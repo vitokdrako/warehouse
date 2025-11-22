@@ -187,10 +187,38 @@ function ItemRow({it, onScan, onPick, onOpenDamage, availability}){
       <td className="px-3 py-2 text-right tabular-nums font-medium text-amber-700">
         ₴ {(it.deposit || 0).toLocaleString('uk-UA')}
       </td>
-      <td className="px-3 py-2">{it.available}</td>
-      <td className="px-3 py-2">{it.reserved||0}</td>
-      <td className="px-3 py-2">{it.in_rent||0}</td>
-      <td className="px-3 py-2">{it.in_restore||0}</td>
+      <td className="px-3 py-2 text-center">
+        {availability ? (
+          <span className={availability.is_available ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+            {availability.total_quantity}
+          </span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </td>
+      <td className="px-3 py-2 text-center">
+        {availability ? (
+          <span className="text-orange-600 font-medium">{availability.reserved_quantity}</span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </td>
+      <td className="px-3 py-2 text-center">
+        {availability ? (
+          <span className={availability.is_available ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+            {availability.available_quantity}
+          </span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </td>
+      <td className="px-3 py-2 text-center">
+        {availability ? (
+          <span className="font-medium">{availability.requested_quantity}</span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+      </td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-2">
           <button onClick={()=>onPick(it.id, Math.max(0, it.picked_qty-1))} className="h-7 w-7 rounded-lg border hover:bg-slate-50">-</button>

@@ -941,38 +941,105 @@ async def check_availability(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Перевірка доступності товарів для дат
-    ✅ MIGRATED: Includes date range checking
+    Перевірка доступності товарів для дат з урахуванням резервацій
+    ✅ MIGRATED: Full date range checking with reservations
     """
     items = data.get('items', [])
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
+    start_date = data.get('start_date') or data.get('issue_date')
+    end_date = data.get('end_date') or data.get('return_date')
+    exclude_order_id = data.get('exclude_order_id')  # Для редагування існуючого замовлення
+    
+    if not start_date or not end_date:
+        raise HTTPException(status_code=400, detail="start_date and end_date are required")
     
     results = []
     
     for item in items:
         product_id = item.get('product_id')
+        sku = item.get('sku')
         requested_qty = item.get('quantity', 1)
         
-        # Get available quantity
+        # Якщо є SKU але немає product_id - шукаємо по SKU
+        if not product_id and sku:
+            sku_result = db.execute(text("""
+                SELECT product_id FROM products WHERE model = :sku OR sku = :sku LIMIT 1
+            """), {"sku": sku})
+            sku_row = sku_result.fetchone()
+            product_id = sku_row[0] if sku_row else None
+        
+        if not product_id:
+            results.append({
+                "product_id": product_id,
+                "sku": sku,
+                "requested_quantity": requested_qty,
+                "available_quantity": 0,
+                "is_available": False,
+                "message": "Product not found"
+            })
+            continue
+        
+        # Отримати загальну кількість товару
         result = db.execute(text("""
-            SELECT quantity FROM products WHERE product_id = :id
+            SELECT quantity, model, name FROM products WHERE product_id = :id
         """), {"id": product_id})
         
         row = result.fetchone()
-        available_qty = row[0] if row else 0
+        if not row:
+            results.append({
+                "product_id": product_id,
+                "requested_quantity": requested_qty,
+                "available_quantity": 0,
+                "is_available": False,
+                "message": "Product not found"
+            })
+            continue
         
-        # Check reservations in date range (simplified)
-        # In production, you'd check actual reservations
+        total_qty = row[0] or 0
+        product_sku = row[1]
+        product_name = row[2]
         
+        # Порахувати скільки товару зарезервовано/в оренді в ці дати
+        # Перевіряємо замовлення які перетинаються з нашими датами
+        reserved_query = text("""
+            SELECT COALESCE(SUM(oi.quantity), 0) as reserved_qty
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            WHERE oi.product_id = :product_id
+            AND o.status IN ('pending', 'processing', 'ready_for_issue', 'issued', 'on_rent')
+            AND (
+                (o.rental_start_date <= :end_date AND o.rental_end_date >= :start_date)
+            )
+            AND (:exclude_order_id IS NULL OR o.order_id != :exclude_order_id)
+        """)
+        
+        reserved_result = db.execute(reserved_query, {
+            "product_id": product_id,
+            "start_date": start_date,
+            "end_date": end_date,
+            "exclude_order_id": exclude_order_id
+        })
+        
+        reserved_qty = reserved_result.fetchone()[0] or 0
+        available_qty = total_qty - reserved_qty
         is_available = available_qty >= requested_qty
+        
+        message = "Available"
+        if not is_available:
+            if available_qty > 0:
+                message = f"Only {available_qty} available (out of {total_qty} total, {reserved_qty} reserved)"
+            else:
+                message = f"Not available ({reserved_qty} of {total_qty} already reserved)"
         
         results.append({
             "product_id": product_id,
+            "sku": product_sku,
+            "name": product_name,
             "requested_quantity": requested_qty,
+            "total_quantity": total_qty,
+            "reserved_quantity": reserved_qty,
             "available_quantity": available_qty,
             "is_available": is_available,
-            "message": "Available" if is_available else f"Only {available_qty} available"
+            "message": message
         })
     
     all_available = all(r['is_available'] for r in results)
@@ -980,6 +1047,10 @@ async def check_availability(
     return {
         "all_available": all_available,
         "items": results,
+        "date_range": {
+            "start_date": start_date,
+            "end_date": end_date
+        }
     }
 
 

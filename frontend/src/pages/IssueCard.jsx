@@ -118,7 +118,7 @@ function LocationBadge({state, zone}){
   return <Badge tone={t.tone}>{t.text}: {zone || '—'}</Badge>
 }
 
-function ItemRow({it, onScan, onPick, onOpenDamage}){
+function ItemRow({it, onScan, onPick, onOpenDamage, availability}){
   const missing = it.qty - it.picked_qty
   const over = it.picked_qty > it.qty
   const conflict = missing>0 && (it.available - (it.reserved||0)) < it.qty

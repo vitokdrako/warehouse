@@ -35,7 +35,6 @@ function PillButton({
   children,
   onClick,
   tone = 'slate',
-  onClick,
 }) {
   const tones = {
     slate: 'bg-slate-900 text-white hover:bg-slate-800',

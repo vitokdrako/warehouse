@@ -48,7 +48,7 @@ function Card({title, right=null, children}){
 }
 
 /*********************** Subcomponents ************************/ 
-function Header({order, issueCard}){
+function Header({order, issueCard, onUpdateDates}){
   // Використовуємо статус з issue_card
   const statusMap = {
     'preparation': { text: 'На комплектації', tone: 'amber' },
@@ -57,6 +57,14 @@ function Header({order, issueCard}){
   }
   
   const statusInfo = statusMap[issueCard?.status] || { text: 'В обробці', tone: 'slate' }
+  const [editMode, setEditMode] = useState(false)
+  const [issueDate, setIssueDate] = useState(order.rent_issue_date || todayISO())
+  const [returnDate, setReturnDate] = useState(order.rent_return_date || todayISO())
+  
+  const handleSaveDates = () => {
+    onUpdateDates(issueDate, returnDate)
+    setEditMode(false)
+  }
   
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -65,11 +73,34 @@ function Header({order, issueCard}){
         <Badge tone={statusInfo.tone}>{statusInfo.text}</Badge>
       </div>
       <div className="flex flex-col items-end text-sm text-slate-600">
-        <div className="flex items-center gap-2">
-          <span>Дата видачі: <b>{order.rent_issue_date || todayISO()}</b></span>
-          <span className="mx-1">·</span>
-          <span>Повернення: <b>{order.rent_return_date || todayISO()}</b></span>
-        </div>
+        {!editMode ? (
+          <div className="flex items-center gap-2">
+            <span>Дата видачі: <b>{order.rent_issue_date || todayISO()}</b></span>
+            <span className="mx-1">·</span>
+            <span>Повернення: <b>{order.rent_return_date || todayISO()}</b></span>
+            {issueCard?.status !== 'issued' && (
+              <button onClick={() => setEditMode(true)} className="ml-2 text-blue-600 hover:text-blue-800">✏️</button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input 
+              type="date" 
+              value={issueDate}
+              onChange={e => setIssueDate(e.target.value)}
+              className="rounded border px-2 py-1 text-xs"
+            />
+            <span>→</span>
+            <input 
+              type="date" 
+              value={returnDate}
+              onChange={e => setReturnDate(e.target.value)}
+              className="rounded border px-2 py-1 text-xs"
+            />
+            <button onClick={handleSaveDates} className="ml-2 text-green-600 hover:text-green-800">✅</button>
+            <button onClick={() => setEditMode(false)} className="text-red-600 hover:text-red-800">❌</button>
+          </div>
+        )}
         <div className="mt-1"><Badge tone='slate'>Замовлення від: {order.date_added?.slice(0,10) || '—'}</Badge></div>
       </div>
     </div>

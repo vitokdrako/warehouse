@@ -1,81 +1,85 @@
 from fastapi import FastAPI, APIRouter
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
-import uuid
-from datetime import datetime, timezone
 
-
+# Load environment variables FIRST
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Import route modules AFTER loading env
+from routes import inventory, clients, orders, tasks, damages, finance, test_orders, settings, pdf, users, issue_cards, return_cards, photos, qr_codes, email, catalog, archive, warehouse, extended_catalog, audit, products, auth, image_proxy, price_sync, damage_cases, admin
 
-# Create the main app without a prefix
-app = FastAPI()
+# Create the main app
+app = FastAPI(title="Rental Hub API")
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+# Налаштувати статичні файли для завантажених зображень
+UPLOAD_ROOT = ROOT_DIR / "uploads"
+UPLOAD_ROOT.mkdir(exist_ok=True)
+(UPLOAD_ROOT / "products").mkdir(exist_ok=True)
+(UPLOAD_ROOT / "photos").mkdir(exist_ok=True)
+(UPLOAD_ROOT / "qr").mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_ROOT)), name="uploads")
 
+# Налаштувати статичні файли для мігрованих зображень товарів
+STATIC_ROOT = ROOT_DIR / "static"
+STATIC_ROOT.mkdir(exist_ok=True)
+(STATIC_ROOT / "images").mkdir(exist_ok=True)
+(STATIC_ROOT / "images" / "products").mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_ROOT)), name="static")
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
-    
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
-
-# Include the router in the main app
-app.include_router(api_router)
+# Add CORS middleware (MUST be before routers)
+cors_origins = os.environ.get('CORS_ORIGINS', '*')
+if cors_origins == '*':
+    cors_origins_list = ["*"]
+    allow_cred = False  # Cannot use credentials with wildcard origin
+else:
+    cors_origins_list = [o.strip() for o in cors_origins.split(',')]
+    allow_cred = True
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=cors_origins_list,
+    allow_credentials=allow_cred,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    expose_headers=["*"],
+    max_age=600,
 )
+
+# Include routers
+app.include_router(inventory.router)
+app.include_router(clients.router)
+app.include_router(orders.router)
+app.include_router(orders.decor_router)  # ✅ Додано для сумісності з /api/decor-orders
+app.include_router(test_orders.router)
+app.include_router(auth.router)
+app.include_router(tasks.router)
+app.include_router(damages.router)
+app.include_router(finance.router)
+app.include_router(finance.manager_router)  # ✅ Додано для сумісності з /api/manager/finance
+app.include_router(settings.router)
+app.include_router(pdf.router)
+app.include_router(users.router)
+app.include_router(issue_cards.router)
+app.include_router(return_cards.router)
+app.include_router(photos.router)
+app.include_router(qr_codes.router)
+app.include_router(email.router)
+app.include_router(catalog.router)
+app.include_router(archive.router)
+app.include_router(warehouse.router)
+app.include_router(extended_catalog.router)
+app.include_router(audit.router)
+app.include_router(products.router)
+app.include_router(image_proxy.router)
+app.include_router(price_sync.router)
+app.include_router(damage_cases.router)
+app.include_router(admin.router)
 
 # Configure logging
 logging.basicConfig(
@@ -84,6 +88,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+# Health check
+@app.get("/api/")
+async def root():
+    return {"message": "Rental Hub API is running", "status": "ok"}
+
+@app.get("/api/health")
+async def health():
+    return {"status": "healthy", "database": "mysql"}
+
+
+# OPTIONS handler для CORS preflight
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    return {"message": "OK"}

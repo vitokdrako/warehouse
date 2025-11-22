@@ -1,0 +1,641 @@
+/* eslint-disable */
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+
+export default function ManagerDashboard() {
+  const [orders, setOrders] = useState([]);
+  const [decorOrders, setDecorOrders] = useState([]);  // Наші замовлення
+  const [issueCards, setIssueCards] = useState([]);  // Картки видачі
+  const [loading, setLoading] = useState(true);
+  const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
+  
+  // Стани для розгортання карток
+  const [showAllAwaiting, setShowAllAwaiting] = useState(false);
+  const [showAllReturns, setShowAllReturns] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Всі');
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+
+  // Завантажити дані користувача
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  // Функція для оновлення дат замовлення
+  const handleDateUpdate = async (orderId, issueDate, returnDate) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/orders/${orderId}`, {
+        method: 'PUT',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issue_date: issueDate,
+          return_date: returnDate
+        })
+      });
+
+      if (response.ok) {
+        const updatedOrder = await response.json();
+        console.log('[Dashboard] ✅ Order dates updated:', orderId);
+        
+        // Оновити локальний стан
+        setOrders(prevOrders => 
+          prevOrders.map(o => o.id === orderId ? updatedOrder : o)
+        );
+        
+        return updatedOrder;
+      } else {
+        throw new Error('Failed to update dates');
+      }
+    } catch (error) {
+      console.error('[Dashboard] Error updating dates:', error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    console.log('[Dashboard] 📊 Loading orders for today...');
+    
+    // Завантажити ВСІ замовлення що очікують підтвердження (вони одразу синхронізуються з OpenCart)
+    fetch(`${BACKEND_URL}/api/orders?status=awaiting_customer`, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('[Dashboard] Orders awaiting confirmation:', data.orders?.length || 0);
+      setOrders(data.orders || []);
+    })
+    .catch(err => console.error('[Dashboard] Error loading orders:', err));
+    
+    // Завантажити ВСІ замовлення на комплектації та поверненні
+    fetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready,shipped,delivered,returning`, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('[Dashboard] Orders in progress:', data.orders?.length || 0);
+      setDecorOrders(data.orders || []);
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error('[Dashboard] Error loading decor orders:', err);
+      setLoading(false);
+    });
+    
+    // Завантажити Issue Cards (картки видачі)
+    fetch(`${BACKEND_URL}/api/issue-cards`, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('[Dashboard] Issue cards:', data.length);
+      setIssueCards(data);
+    })
+    .catch(err => console.error('[Dashboard] Error loading issue cards:', err));
+    
+    // Завантажити фінанси (виручка і застави)
+    fetch(`${BACKEND_URL}/api/manager/finance/summary`, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('[Dashboard] Finance summary:', data);
+      setFinanceData({
+        revenue: data.rent_accrued || 0,
+        deposits: data.deposits_held || 0
+      });
+    })
+    .catch(err => console.error('[Dashboard] Error loading finance:', err));
+  }, []);
+  
+  // Manual reload function
+  const handleReload = () => {
+    setLoading(true);
+    setOrders([]);
+    
+    const today = new Date().toISOString().split('T')[0];
+    const queryParams = `?limit=100&from_date=${today}&to_date=${today}`;
+    
+    fetch(`${BACKEND_URL}/api/orders${queryParams}`, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('[Dashboard] Manual reload:', data.orders?.length || 0, 'orders');
+      setOrders(data.orders || []);
+      setLoading(false);
+    })
+    .catch(err => {
+      console.error('[Dashboard] Manual reload error:', err);
+      setLoading(false);
+    });
+  };
+
+  // Сьогоднішня дата для фільтрації
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  
+  // Логіка розподілу замовлень:
+  // 1. Очікують підтвердження (awaiting_customer) - замовлення одразу синхронізуються з OpenCart
+  const awaitingOrders = orders; // Вже фільтруються по status=awaiting_customer в API
+  const newOrders = orders; // Для сумісності з KPI
+  
+  // 3. В обробці (processing) - вже на комплектації
+  const processingOrders = decorOrders.filter(o => o.status === 'processing');
+  
+  // 4. Готові до видачі (на комплектації або готові) - видача сьогодні
+  const readyOrders = decorOrders.filter(o => 
+    (o.status === 'processing' || o.status === 'ready') && o.rent_date === today
+  );
+  
+  // Issue Cards (картки видачі) по статусам:
+  const preparationCards = issueCards.filter(c => c.status === 'preparation');
+  const readyCards = issueCards.filter(c => c.status === 'ready');
+  const issuedCards = issueCards.filter(c => c.status === 'issued');
+  
+  // 4. Видані сьогодні - прибрано, бо issued вже в "Повернення"
+  const issuedTodayOrders = [];
+  
+  // 5. На поверненні сьогодні (decor_orders зі статусом issued/on_rent і return_date = сьогодні)
+  const returnOrders = decorOrders.filter(o => 
+    (o.status === 'issued' || o.status === 'on_rent') && o.rent_return_date === today
+  );
+
+  const kpis = {
+    today: newOrders.length + readyOrders.length + returnOrders.length,  // Всі події сьогодні
+    revenue: financeData.revenue,  // З Finance API
+    deposits: financeData.deposits,  // З Finance API
+    problems: 0
+  };
+
+  return (
+    <div className="min-h-screen bg-white text-slate-900">
+      {/* Top Bar */}
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+        <div className="mx-auto max-w-7xl px-6 py-3 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full border border-slate-300 grid place-content-center font-semibold">RH</div>
+            <span className="text-lg font-semibold tracking-tight">Rental Hub — Кабінет менеджера</span>
+          </div>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
+              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 grid place-content-center text-white text-xs font-semibold">
+                {user?.email?.[0]?.toUpperCase() || 'U'}
+              </div>
+              <div className="text-sm">
+                <div className="font-medium text-slate-900">{user?.email || 'Користувач'}</div>
+                <div className="text-xs text-slate-500">{user?.role === 'admin' ? 'Адміністратор' : user?.role === 'manager' ? 'Менеджер' : 'Реквізитор'}</div>
+              </div>
+            </div>
+            <button 
+              className="h-9 rounded-xl border border-purple-500 bg-purple-50 px-3 text-sm hover:shadow"
+              onClick={() => navigate('/settings')}
+              title="Налаштування"
+            >
+              ⚙️
+            </button>
+            <button 
+              className="h-9 rounded-xl border border-orange-500 bg-orange-50 px-3 text-sm hover:shadow"
+              onClick={handleReload}
+            >
+              🔄 Оновити
+            </button>
+            <button 
+              className="h-9 rounded-xl border border-slate-200 px-3 text-sm hover:shadow"
+              onClick={() => navigate('/order/new')}
+            >
+              Новий заказ
+            </button>
+            <button 
+              className="h-9 rounded-xl bg-red-500 px-3 text-sm text-white hover:bg-red-600"
+              onClick={() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                navigate('/login');
+              }}
+            >
+              Вихід
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Filters */}
+      <section className="mx-auto max-w-7xl px-6 py-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Filter label="Менеджер">
+            <select className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400">
+              <option>Всі</option>
+            </select>
+          </Filter>
+          <Filter label="Статус замовлення">
+            <select 
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option>Всі</option>
+              <option>Нове</option>
+              <option>Видача</option>
+              <option>В оренді</option>
+            </select>
+          </Filter>
+          <Filter label="Фінанси">
+            <select className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400">
+              <option>Всі</option>
+              <option>Очікує оплати</option>
+              <option>Закрито</option>
+            </select>
+          </Filter>
+          <Filter label="Пошук">
+            <input 
+              placeholder="Імʼя / телефон / №" 
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </Filter>
+        </div>
+      </section>
+
+      {/* KPIs */}
+      <section className="mx-auto max-w-7xl px-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Kpi title="Замовлення сьогодні" value={kpis.today.toString()} note={`${newOrders.length} нові / ${readyOrders.length} видач / ${returnOrders.length} повернення`}/>
+          <Kpi title="Виручка" value={`₴ ${kpis.revenue.toFixed(0)}`} note="з фін. кабінету"/>
+          <Kpi title="Застави в холді" value={`₴ ${kpis.deposits.toFixed(0)}`} note="з фін. кабінету"/>
+          <Kpi title="Проблеми" value={kpis.problems.toString()} note="є шкода/прострочка" tone={kpis.problems > 0 ? "warn" : undefined}/>
+        </div>
+      </section>
+
+      {/* Boards */}
+      <main className="mx-auto max-w-7xl px-6 py-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* КОЛОНКА 1: Очікують підтвердження (замовлення одразу з нашої бази) */}
+        <Column title="⏳ Очікують підтвердження" subtitle="Нові замовлення → Редагувати → Email" tone="warning">
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
+          ) : awaitingOrders.length > 0 ? (
+            <>
+              {(showAllAwaiting ? awaitingOrders : awaitingOrders.slice(0, 4)).map(order => (
+                <OrderCard 
+                  key={order.id}
+                  id={order.order_number}
+                  name={order.client_name}
+                  phone={order.client_phone}
+                  rent={`₴ ${order.total_rental?.toFixed(0)}`}
+                  deposit={`₴ ${(order.total_deposit || 0).toFixed(0)}`}
+                  badge="awaiting"
+                  order={order}
+                  onDateUpdate={null}
+                  onClick={() => navigate(`/order/${order.id}/view`)}
+                />
+              ))}
+              {awaitingOrders.length > 4 && !showAllAwaiting && (
+                <button 
+                  onClick={() => setShowAllAwaiting(true)}
+                  className="text-center py-3 text-sm text-blue-600 hover:text-blue-800 font-medium hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  +{awaitingOrders.length - 4} більше замовлень - Показати всі
+                </button>
+              )}
+              {awaitingOrders.length > 4 && showAllAwaiting && (
+                <button 
+                  onClick={() => setShowAllAwaiting(false)}
+                  className="text-center py-3 text-sm text-slate-600 hover:text-slate-800 font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  Згорнути ↑
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+              Немає замовлень що очікують
+            </div>
+          )}
+        </Column>
+
+        {/* КОЛОНКА 2: На комплектації / Видача сьогодні */}
+        <Column title="📦 На комплектації" subtitle="Збір товарів + видача сьогодні" tone="ok">
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
+          ) : preparationCards.length > 0 ? (
+            <>
+              {preparationCards.slice(0, 4).map(card => (
+                <OrderCard 
+                  key={card.id}
+                  id={`#${card.order_id}`}
+                  name={card.customer_name || '—'}
+                  phone={card.customer_phone || '—'}
+                  rent={`₴ ${card.total_rental?.toFixed(0) || 0}`}
+                  deposit={`₴ ${card.deposit_amount?.toFixed(0) || 0}`}
+                  badge="preparation"
+                  order={card}
+                  onDateUpdate={null}
+                  onClick={() => navigate(`/issue/${card.id}`)}
+                />
+              ))}
+              {preparationCards.length > 4 && (
+                <div className="text-center py-2 text-sm text-slate-500">
+                  +{preparationCards.length - 4} більше карток
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+              Немає карток на комплектації
+            </div>
+          )}
+        </Column>
+
+        {/* КОЛОНКА 3: Повернення */}
+        <Column title="🔙 Повернення" subtitle="Очікуємо сьогодні до 17:00" tone="warn">
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
+          ) : returnOrders.length > 0 ? (
+            <>
+              {(showAllReturns ? returnOrders : returnOrders.slice(0, 4)).map(order => (
+                <OrderCard 
+                  key={order.id}
+                  id={order.order_number}
+                  name={order.client_name}
+                  phone={order.client_phone}
+                  rent={`₴ ${order.total_rental?.toFixed(0)}`}
+                  deposit={`₴ ${(order.deposit_held || order.total_deposit || 0).toFixed(0)}`}
+                  badge="return"
+                  order={order}
+                  onClick={() => navigate(`/return/${order.id}`)}
+                />
+              ))}
+              {returnOrders.length > 4 && !showAllReturns && (
+                <button 
+                  onClick={() => setShowAllReturns(true)}
+                  className="text-center py-3 text-sm text-blue-600 hover:text-blue-800 font-medium hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  +{returnOrders.length - 4} більше замовлень - Показати всі
+                </button>
+              )}
+              {returnOrders.length > 4 && showAllReturns && (
+                <button 
+                  onClick={() => setShowAllReturns(false)}
+                  className="text-center py-3 text-sm text-slate-600 hover:text-slate-800 font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  Згорнути ↑
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+              Немає повернень сьогодні
+            </div>
+          )}
+        </Column>
+      </main>
+
+      {/* Bottom nav */}
+      <section className="mx-auto max-w-7xl px-6 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <NavCard 
+            title="💰 Фінанси" 
+            description="Платежі, рахунки, застави"
+            onClick={() => navigate('/finance')}
+          />
+          <NavCard 
+            title="📅 Календар" 
+            description="Події, картки видачі/повернення"
+            onClick={() => navigate('/calendar')}
+          />
+          <NavCard 
+            title="📦 Каталог" 
+            description="Товари, керування наборами"
+            onClick={() => navigate('/catalog')}
+          />
+          <NavCard 
+            title="⚠️ Шкоди PRO" 
+            description="Кейси пошкоджень, реставрація"
+            onClick={() => navigate('/damages')}
+          />
+          <NavCard 
+            title="🧾 Завдання PRO" 
+            description="Kanban дошка, мийка, збір"
+            onClick={() => navigate('/tasks')}
+          />
+          <NavCard 
+            title="🔍 Переоблік PRO" 
+            description="Каталог декору, історія оренд"
+            onClick={() => navigate('/reaudit')}
+          />
+          <NavCard 
+            title="📦 Комплектація" 
+            description="Збір товарів для видачі"
+            onClick={() => navigate('/packing')}
+          />
+          {user?.role === 'admin' && (
+            <NavCard 
+              title="⚙️ Адмін-панель" 
+              description="Користувачі, категорії, налаштування"
+              onClick={() => navigate('/admin')}
+            />
+          )}
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-200 py-6 text-center text-slate-500 text-sm">
+        © Rental Hub • manager cabinet
+      </footer>
+    </div>
+  );
+}
+
+function Filter({label, children}:{label:string, children:any}){
+  return (
+    <label className="flex flex-col gap-1 text-sm text-slate-600">
+      <span className="font-medium">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function Kpi({title, value, note, tone}:{title:string,value:string,note?:string,tone?:'ok'|'warn'|'info'}){
+  const toneMap:any={
+    ok:'bg-emerald-50 text-emerald-700',
+    warn:'bg-amber-50 text-amber-700',
+    info:'bg-slate-50 text-slate-700'
+  };
+  return (
+    <div className={`rounded-2xl border border-slate-200 p-4 shadow-sm ${tone?toneMap[tone]:''}`}>
+      <div className="text-sm text-slate-600">{title}</div>
+      <div className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
+      {note && <div className="mt-1 text-xs text-slate-500">{note}</div>}
+    </div>
+  );
+}
+
+function Column({title, subtitle, children, tone}:{title:string,subtitle?:string,children:any,tone?:'ok'|'warn'|'info'}){
+  const ring:any={ok:'ring-emerald-100',warn:'ring-amber-100',info:'ring-slate-100'}
+  return (
+    <section className={`rounded-2xl border border-slate-200 p-4 shadow-sm ring-2 ${tone?ring[tone]:"ring-transparent"}`}>
+      <header className="mb-3 flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold leading-none">{title}</h3>
+          {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+        </div>
+      </header>
+      <div className="grid gap-3">{children}</div>
+    </section>
+  );
+}
+
+function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:'new'|'issue'|'return'|'ready'|'issued'|'awaiting'|'processing'|'preparation',onClick:()=>void,order?:any,onDateUpdate?:(orderId:string,issueDate:string,returnDate:string)=>void}){
+  const map:any={
+    new:{label:'Нове',bg:'bg-slate-100 text-slate-700'},
+    awaiting:{label:'Очікує',bg:'bg-yellow-100 text-yellow-800'},
+    processing:{label:'В роботі',bg:'bg-blue-100 text-blue-800'},
+    preparation:{label:'На комплектації',bg:'bg-purple-100 text-purple-800'},
+    issue:{label:'Видача',bg:'bg-emerald-100 text-emerald-800'},
+    return:{label:'Повернення',bg:'bg-amber-100 text-amber-800'},
+    ready:{label:'Готово',bg:'bg-emerald-100 text-emerald-800'},
+    issued:{label:'Видано',bg:'bg-green-100 text-green-800'}
+  }
+  
+  // Fallback якщо badge невідомий
+  const badgeInfo = map[badge] || {label: badge, bg: 'bg-slate-100 text-slate-700'}
+  
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [issueDate, setIssueDate] = React.useState(order?.issue_date || '');
+  const [returnDate, setReturnDate] = React.useState(order?.return_date || '');
+  const [isSaving, setIsSaving] = React.useState(false);
+  
+  const handleSaveDates = async (e) => {
+    e.stopPropagation();
+    if (!onDateUpdate) return;
+    
+    setIsSaving(true);
+    try {
+      await onDateUpdate(id, issueDate, returnDate);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating dates:', error);
+      alert('Помилка оновлення дат');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const handleCancel = (e) => {
+    e.stopPropagation();
+    setIsEditing(false);
+    setIssueDate(order?.issue_date || '');
+    setReturnDate(order?.return_date || '');
+  };
+  
+  return (
+    <article className="rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow" onClick={isEditing ? undefined : onClick}>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badgeInfo.bg}`}>{badgeInfo.label}</span>
+          <span className="text-slate-500 text-sm">#{id}</span>
+        </div>
+        {badge === 'new' && onDateUpdate && !isEditing && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+            className="text-xs text-slate-500 hover:text-slate-700"
+            title="Редагувати дати"
+          >
+            📅 Змінити дати
+          </button>
+        )}
+      </div>
+      <div className="text-sm mb-3">
+        <div className="font-medium">{name}</div>
+        <div className="text-slate-500">{phone}</div>
+      </div>
+      
+      {/* Дати (з можливістю редагування для нових замовлень) */}
+      {badge === 'new' && isEditing ? (
+        <div className="mb-3 space-y-2 bg-blue-50 p-3 rounded-xl" onClick={(e) => e.stopPropagation()}>
+          <div>
+            <label className="text-xs text-slate-600 block mb-1">Дата видачі</label>
+            <input 
+              type="date" 
+              value={issueDate}
+              onChange={(e) => setIssueDate(e.target.value)}
+              className="w-full px-2 py-1 text-sm border border-slate-300 rounded"
+              disabled={isSaving}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-600 block mb-1">Дата повернення</label>
+            <input 
+              type="date" 
+              value={returnDate}
+              onChange={(e) => setReturnDate(e.target.value)}
+              className="w-full px-2 py-1 text-sm border border-slate-300 rounded"
+              disabled={isSaving}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleSaveDates}
+              disabled={isSaving}
+              className="flex-1 px-3 py-1 text-xs bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50"
+            >
+              {isSaving ? '⏳ Збереження...' : '✓ Зберегти'}
+            </button>
+            <button 
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="px-3 py-1 text-xs bg-slate-200 rounded hover:bg-slate-300 disabled:opacity-50"
+            >
+              ✕ Скасувати
+            </button>
+          </div>
+        </div>
+      ) : (
+        order?.issue_date || order?.return_date ? (
+          <div className="mb-3 text-xs text-slate-600 bg-slate-50 p-2 rounded-xl">
+            {order.issue_date && <div>📅 Видача: {order.issue_date}</div>}
+            {order.return_date && <div>📅 Повернення: {order.return_date}</div>}
+          </div>
+        ) : null
+      )}
+      
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-xl bg-slate-50 px-3 py-2">
+          <div className="text-slate-500">Сума</div>
+          <div className="font-semibold tabular-nums">{rent}</div>
+        </div>
+        <div className="rounded-xl bg-slate-50 px-3 py-2">
+          <div className="text-slate-500">Застава</div>
+          <div className="font-semibold tabular-nums">{deposit}</div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function NavCard({title, description, onClick}:{title:string, description:string, onClick:()=>void}){
+  return (
+    <article 
+      className="rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      onClick={onClick}
+    >
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+      <p className="text-sm text-slate-500">{description}</p>
+    </article>
+  );
+}

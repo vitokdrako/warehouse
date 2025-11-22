@@ -6,7 +6,7 @@ const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).j
 
 type Tab = 'users' | 'categories'
 
-interface User {
+/* interface User {
   user_id: number
   username: string
   email: string
@@ -16,7 +16,7 @@ interface User {
   is_active: boolean
   created_at: string
   last_login?: string
-}
+} */
 
 interface Category {
   category_id: number
@@ -26,7 +26,7 @@ interface Category {
   sort_order: number
   is_active: boolean
   created_at: string
-}
+} */
 
 const ROLES = [
   { value: 'admin', label: '👑 Адміністратор' },
@@ -626,4 +626,4 @@ export default function AdminPanel() {
       )}
     </div>
   )
-}
+} */

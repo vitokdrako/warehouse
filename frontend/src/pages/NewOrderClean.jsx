@@ -74,9 +74,15 @@ const NewOrderClean = () => {
         const url = `${BACKEND_URL}/api/inventory?search=${sku}`;
         console.log(`📡 API URL: ${url}`);
         const response = await axios.get(url);
-        console.log(`✅ API Response:`, response.data);
+        console.log(`✅ API Response count: ${response.data.length}`);
+        console.log(`✅ API Response items:`, JSON.stringify(response.data, null, 2));
         
         if (response.data && response.data.length > 0) {
+          console.log(`🔎 Searching for SKU: "${sku.toLowerCase()}" in articles:`);
+          response.data.forEach((item, idx) => {
+            console.log(`  [${idx}] article: "${item.article}", matches: ${item.article && item.article.toLowerCase() === sku.toLowerCase()}`);
+          });
+          
           // Find exact match by SKU
           const found = response.data.find(item => 
             item.article && item.article.toLowerCase() === sku.toLowerCase()

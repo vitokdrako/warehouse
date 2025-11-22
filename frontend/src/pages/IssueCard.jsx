@@ -1002,7 +1002,7 @@ export default function IssueCard(){
 
   return (
     <div className="mx-auto max-w-7xl p-6 space-y-6">
-      <Header order={order} issueCard={issueCard} />
+      <Header order={order} issueCard={issueCard} onUpdateDates={updateOrderDates} />
 
       {/* Top summary */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

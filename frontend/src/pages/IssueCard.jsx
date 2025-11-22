@@ -58,8 +58,14 @@ function Header({order, issueCard, onUpdateDates}){
   
   const statusInfo = statusMap[issueCard?.status] || { text: 'В обробці', tone: 'slate' }
   const [editMode, setEditMode] = useState(false)
-  const [issueDate, setIssueDate] = useState(order.rent_issue_date || todayISO())
-  const [returnDate, setReturnDate] = useState(order.rent_return_date || todayISO())
+  const [issueDate, setIssueDate] = useState(order?.rent_issue_date || todayISO())
+  const [returnDate, setReturnDate] = useState(order?.rent_return_date || todayISO())
+  
+  // Sync dates when order changes
+  useEffect(() => {
+    if (order?.rent_issue_date) setIssueDate(order.rent_issue_date)
+    if (order?.rent_return_date) setReturnDate(order.rent_return_date)
+  }, [order?.rent_issue_date, order?.rent_return_date])
   
   const handleSaveDates = () => {
     onUpdateDates(issueDate, returnDate)

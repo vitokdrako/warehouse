@@ -271,7 +271,7 @@ function ItemsTable({items, onScan, onPick, onOpenDamage}){
             </tr>
           </thead>
           <tbody>
-            {items.map(it => <ItemRow key={it.id} it={it} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} />)}
+            {items.map(it => <ItemRow key={it.id} it={it} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} availability={availability[it.sku]} />)}
           </tbody>
         </table>
       </div>

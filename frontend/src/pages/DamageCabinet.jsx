@@ -10,7 +10,7 @@ const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionD
 /*************** types ***************/
 
 /*************** small UI ***************/
-function Badge({ tone = 'slate', children }: { tone?; children: React.ReactNode }) {
+function Badge({ tone = 'slate', children }) {
   const tones = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     green: 'bg-emerald-100 text-emerald-700 border-emerald-200',

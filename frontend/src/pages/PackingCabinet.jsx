@@ -6,7 +6,7 @@ const cls = (...a) => a.filter(Boolean).join(' ')
 /************** types **************/
 
 /************** small UI **************/
-function Badge({ tone = 'slate', children }: { tone?; children: React.ReactNode }) {
+function Badge({ tone = 'slate', children }) {
   const tones = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     blue: 'bg-sky-100 text-sky-700 border-sky-200',

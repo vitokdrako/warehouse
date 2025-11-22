@@ -35,10 +35,7 @@ function PillButton({
   children,
   onClick,
   tone = 'slate',
-}: {
-  children: React.ReactNode
-  onClick? void
-  tone?: 'slate' | 'green' | 'ghost' | 'red' | 'amber'
+  onClick,
 }) {
   const tones = {
     slate: 'bg-slate-900 text-white hover:bg-slate-800',

@@ -64,15 +64,43 @@ const NewOrderClean = () => {
     );
   };
 
-  const handleSKUSearch = (index, sku) => {
+  const handleSKUSearch = async (index, sku) => {
     updateItem(index, 'sku', sku);
     
     if (sku.length >= 3) {
-      const found = searchInventoryBySKU(sku);
-      if (found) {
-        updateItem(index, 'name', found.name);
-        updateItem(index, 'price', found.price_per_day);
-        updateItem(index, 'depositTier', found.deposit_tier || 'medium');
+      try {
+        // First try API search for exact SKU match
+        const response = await axios.get(`${BACKEND_URL}/api/inventory?search=${sku}`);
+        if (response.data && response.data.length > 0) {
+          // Find exact match by SKU
+          const found = response.data.find(item => 
+            item.article && item.article.toLowerCase() === sku.toLowerCase()
+          );
+          
+          if (found) {
+            updateItem(index, 'name', found.name);
+            updateItem(index, 'price', found.price_per_day);
+            updateItem(index, 'depositTier', found.deposit_tier || 'medium');
+            return;
+          }
+        }
+        
+        // Fallback to local search if API fails or no match
+        const localFound = searchInventoryBySKU(sku);
+        if (localFound) {
+          updateItem(index, 'name', localFound.name);
+          updateItem(index, 'price', localFound.price_per_day);
+          updateItem(index, 'depositTier', localFound.deposit_tier || 'medium');
+        }
+      } catch (error) {
+        console.error('Error searching inventory:', error);
+        // Try local search as fallback
+        const localFound = searchInventoryBySKU(sku);
+        if (localFound) {
+          updateItem(index, 'name', localFound.name);
+          updateItem(index, 'price', localFound.price_per_day);
+          updateItem(index, 'depositTier', localFound.deposit_tier || 'medium');
+        }
       }
     }
   };

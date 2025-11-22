@@ -221,7 +221,7 @@ function ItemRow({it, onScan, onPick, onOpenDamage}){
   )
 }
 
-function ItemsTable({items, onScan, onPick, onOpenDamage}){
+function ItemsTable({items, onScan, onPick, onOpenDamage, availability}){
   return (
     <Card title="Позиції до видачі">
       <div className="overflow-hidden rounded-xl border">
@@ -234,16 +234,16 @@ function ItemsTable({items, onScan, onPick, onOpenDamage}){
               <th className="px-3 py-2">Назва / локація</th>
               <th className="px-3 py-2">Збиток</th>
               <th className="px-3 py-2">Застава</th>
-              <th className="px-3 py-2">В наявн.</th>
-              <th className="px-3 py-2">Резерв</th>
+              <th className="px-3 py-2">Всього</th>
               <th className="px-3 py-2">В оренді</th>
-              <th className="px-3 py-2">В реставр.</th>
+              <th className="px-3 py-2">Доступно</th>
+              <th className="px-3 py-2">Запитано</th>
               <th className="px-3 py-2">Укомплект.</th>
               <th className="px-3 py-2">Пакування</th>
             </tr>
           </thead>
           <tbody>
-            {items.map(it => <ItemRow key={it.id} it={it} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} />)}
+            {items.map(it => <ItemRow key={it.id} it={it} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} availability={availability[it.sku]} />)}
           </tbody>
         </table>
       </div>

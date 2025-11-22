@@ -34,7 +34,7 @@ export default function AdminPanel() {
   const [editingCategory, setEditingCategory] = useState(null)
   const [categoryForm, setCategoryForm] = useState({
     name: '',
-    parent_id: null as number | null,
+    parent_id: null,
     description: '',
     sort_order: 0
   })

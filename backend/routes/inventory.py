@@ -134,3 +134,52 @@ async def get_inventory_item(item_id: str, db: Session = Depends(get_rh_db)):  #
         "cleaning_status": cleaning_status,
         "product_state": product_state
     }
+
+@router.get("/products-snapshot", tags=["products"])
+async def get_products_snapshot(
+    sku: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = 50,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Get products from products table (snapshot з OpenCart)
+    Для пошуку товарів по SKU
+    """
+    
+    sql_query = """
+        SELECT 
+            product_id, sku, name, price, image_url, description, category
+        FROM products
+        WHERE 1=1
+    """
+    
+    params = {}
+    
+    if sku:
+        sql_query += " AND sku LIKE :sku"
+        params['sku'] = f"%{sku}%"
+    
+    if search:
+        sql_query += " AND (sku LIKE :search OR name LIKE :search)"
+        params['search'] = f"%{search}%"
+    
+    sql_query += " LIMIT :limit"
+    params['limit'] = limit
+    
+    result = db.execute(text(sql_query), params)
+    rows = result.fetchall()
+    
+    products = []
+    for row in rows:
+        products.append({
+            "product_id": row[0],
+            "sku": row[1],
+            "name": row[2],
+            "price": row[3],
+            "image_url": row[4],
+            "description": row[5],
+            "category": row[6]
+        })
+    
+    return products

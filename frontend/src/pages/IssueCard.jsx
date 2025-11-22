@@ -693,6 +693,51 @@ export default function IssueCard(){
   useEffect(()=>{
     loadOrder()
   },[id])
+  
+  const checkAvailability = async () => {
+    if (!order || !items || items.length === 0) {
+      return;
+    }
+    
+    const startDate = order.rent_issue_date || order.issue_date;
+    const endDate = order.rent_return_date || order.return_date;
+    
+    if (!startDate || !endDate) {
+      return;
+    }
+    
+    try {
+      setCheckingAvailability(true);
+      const response = await axios.post(`${BACKEND_URL}/api/orders/check-availability`, {
+        start_date: startDate,
+        end_date: endDate,
+        exclude_order_id: order.order_id,
+        items: items.map(item => ({
+          sku: item.sku,
+          quantity: item.qty
+        }))
+      });
+      
+      // Створити мапу доступності по SKU
+      const availabilityMap = {};
+      response.data.items.forEach(item => {
+        availabilityMap[item.sku] = item;
+      });
+      
+      setAvailability(availabilityMap);
+    } catch (error) {
+      console.error('Error checking availability:', error);
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+  
+  // Перевірка доступності при завантаженні order та items
+  useEffect(() => {
+    if (order && items.length > 0) {
+      checkAvailability();
+    }
+  }, [order, items])
 
   const loadOrder = async ()=>{
     try {

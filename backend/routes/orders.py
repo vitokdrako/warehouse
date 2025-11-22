@@ -161,8 +161,10 @@ def parse_order_row(row, db: Session = None):
         "client_name": row[3],
         "client_phone": row[4],
         "client_email": row[5],
-        "issue_date": row[6].isoformat() if row[6] else None,
-        "return_date": row[7].isoformat() if row[7] else None,
+        "rental_start_date": row[6].isoformat() if row[6] else None,
+        "rental_end_date": row[7].isoformat() if row[7] else None,
+        "issue_date": row[6].isoformat() if row[6] else None,  # Alias
+        "return_date": row[7].isoformat() if row[7] else None,  # Alias
         "status": row[8],
         "total_rental": float(row[9]) if row[9] else 0.0,
         "total_deposit": float(row[10]) if row[10] else 0.0,

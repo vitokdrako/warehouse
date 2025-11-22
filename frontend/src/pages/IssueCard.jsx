@@ -262,10 +262,10 @@ function ItemsTable({items, onScan, onPick, onOpenDamage}){
               <th className="px-3 py-2">Назва / локація</th>
               <th className="px-3 py-2">Збиток</th>
               <th className="px-3 py-2">Застава</th>
-              <th className="px-3 py-2">В наявн.</th>
-              <th className="px-3 py-2">Резерв</th>
+              <th className="px-3 py-2">Всього</th>
               <th className="px-3 py-2">В оренді</th>
-              <th className="px-3 py-2">В реставр.</th>
+              <th className="px-3 py-2">Доступно</th>
+              <th className="px-3 py-2">Запитано</th>
               <th className="px-3 py-2">Укомплект.</th>
               <th className="px-3 py-2">Пакування</th>
             </tr>

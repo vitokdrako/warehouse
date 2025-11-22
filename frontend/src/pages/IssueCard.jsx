@@ -118,7 +118,7 @@ function LocationBadge({state, zone}){
   return <Badge tone={t.tone}>{t.text}: {zone || '—'}</Badge>
 }
 
-function ItemRow({it, onScan, onPick, onOpenDamage, availability}){
+function ItemRow({it, onScan, onPick, onOpenDamage}){
   const missing = it.qty - it.picked_qty
   const over = it.picked_qty > it.qty
   const conflict = missing>0 && (it.available - (it.reserved||0)) < it.qty
@@ -187,38 +187,10 @@ function ItemRow({it, onScan, onPick, onOpenDamage, availability}){
       <td className="px-3 py-2 text-right tabular-nums font-medium text-amber-700">
         ₴ {(it.deposit || 0).toLocaleString('uk-UA')}
       </td>
-      <td className="px-3 py-2 text-center">
-        {availability ? (
-          <span className={availability.is_available ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-            {availability.total_quantity}
-          </span>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
-      <td className="px-3 py-2 text-center">
-        {availability ? (
-          <span className="text-orange-600 font-medium">{availability.reserved_quantity}</span>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
-      <td className="px-3 py-2 text-center">
-        {availability ? (
-          <span className={availability.is_available ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-            {availability.available_quantity}
-          </span>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
-      <td className="px-3 py-2 text-center">
-        {availability ? (
-          <span className="font-medium">{availability.requested_quantity}</span>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
+      <td className="px-3 py-2">{it.available}</td>
+      <td className="px-3 py-2">{it.reserved||0}</td>
+      <td className="px-3 py-2">{it.in_rent||0}</td>
+      <td className="px-3 py-2">{it.in_restore||0}</td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-2">
           <button onClick={()=>onPick(it.id, Math.max(0, it.picked_qty-1))} className="h-7 w-7 rounded-lg border hover:bg-slate-50">-</button>
@@ -249,7 +221,7 @@ function ItemRow({it, onScan, onPick, onOpenDamage, availability}){
   )
 }
 
-function ItemsTable({items, onScan, onPick, onOpenDamage, availability}){
+function ItemsTable({items, onScan, onPick, onOpenDamage}){
   return (
     <Card title="Позиції до видачі">
       <div className="overflow-hidden rounded-xl border">
@@ -262,16 +234,16 @@ function ItemsTable({items, onScan, onPick, onOpenDamage, availability}){
               <th className="px-3 py-2">Назва / локація</th>
               <th className="px-3 py-2">Збиток</th>
               <th className="px-3 py-2">Застава</th>
-              <th className="px-3 py-2">Всього</th>
+              <th className="px-3 py-2">В наявн.</th>
+              <th className="px-3 py-2">Резерв</th>
               <th className="px-3 py-2">В оренді</th>
-              <th className="px-3 py-2">Доступно</th>
-              <th className="px-3 py-2">Запитано</th>
+              <th className="px-3 py-2">В реставр.</th>
               <th className="px-3 py-2">Укомплект.</th>
               <th className="px-3 py-2">Пакування</th>
             </tr>
           </thead>
           <tbody>
-            {items.map(it => <ItemRow key={it.id} it={it} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} availability={availability[it.sku]} />)}
+            {items.map(it => <ItemRow key={it.id} it={it} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} />)}
           </tbody>
         </table>
       </div>
@@ -371,8 +343,6 @@ export default function IssueCard(){
   const [checklist, setChecklist] = useState({ stretch:false, labels:false, photos_before:false, docs_printed:false })
   const [documents, setDocuments] = useState({ waybill:false, act:false })
   const [events, setEvents] = useState([])
-  const [availability, setAvailability] = useState({})
-  const [checkingAvailability, setCheckingAvailability] = useState(false)
   
   // Item damage modal
   const [itemDamage, setItemDamage] = useState({ open:false, item_id:null, kind:'подряпина', severity:'low', note:'', photoName:'' })
@@ -721,51 +691,6 @@ export default function IssueCard(){
   useEffect(()=>{
     loadOrder()
   },[id])
-  
-  const checkAvailability = async () => {
-    if (!order || !items || items.length === 0) {
-      return;
-    }
-    
-    const startDate = order.rent_issue_date || order.issue_date;
-    const endDate = order.rent_return_date || order.return_date;
-    
-    if (!startDate || !endDate) {
-      return;
-    }
-    
-    try {
-      setCheckingAvailability(true);
-      const response = await axios.post(`${BACKEND_URL}/api/orders/check-availability`, {
-        start_date: startDate,
-        end_date: endDate,
-        exclude_order_id: order.order_id,
-        items: items.map(item => ({
-          sku: item.sku,
-          quantity: item.qty
-        }))
-      });
-      
-      // Створити мапу доступності по SKU
-      const availabilityMap = {};
-      response.data.items.forEach(item => {
-        availabilityMap[item.sku] = item;
-      });
-      
-      setAvailability(availabilityMap);
-    } catch (error) {
-      console.error('Error checking availability:', error);
-    } finally {
-      setCheckingAvailability(false);
-    }
-  };
-  
-  // Перевірка доступності при завантаженні order та items
-  useEffect(() => {
-    if (order && items.length > 0) {
-      checkAvailability();
-    }
-  }, [order, items])
 
   const loadOrder = async ()=>{
     try {
@@ -1033,7 +958,7 @@ export default function IssueCard(){
         <Timeline events={events} />
       </div>
 
-      <ItemsTable items={items} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} availability={availability} />
+      <ItemsTable items={items} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} />
       
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Checklist check={checklist} setCheck={setChecklist} />

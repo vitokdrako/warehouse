@@ -924,6 +924,28 @@ export default function IssueCard(){
       toast({ title: '❌ Помилка', description: 'Не вдалося зберегти прогрес', variant: 'destructive' })
     }
   }
+  
+  const updateOrderDates = async (issueDate, returnDate) => {
+    try {
+      // Оновити дати в замовленні
+      await axios.put(`${BACKEND_URL}/api/orders/${order.order_id}`, {
+        rental_start_date: issueDate,
+        rental_end_date: returnDate
+      })
+      
+      // Оновити локальний стан
+      setOrder(o => ({
+        ...o,
+        rent_issue_date: issueDate,
+        rent_return_date: returnDate
+      }))
+      
+      toast({ title: '✅ Успіх', description: 'Дати оновлено' })
+    } catch(e){
+      console.error('Error updating dates:', e)
+      toast({ title: '❌ Помилка збереження', description: e.response?.data?.detail || 'Не вдалося оновити дати', variant: 'destructive' })
+    }
+  }
 
   const markReady = async ()=>{
     try {

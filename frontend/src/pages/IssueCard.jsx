@@ -343,6 +343,7 @@ export default function IssueCard(){
   const [checklist, setChecklist] = useState({ stretch:false, labels:false, photos_before:false, docs_printed:false })
   const [documents, setDocuments] = useState({ waybill:false, act:false })
   const [events, setEvents] = useState([])
+  const [availability, setAvailability] = useState({})
   
   // Item damage modal
   const [itemDamage, setItemDamage] = useState({ open:false, item_id:null, kind:'подряпина', severity:'low', note:'', photoName:'' })

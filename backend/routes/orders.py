@@ -566,9 +566,16 @@ async def create_order(
     Створити нове замовлення з повною валідацією
     ✅ MIGRATED: Includes item validation and inventory checks
     """
+    # Get dates (support both field names)
+    start_date_str = order.start_date
+    end_date_str = order.end_date
+    
+    if not start_date_str or not end_date_str:
+        raise HTTPException(status_code=400, detail="Start and end dates are required")
+    
     # Validate dates
-    start = datetime.fromisoformat(order.rental_start_date)
-    end = datetime.fromisoformat(order.rental_end_date)
+    start = datetime.fromisoformat(start_date_str)
+    end = datetime.fromisoformat(end_date_str)
     if end <= start:
         raise HTTPException(status_code=400, detail="End date must be after start date")
     
@@ -596,8 +603,8 @@ async def create_order(
         "customer_name": order.customer_name,
         "customer_phone": order.customer_phone,
         "customer_email": order.customer_email,
-        "rental_start_date": order.rental_start_date,
-        "rental_end_date": order.rental_end_date,
+        "rental_start_date": start_date_str,
+        "rental_end_date": end_date_str,
         "total_amount": order.total_amount,
         "deposit_amount": order.deposit_amount,
         "notes": order.notes

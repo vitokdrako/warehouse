@@ -578,13 +578,13 @@ async def create_order(
     # Validate dates
     start = datetime.fromisoformat(start_date_str)
     end = datetime.fromisoformat(end_date_str)
-    if end <= start:
-        raise HTTPException(status_code=400, detail="End date must be after start date")
+    if end < start:
+        raise HTTPException(status_code=400, detail="End date cannot be before start date")
     
-    # Calculate rental days
+    # Calculate rental days (мінімум 1 день, навіть якщо дати однакові)
     rental_days = (end - start).days
-    if rental_days < 1:
-        raise HTTPException(status_code=400, detail="Minimum rental period is 1 day")
+    if rental_days == 0:
+        rental_days = 1  # Якщо той самий день - рахуємо як 1 день оренди
     
     # Generate order number
     order_number = f"ORD-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"

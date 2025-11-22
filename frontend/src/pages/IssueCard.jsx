@@ -249,7 +249,7 @@ function ItemRow({it, onScan, onPick, onOpenDamage, availability}){
   )
 }
 
-function ItemsTable({items, onScan, onPick, onOpenDamage}){
+function ItemsTable({items, onScan, onPick, onOpenDamage, availability}){
   return (
     <Card title="Позиції до видачі">
       <div className="overflow-hidden rounded-xl border">

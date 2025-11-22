@@ -110,15 +110,32 @@ const NewOrderClean = () => {
     );
   };
 
-  const handleSKUSearch = (index, sku) => {
+  const handleSKUSearch = async (index, sku) => {
     updateItem(index, 'sku', sku);
     
     if (sku.length >= 3) {
+      // Спочатку шукаємо в завантаженому inventory
       const found = searchInventoryBySKU(sku);
       if (found) {
         updateItem(index, 'name', found.name);
         updateItem(index, 'price', found.price_per_day);
         updateItem(index, 'depositTier', found.deposit_tier || 'medium');
+        return;
+      }
+      
+      // Якщо не знайдено - шукаємо в products через API
+      try {
+        const response = await axios.get(`${BACKEND_URL}/api/products-snapshot`, {
+          params: { sku: sku }
+        });
+        if (response.data && response.data.length > 0) {
+          const product = response.data[0];
+          updateItem(index, 'name', product.name);
+          updateItem(index, 'price', product.price || 0);
+          updateItem(index, 'depositTier', 'medium');
+        }
+      } catch (error) {
+        console.error('Error searching product:', error);
       }
     }
   };

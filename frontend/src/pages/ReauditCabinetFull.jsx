@@ -1,41 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react'
 
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
-const fmtUA = (n: number) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
+const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
-type AuditStatus = 'ok' | 'minor' | 'critical' | 'lost'
-
-interface AuditItem {
-  id: string
-  product_id: number
-  code: string
-  name: string
-  description?: string
-  careInstructions?: string
-  category: string
-  zone: string
-  location: string
-  qty: number
-  status: AuditStatus
-  lastAuditDate: string
-  lastAuditBy?: string
-  nextAuditDate?: string
-  daysFromLastAudit: number
-  rentalsCount: number
-  lastOrderId?: string
-  damagesCount: number
-  totalProfit: number
-  notes?: string
-  color?: string
-  material?: string
-  size?: string
-  imageUrl?: string
-  price?: number
-  rentalPrice?: number
-}
-
-function Badge({ tone = 'slate', children }: { tone?: string; children: React.ReactNode }) {
+function Badge({ tone = 'slate', children }: { tone?; children: React.ReactNode }) {
   const tones: Record<string, string> = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     green: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -50,7 +19,7 @@ function Badge({ tone = 'slate', children }: { tone?: string; children: React.Re
   )
 }
 
-function PillButton({ children, onClick, tone = 'slate' }: { children: React.ReactNode; onClick?: () => void; tone?: string }) {
+function PillButton({ children, onClick, tone = 'slate' }: { children: React.ReactNode; onClick? void; tone? }) {
   const tones: Record<string, string> = {
     slate: 'bg-slate-900 text-white hover:bg-slate-800',
     green: 'bg-emerald-600 text-white hover:bg-emerald-700',
@@ -84,27 +53,12 @@ function RiskBadge({ item }: { item: AuditItem }) {
   return <Badge tone="green">Ризик низький</Badge>
 }
 
-interface RentalHistoryItem {
-  order_id: number
-  order_number: string
-  client_name: string
-  client_phone: string
-  rent_date: string
-  rent_return_date: string
-  rental_days: number
-  quantity: number
-  total_rental: number
-  deposit: number
-  status: string
-  created_at: string
-}
-
 export default function ReauditCabinetFull({ 
   onBackToDashboard,
   onNavigateToTasks
 }: { 
-  onBackToDashboard: () => void
-  onNavigateToTasks?: (itemId: string) => void
+  onBackToDashboard void
+  onNavigateToTasks? void
 }) {
   const [items, setItems] = useState<AuditItem[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -115,7 +69,7 @@ export default function ReauditCabinetFull({
   const [stats, setStats] = useState({ total: 0, ok: 0, minor: 0, crit: 0, lost: 0, overdueCnt: 0 })
   const [sortByAudit, setSortByAudit] = useState<'all' | 'audited' | 'notAudited'>('all')
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [uploadedImage, setUploadedImage] = useState<{path: string; url: string} | null>(null)
+  const [uploadedImage, setUploadedImage] = useState<{path; url} | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [rentalHistory, setRentalHistory] = useState<RentalHistoryItem[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
@@ -160,7 +114,7 @@ export default function ReauditCabinetFull({
   // Use backend URL from environment
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
-  const loadItems = async (overrideFilters?: { category?: string; subcategory?: string; search?: string }) => {
+  const loadItems = async (overrideFilters?: { category?; subcategory?; search? }) => {
     console.log('[ReauditCabinet] BACKEND_URL:', BACKEND_URL)
     setLoading(true)
     try {
@@ -200,7 +154,7 @@ export default function ReauditCabinetFull({
     }
   }
 
-  const loadRentalHistory = async (itemId: string) => {
+  const loadRentalHistory = async (itemId) => {
     setLoadingHistory(true)
     try {
       const response = await fetch(`${BACKEND_URL}/api/audit/items/${itemId}/rental-history`)
@@ -214,7 +168,7 @@ export default function ReauditCabinetFull({
     }
   }
 
-  const loadDamages = async (itemId: string) => {
+  const loadDamages = async (itemId) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/audit/items/${itemId}/damages`)
       const data = await response.json()
@@ -312,7 +266,7 @@ export default function ReauditCabinetFull({
     }
   }
 
-  const createNewProduct = async (formData: any) => {
+  const createNewProduct = async (formData) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/products/create`, {
         method: 'POST',
@@ -613,7 +567,7 @@ export default function ReauditCabinetFull({
                   disabled={categoryFilter === 'all' || subcategories.length === 0}
                 >
                   <option value="all">Усі</option>
-                  {subcategories.map((subcat: string) => (
+                  {subcategories.map((subcat) => (
                     <option key={subcat} value={subcat}>
                       {subcat}
                     </option>
@@ -650,9 +604,7 @@ export default function ReauditCabinetFull({
             <div className="border-b border-slate-100 px-3 py-2 text-slate-500">Позиції для переобліку</div>
             {loading ? (
               <div className="p-8 text-center text-sm text-slate-500">Завантаження...</div>
-            ) : (
-              <div className="max-h-[360px] overflow-auto divide-y divide-slate-100">
-                {filtered.map((it) => (
+            )  (
                   <button
                     key={it.id}
                     onClick={() => setSelectedId(it.id)}
@@ -1221,7 +1173,7 @@ export default function ReauditCabinetFull({
                             
                             try {
                               const token = localStorage.getItem('token')
-                              const headers: any = { 'Content-Type': 'application/json' }
+                              const headers = { 'Content-Type': 'application/json' }
                               if (token) {
                                 headers['Authorization'] = `Bearer ${token}`
                               }
@@ -1522,7 +1474,7 @@ export default function ReauditCabinetFull({
                          !subcategoriesMap[selectedCategory]?.length ? 'Немає підкатегорій' : 
                          'Оберіть підкатегорію...'}
                       </option>
-                      {selectedCategory && subcategoriesMap[selectedCategory]?.map((subcat: string) => (
+                      {selectedCategory && subcategoriesMap[selectedCategory]?.map((subcat) => (
                         <option key={subcat} value={subcat}>{subcat}</option>
                       ))}
                     </select>

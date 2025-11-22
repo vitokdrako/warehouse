@@ -2,13 +2,10 @@ import React, { useMemo, useState, useEffect } from 'react'
 
 /**************** helpers ****************/
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
-const fmtUA = (n: number) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
+const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 
 /**************** types ****************/
-type InventoryStatus = 'available' | 'reserved' | 'on_rent' | 'washing' | 'repair' | 'lost'
 
-type HistoryKind =
-  | 'created'
   | 'edited'
   | 'moved'
   | 'rent_out'
@@ -17,62 +14,8 @@ type HistoryKind =
   | 'damage_closed'
   | 'cleaned'
 
-interface InventoryItem {
-  id: string
-  code: string
-  status: InventoryStatus
-  location: string
-  lastOrderId?: string
-  lastMovementAt: string
-  note?: string
-}
-
-interface HistoryEvent {
-  id: string
-  date: string
-  kind: HistoryKind
-  actor: string
-  orderId?: string
-  note: string
-}
-
-interface StatusSummary {
-  total: number
-  available: number
-  reserved: number
-  on_rent: number
-  washing: number
-  repair: number
-  lost: number
-}
-
-interface Product {
-  id: string
-  product_id: number
-  name: string
-  mainSku: string
-  skuPrefix: string
-  category: string
-  subcategory?: string
-  color?: string
-  material?: string
-  size?: string
-  imageUrl?: string
-  defaultLocation: string
-  tags: string[]
-  description: string
-  careNotes: string
-  createdAt: string
-  updatedAt: string
-  statusSummary: StatusSummary
-  inventory?: InventoryItem[]
-  history?: HistoryEvent[]
-  price?: number
-  ean?: string
-}
-
 /**************** small UI ****************/
-function Badge({ tone = 'slate', children }: { tone?: string; children: React.ReactNode }) {
+function Badge({ tone = 'slate', children }: { tone?; children: React.ReactNode }) {
   const tones: Record<string, string> = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     green: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -99,7 +42,7 @@ function PillButton({
   tone = 'slate',
 }: {
   children: React.ReactNode
-  onClick?: () => void
+  onClick? void
   tone?: 'slate' | 'green' | 'ghost' | 'red'
 }) {
   const tones: Record<string, string> = {
@@ -119,7 +62,7 @@ function PillButton({
   )
 }
 
-function Card({ title, children, right }: { title: string; children: React.ReactNode; right?: React.ReactNode }) {
+function Card({ title, children, right }: { title; children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -145,7 +88,7 @@ function StatusPill({ summary }: { summary: StatusSummary }) {
   )
 }
 
-function TagChip({ label }: { label: string }) {
+function TagChip({ label }: { label }) {
   return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">{label}</span>
 }
 
@@ -157,9 +100,9 @@ function CatalogList({
   loading
 }: {
   products: Product[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-  loading: boolean
+  selectedId | null
+  onSelect void
+  loading
 }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
@@ -212,9 +155,7 @@ function CatalogList({
         <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-slate-500">Список товарів</div>
         {loading ? (
           <div className="py-8 text-center text-sm text-slate-500">Завантаження...</div>
-        ) : (
-          <div className="max-h-[460px] divide-y divide-slate-100 overflow-auto text-xs">
-            {filtered.map((p) => (
+        )  (
               <button
                 key={p.id}
                 type="button"
@@ -254,7 +195,7 @@ function CatalogList({
 }
 
 /**************** right: product details tabs ****************/
-function PassportTab({ product, onSave }: { product: Product; onSave: (data: any) => void }) {
+function PassportTab({ product, onSave }: { product: Product; onSave void }) {
   const [edit, setEdit] = useState(false)
   const [form, setForm] = useState({
     name: product.name,
@@ -443,9 +384,7 @@ function InventoryTab({ product }: { product: Product }) {
         <div className="py-8 text-center text-[11px] text-slate-500">
           Інвентарні одиниці не створені. Натисніть "+ Додати одиницю" щоб створити.
         </div>
-      ) : (
-        <div className="space-y-2 text-[11px]">
-          {inventory.map((item) => (
+      )  (
             <div key={item.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -492,9 +431,7 @@ function HistoryTab({ product }: { product: Product }) {
         <div className="py-8 text-center text-[11px] text-slate-500">
           Історія порожня
         </div>
-      ) : (
-        <div className="space-y-2 text-[11px]">
-          {history.map((event) => (
+      )  (
             <div key={event.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -522,7 +459,7 @@ function HistoryTab({ product }: { product: Product }) {
 }
 
 /**************** main component ****************/
-export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboard: () => void }) {
+export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboard void }) {
   const [products, setProducts] = useState<Product[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -556,7 +493,7 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
   }
 
   // Завантажити деталі продукту
-  const loadProductDetails = async (productId: string) => {
+  const loadProductDetails = async (productId) => {
     setDetailsLoading(true)
     try {
       const numericId = productId.replace('P-', '')
@@ -571,7 +508,7 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
   }
 
   // Зберегти зміни
-  const handleSave = async (formData: any) => {
+  const handleSave = async (formData) => {
     if (!selectedProduct) return
     
     try {

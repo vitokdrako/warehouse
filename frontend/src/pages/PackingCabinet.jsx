@@ -4,26 +4,9 @@ import React, { useState, useEffect } from 'react'
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 
 /************** types **************/
-type OrderStatus = 'progress' | 'ready'
-
-interface PackingOrder {
-  id: string
-  order_id: string
-  client: string
-  eventDate: string
-  issueTime: string
-  returnTime: string
-  manager: string
-  status: OrderStatus
-  itemsCount: number
-  skuCount: number
-  progressPack: number
-  warehouseZone: string
-  notes: string
-}
 
 /************** small UI **************/
-function Badge({ tone = 'slate', children }: { tone?: string; children: React.ReactNode }) {
+function Badge({ tone = 'slate', children }: { tone?; children: React.ReactNode }) {
   const tones: Record<string, string> = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     blue: 'bg-sky-100 text-sky-700 border-sky-200',
@@ -49,8 +32,8 @@ function PillButton({
   tone = 'slate',
 }: {
   children: React.ReactNode
-  onClick?: () => void
-  tone?: string
+  onClick? void
+  tone?
 }) {
   const tones: Record<string, string> = {
     slate: 'bg-slate-900 text-white hover:bg-slate-800',
@@ -68,7 +51,7 @@ function PillButton({
   )
 }
 
-function ProgressBar({ value }: { value: number }) {
+function ProgressBar({ value }: { value }) {
   const v = Math.max(0, Math.min(100, value))
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
@@ -85,9 +68,9 @@ function PackingList({
   loading 
 }: { 
   orders: PackingOrder[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-  loading: boolean
+  selectedId | null
+  onSelect void
+  loading
 }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -106,9 +89,7 @@ function PackingList({
         <div className="py-8 text-center text-sm text-slate-500">Завантаження...</div>
       ) : orders.length === 0 ? (
         <div className="py-8 text-center text-sm text-slate-500">Немає замовлень в комплектації</div>
-      ) : (
-        <div className="space-y-2 text-xs">
-          {orders.map((o) => (
+      )  (
             <button
               key={o.id}
               type="button"
@@ -158,12 +139,12 @@ function PackingDetails({
   onFlagForDamage
 }: { 
   order: PackingOrder | null
-  loading: boolean
-  onMarkReady: (orderId: string) => void
-  onOpenIssueCard: (orderId: string) => void
-  onOpenReturnCard: (orderId: string) => void
-  onCreateChecklist: (orderId: string) => void
-  onFlagForDamage: (orderId: string) => void
+  loading
+  onMarkReady void
+  onOpenIssueCard void
+  onOpenReturnCard void
+  onCreateChecklist void
+  onFlagForDamage void
 }) {
   if (loading) {
     return (
@@ -332,9 +313,9 @@ export default function PackingCabinet({
   onNavigateToTasks,
   initialOrderId
 }: { 
-  onBackToDashboard: () => void
-  onNavigateToTasks?: (orderId: string, orderNumber: string) => void
-  initialOrderId?: string
+  onBackToDashboard void
+  onNavigateToTasks? void
+  initialOrderId?
 }) {
   const [orders, setOrders] = useState<PackingOrder[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -380,7 +361,7 @@ export default function PackingCabinet({
   }
 
   // Завантажити деталі вибраного замовлення
-  const loadOrderDetails = async (orderId: string) => {
+  const loadOrderDetails = async (orderId) => {
     setDetailsLoading(true)
     try {
       const response = await fetch(`${BACKEND_URL}/api/warehouse/packing-orders/${orderId}`)
@@ -405,7 +386,7 @@ export default function PackingCabinet({
   }, [selectedId])
 
   // Дії
-  const handleMarkReady = async (orderId: string) => {
+  const handleMarkReady = async (orderId) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/warehouse/packing-orders/${orderId}/mark-ready`, {
         method: 'PUT'
@@ -423,15 +404,15 @@ export default function PackingCabinet({
     }
   }
 
-  const handleOpenIssueCard = (orderId: string) => {
+  const handleOpenIssueCard = (orderId) => {
     alert(`Мок: відкрити повну картку видачі цього ордера у кабінеті менеджера (Issue Card: ${orderId}).`)
   }
 
-  const handleOpenReturnCard = (orderId: string) => {
+  const handleOpenReturnCard = (orderId) => {
     alert(`Мок: відкрити картку повернення цього ордера (Return Card) у кабінеті комірника для ${orderId}.`)
   }
 
-  const handleCreateChecklist = async (orderId: string) => {
+  const handleCreateChecklist = async (orderId) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/warehouse/packing-orders/${orderId}/return-checklist`, {
         method: 'POST',
@@ -449,7 +430,7 @@ export default function PackingCabinet({
     }
   }
 
-  const handleFlagForDamage = (orderId: string) => {
+  const handleFlagForDamage = (orderId) => {
     alert(`Мок: позначити, що після повернення треба перевірити цей ордер на можливі пошкодження (${orderId}).`)
   }
 

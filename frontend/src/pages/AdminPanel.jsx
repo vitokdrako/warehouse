@@ -4,30 +4,6 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.
 
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 
-type Tab = 'users' | 'categories'
-
-interface User {
-  user_id: number
-  username: string
-  email: string
-  firstname: string
-  lastname: string
-  role: string
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
-
-interface Category {
-  category_id: number
-  name: string
-  parent_id: number | null
-  description: string
-  sort_order: number
-  is_active: boolean
-  created_at: string
-}
-
 const ROLES = [
   { value: 'admin', label: '👑 Адміністратор' },
   { value: 'manager', label: '📊 Менеджер' },
@@ -143,7 +119,7 @@ export default function AdminPanel() {
     }
   }
 
-  const deleteUser = async (userId: number) => {
+  const deleteUser = async (userId) => {
     if (!window.confirm('Видалити користувача?')) return
     
     try {
@@ -196,7 +172,7 @@ export default function AdminPanel() {
     }
   }
 
-  const deleteCategory = async (categoryId: number) => {
+  const deleteCategory = async (categoryId) => {
     if (!window.confirm('Видалити категорію?')) return
     
     try {
@@ -219,7 +195,7 @@ export default function AdminPanel() {
     }
   }
 
-  const getCategoryName = (id: number | null) => {
+  const getCategoryName = (id | null) => {
     if (!id) return '-'
     return categories.find(c => c.category_id === id)?.name || '-'
   }

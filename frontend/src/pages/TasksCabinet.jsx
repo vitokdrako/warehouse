@@ -5,31 +5,9 @@ import { tasksAPI } from '../api/client'
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 
 /*************** types ***************/
-type TaskType = 'packing' | 'washing' | 'restoration' | 'reaudit' | 'return' | 'general'
-type TaskStatus = 'todo' | 'in_progress' | 'done'
-type TaskPriority = 'low' | 'medium' | 'high'
-
-interface Task {
-  id: string
-  order_id?: number
-  order_number?: string
-  damage_id?: string
-  damage_case_number?: string
-  title: string
-  description?: string
-  task_type: TaskType
-  status: TaskStatus
-  priority: TaskPriority
-  assigned_to?: string
-  due_date?: string
-  completed_at?: string
-  created_by: string
-  created_at: string
-  updated_at: string
-}
 
 /*************** small UI ***************/
-function Badge({ tone = 'slate', children }: { tone?: string; children: React.ReactNode }) {
+function Badge({ tone = 'slate', children }: { tone?; children: React.ReactNode }) {
   const tones: Record<string, string> = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     green: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -56,7 +34,7 @@ function PillButton({
   tone = 'slate',
 }: {
   children: React.ReactNode
-  onClick?: () => void
+  onClick? void
   tone?: 'slate' | 'green' | 'ghost' | 'red' | 'amber'
 }) {
   const tones: Record<string, string> = {
@@ -90,7 +68,7 @@ function StatusBadge({ status }: { status: TaskStatus }) {
 }
 
 function TaskTypeBadge({ type }: { type: TaskType }) {
-  const types: Record<TaskType, { label: string; tone: string }> = {
+  const types: Record<TaskType, { label; tone }> = {
     packing: { label: '📦 Комплектація', tone: 'blue' },
     washing: { label: '💧 Мийка', tone: 'sky' },
     restoration: { label: '🔧 Реставрація', tone: 'violet' },
@@ -108,9 +86,9 @@ export default function TasksCabinet({
   onNavigateToDamage,
   initialContext
 }: { 
-  onBackToDashboard?: () => void
-  onNavigateToDamage?: (damageId: string) => void
-  initialContext?: { orderId?: string; orderNumber?: string; damageId?: string; itemId?: string }
+  onBackToDashboard? void
+  onNavigateToDamage? void
+  initialContext?: { orderId?; orderNumber?; damageId?; itemId? }
 }) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -170,7 +148,7 @@ export default function TasksCabinet({
   }, [filteredTasks])
 
   // Update task status
-  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
+  const handleStatusChange = async (taskId, newStatus: TaskStatus) => {
     try {
       const updatedTask = await tasksAPI.update(taskId, { status: newStatus })
       setTasks(tasks.map((t) => (t.id === taskId ? updatedTask : t)))
@@ -184,7 +162,7 @@ export default function TasksCabinet({
   }
 
   // Update task assignee
-  const handleAssigneeChange = async (taskId: string, assignee: string) => {
+  const handleAssigneeChange = async (taskId, assignee) => {
     try {
       const updatedTask = await tasksAPI.update(taskId, { assigned_to: assignee })
       setTasks(tasks.map((t) => (t.id === taskId ? updatedTask : t)))
@@ -198,7 +176,7 @@ export default function TasksCabinet({
   }
 
   // Format date
-  const formatDate = (dateStr?: string) => {
+  const formatDate = (dateStr?) => {
     if (!dateStr) return '-'
     const date = new Date(dateStr)
     return date.toLocaleString('uk-UA', {
@@ -435,9 +413,9 @@ function TaskCard({
   onStatusChange,
 }: {
   task: Task
-  isOverdue: boolean
-  onClick: () => void
-  onStatusChange: (id: string, status: TaskStatus) => void
+  isOverdue
+  onClick void
+  onStatusChange void
 }) {
   return (
     <div
@@ -489,11 +467,11 @@ function TaskDetailsModal({
   onNavigateToDamage,
 }: {
   task: Task
-  onClose: () => void
-  onStatusChange: (id: string, status: TaskStatus) => void
-  onAssigneeChange: (id: string, assignee: string) => void
-  onUpdate: () => void
-  onNavigateToDamage?: (damageId: string) => void
+  onClose void
+  onStatusChange void
+  onAssigneeChange void
+  onUpdate void
+  onNavigateToDamage? void
 }) {
   const [assignee, setAssignee] = useState(task.assigned_to || '')
 
@@ -654,9 +632,9 @@ function CreateTaskModal({
   onSuccess, 
   prefilledData 
 }: { 
-  onClose: () => void
-  onSuccess: () => void
-  prefilledData?: any
+  onClose void
+  onSuccess void
+  prefilledData?
 }) {
   const [formData, setFormData] = useState({
     title: '',

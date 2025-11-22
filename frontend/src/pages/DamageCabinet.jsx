@@ -5,48 +5,12 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.
 
 /*************** helpers ***************/
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
-const fmtUA = (n: number) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
+const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 
 /*************** types ***************/
-type DamageSeverity = 'low' | 'medium' | 'high' | 'critical'
-type DamageStatus = 'draft' | 'awaiting_client' | 'awaiting_payment' | 'in_repair' | 'closed'
-type DamageSource = 'return' | 'reaudit' | 'other'
-
-interface DamageLine {
-  id: string
-  productName: string
-  sku: string
-  inventoryCode?: string
-  category: string
-  ruleLabel?: string
-  minAmount?: number
-  qty: number
-  amountPerUnit: number
-  total: number
-  note?: string
-  fromReauditItemId?: string
-  image?: string
-}
-
-interface DamageCase {
-  id: string
-  orderId?: string
-  source: DamageSource
-  fromReauditItemId?: string | null
-  createdAt: string
-  createdBy: string
-  clientName: string
-  eventName?: string
-  returnDate?: string
-  severity: DamageSeverity
-  status: DamageStatus
-  depositHold: number
-  lines: DamageLine[]
-  internalNote?: string
-}
 
 /*************** small UI ***************/
-function Badge({ tone = 'slate', children }: { tone?: string; children: React.ReactNode }) {
+function Badge({ tone = 'slate', children }: { tone?; children: React.ReactNode }) {
   const tones: Record<string, string> = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     green: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -73,7 +37,7 @@ function PillButton({
   tone = 'slate',
 }: {
   children: React.ReactNode
-  onClick?: () => void
+  onClick? void
   tone?: 'slate' | 'green' | 'ghost' | 'red' | 'amber'
 }) {
   const tones: Record<string, string> = {
@@ -102,7 +66,7 @@ function SeverityBadge({ severity }: { severity: DamageSeverity }) {
 }
 
 function StatusBadge({ status }: { status: DamageStatus }) {
-  const map: Record<DamageStatus, { label: string; tone: string }> = {
+  const map: Record<DamageStatus, { label; tone }> = {
     draft: { label: 'Чернетка', tone: 'slate' },
     awaiting_client: { label: 'Очікуємо підтвердження клієнта', tone: 'amber' },
     awaiting_payment: { label: 'Очікуємо оплату', tone: 'amber' },
@@ -119,9 +83,9 @@ export default function DamageCabinetPro({
   onNavigateToTasks,
   initialDamageId
 }: { 
-  onBackToDashboard?: () => void
-  onNavigateToTasks?: (damageId: string) => void
-  initialDamageId?: string
+  onBackToDashboard? void
+  onNavigateToTasks? void
+  initialDamageId?
 }) {
   const [cases, setCases] = useState<DamageCase[]>([])
   const [loading, setLoading] = useState(true)
@@ -144,7 +108,7 @@ export default function DamageCabinetPro({
       const data = await response.json()
       
       // Трансформувати дані з нового формату в старий формат для сумісності
-      const transformedData = data.map((item: any) => ({
+      const transformedData = data.map((item) => ({
         id: item.damage_id,
         orderId: null,
         clientName: item.product_name || 'Без назви',
@@ -214,7 +178,7 @@ export default function DamageCabinetPro({
     return { open, awaitingClient, awaitingPayment, inRepair, closed }
   }, [cases])
 
-  const updateCaseStatus = async (id: string, status: DamageStatus) => {
+  const updateCaseStatus = async (id, status: DamageStatus) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/damages/cases/${id}/status`, {
         method: 'PUT',
@@ -230,7 +194,7 @@ export default function DamageCabinetPro({
     }
   }
 
-  const editLineAmount = async (caseId: string, lineId: string) => {
+  const editLineAmount = async (caseId, lineId) => {
     const targetCase = cases.find((c) => c.id === caseId)
     if (!targetCase || !targetCase.lines) return
     const line = targetCase.lines.find((l) => l.id === lineId)
@@ -275,7 +239,7 @@ export default function DamageCabinetPro({
     }
   }
 
-  const addLine = async (caseId: string) => {
+  const addLine = async (caseId) => {
     const productName = prompt('Назва предмета?')
     if (!productName) return
     const sku = prompt('SKU / код (можна пропустити)?') || ''
@@ -751,8 +715,8 @@ function SendToClientModal({
   onSuccess,
 }: {
   damageCase: DamageCase
-  onClose: () => void
-  onSuccess: (method: 'email' | 'callbell') => void
+  onClose void
+  onSuccess void
 }) {
   const [selectedMethod, setSelectedMethod] = useState<'email' | 'callbell'>('email')
 
@@ -840,8 +804,8 @@ function CreateTaskFromDamageModal({
   onSuccess,
 }: {
   damageCase: DamageCase
-  onClose: () => void
-  onSuccess: () => void
+  onClose void
+  onSuccess void
 }) {
   const [formData, setFormData] = useState({
     title: `Реставрація - ${damageCase.clientName}`,

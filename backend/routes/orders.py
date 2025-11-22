@@ -978,9 +978,16 @@ async def check_availability(
             })
             continue
         
-        # Отримати загальну кількість товару
+        # Отримати інформацію про товар та кількість з inventory
         result = db.execute(text("""
-            SELECT quantity, sku, name FROM products WHERE product_id = :id
+            SELECT 
+                p.sku, 
+                p.name,
+                COALESCE(SUM(i.quantity), 0) as total_qty
+            FROM products p
+            LEFT JOIN inventory i ON p.product_id = i.product_id
+            WHERE p.product_id = :id
+            GROUP BY p.product_id, p.sku, p.name
         """), {"id": product_id})
         
         row = result.fetchone()
@@ -994,9 +1001,9 @@ async def check_availability(
             })
             continue
         
-        total_qty = row[0] or 0
-        product_sku = row[1]
-        product_name = row[2]
+        product_sku = row[0]
+        product_name = row[1]
+        total_qty = row[2] or 0
         
         # Порахувати скільки товару зарезервовано/в оренді в ці дати
         # Перевіряємо замовлення які перетинаються з нашими датами

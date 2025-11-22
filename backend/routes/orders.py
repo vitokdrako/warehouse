@@ -962,7 +962,7 @@ async def check_availability(
         # Якщо є SKU але немає product_id - шукаємо по SKU
         if not product_id and sku:
             sku_result = db.execute(text("""
-                SELECT product_id FROM products WHERE model = :sku OR sku = :sku LIMIT 1
+                SELECT product_id FROM products WHERE sku = :sku LIMIT 1
             """), {"sku": sku})
             sku_row = sku_result.fetchone()
             product_id = sku_row[0] if sku_row else None

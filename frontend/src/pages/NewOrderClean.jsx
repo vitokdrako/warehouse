@@ -68,54 +68,33 @@ const NewOrderClean = () => {
     updateItem(index, 'sku', sku);
     
     if (sku.length >= 3) {
-      console.log(`🔍 Searching for SKU: ${sku}`);
       try {
         // First try API search for exact SKU match
-        const url = `${BACKEND_URL}/api/inventory?search=${sku}`;
-        console.log(`📡 API URL: ${url}`);
-        const response = await axios.get(url);
-        console.log(`✅ API Response count: ${response.data.length}`);
-        console.log(`✅ API Response items:`, JSON.stringify(response.data, null, 2));
+        const response = await axios.get(`${BACKEND_URL}/api/inventory?search=${sku}`);
         
         if (response.data && response.data.length > 0) {
-          console.log(`🔎 Searching for SKU: "${sku.toLowerCase()}" in articles:`);
-          response.data.forEach((item, idx) => {
-            console.log(`  [${idx}] article: "${item.article}", matches: ${item.article && item.article.toLowerCase() === sku.toLowerCase()}`);
-          });
-          
           // Find exact match by SKU
           const found = response.data.find(item => 
             item.article && item.article.toLowerCase() === sku.toLowerCase()
           );
           
-          console.log(`Found exact match:`, found);
-          
           if (found) {
-            console.log(`✅ Updating item with: name=${found.name}, price=${found.price_per_day}`);
             updateItem(index, 'name', found.name);
             updateItem(index, 'price', found.price_per_day);
             updateItem(index, 'depositTier', found.deposit_tier || 'medium');
             return;
-          } else {
-            console.log(`⚠️ No exact SKU match found in API results`);
           }
-        } else {
-          console.log(`⚠️ API returned empty array`);
         }
         
         // Fallback to local search if API fails or no match
-        console.log(`🔍 Trying local search...`);
         const localFound = searchInventoryBySKU(sku);
         if (localFound) {
-          console.log(`✅ Found in local inventory:`, localFound);
           updateItem(index, 'name', localFound.name);
           updateItem(index, 'price', localFound.price_per_day);
           updateItem(index, 'depositTier', localFound.deposit_tier || 'medium');
-        } else {
-          console.log(`❌ Not found in local inventory either`);
         }
       } catch (error) {
-        console.error('❌ Error searching inventory:', error);
+        console.error('Error searching inventory:', error);
         // Try local search as fallback
         const localFound = searchInventoryBySKU(sku);
         if (localFound) {

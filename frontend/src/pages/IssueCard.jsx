@@ -751,9 +751,12 @@ export default function IssueCard(){
   
   useEffect(() => {
     if (order && items.length > 0) {
-      checkAvailability();
+      const timeoutId = setTimeout(() => {
+        checkAvailability();
+      }, 1000);
+      return () => clearTimeout(timeoutId);
     }
-  }, [order, items])
+  }, [order?.order_id, items.length])
 
   const loadOrder = async ()=>{
     try {

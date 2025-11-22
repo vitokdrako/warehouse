@@ -1024,7 +1024,7 @@ export default function IssueCard(){
         <Timeline events={events} />
       </div>
 
-      <ItemsTable items={items} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} />
+      <ItemsTable items={items} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} availability={availability} />
       
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Checklist check={checklist} setCheck={setChecklist} />

@@ -464,8 +464,14 @@ async def update_order(
     if 'rental_start_date' in data and 'rental_end_date' in data:
         start = datetime.fromisoformat(data['rental_start_date'])
         end = datetime.fromisoformat(data['rental_end_date'])
-        if end <= start:
-            raise HTTPException(status_code=400, detail="End date must be after start date")
+        if end < start:
+            raise HTTPException(status_code=400, detail="End date cannot be before start date")
+        
+        # Якщо той самий день - рахуємо як 1 день оренди
+        rental_days = (end - start).days
+        if rental_days == 0:
+            rental_days = 1
+            data['rental_days'] = rental_days
     
     # Build update
     set_clauses = []

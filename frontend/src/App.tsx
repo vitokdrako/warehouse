@@ -3,25 +3,25 @@ import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } f
 import './App.css';
 
 // Import pages
-import Login from './pages/Login.jsx';
-import DashboardHome from './pages/DashboardHome.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import ManagerDashboard from './pages/ManagerDashboard.jsx';
-import ReauditCabinetFull from './pages/ReauditCabinetFull.jsx';
-import DamageCabinet from './pages/DamageCabinet.jsx';
-import TasksCabinet from './pages/TasksCabinet.jsx';
-import PackingCabinet from './pages/PackingCabinet.tsx';
-import AdminPanel from './pages/AdminPanel.jsx';
-import ExtendedCatalog from './pages/ExtendedCatalog.jsx';
-import CalendarBoard from './pages/CalendarBoard.jsx';
-import CatalogBoard from './pages/CatalogBoard.jsx';
-import FinanceCabinet from './pages/FinanceCabinet.jsx';
-import NewOrderClean from './pages/NewOrderClean.jsx';
-import NewOrderView from './pages/NewOrderView.jsx';
-import IssueOrderClean from './pages/IssueOrderClean.jsx';
-import IssueCard from './pages/IssueCard.jsx';
-import ReturnOrderClean from './pages/ReturnOrderClean.jsx';
-import InventoryRecount from './pages/InventoryRecount.jsx';
+import Login from './pages/Login';
+import DashboardHome from './pages/DashboardHome';
+import Dashboard from './pages/Dashboard';
+import ManagerDashboard from './pages/ManagerDashboard';
+import ReauditCabinetFull from './pages/ReauditCabinetFull';
+import DamageCabinet from './pages/DamageCabinet';
+import TasksCabinet from './pages/TasksCabinet';
+import PackingCabinet from './pages/PackingCabinet';
+import AdminPanel from './pages/AdminPanel';
+import ExtendedCatalog from './pages/ExtendedCatalog';
+import CalendarBoard from './pages/CalendarBoard';
+import CatalogBoard from './pages/CatalogBoard';
+import FinanceCabinet from './pages/FinanceCabinet';
+import NewOrderClean from './pages/NewOrderClean';
+import NewOrderView from './pages/NewOrderView';
+import IssueOrderClean from './pages/IssueOrderClean';
+import IssueCard from './pages/IssueCard';
+import ReturnOrderClean from './pages/ReturnOrderClean';
+import InventoryRecount from './pages/InventoryRecount';
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

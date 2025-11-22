@@ -48,7 +48,7 @@ function Card({title, right=null, children}){
 }
 
 /*********************** Subcomponents ************************/ 
-function Header({order, issueCard, onUpdateDates}){
+function Header({order, issueCard}){
   // Використовуємо статус з issue_card
   const statusMap = {
     'preparation': { text: 'На комплектації', tone: 'amber' },
@@ -57,20 +57,6 @@ function Header({order, issueCard, onUpdateDates}){
   }
   
   const statusInfo = statusMap[issueCard?.status] || { text: 'В обробці', tone: 'slate' }
-  const [editMode, setEditMode] = useState(false)
-  const [issueDate, setIssueDate] = useState(order?.rent_issue_date || todayISO())
-  const [returnDate, setReturnDate] = useState(order?.rent_return_date || todayISO())
-  
-  // Sync dates when order changes
-  useEffect(() => {
-    if (order?.rent_issue_date) setIssueDate(order.rent_issue_date)
-    if (order?.rent_return_date) setReturnDate(order.rent_return_date)
-  }, [order?.rent_issue_date, order?.rent_return_date])
-  
-  const handleSaveDates = () => {
-    onUpdateDates(issueDate, returnDate)
-    setEditMode(false)
-  }
   
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -79,34 +65,11 @@ function Header({order, issueCard, onUpdateDates}){
         <Badge tone={statusInfo.tone}>{statusInfo.text}</Badge>
       </div>
       <div className="flex flex-col items-end text-sm text-slate-600">
-        {!editMode ? (
-          <div className="flex items-center gap-2">
-            <span>Дата видачі: <b>{order.rent_issue_date || todayISO()}</b></span>
-            <span className="mx-1">·</span>
-            <span>Повернення: <b>{order.rent_return_date || todayISO()}</b></span>
-            {issueCard?.status !== 'issued' && (
-              <button onClick={() => setEditMode(true)} className="ml-2 text-blue-600 hover:text-blue-800 text-lg">✏️</button>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <input 
-              type="date" 
-              value={issueDate}
-              onChange={e => setIssueDate(e.target.value)}
-              className="rounded border px-2 py-1 text-xs"
-            />
-            <span>→</span>
-            <input 
-              type="date" 
-              value={returnDate}
-              onChange={e => setReturnDate(e.target.value)}
-              className="rounded border px-2 py-1 text-xs"
-            />
-            <button onClick={handleSaveDates} className="ml-2 text-green-600 hover:text-green-800 text-lg">✅</button>
-            <button onClick={() => setEditMode(false)} className="text-red-600 hover:text-red-800 text-lg">❌</button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <span>Дата видачі: <b>{order.rent_issue_date || todayISO()}</b></span>
+          <span className="mx-1">·</span>
+          <span>Повернення: <b>{order.rent_return_date || todayISO()}</b></span>
+        </div>
         <div className="mt-1"><Badge tone='slate'>Замовлення від: {order.date_added?.slice(0,10) || '—'}</Badge></div>
       </div>
     </div>
@@ -956,28 +919,6 @@ export default function IssueCard(){
     }
   }
   
-  const updateOrderDates = async (issueDate, returnDate) => {
-    try {
-      // Оновити дати в замовленні
-      await axios.put(`${BACKEND_URL}/api/orders/${order.order_id}`, {
-        rental_start_date: issueDate,
-        rental_end_date: returnDate
-      })
-      
-      // Оновити локальний стан
-      setOrder(o => ({
-        ...o,
-        rent_issue_date: issueDate,
-        rent_return_date: returnDate
-      }))
-      
-      toast({ title: '✅ Успіх', description: 'Дати оновлено' })
-    } catch(e){
-      console.error('Error updating dates:', e)
-      toast({ title: '❌ Помилка збереження', description: e.response?.data?.detail || 'Не вдалося оновити дати', variant: 'destructive' })
-    }
-  }
-  
   const markIssued = async ()=>{
     try {
       // Підготувати дані для завершення видачі
@@ -1008,7 +949,7 @@ export default function IssueCard(){
 
   return (
     <div className="mx-auto max-w-7xl p-6 space-y-6">
-      <Header order={order} issueCard={issueCard} onUpdateDates={updateOrderDates} />
+      <Header order={order} issueCard={issueCard} />
 
       {/* Top summary */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

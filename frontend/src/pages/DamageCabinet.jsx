@@ -66,7 +66,7 @@ function SeverityBadge({ severity }: { severity: DamageSeverity }) {
 }
 
 function StatusBadge({ status }: { status: DamageStatus }) {
-  const map: Record<DamageStatus, { label; tone }> = {
+  const map = {
     draft: { label: 'Чернетка', tone: 'slate' },
     awaiting_client: { label: 'Очікуємо підтвердження клієнта', tone: 'amber' },
     awaiting_payment: { label: 'Очікуємо оплату', tone: 'amber' },

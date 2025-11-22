@@ -144,12 +144,12 @@ function CalendarToolbar({ view, setView, date, setDate }) {
 }
 
 function OrderCardComponent({ card, onOpenFull }: { card: OrderCard; onOpenFull? void }) {
-  const palette: Record<string, string> = {
+  const palette = {
     emerald: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     amber: 'bg-amber-100 text-amber-800 border-amber-200',
     sky: 'bg-sky-100 text-sky-800 border-sky-200',
   }
-  const statusLabel: Record<string, string> = {
+  const statusLabel = {
     scheduled: 'Заплановано',
     progress: 'Комплектація',
     done: 'Завершено',

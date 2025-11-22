@@ -7,7 +7,7 @@ const cls = (...a) => a.filter(Boolean).join(' ')
 
 /************** small UI **************/
 function Badge({ tone = 'slate', children }: { tone?; children: React.ReactNode }) {
-  const tones: Record<string, string> = {
+  const tones = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     blue: 'bg-sky-100 text-sky-700 border-sky-200',
     green: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -35,7 +35,7 @@ function PillButton({
   onClick? void
   tone?
 }) {
-  const tones: Record<string, string> = {
+  const tones = {
     slate: 'bg-slate-900 text-white hover:bg-slate-800',
     green: 'bg-emerald-600 text-white hover:bg-emerald-700',
     ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 border border-slate-200',

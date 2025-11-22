@@ -42,6 +42,50 @@ const NewOrderClean = () => {
     loadInventory();
   }, []);
 
+  const checkAvailability = async () => {
+    if (!issueDate || !returnDate || items.length === 0) {
+      return;
+    }
+    
+    const itemsToCheck = items.filter(item => item.sku && item.qty > 0);
+    if (itemsToCheck.length === 0) {
+      return;
+    }
+    
+    try {
+      setCheckingAvailability(true);
+      const response = await axios.post(`${BACKEND_URL}/api/orders/check-availability`, {
+        start_date: issueDate,
+        end_date: returnDate,
+        items: itemsToCheck.map(item => ({
+          sku: item.sku,
+          quantity: item.qty
+        }))
+      });
+      
+      // Створити мапу доступності по SKU
+      const availabilityMap = {};
+      response.data.items.forEach(item => {
+        availabilityMap[item.sku] = item;
+      });
+      
+      setAvailability(availabilityMap);
+    } catch (error) {
+      console.error('Error checking availability:', error);
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+  
+  // Перевірка доступності при зміні дат або товарів
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      checkAvailability();
+    }, 500); // Debounce 500ms
+    
+    return () => clearTimeout(timeoutId);
+  }, [issueDate, returnDate, items]);
+
   const loadInventory = async () => {
     try {
       setLoadingInventory(true);

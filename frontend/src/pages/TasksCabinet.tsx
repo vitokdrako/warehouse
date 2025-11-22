@@ -2,13 +2,35 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { tasksAPI } from '../api/client'
 
 /*************** helpers ***************/
-const cls = (...a) => a.filter(Boolean).join(' ')
+const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 
 /*************** types ***************/
+type TaskType = 'packing' | 'washing' | 'restoration' | 'reaudit' | 'return' | 'general'
+type TaskStatus = 'todo' | 'in_progress' | 'done'
+type TaskPriority = 'low' | 'medium' | 'high'
+
+interface Task {
+  id: string
+  order_id?: number
+  order_number?: string
+  damage_id?: string
+  damage_case_number?: string
+  title: string
+  description?: string
+  task_type: TaskType
+  status: TaskStatus
+  priority: TaskPriority
+  assigned_to?: string
+  due_date?: string
+  completed_at?: string
+  created_by: string
+  created_at: string
+  updated_at: string
+}
 
 /*************** small UI ***************/
-function Badge({ tone = 'slate', children }) {
-  const tones = {
+function Badge({ tone = 'slate', children }: { tone?: string; children: React.ReactNode }) {
+  const tones: Record<string, string> = {
     slate: 'bg-slate-100 text-slate-700 border-slate-200',
     green: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     blue: 'bg-sky-100 text-sky-700 border-sky-200',
@@ -34,10 +56,10 @@ function PillButton({
   tone = 'slate',
 }: {
   children: React.ReactNode
-  onClick? void
+  onClick?: () => void
   tone?: 'slate' | 'green' | 'ghost' | 'red' | 'amber'
 }) {
-  const tones = {
+  const tones: Record<string, string> = {
     slate: 'bg-slate-900 text-white hover:bg-slate-800',
     green: 'bg-emerald-600 text-white hover:bg-emerald-700',
     red: 'bg-rose-600 text-white hover:bg-rose-700',
@@ -68,7 +90,7 @@ function StatusBadge({ status }: { status: TaskStatus }) {
 }
 
 function TaskTypeBadge({ type }: { type: TaskType }) {
-  const types = {
+  const types: Record<TaskType, { label: string; tone: string }> = {
     packing: { label: '📦 Комплектація', tone: 'blue' },
     washing: { label: '💧 Мийка', tone: 'sky' },
     restoration: { label: '🔧 Реставрація', tone: 'violet' },
@@ -86,20 +108,20 @@ export default function TasksCabinet({
   onNavigateToDamage,
   initialContext
 }: { 
-  onBackToDashboard? void
-  onNavigateToDamage? void
-  initialContext?: { orderId?; orderNumber?; damageId?; itemId? }
+  onBackToDashboard?: () => void
+  onNavigateToDamage?: (damageId: string) => void
+  initialContext?: { orderId?: string; orderNumber?: string; damageId?: string; itemId?: string }
 }) {
-  const [tasks, setTasks] = useState([])
-  const [selectedTask, setSelectedTask] = useState(null)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
-  const [filterType, setFilterType] = useState('all')
-  const [filterPriority, setFilterPriority] = useState('all')
+  const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterType, setFilterType] = useState<string>('all')
+  const [filterPriority, setFilterPriority] = useState<string>('all')
 
   // Pre-fill form if coming from another cabinet
   const [prefilledData, setPrefilledData] = useState(initialContext || {})
@@ -148,7 +170,7 @@ export default function TasksCabinet({
   }, [filteredTasks])
 
   // Update task status
-  const handleStatusChange = async (taskId, newStatus: TaskStatus) => {
+  const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
     try {
       const updatedTask = await tasksAPI.update(taskId, { status: newStatus })
       setTasks(tasks.map((t) => (t.id === taskId ? updatedTask : t)))
@@ -162,7 +184,7 @@ export default function TasksCabinet({
   }
 
   // Update task assignee
-  const handleAssigneeChange = async (taskId, assignee) => {
+  const handleAssigneeChange = async (taskId: string, assignee: string) => {
     try {
       const updatedTask = await tasksAPI.update(taskId, { assigned_to: assignee })
       setTasks(tasks.map((t) => (t.id === taskId ? updatedTask : t)))
@@ -176,7 +198,7 @@ export default function TasksCabinet({
   }
 
   // Format date
-  const formatDate = (dateStr?) => {
+  const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-'
     const date = new Date(dateStr)
     return date.toLocaleString('uk-UA', {
@@ -189,7 +211,7 @@ export default function TasksCabinet({
   }
 
   // Check if overdue
-  const isOverdue = (task) => {
+  const isOverdue = (task: Task) => {
     if (!task.due_date || task.status === 'done') return false
     return new Date(task.due_date) < new Date()
   }
@@ -413,9 +435,9 @@ function TaskCard({
   onStatusChange,
 }: {
   task: Task
-  isOverdue
-  onClick void
-  onStatusChange void
+  isOverdue: boolean
+  onClick: () => void
+  onStatusChange: (id: string, status: TaskStatus) => void
 }) {
   return (
     <div
@@ -467,11 +489,11 @@ function TaskDetailsModal({
   onNavigateToDamage,
 }: {
   task: Task
-  onClose void
-  onStatusChange void
-  onAssigneeChange void
-  onUpdate void
-  onNavigateToDamage? void
+  onClose: () => void
+  onStatusChange: (id: string, status: TaskStatus) => void
+  onAssigneeChange: (id: string, assignee: string) => void
+  onUpdate: () => void
+  onNavigateToDamage?: (damageId: string) => void
 }) {
   const [assignee, setAssignee] = useState(task.assigned_to || '')
 
@@ -632,9 +654,9 @@ function CreateTaskModal({
   onSuccess, 
   prefilledData 
 }: { 
-  onClose void
-  onSuccess void
-  prefilledData?
+  onClose: () => void
+  onSuccess: () => void
+  prefilledData?: any
 }) {
   const [formData, setFormData] = useState({
     title: '',

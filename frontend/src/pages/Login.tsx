@@ -37,7 +37,7 @@ export default function Login() {
       // Navigate to dashboard
       navigate('/dashboard')
       window.location.reload() // Reload to update navigation
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || 'Помилка авторизації')
     } finally {
       setLoading(false)

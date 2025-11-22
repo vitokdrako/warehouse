@@ -2,7 +2,31 @@ import React, { useState, useEffect } from 'react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
 
-const cls = (...a) => a.filter(Boolean).join(' ')
+const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
+
+type Tab = 'users' | 'categories'
+
+interface User {
+  user_id: number
+  username: string
+  email: string
+  firstname: string
+  lastname: string
+  role: string
+  is_active: boolean
+  created_at: string
+  last_login?: string
+}
+
+interface Category {
+  category_id: number
+  name: string
+  parent_id: number | null
+  description: string
+  sort_order: number
+  is_active: boolean
+  created_at: string
+}
 
 const ROLES = [
   { value: 'admin', label: '👑 Адміністратор' },
@@ -12,14 +36,14 @@ const ROLES = [
 ]
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState('users')
-  const [users, setUsers] = useState([])
-  const [categories, setCategories] = useState([])
+  const [activeTab, setActiveTab] = useState<Tab>('users')
+  const [users, setUsers] = useState<User[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
   
   // User form
   const [showUserForm, setShowUserForm] = useState(false)
-  const [editingUser, setEditingUser] = useState(null)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
   const [userForm, setUserForm] = useState({
     username: '',
     email: '',
@@ -31,10 +55,10 @@ export default function AdminPanel() {
   
   // Category form
   const [showCategoryForm, setShowCategoryForm] = useState(false)
-  const [editingCategory, setEditingCategory] = useState(null)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [categoryForm, setCategoryForm] = useState({
     name: '',
-    parent_id: null,
+    parent_id: null as number | null,
     description: '',
     sort_order: 0
   })
@@ -119,7 +143,7 @@ export default function AdminPanel() {
     }
   }
 
-  const deleteUser = async (userId) => {
+  const deleteUser = async (userId: number) => {
     if (!window.confirm('Видалити користувача?')) return
     
     try {
@@ -172,7 +196,7 @@ export default function AdminPanel() {
     }
   }
 
-  const deleteCategory = async (categoryId) => {
+  const deleteCategory = async (categoryId: number) => {
     if (!window.confirm('Видалити категорію?')) return
     
     try {
@@ -195,7 +219,7 @@ export default function AdminPanel() {
     }
   }
 
-  const getCategoryName = (id) => {
+  const getCategoryName = (id: number | null) => {
     if (!id) return '-'
     return categories.find(c => c.category_id === id)?.name || '-'
   }

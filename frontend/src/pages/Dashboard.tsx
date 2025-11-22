@@ -2,10 +2,25 @@ import React, { useState, useEffect } from 'react'
 import { warehouseAPI } from '../api/client'
 
 // Small helpers
-const cls = (...a) => a.filter(Boolean).join(' ')
+const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 const hours = Array.from({ length: 12 }, (_, i) => 8 + i) // 08–19
 
-function TopTiles({ active, onTileClick }: { active; onTileClick void }) {
+interface OrderCard {
+  id: string
+  order_id?: string
+  type: 'issue' | 'return'
+  time: string
+  date?: string
+  client: string
+  label: string
+  color: string
+  status: string
+  itemsSummary: string
+  itemsCount: number
+  warehouseZone: string
+}
+
+function TopTiles({ active, onTileClick }: { active: string; onTileClick: (key: string) => void }) {
   // Get user role from localStorage
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const isManager = user.role === 'manager' || user.role === 'admin'
@@ -84,11 +99,11 @@ function TopTiles({ active, onTileClick }: { active; onTileClick void }) {
   )
 }
 
-function CalendarToolbar({ view, setView, date, setDate }) {
-  const formatDate = (d) =>
+function CalendarToolbar({ view, setView, date, setDate }: any) {
+  const formatDate = (d: Date) =>
     d.toLocaleDateString('uk-UA', { weekday: 'short', day: '2-digit', month: 'short' })
 
-  const shift = (delta) => {
+  const shift = (delta: number) => {
     const d = new Date(date)
     d.setDate(d.getDate() + (view === 'day' ? delta : delta * 7))
     setDate(d)
@@ -143,13 +158,13 @@ function CalendarToolbar({ view, setView, date, setDate }) {
   )
 }
 
-function OrderCardComponent({ card, onOpenFull }: { card: OrderCard; onOpenFull? void }) {
-  const palette = {
+function OrderCardComponent({ card, onOpenFull }: { card: OrderCard; onOpenFull?: (card: OrderCard) => void }) {
+  const palette: Record<string, string> = {
     emerald: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     amber: 'bg-amber-100 text-amber-800 border-amber-200',
     sky: 'bg-sky-100 text-sky-800 border-sky-200',
   }
-  const statusLabel = {
+  const statusLabel: Record<string, string> = {
     scheduled: 'Заплановано',
     progress: 'Комплектація',
     done: 'Завершено',
@@ -200,7 +215,7 @@ function OrderCardComponent({ card, onOpenFull }: { card: OrderCard; onOpenFull?
   )
 }
 
-function DayGrid({ view, cards, onDrop, onOpenCard }: { view: 'day' | 'week', cards: OrderCard[], onDrop void, onOpenCard? void }) {
+function DayGrid({ view, cards, onDrop, onOpenCard }: { view: 'day' | 'week', cards: OrderCard[], onDrop: (data: any, slot: any) => void, onOpenCard?: (card: OrderCard) => void }) {
   const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
   }
@@ -300,20 +315,20 @@ export default function RentalHubRekvisitorDashboard({
   onNavigateToFinance,
   onNavigateToCatalogBoard
 }: { 
-  onNavigateToCatalog? void
-  onNavigateToAudit? void
-  onNavigateToDamage? void
-  onNavigateToTasks? void
-  onNavigateToOrders? void
-  onNavigateToFinance? void
-  onNavigateToCatalogBoard? void
+  onNavigateToCatalog?: () => void
+  onNavigateToAudit?: () => void
+  onNavigateToDamage?: () => void
+  onNavigateToTasks?: () => void
+  onNavigateToOrders?: () => void
+  onNavigateToFinance?: () => void
+  onNavigateToCatalogBoard?: () => void
 }) {
-  const [view, setView] = useState('day')
-  const [date, setDate] = useState(new Date())
-  const [cards, setCards] = useState([])
-  const [dashboardStats, setDashboardStats] = useState(null)
+  const [view, setView] = useState<'day' | 'week'>('day')
+  const [date, setDate] = useState<Date>(new Date())
+  const [cards, setCards] = useState<OrderCard[]>([])
+  const [dashboardStats, setDashboardStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedCard, setSelectedCard] = useState(null)
+  const [selectedCard, setSelectedCard] = useState<OrderCard | null>(null)
 
   useEffect(() => {
     loadDashboard()
@@ -355,7 +370,7 @@ export default function RentalHubRekvisitorDashboard({
     }
   }
 
-  const handleDrop = async (dragData, slot) => {
+  const handleDrop = async (dragData: any, slot: any) => {
     try {
       const newTime = slot.hour ? `${slot.hour.toString().padStart(2, '0')}:00` : '10:00'
       const newDate = date.toISOString().split('T')[0]
@@ -458,7 +473,7 @@ export default function RentalHubRekvisitorDashboard({
 }
 
 /*************** Full Card Modal ***************/
-function FullCardModal({ card, onClose }: { card: OrderCard; onClose void }) {
+function FullCardModal({ card, onClose }: { card: OrderCard; onClose: () => void }) {
   const cardTypeLabel = card.type === 'issue' ? '📦 Картка видачі' : '↩️ Картка повернення'
   const cardTypeColor = card.type === 'issue' ? 'from-blue-600 to-indigo-600' : 'from-emerald-600 to-green-600'
 

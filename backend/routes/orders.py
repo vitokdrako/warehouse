@@ -60,12 +60,24 @@ class OrderCreate(BaseModel):
     customer_name: str
     customer_phone: str
     customer_email: Optional[str] = None
-    rental_start_date: str
-    rental_end_date: str
+    rental_start_date: Optional[str] = None
+    rental_end_date: Optional[str] = None
+    issue_date: Optional[str] = None  # Alias для rental_start_date
+    return_date: Optional[str] = None  # Alias для rental_end_date
     items: List[dict]
     total_amount: float
     deposit_amount: float
     notes: Optional[str] = None
+    
+    @property
+    def start_date(self):
+        """Get start date from either field"""
+        return self.rental_start_date or self.issue_date
+    
+    @property
+    def end_date(self):
+        """Get end date from either field"""
+        return self.rental_end_date or self.return_date
 
 # ============================================================
 # HELPER FUNCTIONS

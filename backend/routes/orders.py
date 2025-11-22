@@ -980,7 +980,7 @@ async def check_availability(
         
         # Отримати загальну кількість товару
         result = db.execute(text("""
-            SELECT quantity, model, name FROM products WHERE product_id = :id
+            SELECT quantity, sku, name FROM products WHERE product_id = :id
         """), {"id": product_id})
         
         row = result.fetchone()

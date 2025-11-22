@@ -195,7 +195,7 @@ export default function AdminPanel() {
     }
   }
 
-  const getCategoryName = (id | null) => {
+  const getCategoryName = (id) => {
     if (!id) return '-'
     return categories.find(c => c.category_id === id)?.name || '-'
   }

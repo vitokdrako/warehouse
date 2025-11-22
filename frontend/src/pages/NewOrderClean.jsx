@@ -504,7 +504,28 @@ const NewOrderClean = () => {
                           </select>
                         </td>
                         <td className="px-4 py-2">
-                          <Badge value="in_stock" />
+                          {availability[item.sku] ? (
+                            <div className="text-xs">
+                              <div className={`font-medium ${availability[item.sku].is_available ? 'text-green-600' : 'text-red-600'}`}>
+                                {availability[item.sku].is_available ? '✓ Доступно' : '✗ Недоступно'}
+                              </div>
+                              <div className="text-slate-500 mt-1">
+                                <div>Всього: {availability[item.sku].total_quantity}</div>
+                                <div>В оренді: {availability[item.sku].reserved_quantity}</div>
+                                <div>Доступно: {availability[item.sku].available_quantity}</div>
+                                <div>Запитано: {availability[item.sku].requested_quantity}</div>
+                              </div>
+                              {!availability[item.sku].is_available && (
+                                <div className="mt-1 text-red-600 font-medium">
+                                  {availability[item.sku].message}
+                                </div>
+                              )}
+                            </div>
+                          ) : checkingAvailability ? (
+                            <div className="text-xs text-slate-400">Перевірка...</div>
+                          ) : (
+                            <Badge value="in_stock" />
+                          )}
                         </td>
                         <td className="px-4 py-2">
                           <div className="flex gap-2">

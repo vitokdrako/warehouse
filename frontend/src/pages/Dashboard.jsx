@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { warehouseAPI } from '../api/client'
 
 // Small helpers
-const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
+const cls = (...a) => a.filter(Boolean).join(' ')
 const hours = Array.from({ length: 12 }, (_, i) => 8 + i) // 08–19
 
 function TopTiles({ active, onTileClick }: { active; onTileClick void }) {
@@ -85,7 +85,7 @@ function TopTiles({ active, onTileClick }: { active; onTileClick void }) {
 }
 
 function CalendarToolbar({ view, setView, date, setDate }) {
-  const formatDate = (d: Date) =>
+  const formatDate = (d) =>
     d.toLocaleDateString('uk-UA', { weekday: 'short', day: '2-digit', month: 'short' })
 
   const shift = (delta) => {
@@ -308,12 +308,12 @@ export default function RentalHubRekvisitorDashboard({
   onNavigateToFinance? void
   onNavigateToCatalogBoard? void
 }) {
-  const [view, setView] = useState<'day' | 'week'>('day')
-  const [date, setDate] = useState<Date>(new Date())
-  const [cards, setCards] = useState<OrderCard[]>([])
-  const [dashboardStats, setDashboardStats] = useState<any>(null)
+  const [view, setView] = useState('day')
+  const [date, setDate] = useState(new Date())
+  const [cards, setCards] = useState([])
+  const [dashboardStats, setDashboardStats] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [selectedCard, setSelectedCard] = useState<OrderCard | null>(null)
+  const [selectedCard, setSelectedCard] = useState(null)
 
   useEffect(() => {
     loadDashboard()

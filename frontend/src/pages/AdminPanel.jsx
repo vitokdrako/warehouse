@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
 
-const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
+const cls = (...a) => a.filter(Boolean).join(' ')
 
 const ROLES = [
   { value: 'admin', label: '👑 Адміністратор' },
@@ -12,14 +12,14 @@ const ROLES = [
 ]
 
 export default function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<Tab>('users')
-  const [users, setUsers] = useState<User[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const [activeTab, setActiveTab] = useState('users')
+  const [users, setUsers] = useState([])
+  const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(false)
   
   // User form
   const [showUserForm, setShowUserForm] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editingUser, setEditingUser] = useState(null)
   const [userForm, setUserForm] = useState({
     username: '',
     email: '',
@@ -31,7 +31,7 @@ export default function AdminPanel() {
   
   // Category form
   const [showCategoryForm, setShowCategoryForm] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [editingCategory, setEditingCategory] = useState(null)
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     parent_id: null as number | null,

@@ -4,7 +4,7 @@ import { getImageUrl } from '../utils/imageHelper'
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
 
 /*************** helpers ***************/
-const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
+const cls = (...a) => a.filter(Boolean).join(' ')
 const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 
 /*************** types ***************/
@@ -87,13 +87,13 @@ export default function DamageCabinetPro({
   onNavigateToTasks? void
   initialDamageId?
 }) {
-  const [cases, setCases] = useState<DamageCase[]>([])
+  const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedId, setSelectedId] = useState<string | null>(initialDamageId || null)
+  const [selectedId, setSelectedId] = useState(initialDamageId || null)
   const [q, setQ] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | DamageStatus>('all')
-  const [severityFilter, setSeverityFilter] = useState<'all' | DamageSeverity>('all')
-  const [sourceFilter, setSourceFilter] = useState<'all' | DamageSource>('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [severityFilter, setSeverityFilter] = useState('all')
+  const [sourceFilter, setSourceFilter] = useState('all')
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
 
@@ -271,7 +271,7 @@ export default function DamageCabinetPro({
     }
   }
 
-  const openInFinance = (c: DamageCase) => {
+  const openInFinance = (c) => {
     alert(
       `Мок: кейс ${c.id} буде відправлено у фінансовий кабінет (manager frontend) з прив'язкою до замовлення ${
         c.orderId || '—'
@@ -279,7 +279,7 @@ export default function DamageCabinetPro({
     )
   }
 
-  const openInReaudit = (c: DamageCase) => {
+  const openInReaudit = (c) => {
     if (!c.fromReauditItemId) {
       alert('Для цього кейсу немає привʼязки до переобліку.')
       return
@@ -718,7 +718,7 @@ function SendToClientModal({
   onClose void
   onSuccess void
 }) {
-  const [selectedMethod, setSelectedMethod] = useState<'email' | 'callbell'>('email')
+  const [selectedMethod, setSelectedMethod] = useState('email')
 
   const handleSend = async () => {
     if (selectedMethod === 'email') {

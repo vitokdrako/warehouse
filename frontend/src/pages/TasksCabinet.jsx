@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react'
 import { tasksAPI } from '../api/client'
 
 /*************** helpers ***************/
-const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
+const cls = (...a) => a.filter(Boolean).join(' ')
 
 /*************** types ***************/
 
@@ -90,16 +90,16 @@ export default function TasksCabinet({
   onNavigateToDamage? void
   initialContext?: { orderId?; orderNumber?; damageId?; itemId? }
 }) {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [tasks, setTasks] = useState([])
+  const [selectedTask, setSelectedTask] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterType, setFilterType] = useState<string>('all')
-  const [filterPriority, setFilterPriority] = useState<string>('all')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [filterType, setFilterType] = useState('all')
+  const [filterPriority, setFilterPriority] = useState('all')
 
   // Pre-fill form if coming from another cabinet
   const [prefilledData, setPrefilledData] = useState(initialContext || {})
@@ -189,7 +189,7 @@ export default function TasksCabinet({
   }
 
   // Check if overdue
-  const isOverdue = (task: Task) => {
+  const isOverdue = (task) => {
     if (!task.due_date || task.status === 'done') return false
     return new Date(task.due_date) < new Date()
   }

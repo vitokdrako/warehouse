@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react'
 
 /**************** helpers ****************/
-const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
+const cls = (...a) => a.filter(Boolean).join(' ')
 const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 
 /**************** types ****************/
@@ -460,10 +460,10 @@ function HistoryTab({ product }: { product: Product }) {
 
 /**************** main component ****************/
 export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboard void }) {
-  const [products, setProducts] = useState<Product[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [activeTab, setActiveTab] = useState<'passport' | 'inventory' | 'history'>('passport')
+  const [products, setProducts] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [activeTab, setActiveTab] = useState('passport')
   const [loading, setLoading] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
 

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 
-const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
+const cls = (...a) => a.filter(Boolean).join(' ')
 const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
@@ -60,18 +60,18 @@ export default function ReauditCabinetFull({
   onBackToDashboard void
   onNavigateToTasks? void
 }) {
-  const [items, setItems] = useState<AuditItem[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [items, setItems] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [q, setQ] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState<'all' | string>('all')
-  const [subcategoryFilter, setSubcategoryFilter] = useState<'all' | string>('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [subcategoryFilter, setSubcategoryFilter] = useState('all')
   const [stats, setStats] = useState({ total: 0, ok: 0, minor: 0, crit: 0, lost: 0, overdueCnt: 0 })
-  const [sortByAudit, setSortByAudit] = useState<'all' | 'audited' | 'notAudited'>('all')
+  const [sortByAudit, setSortByAudit] = useState('all')
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [uploadedImage, setUploadedImage] = useState<{path; url} | null>(null)
+  const [uploadedImage, setUploadedImage] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
-  const [rentalHistory, setRentalHistory] = useState<RentalHistoryItem[]>([])
+  const [rentalHistory, setRentalHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   
   // Стан для редагування
@@ -102,14 +102,14 @@ export default function ReauditCabinetFull({
     action_type: 'repair',
     qty: 1
   })
-  const [damages, setDamages] = useState<any[]>([])
+  const [damages, setDamages] = useState([])
   
   // Категорії та підкатегорії з API
-  const [categories, setCategories] = useState<string[]>([])
-  const [subcategoriesMap, setSubcategoriesMap] = useState<Record<string, string[]>>({})
+  const [categories, setCategories] = useState([])
+  const [subcategoriesMap, setSubcategoriesMap] = useState>({})
   
   // Стан для форми створення нового товару
-  const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [selectedCategory, setSelectedCategory] = useState('')
 
   // Use backend URL from environment
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
@@ -239,7 +239,7 @@ export default function ReauditCabinetFull({
   const overdue = filtered.filter((i) => i.daysFromLastAudit > 180)
   const critical = filtered.filter((i) => i.status === 'critical' || i.status === 'lost')
 
-  const uploadImage = async (file: File) => {
+  const uploadImage = async (file) => {
     try {
       setUploadingImage(true)
       const formData = new FormData()
@@ -422,7 +422,7 @@ export default function ReauditCabinetFull({
     alert('Мок: зона позначена як переоблікована.')
   }
 
-  const markItemAudited = async (item: AuditItem) => {
+  const markItemAudited = async (item) => {
     const days = prompt('Наступний переоблік через (днів)?', '180')
     
     try {

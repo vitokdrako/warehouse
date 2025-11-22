@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 
 /************** helpers **************/
-const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
+const cls = (...a) => a.filter(Boolean).join(' ')
 
 /************** types **************/
 
@@ -317,14 +317,14 @@ export default function PackingCabinet({
   onNavigateToTasks? void
   initialOrderId?
 }) {
-  const [orders, setOrders] = useState<PackingOrder[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [selectedOrder, setSelectedOrder] = useState<PackingOrder | null>(null)
+  const [orders, setOrders] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
+  const [selectedOrder, setSelectedOrder] = useState(null)
   const [loading, setLoading] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [zoneFilter, setZoneFilter] = useState<string>('all')
-  const [searchQuery, setSearchQuery] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [zoneFilter, setZoneFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
 

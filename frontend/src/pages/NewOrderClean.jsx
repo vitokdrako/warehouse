@@ -32,6 +32,8 @@ const NewOrderClean = () => {
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [showInventoryPicker, setShowInventoryPicker] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [availability, setAvailability] = useState({});
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 

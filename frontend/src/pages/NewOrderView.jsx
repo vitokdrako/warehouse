@@ -792,7 +792,7 @@ function Badge({ children, tone = 'slate' }) {
   return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${map[tone]}`}>{children}</span>;
 }
 
-function ItemsTable({ items, rentalDays, onUpdateQuantity, onRemove }) {
+function ItemsTable({ items, rentalDays, onUpdateQuantity, onRemove, availability }) {
   return (
     <div className="overflow-auto rounded-xl border border-slate-200">
       <table className="w-full text-sm">
@@ -804,6 +804,7 @@ function ItemsTable({ items, rentalDays, onUpdateQuantity, onRemove }) {
             <th className="px-3 py-2 text-right font-medium">Ціна/д</th>
             <th className="px-3 py-2 text-right font-medium">Збиток</th>
             <th className="px-3 py-2 text-right font-medium">К-сть</th>
+            <th className="px-3 py-2 text-center font-medium">Наявність</th>
             <th className="px-3 py-2 text-right font-medium">Діб</th>
             <th className="px-3 py-2 text-right font-medium">Оренда</th>
             <th className="px-3 py-2 text-right font-medium">Застава</th>
@@ -813,7 +814,7 @@ function ItemsTable({ items, rentalDays, onUpdateQuantity, onRemove }) {
         <tbody className="divide-y divide-slate-200">
           {items.length === 0 && (
             <tr>
-              <td colSpan={10} className="px-3 py-6 text-center text-slate-500">
+              <td colSpan={11} className="px-3 py-6 text-center text-slate-500">
                 Додайте товари через пошук вище
               </td>
             </tr>

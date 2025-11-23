@@ -307,6 +307,11 @@ export default function NewOrderView() {
         const result = await response.json();
         console.log('[Availability Check] Result:', result);
         console.log('[Availability Check] Result items:', JSON.stringify(result.items, null, 2));
+        console.log('[Availability Check] Current items state:', items.map(i => ({ 
+          product_id: i.product_id, 
+          inventory_id: i.inventory_id, 
+          article: i.article 
+        })));
         
         // Transform availability data to object keyed by product_id
         const availabilityMap = {};
@@ -319,6 +324,7 @@ export default function NewOrderView() {
             };
           });
         }
+        console.log('[Availability Check] Availability map:', availabilityMap);
         setAvailability(availabilityMap);
         
         // Set conflicts if any items are not available

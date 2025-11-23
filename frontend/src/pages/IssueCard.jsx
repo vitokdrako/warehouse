@@ -853,12 +853,12 @@ export default function IssueCard(){
   const canMarkReady = allPicked && allSerialsOk && checklistOk
   
   // Для "Видати" - просто перевіряємо чи статус ready_for_issue
-  const canIssue = order && (order.order_status_id === 3)
+  const canIssue = order && (order.status === 'ready_for_issue' || order.decor_status === 'ready_for_issue')
 
-  // Determine if order is in processing stage (OpenCart status 2 or 19=pending)
-  const isProcessing = order ? (order.order_status_id === 2 || order.order_status_id === 19) : false
-  const isReadyForIssue = order ? (order.order_status_id === 3) : false
-  const isIssued = order ? (order.order_status_id === 5 || order.order_status_id === 24) : false // 24 = on_rent in OpenCart
+  // Determine if order is in processing stage
+  const isProcessing = order ? (order.status === 'processing' || order.decor_status === 'processing') : false
+  const isReadyForIssue = order ? (order.status === 'ready_for_issue' || order.decor_status === 'ready_for_issue') : false
+  const isIssued = order ? (order.status === 'issued' || order.decor_status === 'issued') : false
   
   // Debug logging
   console.log('[Issue] Button states:', {

@@ -247,7 +247,12 @@ async def get_orders(
     # Get total count
     count_sql = "SELECT COUNT(*) FROM orders WHERE 1=1"
     if status:
-        count_sql += " AND status = :status"
+        if ',' in status:
+            statuses = [s.strip() for s in status.split(',')]
+            placeholders = ','.join([f':status_{i}' for i in range(len(statuses))])
+            count_sql += f" AND status IN ({placeholders})"
+        else:
+            count_sql += " AND status = :status"
     if customer_id:
         count_sql += " AND customer_id = :customer_id"
     if from_date:

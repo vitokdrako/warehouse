@@ -915,7 +915,11 @@ export default function IssueCard(){
       toast({ title: '✅ Успіх', description: 'Замовлення готове до видачі' })
       
       // Повернутися на dashboard після короткої затримки
-      setTimeout(() => navigate('/manager'), 1500)
+      console.log('[IssueCard] Navigating to dashboard in 1.5s...')
+      setTimeout(() => {
+        console.log('[IssueCard] Navigating now...')
+        navigate('/manager')
+      }, 1500)
     } catch(e){
       console.error('Error marking ready:', e)
       toast({ title: '❌ Помилка', description: 'Не вдалося оновити статус', variant: 'destructive' })

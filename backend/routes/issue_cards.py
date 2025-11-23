@@ -81,6 +81,17 @@ def parse_issue_card(row, db: Session = None):
                 "rental_days": order_row[6] or 0
             }
     
+    # Parse checklist JSON if exists
+    checklist = None
+    if len(row) > 13 and row[13]:  # checklist column
+        try:
+            checklist = json.loads(row[13]) if isinstance(row[13], str) else row[13]
+        except:
+            checklist = None
+    
+    # Parse manager_notes if exists
+    manager_notes = row[14] if len(row) > 14 else None
+    
     return {
         "id": row[0],
         "order_id": row[1],
@@ -95,6 +106,8 @@ def parse_issue_card(row, db: Session = None):
         "issued_at": row[10].isoformat() if row[10] else None,
         "created_at": row[11].isoformat() if row[11] else None,
         "updated_at": row[12].isoformat() if row[12] else None,
+        "checklist": checklist,
+        "manager_notes": manager_notes,
         **order_data  # Додати всі поля замовлення
     }
 

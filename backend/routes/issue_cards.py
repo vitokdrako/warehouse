@@ -203,7 +203,7 @@ async def update_issue_card(
         db.execute(text(sql), params)
         db.commit()
     
-    # Якщо змінюємо статус на 'ready', оновимо також order_status_id замовлення на 3
+    # Якщо змінюємо статус на 'ready', оновимо також статус замовлення
     if updates.status == 'ready':
         # Отримати order_id з issue_card
         result = db.execute(text("SELECT order_id FROM issue_cards WHERE id = :id"), {"id": card_id})
@@ -213,8 +213,7 @@ async def update_issue_card(
             # Оновити статус замовлення
             db.execute(text("""
                 UPDATE orders 
-                SET order_status_id = 3, 
-                    status = 'ready_for_issue',
+                SET status = 'ready_for_issue',
                     updated_at = NOW() 
                 WHERE order_id = :order_id
             """), {"order_id": order_id})

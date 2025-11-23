@@ -850,29 +850,26 @@ function Badge({ children, tone = 'slate' }) {
   return <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${map[tone]}`}>{children}</span>;
 }
 
-function ItemsTable({ items, rentalDays, onUpdateQuantity, onRemove, availability }) {
+function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
   return (
     <div className="overflow-auto rounded-xl border border-slate-200">
       <table className="w-full text-sm">
         <thead className="bg-slate-50 text-slate-600">
           <tr>
             <th className="px-3 py-2 text-left font-medium">Фото</th>
-            <th className="px-3 py-2 text-left font-medium">Позиція</th>
+            <th className="px-3 py-2 text-left font-medium">Назва</th>
             <th className="px-3 py-2 text-left font-medium">SKU</th>
             <th className="px-3 py-2 text-right font-medium">Ціна/д</th>
             <th className="px-3 py-2 text-right font-medium">Збиток</th>
-            <th className="px-3 py-2 text-right font-medium">К-сть</th>
+            <th className="px-3 py-2 text-right font-medium">Кількість</th>
             <th className="px-3 py-2 text-center font-medium">Наявність</th>
-            <th className="px-3 py-2 text-right font-medium">Діб</th>
-            <th className="px-3 py-2 text-right font-medium">Оренда</th>
-            <th className="px-3 py-2 text-right font-medium">Застава</th>
             <th className="px-3 py-2"></th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200">
           {items.length === 0 && (
             <tr>
-              <td colSpan={11} className="px-3 py-6 text-center text-slate-500">
+              <td colSpan={8} className="px-3 py-6 text-center text-slate-500">
                 Додайте товари через пошук вище
               </td>
             </tr>

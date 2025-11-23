@@ -396,7 +396,7 @@ export default function ManagerDashboard() {
         </Column>
 
         {/* КОЛОНКА 4: Повернення */}
-        <Column title="🔙 Повернення" subtitle="Очікуємо сьогодні до 17:00" tone="warn">
+        <Column title="🔙 Повернення" subtitle="Видані замовлення, які очікують повернення" tone="warn">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
           ) : returnOrders.length > 0 ? (

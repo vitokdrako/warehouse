@@ -914,8 +914,7 @@ async def check_availability(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Перевірка доступності товарів для дат
-    ✅ MIGRATED: Includes date range checking
+    Перевірка доступності товарів для дат з урахуванням резервацій
     """
     items = data.get('items', [])
     start_date = data.get('start_date')
@@ -927,25 +926,52 @@ async def check_availability(
         product_id = item.get('product_id')
         requested_qty = item.get('quantity', 1)
         
-        # Get available quantity
+        # Get total quantity from inventory or products
+        # Try inventory first, fallback to products if empty
         result = db.execute(text("""
-            SELECT quantity FROM products WHERE product_id = :id
+            SELECT COALESCE(
+                (SELECT quantity FROM inventory WHERE product_id = :id LIMIT 1),
+                (SELECT 100 FROM products WHERE product_id = :id LIMIT 1),
+                0
+            ) as total_qty
         """), {"id": product_id})
         
         row = result.fetchone()
-        available_qty = row[0] if row else 0
+        total_qty = row[0] if row else 0
         
-        # Check reservations in date range (simplified)
-        # In production, you'd check actual reservations
+        # Check reservations in date range
+        # Count all reserved items for this product in overlapping date ranges
+        reserved_qty = 0
+        if start_date and end_date:
+            reservation_result = db.execute(text("""
+                SELECT COALESCE(SUM(oi.quantity), 0) as reserved
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE oi.product_id = :product_id
+                  AND o.status NOT IN ('cancelled', 'completed', 'returned')
+                  AND (
+                    (o.rental_start_date <= :end_date AND o.rental_end_date >= :start_date)
+                    OR (o.issue_date <= :end_date AND o.return_date >= :start_date)
+                  )
+            """), {
+                "product_id": product_id,
+                "start_date": start_date,
+                "end_date": end_date
+            })
+            reserved_row = reservation_result.fetchone()
+            reserved_qty = reserved_row[0] if reserved_row else 0
         
+        available_qty = max(0, total_qty - reserved_qty)
         is_available = available_qty >= requested_qty
         
         results.append({
             "product_id": product_id,
             "requested_quantity": requested_qty,
+            "total_quantity": total_qty,
+            "reserved_quantity": reserved_qty,
             "available_quantity": available_qty,
             "is_available": is_available,
-            "message": "Available" if is_available else f"Only {available_qty} available"
+            "message": "Available" if is_available else f"Only {available_qty} available (total: {total_qty}, reserved: {reserved_qty})"
         })
     
     all_available = all(r['is_available'] for r in results)

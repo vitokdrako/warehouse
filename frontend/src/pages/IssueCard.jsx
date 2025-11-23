@@ -756,7 +756,7 @@ export default function IssueCard(){
           name: p.name || p.product_name || '',
           image: p.image || p.photo || '',  // Додано image та photo
           qty: qty,
-          picked_qty: p.picked_qty || 0, // Завжди починаємо з 0 щоб комірники бачили прогрес
+          picked_qty: parseInt(p.picked_qty) || 0, // Завантажуємо збережене значення з БД
           available: parseInt(p.available_qty || p.available) || 0,
           reserved: parseInt(p.reserved_qty || p.reserved) || 0,
           in_rent: parseInt(p.in_rent_qty || p.in_rent) || 0,

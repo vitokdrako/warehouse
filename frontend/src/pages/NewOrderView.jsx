@@ -284,8 +284,8 @@ export default function NewOrderView() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          rental_start_date: issueDate,
-          rental_end_date: returnDate,
+          start_date: issueDate,
+          end_date: returnDate,
           items: items.map(i => ({
             product_id: parseInt(i.inventory_id || i.product_id),
             sku: i.article || i.sku,

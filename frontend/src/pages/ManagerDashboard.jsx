@@ -83,15 +83,14 @@ export default function ManagerDashboard() {
       mode: 'cors',
       headers: { 'Content-Type': 'application/json' },
     })
-    .then(res => res.json())
+    .then(res => {
+      console.log('[Dashboard] Response status:', res.status);
+      return res.json();
+    })
     .then(data => {
       console.log('[Dashboard] Loaded decor orders:', data.orders?.length || 0, 'orders');
-      console.log('[Dashboard] Decor orders data:', data.orders);
+      console.log('[Dashboard] Decor orders data:', JSON.stringify(data.orders, null, 2));
       setDecorOrders(data.orders || []);
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error('[Dashboard] Error loading decor orders:', err);
       setLoading(false);
     })
     .catch(err => {

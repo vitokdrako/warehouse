@@ -280,15 +280,15 @@ export default function NewOrderView() {
     
     setCheckingConflicts(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/orders/check-availability`, {
+      const response = await fetch(`${BACKEND_URL}/api/check-availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          issue_date: issueDate,
-          return_date: returnDate,
+          rental_start_date: issueDate,
+          rental_end_date: returnDate,
           items: items.map(i => ({
-            product_id: parseInt(i.inventory_id),
-            sku: i.article,
+            product_id: parseInt(i.inventory_id || i.product_id),
+            sku: i.article || i.sku,
             quantity: i.quantity
           }))
         })
@@ -296,7 +296,26 @@ export default function NewOrderView() {
       
       if (response.ok) {
         const result = await response.json();
-        setConflicts(result.conflicts || []);
+        console.log('[Availability Check] Result:', result);
+        
+        // Transform availability data to object keyed by product_id
+        const availabilityMap = {};
+        if (result.items) {
+          result.items.forEach(item => {
+            availabilityMap[item.product_id] = {
+              total: item.total_quantity || 0,
+              reserved: item.reserved_quantity || 0,
+              available: item.available_quantity || 0
+            };
+          });
+        }
+        setAvailability(availabilityMap);
+        
+        // Set conflicts if any items are not available
+        const conflicts = result.items?.filter(item => 
+          item.available_quantity < item.requested_quantity
+        ) || [];
+        setConflicts(conflicts);
       }
     } catch (error) {
       console.error('Error checking conflicts:', error);

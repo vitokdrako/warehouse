@@ -178,14 +178,9 @@ export default function ManagerDashboard() {
   const issuedTodayOrders = [];
   
   // 5. На поверненні (всі decor_orders зі статусом issued/on_rent - видані і очікують повернення)
-  console.log(`[Dashboard] Total decorOrders: ${decorOrders.length}`);
   const returnOrders = decorOrders.filter(o => {
-    const isReturn = (o.status === 'issued' || o.status === 'on_rent');
-    console.log(`[Return Filter] Order ${o.id} (${o.order_number}): status=${o.status}, isReturn=${isReturn}`);
-    return isReturn;
+    return (o.status === 'issued' || o.status === 'on_rent');
   });
-  console.log(`[Dashboard] Return orders count: ${returnOrders.length}`);
-  console.log(`[Dashboard] Return orders:`, returnOrders.map(o => ({id: o.id, number: o.order_number, status: o.status})));
 
   const kpis = {
     today: newOrders.length + readyOrders.length + returnOrders.length,  // Всі події сьогодні

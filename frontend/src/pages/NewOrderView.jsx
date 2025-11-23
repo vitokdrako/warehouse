@@ -284,18 +284,21 @@ export default function NewOrderView() {
     
     setCheckingConflicts(true);
     try {
+      const requestBody = {
+        start_date: issueDate,
+        end_date: returnDate,
+        items: items.map(i => ({
+          product_id: parseInt(i.inventory_id || i.product_id),
+          sku: i.article || i.sku,
+          quantity: i.quantity
+        }))
+      };
+      console.log('[Availability Check] Request body:', JSON.stringify(requestBody));
+      
       const response = await fetch(`${BACKEND_URL}/api/orders/check-availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          start_date: issueDate,
-          end_date: returnDate,
-          items: items.map(i => ({
-            product_id: parseInt(i.inventory_id || i.product_id),
-            sku: i.article || i.sku,
-            quantity: i.quantity
-          }))
-        })
+        body: JSON.stringify(requestBody)
       });
       
       if (response.ok) {

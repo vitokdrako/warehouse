@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../hooks/use-toast'
 import axios from 'axios'
 import { getImageUrl } from '../utils/imageHelper'
+import { DAMAGE_RULES, defaultFeeFor } from '../utils/damageRules'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
@@ -13,81 +14,6 @@ const cls = (...a)=> a.filter(Boolean).join(' ')
 const fmtUA = (n)=> (Number(n)||0).toLocaleString('uk-UA', {maximumFractionDigits:2})
 const todayISO = ()=> new Date().toISOString().slice(0,10)
 const nowISO = ()=> new Date().toISOString().replace('T',' ').slice(0,19)
-
-/******************** damage rules (min fees & percent heuristics) ********************/
-const DAMAGE_RULES = {
-  'Меблі': {
-    groups: [
-      {code:'dirty_upholstery', label:'Брудна оббивка / сидіння / каркас', min:1000},
-      {code:'chips_cracks_missing', label:'Скол/подряпини/тріщини/втрата деталей', min:800, max:'full'},
-      {code:'burn_or_hole', label:'Пропал або дірка', min:5000},
-      {code:'dirty_legs', label:'Ніжки брудні (земля/глина/пісок)', min:800},
-      {code:'liquid_spill', label:'Залито рідиною', range:[1000,2500]},
-      {code:'wet', label:'Мокрі або вологі (вода)', range:[1000,2000]},
-      {code:'no_brand_bag', label:'Немає фірмового чохла', min:1400},
-      {code:'no_stretch', label:'Немає пакування в стрейч', min:800}
-    ]
-  },
-  'Столики': {
-    groups:[
-      {code:'dirty', label:'Брудні', min:500},
-      {code:'chips', label:'Сколи або подряпини', range:[1600,3000]},
-      {code:'top_missing', label:'Відсутня/пошкоджена стільниця', min:1500},
-      {code:'no_stretch_pct', label:'Без стрейчування', percentOf:'full', percent:0.30},
-      {code:'no_native_pack_pct', label:'Без власного пакування', percentOf:'full', percent:0.50}
-    ]
-  },
-  'Пуфи та стільці з текстилем (шкірою)': {
-    groups:[
-      {code:'dirty_upholstery', label:'Брудна оббивка/сидіння', range:[1200,2000]},
-      {code:'frame_damage', label:'Пошкоджений каркас', min:700},
-      {code:'dirty_legs', label:'Ніжки брудні', min:800},
-      {code:'burn_or_hole', label:'Пропал або дірка', max:'full'},
-      {code:'liquid_spill', label:'Залито рідиною', range:[1200,2000]},
-      {code:'wet', label:'Мокрі або вологі', range:[1000,2000]},
-      {code:'no_brand_or_box', label:'Немає фірмового чохла/коробки', min:3000},
-      {code:'no_stretch', label:'Немає пакування в стрейч', min:1500}
-    ]
-  },
-  'Стільці': {
-    groups:[
-      {code:'dirty', label:'Брудні', min:700},
-      {code:'chips', label:'Сколи або подряпини', min:1500},
-      {code:'no_stretch', label:'Без стрейчування', min:1000},
-      {code:'wet', label:'Мокрі або вологі', min:1000},
-      {code:'broken_full', label:'Зламані (неможливо використовувати)', max:'full'}
-    ]
-  },
-  'Куби дзеркальні': {
-    groups:[
-      {code:'dirty', label:'Брудні', min:800},
-      {code:'chips', label:'Сколи/подряпини', range:[1000,5500]},
-      {code:'adhesive', label:'Залишки оракалу/наліпок', min:800},
-      {code:'paint', label:'У фарбі', min:1000},
-      {code:'no_box', label:'Без власного пакування (дер. бокс)', min:3500},
-      {code:'no_stretch', label:'Без стрейчу/захисту', min:2000},
-      {code:'broken_full', label:'Зламані (неможливо використовувати)', max:'full'},
-      {code:'wet', label:'Мокрі або вологі', min:200}
-    ]
-  },
-  'Вази': {
-    groups:[
-      {code:'dirty', label:'Брудні (оазис/квіти/фарба/віск/матеріали)', range:[50,2000]},
-      {code:'chips', label:'Скол/подряпини', max:'full'},
-      {code:'wet_inside', label:'З водою всередині / мокрі / не натерті', range:[50,800]},
-      {code:'broken_full', label:'Пошкоджені (неможливо використовувати)', max:'full'},
-      {code:'no_stretch', label:'Без пакування в стрейч', min:200},
-      {code:'no_native_pack', label:'Без рідного пакування', range:[200,800]}
-    ]
-  },
-}
-
-function defaultFeeFor(kindObj){
-  if(!kindObj) return 0
-  if(typeof kindObj.min === 'number') return kindObj.min
-  if(Array.isArray(kindObj.range)) return kindObj.range[0]
-  return 0
-}
 
 /******************** small UI ********************/
 function Badge({tone='slate', children}){

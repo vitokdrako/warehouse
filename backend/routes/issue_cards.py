@@ -190,12 +190,35 @@ async def update_issue_card(
     if updates.issued_by is not None:
         set_clauses.append("issued_by = :issued_by")
         params['issued_by'] = updates.issued_by
+    if updates.checklist is not None:
+        set_clauses.append("checklist = :checklist")
+        params['checklist'] = json.dumps(updates.checklist)
+    if updates.manager_notes is not None:
+        set_clauses.append("manager_notes = :manager_notes")
+        params['manager_notes'] = updates.manager_notes
     
     if set_clauses:
         set_clauses.append("updated_at = NOW()")
         sql = f"UPDATE issue_cards SET {', '.join(set_clauses)} WHERE id = :id"
         db.execute(text(sql), params)
         db.commit()
+    
+    # Якщо змінюємо статус на 'ready', оновимо також order_status_id замовлення на 3
+    if updates.status == 'ready':
+        # Отримати order_id з issue_card
+        result = db.execute(text("SELECT order_id FROM issue_cards WHERE id = :id"), {"id": card_id})
+        row = result.fetchone()
+        if row:
+            order_id = row[0]
+            # Оновити статус замовлення
+            db.execute(text("""
+                UPDATE orders 
+                SET order_status_id = 3, 
+                    status = 'ready_for_issue',
+                    updated_at = NOW() 
+                WHERE order_id = :order_id
+            """), {"order_id": order_id})
+            db.commit()
     
     return {"message": "Issue card updated"}
 

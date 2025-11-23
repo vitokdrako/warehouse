@@ -76,14 +76,17 @@ export default function ManagerDashboard() {
     .catch(err => console.error('[Dashboard] Error loading orders:', err));
     
     // Завантажити ВСІ замовлення на комплектації та поверненні
-    fetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`, {
+    const decorUrl = `${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`;
+    console.log('[Dashboard] Loading decor orders from:', decorUrl);
+    fetch(decorUrl, {
       method: 'GET',
       mode: 'cors',
       headers: { 'Content-Type': 'application/json' },
     })
     .then(res => res.json())
     .then(data => {
-      console.log('[Dashboard] Orders in progress:', data.orders?.length || 0);
+      console.log('[Dashboard] Loaded decor orders:', data.orders?.length || 0, 'orders');
+      console.log('[Dashboard] Decor orders data:', data.orders);
       setDecorOrders(data.orders || []);
       setLoading(false);
     })

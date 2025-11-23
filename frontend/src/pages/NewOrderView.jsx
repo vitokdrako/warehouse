@@ -578,6 +578,7 @@ export default function NewOrderView() {
                 rentalDays={rentalDays}
                 onUpdateQuantity={handleUpdateQuantity}
                 onRemove={handleRemoveItem}
+                availability={availability}
               />
             </Card>
 

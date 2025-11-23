@@ -922,7 +922,7 @@ export default function IssueCard(){
         manager_notes: notes
       })
       
-      setOrder(o=>({...o, order_status_id: 3, decor_status: 'ready_for_issue'}))
+      setOrder(o=>({...o, status: 'ready_for_issue', decor_status: 'ready_for_issue'}))
       setEvents(e=>[{title:'Укомплектовано і готово до видачі', when: nowISO(), tone:'blue'}, ...e])
       toast({ title: '✅ Успіх', description: 'Замовлення готове до видачі' })
       

@@ -306,6 +306,7 @@ export default function NewOrderView() {
       if (response.ok) {
         const result = await response.json();
         console.log('[Availability Check] Result:', result);
+        console.log('[Availability Check] Result items:', JSON.stringify(result.items, null, 2));
         
         // Transform availability data to object keyed by product_id
         const availabilityMap = {};

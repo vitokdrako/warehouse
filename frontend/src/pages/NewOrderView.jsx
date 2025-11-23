@@ -610,7 +610,6 @@ export default function NewOrderView() {
               )}
               <ItemsTable 
                 items={items} 
-                rentalDays={rentalDays}
                 onUpdateQuantity={handleUpdateQuantity}
                 onRemove={handleRemoveItem}
                 availability={availability}

@@ -907,7 +907,19 @@ export default function IssueCard(){
       // Оновити статус issue card на 'ready' (це також оновить DecorOrder на 'ready_for_issue')
       await axios.put(`${BACKEND_URL}/api/issue-cards/${issueCard.id}`, { 
         status: 'ready',
-        prepared_by: 'Warehouse Staff'
+        prepared_by: 'Warehouse Staff',
+        items: items.map(it => ({
+          id: it.id,
+          sku: it.sku,
+          name: it.name,
+          qty: it.qty,
+          picked_qty: it.picked_qty,
+          scanned: it.scanned,
+          location_zone: it.location_zone,
+          location_state: it.location_state
+        })),
+        checklist: checklist,
+        manager_notes: notes
       })
       
       setOrder(o=>({...o, order_status_id: 3, decor_status: 'ready_for_issue'}))

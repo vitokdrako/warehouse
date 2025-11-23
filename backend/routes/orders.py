@@ -1272,6 +1272,12 @@ async def complete_return(
     ✅ MIGRATED: Using RentalHub DB
     """
     try:
+        # Отримати дані про збитки
+        late_fee = float(return_data.get('late_fee', 0))
+        cleaning_fee = float(return_data.get('cleaning_fee', 0))
+        damage_fee = float(return_data.get('damage_fee', 0))
+        total_fees = late_fee + cleaning_fee + damage_fee
+        
         # Оновити статус замовлення
         db.execute(text("""
             UPDATE orders 
@@ -1286,12 +1292,40 @@ async def complete_return(
             WHERE order_id = :order_id
         """), {"order_id": order_id})
         
+        # Створити фінансову транзакцію для збитків (якщо є)
+        if total_fees > 0:
+            fee_details = []
+            if late_fee > 0:
+                fee_details.append(f"Пеня: ₴{late_fee:.2f}")
+            if cleaning_fee > 0:
+                fee_details.append(f"Чистка: ₴{cleaning_fee:.2f}")
+            if damage_fee > 0:
+                fee_details.append(f"Пошкодження: ₴{damage_fee:.2f}")
+            
+            description = f"Збитки після повернення замовлення #{order_id}. " + ", ".join(fee_details)
+            
+            db.execute(text("""
+                INSERT INTO finance_transactions (
+                    order_id, transaction_type, amount, currency, 
+                    status, description, created_at
+                ) VALUES (
+                    :order_id, 'charge', :amount, 'UAH',
+                    'pending', :description, NOW()
+                )
+            """), {
+                "order_id": order_id,
+                "amount": total_fees,
+                "description": description
+            })
+        
         db.commit()
         
         return {
             "success": True,
             "message": "Повернення успішно завершено",
-            "order_id": order_id
+            "order_id": order_id,
+            "fees_charged": total_fees,
+            "finance_transaction_created": total_fees > 0
         }
         
     except Exception as e:

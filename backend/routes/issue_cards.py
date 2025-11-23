@@ -226,8 +226,7 @@ async def update_issue_card(
             # Оновити статус замовлення
             db.execute(text("""
                 UPDATE orders 
-                SET status = 'ready_for_issue',
-                    updated_at = NOW() 
+                SET status = 'ready_for_issue'
                 WHERE order_id = :order_id
             """), {"order_id": order_id})
             db.commit()

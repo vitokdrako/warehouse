@@ -106,6 +106,7 @@ def parse_order_row(row, db: Session = None):
                 "article": item_row[10] or str(item_row[2]),  # SKU (article) або product_id
                 "sku": item_row[10] or str(item_row[2]),  # SKU або product_id
                 "name": item_row[3],
+                "category": item_row[16] or "Реквізит",  # Категорія товару для пошкоджень
                 "quantity": quantity,
                 "qty": quantity,  # Для IssueCard
                 "price_per_day": float(item_row[5]) if item_row[5] else 0.0,

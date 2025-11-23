@@ -280,7 +280,7 @@ export default function NewOrderView() {
     
     setCheckingConflicts(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/check-availability`, {
+      const response = await fetch(`${BACKEND_URL}/api/orders/check-availability`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

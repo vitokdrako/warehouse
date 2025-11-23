@@ -986,7 +986,7 @@ export default function IssueCard(){
           
           {/* "Готово до видачі" - тільки під час комплектування */}
           {(isProcessing) && (
-            <PillButton tone='yellow' onClick={markReady} disabled={!canMarkReady}>✅ Готово до видачі</PillButton>
+            <PillButton tone='yellow' onClick={markReady}>✅ Готово до видачі</PillButton>
           )}
           
           {/* "Підтвердити видачу" - коли готове до видачі */}

@@ -362,7 +362,40 @@ export default function ManagerDashboard() {
           )}
         </Column>
 
-        {/* КОЛОНКА 3: Повернення */}
+        {/* КОЛОНКА 3: Готові до видачі */}
+        <Column title="✅ Готові до видачі" subtitle="Скомплектовано → готово до передачі клієнту" tone="ok">
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
+          ) : readyCards.length > 0 ? (
+            <>
+              {readyCards.slice(0, 4).map(card => (
+                <OrderCard 
+                  key={card.id}
+                  id={`#${card.order_id}`}
+                  name={card.customer_name || '—'}
+                  phone={card.customer_phone || '—'}
+                  rent={`₴ ${card.total_rental?.toFixed(0) || 0}`}
+                  deposit={`₴ ${card.deposit_amount?.toFixed(0) || 0}`}
+                  badge="ready"
+                  order={card}
+                  onDateUpdate={null}
+                  onClick={() => navigate(`/issue/${card.id}`)}
+                />
+              ))}
+              {readyCards.length > 4 && (
+                <div className="text-center py-2 text-sm text-slate-500">
+                  +{readyCards.length - 4} більше карток
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+              Немає готових карток
+            </div>
+          )}
+        </Column>
+
+        {/* КОЛОНКА 4: Повернення */}
         <Column title="🔙 Повернення" subtitle="Очікуємо сьогодні до 17:00" tone="warn">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />

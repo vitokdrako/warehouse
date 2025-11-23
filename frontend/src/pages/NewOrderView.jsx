@@ -875,7 +875,6 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
             </tr>
           )}
           {items.map((item, idx) => {
-            const rental = item.price_per_day * item.quantity * rentalDays;
             const imageUrl = getImageUrl(item.image);
             return (
               <tr key={idx}>
@@ -898,16 +897,17 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
                 <td className="px-3 py-2 font-medium">{item.name}</td>
                 <td className="px-3 py-2 font-mono text-xs text-slate-600">{item.article || item.sku || '-'}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
-                  ₴ {item.price_per_day.toLocaleString('uk-UA')}
+                  ₴ {item.price_per_day?.toLocaleString('uk-UA') || '0'}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums text-slate-500">
-                  ₴ {item.deposit?.toLocaleString('uk-UA') || '-'}
+                  ₴ {item.damage_cost?.toLocaleString('uk-UA') || item.price_per_day?.toLocaleString('uk-UA') || '0'}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex justify-end gap-2">
                     <button 
                       onClick={() => onUpdateQuantity(item.inventory_id, item.quantity - 1)}
                       className="h-7 w-7 rounded-lg border hover:bg-slate-50"
+                      disabled={item.quantity <= 1}
                     >
                       -
                     </button>
@@ -937,13 +937,6 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
                   ) : (
                     <div className="text-xs text-center text-slate-400">-</div>
                   )}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums">{rentalDays}</td>
-                <td className="px-3 py-2 text-right tabular-nums font-medium">
-                  ₴ {rental.toLocaleString('uk-UA')}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums font-medium text-amber-700">
-                  ₴ {item.deposit?.toLocaleString('uk-UA') || '0'}
                 </td>
                 <td className="px-3 py-2 text-right">
                   <button 

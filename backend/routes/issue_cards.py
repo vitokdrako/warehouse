@@ -37,6 +37,8 @@ class IssueCardUpdate(BaseModel):
     issue_notes: Optional[str] = None
     prepared_by: Optional[str] = None
     issued_by: Optional[str] = None
+    checklist: Optional[dict] = None
+    manager_notes: Optional[str] = None
 
 # Helper function to parse issue card row
 def parse_issue_card(row, db: Session = None):

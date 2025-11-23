@@ -971,7 +971,8 @@ export default function IssueCard(){
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
         <div className="text-sm text-slate-600">
           Статус: <b>{isIssued ? 'issued' : isReadyForIssue ? 'ready_for_issue' : 'processing'}</b> · 
-          <span className="ml-2">Комплектовано: {items.reduce((s,it)=>s+it.picked_qty,0)}/{items.reduce((s,it)=>s+it.qty,0)}</span> ·
+          <span className="ml-2">Позицій скомплектовано: {items.filter(it=>it.picked_qty>=it.qty).length}/{items.length}</span> ·
+          <span className="ml-2">Одиниць: {items.reduce((s,it)=>s+it.picked_qty,0)}/{items.reduce((s,it)=>s+it.qty,0)}</span> ·
           <span className="ml-2">Серій відскановано: {items.reduce((s,it)=>s+(it.scanned?.length||0),0)}</span>
         </div>
         <div className="flex flex-wrap gap-2">

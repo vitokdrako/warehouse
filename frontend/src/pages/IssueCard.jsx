@@ -1011,9 +1011,9 @@ export default function IssueCard(){
             <PillButton tone='yellow' onClick={markReady}>✅ Готово до видачі</PillButton>
           )}
           
-          {/* "Підтвердити видачу" - коли готове до видачі */}
+          {/* "Видати" - коли готове до видачі */}
           {(isReadyForIssue) && (
-            <PillButton tone='green' onClick={markIssued}>🚚 Підтвердити видачу</PillButton>
+            <PillButton tone='green' onClick={markIssued}>🚚 Видати</PillButton>
           )}
           
           {/* Badge якщо вже видано */}

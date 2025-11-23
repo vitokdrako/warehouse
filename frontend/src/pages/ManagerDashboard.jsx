@@ -93,6 +93,10 @@ export default function ManagerDashboard() {
     .catch(err => {
       console.error('[Dashboard] Error loading decor orders:', err);
       setLoading(false);
+    })
+    .catch(err => {
+      console.error('[Dashboard] Error loading decor orders:', err);
+      setLoading(false);
     });
     
     // Завантажити Issue Cards (картки видачі)

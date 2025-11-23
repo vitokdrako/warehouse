@@ -742,6 +742,12 @@ export default function IssueCard(){
       setOrder(transformedOrder)
       setNotes(issueCardData.preparation_notes || orderData.notes || orderData.manager_comment || '')
       
+      // Завантажити checklist з issue_card якщо є
+      if (issueCardData.checklist) {
+        setChecklist(issueCardData.checklist)
+        console.log('[IssueCard] Завантажено checklist:', issueCardData.checklist)
+      }
+      
       // Transform items - використовуємо items з issue_card, якщо є і не пусті, інакше з order
       const itemsSource = (issueCardData.items && issueCardData.items.length > 0) 
         ? issueCardData.items 

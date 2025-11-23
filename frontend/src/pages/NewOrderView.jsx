@@ -301,6 +301,8 @@ export default function NewOrderView() {
         body: JSON.stringify(requestBody)
       });
       
+      console.log('[Availability Check] Response status:', response.status, response.statusText);
+      
       if (response.ok) {
         const result = await response.json();
         console.log('[Availability Check] Result:', result);

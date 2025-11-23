@@ -408,6 +408,10 @@ export default function ManagerDashboard() {
 
         {/* КОЛОНКА 4: Повернення */}
         <Column title="🔙 Повернення" subtitle="Видані замовлення, які очікують повернення" tone="warn">
+          {(() => {
+            console.log(`[Render Return Column] loading=${loading}, returnOrders.length=${returnOrders.length}`);
+            return null;
+          })()}
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
           ) : returnOrders.length > 0 ? (

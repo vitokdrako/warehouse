@@ -171,9 +171,9 @@ export default function ManagerDashboard() {
   // 4. Видані сьогодні - прибрано, бо issued вже в "Повернення"
   const issuedTodayOrders = [];
   
-  // 5. На поверненні сьогодні (decor_orders зі статусом issued/on_rent і return_date = сьогодні)
+  // 5. На поверненні (всі decor_orders зі статусом issued/on_rent - видані і очікують повернення)
   const returnOrders = decorOrders.filter(o => 
-    (o.status === 'issued' || o.status === 'on_rent') && o.rent_return_date === today
+    (o.status === 'issued' || o.status === 'on_rent')
   );
 
   const kpis = {

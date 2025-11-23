@@ -202,8 +202,16 @@ async def get_orders(
     params = {}
     
     if status:
-        sql += " AND status = :status"
-        params['status'] = status
+        # Підтримка кількох статусів через кому
+        if ',' in status:
+            statuses = [s.strip() for s in status.split(',')]
+            placeholders = ','.join([f':status_{i}' for i in range(len(statuses))])
+            sql += f" AND status IN ({placeholders})"
+            for i, s in enumerate(statuses):
+                params[f'status_{i}'] = s
+        else:
+            sql += " AND status = :status"
+            params['status'] = status
     
     if customer_id:
         sql += " AND customer_id = :customer_id"

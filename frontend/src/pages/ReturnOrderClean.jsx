@@ -255,10 +255,10 @@ function FinancePanel({order, onSetFees, onDecideDeposit}){
   const canCover = deposit >= totalDue
 
   return (
-    <Card title="Фінанси" right={<Badge tone={totalDue>0?'amber':'green'}>{totalDue>0? `До сплати ₴ ${fmtUA(totalDue)}`:'Без боргу'}</Badge>}>
-      <div className="grid gap-4 md:grid-cols-2">
+    <Card title="Фінанси" right={<Badge tone={totalFees>0?'amber':'green'}>{totalFees>0? `До доплати ₴ ${fmtUA(totalFees)}`:'Без збитків'}</Badge>}>
+      <div className="space-y-3">
+        <div className="text-sm text-slate-600">Нараховані збитки після повернення:</div>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-slate-500">Оренда (баланс)</span><span>₴ {fmtUA(rentDue)}</span></div>
           <div className="flex justify-between"><span className="text-slate-500">Пеня за прострочку</span>
             <input type="number" className="w-28 rounded-lg border px-2 py-1 text-right" value={order.late_fee||0}
                    onChange={e=>onSetFees('late_fee', Number(e.target.value)||0)} />
@@ -267,20 +267,18 @@ function FinancePanel({order, onSetFees, onDecideDeposit}){
             <input type="number" className="w-28 rounded-lg border px-2 py-1 text-right" value={order.cleaning_fee||0}
                    onChange={e=>onSetFees('cleaning_fee', Number(e.target.value)||0)} />
           </div>
-          <div className="flex justify-between"><span className="text-slate-500">Збитки</span>
+          <div className="flex justify-between"><span className="text-slate-500">Збитки (пошкодження)</span>
             <input type="number" className="w-28 rounded-lg border px-2 py-1 text-right" value={order.damage_fee||0}
                    onChange={e=>onSetFees('damage_fee', Number(e.target.value)||0)} />
           </div>
-          <div className="flex justify-between border-t pt-2"><span className="font-medium">Разом до сплати</span><span className="font-semibold">₴ {fmtUA(totalDue)}</span></div>
+          <div className="flex justify-between border-t pt-2"><span className="font-medium">Разом до доплати</span><span className="font-semibold">₴ {fmtUA(totalFees)}</span></div>
         </div>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-slate-500">Застава (UAH)</span><span>₴ {fmtUA(deposit)}</span></div>
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Pill tone='yellow' onClick={()=>onDecideDeposit('use')} disabled={totalDue===0}>Списати із застави</Pill>
-            <Pill tone='green' onClick={()=>onDecideDeposit('release')} disabled={!canCover && totalDue>0}>Повернути заставу</Pill>
-            <Pill tone='blue' onClick={()=>onDecideDeposit('part-release')} disabled={totalDue===0 && deposit>0}>Частково повернути</Pill>
+        {totalFees > 0 && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm">
+            <div className="font-medium text-amber-800 mb-1">💰 Інформація</div>
+            <div className="text-amber-700">Після завершення приймання дані про доплату будуть передані у фінансовий кабінет для прийняття коштів менеджером.</div>
           </div>
-        </div>
+        )}
       </div>
     </Card>
   )

@@ -949,10 +949,8 @@ async def check_availability(
                 JOIN orders o ON oi.order_id = o.order_id
                 WHERE oi.product_id = :product_id
                   AND o.status NOT IN ('cancelled', 'completed', 'returned')
-                  AND (
-                    (o.rental_start_date <= :end_date AND o.rental_end_date >= :start_date)
-                    OR (o.issue_date <= :end_date AND o.return_date >= :start_date)
-                  )
+                  AND o.rental_start_date <= :end_date 
+                  AND o.rental_end_date >= :start_date
             """), {
                 "product_id": product_id,
                 "start_date": start_date,

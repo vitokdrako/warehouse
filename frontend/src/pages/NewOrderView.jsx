@@ -35,6 +35,9 @@ export default function NewOrderView() {
   // Для конфліктів
   const [conflicts, setConflicts] = useState([]);
   const [checkingConflicts, setCheckingConflicts] = useState(false);
+  
+  // Для доступності товарів
+  const [availability, setAvailability] = useState({});
 
   // Завантажити замовлення
   useEffect(() => {

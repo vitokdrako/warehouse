@@ -84,7 +84,7 @@ def parse_order_row(row, db: Session = None):
                    oi.quantity, oi.price, oi.total_rental,
                    p.image_url, p.price as loss_value, p.quantity as available_qty,
                    p.sku, p.zone, p.aisle, p.shelf, p.cleaning_status, p.product_state,
-                   p.category
+                   p.category_name
             FROM order_items oi
             LEFT JOIN products p ON oi.product_id = p.product_id
             WHERE oi.order_id = :order_id
@@ -92,7 +92,7 @@ def parse_order_row(row, db: Session = None):
         
         for item_row in items_result:
             # order_items: [0]id, [1]order_id, [2]product_id, [3]product_name, [4]quantity, [5]price, [6]total_rental, 
-            #              [7]image_url, [8]loss_value, [9]available_qty, [10]sku, [11]zone, [12]aisle, [13]shelf, [14]cleaning_status, [15]product_state, [16]category
+            #              [7]image_url, [8]loss_value, [9]available_qty, [10]sku, [11]zone, [12]aisle, [13]shelf, [14]cleaning_status, [15]product_state, [16]category_name
             loss_value = float(item_row[8]) if item_row[8] else 0.0
             quantity = item_row[4] or 1
             available = int(item_row[9]) if item_row[9] else 0

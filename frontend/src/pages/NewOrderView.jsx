@@ -155,9 +155,20 @@ export default function NewOrderView() {
     
     setSearching(true);
     try {
-      const response = await fetch(`${BACKEND_URL}/api/orders/inventory/search?q=${encodeURIComponent(query)}&limit=9999`);
+      const response = await fetch(`${BACKEND_URL}/api/orders/inventory/search?query=${encodeURIComponent(query)}&limit=9999`);
       if (response.ok) {
-        const results = await response.json();
+        const data = await response.json();
+        // API returns {products: [...], total: N}
+        const results = (data.products || []).map(p => ({
+          product_id: p.product_id,
+          sku: p.sku,
+          name: p.name,
+          price_per_day: p.price || 0,
+          damage_cost: 0, // not provided by API
+          deposit: 0, // not provided by API
+          image_url: p.image,
+          available_quantity: p.available_quantity || 0
+        }));
         setSearchResults(results);
       }
     } catch (error) {

@@ -143,8 +143,12 @@ export default function NewOrderView() {
 
   // Перевірка конфліктів при зміні дат або товарів
   useEffect(() => {
+    console.log('[Availability Check] useEffect triggered:', { issueDate, returnDate, itemsCount: items.length });
     if (issueDate && returnDate && items.length > 0) {
+      console.log('[Availability Check] Calling checkConflicts...');
       checkConflicts();
+    } else {
+      console.log('[Availability Check] Skipped - missing data');
     }
   }, [issueDate, returnDate, items]);
 

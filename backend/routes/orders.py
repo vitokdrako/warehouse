@@ -954,25 +954,23 @@ async def check_availability(
         row = result.fetchone()
         total_qty = row[0] if row else 0
         
-        # Check reservations in date range
-        # Count all reserved items for this product in overlapping date ranges
+        # Check reservations in date range using product_reservations table
         reserved_qty = 0
         if start_date and end_date:
             reservation_result = db.execute(text("""
-                SELECT COALESCE(SUM(oi.quantity), 0) as reserved
-                FROM order_items oi
-                JOIN orders o ON oi.order_id = o.order_id
-                WHERE oi.product_id = :product_id
-                  AND o.status NOT IN ('cancelled', 'completed', 'returned')
-                  AND o.rental_start_date <= :end_date 
-                  AND o.rental_end_date >= :start_date
+                SELECT COALESCE(SUM(quantity), 0) as reserved
+                FROM product_reservations
+                WHERE product_id = :product_id
+                  AND status = 'active'
+                  AND reserved_from <= :end_date 
+                  AND reserved_until >= :start_date
             """), {
                 "product_id": product_id,
                 "start_date": start_date,
                 "end_date": end_date
             })
             reserved_row = reservation_result.fetchone()
-            reserved_qty = reserved_row[0] if reserved_row else 0
+            reserved_qty = int(reserved_row[0]) if reserved_row else 0
         
         available_qty = max(0, total_qty - reserved_qty)
         is_available = available_qty >= requested_qty

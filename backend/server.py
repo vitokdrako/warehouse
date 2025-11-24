@@ -82,6 +82,7 @@ app.include_router(damage_cases.router)
 app.include_router(admin.router)
 app.include_router(product_damage_history.router)
 app.include_router(product_reservations.router)
+app.include_router(inventory_adjustments.router)
 
 # Configure logging
 logging.basicConfig(

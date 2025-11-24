@@ -1,0 +1,123 @@
+"""
+Utility для перевірки доступності товарів
+Використовується в різних частинах системи для консистентної логіки
+"""
+from sqlalchemy import text
+from typing import List, Dict, Optional
+
+def check_product_availability(
+    db,
+    product_id: int,
+    quantity: int,
+    start_date: str,
+    end_date: str,
+    exclude_order_id: Optional[int] = None
+) -> Dict:
+    """
+    Перевірити доступність товару на період
+    
+    Логіка заморожування:
+    - ЗАМОРОЖЕНО: orders.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
+    - РОЗМОРОЖЕНО: orders.status IN ('returned', 'cancelled', 'completed')
+    
+    Returns:
+        {
+            "product_id": int,
+            "total_quantity": int,
+            "reserved_quantity": int,
+            "available_quantity": int,
+            "requested_quantity": int,
+            "is_available": bool
+        }
+    """
+    # Отримати загальну кількість
+    total_result = db.execute(text("""
+        SELECT quantity FROM products WHERE product_id = :product_id
+    """), {"product_id": product_id})
+    total_row = total_result.fetchone()
+    total_qty = int(total_row[0]) if total_row else 0
+    
+    # Підрахувати зарезервовані (заморожені) товари
+    query = """
+        SELECT COALESCE(SUM(oi.quantity), 0) as reserved
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE oi.product_id = :product_id
+        AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
+        AND o.rental_start_date <= :end_date 
+        AND o.rental_end_date >= :start_date
+    """
+    
+    params = {
+        "product_id": product_id,
+        "start_date": start_date,
+        "end_date": end_date
+    }
+    
+    # Виключити поточне замовлення (якщо потрібно)
+    if exclude_order_id:
+        query += " AND o.order_id != :exclude_order_id"
+        params["exclude_order_id"] = exclude_order_id
+    
+    reserved_result = db.execute(text(query), params)
+    reserved_qty = int(reserved_result.fetchone()[0])
+    
+    available_qty = max(0, total_qty - reserved_qty)
+    is_available = available_qty >= quantity
+    
+    return {
+        "product_id": product_id,
+        "total_quantity": total_qty,
+        "reserved_quantity": reserved_qty,
+        "available_quantity": available_qty,
+        "requested_quantity": quantity,
+        "is_available": is_available
+    }
+
+
+def check_order_availability(
+    db,
+    items: List[Dict],
+    start_date: str,
+    end_date: str,
+    exclude_order_id: Optional[int] = None
+) -> Dict:
+    """
+    Перевірити доступність для всіх товарів замовлення
+    
+    Args:
+        items: [{product_id, quantity}, ...]
+        start_date: YYYY-MM-DD
+        end_date: YYYY-MM-DD
+        exclude_order_id: ID замовлення для виключення (при оновленні)
+    
+    Returns:
+        {
+            "all_available": bool,
+            "items": [...],
+            "unavailable_items": [...]
+        }
+    """
+    results = []
+    unavailable = []
+    
+    for item in items:
+        result = check_product_availability(
+            db,
+            product_id=item["product_id"],
+            quantity=item["quantity"],
+            start_date=start_date,
+            end_date=end_date,
+            exclude_order_id=exclude_order_id
+        )
+        
+        results.append(result)
+        
+        if not result["is_available"]:
+            unavailable.append(result)
+    
+    return {
+        "all_available": len(unavailable) == 0,
+        "items": results,
+        "unavailable_items": unavailable
+    }

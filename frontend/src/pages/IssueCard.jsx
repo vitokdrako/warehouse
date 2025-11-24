@@ -346,7 +346,7 @@ export default function IssueCard(){
   const [events, setEvents] = useState([])
   
   // Item damage modal
-  const [itemDamage, setItemDamage] = useState({ open:false, item_id:null, kind:'подряпина', severity:'low', note:'', photoName:'' })
+  const [itemDamage, setItemDamage] = useState({ open:false, item_id:null, category:'Меблі', kindCode:'', severity:'low', note:'', fee:0, photoName:'' })
 
   // Функція для друку накладної
   const printWarehouseSlip = async () => {

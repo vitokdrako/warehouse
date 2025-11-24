@@ -477,12 +477,11 @@ export default function FinanceCabinet(){
     try {
       await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
         order_id: orderId,
-        type: 'damage',
-        title: `Шкода: ${dmg.note||''}`,
-        debit: Number(dmg.amount||0),
-        credit: 0,
+        transaction_type: 'damage',
+        amount: Number(dmg.amount||0),
         currency: 'UAH',
-        status: 'unpaid'
+        status: 'unpaid',
+        description: `Шкода: ${dmg.note||''}`
       })
       await loadTransactions()
       alert('Збитки нараховано!')

@@ -23,6 +23,8 @@ def check_product_availability(
     Returns:
         {
             "product_id": int,
+            "sku": str,
+            "product_name": str,
             "total_quantity": int,
             "reserved_quantity": int,
             "available_quantity": int,
@@ -30,12 +32,14 @@ def check_product_availability(
             "is_available": bool
         }
     """
-    # Отримати загальну кількість
+    # Отримати загальну кількість, SKU та назву
     total_result = db.execute(text("""
-        SELECT quantity FROM products WHERE product_id = :product_id
+        SELECT quantity, sku, name FROM products WHERE product_id = :product_id
     """), {"product_id": product_id})
     total_row = total_result.fetchone()
     total_qty = int(total_row[0]) if total_row else 0
+    sku = total_row[1] if total_row else None
+    product_name = total_row[2] if total_row else None
     
     # Підрахувати зарезервовані (заморожені) товари
     query = """

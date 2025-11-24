@@ -92,6 +92,7 @@ function balanceDue(rows){
 function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff, onReleaseDeposit, onAddDamage, onCollapse, onDelete}){
   const orderRows = rows.filter(r=>r.order_id===orderId)
   const held = heldAmount(orderRows)
+  const heldByCurrency = heldAmountByCurrency(orderRows)
   const due  = balanceDue(orderRows)
   const [emailInput, setEmailInput] = useState('')
   const [showEmailDialog, setShowEmailDialog] = useState(false)

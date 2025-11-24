@@ -159,15 +159,18 @@ async def create_transaction(
     Створити транзакцію
     ✅ MIGRATED: Using RentalHub DB
     """
+    transaction_id = str(uuid.uuid4())
+    
     db.execute(text("""
         INSERT INTO finance_transactions (
-            order_id, transaction_type, amount, currency, status, 
+            id, order_id, transaction_type, amount, currency, status, 
             description, payment_method, notes, created_at
         ) VALUES (
-            :order_id, :type, :amount, :currency, :status, 
+            :id, :order_id, :type, :amount, :currency, :status, 
             :description, :method, :notes, NOW()
         )
     """), {
+        "id": transaction_id,
         "order_id": data.get('order_id'),
         "type": data.get('transaction_type', 'payment'),
         "amount": data.get('amount', 0),
@@ -179,7 +182,7 @@ async def create_transaction(
     })
     
     db.commit()
-    return {"message": "Transaction created"}
+    return {"message": "Transaction created", "transaction_id": transaction_id}
 
 @router.post("/mark-paid/{transaction_id}")
 @manager_router.post("/mark-paid/{transaction_id}")

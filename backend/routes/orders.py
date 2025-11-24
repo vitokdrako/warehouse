@@ -1137,7 +1137,84 @@ async def move_to_preparation(
                 detail=f"Неможливо відправити на збір. Поточний статус: {status}"
             )
         
-        # Оновити замовлення
+        # ПЕРЕВІРКА ДОСТУПНОСТІ перед заморожуванням товарів
+        # Отримати всі товари замовлення та дати оренди
+        order_details = db.execute(text("""
+            SELECT o.rental_start_date, o.rental_end_date
+            FROM orders o
+            WHERE o.order_id = :order_id
+        """), {"order_id": order_id}).fetchone()
+        
+        if order_details:
+            rental_start = order_details[0]
+            rental_end = order_details[1]
+            
+            # Отримати товари
+            items_result = db.execute(text("""
+                SELECT product_id, quantity FROM order_items
+                WHERE order_id = :order_id
+            """), {"order_id": order_id})
+            
+            # Перевірити кожен товар
+            unavailable_items = []
+            for item_row in items_result:
+                product_id, quantity = item_row[0], item_row[1]
+                
+                # Підрахувати зарезервовані товари (крім поточного замовлення)
+                reserved_result = db.execute(text("""
+                    SELECT COALESCE(SUM(oi.quantity), 0) as reserved
+                    FROM order_items oi
+                    JOIN orders o ON oi.order_id = o.order_id
+                    WHERE oi.product_id = :product_id
+                    AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
+                    AND o.order_id != :current_order_id
+                    AND o.rental_start_date <= :end_date 
+                    AND o.rental_end_date >= :start_date
+                """), {
+                    "product_id": product_id,
+                    "current_order_id": order_id,
+                    "start_date": rental_start,
+                    "end_date": rental_end
+                })
+                reserved_qty = int(reserved_result.fetchone()[0])
+                
+                # Отримати загальну кількість
+                total_result = db.execute(text("""
+                    SELECT quantity FROM products WHERE product_id = :product_id
+                """), {"product_id": product_id})
+                total_row = total_result.fetchone()
+                total_qty = int(total_row[0]) if total_row else 0
+                
+                available_qty = total_qty - reserved_qty
+                
+                if available_qty < quantity:
+                    # Отримати SKU для повідомлення
+                    sku_result = db.execute(text("""
+                        SELECT sku, name FROM products WHERE product_id = :product_id
+                    """), {"product_id": product_id})
+                    sku_row = sku_result.fetchone()
+                    sku = sku_row[0] if sku_row else str(product_id)
+                    name = sku_row[1] if sku_row and len(sku_row) > 1 else "Товар"
+                    
+                    unavailable_items.append({
+                        "sku": sku,
+                        "name": name,
+                        "requested": quantity,
+                        "available": available_qty
+                    })
+            
+            # Якщо є недоступні товари, відхилити запит
+            if unavailable_items:
+                error_details = "; ".join([
+                    f"{item['sku']} ({item['name']}): потрібно {item['requested']}, доступно {item['available']}"
+                    for item in unavailable_items
+                ])
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Неможливо підтвердити замовлення. Товари недоступні: {error_details}"
+                )
+        
+        # Оновити замовлення (заморожує товари)
         db.execute(text("""
             UPDATE orders 
             SET client_confirmed = TRUE, status = 'processing'

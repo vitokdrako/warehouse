@@ -388,13 +388,12 @@ export default function FinanceCabinet(){
     try {
       const payload = {
         order_id: orderId,
-        type: 'payment',
+        transaction_type: 'payment',
         payment_method: p.method,
-        title: `Оплата (${p.method})`,
-        credit: Number(p.amount||0),
-        debit: 0,
+        amount: Number(p.amount||0),
         currency: 'UAH',
-        status: 'paid',
+        status: 'completed',
+        description: `Оплата (${p.method})`,
         notes: p.note||''
       }
       await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, payload)

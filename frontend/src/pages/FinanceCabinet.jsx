@@ -288,12 +288,22 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
 function OrderListItem({orderId, rows, onClick, isExpanded}){
   const orderRows = rows.filter(r=>r.order_id===orderId)
   const held = heldAmount(orderRows)
+  const heldByCurrency = heldAmountByCurrency(orderRows)
   const due  = balanceDue(orderRows)
   const accrued = orderRows.filter(isRentOrCharge).reduce((s,r)=>s+(r.debit||0),0)
   const paid = orderRows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0)
   
   // Get client name from first transaction of this order
   const clientName = orderRows[0]?.client_name || ''
+  
+  // Format held amounts by currency for badge
+  const heldDisplay = Object.entries(heldByCurrency)
+    .filter(([, amt]) => amt > 0)
+    .map(([curr, amt]) => {
+      const symbol = curr === 'UAH' ? '₴' : curr === 'USD' ? '$' : '€'
+      return `${symbol}${fmtUA(amt)}`
+    })
+    .join(' + ')
 
   return (
     <div 
@@ -314,7 +324,7 @@ function OrderListItem({orderId, rows, onClick, isExpanded}){
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {held > 0 && <Badge tone='blue'>Застава ₴{fmtUA(held)}</Badge>}
+          {held > 0 && <Badge tone='blue'>Застава {heldDisplay || `₴${fmtUA(held)}`}</Badge>}
           {due > 0 ? (
             <Badge tone='amber'>Борг ₴{fmtUA(due)}</Badge>
           ) : (

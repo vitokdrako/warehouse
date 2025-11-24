@@ -327,9 +327,9 @@ export default function NewOrderView() {
         console.log('[Availability Check] Availability map:', availabilityMap);
         setAvailability(availabilityMap);
         
-        // Set conflicts if any items are not available
+        // Set conflicts if any items are not available OR have tight schedule
         const conflicts = result.items?.filter(item => 
-          item.available_quantity < item.requested_quantity
+          item.available_quantity < item.requested_quantity || item.has_tight_schedule
         ) || [];
         setConflicts(conflicts);
       }

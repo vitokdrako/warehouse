@@ -458,12 +458,11 @@ export default function FinanceCabinet(){
     try {
       await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
         order_id: orderId,
-        type: 'deposit_release',
-        title: 'Повернення застави',
-        debit: 0,
-        credit: 0,
+        transaction_type: 'deposit_release',
+        amount: amount,
         currency: 'UAH',
         status: 'completed',
+        description: 'Повернення застави',
         notes: `Повернено ₴${amount}`
       })
       await loadTransactions()

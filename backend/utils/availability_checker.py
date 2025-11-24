@@ -96,43 +96,49 @@ def check_product_availability(
     on_rent_qty = int(on_rent_result.fetchone()[0])
     on_rent_result.close()  # Закрити результат
     
-    # Отримати список замовлень що блокують товар
-    blocking_orders_query = """
-        SELECT o.order_id, o.order_number, o.status, o.rental_start_date, o.rental_end_date, oi.quantity
+    # Отримати близькі замовлення (попередження про можливий конфлікт)
+    # Шукаємо замовлення що:
+    # 1. Перетинаються з датами (конфлікт)
+    # 2. Завершуються за день до початку (мало часу на підготовку)
+    # 3. Зараз у статусі issued/on_rent (може запізнитися з поверненням)
+    nearby_orders_query = """
+        SELECT o.order_id, o.order_number, o.status, o.rental_start_date, o.rental_end_date, oi.quantity,
+               DATEDIFF(:start_date, o.rental_end_date) as days_gap
         FROM order_items oi
         JOIN orders o ON oi.order_id = o.order_id
         WHERE oi.product_id = :product_id
+        AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
         AND (
-            (o.status IN ('processing', 'ready_for_issue') 
-             AND o.rental_start_date <= :end_date 
-             AND o.rental_end_date >= :start_date)
-            OR
-            (o.status IN ('issued', 'on_rent'))
+            (o.rental_start_date <= :end_date AND o.rental_end_date >= :start_date)
+            OR (o.rental_end_date >= DATE_SUB(:start_date, INTERVAL 1 DAY) 
+                AND o.rental_end_date < :start_date)
         )
+        ORDER BY o.rental_start_date
     """
     
-    blocking_params = {
+    nearby_params = {
         "product_id": product_id,
         "start_date": start_date,
         "end_date": end_date
     }
     
     if exclude_order_id:
-        blocking_orders_query += " AND o.order_id != :exclude_order_id"
-        blocking_params["exclude_order_id"] = exclude_order_id
+        nearby_orders_query += " AND o.order_id != :exclude_order_id"
+        nearby_params["exclude_order_id"] = exclude_order_id
     
-    blocking_result = db.execute(text(blocking_orders_query), blocking_params)
-    blocking_orders = []
-    for row in blocking_result:
-        blocking_orders.append({
+    nearby_result = db.execute(text(nearby_orders_query), nearby_params)
+    nearby_orders = []
+    for row in nearby_result:
+        nearby_orders.append({
             "order_id": row[0],
             "order_number": row[1],
             "status": row[2],
             "rental_start_date": row[3].isoformat() if row[3] else None,
             "rental_end_date": row[4].isoformat() if row[4] else None,
-            "quantity": row[5]
+            "quantity": row[5],
+            "days_gap": row[6] if row[6] is not None else None
         })
-    blocking_result.close()
+    nearby_result.close()
     
     available_qty = max(0, total_qty - reserved_qty)
     is_available = available_qty >= quantity

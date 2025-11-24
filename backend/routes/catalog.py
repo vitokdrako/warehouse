@@ -97,45 +97,10 @@ async def get_catalog_items(
         product_id = row[0]
         total_qty = row[10] or 0
         
-        # Підрахунок резервів та станів (якщо запитано)
-        reserved_qty = 0
-        in_rent_qty = 0
-        in_restore_qty = 0
-        
-        if include_reservations:
-            # Підрахувати активні резерви
-            reserved_result = db.execute(text("""
-                SELECT COALESCE(SUM(quantity), 0)
-                FROM product_reservations
-                WHERE product_id = :product_id 
-                AND status = 'active'
-                AND reserved_until >= CURDATE()
-            """), {"product_id": product_id})
-            reserved_row = reserved_result.fetchone()
-            reserved_qty = int(reserved_row[0]) if reserved_row else 0
-            print(f"[Catalog] Product {product_id}: reserved_qty={reserved_qty}")
-            
-            # Підрахувати товари в оренді (видані замовлення)
-            in_rent_result = db.execute(text("""
-                SELECT COALESCE(SUM(oi.quantity), 0)
-                FROM order_items oi
-                JOIN orders o ON oi.order_id = o.order_id
-                WHERE oi.product_id = :product_id
-                AND o.status IN ('issued', 'on_rent')
-            """), {"product_id": product_id})
-            in_rent_row = in_rent_result.fetchone()
-            in_rent_qty = int(in_rent_row[0]) if in_rent_row else 0
-            
-            # Підрахувати товари на реставрації (з пошкодженнями)
-            in_restore_result = db.execute(text("""
-                SELECT COUNT(DISTINCT id)
-                FROM product_damage_history
-                WHERE product_id = :product_id
-                AND fee > 0
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            """), {"product_id": product_id})
-            in_restore_row = in_restore_result.fetchone()
-            in_restore_qty = int(in_restore_row[0]) if in_restore_row else 0
+        # Отримати статистику з pre-loaded словників
+        reserved_qty = reserved_dict.get(product_id, 0)
+        in_rent_qty = in_rent_dict.get(product_id, 0)
+        in_restore_qty = in_restore_dict.get(product_id, 0)
         
         available_qty = max(0, total_qty - reserved_qty - in_rent_qty)
         

@@ -149,15 +149,13 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
         </Card>
 
         <Card title="Прийом застави" right={<Badge tone='blue'>холд</Badge>}>
-          <div className="grid gap-2 md:grid-cols-5">
+          <div className="grid gap-2 md:grid-cols-3">
             <select className="rounded-xl border px-3 py-2" value={dep.code} onChange={e=>setDep({...dep, code:e.target.value})}>
               <option value="UAH">UAH</option>
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
             </select>
-            <input className="rounded-xl border px-3 py-2" type="number" value={dep.amount} onChange={e=>setDep({...dep, amount:Number(e.target.value)})} placeholder="Сума"/>
-            <input className="rounded-xl border px-3 py-2" type="number" step="0.01" value={dep.rate} onChange={e=>setDep({...dep, rate:Number(e.target.value)})} placeholder="Курс"/>
-            <div className="md:col-span-2 flex items-center text-sm text-slate-600">Еквівалент: ₴ {fmtUA(depUAH)}</div>
+            <input className="md:col-span-2 rounded-xl border px-3 py-2" type="number" value={dep.amount} onChange={e=>setDep({...dep, amount:Number(e.target.value)})} placeholder="Сума"/>
           </div>
           <div className="mt-3"><PillButton tone='blue' onClick={()=>onAddDeposit(orderId, dep)}>Прийняти заставу</PillButton></div>
         </Card>

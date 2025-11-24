@@ -954,16 +954,18 @@ async def check_availability(
         row = result.fetchone()
         total_qty = row[0] if row else 0
         
-        # Check reservations in date range using product_reservations table
+        # Check reservations using order_items + orders status
+        # Товари заморожені якщо замовлення в статусах: processing, ready_for_issue, issued, on_rent
         reserved_qty = 0
         if start_date and end_date:
             reservation_result = db.execute(text("""
-                SELECT COALESCE(SUM(quantity), 0) as reserved
-                FROM product_reservations
-                WHERE product_id = :product_id
-                  AND status = 'active'
-                  AND reserved_from <= :end_date 
-                  AND reserved_until >= :start_date
+                SELECT COALESCE(SUM(oi.quantity), 0) as reserved
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE oi.product_id = :product_id
+                  AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
+                  AND o.rental_start_date <= :end_date 
+                  AND o.rental_end_date >= :start_date
             """), {
                 "product_id": product_id,
                 "start_date": start_date,

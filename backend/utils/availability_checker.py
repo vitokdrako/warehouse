@@ -69,6 +69,31 @@ def check_product_availability(
     reserved_qty = int(reserved_result.fetchone()[0])
     reserved_result.close()  # Закрити результат
     
+    # Підрахувати кількість товару що саме "в оренді" (статус on_rent)
+    on_rent_query = """
+        SELECT COALESCE(SUM(oi.quantity), 0) as on_rent
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE oi.product_id = :product_id
+        AND o.status = 'on_rent'
+        AND o.rental_start_date <= :end_date 
+        AND o.rental_end_date >= :start_date
+    """
+    
+    on_rent_params = {
+        "product_id": product_id,
+        "start_date": start_date,
+        "end_date": end_date
+    }
+    
+    if exclude_order_id:
+        on_rent_query += " AND o.order_id != :exclude_order_id"
+        on_rent_params["exclude_order_id"] = exclude_order_id
+    
+    on_rent_result = db.execute(text(on_rent_query), on_rent_params)
+    on_rent_qty = int(on_rent_result.fetchone()[0])
+    on_rent_result.close()  # Закрити результат
+    
     available_qty = max(0, total_qty - reserved_qty)
     is_available = available_qty >= quantity
     
@@ -78,6 +103,7 @@ def check_product_availability(
         "product_name": product_name,
         "total_quantity": total_qty,
         "reserved_quantity": reserved_qty,
+        "in_rent": on_rent_qty,
         "available_quantity": available_qty,
         "requested_quantity": quantity,
         "is_available": is_available

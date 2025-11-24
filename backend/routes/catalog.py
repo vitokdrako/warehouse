@@ -17,6 +17,7 @@ async def get_catalog_items(
     category: str = None,
     search: str = None,
     limit: int = 1000,
+    include_reservations: bool = False,
     db: Session = Depends(get_rh_db)
 ):
     """

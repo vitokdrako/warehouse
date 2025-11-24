@@ -283,7 +283,7 @@ export default function ManagerDashboard() {
       </section>
 
       {/* Boards */}
-      <main className="mx-auto max-w-7xl px-6 py-6 grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <main className="mx-auto max-w-7xl px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* КОЛОНКА 1: Очікують підтвердження (замовлення одразу з нашої бази) */}
         <Column title="⏳ Очікують підтвердження" subtitle="Нові замовлення → Редагувати → Email" tone="warning">
           {loading ? (

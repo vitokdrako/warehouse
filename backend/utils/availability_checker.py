@@ -86,9 +86,7 @@ def check_product_availability(
     """
     
     on_rent_params = {
-        "product_id": product_id,
-        "start_date": start_date,
-        "end_date": end_date
+        "product_id": product_id
     }
     
     if exclude_order_id:

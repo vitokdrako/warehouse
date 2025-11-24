@@ -924,16 +924,22 @@ async def search_inventory(
     return {"products": products, "total": len(products)}
 
 @router.post("/check-availability")
-async def check_availability(
-    data: dict,
+async def check_availability_endpoint(
+    request: dict,
     db: Session = Depends(get_rh_db)
 ):
     """
-    Перевірка доступності товарів для дат з урахуванням резервацій
+    Перевірити доступність товарів на період
+    Request body: { start_date, end_date, items: [{product_id, quantity}] }
+    ✅ MIGRATED: Using products + order_items from RentalHub DB
+    ✅ USES: availability_checker utility для консистентної логіки
     """
-    items = data.get('items', [])
-    start_date = data.get('start_date')
-    end_date = data.get('end_date')
+    try:
+        from utils.availability_checker import check_order_availability
+        
+        start_date = request.get("start_date")
+        end_date = request.get("end_date")
+        items = request.get("items", [])
     
     results = []
     

@@ -4,6 +4,7 @@ import { useToast } from '../hooks/use-toast'
 import axios from 'axios'
 import { QRCodeSVG } from 'qrcode.react'
 import { getImageUrl } from '../utils/imageHelper'
+import { DAMAGE_RULES, defaultFeeFor } from '../utils/damageRules'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

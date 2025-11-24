@@ -26,25 +26,33 @@ async def get_transactions(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Отримати фінансові транзакції
+    Отримати фінансові транзакції з іменами клієнтів
     ✅ MIGRATED: Using RentalHub DB
     """
-    sql = "SELECT * FROM finance_transactions WHERE 1=1"
+    # Join with orders table to get client name
+    sql = """
+        SELECT 
+            ft.*,
+            o.customer_name
+        FROM finance_transactions ft
+        LEFT JOIN orders o ON ft.order_id = o.order_id
+        WHERE 1=1
+    """
     params = {}
     
     if order_id:
-        sql += " AND order_id = :order_id"
+        sql += " AND ft.order_id = :order_id"
         params['order_id'] = order_id
     
     if transaction_type:
-        sql += " AND transaction_type = :type"
+        sql += " AND ft.transaction_type = :type"
         params['type'] = transaction_type
     
     if status:
-        sql += " AND status = :status"
+        sql += " AND ft.status = :status"
         params['status'] = status
     
-    sql += f" ORDER BY created_at DESC LIMIT {limit}"
+    sql += f" ORDER BY ft.created_at DESC LIMIT {limit}"
     
     result = db.execute(text(sql), params)
     
@@ -81,7 +89,8 @@ async def get_transactions(
             "currency": row[5] or 'UAH',
             "status": row[6],
             "counterparty": f"Order #{row[2]}" if row[2] else "N/A",
-            "notes": row[10]
+            "notes": row[10],
+            "client_name": row[12] if len(row) > 12 else None  # customer_name from join
         })
     
     return transactions

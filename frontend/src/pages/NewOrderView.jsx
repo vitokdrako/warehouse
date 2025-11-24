@@ -768,16 +768,21 @@ function ConflictsPanel({ conflicts }) {
                 </Badge>
               </td>
               <td className="px-3 py-2 text-slate-600">
-                {c.message || 'Недоступно в обраній кількості'}
-                {c.available !== undefined && c.requested !== undefined && c.available < c.requested && (
+                {/* Основне повідомлення в залежності від типу */}
+                {c.type === 'out_of_stock' && 'Товар відсутній на складі (загальна кількість = 0)'}
+                {c.type === 'insufficient' && 'Товар зарезервований на ці дати іншими замовленнями'}
+                {c.type === 'tight_schedule' && 'Товар доступний, але є близькі замовлення з ризиком затримки'}
+                {c.type === 'low_stock' && `Товар доступний, але залишок критично малий (${c.available_quantity} з ${c.total_quantity} шт)`}
+                
+                {c.available_quantity !== undefined && c.requested_quantity !== undefined && c.available_quantity < c.requested_quantity && (
                   <div className="text-xs text-rose-600 mt-1">
-                    Бракує: {c.requested - c.available} шт
+                    Бракує: {c.requested_quantity - c.available_quantity} шт
                   </div>
                 )}
                 {c.nearby_orders && c.nearby_orders.length > 0 && (
                   <div className="text-xs text-slate-600 mt-2 space-y-1">
                     <div className="font-semibold">
-                      {c.is_available ? '⚠️ Близькі замовлення:' : 'Товар зайнятий в замовленнях:'}
+                      {c.is_available ? '⚠️ Близькі замовлення (ризик):' : '🔒 Товар зайнятий в замовленнях:'}
                     </div>
                     {c.nearby_orders.map((order, idx) => (
                       <div key={idx} className="pl-2">

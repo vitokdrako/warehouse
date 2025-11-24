@@ -71,6 +71,8 @@ def check_product_availability(
     
     return {
         "product_id": product_id,
+        "sku": sku,
+        "product_name": product_name,
         "total_quantity": total_qty,
         "reserved_quantity": reserved_qty,
         "available_quantity": available_qty,

@@ -750,15 +750,24 @@ function ConflictsPanel({ conflicts }) {
                     Бракує: {c.requested - c.available} шт
                   </div>
                 )}
-                {c.blocking_orders && c.blocking_orders.length > 0 && (
+                {c.nearby_orders && c.nearby_orders.length > 0 && (
                   <div className="text-xs text-slate-600 mt-2 space-y-1">
-                    <div className="font-semibold">Товар зайнятий в замовленнях:</div>
-                    {c.blocking_orders.map((order, idx) => (
+                    <div className="font-semibold">
+                      {c.is_available ? '⚠️ Близькі замовлення:' : 'Товар зайнятий в замовленнях:'}
+                    </div>
+                    {c.nearby_orders.map((order, idx) => (
                       <div key={idx} className="pl-2">
                         • <span className="font-mono">{order.order_number}</span>
-                        {' '}<span className="text-blue-600">({order.status})</span>
+                        {' '}<span className={order.status === 'issued' || order.status === 'on_rent' ? 'text-rose-600 font-semibold' : 'text-blue-600'}>
+                          ({order.status})
+                        </span>
                         {' '}{order.rental_start_date} → {order.rental_end_date}
                         {' '}[{order.quantity} шт]
+                        {order.days_gap !== null && order.days_gap >= 0 && order.days_gap <= 1 && (
+                          <span className="text-amber-600 font-semibold ml-1">
+                            (↔ {order.days_gap} дн. до видачі)
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>

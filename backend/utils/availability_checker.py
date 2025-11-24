@@ -143,6 +143,18 @@ def check_product_availability(
     available_qty = max(0, total_qty - reserved_qty)
     is_available = available_qty >= quantity
     
+    # Визначити рівень ризику
+    has_conflict = not is_available
+    has_tight_schedule = False
+    
+    for order in nearby_orders:
+        # Якщо є замовлення з issued/on_rent поруч, це ризик
+        if order['status'] in ('issued', 'on_rent'):
+            has_tight_schedule = True
+        # Якщо між поверненням і видачею 0-1 день, це ризик
+        if order['days_gap'] is not None and 0 <= order['days_gap'] <= 1:
+            has_tight_schedule = True
+    
     return {
         "product_id": product_id,
         "sku": sku,
@@ -153,7 +165,8 @@ def check_product_availability(
         "available_quantity": available_qty,
         "requested_quantity": quantity,
         "is_available": is_available,
-        "blocking_orders": blocking_orders
+        "has_tight_schedule": has_tight_schedule,
+        "nearby_orders": nearby_orders
     }
 
 

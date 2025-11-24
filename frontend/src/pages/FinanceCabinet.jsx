@@ -406,17 +406,15 @@ export default function FinanceCabinet(){
 
   const addDeposit = async (orderId, dep)=>{
     try {
-      const uahAmount = dep.code==='UAH'? dep.amount : Math.round(dep.amount*dep.rate)
       const payload = {
         order_id: orderId,
-        type: 'deposit_hold',
-        payment_method: dep.code==='UAH'? 'cash':'cash_fx',
-        title: `Застава (${dep.code})`,
-        credit: uahAmount,
-        debit: 0,
+        transaction_type: 'deposit_hold',
+        payment_method: 'cash',
+        amount: Number(dep.amount||0),
         currency: dep.code,
         status: 'held',
-        notes: dep.code!=='UAH'? `${dep.amount} ${dep.code} @ ${dep.rate}` : ''
+        description: `Застава (${dep.code})`,
+        notes: ''
       }
       await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, payload)
       await loadTransactions()

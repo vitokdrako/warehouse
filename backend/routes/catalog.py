@@ -126,7 +126,7 @@ async def get_catalog_items(
             "reserved": reserved_qty,
             "in_rent": in_rent_qty,
             "rented": in_rent_qty,
-            "in_restore": in_restore_qty
+            "in_restore": in_restore_qty,
             "location": {
                 "zone": row[11] or "",
                 "aisle": row[12] or "",

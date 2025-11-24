@@ -72,8 +72,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
 
   // forms
   const [pay, setPay] = useState({amount:due>0?due:500, method:'cash', note:''})
-  const [dep, setDep] = useState({code:'UAH', amount:3000, rate:1})
-  const depUAH = dep.code==='UAH'? dep.amount : Math.round(dep.amount*dep.rate)
+  const [dep, setDep] = useState({code:'UAH', amount:3000})
   const [dmg, setDmg] = useState({amount:0, note:''})
 
   useEffect(()=>{

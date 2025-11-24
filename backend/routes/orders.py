@@ -940,65 +940,27 @@ async def check_availability_endpoint(
         start_date = request.get("start_date")
         end_date = request.get("end_date")
         items = request.get("items", [])
-    
-    results = []
-    
-    for item in items:
-        product_id = item.get('product_id')
-        requested_qty = item.get('quantity', 1)
         
-        # Get total quantity from inventory or products
-        # Try inventory first, fallback to products if empty
-        result = db.execute(text("""
-            SELECT COALESCE(
-                (SELECT quantity FROM inventory WHERE product_id = :id LIMIT 1),
-                (SELECT 100 FROM products WHERE product_id = :id LIMIT 1),
-                0
-            ) as total_qty
-        """), {"id": product_id})
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="start_date and end_date are required")
         
-        row = result.fetchone()
-        total_qty = row[0] if row else 0
+        if not items:
+            raise HTTPException(status_code=400, detail="items list is required")
         
-        # Check reservations using order_items + orders status
-        # Товари заморожені якщо замовлення в статусах: processing, ready_for_issue, issued, on_rent
-        reserved_qty = 0
-        if start_date and end_date:
-            reservation_result = db.execute(text("""
-                SELECT COALESCE(SUM(oi.quantity), 0) as reserved
-                FROM order_items oi
-                JOIN orders o ON oi.order_id = o.order_id
-                WHERE oi.product_id = :product_id
-                  AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
-                  AND o.rental_start_date <= :end_date 
-                  AND o.rental_end_date >= :start_date
-            """), {
-                "product_id": product_id,
-                "start_date": start_date,
-                "end_date": end_date
-            })
-            reserved_row = reservation_result.fetchone()
-            reserved_qty = int(reserved_row[0]) if reserved_row else 0
+        # Use the availability checker utility
+        availability_result = check_order_availability(
+            db=db,
+            items=items,
+            start_date=start_date,
+            end_date=end_date
+        )
         
-        available_qty = max(0, total_qty - reserved_qty)
-        is_available = available_qty >= requested_qty
+        return availability_result
         
-        results.append({
-            "product_id": product_id,
-            "requested_quantity": requested_qty,
-            "total_quantity": total_qty,
-            "reserved_quantity": reserved_qty,
-            "available_quantity": available_qty,
-            "is_available": is_available,
-            "message": "Available" if is_available else f"Only {available_qty} available (total: {total_qty}, reserved: {reserved_qty})"
-        })
-    
-    all_available = all(r['is_available'] for r in results)
-    
-    return {
-        "all_available": all_available,
-        "items": results,
-    }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error checking availability: {str(e)}")
 
 
 # ============================================================

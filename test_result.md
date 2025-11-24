@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Протестувати функціонал фінансового кабінету - login, navigation, client name display, payment forms, deposit forms"
+user_problem_statement: "Протестувати відображення мультивалютних депозитів у фінансовому кабінеті для замовлення #6996"
 
 frontend:
   - task: "Login functionality"

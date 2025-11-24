@@ -101,3 +101,86 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Протестувати функціонал фінансового кабінету - login, navigation, client name display, payment forms, deposit forms"
+
+frontend:
+  - task: "Login functionality"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/Login.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test login with provided credentials: vitokdrako@gmail.com / test123"
+
+  - task: "Finance cabinet navigation"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/FinanceCabinet.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test navigation to /finance page and verify page loads with orders"
+
+  - task: "Client name display in order list"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/FinanceCabinet.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to verify client name displays as 'Замовлення #XXXX · [Ім'я клієнта]' format in line 270-272"
+
+  - task: "Payment form functionality"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/FinanceCabinet.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test payment form with method, amount, note fields and 'Зарахувати оплату' button (lines 137-149)"
+
+  - task: "Deposit form functionality"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/FinanceCabinet.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to verify deposit form has ONLY 2 fields (currency + amount) without 'Курс' and 'Еквівалент' fields (lines 151-161)"
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+
+test_plan:
+  current_focus:
+    - "Login functionality"
+    - "Finance cabinet navigation"
+    - "Client name display in order list"
+    - "Payment form functionality"
+    - "Deposit form functionality"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+      message: "Starting comprehensive testing of finance cabinet functionality with provided credentials and specific UI verification requirements"

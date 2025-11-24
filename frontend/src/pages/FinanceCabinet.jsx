@@ -429,24 +429,22 @@ export default function FinanceCabinet(){
       // Create writeoff record
       await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
         order_id: orderId,
-        type: 'deposit_writeoff',
-        title: 'Списання із застави',
-        debit: 0,
-        credit: 0,
+        transaction_type: 'deposit_writeoff',
+        amount: amount,
         currency: 'UAH',
         status: 'completed',
+        description: 'Списання із застави',
         notes: `Списано ₴${amount}`
       })
       // Create payment from deposit
       await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
         order_id: orderId,
-        type: 'payment',
+        transaction_type: 'payment',
         payment_method: 'deposit',
-        title: 'Оплата за рахунок застави',
-        debit: 0,
-        credit: amount,
+        amount: amount,
         currency: 'UAH',
-        status: 'paid'
+        status: 'completed',
+        description: 'Оплата за рахунок застави'
       })
       await loadTransactions()
       alert('Списано з застави!')

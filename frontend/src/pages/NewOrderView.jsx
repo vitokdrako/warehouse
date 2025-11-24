@@ -328,9 +328,36 @@ export default function NewOrderView() {
         setAvailability(availabilityMap);
         
         // Set conflicts if any items are not available OR have tight schedule
-        const conflicts = result.items?.filter(item => 
-          item.available_quantity < item.requested_quantity || item.has_tight_schedule
-        ) || [];
+        const conflicts = result.items?.map(item => {
+          // Визначити тип конфлікту
+          let conflictType = null;
+          let level = 'warning';
+          
+          if (item.total_quantity === 0) {
+            conflictType = 'out_of_stock';
+            level = 'error';
+          } else if (item.available_quantity < item.requested_quantity) {
+            conflictType = 'insufficient';
+            level = 'error';
+          } else if (item.has_tight_schedule) {
+            conflictType = 'tight_schedule';
+            level = 'warning';
+          } else if (item.available_quantity < item.total_quantity * 0.2) {
+            conflictType = 'low_stock';
+            level = 'warning';
+          }
+          
+          // Якщо є конфлікт, додати до списку
+          if (conflictType) {
+            return {
+              ...item,
+              type: conflictType,
+              level: level
+            };
+          }
+          return null;
+        }).filter(Boolean) || [];
+        
         setConflicts(conflicts);
       }
     } catch (error) {

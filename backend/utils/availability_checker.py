@@ -44,20 +44,15 @@ def check_product_availability(
     product_name = total_row[2] if total_row else None
     
     # Підрахувати зарезервовані (заморожені) товари
-    # ВАЖЛИВО: Товари 'issued'/'on_rent' блокують ВСЕ після rental_start_date
+    # Перевірка по ДАТАХ - якщо дати не перетинаються, товар вільний
     query = """
         SELECT COALESCE(SUM(oi.quantity), 0) as reserved
         FROM order_items oi
         JOIN orders o ON oi.order_id = o.order_id
         WHERE oi.product_id = :product_id
-        AND (
-            (o.status IN ('processing', 'ready_for_issue') 
-             AND o.rental_start_date <= :end_date 
-             AND o.rental_end_date >= :start_date)
-            OR
-            (o.status IN ('issued', 'on_rent')
-             AND o.rental_start_date <= :end_date)
-        )
+        AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
+        AND o.rental_start_date <= :end_date 
+        AND o.rental_end_date >= :start_date
     """
     
     params = {

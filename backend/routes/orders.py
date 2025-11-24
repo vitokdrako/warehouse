@@ -1294,16 +1294,8 @@ async def complete_return(
             WHERE order_id = :order_id
         """), {"order_id": order_id})
         
-        # Розморозити резерви товарів
-        try:
-            result = db.execute(text("""
-                UPDATE product_reservations
-                SET status = 'released', released_at = NOW()
-                WHERE order_id = :order_id AND status = 'active'
-            """), {"order_id": order_id})
-            print(f"[Reservations] Розморожено {result.rowcount} резервів для замовлення {order_id}")
-        except Exception as e:
-            print(f"[Reservations] Помилка розморожування: {e}")
+        # Статус 'returned' автоматично "розморожує" товари в order_items
+        print(f"[Orders] Замовлення {order_id} повернуто (товари розморожені)")
         
         # Створити фінансову транзакцію для збитків (якщо є)
         if total_fees > 0:

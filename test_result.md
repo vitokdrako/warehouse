@@ -165,20 +165,29 @@ frontend:
           agent: "testing"
           comment: "✅ TESTED: Payment form working correctly. Has all required fields: payment method (select), amount (input), note (input). 'Зарахувати оплату' button functions properly. Form submission successful and note is preserved."
 
-  - task: "Deposit form functionality"
+  - task: "Multi-currency deposit display in order list badge"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/frontend/src/pages/FinanceCabinet.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "testing"
-          comment: "Need to verify deposit form has ONLY 2 fields (currency + amount) without 'Курс' and 'Еквівалент' fields (lines 151-161)"
-        - working: true
+          comment: "Need to test that order #6996 badge shows multi-currency amounts in format 'Застава ₴X + $Y + €Z' or each currency separately (lines 300-307)"
+
+  - task: "Multi-currency deposit display in expanded order view"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/FinanceCabinet.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
           agent: "testing"
-          comment: "✅ TESTED: Deposit form correctly implemented with ONLY 2 fields as required: currency (select) and amount (input). Confirmed NO 'Курс' or 'Еквівалент' fields present. 'Прийняти заставу' button works correctly."
+          comment: "Need to verify expanded order #6996 shows 'Холд застави' card with all three currencies as separate lines: ₴4,000, $600 USD, €50 EUR (lines 154-167)"
 
 metadata:
   created_by: "testing_agent"

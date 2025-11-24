@@ -67,6 +67,7 @@ def check_product_availability(
     
     reserved_result = db.execute(text(query), params)
     reserved_qty = int(reserved_result.fetchone()[0])
+    reserved_result.close()  # Закрити результат
     
     available_qty = max(0, total_qty - reserved_qty)
     is_available = available_qty >= quantity

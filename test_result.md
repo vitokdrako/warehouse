@@ -207,3 +207,5 @@ agent_communication:
       message: "Starting comprehensive testing of finance cabinet functionality with provided credentials and specific UI verification requirements"
     - agent: "testing"
       message: "✅ TESTING COMPLETED: All finance cabinet functionality tested successfully. Login works, navigation works, client names display correctly in required format, payment form has all required fields and works, deposit form correctly has only 2 fields without 'Курс'/'Еквівалент' as required. All screenshots captured for verification. No critical issues found."
+    - agent: "testing"
+      message: "Starting new testing task: Multi-currency deposit display verification for order #6996. Need to test badge display in order list and expanded view with separate currency lines."

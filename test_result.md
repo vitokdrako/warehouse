@@ -215,3 +215,5 @@ agent_communication:
       message: "✅ TESTING COMPLETED: All finance cabinet functionality tested successfully. Login works, navigation works, client names display correctly in required format, payment form has all required fields and works, deposit form correctly has only 2 fields without 'Курс'/'Еквівалент' as required. All screenshots captured for verification. No critical issues found."
     - agent: "testing"
       message: "Starting new testing task: Multi-currency deposit display verification for order #6996. Need to test badge display in order list and expanded view with separate currency lines."
+    - agent: "testing"
+      message: "❌ TESTING FAILED: Cannot access finance cabinet (/finance) - redirects to login page. Order #6996 visible in manager dashboard returns section but shows only single currency (₴ 1510). Multi-currency display functionality cannot be tested due to finance cabinet navigation issues. Requires investigation of authentication/routing for finance page access."

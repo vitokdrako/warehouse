@@ -167,27 +167,33 @@ frontend:
 
   - task: "Multi-currency deposit display in order list badge"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/frontend/src/pages/FinanceCabinet.jsx"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "testing"
           comment: "Need to test that order #6996 badge shows multi-currency amounts in format 'Застава ₴X + $Y + €Z' or each currency separately (lines 300-307)"
+        - working: false
+          agent: "testing"
+          comment: "❌ TESTED: Order #6996 not accessible in finance cabinet. Direct navigation to /finance redirects to login page. Manager dashboard shows order #OC-6996 in returns section but only displays single currency (₴ 1510) instead of expected multi-currency format. Finance cabinet navigation appears broken or requires different authentication approach."
 
   - task: "Multi-currency deposit display in expanded order view"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/frontend/src/pages/FinanceCabinet.jsx"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "testing"
           comment: "Need to verify expanded order #6996 shows 'Холд застави' card with all three currencies as separate lines: ₴4,000, $600 USD, €50 EUR (lines 154-167)"
+        - working: false
+          agent: "testing"
+          comment: "❌ TESTED: Cannot access finance cabinet to test expanded view. Navigation to /finance fails with redirect to login. Unable to verify 'Холд застави' card multi-currency display. Finance cabinet functionality appears inaccessible."
 
 metadata:
   created_by: "testing_agent"

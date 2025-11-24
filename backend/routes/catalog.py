@@ -76,6 +76,7 @@ async def get_catalog_items(
             """), {"product_id": product_id})
             reserved_row = reserved_result.fetchone()
             reserved_qty = int(reserved_row[0]) if reserved_row else 0
+            print(f"[Catalog] Product {product_id}: reserved_qty={reserved_qty}")
             
             # Підрахувати товари в оренді (видані замовлення)
             in_rent_result = db.execute(text("""

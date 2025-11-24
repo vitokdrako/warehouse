@@ -195,7 +195,9 @@ metadata:
   test_sequence: 1
 
 test_plan:
-  current_focus: []
+  current_focus: 
+    - "Multi-currency deposit display in order list badge"
+    - "Multi-currency deposit display in expanded order view"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

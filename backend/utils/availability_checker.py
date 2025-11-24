@@ -69,13 +69,13 @@ def check_product_availability(
     reserved_qty = int(reserved_result.fetchone()[0])
     reserved_result.close()  # Закрити результат
     
-    # Підрахувати кількість товару що саме "в оренді" (статус on_rent)
+    # Підрахувати кількість товару що саме "в оренді" (статус issued або on_rent)
     on_rent_query = """
         SELECT COALESCE(SUM(oi.quantity), 0) as on_rent
         FROM order_items oi
         JOIN orders o ON oi.order_id = o.order_id
         WHERE oi.product_id = :product_id
-        AND o.status = 'on_rent'
+        AND o.status IN ('issued', 'on_rent')
         AND o.rental_start_date <= :end_date 
         AND o.rental_end_date >= :start_date
     """

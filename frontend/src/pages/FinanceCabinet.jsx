@@ -371,7 +371,8 @@ export default function FinanceCabinet(){
         credit: r.credit || 0,
         currency: r.currency || 'UAH',
         status: r.status,
-        counterparty: r.counterparty
+        counterparty: r.counterparty,
+        client_name: r.client_name
       })))
     } catch(e){
       console.error('Error loading transactions:', e)

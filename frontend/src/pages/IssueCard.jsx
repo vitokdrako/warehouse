@@ -1173,29 +1173,28 @@ export default function IssueCard(){
                 </div>
               </div>
 
-            <div className="mt-4">
-              <Card title="Історія пошкоджень по позиції">
-                <div className="max-h-40 overflow-auto text-sm">
-                  {(() => {
-                    const it = items.find(i=>i.id===itemDamage.item_id)
-                    if(!it || (it.pre_damage?.length||0)===0) return <div className="text-slate-500">Поки немає записів</div>
-                    return (
+              <div className="mt-4">
+                <Card title="Історія пошкоджень по позиції">
+                  <div className="max-h-40 overflow-auto text-sm">
+                    {item.pre_damage && item.pre_damage.length > 0 ? (
                       <ul className="space-y-1">
-                        {it.pre_damage.map(d=> (
+                        {item.pre_damage.map(d=> (
                           <li key={d.id} className="text-xs border-b pb-1">
-                            <Badge tone='amber'>{d.kind}</Badge> · <Badge tone={d.severity==='high'?'red':d.severity==='mid'?'amber':'slate'}>{d.severity}</Badge> · {d.note || '—'}
+                            <Badge tone='amber'>{d.category}</Badge> · <Badge tone={d.severity==='high'?'red':d.severity==='medium'?'amber':'slate'}>{d.severity}</Badge> · ₴{d.fee} · {d.note || '—'}
                             <div className="text-slate-400 mt-0.5">{d.at?.slice(0,16)} {d.photoName? `· 📷 ${d.photoName}`:''}</div>
                           </li>
                         ))}
                       </ul>
-                    )
-                  })()}
-                </div>
-              </Card>
+                    ) : (
+                      <div className="text-slate-500">Поки немає записів</div>
+                    )}
+                  </div>
+                </Card>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Helper hints */}
       <div className="text-xs text-slate-500 text-center">

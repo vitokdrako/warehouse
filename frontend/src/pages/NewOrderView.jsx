@@ -739,8 +739,8 @@ function ConflictsPanel({ conflicts }) {
       <table className="w-full text-sm">
         <thead className="bg-slate-50 text-slate-600">
           <tr>
-            <th className="px-3 py-2 text-left font-medium">SKU</th>
-            <th className="px-3 py-2 text-left font-medium">Тип</th>
+            <th className="px-3 py-2 text-left font-medium">SKU / Назва</th>
+            <th className="px-3 py-2 text-left font-medium">Тип конфлікту</th>
             <th className="px-3 py-2 text-left font-medium">Деталь</th>
             <th className="px-3 py-2 text-right font-medium">Всього</th>
             <th className="px-3 py-2 text-right font-medium">В оренді</th>
@@ -751,17 +751,37 @@ function ConflictsPanel({ conflicts }) {
         <tbody className="divide-y divide-slate-200">
           {conflicts.map((c, i) => (
             <tr key={i} className={c.level === 'error' ? 'bg-rose-50' : 'bg-amber-50'}>
-              <td className="px-3 py-2 font-mono text-xs">{c.sku}</td>
+              <td className="px-3 py-2">
+                <div className="font-mono text-xs font-semibold text-slate-900">{c.sku || 'N/A'}</div>
+                <div className="text-xs text-slate-600 mt-0.5">{c.product_name || c.name || 'Невідомий товар'}</div>
+              </td>
               <td className="px-3 py-2">
                 <Badge tone={c.level === 'error' ? 'rose' : 'amber'}>
-                  {c.type === 'insufficient' ? 'Недостатньо' : c.type === 'low_stock' ? 'Малий запас' : c.type}
+                  {c.type === 'insufficient' ? '⚠️ Недостатньо' : c.type === 'low_stock' ? '📦 Малий запас' : c.type}
                 </Badge>
               </td>
-              <td className="px-3 py-2 text-slate-600">{c.message}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{c.total_quantity}</td>
-              <td className="px-3 py-2 text-right tabular-nums text-rose-600">{c.in_rent}</td>
-              <td className="px-3 py-2 text-right tabular-nums font-medium">{c.available}</td>
-              <td className="px-3 py-2 text-right tabular-nums font-medium">{c.requested}</td>
+              <td className="px-3 py-2 text-slate-600">
+                {c.message || 'Недоступно в обраній кількості'}
+                {c.available !== undefined && c.requested !== undefined && c.available < c.requested && (
+                  <div className="text-xs text-rose-600 mt-1">
+                    Бракує: {c.requested - c.available} шт
+                  </div>
+                )}
+              </td>
+              <td className="px-3 py-2 text-right tabular-nums">
+                <span className="font-medium">{c.total_quantity !== undefined ? c.total_quantity : '?'}</span>
+              </td>
+              <td className="px-3 py-2 text-right tabular-nums text-rose-600">
+                {c.in_rent !== undefined ? c.in_rent : '?'}
+              </td>
+              <td className="px-3 py-2 text-right tabular-nums">
+                <span className={c.available === 0 ? 'font-bold text-rose-600' : 'font-medium text-emerald-600'}>
+                  {c.available !== undefined ? c.available : '?'}
+                </span>
+              </td>
+              <td className="px-3 py-2 text-right tabular-nums font-bold">
+                {c.requested !== undefined ? c.requested : '?'}
+              </td>
             </tr>
           ))}
         </tbody>

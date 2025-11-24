@@ -556,30 +556,6 @@ export default function NewOrderView() {
             {/* Конфлікти */}
             {conflicts.length > 0 && (
               <Card title={`⚠️ Конфлікти наявності (${conflicts.length})`}>
-                <div className="mb-3 rounded-lg bg-yellow-50 border border-yellow-200 p-3">
-                  <div className="flex items-start gap-2">
-                    <span className="text-yellow-600">ℹ️</span>
-                    <div className="text-sm text-yellow-800">
-                      <strong>Це попередження, а не помилка.</strong> Ви можете продовжити роботу з замовленням, відправити email, і на збір.
-                      <div className="mt-2">
-                        <strong>Можливі причини:</strong>
-                        <ul className="list-disc ml-4 mt-1">
-                          <li><strong>Товар вже зарезервований</strong> іншими замовленнями на ці дати</li>
-                          <li><strong>Недостатньо товару на складі</strong> (перевірте загальну кількість)</li>
-                          <li><strong>Товар в оренді</strong> на період, що перетинається з вашим</li>
-                        </ul>
-                      </div>
-                      <div className="mt-2">
-                        <strong>Як виправити:</strong>
-                        <ul className="list-disc ml-4 mt-1">
-                          <li>Перегляньте таблицю нижче - там показано SKU, назву та поточний статус товару</li>
-                          <li>Змініть дати оренди або зменште кількість</li>
-                          <li>Або зачекайте, поки товар стане доступним (після повернення з інших замовлень)</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                </div>
                 <ConflictsPanel conflicts={conflicts} />
               </Card>
             )}

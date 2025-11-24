@@ -219,61 +219,20 @@ async def update_issue_card(
     # Якщо змінюємо статус на 'ready', оновимо також статус замовлення
     if updates.status == 'ready':
         # Отримати order_id з issue_card
-        result = db.execute(text("SELECT order_id, items FROM issue_cards WHERE id = :id"), {"id": card_id})
+        result = db.execute(text("SELECT order_id FROM issue_cards WHERE id = :id"), {"id": card_id})
         row = result.fetchone()
         if row:
             order_id = row[0]
-            items_json = row[1]
             
-            # Оновити статус замовлення
+            # Оновити статус замовлення на 'ready_for_issue'
+            # Це автоматично "заморожує" товари в order_items
             db.execute(text("""
                 UPDATE orders 
                 SET status = 'ready_for_issue'
                 WHERE order_id = :order_id
             """), {"order_id": order_id})
             
-            # Отримати дати оренди
-            order_result = db.execute(text("""
-                SELECT order_number, rent_issue_date, rent_return_date
-                FROM orders
-                WHERE order_id = :order_id
-            """), {"order_id": order_id})
-            order_row = order_result.fetchone()
-            
-            if order_row and items_json:
-                order_number = order_row[0]
-                rent_issue_date = order_row[1]
-                rent_return_date = order_row[2]
-                
-                # Створити резерви для всіх позицій
-                try:
-                    items = json.loads(items_json) if isinstance(items_json, str) else items_json
-                    
-                    for item in items:
-                        reservation_id = str(uuid.uuid4())
-                        db.execute(text("""
-                            INSERT INTO product_reservations (
-                                id, product_id, sku, order_id, order_number,
-                                quantity, reserved_from, reserved_until, status, created_at
-                            ) VALUES (
-                                :id, :product_id, :sku, :order_id, :order_number,
-                                :quantity, :reserved_from, :reserved_until, 'active', NOW()
-                            )
-                        """), {
-                            "id": reservation_id,
-                            "product_id": item.get("inventory_id") or item.get("id"),
-                            "sku": item.get("sku"),
-                            "order_id": order_id,
-                            "order_number": order_number,
-                            "quantity": item.get("qty", 1),
-                            "reserved_from": rent_issue_date,
-                            "reserved_until": rent_return_date
-                        })
-                    
-                    print(f"[Reservations] Створено резерви для замовлення {order_id}")
-                except Exception as e:
-                    print(f"[Reservations] Помилка створення резервів: {e}")
-            
+            print(f"[Orders] Замовлення {order_id} готове до видачі (товари заморожені)")
             db.commit()
     
     return {"message": "Issue card updated"}

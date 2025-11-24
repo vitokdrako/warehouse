@@ -37,6 +37,8 @@ def check_product_availability(
         SELECT quantity, sku, name FROM products WHERE product_id = :product_id
     """), {"product_id": product_id})
     total_row = total_result.fetchone()
+    total_result.close()  # Закрити результат
+    
     total_qty = int(total_row[0]) if total_row else 0
     sku = total_row[1] if total_row else None
     product_name = total_row[2] if total_row else None

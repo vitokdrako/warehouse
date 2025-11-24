@@ -50,6 +50,43 @@ async def get_catalog_items(
     
     result = db.execute(text(sql), params)
     
+    # Оптимізація: отримати статистику для всіх товарів одним запитом
+    reserved_dict = {}
+    in_rent_dict = {}
+    in_restore_dict = {}
+    
+    if include_reservations:
+        # Резерви (order_items де замовлення заморожені)
+        reserved_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
+            AND o.rental_end_date >= CURDATE()
+            GROUP BY oi.product_id
+        """))
+        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+        
+        # В оренді (видані замовлення)
+        in_rent_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE o.status IN ('issued', 'on_rent')
+            GROUP BY oi.product_id
+        """))
+        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+        
+        # На реставрації (унікальні пошкодження)
+        in_restore_result = db.execute(text("""
+            SELECT product_id, COUNT(DISTINCT id) as in_restore
+            FROM product_damage_history
+            WHERE fee > 0
+            AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY product_id
+        """))
+        in_restore_dict = {row[0]: int(row[1]) for row in in_restore_result}
+    
     items = []
     for row in result:
         family_id = row[14] if len(row) > 14 else None

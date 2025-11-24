@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional
 from datetime import datetime
+import uuid
 
 from database_rentalhub import get_rh_db
 

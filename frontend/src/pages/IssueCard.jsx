@@ -850,7 +850,19 @@ export default function IssueCard(){
     return {...it, scanned}
   }))
 
-  const onOpenDamage = (item_id)=> setItemDamage({ open:true, item_id, kind:'подряпина', severity:'low', note:'', photoName:'' })
+  const onOpenDamage = (item_id)=> {
+    const item = items.find(i => i.id === item_id)
+    setItemDamage({ 
+      open:true, 
+      item_id, 
+      category: item?.category || 'Меблі', 
+      kindCode:'', 
+      severity:'low', 
+      note:'', 
+      fee:0, 
+      photoName:'' 
+    })
+  }
 
   const allPicked = useMemo(()=> items.every(it => it.picked_qty>=it.qty), [items])
   const allSerialsOk = useMemo(()=> items.every(it => it.serials.length===0 || it.scanned.length>=it.qty), [items])

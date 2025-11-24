@@ -151,7 +151,19 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
         </div>
         <div className="rounded-xl border border-slate-200 p-3">
           <div className="text-xs text-slate-500">Холд застави</div>
-          <div className="text-xl font-semibold">₴ {fmtUA(held)}</div>
+          {Object.keys(heldByCurrency).length > 0 ? (
+            <div className="space-y-1">
+              {Object.entries(heldByCurrency).map(([curr, amt]) => (
+                amt > 0 && (
+                  <div key={curr} className="text-base font-semibold">
+                    {curr === 'UAH' ? '₴' : curr === 'USD' ? '$' : '€'} {fmtUA(amt)} {curr !== 'UAH' && <span className="text-xs text-slate-500">{curr}</span>}
+                  </div>
+                )
+              ))}
+            </div>
+          ) : (
+            <div className="text-xl font-semibold text-slate-400">₴ 0</div>
+          )}
         </div>
         <div className="rounded-xl border border-slate-200 p-3">
           <div className="text-xs text-slate-500">До сплати</div>

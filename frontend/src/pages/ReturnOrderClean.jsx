@@ -447,14 +447,39 @@ export default function ReturnCard(){
 
   const onOpenFinding = (id)=> setFindingOpen({open:true, itemId:id})
   
-  const onSaveFinding = (f)=>{
+  const onSaveFinding = async (f)=>{
+    const item = items.find(it => it.id === findingOpen.itemId)
+    
+    // Оновити локальний стан
     setItems(items => items.map(it=> it.id===findingOpen.itemId ? {...it, findings:[...it.findings, f]} : it))
     setFindingOpen({open:false, itemId:null})
-    // auto add to damage fee
     setOrder(o=> ({...o, damage_fee:(o.damage_fee||0)+ (Number(f.fee)||0)}))
     setEvents(e=>[{at: nowISO(), text:`Зафіксовано пошкодження: ${f.category} - ${f.kind}`, tone:'amber'}, ...e])
     
-    toast({ title: '✅ Успіх', description: 'Пошкодження зафіксовано' })
+    // Зберегти в історію пошкоджень
+    try {
+      await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
+        product_id: item.inventory_id || item.id,
+        sku: item.sku,
+        product_name: item.name,
+        category: f.category,
+        order_id: orderId,
+        order_number: order.order_number,
+        stage: 'return',
+        damage_type: f.kind,
+        damage_code: f.kindCode,
+        severity: f.severity,
+        fee: Number(f.fee) || 0,
+        photo_url: f.photoName,
+        note: f.note,
+        created_by: 'manager'
+      })
+      console.log('[Damage History] Пошкодження збережено в історію')
+    } catch(err) {
+      console.error('[Damage History] Помилка збереження:', err)
+    }
+    
+    toast({ title: '✅ Успіх', description: 'Пошкодження зафіксовано та збережено в історію' })
   }
 
   const onToggleFlags = (id, key)=> setItems(items => items.map(it => it.id===id ? {...it, [key]: !it[key]} : it))

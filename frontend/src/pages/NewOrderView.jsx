@@ -759,16 +759,13 @@ function ConflictsPanel({ conflicts }) {
                 <div className="text-xs text-slate-600 mt-0.5">{c.product_name || c.name || 'Невідомий товар'}</div>
               </td>
               <td className="px-3 py-2">
-                <div className="space-y-1">
-                  <Badge tone={c.level === 'error' ? 'rose' : 'amber'}>
-                    {c.type === 'insufficient' ? '⚠️ Недостатньо' : c.type === 'low_stock' ? '📦 Малий запас' : c.type}
-                  </Badge>
-                  {c.has_tight_schedule && (
-                    <Badge tone='amber'>
-                      ⏱️ Щільний графік
-                    </Badge>
-                  )}
-                </div>
+                <Badge tone={c.level === 'error' ? 'rose' : 'amber'}>
+                  {c.type === 'out_of_stock' && '🔴 Немає на складі'}
+                  {c.type === 'insufficient' && '❌ Недоступно'}
+                  {c.type === 'tight_schedule' && '⚠️ Щільний графік'}
+                  {c.type === 'low_stock' && '📦 Малий запас'}
+                  {!['out_of_stock', 'insufficient', 'tight_schedule', 'low_stock'].includes(c.type) && c.type}
+                </Badge>
               </td>
               <td className="px-3 py-2 text-slate-600">
                 {c.message || 'Недоступно в обраній кількості'}

@@ -56,6 +56,32 @@ function heldAmount(rows){
   return Math.max(0, hold - release - writeoff)
 }
 
+function heldAmountByCurrency(rows){
+  const holdTransactions = rows.filter(isHold)
+  const releaseTotal = rows.filter(isHoldRelease).reduce((s,r)=>s+(r.amount||0),0)
+  const writeoffTotal = rows.filter(isHoldWriteoff).reduce((s,r)=>s+(r.amount||0),0)
+  
+  // Calculate hold by currency
+  const byCurrency = {}
+  holdTransactions.forEach(r => {
+    const curr = r.currency || 'UAH'
+    byCurrency[curr] = (byCurrency[curr] || 0) + (r.credit || 0)
+  })
+  
+  // For simplicity, we'll proportionally reduce each currency by releases/writeoffs
+  const totalHold = holdTransactions.reduce((s,r)=>s+(r.credit||0),0)
+  const totalReduction = releaseTotal + writeoffTotal
+  
+  if (totalReduction > 0 && totalHold > 0) {
+    const reductionRatio = Math.min(1, totalReduction / totalHold)
+    Object.keys(byCurrency).forEach(curr => {
+      byCurrency[curr] = Math.max(0, byCurrency[curr] * (1 - reductionRatio))
+    })
+  }
+  
+  return byCurrency
+}
+
 function balanceDue(rows){
   const deb = rows.filter(isRentOrCharge).reduce((s,r)=>s+(r.debit||0),0)
   const cred = rows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0)

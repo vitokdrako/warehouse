@@ -1178,6 +1178,22 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
   };
   
   const handleMoveToPreparation = async () => {
+    // Перевірити конфлікти перед відправкою
+    console.log('[MOVE TO PREP] 🔍 Попередня перевірка конфліктів...');
+    await checkAvailability();
+    
+    // Якщо є критичні конфлікти (error level), заблокувати
+    const criticalConflicts = conflicts.filter(c => c.level === 'error');
+    if (criticalConflicts.length > 0) {
+      const conflictList = criticalConflicts.map(c => 
+        `• ${c.sku || c.article} (${c.name}): потрібно ${c.total_quantity}, доступно ${c.available_quantity}`
+      ).join('\n');
+      
+      alert(`❌ Неможливо відправити на збір!\n\nЗнайдено конфлікти наявності:\n${conflictList}\n\n` +
+            `Будь ласка, вирішіть конфлікти (змініть дати або кількість) і збережіть зміни.`);
+      return;
+    }
+    
     if (!confirm('Відправити замовлення на збір? Комірники зможуть почати збирати товари.')) {
       return;
     }
@@ -1198,7 +1214,7 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
         console.log('[MOVE TO PREP] Навігація до /issue/' + result.issue_card_id);
         navigate(`/issue/${result.issue_card_id}`);
       } else {
-        alert(`❌ Помилка: ${result.detail || 'Невідома помилка'}`);
+        alert(`❌ Помилка: ${result.detail || 'Невідома помилка'}\n\nЯкщо проблема з наявністю - перевірте конфлікти та збережіть зміни.`);
       }
     } catch (error) {
       console.error('[MOVE TO PREP] Error:', error);

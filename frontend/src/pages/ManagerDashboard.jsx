@@ -378,6 +378,7 @@ export default function ManagerDashboard() {
                   badge="preparation"
                   order={card}
                   onDateUpdate={null}
+                  onCancelByClient={handleCancelByClient}
                   onClick={() => navigate(`/issue/${card.id}`)}
                 />
               ))}

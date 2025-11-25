@@ -599,3 +599,108 @@ curl http://localhost:8001/api/product-cleaning/list/in-repair
 
 ---
 
+
+---
+
+## ♻️ Рефакторинг: Універсальна модалка пошкоджень (DamageModal)
+**Дата**: 25.11.2025
+**Завдання**: Винести дублюючий код модалки пошкоджень у окремий компонент
+
+### Проблема:
+Код модалки для реєстрації пошкоджень був продубльований в `IssueCard.jsx` та інших місцях - ~150 рядків однакового коду.
+
+### Рішення:
+Створено універсальний компонент `/app/frontend/src/components/DamageModal.jsx`
+
+### Переваги:
+
+#### 1. Універсальність
+Компонент може використовуватися в різних місцях:
+- ✅ `IssueCard.jsx` - пошкодження ДО видачі
+- ✅ `ReturnOrderClean.jsx` - пошкодження при поверненні
+- ✅ `InventoryRecount.jsx` - пошкодження при аудиті
+- ✅ Інші місця де потрібна реєстрація пошкоджень
+
+#### 2. Гнучкість
+Параметри компонента:
+```javascript
+<DamageModal
+  isOpen={boolean}           // Відкрита чи ні
+  onClose={() => {}}         // Callback при закритті
+  item={{...}}               // Товар (sku, name, id, pre_damage)
+  order={{...}}              // Замовлення (order_id, order_number)
+  stage="pre_issue"          // Етап: pre_issue, return, audit
+  onSave={(record) => {}}    // Callback після збереження
+  existingHistory={[]}       // Опціонально: існуюча історія
+/>
+```
+
+#### 3. Менше коду
+**До рефакторингу:**
+- `IssueCard.jsx`: ~150 рядків модалки
+- `ReturnOrderClean.jsx`: ~150 рядків модалки (якби була)
+- **Разом:** ~300+ рядків дублікатів
+
+**Після рефакторингу:**
+- `DamageModal.jsx`: ~330 рядків (один раз)
+- `IssueCard.jsx`: ~15 рядків використання
+- **Заощадження:** ~150+ рядків
+
+#### 4. Легкість підтримки
+Зміни в логіці пошкоджень потрібно робити тільки в одному місці!
+
+### Функціональність компонента:
+- ✅ Вибір категорії і типу пошкодження
+- ✅ Рівень важкості (low/medium/high/critical)
+- ✅ Автоматичний розрахунок штрафу за правилами
+- ✅ Завантаження фото пошкодження
+- ✅ Додавання нотаток
+- ✅ Збереження в API `/api/product-damage-history`
+- ✅ Відображення історії пошкоджень по товару
+- ✅ Валідація обов'язкових полів
+
+### Приклад використання:
+
+**До (IssueCard.jsx):**
+```javascript
+// 150+ рядків модалки
+{itemDamage.open && (() => {
+  const item = items.find(...)
+  // Вся логіка модалки...
+  return <div>...</div>
+})()}
+```
+
+**Після:**
+```javascript
+<DamageModal
+  isOpen={itemDamage.open}
+  onClose={() => setItemDamage(s => ({...s, open: false}))}
+  item={items.find(i => i.id === itemDamage.item_id)}
+  order={order}
+  stage="pre_issue"
+  onSave={(record) => {
+    // Update local state
+    setItems(items => items.map(it => 
+      it.id === itemDamage.item_id ? {
+        ...it,
+        pre_damage: [...(it.pre_damage||[]), record]
+      } : it
+    ))
+  }}
+/>
+```
+
+### Файли:
+- `/app/frontend/src/components/DamageModal.jsx` (новий)
+- `/app/frontend/src/pages/IssueCard.jsx` (рефакторинг)
+
+### Майбутні покращення:
+- [ ] Додати попередній перегляд фото
+- [ ] Інтеграція з камерою для швидкої фотозйомки
+- [ ] Шаблони для швидкого внесення типових пошкоджень
+
+### Статус: ✅ ЗАВЕРШЕНО
+
+---
+

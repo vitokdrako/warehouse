@@ -642,7 +642,7 @@ export default function FinanceCabinet(){
           </Card>
 
           {orderIds.map(orderId=> (
-            <div key={orderId}>
+            <div key={orderId} data-order-id={orderId}>
               <OrderListItem 
                 orderId={orderId} 
                 rows={rowsFiltered} 

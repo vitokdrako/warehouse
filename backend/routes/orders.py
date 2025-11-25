@@ -918,12 +918,14 @@ async def cancel_order_by_client(
     })
     
     # Залогувати в lifecycle
+    created_by = data.get('created_by', 'System')
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'cancelled_by_client', :notes, NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+        VALUES (:order_id, 'cancelled_by_client', :notes, :created_by, NOW())
     """), {
         "order_id": order_id,
-        "notes": f"Клієнт відмовився від замовлення: {reason}"
+        "notes": f"Клієнт відмовився від замовлення: {reason}",
+        "created_by": created_by
     })
     
     db.commit()

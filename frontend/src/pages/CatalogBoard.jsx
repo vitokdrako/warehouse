@@ -592,12 +592,31 @@ export default function CatalogBoard(){
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Каталог / Інвентар</h1>
         <div className="flex gap-2">
+          <button 
+            className="rounded-full bg-blue-600 text-white px-3 py-1 text-sm font-medium hover:bg-blue-700 flex items-center gap-1" 
+            onClick={() => setScannerOpen(true)}
+          >
+            📷 Сканувати SKU
+          </button>
           <button className="rounded-full bg-purple-500 text-white px-3 py-1 text-sm font-medium hover:bg-purple-600" onClick={openFamilyManager}>🔗 Керувати наборами</button>
           <button className="rounded-full bg-slate-200 px-3 py-1 text-sm" onClick={()=>navigate('/')}>← Назад</button>
           <button className="rounded-full bg-slate-200 px-3 py-1 text-sm" onClick={()=>alert('Експорт CSV (мок)')}>Експорт</button>
           <button className="rounded-full bg-slate-200 px-3 py-1 text-sm" onClick={()=>alert('Імпорт CSV (мок)')}>Імпорт</button>
         </div>
       </div>
+      
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={(code) => {
+          console.log('[Catalog] Scanned:', code)
+          // Set search query to scanned code
+          setQ(code)
+          setScannerOpen(false)
+        }}
+        title="Сканування SKU товару"
+      />
 
       <Filters q={q} setQ={setQ} cat={cat} setCat={setCat} state={state} setState={setState} clean={clean} setClean={setClean} categories={categories} />
 

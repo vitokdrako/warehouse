@@ -162,6 +162,15 @@ function App() {
           />
           
           <Route 
+            path="/sync" 
+            element={
+              <ProtectedRoute>
+                <SyncPanel />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
             path="/orders/new" 
             element={
               <ProtectedRoute>

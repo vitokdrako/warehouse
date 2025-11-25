@@ -299,11 +299,11 @@ export default function OrdersArchive() {
                       <div className="text-right">
                         <div className="text-sm text-slate-500">Дати</div>
                         <div className="text-sm text-slate-900">
-                          {order.rental_start_date} → {order.rental_end_date}
+                          {order.issue_date || order.rental_start_date} → {order.return_date || order.rental_end_date}
                         </div>
                       </div>
                       <span className="text-slate-400">
-                        {expandedOrder === order.order_id ? '▼' : '▶'}
+                        {expandedOrder === (order.order_id || parseInt(order.id)) ? '▼' : '▶'}
                       </span>
                     </div>
                   </div>

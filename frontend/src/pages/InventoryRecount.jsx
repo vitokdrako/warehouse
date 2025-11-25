@@ -310,57 +310,11 @@ export default function InventoryRecount() {
             </div>
           </div>
 
-          {/* Damage Details (if damaged) */}
+          {/* Damage Note (if damaged) */}
           {status === 'damaged' && (
-            <div className="space-y-3 mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Тип пошкодження
-                </label>
-                <select
-                  value={damageType}
-                  onChange={(e) => setDamageType(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                >
-                  <option value="">Оберіть тип...</option>
-                  <option value="scratch">Подряпина</option>
-                  <option value="crack">Тріщина</option>
-                  <option value="chip">Відколотий шматок</option>
-                  <option value="stain">Пляма</option>
-                  <option value="broken">Зламано</option>
-                  <option value="other">Інше</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Ступінь пошкодження
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSeverity('low')}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium ${
-                      severity === 'low' ? 'bg-yellow-500 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    Низький
-                  </button>
-                  <button
-                    onClick={() => setSeverity('medium')}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium ${
-                      severity === 'medium' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    Середній
-                  </button>
-                  <button
-                    onClick={() => setSeverity('high')}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium ${
-                      severity === 'high' ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    Високий
-                  </button>
-                </div>
+            <div className="mb-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="text-sm text-amber-800 mb-2">
+                ⚠️ При збереженні відкриється модальне вікно для детальної фіксації пошкодження.
               </div>
             </div>
           )}

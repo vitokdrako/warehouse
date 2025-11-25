@@ -1204,6 +1204,27 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
     }
   };
   
+  const handleCancelByClient = async () => {
+    const reason = prompt('Причина відмови клієнта (опціонально):');
+    if (reason === null) return; // User clicked Cancel
+    
+    if (!confirm('⚠️ Клієнт відмовився від замовлення?\n\nЗамовлення буде скасовано і товари розморожено.')) {
+      return;
+    }
+    
+    try {
+      await axios.post(`${BACKEND_URL}/api/decor-orders/${order.order_id}/cancel-by-client`, {
+        reason: reason || 'Клієнт відмовився без пояснень'
+      });
+      
+      alert('✅ Замовлення скасовано. Товари розморожено.');
+      window.location.href = '/manager'; // Redirect to dashboard
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert(`❌ Помилка: ${error.response?.data?.detail || error.message}`);
+    }
+  };
+
   const handleDecline = async () => {
     const reason = prompt('Вкажіть причину відхилення замовлення:\n(ця інформація буде збережена в системі)');
     

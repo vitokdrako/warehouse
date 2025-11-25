@@ -157,7 +157,7 @@ async def get_finance_summary(
     return {
         "total_revenue": float(total_revenue),  # Оплачено
         "total_accrued": float(total_accrued),  # Нараховано
-        "total_deposits_held": float(total_deposits),  # Застави на холді
+        "deposits_count": int(total_deposits),  # Кількість замовлень з заставами
         "pending_payments": float(pending_amount),
         "period": {
             "from": from_date,

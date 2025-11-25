@@ -420,10 +420,12 @@ export default function FinanceCabinet(){
         method: r.payment_method,
         debit: r.debit || 0,
         credit: r.credit || 0,
+        amount: r.amount || 0,
         currency: r.currency || 'UAH',
         status: r.status,
         counterparty: r.counterparty,
-        client_name: r.client_name
+        client_name: r.client_name,
+        expected_deposit: r.expected_deposit || 0
       })))
     } catch(e){
       console.error('Error loading transactions:', e)

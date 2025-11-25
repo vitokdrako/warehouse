@@ -281,6 +281,8 @@ agent_communication:
       message: "🔍 TESTING: DamageModal error fix verification - Testing that 'Cannot read properties of undefined (reading 'length')' error has been fixed in DamageModal component. Testing with return order #6996 and multiple damage buttons."
     - agent: "testing"
       message: "🎉 TESTING SUCCESSFUL: DamageModal error fix verified completely! Successfully logged in with vitokdrako@gmail.com/test123, navigated to /return/6996, found 4 damage buttons, opened multiple modals without any 'Cannot read properties of undefined (reading 'length')' console errors. Modal displays correctly with proper title 'Пошкодження При поверненні · D8602 · Підвіс 46 см', all form fields present (category dropdown, damage type, severity, fee input, note input), modal opens/closes properly. Fix with optional chaining (existingHistory?.length) working perfectly. Zero console errors detected."
+    - agent: "main"
+      message: "NEW TESTING TASK: Quick filters in Product Catalog - Need to test 4 new filter buttons (🔧 В реставрації, 🚿 На мийці, ⚠️ Пошкоджено, ✖️ Скинути фільтри) and restoration indicator in header. Test button states, filtering functionality, and UI behavior. Login: vitokdrako@gmail.com/test123, navigate to /catalog."
 ---
 
 ## 📊 Тестування: Функція "Очікуваний vs Фактичний депозит"

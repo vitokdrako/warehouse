@@ -61,9 +61,13 @@ async def get_transactions(
     
     transactions = []
     for row in result:
-        # Map to ledger format expected by frontend
-        transaction_type = row[1]  # transaction_type column (index 1)
-        amount = float(row[4]) if row[4] else 0.0
+        # Нові індекси після зміни SELECT:
+        # 0: id, 1: transaction_type, 2: order_id, 3: amount,
+        # 4: currency, 5: status, 6: description, 7: created_at, 8: payment_method,
+        # 9: notes, 10: created_by, 11: customer_name
+        
+        transaction_type = row[1]  # transaction_type
+        amount = float(row[3]) if row[3] else 0.0  # amount (index 3)
         
         # Determine debit/credit based on transaction type
         debit = 0.0
@@ -81,20 +85,20 @@ async def get_transactions(
         
         transactions.append({
             "id": row[0],
-            "date": row[7].isoformat() if row[7] else None,  # created_at (index 7)
+            "date": row[7].isoformat() if row[7] else None,  # created_at
             "order_id": row[2],
             "type": transaction_type,
-            "title": row[6] or transaction_type.replace('_', ' ').title(),  # description (index 6)
-            "payment_method": row[8],  # payment_method (index 8)
+            "title": row[6] or transaction_type.replace('_', ' ').title(),  # description
+            "payment_method": row[8],  # payment_method
             "debit": debit,
             "credit": credit,
             "amount": amount,
-            "currency": row[4] or 'UAH',  # currency (index 4)
-            "status": row[5],  # status (index 5)
+            "currency": row[4] or 'UAH',  # currency
+            "status": row[5],  # status
             "counterparty": f"Order #{row[2]}" if row[2] else "N/A",
-            "notes": row[9],  # notes (index 9)
-            "created_by": row[10] if len(row) > 10 else None,  # created_by (index 10)
-            "client_name": row[11] if len(row) > 11 else None  # customer_name (index 11)
+            "notes": row[9],  # notes
+            "created_by": row[10] if len(row) > 10 else None,  # created_by
+            "client_name": row[11] if len(row) > 11 else None  # customer_name
         })
     
     return transactions

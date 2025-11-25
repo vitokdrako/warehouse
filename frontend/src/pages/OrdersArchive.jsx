@@ -121,6 +121,9 @@ export default function OrdersArchive() {
       if (!lifecycle[orderId]) {
         fetchLifecycle(orderId);
       }
+      if (!financeHistory[orderId]) {
+        fetchFinanceHistory(orderId);
+      }
     }
   };
   

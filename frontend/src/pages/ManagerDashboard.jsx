@@ -10,6 +10,7 @@ export default function ManagerDashboard() {
   const [issueCards, setIssueCards] = useState([]);  // Картки видачі
   const [loading, setLoading] = useState(true);
   const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
+  const [cleaningStats, setCleaningStats] = useState({ repair: 0 });
   
   // Стани для розгортання карток
   const [showAllAwaiting, setShowAllAwaiting] = useState(false);

@@ -276,8 +276,7 @@ metadata:
   test_sequence: 1
 
 test_plan:
-  current_focus:
-    - "New Calendar with Lanes and Drag & Drop"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

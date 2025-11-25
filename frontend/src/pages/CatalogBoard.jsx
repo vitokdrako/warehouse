@@ -641,7 +641,14 @@ export default function CatalogBoard(){
   return (
     <div className="mx-auto max-w-7xl p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Каталог / Інвентар</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Каталог / Інвентар</h1>
+          {inRestoreCount > 0 && (
+            <Badge tone={CLEAN.repair.tone}>
+              🔧 {inRestoreCount} в реставрації
+            </Badge>
+          )}
+        </div>
         <div className="flex gap-2">
           <button 
             className="rounded-full bg-blue-600 text-white px-3 py-1 text-sm font-medium hover:bg-blue-700 flex items-center gap-1" 

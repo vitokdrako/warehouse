@@ -592,6 +592,12 @@ export default function FinanceCabinet(){
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Фінансовий кабінет</h1>
         <div className="flex gap-2">
+          <button 
+            onClick={() => setScannerOpen(true)}
+            className="rounded-full px-3 py-1 text-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1"
+          >
+            📷 Сканувати
+          </button>
           {['orders','ledger','monthly'].map(t => (
             <button key={t} onClick={()=>{setTab(t); setExpandedOrderId(null)}} className={cls('rounded-full px-3 py-1 text-sm', tab===t? 'bg-slate-900 text-white':'bg-slate-200 text-slate-800')}>
               {t==='orders'?'Замовлення':t==='ledger'?'Журнал':'Архів'}
@@ -599,6 +605,35 @@ export default function FinanceCabinet(){
           ))}
         </div>
       </div>
+      
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={(code) => {
+          console.log('[FinanceCabinet] Scanned:', code)
+          // Extract order ID from code (assuming format like "OC-6996" or just "6996")
+          const orderId = parseInt(code.replace(/[^0-9]/g, ''))
+          if (orderId && !isNaN(orderId)) {
+            // Find and expand order
+            if (orderIds.includes(orderId)) {
+              setExpandedOrderId(orderId)
+              // Scroll to order
+              setTimeout(() => {
+                const element = document.querySelector(`[data-order-id="${orderId}"]`)
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }
+              }, 100)
+            } else {
+              alert(`Замовлення #${orderId} не знайдено у фінансовому кабінеті`)
+            }
+          } else {
+            alert(`Не вдалося розпізнати номер замовлення з коду: ${code}`)
+          }
+        }}
+        title="Сканування замовлення"
+      />
 
       {tab==='orders' && (
         <div className="space-y-4">

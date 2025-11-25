@@ -247,6 +247,8 @@ agent_communication:
       message: "❌ TESTING FAILED: Cannot access finance cabinet (/finance) - redirects to login page. Order #6996 visible in manager dashboard returns section but shows only single currency (₴ 1510). Multi-currency display functionality cannot be tested due to finance cabinet navigation issues. Requires investigation of authentication/routing for finance page access."
     - agent: "testing"
       message: "Starting new testing task: DamageModal integration testing in ReturnOrderClean.jsx and InventoryRecount.jsx. Need to test modal opening, form functionality, data saving, and UI integration in both return process and inventory audit scenarios."
+    - agent: "testing"
+      message: "✅ TESTING COMPLETED: DamageModal integration testing successful in both ReturnOrderClean and InventoryRecount. Return process: Modal opens correctly with stage='return', all form fields functional, proper title display. Inventory audit: Modal opens correctly with stage='audit', proper workflow (select damaged status → save → modal opens), existing damage history displayed. Both integrations working as expected with universal DamageModal component."
 ---
 
 ## 📊 Тестування: Функція "Очікуваний vs Фактичний депозит"

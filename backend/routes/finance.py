@@ -33,7 +33,9 @@ async def get_transactions(
     # Join with orders table to get client name
     sql = """
         SELECT 
-            ft.*,
+            ft.id, ft.transaction_type, ft.order_id, ft.reference_id, ft.amount,
+            ft.currency, ft.status, ft.description, ft.created_at, ft.payment_method,
+            ft.notes, ft.created_by,
             o.customer_name
         FROM finance_transactions ft
         LEFT JOIN orders o ON ft.order_id = o.order_id

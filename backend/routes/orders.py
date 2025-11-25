@@ -184,6 +184,7 @@ async def get_orders(
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
     search: Optional[str] = None,
+    archived: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
     db: Session = Depends(get_rh_db)
@@ -191,12 +192,13 @@ async def get_orders(
     """
     Отримати список замовлень з повною фільтрацією
     ✅ MIGRATED: Full business logic preserved
+    archived: 'true' - тільки архівні, 'false' - тільки неархівні, 'all' - всі
     """
     sql = """
         SELECT 
             order_id, order_number, customer_id, customer_name, 
             customer_phone, customer_email, rental_start_date, rental_end_date,
-            status, total_amount, deposit_amount, notes, created_at
+            status, total_amount, deposit_amount, notes, created_at, is_archived
         FROM orders
         WHERE 1=1
     """

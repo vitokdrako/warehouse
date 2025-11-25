@@ -155,6 +155,13 @@ function Table({rows, onOpen, loading}){
                 </div>
               </td>
               <td className="px-3 py-2">
+                {p.in_restore > 0 ? (
+                  <Badge tone={CLEAN.repair.tone}>🔧 {p.in_restore} шт</Badge>
+                ) : (
+                  <div className="text-xs text-slate-400">—</div>
+                )}
+              </td>
+              <td className="px-3 py-2">
                 <div className="text-xs">Зона {p.location.zone} · Ряд {p.location.aisle} · Полиця {p.location.shelf} · Бокс {p.location.bin}</div>
               </td>
               <td className="px-3 py-2">

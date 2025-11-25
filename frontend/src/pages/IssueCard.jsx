@@ -1042,160 +1042,23 @@ export default function IssueCard(){
       </div>
 
       {/* Per-item damage modal */}
-      {itemDamage.open && (() => {
-        const item = items.find(i => i.id === itemDamage.item_id)
-        if (!item) return null
-        
-        const categories = Object.keys(DAMAGE_RULES)
-        const selectedCat = DAMAGE_RULES[itemDamage.category] || {groups:[]}
-        const kinds = selectedCat.groups
-        const selectedKind = kinds.find(k=>k.code===itemDamage.kindCode)
-        
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-4 shadow-xl max-h-[90vh] overflow-auto">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-base font-semibold">Пошкодження ДО видачі · {item.sku} · {item.name}</h3>
-                <button onClick={()=>setItemDamage(s=>({...s, open:false}))} className="text-slate-500 hover:text-slate-700">✕</button>
-              </div>
-
-              <div className="grid gap-3 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-slate-500 mb-1">Категорія</div>
-                    <select className="w-full rounded-xl border px-3 py-2" value={itemDamage.category} onChange={e=>setItemDamage(s=>({...s, category:e.target.value, kindCode:'', fee:0}))}>
-                      {categories.map(c=> <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <div className="text-slate-500 mb-1">Тип</div>
-                    <select className="w-full rounded-xl border px-3 py-2" value={itemDamage.kindCode} onChange={e=>{
-                      const code=e.target.value; const k = kinds.find(x=>x.code===code); 
-                      setItemDamage(s=>({...s, kindCode:code, fee: defaultFeeFor(k)}))
-                    }}>
-                      <option value="">— оберіть —</option>
-                      {kinds.map(k=> <option key={k.code} value={k.code}>{k.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-slate-500 mb-1">Рівень</div>
-                    <select className="w-full rounded-xl border px-3 py-2" value={itemDamage.severity} onChange={e=>setItemDamage(s=>({...s, severity:e.target.value}))}>
-                      <option value="low">низький</option>
-                      <option value="medium">середній</option>
-                      <option value="high">високий</option>
-                      <option value="critical">критичний</option>
-                    </select>
-                  </div>
-                  <div>
-                    <div className="text-slate-500 mb-1">Сума (грн)</div>
-                    <div className="flex gap-2">
-                      <input className="w-full rounded-xl border px-3 py-2" type="number" value={itemDamage.fee} onChange={e=>setItemDamage(s=>({...s, fee:Number(e.target.value)||0}))} />
-                      <button className="rounded-lg border px-2 hover:bg-slate-50" onClick={()=> setItemDamage(s=>({...s, fee: defaultFeeFor(selectedKind)}))}>Авто</button>
-                    </div>
-                    {selectedKind && (selectedKind.percent ? (
-                      <div className="mt-1 text-xs text-amber-700">Правило: {Math.round(selectedKind.percent*100)}% від повного збитку</div>
-                    ) : selectedKind.max==='full' ? (
-                      <div className="mt-1 text-xs text-amber-700">Можливе повне відшкодування</div>
-                    ) : selectedKind.range ? (
-                      <div className="mt-1 text-xs text-slate-500">Діапазон: ₴ {selectedKind.range[0]} — ₴ {selectedKind.range[1]}</div>
-                    ) : selectedKind.min ? (
-                      <div className="mt-1 text-xs text-slate-500">Мінімум: ₴ {selectedKind.min}</div>
-                    ) : null)}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-slate-500 mb-1">Фото</div>
-                    <input type="file" accept="image/*" onChange={(e)=>{
-                      const f = e.target.files?.[0]
-                      setItemDamage(s=>({...s, photoName: f? f.name : ''}))
-                    }} className="w-full rounded-xl border px-3 py-2" />
-                    {itemDamage.photoName && (<div className="mt-1 text-xs text-slate-500">Обрано: {itemDamage.photoName}</div>)}
-                  </div>
-                  <div>
-                    <div className="text-slate-500 mb-1">Нотатка</div>
-                    <input className="w-full rounded-xl border px-3 py-2" value={itemDamage.note} onChange={e=>setItemDamage(s=>({...s, note:e.target.value}))} placeholder="Опишіть проблему…" />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <PillButton tone='slate' onClick={()=>setItemDamage(s=>({...s, open:false}))}>Скасувати</PillButton>
-                  <PillButton tone='green' onClick={async ()=>{
-                    if(!itemDamage.kindCode){ alert('Оберіть тип пошкодження'); return }
-                    
-                    const id = 'pd-'+Math.floor(Math.random()*90000+100)
-                    const saved = { 
-                      id, 
-                      kind:itemDamage.kindCode, 
-                      category:itemDamage.category,
-                      severity:itemDamage.severity, 
-                      note:itemDamage.note, 
-                      fee:itemDamage.fee,
-                      at: nowISO(), 
-                      photoName:itemDamage.photoName 
-                    }
-                    
-                    // Оновити локальний стан
-                    setItems(items => items.map(it=> it.id===itemDamage.item_id ? {
-                      ...it,
-                      pre_damage: [...(it.pre_damage||[]), saved]
-                    } : it))
-                    
-                    // Зберегти в історію пошкоджень
-                    try {
-                      await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
-                        product_id: item.inventory_id || item.id,
-                        sku: item.sku,
-                        product_name: item.name,
-                        category: itemDamage.category,
-                        order_id: order.order_id,
-                        order_number: order.order_number,
-                        stage: 'pre_issue',
-                        damage_type: selectedKind?.label || itemDamage.kindCode,
-                        damage_code: itemDamage.kindCode,
-                        severity: itemDamage.severity,
-                        fee: itemDamage.fee,
-                        photo_url: itemDamage.photoName,
-                        note: itemDamage.note,
-                        created_by: 'manager'
-                      })
-                      console.log('[Damage History] Пошкодження збережено в історію (pre_issue)')
-                    } catch(err) {
-                      console.error('[Damage History] Помилка збереження:', err)
-                    }
-                    
-                    setItemDamage({ open:false, item_id:null, category:'Меблі', kindCode:'', severity:'low', note:'', fee:0, photoName:'' })
-                    toast({ title: '✅ Успіх', description: 'Пошкодження зафіксовано та збережено в історію' })
-                  }}>Зафіксувати</PillButton>
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <Card title="Історія пошкоджень по позиції">
-                  <div className="max-h-40 overflow-auto text-sm">
-                    {item.pre_damage && item.pre_damage.length > 0 ? (
-                      <ul className="space-y-1">
-                        {item.pre_damage.map(d=> (
-                          <li key={d.id} className="text-xs border-b pb-1">
-                            <Badge tone='amber'>{d.category}</Badge> · <Badge tone={d.severity==='high'?'red':d.severity==='medium'?'amber':'slate'}>{d.severity}</Badge> · ₴{d.fee} · {d.note || '—'}
-                            <div className="text-slate-400 mt-0.5">{d.at?.slice(0,16)} {d.photoName? `· 📷 ${d.photoName}`:''}</div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <div className="text-slate-500">Поки немає записів</div>
-                    )}
-                  </div>
-                </Card>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
+      <DamageModal
+        isOpen={itemDamage.open}
+        onClose={() => setItemDamage(s => ({...s, open: false}))}
+        item={items.find(i => i.id === itemDamage.item_id)}
+        order={order}
+        stage="pre_issue"
+        onSave={(damageRecord) => {
+          // Update local state with new damage record
+          setItems(items => items.map(it => 
+            it.id === itemDamage.item_id ? {
+              ...it,
+              pre_damage: [...(it.pre_damage||[]), damageRecord]
+            } : it
+          ))
+          setItemDamage({ open:false, item_id:null, category:'Меблі', kindCode:'', severity:'low', note:'', fee:0, photoName:'' })
+        }}
+      />
 
       {/* Helper hints */}
       <div className="text-xs text-slate-500 text-center">

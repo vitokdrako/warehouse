@@ -336,7 +336,14 @@ function OrderListItem({orderId, rows, onClick, isExpanded}){
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {held > 0 && <Badge tone='blue'>Застава {heldDisplay || `₴${fmtUA(held)}`}</Badge>}
+          {held > 0 && (
+            <div className="flex flex-col items-end">
+              <Badge tone='blue'>Застава: {heldDisplay || `₴${fmtUA(held)}`}</Badge>
+              {expectedDeposit > 0 && (
+                <span className="text-[10px] text-slate-400 mt-0.5">очікувалось ₴{fmtUA(expectedDeposit)}</span>
+              )}
+            </div>
+          )}
           {due > 0 ? (
             <Badge tone='amber'>Борг ₴{fmtUA(due)}</Badge>
           ) : (

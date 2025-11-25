@@ -140,12 +140,12 @@ async def get_finance_summary(
     """), params)
     total_accrued = accrued_result.scalar() or 0.0
     
-    # Total deposits held (фактичні застави на холді)
+    # Total deposits held (кількість замовлень з заставами на холді)
     deposits_result = db.execute(text(f"""
-        SELECT SUM(amount) FROM finance_transactions 
+        SELECT COUNT(DISTINCT order_id) FROM finance_transactions 
         WHERE transaction_type = 'deposit_hold' AND status = 'held' {date_filter}
     """), params)
-    total_deposits = deposits_result.scalar() or 0.0
+    total_deposits = deposits_result.scalar() or 0
     
     # Pending payments
     pending_result = db.execute(text(f"""

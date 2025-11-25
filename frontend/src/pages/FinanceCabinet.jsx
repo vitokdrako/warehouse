@@ -496,30 +496,60 @@ export default function FinanceCabinet(){
     }
   }
 
-  const writeoff = async (orderId, amount)=>{
+  const writeoff = async (orderId, heldByCurrency, dueAmount)=>{
     try {
-      // Create writeoff record
-      await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
-        order_id: orderId,
-        transaction_type: 'deposit_writeoff',
-        amount: amount,
-        currency: 'UAH',
-        status: 'completed',
-        description: 'Списання із застави',
-        notes: `Списано ₴${amount}`
+      // Списуємо застави по валютах до покриття боргу
+      let remaining = dueAmount
+      const currencies = Object.entries(heldByCurrency).filter(([_, amt]) => amt > 0)
+      
+      if (currencies.length === 0) {
+        alert('Немає активного холду')
+        return
+      }
+      
+      // Пріоритет: UAH, потім інші валюти
+      const sorted = currencies.sort((a, b) => {
+        if (a[0] === 'UAH') return -1
+        if (b[0] === 'UAH') return 1
+        return 0
       })
-      // Create payment from deposit
-      await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
-        order_id: orderId,
-        transaction_type: 'payment',
-        payment_method: 'deposit',
-        amount: amount,
-        currency: 'UAH',
-        status: 'completed',
-        description: 'Оплата за рахунок застави'
-      })
+      
+      const writeoffs = []
+      
+      for (const [currency, amount] of sorted) {
+        if (remaining <= 0) break
+        
+        const toWrite = Math.min(amount, remaining)
+        const symbol = currency === 'UAH' ? '₴' : currency === 'USD' ? '$' : '€'
+        
+        // Writeoff record
+        await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
+          order_id: orderId,
+          transaction_type: 'deposit_writeoff',
+          amount: toWrite,
+          currency: currency,
+          status: 'completed',
+          description: 'Списання із застави',
+          notes: `Списано ${symbol}${toWrite}`
+        })
+        
+        // Payment from deposit
+        await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
+          order_id: orderId,
+          transaction_type: 'payment',
+          payment_method: 'deposit',
+          amount: toWrite,
+          currency: currency,
+          status: 'completed',
+          description: 'Оплата за рахунок застави'
+        })
+        
+        writeoffs.push(`${symbol}${toWrite} ${currency}`)
+        remaining -= toWrite
+      }
+      
       await loadTransactions()
-      alert('Списано з застави!')
+      alert(`Списано з застави:\n${writeoffs.join('\n')}`)
     } catch(e){
       console.error('Error writeoff:', e)
       alert('Помилка при списанні')

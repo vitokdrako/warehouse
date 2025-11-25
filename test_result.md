@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Протестувати відображення мультивалютних депозитів у фінансовому кабінеті для замовлення #6996"
+user_problem_statement: "Протестувати інтеграцію компонента DamageModal в процес повернення та інвентаризації для системи FarforDecor Rental Hub"
 
 frontend:
   - task: "Login functionality"

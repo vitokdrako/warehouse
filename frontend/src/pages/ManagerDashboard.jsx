@@ -564,7 +564,7 @@ function Column({title, subtitle, children, tone}:{title:string,subtitle?:string
   );
 }
 
-function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:'new'|'issue'|'return'|'ready'|'issued'|'awaiting'|'processing'|'preparation',onClick:()=>void,order?:any,onDateUpdate?:(orderId:string,issueDate:string,returnDate:string)=>void}){
+function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,onCancelByClient}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:'new'|'issue'|'return'|'ready'|'issued'|'awaiting'|'processing'|'preparation',onClick:()=>void,order?:any,onDateUpdate?:(orderId:string,issueDate:string,returnDate:string)=>void,onCancelByClient?:(orderId:number,orderNumber:string)=>void}){
   const map:any={
     new:{label:'Нове',bg:'bg-slate-100 text-slate-700'},
     awaiting:{label:'Очікує',bg:'bg-yellow-100 text-yellow-800'},

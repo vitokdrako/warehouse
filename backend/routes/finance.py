@@ -126,12 +126,19 @@ async def get_finance_summary(
         date_filter += " AND created_at <= :to_date"
         params['to_date'] = to_date
     
-    # Total revenue
+    # Total revenue (ОПЛАЧЕНО)
     revenue_result = db.execute(text(f"""
         SELECT SUM(amount) FROM finance_transactions 
-        WHERE transaction_type = 'payment' AND status = 'completed' {date_filter}
+        WHERE transaction_type IN ('payment', 'prepayment') AND status = 'completed' {date_filter}
     """), params)
     total_revenue = revenue_result.scalar() or 0.0
+    
+    # Total rent accrued (НАРАХОВАНО)
+    accrued_result = db.execute(text(f"""
+        SELECT SUM(amount) FROM finance_transactions 
+        WHERE transaction_type IN ('rent', 'rent_accrual') {date_filter}
+    """), params)
+    total_accrued = accrued_result.scalar() or 0.0
     
     # Total deposits held (фактичні застави на холді)
     deposits_result = db.execute(text(f"""

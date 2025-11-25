@@ -27,6 +27,38 @@ export default function ManagerDashboard() {
     }
   }, []);
 
+  // Функція для скасування замовлення клієнтом
+  const handleCancelByClient = async (orderId, orderNumber) => {
+    const reason = prompt(`Скасувати замовлення ${orderNumber}?\n\nПричина відмови клієнта (опціонально):`);
+    if (reason === null) return; // User clicked Cancel
+    
+    if (!confirm(`⚠️ Клієнт відмовився від замовлення ${orderNumber}?\n\nЗамовлення буде скасовано і товари розморожено.`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/cancel-by-client`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: reason || 'Клієнт відмовився без пояснень'
+        })
+      });
+      
+      if (response.ok) {
+        alert('✅ Замовлення скасовано. Товари розморожено.');
+        fetchAllData(); // Перезавантажити дані
+      } else {
+        const error = await response.json();
+        alert(`❌ Помилка: ${error.detail || 'Не вдалося скасувати замовлення'}`);
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      alert(`❌ Помилка: ${error.message}`);
+    }
+  };
+
   // Функція для оновлення дат замовлення
   const handleDateUpdate = async (orderId, issueDate, returnDate) => {
     try {

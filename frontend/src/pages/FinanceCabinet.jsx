@@ -228,7 +228,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
             <PillButton tone='red' onClick={()=>{
               const amt = Math.min(held, due)
               if(amt<=0) return alert('Немає що списувати');
-              onWriteoff(orderId, amt)
+              onWriteoff(orderId, heldByCurrency, due)
             }}>Списати з застави (до суми боргу)</PillButton>
             <PillButton tone='yellow' onClick={()=>{
               if(held<=0) return alert('Немає активного холду');

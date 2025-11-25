@@ -195,6 +195,30 @@ frontend:
           agent: "testing"
           comment: "❌ TESTED: Cannot access finance cabinet to test expanded view. Navigation to /finance fails with redirect to login. Unable to verify 'Холд застави' card multi-currency display. Finance cabinet functionality appears inaccessible."
 
+  - task: "DamageModal integration in ReturnOrderClean"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/ReturnOrderClean.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test DamageModal integration in return process: open return order page, click 'Зафіксувати пошкодження' button, verify modal opens with correct form fields, test form submission and data saving"
+
+  - task: "DamageModal integration in InventoryRecount"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/InventoryRecount.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test DamageModal integration in inventory audit: open inventory recount page, select 'Пошкоджено' status, save recount to trigger modal, verify modal opens with stage='audit', test form submission and redirect"
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"

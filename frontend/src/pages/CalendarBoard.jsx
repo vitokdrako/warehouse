@@ -70,8 +70,7 @@ function DayView({date, orders, onOpen}){
   const list = useMemo(()=> orders.filter(o=> o.date===date).sort((a,b)=> a.time.localeCompare(b.time)), [orders,date])
   const buckets = {
     issue: list.filter(o=>o.kind==='issue'),
-    return: list.filter(o=>o.kind==='return'),
-    new: list.filter(o=>o.kind==='new')
+    return: list.filter(o=>o.kind==='return')
   }
   const Block = ({title, kind, arr})=> (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -81,11 +80,13 @@ function DayView({date, orders, onOpen}){
           <div key={o.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
             <div>
               <div className="font-medium text-slate-800">#{o.order_id} · {o.customer}</div>
-              <div className="text-xs text-slate-500">{fmtTime(o.time)} · {o.items} позицій</div>
+              <div className="text-xs text-slate-500">{fmtTime(o.time)} · {o.items} позицій · {o.status}</div>
             </div>
             <div className="flex items-center gap-2">
               <span className={cls('h-2 w-2 rounded-full', KIND_META[o.kind].dot)} />
-              <button onClick={()=>onOpen(o)} className="rounded-full bg-slate-900 px-3 py-1 text-sm text-white">Відкрити</button>
+              <button onClick={()=>onOpen(o)} className="rounded-full bg-slate-900 px-3 py-1 text-sm text-white">
+                {o.kind === 'issue' ? 'Видати' : 'Повернення'}
+              </button>
             </div>
           </div>
         ))}
@@ -94,8 +95,8 @@ function DayView({date, orders, onOpen}){
     </div>
   )
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <Block title="Видача" kind="issue" arr={buckets.issue} />
+    <div className="grid gap-4 md:grid-cols-2">
+      <Block title="Готово до видачі" kind="issue" arr={buckets.issue} />
       <Block title="Повернення" kind="return" arr={buckets.return} />
       <Block title="Нове" kind="new" arr={buckets.new} />
     </div>

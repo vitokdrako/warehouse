@@ -304,8 +304,9 @@ function OrderListItem({orderId, rows, onClick, isExpanded}){
   const accrued = orderRows.filter(isRentOrCharge).reduce((s,r)=>s+(r.debit||0),0)
   const paid = orderRows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0)
   
-  // Get client name from first transaction of this order
+  // Get client name and expected deposit from first transaction of this order
   const clientName = orderRows[0]?.client_name || ''
+  const expectedDeposit = orderRows.length > 0 ? (orderRows[0].expected_deposit || 0) : 0
   
   // Format held amounts by currency for badge
   const heldDisplay = Object.entries(heldByCurrency)

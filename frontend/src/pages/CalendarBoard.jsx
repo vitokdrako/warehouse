@@ -59,8 +59,7 @@ function Toolbar({view,setView, date,setDate, onToday}){
 function Legend(){
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm">
-      <span className="inline-flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-violet-500"/> Нове замовлення</span>
-      <span className="inline-flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-emerald-500"/> Видача</span>
+      <span className="inline-flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-emerald-500"/> Готово до видачі</span>
       <span className="inline-flex items-center gap-2"><i className="h-2 w-2 rounded-full bg-amber-500"/> Повернення</span>
     </div>
   )

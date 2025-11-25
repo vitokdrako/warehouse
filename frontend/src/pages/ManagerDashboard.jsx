@@ -741,6 +741,42 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
   );
 }
 
+function OrderCardWithArchive({id,name,phone,rent,deposit,badge,onClick,order,onArchive}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:string,onClick:()=>void,order?:any,onArchive?:(orderId:number,orderNumber:string)=>void}){
+  return (
+    <article onClick={onClick} className="relative cursor-pointer rounded-xl border border-slate-200 bg-white p-3 transition hover:border-teal-400 hover:shadow-lg">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-sm font-semibold text-slate-900">{id}</div>
+      </div>
+      
+      <div className="mb-2 text-xs text-slate-500">{name}</div>
+      <div className="mb-3 text-xs text-slate-500">{phone}</div>
+      
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="rounded-xl bg-slate-50 px-3 py-2">
+          <div className="text-slate-500">Сума</div>
+          <div className="font-semibold tabular-nums">{rent}</div>
+        </div>
+        <div className="rounded-xl bg-slate-50 px-3 py-2">
+          <div className="text-slate-500">Застава</div>
+          <div className="font-semibold tabular-nums">{deposit}</div>
+        </div>
+      </div>
+      
+      {onArchive && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onArchive(order?.order_id, id);
+          }}
+          className="mt-2 w-full text-xs text-slate-600 border border-slate-300 rounded-lg px-2 py-1.5 hover:bg-slate-50 transition-colors"
+        >
+          📂 В архів
+        </button>
+      )}
+    </article>
+  );
+}
+
 function NavCard({title, description, onClick}:{title:string, description:string, onClick:()=>void}){
   return (
     <article 

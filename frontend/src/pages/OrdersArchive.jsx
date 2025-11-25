@@ -376,7 +376,7 @@ export default function OrdersArchive() {
                         <h3 className="font-semibold text-slate-900 mb-3">🕐 Історія операцій</h3>
                         {lifecycle[order.order_id || parseInt(order.id)] ? (
                           <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {lifecycle[order.order_id].map((event, idx) => (
+                            {lifecycle[order.order_id || parseInt(order.id)].map((event, idx) => (
                               <div key={idx} className="flex gap-3 text-sm">
                                 <div className="text-slate-500 min-w-[100px]">
                                   {new Date(event.created_at).toLocaleString('uk-UA', {

@@ -355,10 +355,16 @@ export default function ManagerDashboard() {
 
       {/* KPIs */}
       <section className="mx-auto max-w-7xl px-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Kpi title="Замовлення" value={kpis.today.toString()} note={`${newOrders.length} нові / ${preparationCards.length} комплектації / ${readyCards.length} видач / ${returnOrders.length} повернення`}/>
           <Kpi title="Виручка" value={`₴ ${kpis.revenue.toFixed(0)}`} note="з фін. кабінету"/>
           <Kpi title="Застави в холді" value={`₴ ${kpis.deposits.toFixed(0)}`} note="з фін. кабінету"/>
+          <Kpi 
+            title="🔧 На реставрації" 
+            value={cleaningStats.repair.toString()} 
+            note="товари у відновленні" 
+            tone={cleaningStats.repair > 0 ? "info" : undefined}
+          />
           <Kpi title="Проблеми" value={kpis.problems.toString()} note="є шкода/прострочка" tone={kpis.problems > 0 ? "warn" : undefined}/>
         </div>
       </section>

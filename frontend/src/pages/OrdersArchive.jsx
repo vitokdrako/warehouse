@@ -100,6 +100,18 @@ export default function OrdersArchive() {
     }
   };
   
+  const fetchFinanceHistory = async (orderId) => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/manager/finance/ledger?order_id=${orderId}`, {
+        mode: 'cors'
+      });
+      const data = await response.json();
+      setFinanceHistory(prev => ({ ...prev, [orderId]: data }));
+    } catch (error) {
+      console.error('Error fetching finance history:', error);
+    }
+  };
+  
   const toggleExpand = (order) => {
     const orderId = order.order_id || parseInt(order.id);
     if (expandedOrder === orderId) {

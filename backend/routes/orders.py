@@ -1023,8 +1023,8 @@ async def unarchive_order(
     
     # Залогувати
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'unarchived', 'Замовлення відновлено з архіву', NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+        VALUES (:order_id, 'unarchived', 'Замовлення відновлено з архіву', 'Manager', NOW())
     """), {"order_id": order_id})
     
     db.commit()

@@ -175,6 +175,8 @@ function Table({rows, onOpen, loading}){
 function Drawer({open, item, onClose, onSave}){
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState({})
+  const [damageHistory, setDamageHistory] = useState([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
   
   useEffect(() => {
     if (item) {
@@ -183,8 +185,26 @@ function Drawer({open, item, onClose, onSave}){
         cleaning: {...item.cleaning},
         state: item.state
       })
+      // Завантажити історію пошкоджень
+      loadDamageHistory(item.sku)
     }
   }, [item])
+  
+  const loadDamageHistory = async (sku) => {
+    if (!sku) return
+    
+    try {
+      setLoadingHistory(true)
+      const response = await fetch(`${BACKEND_URL}/api/product-damage-history/sku/${sku}`)
+      const data = await response.json()
+      setDamageHistory(data.history || [])
+    } catch (error) {
+      console.error('Error loading damage history:', error)
+      setDamageHistory([])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
   
   if(!open || !item) return null
   

@@ -362,6 +362,22 @@ export default function InventoryRecount() {
           </div>
         </div>
       </div>
+      
+      {/* Damage Modal */}
+      <DamageModal 
+        isOpen={damageModalOpen}
+        onClose={() => setDamageModalOpen(false)}
+        item={{
+          id: product?.product_id,
+          sku: product?.sku,
+          name: product?.name,
+          inventory_id: product?.product_id
+        }}
+        order={null}
+        stage='audit'
+        onSave={handleDamageSaved}
+        existingHistory={damageHistory}
+      />
     </div>
   )
 }

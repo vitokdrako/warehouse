@@ -551,6 +551,11 @@ export default function CatalogBoard(){
     const okCl = clean==='all' || p.cleaning.status===clean
     return okC && okS && okCl
   }),[products,cat,state,clean])
+  
+  // Підрахунок товарів у реставрації
+  const inRestoreCount = useMemo(() => {
+    return products.filter(p => p.cleaning?.status === 'repair').length
+  }, [products])
 
   // Відкрити менеджер наборів
   const openFamilyManager = async () => {

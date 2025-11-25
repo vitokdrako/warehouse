@@ -974,8 +974,8 @@ async def archive_order(
     
     # Залогувати
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', 'Manager', NOW())
     """), {"order_id": order_id})
     
     db.commit()

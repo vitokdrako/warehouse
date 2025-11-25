@@ -419,6 +419,7 @@ export default function FinanceCabinet(){
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState('orders')
   const [expandedOrderId, setExpandedOrderId] = useState(null)
+  const [scannerOpen, setScannerOpen] = useState(false)
 
   // Load all transactions
   useEffect(()=>{

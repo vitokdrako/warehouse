@@ -256,23 +256,8 @@ export default function CalendarBoard(){
           const calendarOrders = data.flatMap(o => {
             const results = []
             
-            // Add as "new" if status awaiting_customer (нові необроблені)
-            if (o.status === 'awaiting_customer') {
-              results.push({
-                id: `${o.order_id}-new`,
-                order_id: o.order_number,
-                date: o.rental_start_date || o.created_at?.split('T')[0],
-                time: o.created_at?.split('T')[1]?.slice(0,5) || '00:00',
-                kind: 'new',
-                customer: o.customer_name,
-                items: o.items?.length || 0,
-                status: 'pending',
-                order: o
-              })
-            }
-            
-            // Add as "issue" if has rental_start_date and status not awaiting_customer
-            if (o.rental_start_date && o.status !== 'awaiting_customer') {
+            // ТІЛЬКИ готові до видачі (ready_for_issue) - з можливістю конвертації у "видано"
+            if (o.status === 'ready_for_issue' && o.rental_start_date) {
               results.push({
                 id: `${o.order_id}-issue`,
                 order_id: o.order_number,
@@ -281,13 +266,13 @@ export default function CalendarBoard(){
                 kind: 'issue',
                 customer: o.customer_name,
                 items: o.items?.length || 0,
-                status: 'scheduled',
+                status: o.status,
                 order: o
               })
             }
             
-            // Add as "return" if has rental_end_date and status not awaiting_customer
-            if (o.rental_end_date && o.status !== 'awaiting_customer') {
+            // Повернення - для замовлень що issued або on_rent
+            if (o.rental_end_date && (o.status === 'issued' || o.status === 'on_rent')) {
               results.push({
                 id: `${o.order_id}-return`,
                 order_id: o.order_number,
@@ -296,7 +281,7 @@ export default function CalendarBoard(){
                 kind: 'return',
                 customer: o.customer_name,
                 items: o.items?.length || 0,
-                status: 'expected',
+                status: o.status,
                 order: o
               })
             }

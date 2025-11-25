@@ -256,15 +256,20 @@ export default function CalendarBoard(){
           const calendarOrders = data.flatMap(o => {
             const results = []
             
-            // ТІЛЬКИ готові до видачі (ready_for_issue) - з можливістю конвертації у "видано"
-            if (o.status === 'ready_for_issue' && o.rental_start_date) {
+            // Використовуємо issue_date та return_date як основні дати
+            const issueDate = o.issue_date || o.rental_start_date
+            const returnDate = o.return_date || o.rental_end_date
+            
+            // Видача - для всіх замовлень крім archived
+            // Показуємо ready_for_issue та awaiting_customer як готові до видачі
+            if (issueDate && ['ready_for_issue', 'awaiting_customer', 'processing', 'pending'].includes(o.status)) {
               results.push({
                 id: `${o.order_id}-issue`,
                 order_id: o.order_number,
-                date: o.rental_start_date,
+                date: issueDate,
                 time: '10:00',
                 kind: 'issue',
-                customer: o.customer_name,
+                customer: o.client_name || o.customer_name,
                 items: o.items?.length || 0,
                 status: o.status,
                 order: o
@@ -272,14 +277,14 @@ export default function CalendarBoard(){
             }
             
             // Повернення - для замовлень що issued або on_rent
-            if (o.rental_end_date && (o.status === 'issued' || o.status === 'on_rent')) {
+            if (returnDate && (o.status === 'issued' || o.status === 'on_rent')) {
               results.push({
                 id: `${o.order_id}-return`,
                 order_id: o.order_number,
-                date: o.rental_end_date,
+                date: returnDate,
                 time: '16:00',
                 kind: 'return',
-                customer: o.customer_name,
+                customer: o.client_name || o.customer_name,
                 items: o.items?.length || 0,
                 status: o.status,
                 order: o

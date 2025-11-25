@@ -155,8 +155,9 @@ async def get_finance_summary(
     pending_amount = pending_result.scalar() or 0.0
     
     return {
-        "total_revenue": float(total_revenue),
-        "total_deposits_held": float(total_deposits),
+        "total_revenue": float(total_revenue),  # Оплачено
+        "total_accrued": float(total_accrued),  # Нараховано
+        "total_deposits_held": float(total_deposits),  # Застави на холді
         "pending_payments": float(pending_amount),
         "period": {
             "from": from_date,

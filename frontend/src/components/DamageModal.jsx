@@ -1,4 +1,4 @@
-/* eslint-disable */
+ 
 /**
  * DamageModal - Universal component for recording product damage
  * Can be used in: IssueCard, ReturnOrderClean, InventoryRecount

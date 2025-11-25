@@ -162,7 +162,7 @@ function WeekView({date, orders, onOpen, onPickDay}){
 function MonthView({date, orders, onOpen, onPickDay}){
   const days = monthGrid(date)
   const curMonth = new Date(date).getMonth()
-  const byDay = (d)=> orders.filter(o=> o.date===d)
+  const byDay = (d)=> (orders || []).filter(o=> o.date===d)
   return (
     <div className="grid grid-cols-7 gap-1">
       {['Пн','Вт','Ср','Чт','Пт','Сб','Нд'].map(h=> (

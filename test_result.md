@@ -225,6 +225,21 @@ frontend:
           agent: "testing"
           comment: "✅ TESTED: DamageModal integration in InventoryRecount working correctly. Successfully accessed inventory recount page for SKU D8602, found damage status button '⚠️ Пошкоджено', clicked it and then clicked save button. Modal opened with correct title 'Пошкодження При аудиті · D8602 · Підвіс 46 см' showing stage='audit' correctly. Page shows existing damage history (1 record). All form fields present and functional. Minor timeout issue with dropdown selection but core functionality confirmed working."
 
+  - task: "DamageModal undefined length error fix"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/DamageModal.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to verify that 'Cannot read properties of undefined (reading 'length')' error has been fixed in DamageModal component. Test with return order #6996, click damage buttons, verify modal opens without console errors."
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: DamageModal error fix verified successfully! Login with vitokdrako@gmail.com/test123 successful, navigated to /return/6996, found 4 'Зафіксувати пошкодження' buttons. Opened multiple modals without any 'Cannot read properties of undefined (reading 'length')' console errors. Modal displays correctly with proper title format 'Пошкодження При поверненні · [SKU] · [Product Name]', all form fields present and functional (category dropdown with 'Меблі', damage type dropdown, severity levels, fee input with auto-calculation, photo upload, notes). Modal opens/closes properly multiple times. Fix with optional chaining (existingHistory?.length > 0) on line 281 working perfectly. Zero critical console errors detected during testing."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"

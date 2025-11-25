@@ -69,6 +69,15 @@ function App() {
           />
           
           <Route 
+            path="/orders-archive" 
+            element={
+              <ProtectedRoute>
+                <OrdersArchive />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
             path="/reaudit" 
             element={
               <ProtectedRoute>

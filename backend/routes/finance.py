@@ -93,6 +93,7 @@ async def get_transactions(
             "status": row[6],
             "counterparty": f"Order #{row[2]}" if row[2] else "N/A",
             "notes": row[10],
+            "created_by": row[11] if len(row) > 11 else None,  # created_by
             "client_name": row[12] if len(row) > 12 else None  # customer_name from join
         })
     

@@ -351,7 +351,7 @@ export default function OrdersArchive() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleUnarchive(order.order_id, order.order_number);
+                                handleUnarchive(order.order_id || parseInt(order.id), order.order_number);
                               }}
                               className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700"
                             >
@@ -361,7 +361,7 @@ export default function OrdersArchive() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleArchive(order.order_id, order.order_number);
+                                handleArchive(order.order_id || parseInt(order.id), order.order_number);
                               }}
                               className="px-3 py-1.5 text-sm bg-slate-600 text-white rounded hover:bg-slate-700"
                             >

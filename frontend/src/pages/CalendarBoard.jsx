@@ -198,7 +198,7 @@ function MonthView({date, orders, onOpen, onPickDay}){
 /******************** side panel ********************/
 function SidePanel({open, onClose, date, orders, onOpen}){
   if(!open) return null
-  const list = orders.filter(o=>o.date===date)
+  const list = (orders || []).filter(o=>o.date===date)
   return (
     <div className="fixed inset-0 z-30 flex">
       <div className="h-full w-full bg-black/20" onClick={onClose} />

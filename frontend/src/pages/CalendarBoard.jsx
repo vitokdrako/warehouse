@@ -127,7 +127,7 @@ function WeekView({date, orders, onOpen, onPickDay}){
         <tbody>
           <tr>
             {days.map(d=> {
-              const arr = byDay(d)
+              const arr = byDay(d) || []
               const count = {
                 issue: arr.filter(x=>x.kind==='issue').length,
                 return: arr.filter(x=>x.kind==='return').length,

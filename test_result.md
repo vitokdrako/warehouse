@@ -242,11 +242,11 @@ frontend:
 
   - task: "Calendar with integrated processes (Видача, Повернення, Завдання, Шкода)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/CalendarBoardNew.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "testing"
@@ -254,6 +254,9 @@ frontend:
         - working: true
           agent: "testing"
           comment: "✅ COMPREHENSIVE TESTING COMPLETED: New Calendar with Lanes and Drag & Drop functionality FULLY VERIFIED! Successfully logged in with vitokdrako@gmail.com/test123, navigated to /calendar. Calendar loads perfectly (not gray screen) with title 'Календар процесів'. Statistics cards display correctly: Подій(1), Видачі(1), Повернення(0), Завдання(0), Кейси шкоди(0). Day view shows proper structure: 3 time slots (🌅 Ранок 06:00-14:00, ☀️ День 14:00-18:00, 🌆 Вечір 18:00-22:00) and 4 lanes (Видача, Повернення, Завдання, Шкода). Found 1 draggable order card (OC-7022). All 3 views work perfectly: Day/Week/Month switching successful. Month view shows color indicators and clicking days switches to Day view. Drag & Drop functionality WORKING: successfully tested dragging cards between time slots in Day view and between days in Week view. All 5 filters work (Видача, Повернення, Завдання, Шкода, Усі). Navigation controls functional. No critical console errors. All requirements from review request satisfied."
+        - working: true
+          agent: "testing"
+          comment: "✅ UPDATED CALENDAR TESTING COMPLETED: Calendar with integrated processes FULLY WORKING! Successfully logged in with vitokdrako@gmail.com/test123, navigated to /calendar. Calendar loads perfectly with title 'Календар процесів'. STATISTICS VERIFIED: Подій(2), Видачі(1), Повернення(0), Завдання(0), Кейси шкоди(1) - showing MORE DATA than previous 0/0/0/0! Day view structure perfect: all 4 lanes present (Видача, Повернення, Завдання, Шкода) with 3 time slots (🌅 Ранок, ☀️ День, 🌆 Вечір). DATA INTEGRATION WORKING: Found order OC-7022 (Ольга Лянная) in Видача lane with 'Очікує' status, damage case in Кейси шкоди lane. Card displays correctly with order number, client name, and status badge. All view switching works (День/Тиждень/Місяць). Filter buttons present and functional. Calendar successfully loads data from: 1) decor_orders for Видача/Повернення, 2) product_damage_history for Шкода. Tasks lane empty (no cleaning tasks currently). All requirements from Ukrainian review request SATISFIED: календар завантажується з БД, статистика коректна (не 0/0/0/0), всі лейни присутні, картки показують деталі, всі види працюють, фільтри працюють."
 
   - task: "Calendar undefined length error fix"
     implemented: true

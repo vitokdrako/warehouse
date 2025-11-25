@@ -17,10 +17,28 @@ export default function InventoryRecount() {
   const [severity, setSeverity] = useState('low')
   const [saving, setSaving] = useState(false)
   const [familyProducts, setFamilyProducts] = useState([]) // Товари з набору
+  const [damageHistory, setDamageHistory] = useState([]) // Історія пошкоджень
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => {
     loadProduct()
+    loadDamageHistory()
   }, [sku])
+  
+  const loadDamageHistory = async () => {
+    if (!sku) return
+    
+    try {
+      setLoadingHistory(true)
+      const res = await axios.get(`${BACKEND_URL}/api/product-damage-history/sku/${sku}`)
+      setDamageHistory(res.data.history || [])
+    } catch (err) {
+      console.error('Error loading damage history:', err)
+      setDamageHistory([])
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
 
   const loadProduct = async () => {
     try {

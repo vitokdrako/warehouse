@@ -81,20 +81,20 @@ async def get_transactions(
         
         transactions.append({
             "id": row[0],
-            "date": row[8].isoformat() if row[8] else None,  # created_at
+            "date": row[7].isoformat() if row[7] else None,  # created_at (index 7)
             "order_id": row[2],
             "type": transaction_type,
-            "title": row[7] or transaction_type.replace('_', ' ').title(),  # description
-            "payment_method": row[9],
+            "title": row[6] or transaction_type.replace('_', ' ').title(),  # description (index 6)
+            "payment_method": row[8],  # payment_method (index 8)
             "debit": debit,
             "credit": credit,
             "amount": amount,
-            "currency": row[5] or 'UAH',
-            "status": row[6],
+            "currency": row[4] or 'UAH',  # currency (index 4)
+            "status": row[5],  # status (index 5)
             "counterparty": f"Order #{row[2]}" if row[2] else "N/A",
-            "notes": row[10],
-            "created_by": row[11] if len(row) > 11 else None,  # created_by
-            "client_name": row[12] if len(row) > 12 else None  # customer_name from join
+            "notes": row[9],  # notes (index 9)
+            "created_by": row[10] if len(row) > 10 else None,  # created_by (index 10)
+            "client_name": row[11] if len(row) > 11 else None  # customer_name (index 11)
         })
     
     return transactions

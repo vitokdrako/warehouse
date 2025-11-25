@@ -526,19 +526,31 @@ export default function FinanceCabinet(){
     }
   }
 
-  const releaseDeposit = async (orderId, amount)=>{
+  const releaseDeposit = async (orderId, heldByCurrency)=>{
     try {
-      await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
-        order_id: orderId,
-        transaction_type: 'deposit_release',
-        amount: amount,
-        currency: 'UAH',
-        status: 'completed',
-        description: 'Повернення застави',
-        notes: `Повернено ₴${amount}`
-      })
+      // Повертаємо кожну валюту окремо
+      const currencies = Object.entries(heldByCurrency).filter(([_, amt]) => amt > 0)
+      
+      if (currencies.length === 0) {
+        alert('Немає активного холду')
+        return
+      }
+      
+      for (const [currency, amount] of currencies) {
+        const symbol = currency === 'UAH' ? '₴' : currency === 'USD' ? '$' : '€'
+        await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
+          order_id: orderId,
+          transaction_type: 'deposit_release',
+          amount: amount,
+          currency: currency,
+          status: 'completed',
+          description: 'Повернення застави',
+          notes: `Повернено ${symbol}${amount}`
+        })
+      }
+      
       await loadTransactions()
-      alert('Заставу повернено!')
+      alert(`Заставу повернено!\n${currencies.map(([c, a]) => `${c === 'UAH' ? '₴' : c === 'USD' ? '$' : '€'}${a}`).join(' + ')}`)
     } catch(e){
       console.error('Error release:', e)
       alert('Помилка при поверненні')

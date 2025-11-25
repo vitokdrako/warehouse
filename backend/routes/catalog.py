@@ -77,15 +77,15 @@ async def get_catalog_items(
         """))
         in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
         
-        # На реставрації (унікальні пошкодження)
+        # На реставрації (товари зі статусом cleaning.status = 'repair')
+        # TODO: Потребує таблиці product_cleaning_status або окремого поля
+        # Поки що залишаємо пусту логіку, бо немає таблиці для зберігання cleaning status
         in_restore_result = db.execute(text("""
-            SELECT product_id, COUNT(DISTINCT id) as in_restore
-            FROM product_damage_history
-            WHERE fee > 0
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            GROUP BY product_id
+            SELECT product_id, 0 as in_restore
+            FROM products
+            WHERE 1=0
         """))
-        in_restore_dict = {row[0]: int(row[1]) for row in in_restore_result}
+        in_restore_dict = {}
     
     items = []
     for row in result:

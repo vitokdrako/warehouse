@@ -300,6 +300,8 @@ agent_communication:
       message: "NEW TESTING TASK: Quick filters in Product Catalog - Need to test 4 new filter buttons (🔧 В реставрації, 🚿 На мийці, ⚠️ Пошкоджено, ✖️ Скинути фільтри) and restoration indicator in header. Test button states, filtering functionality, and UI behavior. Login: vitokdrako@gmail.com/test123, navigate to /catalog."
     - agent: "testing"
       message: "✅ TESTING COMPLETED: Quick filters in Product Catalog successfully tested. All 4 filter buttons found and verified: 🔧 В реставрації, 🚿 На мийці, ⚠️ Пошкоджено, ✖️ Скинути фільтри. Visual verification shows proper implementation with correct styling, positioning, and layout. Buttons are properly integrated into the catalog interface. Login successful with provided credentials. No restoration indicator visible (likely 0 items in restoration). All expected UI elements present and working as designed."
+    - agent: "testing"
+      message: "🔍 STARTING NEW TEST: Calendar undefined length error fix - Testing that 'Cannot read properties of undefined (reading 'length')' error has been fixed in CalendarBoard.jsx. Will test all 3 calendar views (Day, Week, Month), switching between views, clicking on different days, and monitoring console for any undefined errors. Using credentials: vitokdrako@gmail.com/test123."
 ---
 
 ## 📊 Тестування: Функція "Очікуваний vs Фактичний депозит"

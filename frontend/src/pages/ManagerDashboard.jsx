@@ -333,6 +333,7 @@ export default function ManagerDashboard() {
                   badge="awaiting"
                   order={order}
                   onDateUpdate={null}
+                  onCancelByClient={handleCancelByClient}
                   onClick={() => navigate(`/order/${order.id}/view`)}
                 />
               ))}

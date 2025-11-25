@@ -387,33 +387,94 @@ export default function OrdersArchive() {
                         </div>
                       </div>
                       
-                      {/* Right: Lifecycle History */}
+                      {/* Middle: Lifecycle History */}
                       <div>
-                        <h3 className="font-semibold text-slate-900 mb-3">🕐 Історія операцій</h3>
+                        <h3 className="font-semibold text-slate-900 mb-3">🕐 Історія статусів</h3>
                         {lifecycle[order.order_id || parseInt(order.id)] ? (
                           <div className="space-y-2 max-h-64 overflow-y-auto">
                             {lifecycle[order.order_id || parseInt(order.id)].map((event, idx) => (
-                              <div key={idx} className="flex gap-3 text-sm">
-                                <div className="text-slate-500 min-w-[100px]">
-                                  {new Date(event.created_at).toLocaleString('uk-UA', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </div>
+                              <div key={idx} className="flex gap-3 text-sm border-l-2 border-blue-200 pl-3 py-1">
                                 <div className="flex-1">
-                                  <span className="font-medium text-slate-900">{event.stage}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-slate-900">{event.stage}</span>
+                                    {event.created_by && (
+                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                        {event.created_by}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-slate-500 mt-0.5">
+                                    {new Date(event.created_at).toLocaleString('uk-UA', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </div>
                                   {event.notes && (
-                                    <div className="text-slate-600 mt-0.5">{event.notes}</div>
+                                    <div className="text-xs text-slate-600 mt-1">{event.notes}</div>
                                   )}
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="text-sm text-slate-500">Завантаження історії...</div>
+                          <div className="text-sm text-slate-500">Завантаження...</div>
+                        )}
+                      </div>
+                      
+                      {/* Right: Finance History */}
+                      <div>
+                        <h3 className="font-semibold text-slate-900 mb-3">💰 Фінансова історія</h3>
+                        {financeHistory[order.order_id || parseInt(order.id)] ? (
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {financeHistory[order.order_id || parseInt(order.id)].map((transaction, idx) => (
+                              <div key={idx} className="flex gap-3 text-sm border-l-2 border-emerald-200 pl-3 py-1">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-slate-900">
+                                      {transaction.type === 'payment' && '💵 Оплата'}
+                                      {transaction.type === 'deposit_hold' && '🔒 Застава'}
+                                      {transaction.type === 'deposit_release' && '↩️ Повернення застави'}
+                                      {transaction.type === 'damage' && '⚠️ Збитки'}
+                                      {!['payment', 'deposit_hold', 'deposit_release', 'damage'].includes(transaction.type) && transaction.type}
+                                    </span>
+                                    <span className={`text-sm font-semibold ${
+                                      transaction.credit > 0 ? 'text-emerald-600' : 'text-rose-600'
+                                    }`}>
+                                      {transaction.credit > 0 ? '+' : '-'}₴{Math.abs(transaction.credit || transaction.debit || 0).toFixed(0)}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-slate-500 mt-0.5">
+                                    {new Date(transaction.date).toLocaleString('uk-UA', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                    {transaction.payment_method && ` • ${transaction.payment_method}`}
+                                  </div>
+                                  {transaction.notes && (
+                                    <div className="text-xs text-slate-600 mt-1">{transaction.notes}</div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                            
+                            {/* Підсумок */}
+                            <div className="border-t border-slate-300 pt-2 mt-3">
+                              <div className="flex justify-between text-sm font-semibold">
+                                <span>Всього оплачено:</span>
+                                <span className="text-emerald-600">
+                                  ₴{financeHistory[order.order_id || parseInt(order.id)]
+                                    .filter(t => t.type === 'payment')
+                                    .reduce((sum, t) => sum + (t.credit || 0), 0).toFixed(0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-slate-500">Завантаження...</div>
                         )}
                       </div>
                     </div>

@@ -338,6 +338,28 @@ export default function OrdersArchive() {
                           >
                             Відкрити замовлення
                           </button>
+                          
+                          {order.is_archived ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnarchive(order.order_id, order.order_number);
+                              }}
+                              className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                            >
+                              ↩️ Розархівувати
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleArchive(order.order_id, order.order_number);
+                              }}
+                              className="px-3 py-1.5 text-sm bg-slate-600 text-white rounded hover:bg-slate-700"
+                            >
+                              📂 Архівувати
+                            </button>
+                          )}
                         </div>
                       </div>
                       

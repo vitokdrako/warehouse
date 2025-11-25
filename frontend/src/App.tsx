@@ -22,6 +22,7 @@ import IssueOrderClean from './pages/IssueOrderClean';
 import IssueCard from './pages/IssueCard';
 import ReturnOrderClean from './pages/ReturnOrderClean';
 import InventoryRecount from './pages/InventoryRecount';
+import OrdersArchive from './pages/OrdersArchive';
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

@@ -301,6 +301,14 @@ export default function ManagerDashboard() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </Filter>
+          <div className="flex items-end">
+            <button
+              onClick={() => navigate('/orders-archive')}
+              className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-400 transition-colors"
+            >
+              📂 Архів замовлень
+            </button>
+          </div>
         </div>
       </section>
 

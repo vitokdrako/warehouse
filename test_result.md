@@ -217,6 +217,8 @@ agent_communication:
       message: "Starting new testing task: Multi-currency deposit display verification for order #6996. Need to test badge display in order list and expanded view with separate currency lines."
     - agent: "testing"
       message: "❌ TESTING FAILED: Cannot access finance cabinet (/finance) - redirects to login page. Order #6996 visible in manager dashboard returns section but shows only single currency (₴ 1510). Multi-currency display functionality cannot be tested due to finance cabinet navigation issues. Requires investigation of authentication/routing for finance page access."
+    - agent: "testing"
+      message: "Starting new testing task: DamageModal integration testing in ReturnOrderClean.jsx and InventoryRecount.jsx. Need to test modal opening, form functionality, data saving, and UI integration in both return process and inventory audit scenarios."
 ---
 
 ## 📊 Тестування: Функція "Очікуваний vs Фактичний депозит"

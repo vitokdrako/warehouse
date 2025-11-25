@@ -169,7 +169,7 @@ function MonthView({date, orders, onOpen, onPickDay}){
         <div key={h} className="px-2 py-1 text-center text-xs text-slate-500">{h}</div>
       ))}
       {days.map(d=> {
-        const arr = byDay(d)
+        const arr = byDay(d) || []
         const dayNum = new Date(d).getDate()
         const faded = new Date(d).getMonth()!==curMonth
         return (

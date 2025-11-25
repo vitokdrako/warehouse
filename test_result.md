@@ -304,6 +304,8 @@ agent_communication:
       message: "🔍 STARTING NEW TEST: Calendar undefined length error fix - Testing that 'Cannot read properties of undefined (reading 'length')' error has been fixed in CalendarBoard.jsx. Will test all 3 calendar views (Day, Week, Month), switching between views, clicking on different days, and monitoring console for any undefined errors. Using credentials: vitokdrako@gmail.com/test123."
     - agent: "testing"
       message: "🎉 TESTING SUCCESSFUL: Calendar undefined length error fix COMPLETELY VERIFIED! Comprehensive testing completed with all 3 calendar views (Day, Week, Month), rapid view switching, navigation controls, side panel, KPI counters, and month grid interactions. Monitored 27 console messages during extensive testing - found ZERO 'Cannot read properties of undefined (reading 'length')' errors. The fix with (orders || []) defensive programming throughout CalendarBoard.jsx is working perfectly. Calendar loads properly, all functionality works without errors. Other console errors detected are unrelated dashboard API fetch failures, not calendar issues. Fix is complete and verified."
+    - agent: "testing"
+      message: "🔍 STARTING NEW TEST: New Calendar with Lanes and Drag & Drop - Testing the completely new calendar implementation at /calendar with lanes concept (Видача/Повернення/Завдання/Шкода), Day view with time slots (🌅 Ранок, ☀️ День, 🌆 Вечір), Week view, Month view with color indicators, and Drag & Drop functionality. Using credentials: vitokdrako@gmail.com/test123."
 ---
 
 ## 📊 Тестування: Функція "Очікуваний vs Фактичний депозит"

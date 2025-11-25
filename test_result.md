@@ -201,10 +201,10 @@ metadata:
   test_sequence: 1
 
 test_plan:
-  current_focus: []
-  stuck_tasks: 
-    - "Multi-currency deposit display in order list badge"
-    - "Multi-currency deposit display in expanded order view"
+  current_focus:
+    - "DamageModal integration in ReturnOrderClean"
+    - "DamageModal integration in InventoryRecount"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 

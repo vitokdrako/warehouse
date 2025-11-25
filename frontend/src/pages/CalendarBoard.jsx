@@ -306,7 +306,6 @@ export default function CalendarBoard(){
     return {
       issue: list.filter(o=>o.kind==='issue').length,
       return: list.filter(o=>o.kind==='return').length,
-      new:    list.filter(o=>o.kind==='new').length,
       total:  list.length
     }
   },[orders,date])

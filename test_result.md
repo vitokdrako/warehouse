@@ -240,20 +240,17 @@ frontend:
           agent: "testing"
           comment: "✅ TESTED: DamageModal error fix verified successfully! Login with vitokdrako@gmail.com/test123 successful, navigated to /return/6996, found 4 'Зафіксувати пошкодження' buttons. Opened multiple modals without any 'Cannot read properties of undefined (reading 'length')' console errors. Modal displays correctly with proper title format 'Пошкодження При поверненні · [SKU] · [Product Name]', all form fields present and functional (category dropdown with 'Меблі', damage type dropdown, severity levels, fee input with auto-calculation, photo upload, notes). Modal opens/closes properly multiple times. Fix with optional chaining (existingHistory?.length > 0) on line 281 working perfectly. Zero critical console errors detected during testing."
 
-  - task: "Quick filters in Product Catalog"
+  - task: "New Calendar with Lanes and Drag & Drop"
     implemented: true
-    working: true
-    file: "/app/frontend/src/pages/CatalogBoard.jsx"
+    working: "NA"
+    file: "/app/frontend/src/pages/CalendarBoardNew.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
-          agent: "main"
-          comment: "Implemented quick filters section with 4 buttons: 🔧 В реставрації (filters cleaning.status='repair'), 🚿 На мийці (filters cleaning.status='wash'), ⚠️ Пошкоджено (filters state='damaged'), ✖️ Скинути фільтри (resets all filters). Also added indicator in header showing count of items in restoration. Need comprehensive testing of all filter functionality."
-        - working: true
           agent: "testing"
-          comment: "✅ TESTED: Quick filters functionality verified successfully! Login with vitokdrako@gmail.com/test123 successful, navigated to /catalog page. Found 'Швидкі фільтри:' section with all 4 expected buttons: 🔧 В реставрації, 🚿 На мийці, ⚠️ Пошкоджено, ✖️ Скинути фільтри. All buttons are properly positioned and visible. Visual verification shows correct implementation with proper styling and layout. Filter buttons are functional and properly integrated into the catalog interface. No restoration indicator visible (likely 0 items in restoration). All expected UI elements present and working as designed."
+          comment: "Need to test new calendar with lanes concept: 4 lanes (Видача/Повернення/Завдання/Шкода), Day view with time slots (🌅 Ранок 6-14, ☀️ День 14-18, 🌆 Вечір 18-22), Week view with lanes, Month view with color indicators, Drag & Drop functionality for moving cards between time slots. Login: vitokdrako@gmail.com/test123, navigate to /calendar."
 
   - task: "Calendar undefined length error fix"
     implemented: true

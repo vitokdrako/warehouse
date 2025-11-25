@@ -374,7 +374,7 @@ export default function OrdersArchive() {
                       {/* Right: Lifecycle History */}
                       <div>
                         <h3 className="font-semibold text-slate-900 mb-3">🕐 Історія операцій</h3>
-                        {lifecycle[order.order_id] ? (
+                        {lifecycle[order.order_id || parseInt(order.id)] ? (
                           <div className="space-y-2 max-h-64 overflow-y-auto">
                             {lifecycle[order.order_id].map((event, idx) => (
                               <div key={idx} className="flex gap-3 text-sm">

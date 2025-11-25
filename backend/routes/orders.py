@@ -203,7 +203,7 @@ async def get_orders(
     
     params = {}
     
-    if status:
+    if status and status != 'all':
         # Підтримка кількох статусів через кому
         if ',' in status:
             statuses = [s.strip() for s in status.split(',')]

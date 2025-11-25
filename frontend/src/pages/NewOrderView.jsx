@@ -1321,6 +1321,13 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
           {saving ? '⏳ Збереження...' : '💾 Зберегти'}
         </button>
         <button 
+          onClick={handleCancelByClient}
+          disabled={accepting || saving}
+          className="h-10 rounded-xl border-2 border-rose-300 px-4 text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+        >
+          🚫 Клієнт відмовився
+        </button>
+        <button 
           onClick={handleDecline}
           disabled={accepting}
           className="h-10 rounded-xl border border-slate-200 px-4 text-sm hover:bg-slate-50 disabled:opacity-50"

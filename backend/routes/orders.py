@@ -761,21 +761,22 @@ async def accept_order(
             "notes": f"Автоматично при прийнятті замовлення"
         })
         
-        # 2. Утримання застави (credit - застава на холді)
+        # 2. Очікувана застава (тільки для відображення, НЕ реальний холд)
+        # ПРИМІТКА: Реальний deposit_hold створюється вручну менеджером через FinanceCabinet
         db.execute(text("""
             INSERT INTO finance_transactions (
                 id, order_id, transaction_type, amount, status, description,
                 payment_method, notes, created_at
             ) VALUES (
-                :id, :order_id, 'deposit_hold', :amount, 'held',
+                :id, :order_id, 'deposit_expected', :amount, 'pending',
                 :description, NULL, :notes, NOW()
             )
         """), {
             "id": deposit_transaction_id,
             "order_id": order_id,
             "amount": deposit_amount,
-            "description": f"Застава (50% від ₴{total_loss_value})",
-            "notes": f"Повна вартість втрати: ₴{total_loss_value}"
+            "description": f"Очікувана застава (₴{deposit_amount})",
+            "notes": f"Розраховано як 50% від вартості втрати: ₴{total_loss_value}"
         })
     
     db.commit()

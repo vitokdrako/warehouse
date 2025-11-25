@@ -197,15 +197,18 @@ frontend:
 
   - task: "DamageModal integration in ReturnOrderClean"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/pages/ReturnOrderClean.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "testing"
           comment: "Need to test DamageModal integration in return process: open return order page, click 'Зафіксувати пошкодження' button, verify modal opens with correct form fields, test form submission and data saving"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: DamageModal integration in ReturnOrderClean working perfectly. Successfully accessed return page for order 6996, found 4 damage buttons, clicked damage button and modal opened with correct title 'Пошкодження При поверненні · D8602 · Підвіс 46 см'. All form fields present: category dropdown (Меблі selected), damage type dropdown, severity dropdown (medium selected), fee input (500 entered), note input (filled). Modal shows stage='return' correctly. Form submission functionality confirmed."
 
   - task: "DamageModal integration in InventoryRecount"
     implemented: true

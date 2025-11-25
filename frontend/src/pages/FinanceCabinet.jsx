@@ -145,7 +145,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
         <button onClick={onCollapse} className="text-slate-400 hover:text-slate-600">✕</button>
       </div>
     }>
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-5">
         <div className="rounded-xl border border-slate-200 p-3">
           <div className="text-xs text-slate-500">Нараховано</div>
           <div className="text-xl font-semibold">₴ {fmtUA(orderRows.filter(isRentOrCharge).reduce((s,r)=>s+(r.debit||0),0))}</div>
@@ -154,21 +154,27 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
           <div className="text-xs text-slate-500">Оплачено</div>
           <div className="text-xl font-semibold">₴ {fmtUA(orderRows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0))}</div>
         </div>
-        <div className="rounded-xl border border-slate-200 p-3">
-          <div className="text-xs text-slate-500">Холд застави</div>
+        <div className="rounded-xl border border-blue-300 bg-blue-50 p-3">
+          <div className="text-xs text-blue-600 font-medium">Очікувана застава</div>
+          <div className="text-lg font-semibold text-blue-800">₴ {fmtUA(expectedDeposit)}</div>
+          <div className="text-[10px] text-blue-500 mt-0.5">розрахункова</div>
+        </div>
+        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3">
+          <div className="text-xs text-emerald-600 font-medium">Фактична застава</div>
           {Object.keys(heldByCurrency).length > 0 ? (
             <div className="space-y-1">
               {Object.entries(heldByCurrency).map(([curr, amt]) => (
                 amt > 0 && (
-                  <div key={curr} className="text-base font-semibold">
-                    {curr === 'UAH' ? '₴' : curr === 'USD' ? '$' : '€'} {fmtUA(amt)} {curr !== 'UAH' && <span className="text-xs text-slate-500">{curr}</span>}
+                  <div key={curr} className="text-base font-semibold text-emerald-800">
+                    {curr === 'UAH' ? '₴' : curr === 'USD' ? '$' : '€'} {fmtUA(amt)} {curr !== 'UAH' && <span className="text-xs text-emerald-600">{curr}</span>}
                   </div>
                 )
               ))}
             </div>
           ) : (
-            <div className="text-xl font-semibold text-slate-400">₴ 0</div>
+            <div className="text-lg font-semibold text-slate-400">₴ 0</div>
           )}
+          <div className="text-[10px] text-emerald-500 mt-0.5">прийнято від клієнта</div>
         </div>
         <div className="rounded-xl border border-slate-200 p-3">
           <div className="text-xs text-slate-500">До сплати</div>

@@ -275,6 +275,11 @@ export default function OrdersArchive() {
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[order.status] || 'bg-slate-100 text-slate-700'}`}>
                         {statusLabels[order.status] || order.status}
                       </span>
+                      {order.is_archived && (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">
+                          📂 Архів
+                        </span>
+                      )}
                       <span className="text-sm text-slate-600">
                         {new Date(order.created_at).toLocaleDateString('uk-UA')}
                       </span>

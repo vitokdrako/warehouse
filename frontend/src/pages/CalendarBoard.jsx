@@ -317,7 +317,9 @@ export default function CalendarBoard(){
       if (o.kind === 'new') {
         navigate(`/order/${o.order.order_number}/view`)
       } else if (o.kind === 'issue') {
-        navigate(`/order/${o.order.order_number}`)
+        // Navigate to issue card for ready_for_issue orders
+        // Issue card has endpoints to mark as issued
+        navigate(`/issue/${o.order.order_id}`)
       } else if (o.kind === 'return') {
         navigate(`/return/${o.order.order_number}`)
       }

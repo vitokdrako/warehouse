@@ -14,16 +14,18 @@ export default function OrdersArchive() {
   // Фільтри
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [archiveFilter, setArchiveFilter] = useState('archived'); // archived, active, all
   const [sortBy, setSortBy] = useState('date_desc'); // date_desc, date_asc, amount_desc, amount_asc
   
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [archiveFilter]);
   
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders?status=all`, {
+      const archiveParam = archiveFilter === 'archived' ? 'true' : archiveFilter === 'active' ? 'false' : 'all';
+      const response = await fetch(`${BACKEND_URL}/api/decor-orders?status=all&archived=${archiveParam}`, {
         mode: 'cors'
       });
       const data = await response.json();
@@ -32,6 +34,54 @@ export default function OrdersArchive() {
       console.error('Error fetching orders:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleArchive = async (orderId, orderNumber) => {
+    if (!confirm(`Архівувати замовлення ${orderNumber}?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/archive`, {
+        method: 'POST',
+        mode: 'cors'
+      });
+      
+      if (response.ok) {
+        alert('✅ Замовлення архівовано');
+        fetchOrders();
+      } else {
+        const error = await response.json();
+        alert(`❌ Помилка: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error('Error archiving order:', error);
+      alert(`❌ Помилка: ${error.message}`);
+    }
+  };
+  
+  const handleUnarchive = async (orderId, orderNumber) => {
+    if (!confirm(`Розархівувати замовлення ${orderNumber}?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/unarchive`, {
+        method: 'POST',
+        mode: 'cors'
+      });
+      
+      if (response.ok) {
+        alert('✅ Замовлення розархівовано');
+        fetchOrders();
+      } else {
+        const error = await response.json();
+        alert(`❌ Помилка: ${error.detail}`);
+      }
+    } catch (error) {
+      console.error('Error unarchiving order:', error);
+      alert(`❌ Помилка: ${error.message}`);
     }
   };
   

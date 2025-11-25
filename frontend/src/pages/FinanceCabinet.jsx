@@ -232,7 +232,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
             }}>Списати з застави (до суми боргу)</PillButton>
             <PillButton tone='yellow' onClick={()=>{
               if(held<=0) return alert('Немає активного холду');
-              onReleaseDeposit(orderId, held)
+              onReleaseDeposit(orderId, heldByCurrency)
             }}>Повернути заставу</PillButton>
           </div>
           <div className="mt-2 text-xs text-slate-500">Повернення повертає залишок холду. Списання створює кредитну проводку «deposit_writeoff» і зменшує холд.</div>

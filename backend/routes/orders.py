@@ -259,7 +259,7 @@ async def get_orders(
     
     # Get total count
     count_sql = "SELECT COUNT(*) FROM orders WHERE 1=1"
-    if status:
+    if status and status != 'all':
         if ',' in status:
             statuses = [s.strip() for s in status.split(',')]
             placeholders = ','.join([f':status_{i}' for i in range(len(statuses))])
@@ -278,6 +278,12 @@ async def get_orders(
             customer_name LIKE :search OR
             customer_phone LIKE :search
         )"""
+    
+    # Додати фільтр архівних в count
+    if archived == 'true':
+        count_sql += " AND is_archived = 1"
+    elif archived == 'false' or archived is None:
+        count_sql += " AND is_archived = 0"
     
     count_result = db.execute(text(count_sql), params)
     total = count_result.scalar()

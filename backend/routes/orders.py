@@ -920,6 +920,104 @@ async def cancel_order_by_client(
         "items_unfrozen": True
     }
 
+
+@decor_router.post("/{order_id}/archive")
+@router.post("/{order_id}/archive")
+async def archive_order(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Архівувати замовлення
+    ✅ Замовлення переміщується в архів і не показується на основному дашборді
+    """
+    # Перевірити що замовлення існує
+    check_result = db.execute(text("""
+        SELECT order_number, status FROM orders WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    order_row = check_result.fetchone()
+    check_result.close()
+    
+    if not order_row:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    order_number = order_row[0]
+    status = order_row[1]
+    
+    # Оновити is_archived
+    db.execute(text("""
+        UPDATE orders 
+        SET is_archived = 1,
+            updated_at = NOW()
+        WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    # Залогувати
+    db.execute(text("""
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
+        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', NOW())
+    """), {"order_id": order_id})
+    
+    db.commit()
+    
+    return {
+        "message": "Замовлення архівовано",
+        "order_id": order_id,
+        "order_number": order_number,
+        "status": status,
+        "is_archived": True
+    }
+
+
+@decor_router.post("/{order_id}/unarchive")
+@router.post("/{order_id}/unarchive")
+async def unarchive_order(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Розархівувати замовлення
+    ✅ Замовлення повертається з архіву на основний дашборд
+    """
+    # Перевірити що замовлення існує
+    check_result = db.execute(text("""
+        SELECT order_number, status FROM orders WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    order_row = check_result.fetchone()
+    check_result.close()
+    
+    if not order_row:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    order_number = order_row[0]
+    status = order_row[1]
+    
+    # Оновити is_archived
+    db.execute(text("""
+        UPDATE orders 
+        SET is_archived = 0,
+            updated_at = NOW()
+        WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    # Залогувати
+    db.execute(text("""
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
+        VALUES (:order_id, 'unarchived', 'Замовлення відновлено з архіву', NOW())
+    """), {"order_id": order_id})
+    
+    db.commit()
+    
+    return {
+        "message": "Замовлення розархівовано",
+        "order_id": order_id,
+        "order_number": order_number,
+        "status": status,
+        "is_archived": False
+    }
+
 # ============================================================
 # ADDITIONAL ENDPOINTS
 # ============================================================

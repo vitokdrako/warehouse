@@ -172,8 +172,8 @@ export default function ManagerDashboard() {
     .then(data => {
       console.log('[Dashboard] Finance summary:', data);
       setFinanceData({
-        revenue: data.rent_accrued || 0,
-        deposits: data.deposits_held || 0
+        revenue: data.total_revenue || 0,  // ОПЛАЧЕНІ (payment completed)
+        deposits: data.total_deposits_held || 0  // ЗАСТАВИ на холді
       });
     })
     .catch(err => console.error('[Dashboard] Error loading finance:', err));

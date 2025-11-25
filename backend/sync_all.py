@@ -38,12 +38,13 @@ def sync_categories():
         
         for cat in categories:
             rh_cur.execute("""
-                INSERT INTO categories (category_id, parent_id, name, sort_order, status, synced_at)
+                INSERT INTO categories (category_id, parent_id, name, sort_order, is_active, updated_at)
                 VALUES (%s, %s, %s, %s, %s, NOW())
                 ON DUPLICATE KEY UPDATE
                     parent_id = VALUES(parent_id),
                     name = VALUES(name),
-                    synced_at = NOW()
+                    is_active = VALUES(is_active),
+                    updated_at = NOW()
             """, (cat['category_id'], cat['parent_id'], cat['name'], cat['sort_order'], cat['status']))
         
         rh.commit()

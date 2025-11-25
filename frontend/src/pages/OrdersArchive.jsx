@@ -99,7 +99,8 @@ export default function OrdersArchive() {
     }
   };
   
-  const toggleExpand = (orderId) => {
+  const toggleExpand (order) => {
+    const orderId = order.order_id || parseInt(order.id);
     if (expandedOrder === orderId) {
       setExpandedOrder(null);
     } else {

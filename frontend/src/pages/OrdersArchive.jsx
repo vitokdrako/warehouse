@@ -329,7 +329,7 @@ export default function OrdersArchive() {
                 {/* Expanded Details */}
                 {expandedOrder === (order.order_id || parseInt(order.id)) && (
                   <div className="border-t border-slate-200 bg-slate-50 p-4">
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       {/* Left: Order Info */}
                       <div>
                         <h3 className="font-semibold text-slate-900 mb-3">Інформація про замовлення</h3>

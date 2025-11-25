@@ -333,11 +333,36 @@ function Drawer({open, item, onClose, onSave}){
               {(!item.variants || item.variants.length === 0) && <div className="text-sm text-slate-500">Немає варіантів</div>}
             </div>
           </Card>
-          <Card title="Історія (лог)">
-            <div className="space-y-2 text-sm text-slate-500">
-              <div>📦 Дані з OpenCart БД</div>
-              <div>🔄 Синхронізовано з Rental Hub</div>
-            </div>
+          <Card title={`🔨 Історія пошкоджень (${damageHistory.length})`}>
+            {loadingHistory ? (
+              <div className="text-sm text-slate-400">Завантаження...</div>
+            ) : damageHistory.length > 0 ? (
+              <div className="max-h-48 space-y-2 overflow-y-auto text-sm">
+                {damageHistory.map(d => (
+                  <div key={d.id} className="rounded-lg border p-2">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-medium text-slate-900">{d.damage_type}</div>
+                        <div className="text-xs text-slate-500">
+                          {d.stage_label} · Замовлення #{d.order_number}
+                        </div>
+                        {d.note && <div className="mt-1 text-xs text-slate-600">{d.note}</div>}
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-sm font-semibold ${d.severity === 'high' ? 'text-red-600' : d.severity === 'medium' ? 'text-amber-600' : 'text-green-600'}`}>
+                          ₴{fmtUA(d.fee)}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {new Date(d.created_at).toLocaleDateString('uk-UA')}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500">✅ Пошкоджень не зафіксовано</div>
+            )}
           </Card>
         </div>
       </div>

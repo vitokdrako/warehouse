@@ -267,7 +267,7 @@ export default function OrdersArchive() {
               <div key={order.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
                 {/* Order Header */}
                 <div 
-                  onClick={() => toggleExpand(order.order_id)}
+                  onClick={() => toggleExpand(order)}
                   className="p-4 cursor-pointer hover:bg-slate-50 transition-colors"
                 >
                   <div className="flex items-center justify-between">

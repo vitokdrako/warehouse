@@ -195,7 +195,17 @@ export default function OrdersArchive() {
           </div>
           
           {/* Фільтри */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            <select
+              value={archiveFilter}
+              onChange={(e) => setArchiveFilter(e.target.value)}
+              className="px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-blue-50 font-semibold"
+            >
+              <option value="archived">📂 Архівні</option>
+              <option value="active">📋 Активні</option>
+              <option value="all">📊 Всі</option>
+            </select>
+            
             <input
               type="text"
               placeholder="Пошук (номер, клієнт, телефон)..."

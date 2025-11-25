@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Протестуй новий календар з лейнами та Drag & Drop функціональністю"
+user_problem_statement: "Протестуй календар з інтеграцією всіх процесів (Видача, Повернення, Завдання, Шкода)"
 
 frontend:
   - task: "Login functionality"

@@ -5,6 +5,7 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getImageUrl, handleImageError } from '../utils/imageHelper'
+import BarcodeScanner from '../components/BarcodeScanner'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

@@ -240,17 +240,17 @@ frontend:
           agent: "testing"
           comment: "✅ TESTED: DamageModal error fix verified successfully! Login with vitokdrako@gmail.com/test123 successful, navigated to /return/6996, found 4 'Зафіксувати пошкодження' buttons. Opened multiple modals without any 'Cannot read properties of undefined (reading 'length')' console errors. Modal displays correctly with proper title format 'Пошкодження При поверненні · [SKU] · [Product Name]', all form fields present and functional (category dropdown with 'Меблі', damage type dropdown, severity levels, fee input with auto-calculation, photo upload, notes). Modal opens/closes properly multiple times. Fix with optional chaining (existingHistory?.length > 0) on line 281 working perfectly. Zero critical console errors detected during testing."
 
-  - task: "New Calendar with Lanes and Drag & Drop"
+  - task: "Calendar with integrated processes (Видача, Повернення, Завдання, Шкода)"
     implemented: true
-    working: true
+    working: "NA"
     file: "/app/frontend/src/pages/CalendarBoardNew.jsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: "NA"
           agent: "testing"
-          comment: "Need to test new calendar with lanes concept: 4 lanes (Видача/Повернення/Завдання/Шкода), Day view with time slots (🌅 Ранок 6-14, ☀️ День 14-18, 🌆 Вечір 18-22), Week view with lanes, Month view with color indicators, Drag & Drop functionality for moving cards between time slots. Login: vitokdrako@gmail.com/test123, navigate to /calendar."
+          comment: "Need to test updated calendar with integrated processes from database: 1) Видача from decor_orders (awaiting_customer, processing, ready_for_issue, pending), 2) Повернення from decor_orders (issued, on_rent), 3) Завдання from product_cleaning_status (wash, dry, repair), 4) Шкода from product_damage_history (last 30 days). Test data loading, statistics display, Day view lanes, card details, Week/Month views, and filters. Login: vitokdrako@gmail.com/test123, navigate to /calendar."
         - working: true
           agent: "testing"
           comment: "✅ COMPREHENSIVE TESTING COMPLETED: New Calendar with Lanes and Drag & Drop functionality FULLY VERIFIED! Successfully logged in with vitokdrako@gmail.com/test123, navigated to /calendar. Calendar loads perfectly (not gray screen) with title 'Календар процесів'. Statistics cards display correctly: Подій(1), Видачі(1), Повернення(0), Завдання(0), Кейси шкоди(0). Day view shows proper structure: 3 time slots (🌅 Ранок 06:00-14:00, ☀️ День 14:00-18:00, 🌆 Вечір 18:00-22:00) and 4 lanes (Видача, Повернення, Завдання, Шкода). Found 1 draggable order card (OC-7022). All 3 views work perfectly: Day/Week/Month switching successful. Month view shows color indicators and clicking days switches to Day view. Drag & Drop functionality WORKING: successfully tested dragging cards between time slots in Day view and between days in Week view. All 5 filters work (Видача, Повернення, Завдання, Шкода, Усі). Navigation controls functional. No critical console errors. All requirements from review request satisfied."

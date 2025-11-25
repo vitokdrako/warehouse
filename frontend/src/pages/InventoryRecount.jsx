@@ -203,6 +203,52 @@ export default function InventoryRecount() {
           </div>
         </div>
 
+        {/* Damage History */}
+        {damageHistory.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-4">
+            <h2 className="text-lg font-semibold mb-3 text-amber-900">
+              🔨 Історія пошкоджень ({damageHistory.length})
+            </h2>
+            <div className="space-y-2">
+              {damageHistory.map(d => (
+                <div key={d.id} className="bg-white rounded-lg border border-amber-300 p-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="font-medium text-slate-900">{d.damage_type}</div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {d.stage_label} · Замовлення #{d.order_number}
+                      </div>
+                      {d.note && (
+                        <div className="text-sm text-slate-600 mt-1">{d.note}</div>
+                      )}
+                      <div className="text-xs text-slate-400 mt-1">
+                        {d.created_by} · {new Date(d.created_at).toLocaleString('uk-UA')}
+                      </div>
+                    </div>
+                    <div className="text-right ml-3">
+                      <div className={`text-sm font-semibold ${
+                        d.severity === 'high' ? 'text-red-600' : 
+                        d.severity === 'medium' ? 'text-amber-600' : 
+                        'text-green-600'
+                      }`}>
+                        ₴{d.fee}
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {d.severity === 'high' ? '🔴 Високе' : 
+                         d.severity === 'medium' ? '🟡 Середнє' : 
+                         '🟢 Низьке'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 text-sm text-amber-800">
+              💡 При виявленні нового пошкодження оберіть "⚠️ Пошкоджено" нижче
+            </div>
+          </div>
+        )}
+
         {/* Recount Form */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-4">
           <h2 className="text-lg font-semibold mb-4">Результат перевірки</h2>

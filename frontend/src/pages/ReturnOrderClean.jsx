@@ -524,11 +524,14 @@ export default function ReturnCard(){
         </div>
       </Card>
 
-      <FindingModal 
-        open={findingOpen.open}
-        item={currentItem}
+      <DamageModal 
+        isOpen={findingOpen.open}
         onClose={()=>setFindingOpen({open:false,itemId:null})}
+        item={currentItem}
+        order={{ order_id: orderId, order_number: order?.order_id }}
+        stage='return'
         onSave={onSaveFinding}
+        existingHistory={currentItem?.findings || []}
       />
 
       <div className="text-xs text-slate-500 text-center">Підказка: клік по серійному номеру відмічає, що екземпляр повернувся та OK.</div>

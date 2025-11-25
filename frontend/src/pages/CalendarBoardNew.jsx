@@ -416,53 +416,109 @@ export default function CalendarBoardNew() {
       const start = view === 'month' ? startOfMonth(baseDate) : view === 'week' ? startOfWeek(baseDate) : baseDate
       const end = view === 'month' ? endOfMonth(baseDate) : view === 'week' ? addDays(startOfWeek(baseDate), 6) : baseDate
 
-      // Load orders
-      const ordersRes = await axios.get(`${BACKEND_URL}/api/orders`, {
-        params: { from_date: toISO(start), to_date: toISO(end) }
-      })
-
-      const orders = ordersRes.data.orders || []
-      
-      // Transform to calendar items
       const calendarItems = []
 
-      orders.forEach((o) => {
-        const issueDate = o.issue_date || o.rental_start_date
-        const returnDate = o.return_date || o.rental_end_date
-        const clientName = o.client_name || o.customer_name
+      // 1. Load orders for Issue and Return lanes
+      try {
+        const ordersRes = await axios.get(`${BACKEND_URL}/api/orders`, {
+          params: { from_date: toISO(start), to_date: toISO(end) }
+        })
 
-        // Issue lane
-        if (issueDate && ['awaiting_customer', 'processing', 'ready_for_issue', 'pending'].includes(o.status)) {
-          calendarItems.push({
-            id: `order-${o.order_number}-issue`,
-            lane: 'issue',
-            date: issueDate,
-            timeSlot: 'morning',
-            orderCode: o.order_number,
-            title: `Видача: ${o.order_number}`,
-            client: clientName,
-            badge: o.status === 'ready_for_issue' ? 'Готово' : o.status === 'processing' ? 'На комплектації' : 'Очікує',
-            status: o.status,
-            orderData: o,
-          })
-        }
+        const orders = ordersRes.data.orders || []
+        
+        orders.forEach((o) => {
+          const issueDate = o.issue_date || o.rental_start_date
+          const returnDate = o.return_date || o.rental_end_date
+          const clientName = o.client_name || o.customer_name
 
-        // Return lane
-        if (returnDate && ['issued', 'on_rent'].includes(o.status)) {
+          // Issue lane
+          if (issueDate && ['awaiting_customer', 'processing', 'ready_for_issue', 'pending'].includes(o.status)) {
+            calendarItems.push({
+              id: `order-${o.order_number}-issue`,
+              lane: 'issue',
+              date: issueDate,
+              timeSlot: 'morning',
+              orderCode: o.order_number,
+              title: `Видача: ${clientName}`,
+              client: clientName,
+              badge: o.status === 'ready_for_issue' ? 'Готово' : o.status === 'processing' ? 'На комплектації' : 'Очікує',
+              status: o.status,
+              orderData: o,
+            })
+          }
+
+          // Return lane
+          if (returnDate && ['issued', 'on_rent'].includes(o.status)) {
+            calendarItems.push({
+              id: `order-${o.order_number}-return`,
+              lane: 'return',
+              date: returnDate,
+              timeSlot: 'evening',
+              orderCode: o.order_number,
+              title: `Повернення: ${clientName}`,
+              client: clientName,
+              badge: 'Очікуємо',
+              status: o.status,
+              orderData: o,
+            })
+          }
+        })
+      } catch (err) {
+        console.error('Failed to load orders:', err)
+      }
+
+      // 2. Load cleaning tasks for Task lane
+      try {
+        const cleaningRes = await axios.get(`${BACKEND_URL}/api/catalog/products`)
+        const products = cleaningRes.data || []
+        
+        products.forEach((p) => {
+          if (p.cleaning && p.cleaning.status && p.cleaning.status !== 'clean') {
+            // Add task for today or tomorrow based on status
+            const taskDate = p.cleaning.status === 'wash' ? toISO(new Date()) : toISO(addDays(new Date(), 1))
+            
+            calendarItems.push({
+              id: `task-${p.sku}-${p.cleaning.status}`,
+              lane: 'task',
+              date: taskDate,
+              timeSlot: p.cleaning.status === 'wash' ? 'morning' : p.cleaning.status === 'dry' ? 'day' : 'evening',
+              orderCode: null,
+              title: `${p.cleaning.status === 'wash' ? 'Мийка' : p.cleaning.status === 'dry' ? 'Сушка' : 'Реставрація'}: ${p.name}`,
+              client: `SKU: ${p.sku}`,
+              badge: p.cleaning.status === 'repair' ? 'Критично' : 'В процесі',
+              status: p.cleaning.status,
+              orderData: p,
+            })
+          }
+        })
+      } catch (err) {
+        console.error('Failed to load cleaning tasks:', err)
+      }
+
+      // 3. Load damage cases for Damage lane
+      try {
+        const damageRes = await axios.get(`${BACKEND_URL}/api/product-damage-history/recent?limit=50`)
+        const damages = damageRes.data || []
+        
+        damages.forEach((d) => {
+          const damageDate = d.created_at ? d.created_at.slice(0, 10) : toISO(new Date())
+          
           calendarItems.push({
-            id: `order-${o.order_number}-return`,
-            lane: 'return',
-            date: returnDate,
-            timeSlot: 'evening',
-            orderCode: o.order_number,
-            title: `Повернення: ${o.order_number}`,
-            client: clientName,
-            badge: 'Очікуємо',
-            status: o.status,
-            orderData: o,
+            id: `damage-${d.id}`,
+            lane: 'damage',
+            date: damageDate,
+            timeSlot: 'day',
+            orderCode: d.order_number,
+            title: `Пошкодження: ${d.product_name}`,
+            client: d.order_number ? `Замовлення ${d.order_number}` : 'Переоблік',
+            badge: d.severity === 'high' ? 'Критично' : d.severity === 'medium' ? 'Середньо' : 'Низько',
+            status: d.severity,
+            orderData: d,
           })
-        }
-      })
+        })
+      } catch (err) {
+        console.error('Failed to load damage cases:', err)
+      }
 
       setItems(calendarItems)
     } catch (err) {

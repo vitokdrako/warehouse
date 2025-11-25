@@ -133,10 +133,10 @@ async def get_finance_summary(
     """), params)
     total_revenue = revenue_result.scalar() or 0.0
     
-    # Total deposits
+    # Total deposits held (фактичні застави на холді)
     deposits_result = db.execute(text(f"""
         SELECT SUM(amount) FROM finance_transactions 
-        WHERE transaction_type = 'deposit' AND status = 'held' {date_filter}
+        WHERE transaction_type = 'deposit_hold' AND status = 'held' {date_filter}
     """), params)
     total_deposits = deposits_result.scalar() or 0.0
     

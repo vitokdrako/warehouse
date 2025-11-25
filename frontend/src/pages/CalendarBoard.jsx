@@ -106,7 +106,7 @@ function DayView({date, orders, onOpen}){
 function WeekView({date, orders, onOpen, onPickDay}){
   const start = startOfWeek(date)
   const days = Array.from({length:7}, (_,i)=> addDays(start, i))
-  const byDay = (d)=> orders.filter(o=> o.date===d)
+  const byDay = (d)=> (orders || []).filter(o=> o.date===d)
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200">
       <table className="min-w-full text-sm">

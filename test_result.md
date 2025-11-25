@@ -240,6 +240,18 @@ frontend:
           agent: "testing"
           comment: "✅ TESTED: DamageModal error fix verified successfully! Login with vitokdrako@gmail.com/test123 successful, navigated to /return/6996, found 4 'Зафіксувати пошкодження' buttons. Opened multiple modals without any 'Cannot read properties of undefined (reading 'length')' console errors. Modal displays correctly with proper title format 'Пошкодження При поверненні · [SKU] · [Product Name]', all form fields present and functional (category dropdown with 'Меблі', damage type dropdown, severity levels, fee input with auto-calculation, photo upload, notes). Modal opens/closes properly multiple times. Fix with optional chaining (existingHistory?.length > 0) on line 281 working perfectly. Zero critical console errors detected during testing."
 
+  - task: "Quick filters in Product Catalog"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/CatalogBoard.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Implemented quick filters section with 4 buttons: 🔧 В реставрації (filters cleaning.status='repair'), 🚿 На мийці (filters cleaning.status='wash'), ⚠️ Пошкоджено (filters state='damaged'), ✖️ Скинути фільтри (resets all filters). Also added indicator in header showing count of items in restoration. Need comprehensive testing of all filter functionality."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"

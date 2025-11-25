@@ -98,6 +98,9 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
   const due  = balanceDue(orderRows)
   const [emailInput, setEmailInput] = useState('')
   const [showEmailDialog, setShowEmailDialog] = useState(false)
+  
+  // Очікуваний депозит (з orders.deposit_amount)
+  const expectedDeposit = orderRows.length > 0 ? (orderRows[0].expected_deposit || 0) : 0
 
   // forms
   const [pay, setPay] = useState({amount:due>0?due:500, method:'cash', note:''})

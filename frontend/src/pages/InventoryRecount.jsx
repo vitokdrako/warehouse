@@ -20,6 +20,7 @@ export default function InventoryRecount() {
   const [familyProducts, setFamilyProducts] = useState([]) // Товари з набору
   const [damageHistory, setDamageHistory] = useState([]) // Історія пошкоджень
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [damageModalOpen, setDamageModalOpen] = useState(false) // Для відкриття DamageModal
 
   useEffect(() => {
     loadProduct()

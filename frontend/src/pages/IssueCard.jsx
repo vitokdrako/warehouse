@@ -1036,6 +1036,28 @@ export default function IssueCard(){
     }
   }
 
+  const handleDateChange = async (issueDate, returnDate) => {
+    try {
+      // Update local state immediately
+      setOrder(prevOrder => ({
+        ...prevOrder,
+        rent_issue_date: issueDate,
+        rent_return_date: returnDate
+      }))
+      
+      // Save to backend
+      await axios.put(`${BACKEND_URL}/api/issue-cards/${id}`, {
+        rent_issue_date: issueDate,
+        rent_return_date: returnDate
+      })
+      
+      toast({ title: '✅ Успіх', description: 'Дати оновлено' })
+    } catch (e) {
+      console.error('Error updating dates:', e)
+      toast({ title: '❌ Помилка', description: 'Не вдалося оновити дати', variant: 'destructive' })
+    }
+  }
+
   if(loading) return <div className="flex items-center justify-center h-screen"><div className="text-xl">Завантаження...</div></div>
   if(!order) return <div className="flex items-center justify-center h-screen"><div className="text-xl">Замовлення не знайдено</div></div>
 

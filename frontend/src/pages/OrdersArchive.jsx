@@ -25,13 +25,15 @@ export default function OrdersArchive() {
     try {
       setLoading(true);
       const archiveParam = archiveFilter === 'archived' ? 'true' : archiveFilter === 'active' ? 'false' : 'all';
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders?status=all&archived=${archiveParam}`, {
+      const response = await fetch(`${BACKEND_URL}/api/decor-orders?status=all&archived=${archiveParam}&limit=1000`, {
         mode: 'cors'
       });
       const data = await response.json();
-      setOrders(data);
+      // API повертає {orders: [...], total: X}
+      setOrders(data.orders || data);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      alert('Помилка завантаження замовлень. Перевірте консоль.');
     } finally {
       setLoading(false);
     }

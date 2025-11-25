@@ -392,6 +392,7 @@ export default function CatalogBoard(){
   const [selectedProducts, setSelectedProducts] = useState([])
   const [familySearch, setFamilySearch] = useState('') // Пошук в модалці
   const [draggedProduct, setDraggedProduct] = useState(null) // Для drag&drop
+  const [scannerOpen, setScannerOpen] = useState(false)
   const navigate = useNavigate()
 
   // Load products from backend

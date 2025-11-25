@@ -50,7 +50,7 @@ function Card({title, right=null, children}){
 }
 
 /*********************** Subcomponents ************************/ 
-function Header({order, issueCard}){
+function Header({order, issueCard, onDateChange}){
   // Використовуємо статус з issue_card
   const statusMap = {
     'preparation': { text: 'На комплектації', tone: 'amber' },
@@ -60,6 +60,17 @@ function Header({order, issueCard}){
   
   const statusInfo = statusMap[issueCard?.status] || { text: 'В обробці', tone: 'slate' }
   
+  const [editingDates, setEditingDates] = useState(false)
+  const [tempIssueDate, setTempIssueDate] = useState(order.rent_issue_date || todayISO())
+  const [tempReturnDate, setTempReturnDate] = useState(order.rent_return_date || todayISO())
+  
+  const handleSaveDates = () => {
+    if (onDateChange) {
+      onDateChange(tempIssueDate, tempReturnDate)
+    }
+    setEditingDates(false)
+  }
+  
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-3">
@@ -67,11 +78,53 @@ function Header({order, issueCard}){
         <Badge tone={statusInfo.tone}>{statusInfo.text}</Badge>
       </div>
       <div className="flex flex-col items-end text-sm text-slate-600">
-        <div className="flex items-center gap-2">
-          <span>Дата видачі: <b>{order.rent_issue_date || todayISO()}</b></span>
-          <span className="mx-1">·</span>
-          <span>Повернення: <b>{order.rent_return_date || todayISO()}</b></span>
-        </div>
+        {editingDates ? (
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col">
+              <label className="text-xs text-slate-500">Дата видачі:</label>
+              <input 
+                type="date" 
+                value={tempIssueDate}
+                onChange={(e) => setTempIssueDate(e.target.value)}
+                className="rounded border px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-xs text-slate-500">Повернення:</label>
+              <input 
+                type="date" 
+                value={tempReturnDate}
+                onChange={(e) => setTempReturnDate(e.target.value)}
+                className="rounded border px-2 py-1 text-sm"
+              />
+            </div>
+            <button 
+              onClick={handleSaveDates}
+              className="rounded bg-green-600 px-2 py-1 text-white hover:bg-green-700"
+            >
+              ✓
+            </button>
+            <button 
+              onClick={() => setEditingDates(false)}
+              className="rounded bg-slate-200 px-2 py-1 hover:bg-slate-300"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span>Дата видачі: <b>{order.rent_issue_date || todayISO()}</b></span>
+            <span className="mx-1">·</span>
+            <span>Повернення: <b>{order.rent_return_date || todayISO()}</b></span>
+            <button 
+              onClick={() => setEditingDates(true)}
+              className="ml-2 text-blue-600 hover:text-blue-800"
+              title="Редагувати дати"
+            >
+              ✏️
+            </button>
+          </div>
+        )}
         <div className="mt-1"><Badge tone='slate'>Замовлення від: {order.date_added?.slice(0,10) || '—'}</Badge></div>
       </div>
     </div>

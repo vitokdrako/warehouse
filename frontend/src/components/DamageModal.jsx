@@ -278,13 +278,13 @@ export default function DamageModal({
         </div>
 
         {/* History Section */}
-        {(item.pre_damage?.length > 0 || existingHistory.length > 0) && (
+        {((item.pre_damage?.length > 0) || (existingHistory?.length > 0)) && (
           <div className="mt-4">
             <Card title="Історія пошкоджень по позиції">
               <div className="max-h-40 overflow-auto text-sm">
-                {(item.pre_damage || existingHistory).length > 0 ? (
+                {((item.pre_damage || existingHistory || []).length > 0) ? (
                   <ul className="space-y-1">
-                    {(item.pre_damage || existingHistory).map(d=> (
+                    {(item.pre_damage || existingHistory || []).map(d=> (
                       <li key={d.id} className="text-xs border-b pb-1">
                         <Badge tone='amber'>{d.category}</Badge> · 
                         <Badge tone={d.severity==='high'?'red':d.severity==='medium'?'amber':'slate'}>

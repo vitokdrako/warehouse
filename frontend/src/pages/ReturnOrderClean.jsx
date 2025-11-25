@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../hooks/use-toast'
 import axios from 'axios'
 import { getImageUrl } from '../utils/imageHelper'
-import { DAMAGE_RULES, defaultFeeFor } from '../utils/damageRules'
+import DamageModal from '../components/DamageModal'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

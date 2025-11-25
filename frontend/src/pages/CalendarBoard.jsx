@@ -116,7 +116,7 @@ function WeekView({date, orders, onOpen, onPickDay}){
               <th key={d} className="px-3 py-2 text-left">
                 <div className="flex items-center justify-between">
                   <div className="font-medium">{new Date(d).toLocaleDateString('uk-UA', {weekday:'short', day:'2-digit', month:'2-digit'})}</div>
-                  {byDay(d).length > 0 && (
+                  {(byDay(d) || []).length > 0 && (
                     <button onClick={()=>onPickDay(d)} className="rounded-md border px-2 py-0.5 text-xs hover:bg-slate-100">День</button>
                   )}
                 </div>

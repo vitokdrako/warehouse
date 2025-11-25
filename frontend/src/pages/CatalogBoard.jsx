@@ -112,6 +112,7 @@ function Table({rows, onOpen, loading}){
             <th className="px-3 py-2">Категорія</th>
             <th className="px-3 py-2">Склад</th>
             <th className="px-3 py-2">В обігу</th>
+            <th className="px-3 py-2">Відновлення</th>
             <th className="px-3 py-2">Де знаходиться</th>
             <th className="px-3 py-2">Чистка</th>
             <th className="px-3 py-2 text-right">Дії</th>

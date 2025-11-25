@@ -688,6 +688,19 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
           <div className="font-semibold tabular-nums">{deposit}</div>
         </div>
       </div>
+      
+      {/* Кнопка "Клієнт відмовився" для статусів до видачі */}
+      {onCancelByClient && ['awaiting', 'processing', 'preparation', 'ready'].includes(badge) && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onCancelByClient(order?.order_id, id);
+          }}
+          className="mt-2 w-full text-xs text-rose-600 border border-rose-300 rounded-lg px-2 py-1.5 hover:bg-rose-50 transition-colors"
+        >
+          🚫 Клієнт відмовився
+        </button>
+      )}
     </article>
   );
 }

@@ -164,10 +164,10 @@ async def create_transaction(
     db.execute(text("""
         INSERT INTO finance_transactions (
             id, order_id, transaction_type, amount, currency, status, 
-            description, payment_method, notes, created_at
+            description, payment_method, notes, created_by, created_at
         ) VALUES (
             :id, :order_id, :type, :amount, :currency, :status, 
-            :description, :method, :notes, NOW()
+            :description, :method, :notes, :created_by, NOW()
         )
     """), {
         "id": transaction_id,
@@ -178,7 +178,8 @@ async def create_transaction(
         "status": data.get('status', 'pending'),
         "description": data.get('description', ''),
         "method": data.get('payment_method'),
-        "notes": data.get('notes')
+        "notes": data.get('notes'),
+        "created_by": data.get('created_by', 'Manager')
     })
     
     db.commit()

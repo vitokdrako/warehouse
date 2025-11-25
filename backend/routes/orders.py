@@ -854,6 +854,72 @@ async def decline_order(
         "reason": reason
     }
 
+
+@decor_router.post("/{order_id}/cancel-by-client")
+@router.post("/{order_id}/cancel-by-client")
+async def cancel_order_by_client(
+    order_id: int,
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Клієнт відмовився від замовлення
+    ✅ Замовлення скасовується і товари розморожуються
+    Можна використовувати до моменту видачі (до статусу 'issued')
+    """
+    reason = data.get('reason', 'Клієнт відмовився без пояснень')
+    
+    # Перевірити що замовлення ще не видане
+    check_result = db.execute(text("""
+        SELECT status FROM orders WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    order_status_row = check_result.fetchone()
+    check_result.close()
+    
+    if not order_status_row:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    current_status = order_status_row[0]
+    
+    if current_status in ('issued', 'on_rent', 'returned', 'completed'):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Не можна скасувати замовлення зі статусом '{current_status}'. Замовлення вже видано або завершено."
+        )
+    
+    # Оновити статус на cancelled
+    db.execute(text("""
+        UPDATE orders 
+        SET status = 'cancelled', 
+            notes = CONCAT(COALESCE(notes, ''), '\n[СКАСОВАНО КЛІЄНТОМ]: ', :reason),
+            updated_at = NOW()
+        WHERE order_id = :order_id
+    """), {
+        "order_id": order_id,
+        "reason": reason
+    })
+    
+    # Залогувати в lifecycle
+    db.execute(text("""
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
+        VALUES (:order_id, 'cancelled_by_client', :notes, NOW())
+    """), {
+        "order_id": order_id,
+        "notes": f"Клієнт відмовився від замовлення: {reason}"
+    })
+    
+    db.commit()
+    
+    return {
+        "message": "Замовлення скасовано",
+        "order_id": order_id,
+        "previous_status": current_status,
+        "new_status": "cancelled",
+        "reason": reason,
+        "items_unfrozen": True
+    }
+
 # ============================================================
 # ADDITIONAL ENDPOINTS
 # ============================================================

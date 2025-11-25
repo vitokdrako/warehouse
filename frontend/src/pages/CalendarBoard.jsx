@@ -67,16 +67,16 @@ function Legend(){
 
 /******************** views ********************/
 function DayView({date, orders, onOpen}){
-  const list = useMemo(()=> orders.filter(o=> o.date===date).sort((a,b)=> a.time.localeCompare(b.time)), [orders,date])
+  const list = useMemo(()=> (orders || []).filter(o=> o.date===date).sort((a,b)=> a.time.localeCompare(b.time)), [orders,date])
   const buckets = {
     issue: list.filter(o=>o.kind==='issue'),
     return: list.filter(o=>o.kind==='return')
   }
   const Block = ({title, kind, arr})=> (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="mb-3 flex items-center gap-2"><Badge kind={kind}>{title}</Badge><span className="text-xs text-slate-500">{arr.length}</span></div>
+      <div className="mb-3 flex items-center gap-2"><Badge kind={kind}>{title}</Badge><span className="text-xs text-slate-500">{(arr || []).length}</span></div>
       <div className="space-y-2">
-        {arr.map(o=> (
+        {(arr || []).map(o=> (
           <div key={o.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
             <div>
               <div className="font-medium text-slate-800">#{o.order_id} · {o.customer}</div>

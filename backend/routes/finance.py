@@ -64,7 +64,7 @@ async def get_transactions(
         # Нові індекси після зміни SELECT:
         # 0: id, 1: transaction_type, 2: order_id, 3: amount,
         # 4: currency, 5: status, 6: description, 7: created_at, 8: payment_method,
-        # 9: notes, 10: created_by, 11: customer_name
+        # 9: notes, 10: created_by, 11: customer_name, 12: deposit_amount (expected)
         
         transaction_type = row[1]  # transaction_type
         amount = float(row[3]) if row[3] else 0.0  # amount (index 3)
@@ -98,7 +98,8 @@ async def get_transactions(
             "counterparty": f"Order #{row[2]}" if row[2] else "N/A",
             "notes": row[9],  # notes
             "created_by": row[10] if len(row) > 10 else None,  # created_by
-            "client_name": row[11] if len(row) > 11 else None  # customer_name
+            "client_name": row[11] if len(row) > 11 else None,  # customer_name
+            "expected_deposit": float(row[12]) if row[12] else 0.0  # deposit_amount from orders
         })
     
     return transactions

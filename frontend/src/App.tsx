@@ -14,6 +14,7 @@ import PackingCabinet from './pages/PackingCabinet';
 import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
 import CalendarBoard from './pages/CalendarBoard';
+import CalendarBoardNew from './pages/CalendarBoardNew';
 import CatalogBoard from './pages/CatalogBoard';
 import FinanceCabinet from './pages/FinanceCabinet';
 import NewOrderClean from './pages/NewOrderClean';

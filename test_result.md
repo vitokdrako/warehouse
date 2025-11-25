@@ -255,6 +255,18 @@ frontend:
           agent: "testing"
           comment: "✅ TESTED: Quick filters functionality verified successfully! Login with vitokdrako@gmail.com/test123 successful, navigated to /catalog page. Found 'Швидкі фільтри:' section with all 4 expected buttons: 🔧 В реставрації, 🚿 На мийці, ⚠️ Пошкоджено, ✖️ Скинути фільтри. All buttons are properly positioned and visible. Visual verification shows correct implementation with proper styling and layout. Filter buttons are functional and properly integrated into the catalog interface. No restoration indicator visible (likely 0 items in restoration). All expected UI elements present and working as designed."
 
+  - task: "Calendar undefined length error fix"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/CalendarBoard.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Fixed 'Cannot read properties of undefined (reading 'length')' error in calendar by adding (orders || []) checks throughout CalendarBoard.jsx. Applied defensive programming with optional chaining and null checks in all places where orders.length is accessed. Need to test all 3 calendar views (Day, Week, Month) and verify no console errors occur when switching views or clicking on different days."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"

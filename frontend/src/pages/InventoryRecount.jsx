@@ -65,6 +65,17 @@ export default function InventoryRecount() {
   }
 
   const handleSubmit = async () => {
+    // Якщо статус "пошкоджено", спочатку відкрити DamageModal
+    if (status === 'damaged') {
+      setDamageModalOpen(true)
+      return
+    }
+    
+    // Інакше зберегти дані переобліку
+    await saveRecount()
+  }
+  
+  const saveRecount = async () => {
     try {
       setSaving(true)
       
@@ -74,8 +85,6 @@ export default function InventoryRecount() {
         product_id: product?.product_id,
         status: status,
         notes: notes,
-        damage_type: damageType,
-        severity: severity,
         timestamp: new Date().toISOString()
       })
 
@@ -87,6 +96,13 @@ export default function InventoryRecount() {
     } finally {
       setSaving(false)
     }
+  }
+  
+  const handleDamageSaved = async (damageRecord) => {
+    // DamageModal вже зберіг пошкодження, тепер зберігаємо переобік
+    setDamageModalOpen(false)
+    await loadDamageHistory() // Оновити історію
+    await saveRecount()
   }
 
   if (loading) {

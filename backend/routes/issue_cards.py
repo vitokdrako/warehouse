@@ -216,24 +216,32 @@ async def update_issue_card(
         db.execute(text(sql), params)
         db.commit()
     
-    # Якщо змінюємо статус на 'ready', оновимо також статус замовлення
-    if updates.status == 'ready':
+    # Синхронізувати статус замовлення зі статусом issue_card
+    if updates.status is not None:
         # Отримати order_id з issue_card
         result = db.execute(text("SELECT order_id FROM issue_cards WHERE id = :id"), {"id": card_id})
         row = result.fetchone()
         if row:
             order_id = row[0]
             
-            # Оновити статус замовлення на 'ready_for_issue'
-            # Це автоматично "заморожує" товари в order_items
-            db.execute(text("""
-                UPDATE orders 
-                SET status = 'ready_for_issue'
-                WHERE order_id = :order_id
-            """), {"order_id": order_id})
+            # Мапінг статусів issue_card → orders
+            status_mapping = {
+                'preparation': 'processing',        # На комплектації → В обробці
+                'ready': 'ready_for_issue',        # Готово → Готово до видачі
+                'issued': 'issued',                # Видано → Видано
+                'completed': 'completed'           # Завершено → Завершено
+            }
             
-            print(f"[Orders] Замовлення {order_id} готове до видачі (товари заморожені)")
-            db.commit()
+            order_status = status_mapping.get(updates.status)
+            if order_status:
+                db.execute(text("""
+                    UPDATE orders 
+                    SET status = :status
+                    WHERE order_id = :order_id
+                """), {"status": order_status, "order_id": order_id})
+                
+                print(f"[Orders] Замовлення {order_id} → статус '{order_status}' (з issue_card '{updates.status}')")
+                db.commit()
     
     return {"message": "Issue card updated"}
 

@@ -302,7 +302,7 @@ export default function CalendarBoard(){
   }, [date])
 
   const counters = useMemo(()=>{
-    const list = orders.filter(o=> sameDay(o.date, date))
+    const list = (orders || []).filter(o=> sameDay(o.date, date))
     return {
       issue: list.filter(o=>o.kind==='issue').length,
       return: list.filter(o=>o.kind==='return').length,

@@ -277,3 +277,50 @@ async def get_sku_damage_history(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Помилка читання: {str(e)}")
+
+
+
+@router.get("/recent")
+async def get_recent_damages(
+    limit: int = 50,
+    db: Session = Depends(get_rh_db)
+):
+    """Отримати недавні пошкодження для календаря"""
+    try:
+        result = db.execute(text("""
+            SELECT 
+                id, product_id, sku, product_name, category,
+                order_id, order_number, stage,
+                damage_type, damage_code, severity, fee,
+                photo_url, note, created_by, created_at
+            FROM product_damage_history
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            ORDER BY created_at DESC
+            LIMIT :limit
+        """), {"limit": limit})
+        
+        damages = []
+        for row in result:
+            damages.append({
+                "id": row[0],
+                "product_id": row[1],
+                "sku": row[2],
+                "product_name": row[3],
+                "category": row[4],
+                "order_id": row[5],
+                "order_number": row[6],
+                "stage": row[7],
+                "damage_type": row[8],
+                "damage_code": row[9],
+                "severity": row[10],
+                "fee": float(row[11]) if row[11] else 0.0,
+                "photo_url": row[12],
+                "note": row[13],
+                "created_by": row[14],
+                "created_at": row[15].isoformat() if row[15] else None
+            })
+        
+        return damages
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка читання: {str(e)}")

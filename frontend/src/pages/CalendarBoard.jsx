@@ -90,14 +90,14 @@ function DayView({date, orders, onOpen}){
             </div>
           </div>
         ))}
-        {arr.length===0 && <div className="text-sm text-slate-500">Немає записів</div>}
+        {(arr || []).length===0 && <div className="text-sm text-slate-500">Немає записів</div>}
       </div>
     </div>
   )
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Block title="Готово до видачі" kind="issue" arr={buckets.issue} />
-      <Block title="Повернення" kind="return" arr={buckets.return} />
+      <Block title="Готово до видачі" kind="issue" arr={buckets.issue || []} />
+      <Block title="Повернення" kind="return" arr={buckets.return || []} />
       <Block title="Нове" kind="new" arr={buckets.new} />
     </div>
   )

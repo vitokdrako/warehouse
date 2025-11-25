@@ -139,7 +139,7 @@ def parse_order_row(row, db: Session = None):
     # Визначимо індекси полів у row - залежить від того, скільки полів повернуто
     # Стандартний формат: order_id, order_number, customer_id, customer_name, customer_phone, 
     #                      customer_email, rental_start_date, rental_end_date, status, 
-    #                      total_amount, deposit_amount, notes, created_at
+    #                      total_amount, deposit_amount, notes, created_at, is_archived
     # Розширений формат: + total_loss_value, rental_days (на позиціях 11 та 12)
     
     has_extended_fields = len(row) >= 15  # Якщо є додаткові поля
@@ -164,12 +164,13 @@ def parse_order_row(row, db: Session = None):
     if has_extended_fields:
         order_dict["total_loss_value"] = float(row[11]) if row[11] else 0.0
         order_dict["rental_days"] = row[12] if row[12] else 0
-        order_dict["manager_comment"] = row[13] if len(row) > 13 else None
+        order_dict["is_archived"] = bool(row[13]) if len(row) > 13 else False
         order_dict["created_at"] = row[14].isoformat() if len(row) > 14 and row[14] else None
     else:
         # For non-extended format (without total_loss_value and rental_days)
         order_dict["manager_comment"] = row[11] if len(row) > 11 else None
         order_dict["created_at"] = row[12].isoformat() if len(row) > 12 and row[12] else None
+        order_dict["is_archived"] = bool(row[13]) if len(row) > 13 else False
     
     return order_dict
 

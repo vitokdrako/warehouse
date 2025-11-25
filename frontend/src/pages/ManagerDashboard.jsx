@@ -58,6 +58,31 @@ export default function ManagerDashboard() {
       alert(`❌ Помилка: ${error.message}`);
     }
   };
+  
+  // Функція для архівування замовлення
+  const handleArchiveOrder = async (orderId, orderNumber) => {
+    if (!confirm(`Архівувати замовлення ${orderNumber}?\n\nВоно буде приховано з основного дашборду.`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/archive`, {
+        method: 'POST',
+        mode: 'cors'
+      });
+      
+      if (response.ok) {
+        alert('✅ Замовлення архівовано');
+        fetchAllData(); // Перезавантажити дані
+      } else {
+        const error = await response.json();
+        alert(`❌ Помилка: ${error.detail || 'Не вдалося архівувати'}`);
+      }
+    } catch (error) {
+      console.error('Error archiving order:', error);
+      alert(`❌ Помилка: ${error.message}`);
+    }
+  };
 
   // Функція для оновлення дат замовлення
   const handleDateUpdate = async (orderId, issueDate, returnDate) => {

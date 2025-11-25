@@ -177,6 +177,21 @@ export default function ManagerDashboard() {
       });
     })
     .catch(err => console.error('[Dashboard] Error loading finance:', err));
+    
+    // Завантажити статистику товарів на реставрації
+    fetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`, {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+      console.log('[Dashboard] Cleaning stats:', data);
+      setCleaningStats({
+        repair: data.repair || 0
+      });
+    })
+    .catch(err => console.error('[Dashboard] Error loading cleaning stats:', err));
   }, []);
   
   // Manual reload function

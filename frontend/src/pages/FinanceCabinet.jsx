@@ -57,27 +57,29 @@ function heldAmount(rows){
 }
 
 function heldAmountByCurrency(rows){
-  const holdTransactions = rows.filter(isHold)
-  const releaseTotal = rows.filter(isHoldRelease).reduce((s,r)=>s+(r.amount||0),0)
-  const writeoffTotal = rows.filter(isHoldWriteoff).reduce((s,r)=>s+(r.amount||0),0)
-  
-  // Calculate hold by currency
+  // Рахуємо кожну валюту окремо
   const byCurrency = {}
-  holdTransactions.forEach(r => {
+  
+  rows.forEach(r => {
     const curr = r.currency || 'UAH'
-    byCurrency[curr] = (byCurrency[curr] || 0) + (r.credit || 0)
+    
+    // Додаємо холд
+    if (r.type === 'deposit_hold') {
+      byCurrency[curr] = (byCurrency[curr] || 0) + (r.credit || 0)
+    }
+    
+    // Віднімаємо release та writeoff (у тій же валюті)
+    if (r.type === 'deposit_release' || r.type === 'deposit_writeoff') {
+      byCurrency[curr] = (byCurrency[curr] || 0) - (r.amount || 0)
+    }
   })
   
-  // For simplicity, we'll proportionally reduce each currency by releases/writeoffs
-  const totalHold = holdTransactions.reduce((s,r)=>s+(r.credit||0),0)
-  const totalReduction = releaseTotal + writeoffTotal
-  
-  if (totalReduction > 0 && totalHold > 0) {
-    const reductionRatio = Math.min(1, totalReduction / totalHold)
-    Object.keys(byCurrency).forEach(curr => {
-      byCurrency[curr] = Math.max(0, byCurrency[curr] * (1 - reductionRatio))
-    })
-  }
+  // Видалити валюти з нульовим або від'ємним балансом
+  Object.keys(byCurrency).forEach(curr => {
+    if (byCurrency[curr] <= 0) {
+      delete byCurrency[curr]
+    }
+  })
   
   return byCurrency
 }

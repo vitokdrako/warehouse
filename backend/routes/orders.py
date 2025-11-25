@@ -238,6 +238,14 @@ async def get_orders(
         )"""
         params['search'] = f"%{search}%"
     
+    # Фільтр архівних замовлень
+    if archived == 'true':
+        sql += " AND is_archived = 1"
+    elif archived == 'false' or archived is None:
+        # За замовчуванням показувати тільки неархівні
+        sql += " AND is_archived = 0"
+    # Якщо archived == 'all', не додаємо фільтр
+    
     sql += f" ORDER BY created_at DESC LIMIT {limit} OFFSET {offset}"
     
     result = db.execute(text(sql), params)

@@ -139,6 +139,15 @@ function App() {
             path="/calendar" 
             element={
               <ProtectedRoute>
+                <CalendarBoardNew />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/calendar-old" 
+            element={
+              <ProtectedRoute>
                 <CalendarBoard />
               </ProtectedRoute>
             } 

@@ -445,14 +445,21 @@ export default function OrdersArchive() {
                                       {transaction.credit > 0 ? '+' : '-'}₴{Math.abs(transaction.credit || transaction.debit || 0).toFixed(0)}
                                     </span>
                                   </div>
-                                  <div className="text-xs text-slate-500 mt-0.5">
-                                    {new Date(transaction.date).toLocaleString('uk-UA', {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                    {transaction.payment_method && ` • ${transaction.payment_method}`}
+                                  <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                                    <span>
+                                      {new Date(transaction.date).toLocaleString('uk-UA', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })}
+                                    </span>
+                                    {transaction.payment_method && <span>• {transaction.payment_method}</span>}
+                                    {transaction.created_by && (
+                                      <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs">
+                                        {transaction.created_by}
+                                      </span>
+                                    )}
                                   </div>
                                   {transaction.notes && (
                                     <div className="text-xs text-slate-600 mt-1">{transaction.notes}</div>

@@ -367,13 +367,9 @@ export default function CalendarBoard(){
               <span className="text-xs text-amber-700">Повернення:</span>
               <span className="text-lg font-semibold text-amber-900">{counters.return}</span>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2">
-              <i className="h-2 w-2 rounded-full bg-violet-500" />
-              <span className="text-xs text-violet-700">Нові:</span>
-              <span className="text-lg font-semibold text-violet-900">{counters.new}</span>
-            </div>
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2">
-              <span className="text-xs text-slate-600">Всього:</span>
+              <i className="h-2 w-2 rounded-full bg-slate-500" />
+              <span className="text-xs text-slate-700">Разом:</span>
               <span className="text-lg font-semibold text-slate-900">{counters.total}</span>
             </div>
           </div>

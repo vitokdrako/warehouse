@@ -9,6 +9,7 @@ export default function OrdersArchive() {
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [lifecycle, setLifecycle] = useState({});
+  const [financeHistory, setFinanceHistory] = useState({});
   const navigate = useNavigate();
   
   // Фільтри

@@ -273,7 +273,8 @@ metadata:
   test_sequence: 1
 
 test_plan:
-  current_focus: []
+  current_focus: 
+    - "Calendar undefined length error fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

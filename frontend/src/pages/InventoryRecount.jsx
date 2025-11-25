@@ -14,8 +14,6 @@ export default function InventoryRecount() {
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState('available') // available, damaged, missing
   const [notes, setNotes] = useState('')
-  const [damageType, setDamageType] = useState('')
-  const [severity, setSeverity] = useState('low')
   const [saving, setSaving] = useState(false)
   const [familyProducts, setFamilyProducts] = useState([]) // Товари з набору
   const [damageHistory, setDamageHistory] = useState([]) // Історія пошкоджень

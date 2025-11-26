@@ -7,12 +7,12 @@ from fastapi.responses import StreamingResponse
 import httpx
 import logging
 
-router = APIRouter()
+router = APIRouter(prefix="/api/image-proxy", tags=["image-proxy"])
 logger = logging.getLogger(__name__)
 
 PRODUCTION_URL = "https://rentalhub.farforrent.com.ua"
 
-@router.get("/api/image-proxy/{path:path}")
+@router.get("/{path:path}")
 async def proxy_image(path: str):
     """
     Проксує зображення з production сервера

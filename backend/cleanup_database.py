@@ -3,11 +3,11 @@
 Залишає тільки замовлення зі статусом 'awaiting_customer'
 """
 import sys
-from database_rentalhub import get_rh_engine
+from database_rentalhub import rh_engine
 from sqlalchemy import text
 
-# Use existing connection function
-engine = get_rh_engine()
+# Use existing engine
+engine = rh_engine
 
 print("=" * 60)
 print("🧹 ОЧИЩЕННЯ ТЕСТОВИХ ДАНИХ З RENTALHUB БД")

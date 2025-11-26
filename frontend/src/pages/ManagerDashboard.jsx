@@ -229,15 +229,22 @@ export default function ManagerDashboard() {
   // 2. В обробці (processing) - на комплектації
   const processingOrders = decorOrders.filter(o => o.status === 'processing');
   
-  // 3. Готові до видачі (ready_for_issue)
-  const readyOrders = decorOrders.filter(o => o.status === 'ready_for_issue');
+  // 3. Готові до видачі - ВСІ замовлення що готові до видачі (різні варіанти статусів)
+  const readyOrders = decorOrders.filter(o => 
+    o.status === 'processing' || 
+    o.status === 'ready' || 
+    o.status === 'ready_for_issue'
+  );
   
   // Issue Cards (картки видачі) по статусам - ВСІ без фільтрації по даті:
   const preparationCards = issueCards.filter(c => c.status === 'preparation');
-  const readyCards = issueCards.filter(c => c.status === 'ready_for_issue');
+  const readyCards = issueCards.filter(c => 
+    c.status === 'ready' || 
+    c.status === 'ready_for_issue'
+  );
   const issuedCards = issueCards.filter(c => c.status === 'issued');
   
-  // 4. На поверненні - ВСІ замовлення зі статусом issued/on_rent
+  // 4. На поверненні - ВСІ замовлення що видані і не повернуті (issued/on_rent)
   const returnOrders = decorOrders.filter(o => {
     return (o.status === 'issued' || o.status === 'on_rent');
   });

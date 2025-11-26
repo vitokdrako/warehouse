@@ -469,28 +469,37 @@ export default function CalendarBoardNew() {
 
       // 2. Load cleaning tasks for Task lane
       try {
-        const cleaningRes = await axios.get(`${BACKEND_URL}/api/catalog/products`)
-        const products = cleaningRes.data || []
+        const cleaningRes = await axios.get(`${BACKEND_URL}/api/product-cleaning/all`)
+        const cleaningTasks = cleaningRes.data || []
         
-        products.forEach((p) => {
-          if (p.cleaning && p.cleaning.status && p.cleaning.status !== 'clean') {
-            // Add task for today or tomorrow based on status
-            const taskDate = p.cleaning.status === 'wash' ? toISO(new Date()) : toISO(addDays(new Date(), 1))
+        cleaningTasks.forEach((task) => {
+          if (task.status && task.status !== 'clean') {
+            // Add task for today or tomorrow based on status and updated_at
+            const updatedDate = task.updated_at ? task.updated_at.slice(0, 10) : toISO(new Date())
+            const taskDate = task.status === 'wash' ? updatedDate : toISO(addDays(new Date(updatedDate), 1))
+            
+            const statusLabels = {
+              wash: 'Мийка',
+              dry: 'Сушка',
+              repair: 'Реставрація'
+            }
             
             calendarItems.push({
-              id: `task-${p.sku}-${p.cleaning.status}`,
+              id: `task-${task.sku}-${task.status}`,
               lane: 'task',
               date: taskDate,
-              timeSlot: p.cleaning.status === 'wash' ? 'morning' : p.cleaning.status === 'dry' ? 'day' : 'evening',
+              timeSlot: task.status === 'wash' ? 'morning' : task.status === 'dry' ? 'day' : 'evening',
               orderCode: null,
-              title: `${p.cleaning.status === 'wash' ? 'Мийка' : p.cleaning.status === 'dry' ? 'Сушка' : 'Реставрація'}: ${p.name}`,
-              client: `SKU: ${p.sku}`,
-              badge: p.cleaning.status === 'repair' ? 'Критично' : 'В процесі',
-              status: p.cleaning.status,
-              orderData: p,
+              title: `${statusLabels[task.status] || task.status}: ${task.sku}`,
+              client: `Оновлено: ${new Date(task.updated_at || new Date()).toLocaleDateString('uk-UA')}`,
+              badge: task.status === 'repair' ? 'Критично' : 'В процесі',
+              status: task.status,
+              orderData: task,
             })
           }
         })
+        
+        console.log(`[Calendar] Завантажено ${cleaningTasks.length} завдань для реквізиторів`)
       } catch (err) {
         console.error('Failed to load cleaning tasks:', err)
       }

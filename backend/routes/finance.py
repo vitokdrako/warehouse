@@ -106,8 +106,8 @@ async def get_transactions(
             "created_by": row[10] if len(row) > 10 else None,  # created_by
             "client_name": row[11] if len(row) > 11 else None,  # customer_name
             "expected_deposit": float(row[12]) if len(row) > 12 and row[12] else 0.0,  # deposit_amount from orders
-            "manager_comment": manager_comment,  # Витягнуто з description
-            "damage_fee": damage_fee  # Витягнуто з description
+            "manager_comment": manager_comment,  # з orders.manager_comment
+            "damage_fee": damage_fee  # з orders.damage_fee
         })
     
     return transactions

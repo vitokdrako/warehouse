@@ -18,6 +18,41 @@ class CleaningStatusUpdate(BaseModel):
     updated_by: Optional[str] = None
 
 
+
+
+@router.get("/all")
+async def get_all_cleaning_tasks(db: Session = Depends(get_rh_db)):
+    """
+    Отримати всі активні завдання для реквізиторів (wash, dry, repair)
+    """
+    result = db.execute(text("""
+        SELECT pcs.id, pcs.product_id, pcs.sku, pcs.status, 
+               pcs.notes, pcs.updated_by, pcs.updated_at
+        FROM product_cleaning_status pcs
+        WHERE pcs.status IN ('wash', 'dry', 'repair')
+        ORDER BY 
+            CASE pcs.status
+                WHEN 'repair' THEN 1
+                WHEN 'wash' THEN 2
+                WHEN 'dry' THEN 3
+            END,
+            pcs.updated_at DESC
+    """))
+    
+    tasks = []
+    for row in result:
+        tasks.append({
+            "id": row[0],
+            "product_id": row[1],
+            "sku": row[2],
+            "status": row[3],
+            "notes": row[4],
+            "updated_by": row[5],
+            "updated_at": str(row[6]) if row[6] else None
+        })
+    
+    return tasks
+
 @router.get("/{product_id}")
 async def get_cleaning_status(product_id: int, db: Session = Depends(get_rh_db)):
     """

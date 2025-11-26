@@ -433,7 +433,7 @@ export default function NewOrderView() {
         
         // ПЕРЕВІРИТИ КОНФЛІКТИ ПІСЛЯ ЗБЕРЕЖЕННЯ
         console.log('[SAVE] 🔍 Перевірка конфліктів після збереження...');
-        await checkAvailability();
+        await checkConflicts();
         
         alert('✅ Дані збережено');
       } else {

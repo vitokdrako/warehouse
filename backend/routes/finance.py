@@ -64,7 +64,8 @@ async def get_transactions(
         # Нові індекси після зміни SELECT:
         # 0: id, 1: transaction_type, 2: order_id, 3: amount,
         # 4: currency, 5: status, 6: description, 7: created_at, 8: payment_method,
-        # 9: notes, 10: created_by, 11: customer_name, 12: deposit_amount (expected)
+        # 9: notes, 10: created_by, 11: customer_name, 12: deposit_amount (expected),
+        # 13: manager_comment, 14: damage_fee
         
         transaction_type = row[1]  # transaction_type
         amount = float(row[3]) if row[3] else 0.0  # amount (index 3)
@@ -73,7 +74,7 @@ async def get_transactions(
         debit = 0.0
         credit = 0.0
         
-        if transaction_type in ['rent', 'rent_accrual', 'balance_due', 'damage']:
+        if transaction_type in ['rent', 'rent_accrual', 'balance_due', 'damage', 'charge']:
             debit = amount
         elif transaction_type in ['payment', 'prepayment']:
             credit = amount
@@ -99,7 +100,9 @@ async def get_transactions(
             "notes": row[9],  # notes
             "created_by": row[10] if len(row) > 10 else None,  # created_by
             "client_name": row[11] if len(row) > 11 else None,  # customer_name
-            "expected_deposit": float(row[12]) if row[12] else 0.0  # deposit_amount from orders
+            "expected_deposit": float(row[12]) if len(row) > 12 and row[12] else 0.0,  # deposit_amount from orders
+            "manager_comment": row[13] if len(row) > 13 else None,  # manager_comment from orders
+            "damage_fee": float(row[14]) if len(row) > 14 and row[14] else 0.0  # damage_fee from orders
         })
     
     return transactions

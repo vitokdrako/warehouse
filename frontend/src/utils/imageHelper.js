@@ -41,32 +41,31 @@ export const getImageUrl = (url) => {
   
   let mappedPath = '';
   
-  // Шляхи що починаються з 'static/' (повний шлях вже правильний)
+  // Шляхи що починаються з 'static/' (локальні файли)
   if (url.startsWith('static/')) {
     mappedPath = url;
   }
-  // Шляхи що починаються з 'uploads/' 
+  // Шляхи що починаються з 'uploads/' (локальні завантажені файли)
   else if (url.startsWith('uploads/')) {
     mappedPath = url;
   }
-  // Шляхи що починаються з 'catalog/' (старий формат з БД)
-  // catalog/NEW2/IMG_4710.png → static/images/products/NEW2/IMG_4710.png
-  else if (url.startsWith('catalog/')) {
-    const pathAfterCatalog = url.substring('catalog/'.length);
-    mappedPath = `static/images/products/${pathAfterCatalog}`;
-  }
-  // Шляхи що починаються з 'image/catalog/' (OpenCart формат)
+  // Шляхи що починаються з 'image/catalog/' (OpenCart оригінальний формат)
+  // image/catalog/products/... → image/catalog/products/...
   else if (url.startsWith('image/catalog/')) {
-    const pathAfterImage = url.substring('image/'.length);
-    mappedPath = `static/images/${pathAfterImage}`;
+    mappedPath = url;
+  }
+  // Шляхи що починаються з 'catalog/' (формат з БД без префіксу)
+  // catalog/products/NEW2/IMG_4710.png → image/catalog/products/NEW2/IMG_4710.png
+  else if (url.startsWith('catalog/')) {
+    mappedPath = `image/${url}`;
   }
   // Шляхи що починаються з '/'
   else if (url.startsWith('/')) {
-    mappedPath = url.substring(1); // Видалити початковий /
+    mappedPath = url.substring(1);
   }
-  // Відносний шлях - припускаємо що це catalog формат
+  // Відносний шлях - додаємо OpenCart префікс
   else {
-    mappedPath = `static/images/products/${url}`;
+    mappedPath = `image/catalog/products/${url}`;
   }
   
   // Для preview - використовуємо API проксі щоб уникнути CORS

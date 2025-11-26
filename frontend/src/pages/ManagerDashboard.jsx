@@ -14,7 +14,7 @@ export default function ManagerDashboard() {
   
   // Стани для розгортання карток
   const [showAllAwaiting, setShowAllAwaiting] = useState(false);
-  const [showAllReturns, setShowAllReturns] = useState(false);
+  const [showAllReturns, setShowAllReturns] = useState(true);  // За замовчуванням показуємо всі
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Всі');
   const [user, setUser] = useState(null);

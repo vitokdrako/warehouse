@@ -41,8 +41,13 @@ export const getImageUrl = (url) => {
   
   let mappedPath = '';
   
-  // Шляхи що починаються з 'static/' (локальні файли)
-  if (url.startsWith('static/')) {
+  // Шляхи що починаються з 'static/images/catalog/' (з БД) - конвертувати в OpenCart формат
+  // static/images/catalog/products/... → image/catalog/products/...
+  if (url.startsWith('static/images/catalog/')) {
+    mappedPath = url.replace('static/images/', 'image/');
+  }
+  // Шляхи що починаються з 'static/' (інші локальні файли)
+  else if (url.startsWith('static/')) {
     mappedPath = url;
   }
   // Шляхи що починаються з 'uploads/' (локальні завантажені файли)
@@ -50,7 +55,6 @@ export const getImageUrl = (url) => {
     mappedPath = url;
   }
   // Шляхи що починаються з 'image/catalog/' (OpenCart оригінальний формат)
-  // image/catalog/products/... → image/catalog/products/...
   else if (url.startsWith('image/catalog/')) {
     mappedPath = url;
   }

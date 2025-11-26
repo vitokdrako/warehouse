@@ -245,7 +245,27 @@ export default function ManagerDashboard() {
   
   // 5. На поверненні (всі decor_orders зі статусом issued/on_rent - видані і очікують повернення)
   const returnOrders = decorOrders.filter(o => {
-    return (o.status === 'issued' || o.status === 'on_rent');
+    // Показувати замовлення які:
+    // 1. Мають статус issued або on_rent
+    // 2. Дата повернення (return_date) сьогодні або вже минула
+    
+    if (o.status !== 'issued' && o.status !== 'on_rent') {
+      return false;
+    }
+    
+    // Якщо є дата повернення, перевіряємо чи вона вже настала або сьогодні
+    if (o.return_date) {
+      const returnDate = new Date(o.return_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      returnDate.setHours(0, 0, 0, 0);
+      
+      // Показувати якщо дата повернення <= сьогодні (тобто вже настав час повертати або прострочено)
+      return returnDate <= today;
+    }
+    
+    // Якщо немає дати повернення, але статус issued/on_rent - показувати
+    return true;
   });
 
   const kpis = {

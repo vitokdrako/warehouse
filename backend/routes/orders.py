@@ -1507,6 +1507,47 @@ async def complete_return(
         # Статус 'returned' автоматично "розморожує" товари в order_items
         print(f"[Orders] Замовлення {order_id} повернуто (товари розморожені)")
         
+        # ✅ НОВЕ: Автоматично створити завдання для реквізиторів
+        # Отримати всі товари з замовлення
+        order_items_result = db.execute(text("""
+            SELECT oi.product_id, oi.sku, p.name, oi.quantity
+            FROM order_items oi
+            LEFT JOIN products p ON oi.sku = p.sku
+            WHERE oi.order_id = :order_id
+        """), {"order_id": order_id})
+        
+        order_items = [dict(row._mapping) for row in order_items_result]
+        
+        # Отримати список пошкоджених товарів з return_data
+        damaged_items = return_data.get('damaged_items', [])
+        damaged_skus = {item.get('sku') for item in damaged_items if item.get('sku')}
+        
+        # Створити завдання для кожного товару
+        for item in order_items:
+            sku = item['sku']
+            
+            # Якщо товар пошкоджений - в реставрацію
+            if sku in damaged_skus:
+                status = 'repair'
+                print(f"[Orders] Товар {sku} відправлено в реставрацію")
+            else:
+                # Інакше - на мийку
+                status = 'wash'
+                print(f"[Orders] Товар {sku} відправлено на мийку")
+            
+            # Оновити або створити запис в product_cleaning_status
+            db.execute(text("""
+                INSERT INTO product_cleaning_status (product_id, sku, status, updated_at)
+                VALUES (:product_id, :sku, :status, NOW())
+                ON DUPLICATE KEY UPDATE status = :status, updated_at = NOW()
+            """), {
+                "product_id": item['product_id'],
+                "sku": sku,
+                "status": status
+            })
+        
+        print(f"[Orders] Створено {len(order_items)} завдань для реквізиторів")
+        
         # Створити фінансову транзакцію для збитків (якщо є)
         if total_fees > 0:
             fee_details = []

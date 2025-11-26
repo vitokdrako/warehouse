@@ -2,18 +2,12 @@
 Скрипт для очищення тестових даних з RentalHub БД
 Залишає тільки замовлення зі статусом 'awaiting_customer'
 """
-import os
 import sys
-from sqlalchemy import create_engine, text
+from database_rentalhub import get_rh_engine
+from sqlalchemy import text
 
-# Database connection
-RH_HOST = os.environ.get('RH_DB_HOST', 'farforre.mysql.tools')
-RH_USER = os.environ.get('RH_DB_USER', 'farforre_rental')
-RH_PASSWORD = os.environ.get('RH_DB_PASSWORD', 'farfor777')
-RH_PORT = os.environ.get('RH_DB_PORT', '3306')
-RH_DATABASE = os.environ.get('RH_DB_NAME', 'farforre_rentalhub')
-
-engine = create_engine(f'mysql+pymysql://{RH_USER}:{RH_PASSWORD}@{RH_HOST}:{RH_PORT}/{RH_DATABASE}?charset=utf8mb4')
+# Use existing connection function
+engine = get_rh_engine()
 
 print("=" * 60)
 print("🧹 ОЧИЩЕННЯ ТЕСТОВИХ ДАНИХ З RENTALHUB БД")

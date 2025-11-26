@@ -30,13 +30,13 @@ async def get_transactions(
     Отримати фінансові транзакції з іменами клієнтів
     ✅ MIGRATED: Using RentalHub DB
     """
-    # Join with orders table to get client name and expected deposit
+    # Join with orders table to get client name, expected deposit, manager_comment, and damage_fee
     sql = """
         SELECT 
             ft.id, ft.transaction_type, ft.order_id, ft.amount,
             ft.currency, ft.status, ft.description, ft.created_at, ft.payment_method,
             ft.notes, ft.created_by,
-            o.customer_name, o.deposit_amount
+            o.customer_name, o.deposit_amount, o.manager_comment, o.damage_fee
         FROM finance_transactions ft
         LEFT JOIN orders o ON ft.order_id = o.order_id
         WHERE 1=1

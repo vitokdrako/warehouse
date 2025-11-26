@@ -1580,6 +1580,11 @@ async def complete_return(
             
             description = f"Збитки після повернення замовлення #{order_id}. " + ", ".join(fee_details)
             
+            # Додати коментар реквізитора до опису
+            manager_notes = return_data.get('manager_notes', '')
+            if manager_notes:
+                description += f" | Коментар: {manager_notes}"
+            
             import uuid
             transaction_id = str(uuid.uuid4())
             db.execute(text("""

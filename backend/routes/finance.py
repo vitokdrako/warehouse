@@ -64,11 +64,25 @@ async def get_transactions(
         # Нові індекси після зміни SELECT:
         # 0: id, 1: transaction_type, 2: order_id, 3: amount,
         # 4: currency, 5: status, 6: description, 7: created_at, 8: payment_method,
-        # 9: notes, 10: created_by, 11: customer_name, 12: deposit_amount (expected),
-        # 13: manager_comment, 14: damage_fee
+        # 9: notes, 10: created_by, 11: customer_name, 12: deposit_amount (expected)
         
         transaction_type = row[1]  # transaction_type
         amount = float(row[3]) if row[3] else 0.0  # amount (index 3)
+        description = row[6] or transaction_type.replace('_', ' ').title()
+        
+        # Витягнути manager_comment та damage_fee з description якщо є
+        manager_comment = ""
+        damage_fee = 0.0
+        
+        if " | Коментар: " in description:
+            parts = description.split(" | Коментар: ")
+            manager_comment = parts[1] if len(parts) > 1 else ""
+        
+        if "Пошкодження: ₴" in description:
+            import re
+            match = re.search(r'Пошкодження: ₴([\d.]+)', description)
+            if match:
+                damage_fee = float(match.group(1))
         
         # Determine debit/credit based on transaction type
         debit = 0.0
@@ -89,7 +103,7 @@ async def get_transactions(
             "date": row[7].isoformat() if row[7] else None,  # created_at
             "order_id": row[2],
             "type": transaction_type,
-            "title": row[6] or transaction_type.replace('_', ' ').title(),  # description
+            "title": description,  # description
             "payment_method": row[8],  # payment_method
             "debit": debit,
             "credit": credit,
@@ -101,8 +115,8 @@ async def get_transactions(
             "created_by": row[10] if len(row) > 10 else None,  # created_by
             "client_name": row[11] if len(row) > 11 else None,  # customer_name
             "expected_deposit": float(row[12]) if len(row) > 12 and row[12] else 0.0,  # deposit_amount from orders
-            "manager_comment": row[13] if len(row) > 13 else None,  # manager_comment from orders
-            "damage_fee": float(row[14]) if len(row) > 14 and row[14] else 0.0  # damage_fee from orders
+            "manager_comment": manager_comment,  # Витягнуто з description
+            "damage_fee": damage_fee  # Витягнуто з description
         })
     
     return transactions

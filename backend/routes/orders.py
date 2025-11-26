@@ -1494,12 +1494,15 @@ async def complete_return(
             WHERE order_id = :order_id
         """), {"order_id": order_id})
         
-        # Оновити return card якщо є
-        db.execute(text("""
-            UPDATE decor_return_cards 
-            SET status = 'completed', updated_at = NOW()
-            WHERE order_id = :order_id
-        """), {"order_id": order_id})
+        # Оновити return card якщо існує таблиця
+        try:
+            db.execute(text("""
+                UPDATE decor_return_cards 
+                SET status = 'completed', updated_at = NOW()
+                WHERE order_id = :order_id
+            """), {"order_id": order_id})
+        except Exception as e:
+            print(f"[Orders] Return cards table not found or error updating: {e}")
         
         # Статус 'returned' автоматично "розморожує" товари в order_items
         print(f"[Orders] Замовлення {order_id} повернуто (товари розморожені)")

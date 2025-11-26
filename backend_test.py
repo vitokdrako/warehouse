@@ -170,6 +170,62 @@ class BackendTester:
             self.log(f"❌ Exception in return with damage test: {str(e)}", "ERROR")
             return False
     
+    def create_test_order(self) -> Dict[str, Any]:
+        """Create a test order for testing purposes"""
+        try:
+            self.log("🧪 Creating test order for damage testing...")
+            
+            # Create a simple test order
+            order_data = {
+                "customer_name": "Test Customer",
+                "customer_phone": "+380501234567",
+                "customer_email": "test@example.com",
+                "rental_start_date": "2025-11-26",
+                "rental_end_date": "2025-11-27",
+                "total_amount": 100.0,
+                "deposit_amount": 50.0,
+                "notes": "Test order for return workflow testing",
+                "items": [
+                    {
+                        "product_id": 672,  # VA228 - Ваза (8 см)
+                        "name": "Ваза (8 см)",
+                        "quantity": 1,
+                        "price_per_day": 100.0,
+                        "total_rental": 100.0
+                    }
+                ]
+            }
+            
+            response = self.session.post(f"{self.base_url}/orders", json=order_data)
+            
+            if response.status_code == 200:
+                result = response.json()
+                order_id = result.get('order_id')
+                self.log(f"✅ Test order created: {order_id}")
+                
+                # Move order to issued status for testing
+                status_response = self.session.put(
+                    f"{self.base_url}/orders/{order_id}/status",
+                    json={"status": "issued"}
+                )
+                
+                if status_response.status_code == 200:
+                    self.log(f"✅ Test order {order_id} moved to 'issued' status")
+                    
+                    # Get the order details
+                    order_response = self.session.get(f"{self.base_url}/orders/{order_id}")
+                    if order_response.status_code == 200:
+                        return order_response.json()
+                    
+                return {"id": order_id}
+            else:
+                self.log(f"❌ Failed to create test order: {response.status_code} - {response.text}", "ERROR")
+                return {}
+                
+        except Exception as e:
+            self.log(f"❌ Exception creating test order: {str(e)}", "ERROR")
+            return {}
+    
     def test_cleaning_tasks_endpoint(self) -> Dict[str, Any]:
         """Test the /api/product-cleaning/all endpoint"""
         try:

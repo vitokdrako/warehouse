@@ -8,8 +8,14 @@ from sqlalchemy import create_engine, text
 MONGO_URL = os.getenv('MONGO_URL', '')
 MYSQL_ROOT_PASSWORD = os.getenv('MYSQL_ROOT_PASSWORD', 'farfor777')
 
-# Use localhost for internal connection
-engine = create_engine(f'mysql+pymysql://root:{MYSQL_ROOT_PASSWORD}@127.0.0.1/farforre_rentalhub')
+# Use the same connection as the app
+RH_HOST = os.environ.get('RH_DB_HOST', 'farforre.mysql.tools')
+RH_USER = os.environ.get('RH_DB_USER', 'farforre_rental')
+RH_PASSWORD = os.environ.get('RH_DB_PASSWORD', 'farfor777')
+RH_PORT = os.environ.get('RH_DB_PORT', '3306')
+RH_DATABASE = os.environ.get('RH_DB_NAME', 'farforre_rentalhub')
+
+engine = create_engine(f'mysql+pymysql://{RH_USER}:{RH_PASSWORD}@{RH_HOST}:{RH_PORT}/{RH_DATABASE}?charset=utf8mb4')
 
 print("🔄 Початок міграції...")
 

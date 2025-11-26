@@ -65,24 +65,15 @@ async def get_transactions(
         # 0: id, 1: transaction_type, 2: order_id, 3: amount,
         # 4: currency, 5: status, 6: description, 7: created_at, 8: payment_method,
         # 9: notes, 10: created_by, 11: customer_name, 12: deposit_amount (expected)
+        # 13: manager_comment, 14: damage_fee
         
         transaction_type = row[1]  # transaction_type
         amount = float(row[3]) if row[3] else 0.0  # amount (index 3)
         description = row[6] or transaction_type.replace('_', ' ').title()
         
-        # Витягнути manager_comment та damage_fee з description якщо є
-        manager_comment = ""
-        damage_fee = 0.0
-        
-        if " | Коментар: " in description:
-            parts = description.split(" | Коментар: ")
-            manager_comment = parts[1] if len(parts) > 1 else ""
-        
-        if "Пошкодження: ₴" in description:
-            import re
-            match = re.search(r'Пошкодження: ₴([\d.]+)', description)
-            if match:
-                damage_fee = float(match.group(1))
+        # Використовуємо колонки з таблиці orders замість парсингу з description
+        manager_comment = row[13] or ""  # manager_comment з orders
+        damage_fee = float(row[14]) if row[14] else 0.0  # damage_fee з orders
         
         # Determine debit/credit based on transaction type
         debit = 0.0

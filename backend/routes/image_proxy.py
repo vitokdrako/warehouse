@@ -10,7 +10,8 @@ import logging
 router = APIRouter(prefix="/api/image-proxy", tags=["image-proxy"])
 logger = logging.getLogger(__name__)
 
-PRODUCTION_URL = "https://rentalhub.farforrent.com.ua"
+# Backend сервер де знаходяться зображення в /home/farforre/farforrent.com.ua/rentalhub/backend/static/images/products
+PRODUCTION_URL = "https://backrentalhub.farforrent.com.ua"
 
 @router.get("/{path:path}")
 async def proxy_image(path: str):

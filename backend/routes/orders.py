@@ -1519,15 +1519,18 @@ async def complete_return(
             
             description = f"Збитки після повернення замовлення #{order_id}. " + ", ".join(fee_details)
             
+            import uuid
+            transaction_id = str(uuid.uuid4())
             db.execute(text("""
                 INSERT INTO finance_transactions (
-                    order_id, transaction_type, amount, currency, 
+                    id, order_id, transaction_type, amount, currency, 
                     status, description, created_at
                 ) VALUES (
-                    :order_id, 'charge', :amount, 'UAH',
+                    :id, :order_id, 'charge', :amount, 'UAH',
                     'pending', :description, NOW()
                 )
             """), {
+                "id": transaction_id,
                 "order_id": order_id,
                 "amount": total_fees,
                 "description": description

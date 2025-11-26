@@ -103,20 +103,16 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
   // Очікуваний депозит (з orders.deposit_amount)
   const expectedDeposit = orderRows.length > 0 ? (orderRows[0].expected_deposit || 0) : 0
   
-  // Дані про пошкодження з замовлення
+  // Дані про пошкодження з замовлення (з orders таблиці)
   const orderDamageInfo = useMemo(() => {
     if (orderRows.length === 0) return { damage_fee: 0, manager_notes: '' }
     
-    // Шукаємо charge транзакцію з damage_fee
-    const damageTransaction = orderRows.find(r => 
-      r.type === 'charge' && 
-      r.description && 
-      r.description.includes('Збитки')
-    )
+    // Беремо з першого рядка (всі рядки одного замовлення мають однакові дані з orders)
+    const firstRow = orderRows[0]
     
     return {
-      damage_fee: damageTransaction ? (damageTransaction.debit || 0) : 0,
-      manager_notes: damageTransaction ? (damageTransaction.description || '') : ''
+      damage_fee: firstRow.damage_fee || 0,
+      manager_notes: firstRow.manager_comment || ''
     }
   }, [orderRows])
 

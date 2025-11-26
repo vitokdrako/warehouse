@@ -219,53 +219,27 @@ export default function ManagerDashboard() {
     });
   };
 
-  // Сьогоднішня дата для фільтрації
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  // Логіка розподілу замовлень БЕЗ ФІЛЬТРАЦІЇ ПО ДАТІ:
+  // Показуємо ВСІ замовлення в певних статусах
   
-  // Логіка розподілу замовлень:
-  // 1. Очікують підтвердження (awaiting_customer) - замовлення одразу синхронізуються з OpenCart
+  // 1. Очікують підтвердження (awaiting_customer)
   const awaitingOrders = orders; // Вже фільтруються по status=awaiting_customer в API
   const newOrders = orders; // Для сумісності з KPI
   
-  // 3. В обробці (processing) - вже на комплектації
+  // 2. В обробці (processing) - на комплектації
   const processingOrders = decorOrders.filter(o => o.status === 'processing');
   
-  // 4. Готові до видачі (на комплектації або готові) - видача сьогодні
-  const readyOrders = decorOrders.filter(o => 
-    (o.status === 'processing' || o.status === 'ready') && o.rent_date === today
-  );
+  // 3. Готові до видачі (ready_for_issue)
+  const readyOrders = decorOrders.filter(o => o.status === 'ready_for_issue');
   
-  // Issue Cards (картки видачі) по статусам:
+  // Issue Cards (картки видачі) по статусам - ВСІ без фільтрації по даті:
   const preparationCards = issueCards.filter(c => c.status === 'preparation');
-  const readyCards = issueCards.filter(c => c.status === 'ready');
+  const readyCards = issueCards.filter(c => c.status === 'ready_for_issue');
   const issuedCards = issueCards.filter(c => c.status === 'issued');
   
-  // 4. Видані сьогодні - прибрано, бо issued вже в "Повернення"
-  const issuedTodayOrders = [];
-  
-  // 5. На поверненні (всі decor_orders зі статусом issued/on_rent - видані і очікують повернення)
+  // 4. На поверненні - ВСІ замовлення зі статусом issued/on_rent
   const returnOrders = decorOrders.filter(o => {
-    // Показувати замовлення які:
-    // 1. Мають статус issued або on_rent
-    // 2. Дата повернення (return_date) сьогодні або вже минула
-    
-    if (o.status !== 'issued' && o.status !== 'on_rent') {
-      return false;
-    }
-    
-    // Якщо є дата повернення, перевіряємо чи вона вже настала або сьогодні
-    if (o.return_date) {
-      const returnDate = new Date(o.return_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      returnDate.setHours(0, 0, 0, 0);
-      
-      // Показувати якщо дата повернення <= сьогодні (тобто вже настав час повертати або прострочено)
-      return returnDate <= today;
-    }
-    
-    // Якщо немає дати повернення, але статус issued/on_rent - показувати
-    return true;
+    return (o.status === 'issued' || o.status === 'on_rent');
   });
 
   const kpis = {

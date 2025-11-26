@@ -278,6 +278,47 @@ export default function NewOrderView() {
     }
   };
 
+  // Перевірити доступність товарів (конфлікти)
+  const checkAvailability = async () => {
+    if (!issueDate || !returnDate || items.length === 0) {
+      setConflicts([]);
+      return;
+    }
+
+    setCheckingConflicts(true);
+    try {
+      console.log('[CHECK AVAILABILITY] Перевірка конфліктів...');
+      
+      const response = await fetch(`${BACKEND_URL}/api/orders/check-availability`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_date: issueDate,
+          to_date: returnDate,
+          items: items.map(i => ({
+            sku: i.article,
+            quantity: i.quantity
+          })),
+          exclude_order_id: orderId
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setConflicts(result.conflicts || []);
+        console.log('[CHECK AVAILABILITY] ✅ Перевірка завершена', result.conflicts?.length || 0, 'конфліктів');
+      } else {
+        console.error('[CHECK AVAILABILITY] ❌ Помилка перевірки');
+        setConflicts([]);
+      }
+    } catch (error) {
+      console.error('[CHECK AVAILABILITY] ❌ Exception:', error);
+      setConflicts([]);
+    } finally {
+      setCheckingConflicts(false);
+    }
+  };
+
   // Перевірка конфліктів
   const checkConflicts = async () => {
     if (!issueDate || !returnDate || items.length === 0) return;

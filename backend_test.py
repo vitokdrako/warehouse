@@ -351,42 +351,28 @@ class BackendTester:
         self.log("\n🔍 Step 3: Checking tasks after return...")
         initial_tasks = self.test_cleaning_tasks_endpoint()
         
-        # For a complete test, we would need another active order for damage test
-        # Since we just used the order, let's check if we can find another one
-        self.log("\n📋 Finding another active order for damage test...")
+        # Step 5: Create test order for damage testing
+        self.log("\n📋 Step 4: Creating test order for damage testing...")
+        test_order = self.create_test_order()
         
-        # Get all active orders to find another one
-        try:
-            response = self.session.get(f"{self.base_url}/decor-orders?status=issued,on_rent&limit=20")
-            if response.status_code == 200:
-                data = response.json()
-                orders = data.get('orders', [])
-                
-                # Find a different order
-                other_orders = [o for o in orders if o.get('id') != order_id]
-                
-                if other_orders:
-                    damage_order = other_orders[0]
-                    damage_order_id = damage_order.get('id')
-                    damage_items = damage_order.get('items', [])
-                    
-                    self.log(f"Found another order {damage_order_id} for damage test")
-                    
-                    # Step 5: Test return with damage
-                    self.log("\n🧪 Step 4: Testing return WITH damage...")
-                    if not self.test_return_with_damage(damage_order_id, damage_items):
-                        self.log("❌ Return with damage test failed", "ERROR")
-                        return False
-                    
-                    # Step 6: Final verification
-                    self.log("\n🔍 Step 5: Final task verification...")
-                    final_tasks = self.test_cleaning_tasks_endpoint()
-                    
-                else:
-                    self.log("⚠️ No other active orders found for damage test")
-                    
-        except Exception as e:
-            self.log(f"⚠️ Could not find another order for damage test: {str(e)}")
+        if test_order and test_order.get('id'):
+            damage_order_id = test_order.get('id')
+            damage_items = test_order.get('items', [])
+            
+            self.log(f"Created test order {damage_order_id} for damage test")
+            
+            # Step 6: Test return with damage
+            self.log("\n🧪 Step 5: Testing return WITH damage...")
+            if not self.test_return_with_damage(damage_order_id, damage_items):
+                self.log("❌ Return with damage test failed", "ERROR")
+                return False
+            
+            # Step 7: Final verification
+            self.log("\n🔍 Step 6: Final task verification...")
+            final_tasks = self.test_cleaning_tasks_endpoint()
+            
+        else:
+            self.log("⚠️ Could not create test order for damage test")
         
         # Step 7: Check logs
         self.log("\n📋 Step 6: Checking backend logs...")

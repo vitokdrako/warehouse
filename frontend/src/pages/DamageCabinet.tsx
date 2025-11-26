@@ -140,33 +140,41 @@ export default function DamageCabinetPro({
   const loadCases = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${BACKEND_URL}/api/damage-cases/all`)
+      
+      // Завантажити всі пошкодження з product_damage_history
+      const response = await fetch(`${BACKEND_URL}/api/product-damage-history/recent?limit=200`)
       const data = await response.json()
       
-      // Трансформувати дані з нового формату в старий формат для сумісності
+      console.log('[DamageCabinet] Loaded damage history:', data.length)
+      
+      // Трансформувати дані з product_damage_history
       const transformedData = data.map((item: any) => ({
-        id: item.damage_id,
-        orderId: null,
+        id: String(item.id),
+        orderId: item.order_id ? String(item.order_id) : null,
         clientName: item.product_name || 'Без назви',
-        eventName: item.comment || item.notes || 'Створено з переобліку',
-        status: item.status === 'pending' ? 'draft' : 
-                item.status === 'completed' ? 'closed' : 'in_repair',
-        severity: item.estimate_value > 100 ? 'critical' : 'minor',
-        source: 'reaudit',
+        eventName: item.order_number 
+          ? `Замовлення ${item.order_number}` 
+          : (item.note || 'Кейс пошкодження'),
+        status: 'closed', // Всі історичні пошкодження вважаються закритими
+        severity: item.severity === 'high' ? 'critical' : 
+                  item.severity === 'medium' ? 'medium' : 'low',
+        source: item.stage === 'return' ? 'return' : 
+                item.stage === 'audit' ? 'reaudit' : 'other',
         depositHold: 0,
         lines: [{
-          id: item.id,
+          id: String(item.id),
           productName: item.product_name,
-          sku: `ID: ${item.product_id}`,
-          category: item.action_type,
-          qty: item.qty,
-          note: item.comment || '',
-          amountPerUnit: item.estimate_value || 0,
-          total: (item.estimate_value || 0) * item.qty,
-          image: item.image
+          sku: item.sku,
+          category: item.category || 'Unknown',
+          qty: 1,
+          note: item.note || '',
+          amountPerUnit: item.fee || 0,
+          total: item.fee || 0,
+          image: item.photo_url
         }],
         createdAt: item.created_at,
-        createdBy: item.created_by || 'Unknown'
+        createdBy: item.created_by || 'Unknown',
+        returnDate: item.created_at
       }))
       
       setCases(transformedData)

@@ -85,6 +85,7 @@ app.include_router(product_reservations.router)
 app.include_router(inventory_adjustments.router)
 app.include_router(sync.router)
 app.include_router(product_cleaning.router)
+app.include_router(migrations.router)
 
 # Configure logging
 logging.basicConfig(

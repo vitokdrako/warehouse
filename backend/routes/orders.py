@@ -1510,9 +1510,9 @@ async def complete_return(
         # ✅ НОВЕ: Автоматично створити завдання для реквізиторів
         # Отримати всі товари з замовлення
         order_items_result = db.execute(text("""
-            SELECT oi.product_id, oi.sku, p.name, oi.quantity
+            SELECT oi.product_id, p.sku, p.name, oi.quantity
             FROM order_items oi
-            LEFT JOIN products p ON oi.sku = p.sku
+            LEFT JOIN products p ON oi.product_id = p.product_id
             WHERE oi.order_id = :order_id
         """), {"order_id": order_id})
         

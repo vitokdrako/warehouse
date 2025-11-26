@@ -243,7 +243,7 @@ export default function ManagerDashboard() {
   });
 
   const kpis = {
-    today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length,  // Всі події сьогодні
+    today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length,  // Всі активні замовлення
     revenue: financeData.revenue,  // З Finance API
     deposits: financeData.deposits,  // З Finance API
     problems: 0

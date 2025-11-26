@@ -40,6 +40,12 @@ async def proxy_image(path: str):
             else:
                 raise HTTPException(status_code=response.status_code, detail="Image not found")
                 
+    except httpx.TimeoutException as e:
+        logger.error(f"Timeout proxying image {path}: {str(e)}")
+        raise HTTPException(status_code=504, detail="Image proxy timeout")
+    except httpx.HTTPError as e:
+        logger.error(f"HTTP error proxying image {path}: {str(e)}")
+        raise HTTPException(status_code=502, detail="Image proxy HTTP error")
     except Exception as e:
-        logger.error(f"Error proxying image {path}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error proxying image {path}: {type(e).__name__} - {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Image proxy error: {type(e).__name__}")

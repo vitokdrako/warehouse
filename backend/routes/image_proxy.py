@@ -10,8 +10,8 @@ import logging
 router = APIRouter(prefix="/api/image-proxy", tags=["image-proxy"])
 logger = logging.getLogger(__name__)
 
-# Backend сервер де знаходяться зображення в /home/farforre/farforrent.com.ua/rentalhub/backend/static/images/products
-PRODUCTION_URL = "https://backrentalhub.farforrent.com.ua"
+# OpenCart сайт який має доступ до всіх зображень
+PRODUCTION_URL = "https://www.farforrent.com.ua"
 
 @router.get("/{path:path}")
 async def proxy_image(path: str):

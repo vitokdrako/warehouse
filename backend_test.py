@@ -374,8 +374,8 @@ class BackendTester:
         else:
             self.log("⚠️ Could not create test order for damage test")
         
-        # Step 7: Check logs
-        self.log("\n📋 Step 6: Checking backend logs...")
+        # Step 8: Check logs
+        self.log("\n📋 Step 7: Checking backend logs...")
         self.check_backend_logs()
         
         self.log("\n" + "=" * 60)

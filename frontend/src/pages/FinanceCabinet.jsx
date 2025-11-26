@@ -102,11 +102,38 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
   
   // Очікуваний депозит (з orders.deposit_amount)
   const expectedDeposit = orderRows.length > 0 ? (orderRows[0].expected_deposit || 0) : 0
+  
+  // Дані про пошкодження з замовлення
+  const orderDamageInfo = useMemo(() => {
+    if (orderRows.length === 0) return { damage_fee: 0, manager_notes: '' }
+    
+    // Шукаємо charge транзакцію з damage_fee
+    const damageTransaction = orderRows.find(r => 
+      r.type === 'charge' && 
+      r.description && 
+      r.description.includes('Збитки')
+    )
+    
+    return {
+      damage_fee: damageTransaction ? (damageTransaction.debit || 0) : 0,
+      manager_notes: damageTransaction ? (damageTransaction.description || '') : ''
+    }
+  }, [orderRows])
 
   // forms
   const [pay, setPay] = useState({amount:due>0?due:500, method:'cash', note:''})
   const [dep, setDep] = useState({code:'UAH', amount:3000})
   const [dmg, setDmg] = useState({amount:0, note:''})
+  
+  // Оновлювати dmg коли завантажуються дані про пошкодження
+  useEffect(() => {
+    if (orderDamageInfo.damage_fee > 0) {
+      setDmg({
+        amount: orderDamageInfo.damage_fee,
+        note: orderDamageInfo.manager_notes
+      })
+    }
+  }, [orderDamageInfo.damage_fee, orderDamageInfo.manager_notes])
 
   useEffect(()=>{
     if(due>0) setPay(prev=>({...prev, amount:due}))

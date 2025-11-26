@@ -329,12 +329,16 @@ class BackendTester:
             self.log("❌ API health check failed, aborting tests", "ERROR")
             return False
         
-        # Step 2: Find active order
+        # Step 2: Find or create active order
         self.log("\n📋 Step 1: Finding active order...")
         active_order = self.find_active_order()
+        
         if not active_order:
-            self.log("❌ No suitable active order found, aborting tests", "ERROR")
-            return False
+            self.log("⚠️ No active orders found, creating test order...")
+            active_order = self.create_test_order()
+            if not active_order:
+                self.log("❌ Could not create test order, aborting tests", "ERROR")
+                return False
         
         order_id = active_order.get('id')
         items = active_order.get('items', [])

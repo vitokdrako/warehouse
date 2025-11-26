@@ -1518,35 +1518,48 @@ async def complete_return(
         
         order_items = [dict(row._mapping) for row in order_items_result]
         
-        # Отримати список пошкоджених товарів з return_data
-        damaged_items = return_data.get('damaged_items', [])
-        damaged_skus = {item.get('sku') for item in damaged_items if item.get('sku')}
+        # Отримати список пошкоджених товарів з items_returned
+        items_returned = return_data.get('items_returned', [])
+        damaged_skus = set()
+        
+        for item in items_returned:
+            # Якщо є findings (пошкодження), додати SKU до списку пошкоджених
+            findings = item.get('findings', [])
+            if findings and len(findings) > 0:
+                damaged_skus.add(item.get('sku'))
+        
+        print(f"[Orders] Знайдено {len(damaged_skus)} пошкоджених товарів: {damaged_skus}")
         
         # Створити завдання для кожного товару
+        tasks_created = 0
         for item in order_items:
             sku = item['sku']
             
             # Якщо товар пошкоджений - в реставрацію
             if sku in damaged_skus:
                 status = 'repair'
-                print(f"[Orders] Товар {sku} відправлено в реставрацію")
+                print(f"[Orders] 🔧 Товар {sku} ({item['name']}) → реставрація")
             else:
                 # Інакше - на мийку
                 status = 'wash'
-                print(f"[Orders] Товар {sku} відправлено на мийку")
+                print(f"[Orders] 🚿 Товар {sku} ({item['name']}) → мийка")
             
             # Оновити або створити запис в product_cleaning_status
-            db.execute(text("""
-                INSERT INTO product_cleaning_status (product_id, sku, status, updated_at)
-                VALUES (:product_id, :sku, :status, NOW())
-                ON DUPLICATE KEY UPDATE status = :status, updated_at = NOW()
-            """), {
-                "product_id": item['product_id'],
-                "sku": sku,
-                "status": status
-            })
+            try:
+                db.execute(text("""
+                    INSERT INTO product_cleaning_status (product_id, sku, status, updated_at)
+                    VALUES (:product_id, :sku, :status, NOW())
+                    ON DUPLICATE KEY UPDATE status = :status, updated_at = NOW()
+                """), {
+                    "product_id": item['product_id'] if item['product_id'] else 0,
+                    "sku": sku,
+                    "status": status
+                })
+                tasks_created += 1
+            except Exception as e:
+                print(f"[Orders] ⚠️ Помилка створення завдання для {sku}: {e}")
         
-        print(f"[Orders] Створено {len(order_items)} завдань для реквізиторів")
+        print(f"[Orders] ✅ Створено {tasks_created} завдань для реквізиторів (з {len(order_items)} товарів)")
         
         # Створити фінансову транзакцію для збитків (якщо є)
         if total_fees > 0:

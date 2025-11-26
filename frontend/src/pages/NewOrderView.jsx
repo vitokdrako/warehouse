@@ -1180,7 +1180,7 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
   const handleMoveToPreparation = async () => {
     // Перевірити конфлікти перед відправкою
     console.log('[MOVE TO PREP] 🔍 Попередня перевірка конфліктів...');
-    await checkAvailability();
+    await checkConflicts();
     
     // Якщо є критичні конфлікти (error level), заблокувати
     const criticalConflicts = conflicts.filter(c => c.level === 'error');

@@ -20,9 +20,9 @@ async def trigger_sync():
         if not os.path.exists(script_path):
             raise HTTPException(status_code=404, detail="Sync script not found")
         
-        # Start sync process in background
+        # Start sync process in background using venv python
         process = subprocess.Popen(
-            ["python3", script_path],
+            ["/root/.venv/bin/python", script_path],
             cwd="/app/backend",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE

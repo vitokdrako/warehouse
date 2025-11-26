@@ -1487,12 +1487,19 @@ async def complete_return(
         damage_fee = float(return_data.get('damage_fee', 0))
         total_fees = late_fee + cleaning_fee + damage_fee
         
-        # Оновити статус замовлення
+        # Оновити статус замовлення та зберегти manager_notes і damage_fee
+        manager_notes = return_data.get('manager_notes', '')
         db.execute(text("""
             UPDATE orders 
-            SET status = 'returned'
+            SET status = 'returned',
+                manager_comment = :manager_notes,
+                damage_fee = :damage_fee
             WHERE order_id = :order_id
-        """), {"order_id": order_id})
+        """), {
+            "order_id": order_id,
+            "manager_notes": manager_notes,
+            "damage_fee": damage_fee
+        })
         
         # Оновити return card якщо існує таблиця
         try:

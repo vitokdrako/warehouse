@@ -50,15 +50,15 @@ async def proxy_image(path: str):
                         "Access-Control-Allow-Origin": "*"
                     }
                 )
+        
+        # Якщо шлях не починається з uploads/ - це помилка
+        logger.error(f"❌ Invalid image path (should start with 'uploads/'): {path}")
+        raise HTTPException(status_code=400, detail="Image path must start with 'uploads/'")
                 
-    except httpx.TimeoutException as e:
-        logger.error(f"Timeout proxying image {path}: {str(e)}")
-        return StreamingResponse(
-            iter([generate_placeholder_svg(path)]),
-            media_type="image/svg+xml"
-        )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error proxying image {path}: {type(e).__name__} - {str(e)}")
+        logger.error(f"Error serving image {path}: {type(e).__name__} - {str(e)}")
         return StreamingResponse(
             iter([generate_placeholder_svg(path)]),
             media_type="image/svg+xml"

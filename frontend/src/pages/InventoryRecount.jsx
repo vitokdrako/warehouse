@@ -188,15 +188,19 @@ export default function InventoryRecount() {
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-4">
           <h2 className="text-lg font-semibold mb-3">Інформація про товар</h2>
           
-          {product.image_url && (
-            <div className="mb-4">
-              <img 
-                src={getImageUrl(product.image_url)} 
-                alt={product.name}
-                className="w-32 h-32 object-cover rounded-lg border border-slate-200"
-              />
-            </div>
-          )}
+          {/* Image Upload Component */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Фото товару
+            </label>
+            <ImageUpload 
+              sku={product.sku}
+              currentImageUrl={product.image_url}
+              onUploadSuccess={(newImageUrl) => {
+                setProduct({ ...product, image_url: newImageUrl });
+              }}
+            />
+          </div>
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">

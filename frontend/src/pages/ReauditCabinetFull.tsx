@@ -691,20 +691,26 @@ export default function ReauditCabinetFull({
         {selected && (
           <div className="space-y-3 text-[11px]">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-4">
+                <div className="text-xs font-medium text-slate-700 mb-2">📸 Фото товару</div>
+                <ImageUpload
+                  sku={selected.code}
+                  currentImageUrl={selected.imageUrl}
+                  onUploadSuccess={(newImageUrl) => {
+                    // Update selected item
+                    setSelected({ ...selected, imageUrl: newImageUrl });
+                    // Update in items list
+                    setItems(items.map(item => 
+                      item.code === selected.code 
+                        ? { ...item, imageUrl: newImageUrl }
+                        : item
+                    ));
+                  }}
+                />
+              </div>
+              
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
-                  {selected.imageUrl ? (
-                    <img 
-                      src={selected.imageUrl} 
-                      alt={selected.name}
-                      className="h-16 w-16 rounded-xl object-cover border border-slate-200"
-                      onError={(e) => { e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIGZpbGw9IiNFMkU4RjAiLz48cGF0aCBkPSJNMzIgMzZDMzQuMjA5MSAzNiAzNiAzNC4yMDkxIDM2IDMyQzM2IDI5Ljc5MDkgMzQuMjA5MSAyOCAzMiAyOEMyOS43OTA5IDI4IDI4IDI5Ljc5MDkgMjggMzJDMjggMzQuMjA5MSAyOS43OTA5IDM2IDMyIDM2WiIgZmlsbD0iIzk0QTNCOCIvPjxwYXRoIGQ9Ik00MCA0MEgyNEwyOCAzMkwzMiAzNkwzNiAzMkw0MCA0MFoiIGZpbGw9IiM5NEEzQjgiLz48L3N2Zz4=' }}
-                    />
-                  ) : (
-                    <div className="h-16 w-16 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400 text-xs">
-                      Фото
-                    </div>
-                  )}
                   <div>
                     <div className="text-sm font-semibold text-slate-900">{selected.name}</div>
                     <div className="text-[10px] text-slate-500">

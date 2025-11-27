@@ -86,6 +86,7 @@ app.include_router(inventory_adjustments.router)
 app.include_router(sync.router)
 app.include_router(product_cleaning.router)
 app.include_router(migrations.router)
+app.include_router(product_images.router)
 
 # Configure logging
 logging.basicConfig(

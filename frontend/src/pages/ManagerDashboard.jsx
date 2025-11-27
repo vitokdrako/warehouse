@@ -295,13 +295,6 @@ export default function ManagerDashboard() {
               Новий заказ
             </button>
             <button 
-              className="h-9 rounded-xl border border-blue-500 bg-blue-50 px-3 text-sm hover:shadow"
-              onClick={() => navigate('/photo-management')}
-              title="Завантаження фото товарів"
-            >
-              📸 Переоблік
-            </button>
-            <button 
               className="h-9 rounded-xl bg-red-500 px-3 text-sm text-white hover:bg-red-600"
               onClick={() => {
                 localStorage.removeItem('token');

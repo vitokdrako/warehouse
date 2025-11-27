@@ -41,25 +41,23 @@ export const getImageUrl = (url) => {
   
   let mappedPath = '';
   
-  // Шляхи що починаються з 'static/images/catalog/' (з БД) - конвертувати в OpenCart формат
-  // static/images/catalog/products/... → image/catalog/products/...
-  if (url.startsWith('static/images/catalog/')) {
-    mappedPath = url.replace('static/images/', 'image/');
+  // ПРІОРИТЕТ 1: Шляхи що починаються з 'uploads/' (наші завантажені фото - найвища якість)
+  if (url.startsWith('uploads/')) {
+    mappedPath = url;
   }
-  // Шляхи що починаються з 'static/' (інші локальні файли)
+  // ПРІОРИТЕТ 2: Шляхи що починаються з 'static/' (локальні файли)
   else if (url.startsWith('static/')) {
     mappedPath = url;
   }
-  // Шляхи що починаються з 'uploads/' (локальні завантажені файли)
-  else if (url.startsWith('uploads/')) {
-    mappedPath = url;
-  }
-  // Шляхи що починаються з 'image/catalog/' (OpenCart оригінальний формат)
+  // ПРІОРИТЕТ 3: Шляхи що починаються з 'image/catalog/' (OpenCart - запасний варіант)
   else if (url.startsWith('image/catalog/')) {
     mappedPath = url;
   }
-  // Шляхи що починаються з 'catalog/' (формат з БД без префіксу)
-  // catalog/products/NEW2/IMG_4710.png → image/catalog/products/NEW2/IMG_4710.png
+  // Конвертація: static/images/catalog/ → image/catalog/ (для старих записів)
+  else if (url.startsWith('static/images/catalog/')) {
+    mappedPath = url.replace('static/images/', 'image/');
+  }
+  // Конвертація: catalog/ → image/catalog/ (формат з БД без префіксу)
   else if (url.startsWith('catalog/')) {
     mappedPath = `image/${url}`;
   }

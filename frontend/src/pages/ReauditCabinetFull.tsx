@@ -696,10 +696,8 @@ export default function ReauditCabinetFull({
                 <ImageUpload
                   sku={selected.code}
                   currentImageUrl={selected.imageUrl}
-                  onUploadSuccess={(newImageUrl) => {
-                    // Update selected item
-                    setSelected({ ...selected, imageUrl: newImageUrl });
-                    // Update in items list
+                  onUploadSuccess={(newImageUrl: string) => {
+                    // Update in items list - selected буде автоматично оновлено через useMemo
                     setItems(items.map(item => 
                       item.code === selected.code 
                         ? { ...item, imageUrl: newImageUrl }

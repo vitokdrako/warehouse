@@ -209,6 +209,15 @@ function App() {
           />
           
           <Route 
+            path="/photo-management" 
+            element={
+              <ProtectedRoute>
+                <PhotoManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
             path="/order/:id" 
             element={
               <ProtectedRoute>

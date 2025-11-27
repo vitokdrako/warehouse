@@ -23,6 +23,7 @@ import IssueOrderClean from './pages/IssueOrderClean';
 import IssueCard from './pages/IssueCard';
 import ReturnOrderClean from './pages/ReturnOrderClean';
 import InventoryRecount from './pages/InventoryRecount';
+import PhotoManagement from './pages/PhotoManagement';
 import OrdersArchive from './pages/OrdersArchive';
 import SyncPanel from './pages/SyncPanel';
 

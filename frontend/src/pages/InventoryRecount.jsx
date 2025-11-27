@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { getImageUrl } from '../utils/imageHelper'
 import DamageModal from '../components/DamageModal'
+import ImageUpload from '../components/ImageUpload'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

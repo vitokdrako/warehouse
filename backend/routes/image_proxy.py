@@ -36,24 +36,14 @@ async def proxy_image(path: str):
                     iter([generate_placeholder_svg(path)]),
                     media_type="image/svg+xml",
                     headers={
-                        "Cache-Control": "public, max-age=86400",
-                        "Access-Control-Allow-Origin": "*"
-                    }
-                )
-            else:
-                logger.warning(f"Production returned {response.status_code} for {path}")
-                return StreamingResponse(
-                    iter([generate_placeholder_svg(path)]),
-                    media_type="image/svg+xml",
-                    headers={
                         "Cache-Control": "public, max-age=3600",
                         "Access-Control-Allow-Origin": "*"
                     }
                 )
-        
-        # Якщо шлях не починається з uploads/ - це помилка
-        logger.error(f"❌ Invalid image path (should start with 'uploads/'): {path}")
-        raise HTTPException(status_code=400, detail="Image path must start with 'uploads/'")
+        else:
+            # Якщо шлях не починається з uploads/ - це помилка
+            logger.error(f"❌ Invalid image path (should start with 'uploads/'): {path}")
+            raise HTTPException(status_code=400, detail="Image path must start with 'uploads/'")
                 
     except HTTPException:
         raise

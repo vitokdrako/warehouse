@@ -1,30 +1,55 @@
 """
-Image proxy route для отримання зображень з production сервера
+🖼️ Image proxy - ЄДИНЕ ДЖЕРЕЛО ПРАВДИ для зображень
 Використовується тільки для preview, в production зображення локальні
+
+ПРІОРИТЕТИ:
+1. uploads/products/ - Локальні завантажені фото (найвища якість)
+2. static/ - Статичні файли
+3. OpenCart сайт - Запасний варіант
 """
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 import httpx
 import logging
+import os
+from pathlib import Path
 
 router = APIRouter(prefix="/api/image-proxy", tags=["image-proxy"])
 logger = logging.getLogger(__name__)
 
-# OpenCart сайт який має доступ до всіх зображень
+# OpenCart сайт (запасний варіант)
 PRODUCTION_URL = "https://www.farforrent.com.ua"
+
+# Локальні директорії
+LOCAL_UPLOADS = Path("/app/backend/uploads")
+LOCAL_STATIC = Path("/app/backend/static")
 
 @router.get("/{path:path}")
 async def proxy_image(path: str):
     """
-    Проксує зображення з production сервера
-    Використовується тільки для preview середовища
-    
-    ВАЖЛИВО: Production backend не має mount для /static директорії,
-    тому повертаємо placeholder зображення для preview.
+    Проксує зображення з пріоритетом:
+    1. Локальні uploads/ (найвища якість)
+    2. Локальні static/
+    3. OpenCart сайт (запасний варіант)
     """
     try:
+        # ПРІОРИТЕТ 1: Перевірити uploads/ (наші завантажені фото)
+        if path.startswith('uploads/'):
+            local_path = LOCAL_UPLOADS / path.replace('uploads/', '')
+            if local_path.exists() and local_path.is_file():
+                logger.info(f"✅ Serving from local uploads: {local_path}")
+                return FileResponse(local_path)
+        
+        # ПРІОРИТЕТ 2: Перевірити static/
+        if path.startswith('static/'):
+            local_path = LOCAL_STATIC / path.replace('static/', '')
+            if local_path.exists() and local_path.is_file():
+                logger.info(f"✅ Serving from local static: {local_path}")
+                return FileResponse(local_path)
+        
+        # ПРІОРИТЕТ 3: Проксувати з OpenCart (запасний варіант)
         image_url = f"{PRODUCTION_URL}/{path}"
-        logger.info(f"Attempting to proxy image: {image_url}")
+        logger.info(f"⚠️ Proxying from OpenCart (fallback): {image_url}")
         
         async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
             response = await client.get(image_url)

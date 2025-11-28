@@ -348,19 +348,17 @@ function OrderListItem({orderId, rows, onClick, isExpanded}){
       onClick={onClick}
       className={cls(
         'rounded-xl border p-4 cursor-pointer transition',
-        isCancelled ? 'border-rose-300 bg-rose-50' : (isExpanded ? 'border-slate-400 bg-slate-50' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50')
+        isExpanded ? 'border-slate-400 bg-slate-50' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
       )}
     >
       <div className="flex items-center justify-between">
         <div>
-          <div className="font-semibold text-lg flex items-center gap-2">
-            <span>Замовлення #{orderId}</span>
-            {isCancelled && <Badge tone='red'>⚠️ СКАСОВАНО</Badge>}
-            {clientName && <span className="text-slate-600 font-normal">· {clientName}</span>}
+          <div className="font-semibold text-lg">
+            Замовлення #{orderId}
+            {clientName && <span className="text-slate-600 font-normal ml-2">· {clientName}</span>}
           </div>
           <div className="text-xs text-slate-500 mt-1">
             {orderRows.length} транзакцій · Нараховано: ₴{fmtUA(accrued)} · Оплачено: ₴{fmtUA(paid)}
-            {isCancelled && paid > 0 && <span className="text-rose-600 font-semibold ml-2">→ Потрібно повернути ₴{fmtUA(paid)}</span>}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -370,7 +368,6 @@ function OrderListItem({orderId, rows, onClick, isExpanded}){
               {expectedDeposit > 0 && (
                 <span className="text-[10px] text-slate-400 mt-0.5">очікувалось ₴{fmtUA(expectedDeposit)}</span>
               )}
-              {isCancelled && <span className="text-[10px] text-rose-600 mt-0.5 font-semibold">Повернути застави клієнту!</span>}
             </div>
           )}
           {isCancelled ? (

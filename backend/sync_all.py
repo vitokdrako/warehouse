@@ -100,10 +100,13 @@ def sync_products_incremental():
         for p in new_products:
             sku = p['model'] or f"SKU-{p['product_id']}"
             rh_cur.execute("""
-                INSERT INTO products (product_id, sku, name, description, price, status, quantity, color, material, image_url, synced_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                INSERT INTO products (product_id, sku, name, description, price, rental_price, status, quantity, color, material, image_url, synced_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
             """, (p['product_id'], sku[:100], p['name'][:500], 
-                  (p['description'] or '')[:2000], p['price'], p['status'], 
+                  (p['description'] or '')[:2000], 
+                  p['price'] or 0,  # з OpenCart ean (роздрібна ціна)
+                  p['rental_price'] or 0,  # з OpenCart price (ціна оренди)
+                  p['status'], 
                   p['quantity'] or 0,
                   (p['color'] or '')[:100] if p.get('color') else None,
                   (p['material'] or '')[:100] if p.get('material') else None,

@@ -334,7 +334,7 @@ def sync_orders_from_opencart():
                         order_id, order_number, customer_id, customer_name, 
                         customer_phone, customer_email,
                         rental_start_date, rental_end_date,
-                        status, total_amount, deposit_amount, 
+                        status, total_price, deposit_amount, 
                         notes, created_at, synced_at
                     ) VALUES (
                         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()

@@ -110,6 +110,10 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
   // Скільки оплачено
   const paid = orderRows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0)
   
+  // Чи були повернуті гроші
+  const refunded = orderRows.filter(r => r.type === 'refund').reduce((s,r)=>s+(r.debit||0),0)
+  const isRefunded = refunded > 0
+  
   // Дані про пошкодження з замовлення (з orders таблиці)
   const orderDamageInfo = useMemo(() => {
     if (orderRows.length === 0) return { damage_fee: 0, manager_notes: '' }

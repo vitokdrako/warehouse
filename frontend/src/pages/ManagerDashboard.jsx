@@ -117,7 +117,8 @@ export default function ManagerDashboard() {
     }
   };
 
-  useEffect(() => {
+  // Функція для завантаження всіх даних
+  const fetchAllData = () => {
     console.log('[Dashboard] 📊 Loading orders for today...');
     
     // Завантажити ВСІ замовлення що очікують підтвердження (вони одразу синхронізуються з OpenCart)
@@ -177,6 +178,10 @@ export default function ManagerDashboard() {
       });
     })
     .catch(err => console.error('[Dashboard] Error loading finance:', err));
+  };
+
+  useEffect(() => {
+    fetchAllData();
     
     // Завантажити статистику товарів на реставрації
     fetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`, {

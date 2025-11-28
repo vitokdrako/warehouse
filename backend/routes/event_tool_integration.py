@@ -237,7 +237,7 @@ async def convert_event_board_to_order(
             "issue_date": order_data.issue_date,
             "return_date": order_data.return_date,
             "rental_days": rental_days,
-            "total_amount": order_data.total_price,
+            "total_price": order_data.total_price,
             "deposit_amount": order_data.deposit_amount,
             "discount": order_data.discount,
             "event_board_id": order_data.event_board_id,

@@ -484,23 +484,11 @@ export default function NewOrderView() {
               </div>
             </Card>
 
-            {/* Конфлікти */}
-            <Card title={conflicts.length > 0 ? `⚠️ Конфлікти наявності (${conflicts.length})` : "✅ Конфлікти наявності"}>
-              {checkingConflicts ? (
-                <div className="p-4 text-center text-blue-600">
-                  <span className="animate-pulse">Перевірка доступності...</span>
-                </div>
-              ) : conflicts.length > 0 ? (
-                <ConflictsPanel conflicts={conflicts} />
-              ) : issueDate && returnDate && items.length > 0 ? (
-                <div className="p-4 text-center text-emerald-600">
-                  ✅ Всі товари доступні на вказані дати
-                </div>
-              ) : (
-                <div className="p-4 text-center text-slate-400">
-                  Додайте товари та вкажіть дати оренди для перевірки доступності
-                </div>
-              )}
+            {/* Конфлікти - ТИМЧАСОВО ВІДКЛЮЧЕНО */}
+            <Card title="⚙️ Конфлікти наявності (тестовий режим)">
+              <div className="p-4 text-center text-slate-400">
+                Перевірка конфліктів тимчасово відключена для тестування
+              </div>
             </Card>
 
             {/* Пошук та додавання товарів */}

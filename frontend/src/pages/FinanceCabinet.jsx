@@ -469,7 +469,8 @@ export default function FinanceCabinet(){
         client_name: r.client_name,
         expected_deposit: r.expected_deposit || 0,
         manager_comment: r.manager_comment || '',
-        damage_fee: r.damage_fee || 0
+        damage_fee: r.damage_fee || 0,
+        order_status: r.order_status || null
       })))
     } catch(e){
       console.error('Error loading transactions:', e)

@@ -1455,7 +1455,7 @@ async def get_item_damages(
 async def send_to_restoration(
     item_id: str,
     data: dict,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Відправити товар на реставрацію

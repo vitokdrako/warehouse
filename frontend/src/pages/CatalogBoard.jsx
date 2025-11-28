@@ -449,9 +449,9 @@ export default function CatalogBoard(){
         console.log('[Catalog] Loading from:', BACKEND_URL)
         
         // Build search param
-        let url = `${BACKEND_URL}/api/catalog`  // Без ліміту
+        let url = `${BACKEND_URL}/api/catalog?include_reservations=true`  // З резервами
         if (q) {
-          url += `?search=${encodeURIComponent(q)}`
+          url += `&search=${encodeURIComponent(q)}`
         }
         
         console.log('[Catalog] Fetching:', url)

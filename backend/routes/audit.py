@@ -1712,7 +1712,7 @@ async def get_audit_categories(db: Session = Depends(get_rh_db)):
         main_categories_query = db.execute(text("""
             SELECT DISTINCT name, category_id
             FROM categories
-            WHERE parent_id = 0 AND status = 1
+            WHERE parent_id = 0
             ORDER BY name
         """))
         
@@ -1723,12 +1723,15 @@ async def get_audit_categories(db: Session = Depends(get_rh_db)):
         cat_id_to_name = {cat_id: cat_name for cat_name, cat_id in main_categories_list}
         
         # Get all subcategories in one query
-        all_subcategories_query = db.execute(text("""
-            SELECT parent_id, name
-            FROM categories
-            WHERE parent_id IN :parent_ids AND status = 1
-            ORDER BY parent_id, name
-        """), {"parent_ids": tuple([cat_id for _, cat_id in main_categories_list])})
+        if main_categories_list:
+            all_subcategories_query = db.execute(text("""
+                SELECT parent_id, name
+                FROM categories
+                WHERE parent_id IN :parent_ids
+                ORDER BY parent_id, name
+            """), {"parent_ids": tuple([cat_id for _, cat_id in main_categories_list])})
+        else:
+            all_subcategories_query = []
         
         # Group subcategories by parent
         subcategories_dict = {}

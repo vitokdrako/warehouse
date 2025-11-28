@@ -270,10 +270,14 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
                 onWriteoff(orderId, heldByCurrency, due)
               }}>Списати з застави (до суми боргу)</PillButton>
             )}
-            <PillButton tone='yellow' onClick={()=>{
-              if(held<=0) return alert('Немає активного холду');
-              onReleaseDeposit(orderId, heldByCurrency)
-            }}>Повернути заставу</PillButton>
+            {isDepositReturned ? (
+              <PillButton tone='green' disabled={true}>✓ Застава повернута</PillButton>
+            ) : (
+              <PillButton tone='yellow' onClick={()=>{
+                if(held<=0) return alert('Немає активного холду');
+                onReleaseDeposit(orderId, heldByCurrency)
+              }}>Повернути заставу</PillButton>
+            )}
             {isCancelled && paid > 0 && (
               isRefunded ? (
                 <PillButton tone='green' disabled={true}>✓ Гроші повернуті</PillButton>

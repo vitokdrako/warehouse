@@ -631,7 +631,7 @@ async def create_order(
     for item in order.items:
         db.execute(text("""
             INSERT INTO order_items (
-                order_id, product_id, name, quantity, price_per_day, total_amount
+                order_id, product_id, name, quantity, price_per_day, total_rental
             ) VALUES (
                 :order_id, :product_id, :name, :quantity, :price, :total
             )

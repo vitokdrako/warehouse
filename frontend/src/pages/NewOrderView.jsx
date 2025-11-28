@@ -986,20 +986,6 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
                     </button>
                   </div>
                 </td>
-                <td className="px-3 py-2">
-                  {availability && availability[item.product_id] ? (
-                    <div className="text-xs text-center">
-                      <div className={`font-medium ${availability[item.product_id].available >= item.quantity ? 'text-green-600' : 'text-red-600'}`}>
-                        {availability[item.product_id].available} вільно
-                      </div>
-                      <div className="text-slate-500">
-                        з {availability[item.product_id].total} (зайнято: {availability[item.product_id].reserved})
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-center text-slate-400">-</div>
-                  )}
-                </td>
                 <td className="px-3 py-2 text-right">
                   <button 
                     onClick={() => onRemove(item.inventory_id)}

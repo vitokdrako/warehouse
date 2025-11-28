@@ -271,10 +271,14 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
               onReleaseDeposit(orderId, heldByCurrency)
             }}>Повернути заставу</PillButton>
             {isCancelled && paid > 0 && (
-              <PillButton tone='red' onClick={()=>{
-                if(!confirm(`Повернути ₴${fmtUA(paid)} клієнту?`)) return;
-                onRefund(orderId, paid)
-              }}>💰 Повернути ₴{fmtUA(paid)} клієнту</PillButton>
+              isRefunded ? (
+                <PillButton tone='green' disabled={true}>✓ Гроші повернуті</PillButton>
+              ) : (
+                <PillButton tone='red' onClick={()=>{
+                  if(!confirm(`Повернути ₴${fmtUA(paid)} клієнту?`)) return;
+                  onRefund(orderId, paid)
+                }}>💰 Повернути ₴{fmtUA(paid)} клієнту</PillButton>
+              )
             )}
           </div>
           <div className="mt-2 text-xs text-slate-500">

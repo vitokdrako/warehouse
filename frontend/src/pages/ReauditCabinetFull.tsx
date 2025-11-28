@@ -576,28 +576,31 @@ export default function ReauditCabinetFull({
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.25fr),minmax(0,1.75fr)]">
         {/* left: list & filters */}
         <div className="space-y-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 text-[11px] space-y-2">
-            <div className="flex flex-col gap-2 md:flex-row md:items-end">
-              <div className="flex-1">
-                <label className="block text-slate-500">Пошук</label>
-                <input
-                  className="mt-1 w-full rounded-full border border-slate-200 bg-white px-3 py-1.5"
-                  placeholder="Назва, код, категорія, зона..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                />
-              </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 text-[11px] space-y-3">
+            {/* Пошукова строка окремо */}
+            <div>
+              <label className="block text-slate-500 font-medium mb-1">🔍 Пошук</label>
+              <input
+                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Назва, код, категорія, зона..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            
+            {/* Фільтри в окремому рядку */}
+            <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="block text-slate-500">Категорія</label>
+                <label className="block text-slate-500 font-medium mb-1">Категорія</label>
                 <select
-                  className="mt-1 w-32 rounded-full border border-slate-200 bg-white px-2 py-1.5"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs"
                   value={categoryFilter}
                   onChange={(e) => {
                     setCategoryFilter(e.target.value)
-                    setSubcategoryFilter('all') // Очистити підкатегорію при зміні категорії
+                    setSubcategoryFilter('all')
                   }}
                 >
-                  <option value="all">Усі</option>
+                  <option value="all">Усі категорії</option>
                   {categories.map((cat) => (
                     <option key={cat} value={cat}>
                       {cat}
@@ -606,14 +609,14 @@ export default function ReauditCabinetFull({
                 </select>
               </div>
               <div>
-                <label className="block text-slate-500">Підкатегорія</label>
+                <label className="block text-slate-500 font-medium mb-1">Підкатегорія</label>
                 <select
-                  className="mt-1 w-32 rounded-full border border-slate-200 bg-white px-2 py-1.5"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs disabled:bg-slate-100 disabled:text-slate-400"
                   value={subcategoryFilter}
                   onChange={(e) => setSubcategoryFilter(e.target.value)}
                   disabled={categoryFilter === 'all' || subcategories.length === 0}
                 >
-                  <option value="all">Усі</option>
+                  <option value="all">Усі підкатегорії</option>
                   {subcategories.map((subcat: string) => (
                     <option key={subcat} value={subcat}>
                       {subcat}
@@ -622,9 +625,9 @@ export default function ReauditCabinetFull({
                 </select>
               </div>
               <div>
-                <label className="block text-slate-500">Статус переобліку</label>
+                <label className="block text-slate-500 font-medium mb-1">Статус</label>
                 <select
-                  className="mt-1 w-40 rounded-full border border-slate-200 bg-white px-2 py-1.5"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs"
                   value={sortByAudit}
                   onChange={(e) => setSortByAudit(e.target.value as any)}
                 >

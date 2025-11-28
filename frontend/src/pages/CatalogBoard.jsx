@@ -554,7 +554,7 @@ export default function CatalogBoard(){
   }, [products])
 
   const rows = useMemo(()=> products.filter(p=>{
-    const okC = cat==='all' || p.cat===cat
+    const okC = cat==='all' || p.cat===cat || p.category_name===cat
     const okS = state==='all' || p.state===state
     const okCl = clean==='all' || p.cleaning.status===clean
     return okC && okS && okCl

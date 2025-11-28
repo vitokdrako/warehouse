@@ -81,7 +81,8 @@ def sync_products_incremental():
         
         oc_cur.execute("""
             SELECT 
-                p.product_id, p.model, pd.name, pd.description, p.price, p.status, p.image, p.quantity,
+                p.product_id, p.model, pd.name, pd.description, 
+                p.price as rental_price, p.ean as price, p.status, p.image, p.quantity,
                 MAX(CASE WHEN ad.name = 'Колір' AND pa.language_id = 4 THEN pa.text END) as color,
                 MAX(CASE WHEN ad.name = 'Матеріал' AND pa.language_id = 4 THEN pa.text END) as material
             FROM oc_product p

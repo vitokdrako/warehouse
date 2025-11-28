@@ -1213,15 +1213,25 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
     }
     
     try {
-      await axios.post(`${BACKEND_URL}/api/decor-orders/${order.order_id}/cancel-by-client`, {
-        reason: reason || 'Клієнт відмовився без пояснень'
+      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${order.order_id}/cancel-by-client`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: reason || 'Клієнт відмовився без пояснень'
+        })
       });
       
-      alert('✅ Замовлення скасовано. Товари розморожено.');
-      window.location.href = '/manager'; // Redirect to dashboard
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert('✅ Замовлення скасовано. Товари розморожено.');
+        navigate('/orders'); // Повернутися до списку замовлень
+      } else {
+        alert(`❌ Помилка: ${result.detail || 'Невідома помилка'}`);
+      }
     } catch (error) {
       console.error('Error cancelling order:', error);
-      alert(`❌ Помилка: ${error.response?.data?.detail || error.message}`);
+      alert(`❌ Помилка: ${error.message}`);
     }
   };
 

@@ -341,7 +341,7 @@ async def get_event_tool_order_status(order_id: str, db = Depends(get_rh_db_sync
             SELECT 
                 order_id, order_number, status, 
                 issue_date, return_date,
-                total_amount, deposit_amount,
+                total_price, deposit_amount,
                 customer_comment, manager_comment,
                 created_at
             FROM orders

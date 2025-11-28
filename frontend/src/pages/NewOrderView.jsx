@@ -279,6 +279,7 @@ export default function NewOrderView() {
   };
 
   // Перевірка конфліктів
+  // ✅ FIXED: checkConflicts function - version 2024-11-28T07:56
   const checkConflicts = async () => {
     if (!issueDate || !returnDate || items.length === 0) return;
     

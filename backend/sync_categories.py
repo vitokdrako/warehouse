@@ -34,7 +34,7 @@ try:
             SELECT c.category_id, c.parent_id, cd.name, c.sort_order
             FROM oc_category c
             JOIN oc_category_description cd ON c.category_id = cd.category_id
-            WHERE cd.language_id = 3
+            WHERE cd.language_id = 4
             ORDER BY c.parent_id, c.sort_order, cd.name
         """)
         

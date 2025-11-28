@@ -27,7 +27,7 @@ async def get_archived_orders(
     sql = """
         SELECT 
             order_id, order_number, customer_name, customer_phone,
-            rental_start_date, rental_end_date, status, total_amount,
+            rental_start_date, rental_end_date, status, total_price,
             created_at
         FROM orders
         WHERE status IN ('returned', 'cancelled', 'completed')
@@ -80,7 +80,7 @@ async def get_order_full_history(
     order_result = db.execute(text("""
         SELECT 
             order_id, order_number, customer_name, customer_phone, customer_email,
-            rental_start_date, rental_end_date, status, total_amount, deposit_amount,
+            rental_start_date, rental_end_date, status, total_price, deposit_amount,
             created_at
         FROM orders
         WHERE order_id = :order_id

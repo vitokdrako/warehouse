@@ -92,7 +92,7 @@ function balanceDue(rows){
 }
 
 /*********** Order Finance Card ***********/
-function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff, onReleaseDeposit, onAddDamage, onCollapse, onDelete}){
+function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff, onReleaseDeposit, onAddDamage, onCollapse, onDelete, onRefund}){
   const orderRows = rows.filter(r=>r.order_id===orderId)
   const held = heldAmount(orderRows)
   const heldByCurrency = heldAmountByCurrency(orderRows)
@@ -102,6 +102,13 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
   
   // Очікуваний депозит (з orders.deposit_amount)
   const expectedDeposit = orderRows.length > 0 ? (orderRows[0].expected_deposit || 0) : 0
+  
+  // Статус замовлення
+  const orderStatus = orderRows[0]?.order_status || null
+  const isCancelled = orderStatus === 'cancelled'
+  
+  // Скільки оплачено
+  const paid = orderRows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0)
   
   // Дані про пошкодження з замовлення (з orders таблиці)
   const orderDamageInfo = useMemo(() => {

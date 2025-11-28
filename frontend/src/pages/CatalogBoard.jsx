@@ -53,32 +53,40 @@ function Card({title,right,children}){
 function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories}){
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end">
-        <div className="grow">
-          <label className="text-xs text-slate-500">Пошук (назва / SKU / штрих‑код)</label>
-          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="введіть текст або відскануйте штрих‑код…" className="mt-1 w-full rounded-xl border px-3 py-2" />
-        </div>
-        <div>
-          <label className="text-xs text-slate-500">Категорія</label>
-          <select className="mt-1 w-48 rounded-xl border px-3 py-2" value={cat} onChange={e=>setCat(e.target.value)}>
+      {/* Пошукова строчка */}
+      <div className="w-full">
+        <label className="text-xs text-slate-500 font-medium">Пошук (назва / SKU / штрих‑код)</label>
+        <input 
+          value={q} 
+          onChange={e=>setQ(e.target.value)} 
+          placeholder="введіть текст або відскануйте штрих‑код…" 
+          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+        />
+      </div>
+      
+      {/* Фільтри в один ряд */}
+      <div className="flex flex-wrap gap-3 items-end">
+        <div className="min-w-[180px]">
+          <label className="text-xs text-slate-500 font-medium">Категорія</label>
+          <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={cat} onChange={e=>setCat(e.target.value)}>
             <option value="all">Всі</option>
             {categories.map(c => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
-        <div>
-          <label className="text-xs text-slate-500">Стан</label>
-          <select className="mt-1 w-40 rounded-xl border px-3 py-2" value={state} onChange={e=>setState(e.target.value)}>
+        <div className="min-w-[150px]">
+          <label className="text-xs text-slate-500 font-medium">Стан</label>
+          <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={state} onChange={e=>setState(e.target.value)}>
             <option value="all">Будь‑який</option>
             <option value="ok">В наявності</option>
             <option value="fragile">Крихке</option>
             <option value="damaged">Пошкоджено</option>
           </select>
         </div>
-        <div>
-          <label className="text-xs text-slate-500">Чистка</label>
-          <select className="mt-1 w-40 rounded-xl border px-3 py-2" value={clean} onChange={e=>setClean(e.target.value)}>
+        <div className="min-w-[150px]">
+          <label className="text-xs text-slate-500 font-medium">Чистка</label>
+          <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={clean} onChange={e=>setClean(e.target.value)}>
             <option value="all">Будь‑яка</option>
             <option value="clean">Чисте</option>
             <option value="wash">На мийці</option>
@@ -86,7 +94,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
             <option value="repair">Реставрація</option>
           </select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 ml-auto">
           <Pill tone='blue' onClick={()=>alert('Відкрити сканер штрих‑коду (мок)')}>Сканувати</Pill>
           <Pill tone='green' onClick={()=>alert('Створити товар (мок)')}>Новий товар</Pill>
         </div>

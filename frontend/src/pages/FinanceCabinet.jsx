@@ -255,17 +255,31 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
 
         <Card title="Операції із заставою">
           <div className="flex flex-wrap gap-2">
-            <PillButton tone='red' onClick={()=>{
-              const amt = Math.min(held, due)
-              if(amt<=0) return alert('Немає що списувати');
-              onWriteoff(orderId, heldByCurrency, due)
-            }}>Списати з застави (до суми боргу)</PillButton>
+            {!isCancelled && (
+              <PillButton tone='red' onClick={()=>{
+                const amt = Math.min(held, due)
+                if(amt<=0) return alert('Немає що списувати');
+                onWriteoff(orderId, heldByCurrency, due)
+              }}>Списати з застави (до суми боргу)</PillButton>
+            )}
             <PillButton tone='yellow' onClick={()=>{
               if(held<=0) return alert('Немає активного холду');
               onReleaseDeposit(orderId, heldByCurrency)
             }}>Повернути заставу</PillButton>
+            {isCancelled && paid > 0 && (
+              <PillButton tone='red' onClick={()=>{
+                if(!confirm(`Повернути ₴${fmtUA(paid)} клієнту?`)) return;
+                onRefund(orderId, paid)
+              }}>💰 Повернути ₴{fmtUA(paid)} клієнту</PillButton>
+            )}
           </div>
-          <div className="mt-2 text-xs text-slate-500">Повернення повертає залишок холду. Списання створює кредитну проводку «deposit_writeoff» і зменшує холд.</div>
+          <div className="mt-2 text-xs text-slate-500">
+            {isCancelled && paid > 0 ? (
+              <span className="text-rose-600 font-medium">⚠️ Замовлення скасовано! Необхідно повернути ₴{fmtUA(paid)} клієнту та всі застави.</span>
+            ) : (
+              'Повернення повертає залишок холду. Списання створює кредитну проводку «deposit_writeoff» і зменшує холд.'
+            )}
+          </div>
         </Card>
       </div>
 

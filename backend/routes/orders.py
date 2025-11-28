@@ -518,6 +518,87 @@ async def update_order(
     
     return {"message": "Order updated", "order_id": order_id}
 
+
+@router.put("/{order_id}/calendar-update")
+async def update_order_from_calendar(
+    order_id: int,
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Оновити дату та час замовлення з календаря (drag & drop)
+    
+    Приймає:
+    - lane: 'issue' або 'return'
+    - date: нова дата в форматі YYYY-MM-DD
+    - timeSlot: 'morning', 'afternoon', 'evening'
+    """
+    # Check order exists
+    result = db.execute(text("SELECT order_id FROM orders WHERE order_id = :id"), {"id": order_id})
+    if not result.fetchone():
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    lane = data.get('lane')
+    new_date = data.get('date')
+    time_slot = data.get('timeSlot', 'morning')
+    
+    if not lane or not new_date:
+        raise HTTPException(status_code=400, detail="lane and date are required")
+    
+    # Map timeSlot to actual time
+    time_map = {
+        'morning': '09:00',
+        'afternoon': '14:00',
+        'evening': '18:00'
+    }
+    actual_time = time_map.get(time_slot, '09:00')
+    
+    # Determine which fields to update based on lane
+    params = {"order_id": order_id}
+    
+    if lane == 'issue':
+        # Update issue_date and issue_time
+        sql = text("""
+            UPDATE orders 
+            SET issue_date = :date, issue_time = :time, rental_start_date = :date
+            WHERE order_id = :order_id
+        """)
+        params['date'] = new_date
+        params['time'] = actual_time
+    elif lane == 'return':
+        # Update return_date and return_time
+        sql = text("""
+            UPDATE orders 
+            SET return_date = :date, return_time = :time, rental_end_date = :date
+            WHERE order_id = :order_id
+        """)
+        params['date'] = new_date
+        params['time'] = actual_time
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid lane: {lane}")
+    
+    db.execute(sql, params)
+    
+    # Log to lifecycle
+    db.execute(text("""
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
+        VALUES (:order_id, 'calendar_update', :notes, NOW())
+    """), {
+        "order_id": order_id,
+        "notes": f"Calendar: {lane} updated to {new_date} {actual_time}"
+    })
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Updated {lane} date to {new_date}",
+        "order_id": order_id,
+        "date": new_date,
+        "time": actual_time
+    }
+
+
 @router.put("/{order_id}/status")
 async def update_order_status(
     order_id: int,

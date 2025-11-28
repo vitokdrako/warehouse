@@ -20,6 +20,8 @@ export default function NewOrderView() {
   const [loading, setLoading] = useState(true);
   const [issueDate, setIssueDate] = useState('');
   const [returnDate, setReturnDate] = useState('');
+  const [issueTime, setIssueTime] = useState('11:30–12:00');
+  const [returnTime, setReturnTime] = useState('до 17:00');
   const [rentalDays, setRentalDays] = useState(1);
   const [discount, setDiscount] = useState(0);
   const [notes, setNotes] = useState('');

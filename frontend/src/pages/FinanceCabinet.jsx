@@ -283,7 +283,11 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
           </div>
           <div className="mt-2 text-xs text-slate-500">
             {isCancelled && paid > 0 ? (
-              <span className="text-rose-600 font-medium">⚠️ Замовлення скасовано! Необхідно повернути ₴{fmtUA(paid)} клієнту та всі застави.</span>
+              isRefunded ? (
+                <span className="text-emerald-600 font-medium">✓ Гроші повернуті клієнту (₴{fmtUA(refunded)}). Не забудьте повернути всі застави.</span>
+              ) : (
+                <span className="text-rose-600 font-medium">⚠️ Замовлення скасовано! Необхідно повернути ₴{fmtUA(paid)} клієнту та всі застави.</span>
+              )
             ) : (
               'Повернення повертає залишок холду. Списання створює кредитну проводку «deposit_writeoff» і зменшує холд.'
             )}

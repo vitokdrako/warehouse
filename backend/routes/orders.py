@@ -491,7 +491,8 @@ async def update_order(
     
     allowed_fields = [
         'customer_name', 'customer_phone', 'customer_email', 
-        'rental_start_date', 'rental_end_date', 'issue_time', 'return_time', 'status', 
+        'rental_start_date', 'rental_end_date', 'issue_date', 'return_date', 
+        'issue_time', 'return_time', 'status', 
         'total_price', 'deposit_amount', 'total_loss_value', 'rental_days', 'notes'
     ]
     

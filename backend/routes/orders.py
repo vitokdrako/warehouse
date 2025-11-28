@@ -1146,6 +1146,54 @@ async def unarchive_order(
         "is_archived": False
     }
 
+
+
+@decor_router.post("/archive-cancelled")
+@router.post("/archive-cancelled")
+async def archive_all_cancelled_orders(
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Масово архівувати всі cancelled замовлення
+    Utility endpoint для очищення старих скасованих замовлень
+    """
+    # Знайти всі cancelled замовлення які не архівовані
+    result = db.execute(text("""
+        SELECT order_id, order_number FROM orders 
+        WHERE status = 'cancelled' AND is_archived = 0
+    """))
+    
+    cancelled_orders = result.fetchall()
+    count = len(cancelled_orders)
+    
+    if count == 0:
+        return {
+            "message": "Немає скасованих замовлень для архівування",
+            "archived_count": 0
+        }
+    
+    # Архівувати всі
+    db.execute(text("""
+        UPDATE orders 
+        SET is_archived = 1, updated_at = NOW()
+        WHERE status = 'cancelled' AND is_archived = 0
+    """))
+    
+    # Залогувати для кожного
+    for order_id, order_number in cancelled_orders:
+        db.execute(text("""
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+            VALUES (:order_id, 'auto_archived', 'Автоматично архівовано (cancelled)', 'System', NOW())
+        """), {"order_id": order_id})
+    
+    db.commit()
+    
+    return {
+        "message": f"Архівовано {count} скасованих замовлень",
+        "archived_count": count,
+        "order_numbers": [row[1] for row in cancelled_orders]
+    }
+
 # ============================================================
 # ADDITIONAL ENDPOINTS
 # ============================================================

@@ -1340,7 +1340,7 @@ async def add_damage_during_audit(
         history_id = f"H-{uuid.uuid4().hex[:8].upper()}"
         
         db.execute(text("""
-            INSERT INTO decor_product_history 
+            INSERT INTO product_damage_history 
             (id, product_id, event_type, actor, order_id, notes, photo_url, created_at)
             VALUES (:id, :product_id, 'damage_opened', :actor, :order_id, :notes, :photo_url, NOW())
         """), {

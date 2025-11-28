@@ -137,40 +137,58 @@ def parse_order_row(row, db: Session = None):
             })
     
     # Визначимо індекси полів у row - залежить від того, скільки полів повернуто
-    # Стандартний формат: order_id, order_number, customer_id, customer_name, customer_phone, 
-    #                      customer_email, rental_start_date, rental_end_date, status, 
-    #                      total_price, deposit_amount, notes, created_at, is_archived
-    # Розширений формат: + total_loss_value, rental_days (на позиціях 11 та 12)
+    # Новий формат: order_id, order_number, customer_id, customer_name, customer_phone, 
+    #               customer_email, rental_start_date, rental_end_date, issue_date, return_date,
+    #               status, total_price, deposit_amount, notes, created_at, is_archived
     
-    has_extended_fields = len(row) >= 15  # Якщо є додаткові поля
+    has_new_format = len(row) >= 16  # Новий формат з issue_date і return_date
     
-    order_dict = {
-        "id": str(row[0]),
-        "order_number": row[1],
-        "client_id": row[2],
-        "client_name": row[3],
-        "client_phone": row[4],
-        "client_email": row[5],
-        "issue_date": row[6].isoformat() if row[6] else None,
-        "return_date": row[7].isoformat() if row[7] else None,
-        "status": row[8],
-        "total_rental": float(row[9]) if row[9] else 0.0,
-        "total_deposit": float(row[10]) if row[10] else 0.0,
-        "deposit_held": float(row[10]) if row[10] else 0.0,
-        "items": items
-    }
-    
-    # Додати розширені поля якщо є
-    if has_extended_fields:
-        order_dict["total_loss_value"] = float(row[11]) if row[11] else 0.0
-        order_dict["rental_days"] = row[12] if row[12] else 0
-        order_dict["is_archived"] = bool(row[13]) if len(row) > 13 else False
-        order_dict["created_at"] = row[14].isoformat() if len(row) > 14 and row[14] else None
+    if has_new_format:
+        # Новий формат з issue_date та return_date
+        order_dict = {
+            "id": str(row[0]),
+            "order_id": row[0],
+            "order_number": row[1],
+            "client_id": row[2],
+            "client_name": row[3],
+            "customer_name": row[3],  # Alias для календаря
+            "client_phone": row[4],
+            "client_email": row[5],
+            "rental_start_date": row[6].isoformat() if row[6] else None,
+            "rental_end_date": row[7].isoformat() if row[7] else None,
+            "issue_date": row[8].isoformat() if row[8] else None,
+            "return_date": row[9].isoformat() if row[9] else None,
+            "status": row[10],
+            "total_rental": float(row[11]) if row[11] else 0.0,
+            "total_deposit": float(row[12]) if row[12] else 0.0,
+            "deposit_held": float(row[12]) if row[12] else 0.0,
+            "manager_comment": row[13] if row[13] else None,
+            "created_at": row[14].isoformat() if row[14] else None,
+            "is_archived": bool(row[15]) if row[15] else False,
+            "items": items
+        }
     else:
-        # For non-extended format (without total_loss_value and rental_days)
-        order_dict["manager_comment"] = row[11] if len(row) > 11 else None
-        order_dict["created_at"] = row[12].isoformat() if len(row) > 12 and row[12] else None
-        order_dict["is_archived"] = bool(row[13]) if len(row) > 13 else False
+        # Старий формат (без issue_date та return_date)
+        order_dict = {
+            "id": str(row[0]),
+            "order_id": row[0],
+            "order_number": row[1],
+            "client_id": row[2],
+            "client_name": row[3],
+            "customer_name": row[3],
+            "client_phone": row[4],
+            "client_email": row[5],
+            "issue_date": row[6].isoformat() if row[6] else None,
+            "return_date": row[7].isoformat() if row[7] else None,
+            "status": row[8],
+            "total_rental": float(row[9]) if row[9] else 0.0,
+            "total_deposit": float(row[10]) if row[10] else 0.0,
+            "deposit_held": float(row[10]) if row[10] else 0.0,
+            "manager_comment": row[11] if len(row) > 11 else None,
+            "created_at": row[12].isoformat() if len(row) > 12 and row[12] else None,
+            "is_archived": bool(row[13]) if len(row) > 13 else False,
+            "items": items
+        }
     
     return order_dict
 

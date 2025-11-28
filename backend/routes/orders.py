@@ -1054,7 +1054,7 @@ async def get_customer_stats(
     result = db.execute(text("""
         SELECT 
             COUNT(*) as total_orders,
-            SUM(total_amount) as total_spent,
+            SUM(total_price) as total_spent,
             COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_orders,
             COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_orders
         FROM orders 

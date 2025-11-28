@@ -106,7 +106,7 @@ def sync_orders():
             rh_cur.execute("""
                 INSERT INTO orders (
                     order_id, order_number, customer_id, customer_name, 
-                    customer_email, customer_phone, total_amount, deposit_amount, total_loss_value,
+                    customer_email, customer_phone, total_price, deposit_amount, total_loss_value,
                     rental_start_date, rental_end_date, rental_days,
                     status, created_at, synced_at
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'awaiting_customer', %s, NOW())

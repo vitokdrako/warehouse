@@ -1417,7 +1417,7 @@ async def add_damage_during_audit(
 @router.get("/items/{item_id}/damages")
 async def get_item_damages(
     item_id: str,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Отримати історію пошкоджень товару

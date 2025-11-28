@@ -222,12 +222,16 @@ async def get_orders(
         sql += " AND customer_id = :customer_id"
         params['customer_id'] = customer_id
     
-    if from_date:
-        sql += " AND rental_start_date >= :from_date"
+    if from_date and to_date:
+        # Show orders that overlap with the date range
+        sql += " AND (rental_start_date <= :to_date AND rental_end_date >= :from_date)"
         params['from_date'] = from_date
-    
-    if to_date:
-        sql += " AND rental_end_date <= :to_date"
+        params['to_date'] = to_date
+    elif from_date:
+        sql += " AND rental_end_date >= :from_date"
+        params['from_date'] = from_date
+    elif to_date:
+        sql += " AND rental_start_date <= :to_date"
         params['to_date'] = to_date
     
     if search:

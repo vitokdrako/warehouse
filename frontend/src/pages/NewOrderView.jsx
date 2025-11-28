@@ -422,6 +422,9 @@ export default function NewOrderView() {
         // rentalDays вже оновлено вище - не перераховуємо
         
         alert('✅ Дані збережено');
+        
+        // Перезавантажити order щоб синхронізувати всі дані
+        window.location.reload();
       } else {
         const error = await response.text();
         console.error('[SAVE] ❌ Помилка:', error);

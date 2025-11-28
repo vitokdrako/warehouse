@@ -117,18 +117,27 @@ async def get_issue_cards(
     order_id: Optional[int] = None,
     db: Session = Depends(get_rh_db)
 ):
-    """Get all issue cards"""
-    sql = "SELECT * FROM issue_cards WHERE 1=1"
+    """
+    Get all issue cards
+    Фільтрує issue cards для cancelled та archived замовлень
+    """
+    sql = """
+        SELECT ic.* 
+        FROM issue_cards ic
+        JOIN orders o ON ic.order_id = o.order_id
+        WHERE o.status != 'cancelled' 
+        AND o.is_archived = 0
+    """
     params = {}
     
     if status:
-        sql += " AND status = :status"
+        sql += " AND ic.status = :status"
         params['status'] = status
     if order_id:
-        sql += " AND order_id = :order_id"
+        sql += " AND ic.order_id = :order_id"
         params['order_id'] = order_id
     
-    sql += " ORDER BY created_at DESC"
+    sql += " ORDER BY ic.created_at DESC"
     
     result = db.execute(text(sql), params)
     return [parse_issue_card(row, db) for row in result]

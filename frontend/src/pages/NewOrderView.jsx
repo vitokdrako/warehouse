@@ -1163,11 +1163,7 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
   };
   
   const handleMoveToPreparation = async () => {
-    // Перевірити конфлікти перед відправкою
-    console.log('[MOVE TO PREP] 🔍 Попередня перевірка конфліктів...');
-    await checkConflicts();
-    
-    // Якщо є критичні конфлікти (error level), заблокувати
+    // Перевірити чи є критичні конфлікти (вони вже перевірені автоматично)
     const criticalConflicts = conflicts.filter(c => c.level === 'error');
     if (criticalConflicts.length > 0) {
       const conflictList = criticalConflicts.map(c => 

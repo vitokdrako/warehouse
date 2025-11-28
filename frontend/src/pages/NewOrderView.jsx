@@ -618,12 +618,7 @@ export default function NewOrderView() {
                   </div>
                   {!checkingConflicts && Object.keys(availability).length > 0 && (
                     <div className="mt-2 text-xs text-blue-700">
-                      ✅ Перевірка завершена. Інформація про наявність відображена в таблиці нижче.
-                    </div>
-                  )}
-                  {conflicts.length > 0 && (
-                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                      ⚠️ Увага! Деякі товари недоступні в обраних кількостях на вказані дати.
+                      ✅ Перевірка завершена. {conflicts.length > 0 ? 'Деталі конфліктів вище.' : 'Всі товари доступні.'}
                     </div>
                   )}
                 </div>

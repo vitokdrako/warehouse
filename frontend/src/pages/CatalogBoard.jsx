@@ -513,7 +513,7 @@ export default function CatalogBoard(){
       }
       
       // Reload catalog
-      const catalogResponse = await fetch(`${BACKEND_URL}/api/catalog`, {
+      const catalogResponse = await fetch(`${BACKEND_URL}/api/catalog?include_reservations=true`, {
         method: 'GET',
         headers: { 
           'Content-Type': 'application/json',

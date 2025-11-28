@@ -142,8 +142,94 @@ export default function NewOrderView() {
 
   // Кількість днів НЕ залежить від дат - користувач вводить вручну
 
-  // ТИМЧАСОВО ВІДКЛЮЧЕНО: Перевірка конфліктів
-  // Перевіримо базову функціональність без перевірки конфліктів
+  // Перевірка конфліктів - НОВА ВЕРСІЯ (проста і надійна)
+  useEffect(() => {
+    // Якщо немає дат або товарів - очистити конфлікти
+    if (!issueDate || !returnDate || items.length === 0) {
+      setConflicts([]);
+      setAvailability({});
+      return;
+    }
+    
+    // Функція перевірки (inline в useEffect, не винесена окремо)
+    const checkAvailability = async () => {
+      setCheckingConflicts(true);
+      try {
+        const requestBody = {
+          start_date: issueDate,
+          end_date: returnDate,
+          items: items.map(i => ({
+            product_id: parseInt(i.inventory_id || i.product_id),
+            sku: i.article || i.sku,
+            quantity: i.quantity
+          }))
+        };
+        
+        const response = await fetch(`${BACKEND_URL}/api/orders/check-availability`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          
+          // Мапінг для availability
+          const availabilityMap = {};
+          if (result.items) {
+            result.items.forEach(item => {
+              availabilityMap[item.product_id] = {
+                total: item.total_quantity || 0,
+                reserved: item.reserved_quantity || 0,
+                available: item.available_quantity || 0
+              };
+            });
+          }
+          setAvailability(availabilityMap);
+          
+          // Визначити конфлікти
+          const foundConflicts = result.items?.map(item => {
+            let conflictType = null;
+            let level = 'warning';
+            
+            if (item.total_quantity === 0) {
+              conflictType = 'out_of_stock';
+              level = 'error';
+            } else if (item.available_quantity < item.requested_quantity) {
+              conflictType = 'insufficient';
+              level = 'error';
+            } else if (item.has_tight_schedule) {
+              conflictType = 'tight_schedule';
+              level = 'warning';
+            } else if (item.available_quantity < item.total_quantity * 0.2) {
+              conflictType = 'low_stock';
+              level = 'warning';
+            }
+            
+            if (conflictType) {
+              return {
+                ...item,
+                type: conflictType,
+                level: level,
+                available: item.available_quantity,
+                in_rent: item.reserved_quantity || 0,
+                requested: item.requested_quantity
+              };
+            }
+            return null;
+          }).filter(Boolean) || [];
+          
+          setConflicts(foundConflicts);
+        }
+      } catch (error) {
+        console.error('Error checking availability:', error);
+      } finally {
+        setCheckingConflicts(false);
+      }
+    };
+    
+    checkAvailability();
+  }, [issueDate, returnDate, items]);
 
   // Пошук товарів
   const handleSearch = async (query) => {

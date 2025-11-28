@@ -1190,9 +1190,9 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
       
       if (response.ok) {
         alert(`✅ Замовлення відправлено на збір!\n\n• Клієнт автоматично підтверджений\n• Комірники можуть почати підготовку`);
-        // Перейти на картку видачі (Issue Card) з правильним ID
-        console.log('[MOVE TO PREP] Навігація до /issue/' + result.issue_card_id);
-        navigate(`/issue/${result.issue_card_id}`);
+        // Повернутися до списку замовлень
+        console.log('[MOVE TO PREP] Повернення до списку замовлень');
+        navigate('/orders');
       } else {
         alert(`❌ Помилка: ${result.detail || 'Невідома помилка'}\n\nЯкщо проблема з наявністю - перевірте конфлікти та збережіть зміни.`);
       }

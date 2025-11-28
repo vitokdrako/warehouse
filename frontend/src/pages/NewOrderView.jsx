@@ -2,7 +2,7 @@
 // RentalHub — Вхідне замовлення від клієнта
 // order_status_id = 2 (В обработке)
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getImageUrl } from '../utils/imageHelper';
 

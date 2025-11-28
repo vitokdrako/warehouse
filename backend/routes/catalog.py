@@ -156,6 +156,56 @@ async def get_catalog_items(
     return items
 
 
+
+@router.get("/debug/reservations/{product_id}")
+async def debug_reservations(
+    product_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """Debug endpoint to check reservations for a specific product"""
+    
+    # Check order_items for this product
+    order_items = db.execute(text("""
+        SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, 
+               o.order_number, o.status, o.rental_start_date, o.rental_end_date
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE oi.product_id = :product_id
+        ORDER BY o.created_at DESC
+        LIMIT 20
+    """), {"product_id": product_id}).fetchall()
+    
+    items_list = []
+    for row in order_items:
+        items_list.append({
+            "item_id": row[0],
+            "order_id": row[1],
+            "product_id": row[2],
+            "quantity": row[3],
+            "order_number": row[4],
+            "status": row[5],
+            "rental_start": str(row[6]) if row[6] else None,
+            "rental_end": str(row[7]) if row[7] else None
+        })
+    
+    # Check reserved count
+    reserved = db.execute(text("""
+        SELECT COALESCE(SUM(oi.quantity), 0) as reserved
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE oi.product_id = :product_id
+        AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+        AND o.rental_end_date >= CURDATE()
+    """), {"product_id": product_id}).scalar()
+    
+    return {
+        "product_id": product_id,
+        "order_items_found": len(items_list),
+        "items": items_list,
+        "reserved_count": int(reserved) if reserved else 0
+    }
+
+
 @router.get("/families/{family_id}/products")
 async def get_family_products(
     family_id: int,

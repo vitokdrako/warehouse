@@ -139,7 +139,7 @@ def parse_order_row(row, db: Session = None):
     # Визначимо індекси полів у row - залежить від того, скільки полів повернуто
     # Стандартний формат: order_id, order_number, customer_id, customer_name, customer_phone, 
     #                      customer_email, rental_start_date, rental_end_date, status, 
-    #                      total_amount, deposit_amount, notes, created_at, is_archived
+    #                      total_price, deposit_amount, notes, created_at, is_archived
     # Розширений формат: + total_loss_value, rental_days (на позиціях 11 та 12)
     
     has_extended_fields = len(row) >= 15  # Якщо є додаткові поля

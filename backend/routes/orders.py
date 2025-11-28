@@ -1310,6 +1310,7 @@ async def check_availability_endpoint(
 @decor_router.get("")
 async def get_decor_orders(
     status: Optional[str] = None,
+    archived: Optional[str] = None,
     limit: int = 1000,
     db: Session = Depends(get_rh_db)
 ):
@@ -1317,7 +1318,7 @@ async def get_decor_orders(
     Отримати замовлення (алиас для основного GET /orders)
     ✅ MIGRATED: Using RentalHub DB
     """
-    return await get_orders(status=status, limit=limit, db=db)
+    return await get_orders(status=status, archived=archived, limit=limit, db=db)
 
 
 @decor_router.get("/{order_id}")

@@ -621,20 +621,6 @@ export default function NewOrderView() {
             </Card>
 
             <Card title="Позиції замовлення">
-              {issueDate && returnDate && items.length > 0 && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-center gap-2 text-sm text-blue-800">
-                    <span className="font-medium">📊 Перевірка доступності:</span>
-                    <span>Дати оренди: {issueDate} - {returnDate}</span>
-                    {checkingConflicts && <span className="text-blue-600">(перевірка...)</span>}
-                  </div>
-                  {!checkingConflicts && Object.keys(availability).length > 0 && (
-                    <div className="mt-2 text-xs text-blue-700">
-                      ✅ Перевірка завершена. {conflicts.length > 0 ? 'Деталі конфліктів вище.' : 'Всі товари доступні.'}
-                    </div>
-                  )}
-                </div>
-              )}
               <ItemsTable 
                 items={items} 
                 onUpdateQuantity={handleUpdateQuantity}

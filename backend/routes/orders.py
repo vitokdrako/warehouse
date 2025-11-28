@@ -604,11 +604,11 @@ async def create_order(
     db.execute(text("""
         INSERT INTO orders (
             order_number, customer_name, customer_phone, customer_email,
-            rental_start_date, rental_end_date, status, total_amount, deposit_amount,
+            rental_start_date, rental_end_date, status, total_price, deposit_amount,
             notes, created_at
         ) VALUES (
             :order_number, :customer_name, :customer_phone, :customer_email,
-            :rental_start_date, :rental_end_date, 'pending', :total_amount, :deposit_amount,
+            :rental_start_date, :rental_end_date, 'pending', :total_price, :deposit_amount,
             :notes, NOW()
         )
     """), {
@@ -618,7 +618,7 @@ async def create_order(
         "customer_email": order.customer_email,
         "rental_start_date": order.rental_start_date,
         "rental_end_date": order.rental_end_date,
-        "total_amount": order.total_amount,
+        "total_price": order.total_amount,
         "deposit_amount": order.deposit_amount,
         "notes": order.notes
     })

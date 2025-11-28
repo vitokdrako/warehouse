@@ -30,7 +30,7 @@ async def get_orders(
     sql = """
         SELECT 
             order_id, order_number, customer_id, customer_name, customer_phone, customer_email,
-            rental_start_date, rental_end_date, status, total_amount, deposit_amount, created_at
+            rental_start_date, rental_end_date, status, total_price, deposit_amount, created_at
         FROM orders
         WHERE 1=1
     """

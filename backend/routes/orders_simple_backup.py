@@ -343,7 +343,7 @@ async def decline_order(
 async def get_customer_stats(customer_id: int, db: Session = Depends(get_rh_db)):
     """Статистика клієнта"""
     result = db.execute(text("""
-        SELECT COUNT(*), SUM(total_amount) FROM orders WHERE customer_id = :id
+        SELECT COUNT(*), SUM(total_price) FROM orders WHERE customer_id = :id
     """), {"id": customer_id})
     row = result.fetchone()
     return {"total_orders": row[0] or 0, "total_spent": float(row[1]) if row[1] else 0.0}

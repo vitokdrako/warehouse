@@ -534,7 +534,7 @@ export default function NewOrderView() {
             </Card>
 
             <Card title="Дати оренди та тривалість">
-              <div className="grid md:grid-cols-4 gap-4">
+              <div className="grid md:grid-cols-6 gap-4">
                 <Field label="Дата видачі">
                   <input 
                     type="date" 
@@ -543,6 +543,17 @@ export default function NewOrderView() {
                     className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none"
                   />
                 </Field>
+                <Field label="Час видачі">
+                  <select 
+                    value={issueTime}
+                    onChange={(e) => setIssueTime(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none"
+                  >
+                    <option>11:30–12:00</option>
+                    <option>12:00–12:30</option>
+                    <option>16:30–17:00</option>
+                  </select>
+                </Field>
                 <Field label="Дата повернення">
                   <input 
                     type="date" 
@@ -550,6 +561,16 @@ export default function NewOrderView() {
                     onChange={e => setReturnDate(e.target.value)}
                     className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none"
                   />
+                </Field>
+                <Field label="Час повернення">
+                  <select 
+                    value={returnTime}
+                    onChange={(e) => setReturnTime(e.target.value)}
+                    className="w-full rounded-md border border-slate-200 px-3 py-2 outline-none"
+                  >
+                    <option>до 17:00</option>
+                    <option>до 16:00</option>
+                  </select>
                 </Field>
                 <Field label="Кількість діб оренди">
                   <input 

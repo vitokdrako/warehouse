@@ -237,7 +237,7 @@ async def get_archive_stats(
     
     # Revenue
     revenue_result = db.execute(text(f"""
-        SELECT SUM(total_amount) FROM orders 
+        SELECT SUM(total_price) FROM orders 
         WHERE status IN ('returned', 'completed') {date_filter}
     """), params)
     total_revenue = revenue_result.scalar() or 0.0

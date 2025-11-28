@@ -139,31 +139,49 @@ async def get_finance_summary(
         date_filter += " AND created_at <= :to_date"
         params['to_date'] = to_date
     
-    # Total revenue (ОПЛАЧЕНО)
+    # Total revenue (ОПЛАЧЕНО) - виключаємо cancelled замовлення
     revenue_result = db.execute(text(f"""
-        SELECT SUM(amount) FROM finance_transactions 
-        WHERE transaction_type IN ('payment', 'prepayment') AND status = 'completed' {date_filter}
+        SELECT SUM(ft.amount) 
+        FROM finance_transactions ft
+        LEFT JOIN orders o ON ft.order_id = o.order_id
+        WHERE ft.transaction_type IN ('payment', 'prepayment') 
+        AND ft.status = 'completed'
+        AND (o.status IS NULL OR o.status != 'cancelled')
+        {date_filter}
     """), params)
     total_revenue = revenue_result.scalar() or 0.0
     
-    # Total rent accrued (НАРАХОВАНО)
+    # Total rent accrued (НАРАХОВАНО) - виключаємо cancelled замовлення
     accrued_result = db.execute(text(f"""
-        SELECT SUM(amount) FROM finance_transactions 
-        WHERE transaction_type IN ('rent', 'rent_accrual') {date_filter}
+        SELECT SUM(ft.amount) 
+        FROM finance_transactions ft
+        LEFT JOIN orders o ON ft.order_id = o.order_id
+        WHERE ft.transaction_type IN ('rent', 'rent_accrual')
+        AND (o.status IS NULL OR o.status != 'cancelled')
+        {date_filter}
     """), params)
     total_accrued = accrued_result.scalar() or 0.0
     
-    # Total deposits held (кількість замовлень з заставами на холді)
+    # Total deposits held (кількість замовлень з заставами на холді) - виключаємо cancelled
     deposits_result = db.execute(text(f"""
-        SELECT COUNT(DISTINCT order_id) FROM finance_transactions 
-        WHERE transaction_type = 'deposit_hold' AND status = 'held' {date_filter}
+        SELECT COUNT(DISTINCT ft.order_id) 
+        FROM finance_transactions ft
+        LEFT JOIN orders o ON ft.order_id = o.order_id
+        WHERE ft.transaction_type = 'deposit_hold' 
+        AND ft.status = 'held'
+        AND (o.status IS NULL OR o.status != 'cancelled')
+        {date_filter}
     """), params)
     total_deposits = deposits_result.scalar() or 0
     
-    # Pending payments
+    # Pending payments - виключаємо cancelled замовлення
     pending_result = db.execute(text(f"""
-        SELECT SUM(amount) FROM finance_transactions 
-        WHERE status = 'pending' {date_filter}
+        SELECT SUM(ft.amount) 
+        FROM finance_transactions ft
+        LEFT JOIN orders o ON ft.order_id = o.order_id
+        WHERE ft.status = 'pending'
+        AND (o.status IS NULL OR o.status != 'cancelled')
+        {date_filter}
     """), params)
     pending_amount = pending_result.scalar() or 0.0
     

@@ -539,7 +539,7 @@ async def mark_audited_new_working_endpoint(item_id: str, audit_data: dict, db: 
 async def mark_item_audited_v2_fixed(
     item_id: str,
     audit_data: dict,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     DISABLED FOR TESTING
@@ -711,7 +711,7 @@ async def get_audit_stats(
 @router.post("/calculate-lifecycle/{product_id}")
 async def calculate_lifecycle_metrics(
     product_id: int,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Підрахувати lifecycle метрики для товару
@@ -894,7 +894,7 @@ async def update_location(
 async def update_audit_status(
     item_id: str,
     data: dict,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Оновити audit status товару
@@ -951,7 +951,7 @@ async def update_audit_status(
 async def update_notes(
     item_id: str,
     data: dict,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Оновити нотатки
@@ -990,7 +990,7 @@ async def update_notes(
 @router.get("/items/{item_id}/history")
 async def get_product_history(
     item_id: str,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Отримати історію товару
@@ -1096,7 +1096,7 @@ async def get_rental_history(
 @router.get("/items/{item_id}/audit-history")
 async def get_audit_history(
     item_id: str,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Отримати історію переобліків товару
@@ -1247,7 +1247,7 @@ async def edit_item_full(
 async def send_to_wash(
     item_id: str,
     data: dict,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Відправити товар на мийку
@@ -1302,7 +1302,7 @@ async def send_to_wash(
 async def add_damage_during_audit(
     item_id: str,
     data: dict,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Зафіксувати пошкодження при переобліку
@@ -1512,7 +1512,7 @@ async def send_to_restoration(
 async def create_damage_case(
     item_id: str,
     data: dict,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Створити кейс пошкодження

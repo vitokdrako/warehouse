@@ -230,7 +230,8 @@ export default function ReauditCabinetFull({
     try {
       const response = await fetch(`${BACKEND_URL}/api/audit/categories`)
       const data = await response.json()
-      console.log('[ReauditCabinet] Categories loaded:', data.categories?.length, 'subcategories:', Object.keys(data.subcategories || {}).length)
+      const totalSubcats = Object.values(data.subcategories || {}).reduce((sum: number, arr: any) => sum + arr.length, 0)
+      console.log('[ReauditCabinet] Categories loaded:', data.categories?.length, 'main categories |', totalSubcats, 'total subcategories |', Object.keys(data.subcategories || {}).length, 'categories with subcategories')
       setCategories(data.categories || [])
       setSubcategoriesMap(data.subcategories || {})
     } catch (e) {

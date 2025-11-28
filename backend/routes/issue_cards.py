@@ -66,7 +66,7 @@ def parse_issue_card(row, db: Session = None):
     if db and row[1]:  # order_id
         order_result = db.execute(text("""
             SELECT customer_name, customer_phone, customer_email,
-                   total_amount, deposit_amount, total_loss_value, rental_days
+                   total_price, deposit_amount, total_loss_value, rental_days
             FROM orders WHERE order_id = :order_id
         """), {"order_id": row[1]})
         order_row = order_result.fetchone()

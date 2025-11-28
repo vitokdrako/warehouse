@@ -65,7 +65,7 @@ async def get_transactions(
         # 0: id, 1: transaction_type, 2: order_id, 3: amount,
         # 4: currency, 5: status, 6: description, 7: created_at, 8: payment_method,
         # 9: notes, 10: created_by, 11: customer_name, 12: deposit_amount (expected)
-        # 13: manager_comment, 14: damage_fee
+        # 13: manager_comment, 14: damage_fee, 15: order_status
         
         transaction_type = row[1]  # transaction_type
         amount = float(row[3]) if row[3] else 0.0  # amount (index 3)
@@ -74,6 +74,7 @@ async def get_transactions(
         # Використовуємо колонки з таблиці orders замість парсингу з description
         manager_comment = row[13] or ""  # manager_comment з orders
         damage_fee = float(row[14]) if row[14] else 0.0  # damage_fee з orders
+        order_status = row[15] if len(row) > 15 else None  # order status
         
         # Determine debit/credit based on transaction type
         debit = 0.0

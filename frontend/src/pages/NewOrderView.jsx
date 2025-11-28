@@ -279,8 +279,9 @@ export default function NewOrderView() {
   };
 
   // Перевірка конфліктів
-  // ✅ FIXED: checkConflicts function - version 2024-11-28T07:56
+  // ✅ FIXED: checkConflicts function - version 2024-11-28T08:15
   const checkConflicts = async () => {
+    console.log('🔍 [NewOrderView] checkConflicts called - VERSION 2024-11-28T08:15');
     if (!issueDate || !returnDate || items.length === 0) return;
     
     setCheckingConflicts(true);

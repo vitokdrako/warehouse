@@ -549,7 +549,7 @@ export default function CatalogBoard(){
 
   // Get unique categories
   const categories = useMemo(() => {
-    const cats = [...new Set(products.map(p => p.cat))]
+    const cats = [...new Set(products.map(p => p.category_name || p.cat).filter(Boolean))]
     return cats.sort()
   }, [products])
 

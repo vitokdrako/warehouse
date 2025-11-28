@@ -56,12 +56,12 @@ async def get_catalog_items(
     in_restore_dict = {}
     
     if include_reservations:
-        # Резерви (order_items де замовлення заморожені)
+        # Резерви (замовлення на комплектації, готові до видачі, очікують клієнта)
         reserved_result = db.execute(text("""
             SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.order_id
-            WHERE o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
+            WHERE o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
             AND o.rental_end_date >= CURDATE()
             GROUP BY oi.product_id
         """))
@@ -73,6 +73,7 @@ async def get_catalog_items(
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.order_id
             WHERE o.status IN ('issued', 'on_rent')
+            AND o.rental_end_date >= CURDATE()
             GROUP BY oi.product_id
         """))
         in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}

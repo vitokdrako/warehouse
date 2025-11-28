@@ -98,7 +98,7 @@ async def migrate_orders_table_for_event_tool(db = Depends(get_rh_db_sync)):
         
         for field_name, field_type in fields_to_add:
             # Check if column exists
-            check_query = text(f"""
+            check_query = text("""
                 SELECT COUNT(*) 
                 FROM information_schema.COLUMNS 
                 WHERE TABLE_SCHEMA = DATABASE()

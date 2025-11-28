@@ -61,7 +61,7 @@ async def get_archived_orders(
             "rental_start_date": row[4].isoformat() if row[4] else None,
             "rental_end_date": row[5].isoformat() if row[5] else None,
             "status": row[6],
-            "total_amount": float(row[7]) if row[7] else 0.0,
+            "total_price": float(row[7]) if row[7] else 0.0,
             "created_at": row[8].isoformat() if row[8] else None
         })
     

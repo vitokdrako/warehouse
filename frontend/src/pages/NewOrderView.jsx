@@ -77,6 +77,8 @@ export default function NewOrderView() {
           setItems(decorOrder.items || []);
           setIssueDate(issueDate);
           setReturnDate(returnDate);
+          setIssueTime(decorOrder.issue_time || '11:30–12:00');
+          setReturnTime(decorOrder.return_time || 'до 17:00');
           console.log('[NewOrderView] 📅 Встановлено стейт дат:', { issueDate, returnDate });
           setNotes(decorOrder.manager_notes || decorOrder.manager_comment || '');
           setDecorOrderStatus(decorOrder.status);

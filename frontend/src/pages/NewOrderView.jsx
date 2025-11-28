@@ -9,7 +9,7 @@ import { getImageUrl } from '../utils/imageHelper';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 export default function NewOrderView() {
-  console.log('🔄 NewOrderView component loaded - VERSION 2024-11-28-v2');
+  console.log('🔄 NewOrderView component loaded - VERSION 2024-11-28-v3-FINAL - NO checkConflicts function exists!');
   const { id } = useParams();
   const orderId = id;
   const navigate = useNavigate();

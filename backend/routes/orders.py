@@ -273,10 +273,12 @@ async def get_orders(
             count_sql += " AND status = :status"
     if customer_id:
         count_sql += " AND customer_id = :customer_id"
-    if from_date:
-        count_sql += " AND rental_start_date >= :from_date"
-    if to_date:
-        count_sql += " AND rental_end_date <= :to_date"
+    if from_date and to_date:
+        count_sql += " AND (rental_start_date <= :to_date AND rental_end_date >= :from_date)"
+    elif from_date:
+        count_sql += " AND rental_end_date >= :from_date"
+    elif to_date:
+        count_sql += " AND rental_start_date <= :to_date"
     if search:
         count_sql += """ AND (
             order_number LIKE :search OR

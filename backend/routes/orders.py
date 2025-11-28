@@ -1013,10 +1013,11 @@ async def cancel_order_by_client(
             detail=f"Не можна скасувати замовлення зі статусом '{current_status}'. Замовлення вже видано або завершено."
         )
     
-    # Оновити статус на cancelled
+    # Оновити статус на cancelled і автоматично архівувати
     db.execute(text("""
         UPDATE orders 
         SET status = 'cancelled', 
+            is_archived = 1,
             notes = CONCAT(COALESCE(notes, ''), '\n[СКАСОВАНО КЛІЄНТОМ]: ', :reason),
             updated_at = NOW()
         WHERE order_id = :order_id

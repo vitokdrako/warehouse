@@ -1381,7 +1381,7 @@ async def move_to_preparation(
         # Створити фінансові транзакції автоматично
         # Отримати фінансові дані замовлення
         order_financial = db.execute(text("""
-            SELECT total_amount, deposit_amount, total_loss_value, rental_days
+            SELECT total_price, deposit_amount, total_loss_value, rental_days
             FROM orders WHERE order_id = :order_id
         """), {"order_id": order_id}).fetchone()
         

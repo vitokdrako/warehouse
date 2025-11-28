@@ -1427,7 +1427,7 @@ async def get_item_damages(
         
         # Отримати всі записи про пошкодження з історії включаючи фото
         result = db.execute(text("""
-            SELECT id, created_at, actor, notes, order_id, photo_url
+            SELECT id, created_at, created_by as actor, note as notes, order_id, photo_url
             FROM product_damage_history
             WHERE product_id = :pid 
             ORDER BY created_at DESC

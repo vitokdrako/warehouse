@@ -212,12 +212,16 @@ export default function NewOrderView() {
             level = 'warning';
           }
           
-          // Якщо є конфлікт, додати до списку
+          // Якщо є конфлікт, додати до списку з правильним мапінгом полів
           if (conflictType) {
             return {
               ...item,
               type: conflictType,
-              level: level
+              level: level,
+              // Мапінг полів для ConflictsPanel
+              available: item.available_quantity,
+              in_rent: item.reserved_quantity || 0,
+              requested: item.requested_quantity
             };
           }
           return null;

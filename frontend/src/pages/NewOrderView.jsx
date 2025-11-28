@@ -376,6 +376,8 @@ export default function NewOrderView() {
         body: JSON.stringify({
           rental_start_date: issueDate,
           rental_end_date: returnDate,
+          issue_time: issueTime,
+          return_time: returnTime,
           notes: notes,
           rental_days: rentalDays,
           discount: discount,

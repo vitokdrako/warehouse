@@ -1,176 +1,333 @@
 <analysis>**original_problem_statement:**
-The user requested to clone a GitHub repository  and improve the existing rental management system, FarforDecor Rental Hub.
-
-Key requests included:
-1.  Analyze and provide a preview of the full order processing workflow.
-2.  Fix date saving on the Issue Card page and allow same-day rentals.
-3.  Implement and fix product availability checks on the New Order and Issue Card pages.
-4.  Fix the non-functional SKU search on the New Order page.
-5.  Resolve various frontend bugs, including compilation errors and page instability.
-6.  Improve the manager dashboard by adding a Ready for Pickup section and showing all outstanding returns.
-7.  Fix item duplication issues in orders.
-8.  Ensure the entire workflow from Assembly -> Ready for Pickup -> Issued works correctly, with all data (like checklists and item quantities) persisting between states.
+The user's initial goal was to continue enhancing the FarforDecor Rental Hub, starting with refactoring the . The scope quickly expanded to include:
+- Fixing critical bugs like the  500 errors and a broken data synchronization script.
+- Implementing a completely new calendar design with live data.
+- Adding  and  fields to the order process.
+- A major new request emerged: to build a robust, self-hosted image management system to replace the dependency on OpenCart images. This included creating a drag-and-drop upload feature in the Reaudit Cabinet.
+- The user introduced a new, separate Ivent-tool client-facing application and requested guidance on integrating it with the existing admin panel backend.
+- A persistent, recurring JavaScript error () appeared late in the session, blocking further testing and development.
+- The user also requested a fix for incorrect price synchronization from their OpenCart database.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is a full-stack rental management system (React frontend, FastAPI backend, MySQL database). The agent has successfully fixed the login flow, implemented a working SKU search on the New Order page, and resolved a critical, recurring issue of duplicate items being added to orders by enforcing a  constraint in the  database table.
-
-The agent also implemented a full workflow for issue cards:
-1.  A Ready for Pickup column was added to the dashboard.
-2.  The  page logic was fixed to correctly save and load item completion status () and a pre-issuance .
-3.  Backend logic was updated to synchronize the status between  and  tables.
-4.  The Return block on the dashboard was modified to show all issued orders, not just those due today.
-
-However, the Return block is currently not displaying any orders, despite the backend API now providing the correct data.
+The application is a full-stack rental management system (React, FastAPI, MySQL). The critical  and data synchronization issues have been resolved. The system now has a new, fully functional calendar with live data. A new image upload system has been implemented, allowing users to upload high-quality images via a drag-and-drop interface in the Reaudit Cabinet. The backend and frontend have been updated to use these new locally-hosted images as the single source of truth, removing the dependency on OpenCart for images. Price synchronization logic has also been corrected. However, the application is currently blocked by a critical, recurring JavaScript error in the  component, which prevents key order management functionality from working.
 
 **Last working item**:
--   **Last item agent was working:** The agent was debugging why the Return section on the  page remains empty, even though the backend API () was fixed to return orders with an  status. The agent confirmed the API works with  and was adding  statements and a  block to the frontend  call to diagnose why the data is not being rendered.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. The test should involve logging in and verifying that the Return column on the main dashboard () correctly displays cards for all orders that have an  or  status.
--   **User Testing Done:** N
+-   **Last item agent was working:** The agent was attempting to resolve a persistent  in the  component. This error occurs when the user tries to Send to Assembly (Відправити на збір).
+-   **Status:** BLOCKED
+-   **Agent Testing Done:** N (The agent's numerous attempts to fix the issue, including full frontend rebuilds, cache clearing, and code verification, were unsuccessful).
+-   **Which testing method agent to use?** Frontend testing agent. The issue is a JavaScript ReferenceError that persists despite code changes, indicating a potential build, cache, or subtle syntax issue that a fresh testing environment can help identify.
+-   **User Testing Done:** Y (The user has repeatedly confirmed the error persists).
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0)** Return block on the dashboard is empty.
--   **Issue 2: (P1)** The  table is empty (all quantities are zero).
--   **Issue 3: (P2)** Catalog availability check has a .
+-   Issue 1: (P0) Critical Frontend Blocker:  in .
+-   Issue 2: (P1) Recurring SQL Error:  vs  mismatch.
+-   Issue 3: (P2) Cleanup abandoned components and routes.
 
-**Issues Detail:**
--   **Issue 1: Return block on the dashboard is empty**
-    -   **Description:** The dashboard column for Returns does not show any order cards, even for orders that have been marked as issued.
+Issues Detail:
+-   **Issue 1:**
+    -   **Description:** When a user clicks Send to Assembly in an order, the browser console throws . This prevents the order status from being updated.
     -   **Attempted fixes:**
-        1.  The frontend filter in  was changed to show all orders with status  or , not just those due today.
-        2.  The backend API call in  was updated to request the  status.
-        3.  The backend  function in  was fixed to correctly handle multiple statuses by changing the SQL query from  to .
-        4.  The agent confirmed with  that the API now correctly returns orders with  status.
-        5.  The agent was adding more logging to the  call in  to see why the response is not being processed.
+        - Refactoring  to .
+        - Multiple frontend: ERROR (not running)
+frontend: started commands.
+        - Clearing webpack cache ().
+        - Full yarn install v1.22.22
+[1/4] Resolving packages...
+[2/4] Fetching packages...
+[3/4] Linking dependencies...
+[4/4] Building fresh packages...
+success Saved lockfile.
+Done in 0.02s. and frontend rebuild.
+        - Appending a version query string to  script tags to force a cache bust.
+        - The agent identified a **linting error () in  at line 486** but got sidetracked and never fixed it. This is the most likely root cause.
     -   **Next debug checklist:**
-        1.  Examine the browser's Network tab to confirm the  request to  is being sent and that the response body contains the expected order data.
-        2.  Review the browser's console logs for any errors being caught in the new  block or other related warnings.
-        3.  Trace the  hook in  that fetches the data. Log the raw API response and the state right after  is called to ensure the state is being updated correctly.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical dashboard function for managing the lifecycle of rentals.
+        1.  **FIX THE LINTING ERROR FIRST.** View  around line 486 and fix the . This is likely an unclosed JSX tag or a misplaced character.
+        2.  Run yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. again to confirm the parsing error is gone.
+        3.  Perform a full frontend rebuild: frontend: stopped
+yarn run v1.22.22
+$ react-scripts build
+Creating an optimized production build...
+Compiled with warnings.
+
+Failed to parse source map from '/app/frontend/node_modules/src/camera/core-impl.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/camera/core-impl.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/camera/factories.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/camera/factories.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/camera/permissions.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/camera/permissions.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/camera/retriever.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/camera/retriever.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/code-decoder.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/code-decoder.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/core.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/core.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/html5-qrcode-scanner.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/html5-qrcode-scanner.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/html5-qrcode.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/html5-qrcode.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/image-assets.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/image-assets.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/index.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/index.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/native-bar-code-detector.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/native-bar-code-detector.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/state-manager.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/state-manager.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/storage.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/storage.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/strings.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/strings.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/ui.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/ui.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/ui/scanner/base.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/ui/scanner/base.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/ui/scanner/camera-selection-ui.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/ui/scanner/camera-selection-ui.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/ui/scanner/camera-zoom-ui.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/ui/scanner/camera-zoom-ui.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/ui/scanner/file-selection-ui.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/ui/scanner/file-selection-ui.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/ui/scanner/scan-type-selector.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/ui/scanner/scan-type-selector.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/ui/scanner/torch-button.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/ui/scanner/torch-button.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/utils.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/utils.ts'
+
+Failed to parse source map from '/app/frontend/node_modules/src/zxing-html5-qrcode-decoder.ts' file: Error: ENOENT: no such file or directory, open '/app/frontend/node_modules/src/zxing-html5-qrcode-decoder.ts'
+
+[eslint] 
+src/App.tsx
+  Line 1:17:  'useState' is defined but never used           @typescript-eslint/no-unused-vars
+  Line 1:27:  'useEffect' is defined but never used          @typescript-eslint/no-unused-vars
+  Line 2:50:  'Link' is defined but never used               @typescript-eslint/no-unused-vars
+  Line 7:8:   'DashboardHome' is defined but never used      @typescript-eslint/no-unused-vars
+  Line 8:8:   'Dashboard' is defined but never used          @typescript-eslint/no-unused-vars
+  Line 42:9:  'navigate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+src/hooks/use-toast.js
+  Line 8:7:   'actionTypes' is assigned a value but never used  no-unused-vars
+  Line 41:3:  Expected a default case                           default-case
+
+src/pages/AdminPanel.tsx
+  Line 72:6:   React Hook useEffect has missing dependencies: 'loadCategories' and 'loadUsers'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 222:9:  'getCategoryName' is assigned a value but never used                                                                                 @typescript-eslint/no-unused-vars
+
+src/pages/DamageCabinet.tsx
+  Line 138:6:   React Hook useEffect has a missing dependency: 'loadCases'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 451:23:  'fromDeposit' is assigned a value but never used                                                              @typescript-eslint/no-unused-vars
+
+src/pages/ExtendedCatalog.tsx
+  Line 5:7:    'fmtUA' is assigned a value but never used                                                                             @typescript-eslint/no-unused-vars
+  Line 598:6:  React Hook useEffect has a missing dependency: 'loadProducts'. Either include it or remove the dependency array        react-hooks/exhaustive-deps
+  Line 604:6:  React Hook useEffect has a missing dependency: 'loadProductDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/IssueCard.jsx
+  Line 7:10:    'DAMAGE_RULES' is defined but never used                                                                      no-unused-vars
+  Line 7:24:    'defaultFeeFor' is defined but never used                                                                     no-unused-vars
+  Line 670:13:  'qrData' is assigned a value but never used                                                                   no-unused-vars
+  Line 748:5:   React Hook useEffect has a missing dependency: 'loadOrder'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/PackingCabinet.tsx
+  Line 399:6:  React Hook useEffect has a missing dependency: 'loadOrders'. Either include it or remove the dependency array        react-hooks/exhaustive-deps
+  Line 405:6:  React Hook useEffect has a missing dependency: 'loadOrderDetails'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/ReauditCabinetFull.tsx
+  Line 6:7:    'todayISO' is assigned a value but never used                                                                                                      @typescript-eslint/no-unused-vars
+  Line 247:6:  React Hook useEffect has missing dependencies: 'loadCategories', 'loadItems', and 'loadStats'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 254:6:  React Hook useEffect has missing dependencies: 'loadDamages' and 'loadRentalHistory'. Either include them or remove the dependency array           react-hooks/exhaustive-deps
+  Line 468:9:  'markZoneAsAudited' is assigned a value but never used                                                                                             @typescript-eslint/no-unused-vars
+  Line 511:9:  'totalProfit' is assigned a value but never used                                                                                                   @typescript-eslint/no-unused-vars
+
+src/pages/TasksCabinet.tsx
+  Line 117:10:  'loading' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  Line 127:25:  'setPrefilledData' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  Line 201:9:   'formatDate' is assigned a value but never used        @typescript-eslint/no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  292.72 kB  build/static/js/main.8af8ada7.js
+  14.9 kB    build/static/css/main.83f91081.css
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  yarn global add serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment
+
+Done in 46.75s.
+frontend: ERROR (already started).
+        4.  Use the  tool to test the Send to Assembly functionality on an existing order. Check the browser console logs in the screenshot output for the error.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a CRITICAL blocker. The main workflow of processing an order is broken. Fixing it will restore core application functionality.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** frontend
+    -   **Blocked on other issue:** None
 
--   **Issue 2: The  table has no quantities.**
-    -   **Description:** (From previous handoff) The  table contains no quantity data. This means availability checks are only based on existing reservations and do not account for the total stock, making them potentially inaccurate.
-    -   **Attempted fixes:** None. The issue has only been identified.
+-   **Issue 2:**
+    -   **Description:** The agent has fixed multiple SQL errors where queries referenced a non-existent  column instead of . This error appeared in , , and . It's likely there are other instances.
+    -   **Attempted fixes:** The agent fixed instances as they were found.
     -   **Next debug checklist:**
-        1.  Ask the user how inventory quantities are supposed to be populated. Is there an existing script or an external system (like OpenCart) that should be the source of truth?
-        2.  If no automated process exists, propose creating a simple UI for manual inventory management.
-    -   **Why fix this issue and what will be achieved with the fix?** To enable fully accurate stock availability checks and prevent overbooking.
+        1.  Perform a global search for  across the entire  directory.
+        2.  Review each found instance. If it's in a raw SQL query, it must be changed to . If it's a Pydantic model or Python variable, trace its origin to ensure it's not being incorrectly populated from a bad query.
+    -   **Why fix this issue and what will be achieved with the fix?** Prevents future  responses and ensures data consistency.
     -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on other issue:** None
 
--   **Issue 3: Catalog availability check has a **
-    -   **Description:** The agent discovered that the backend endpoint for the main catalog ( in ) has a hardcoded  for calculating reservations (). It does not perform a real availability check.
+-   **Issue 3:**
+    -   **Description:** The agent created a new page  and added a route and a navigation link for it, but then abandoned this approach in favor of adding the upload functionality directly into .
     -   **Attempted fixes:** None.
     -   **Next debug checklist:**
-        1.  Update the  function in .
-        2.  Incorporate the same reservation-checking logic that was built for the  endpoint to provide accurate availability data in the catalog view.
-    -   **Why fix this issue and what will be achieved with the fix?** This will provide users with accurate availability information when browsing the main product catalog.
+        1.  Remove the link to  from .
+        2.  Remove the route for  from .
+        3.  Delete the unused file .
+    -   **Why fix this issue and what will be achieved with the fix?** Code hygiene. Removes dead code and prevents confusion.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend
+    -   **Should Test frontend/backend/both after fix?** frontend
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   There are no specific feature tasks in progress; the current focus is on resolving the pending issues above.
+-   **Task 1:** (P1) Finalize  Integration Plan
+    -   **Description:** The user wants to use a single backend for both the admin panel and the new  client site. The agent has analyzed the  repository and needs to provide a concrete plan.
+    -   **Where to resume:** Provide the user with a checklist for what needs to be added to the main backend to support , based on the analysis of the  backend code (e.g., specific order creation fields, client registration, etc.). A new endpoint  has already been scaffolded.
+    -   **What will be achieved with this?** A clear path for unifying the backend and enabling the development of the new client-facing website.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on something:** Blocked by **Issue 1**, as the core order logic is currently broken.
 
 **Upcoming and Future Tasks**
--   **P1: Refactor  and :** These components have been unstable and prone to bugs related to state management. A refactoring pass to simplify  hooks and state logic would improve stability.
--   **P2: Implement date editing on :** This was an original user request that has been postponed due to the instability of the page.
+-   **Upcoming Tasks:**
+    -   **P1: Integrate CallBell for Communications:** Use the  agent to get a playbook for the CallBell API key provided by the user.
+    -   **P2: Implement Drag & Drop Backend Logic for Calendar:** The new calendar frontend allows dragging events, but the changes are not saved to the backend. An API endpoint is needed to update the event's date/time.
+    -   **P3: Implement Report Exports:** Develop functionality to export financial and damage history reports as CSV or PDF.
+-   **Future Tasks:**
+    -   **P4: Refactor and Remove Old Calendar:** Once the new calendar is fully user-verified, remove the old  and its  route.
 
 **Completed work in this session**
--   **Systemic Bug Fixes:**
-    -   **Duplicate Items:** Fixed a critical bug causing duplicate  by deleting over 59 groups of duplicates and adding a  constraint to the database table to prevent recurrence.
-    -   **Status Synchronization:** Corrected the logic so that changing an  status (e.g., to 'ready' or 'issued') also updates the corresponding  field in the database.
--   **Full Workflow Implementation (Assembly -> Ready -> Issued):**
-    -   **Dashboard:** Added a ✅ Готові до видачі (Ready for Pickup) column to .
-    -   **State Persistence:** Fixed  to correctly save and load the  and  (item completion count) when marking a card as ready. Added  and  columns to the  table.
-    -   **UI/UX:** Corrected the item counter on  to show both positions and units. Implemented navigation back to the dashboard after actions. Ensured buttons () are correctly enabled/disabled based on the card's state.
--   **Login & Environment:**
-    -   Resolved Invalid Host header error by creating and configuring .
-    -   Fixed all backend login errors (, ) by setting up  with correct DB credentials, resetting the user password, and fixing incorrect API paths.
-    -   Fixed post-login redirect issues by correcting  to work with the dev server proxy.
+-   **Image Management Overhaul (DONE):**
+    -   Created a backend endpoint () and  directory for self-hosting images.
+    -   Added a drag-and-drop image upload component () to the  page.
+    -   Refactored  and  to make the  directory the single source of truth for images, completely removing the dependency on OpenCart URLs.
+-   **Critical Bug Fixes (DONE):**
+    -   Fixed the critical  500 errors by pointing it to a working image source.
+    -   Fixed the data synchronization script () by using the correct Python executable path (), allowing product data to be synced from OpenCart.
+-   **Price Sync Logic (DONE):**
+    -   Corrected the price synchronization logic in  to map OpenCart  to  (retail) and OpenCart  to .
+    -   Created and ran a script () to correct prices for recently synced items.
+-   **Database Migration & Feature Restoration (DONE):**
+    -   Successfully added  and  columns to the  table.
+    -   Restored the functionality in the Finance Cabinet to correctly display this information.
+-   **New Calendar (DONE):**
+    -   Verified that the new calendar at  is fully functional and correctly displays live data from the backend.
+-   **Backend Stability (IMPROVED):**
+    -   Fixed multiple s by replacing  with  in SQL queries in , , and .
 
 **Earlier issues found/mentioned but not fixed**
--   Same as the **All Pending/In progress Issue list**.
+-   **Issue 1: Recurring SQL column name error ()**
+    -   **Debug checklist:** Grep the entire  folder for the string  and inspect every raw SQL query that uses it.
+    -   **Why to solve this issue and what will be achieved with this?** Prevents random 500 Internal Server Errors on different pages.
+    -   **Should Test frontend/backend/both after fix:** backend
+    -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
--   The general instability of  (hanging on load, state not updating) was a recurring theme from the previous fork. While many specific bugs causing this were fixed, the component remains complex and fragile.
+-   None.
 
 **Code Architecture**
--   : React application.
--   : FastAPI application.
--   : The original, unmodified clone of the repository for reference.
+-   **Frontend:**  (React, Vite, TypeScript)
+-   **Backend:**  (FastAPI, Python, SQLAlchemy)
+-   **Database:** MySQL
+-   **Key New/Modified Components:**
+    -   : **(CRITICAL/BROKEN)** Contains the blocking JS error.
+    -   : Modified to include the new image upload component.
+    -   : New reusable component for drag-and-drop file uploads.
+    -   : Rewritten to use the new  path as the single source of truth.
+    -   : New route for handling image uploads.
+    -   : Rewritten to only serve images from the local  directory.
+    -   : Logic for price synchronization fixed.
 
 **Key Technical Concepts**
--   **Frontend:** React, React Hooks (, , ), Tailwind CSS.
--   **Backend:** FastAPI, Python, SQLAlchemy.
--   **Database:** MySQL.
--   **Architecture:** REST API connecting the frontend and backend.
+-   **Full Stack App:** React, FastAPI, MySQL.
+-   **JS Debugging:** The main blocker is a persistent  that seems related to webpack/browser caching or a subtle syntax error.
+-   **File Uploads:** Implemented file uploads with FastAPI () and a drag-and-drop React component.
+-   **Database Schema:** The agent is working with a MySQL database and has had to fix several schema mismatches between the code and the actual database state.
 
 **key DB schema**
--   :  (PK),  (varchar), , .
--   : uid=0(root) gid=0(root) groups=0(root) (PK), , , . **Has a UNIQUE constraint on **.
--   : uid=0(root) gid=0(root) groups=0(root) (PK), ,  (varchar),  (JSON),  (TEXT).
--   :  (PK), , .
--   : uid=0(root) gid=0(root) groups=0(root) (varchar, sku),  (int). (This table remains unpopulated).
+-   ****: Contains  (TEXT),  (DECIMAL), and  (DECIMAL). ** does not exist.**
+-   ****: Contains  (retail price, from OpenCart ) and  (rental price, from OpenCart ).
 
 **changes in tech stack**
--   None.
+-    was added to the backend dependencies for image processing.
 
 **All files**
--   : Major changes to fix multi-status filtering (), implement an accurate availability check (), and prevent duplicate items.
--   : Major changes to add support for saving/loading  and , and to synchronize the status with the  table.
--   : Modified to add a Ready for Pickup column, change the logic for the Return column, and fix the API call to request multiple statuses.
--   : Heavily modified to implement the full assembly-to-issue workflow, fixing state persistence for  and , and correcting button/UI logic.
--    & : SKU search functionality was fixed and implemented.
--   , : Created and configured.
+-   **Created:**
+    -   : Handles image upload logic.
+    -   : The reusable drag-and-drop upload UI component.
+    -   : Scaffolding for  API endpoints.
+    -   : One-off script to correct historical price data.
+    -   : **(UNUSED)** Should be deleted.
+-   **Significantly Updated:**
+    -   : **(BROKEN)** Multiple attempts to fix a .
+    -   : Integrated the new image upload component.
+    -   : Logic completely changed to prioritize local uploads.
+    -   : Logic completely changed to serve local uploads only.
+    -   : Price mapping logic was corrected.
+    -   , , : Fixed SQL queries referencing a non-existent  column.
+    -   : Added new routers for  and .
 
 **Areas that need refactoring**:
--    and  are very large and complex components with multiple  hooks and state variables. They are the source of most bugs and instability and would benefit from being broken down into smaller, more manageable sub-components or using a more robust state management pattern.
+-   The files and routes related to  should be removed as this component was abandoned.
 
 **key api endpoints**
--   : Checks product availability against reservations for a given date range. (Working correctly).
--   : Fetches orders with given statuses. (Backend fixed, but frontend not displaying results).
--   : Updates an issue card, now supports saving  and .
--   : Fetches an issue card, now returns the saved .
--   : Searches for a product by SKU. (Working).
+-   : The new endpoint for uploading product images.
+-   : The new endpoint for serving uploaded images.
+-   : A new scaffolded endpoint for the  integration.
 
 **Critical Info for New Agent**
--   A  constraint was added to the  table. This was a critical fix to stop recurring data duplication bugs. The root cause in the frontend was likely double-clicks or state issues, but the DB constraint is the definitive solution.
--   The application uses string-based statuses in the  table (e.g., , , ). The frontend was updated to check against these strings, not a numeric .
--   The  table remains empty. All availability checks are based on reservations, not on total stock levels. This is a known limitation.
+-   **Fix the Linting Error**: The top priority is fixing the . The previous agent found a  in  (line 486) but failed to act on it. This is almost certainly the root cause of the broken component and the subsequent JS error. **Do not get distracted by cache clearing; fix the parsing error first.**
+-   **Image Source of Truth:** The application has been fully migrated to a self-hosted image system. All images are now stored in  and served via the  endpoint. The dependency on OpenCart for images is gone.
+-   **Database is MySQL:** The user asked about MongoDB, but it is not used. All data is in MySQL, which is accessed via two separate connections ( for OpenCart,  for the app's own tables).
 
 **documents created in this job**
--   None.
+-   
 
 **Last 5 User Messages and any pending user messages**
-1.  **User:** Now Ive issued an order, the dashboard should display all return cards, not just for today." (Request to change dashboard logic)
-2.  **User:** "There should be several return cards on the dashboard, but there are none." (Reporting the bug that the "Return" block is empty)
-3.  **User:** (Sends screenshot) "Now lets find what the return card looks like because the card body is missing. (Pointing out that the  component might be missing, which led the agent to debug the empty Return block).
-4.  **User:** (Sends screenshot showing an error) error. (This was the  error, which the agent fixed).
-5.  **User:** Okay, so now when I click ready for pickup on the assembly card, all the info is saved, the button changes to issue, and it goes to the ready for pickup column, while I return to the dashboard. On the dashboard, when I open a card that is ready for pickup, I should see the previously saved data with the issue button active. Not everything is working right now. (Detailed description of the expected workflow and reporting a bug where state wasn't persisting).
+1.  **User:** Reports Send to Assembly is not working and shows an error. (Status: **UNRESOLVED**)
+2.  **User:** Reports a  error again, even after a rebuild. (Status: **UNRESOLVED**)
+3.  **User:** Shares a ChatGPT analysis confirming the  error is a frontend . (Status: **ADDRESSED**, agent confirmed understanding).
+4.  **User:** Reports the same error again and asks the agent to check this rule. (Status: **UNRESOLVED**)
+5.  **User:** Asks the agent to rebuild the frontend again as the error persists. (Status: **ADDRESSED**, agent performed a full rebuild).
 
 **Project Health Check:**
 -   **Broken:**
-    -   : The Return block is not displaying any data, despite the backing API now working correctly. This is the highest priority bug.
+    -   : The core functionality of moving an order to the next status is completely broken due to the  JavaScript error.
 -   **Mocked:**
-    -   **Product Availability:** The logic is structurally present, but because the  table has all quantities as 0, the total and available numbers are not fully accurate. It only accounts for reservations against an assumed infinite stock.
+    -   None.
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
--   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Troubleshoot agent used after agent stuck in loop:** YES (Used to identify DB schema mismatch issues).
 -   **Test files created:** None
--   **Known regressions:** None in this session; many regressions from the previous state were fixed.
+-   **Known regressions:** The Send to Assembly functionality in  was working at some point but is now broken.
 
 **Credentials to test flow:**
 -   **Username:** 
 -   **Password:** 
 
 **What agent forgot to execute**
--   The agent did not fully resolve the issue of the Return block on the dashboard being empty. While the backend API was fixed, the debugging of the frontend component () was left incomplete. The next agent needs to pick this up immediately.</analysis>
+-   **Fix a known parsing error:** The agent found a critical  in  using the lint tool but never addressed it, instead getting stuck in a loop of trying to fix the resulting  via cache clearing and restarts. This is the most critical oversight.
+-   **Clean up abandoned code:** The agent created, routed, and then abandoned the  page without removing the dead code.</analysis>

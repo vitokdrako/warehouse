@@ -186,7 +186,7 @@ async def get_order_full_history(
             "rental_start_date": order_row[5].isoformat() if order_row[5] else None,
             "rental_end_date": order_row[6].isoformat() if order_row[6] else None,
             "status": order_row[7],
-            "total_amount": float(order_row[8]) if order_row[8] else 0.0,
+            "total_price": float(order_row[8]) if order_row[8] else 0.0,
             "deposit_amount": float(order_row[9]) if order_row[9] else 0.0,
             "created_at": order_row[10].isoformat() if order_row[10] else None
         },

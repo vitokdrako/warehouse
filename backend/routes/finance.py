@@ -89,6 +89,9 @@ async def get_transactions(
         elif transaction_type in ['deposit_release', 'deposit_writeoff']:
             # These reduce held amount
             pass
+        elif transaction_type == 'refund':
+            # Refund - повернення оплати (зворотна транзакція payment)
+            debit = amount  # Зменшуємо кредит (повертаємо те що було оплачено)
         
         transactions.append({
             "id": row[0],

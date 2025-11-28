@@ -608,7 +608,7 @@ export default function CatalogBoard(){
       alert(`✅ ${selectedProducts.length} товарів прив'язано до набору!`)
       setSelectedProducts([])
       // Перезавантажити товари та набори
-      const loadRes = await fetch(`${BACKEND_URL}/api/catalog`)
+      const loadRes = await fetch(`${BACKEND_URL}/api/catalog?include_reservations=true`)
       const productsData = await loadRes.json()
       setProducts(productsData)
       await openFamilyManager()
@@ -628,7 +628,7 @@ export default function CatalogBoard(){
       if (!res.ok) throw new Error('Failed to remove product')
       alert('✅ Товар видалено з набору!')
       // Перезавантажити товари та набори
-      const loadRes = await fetch(`${BACKEND_URL}/api/catalog`)
+      const loadRes = await fetch(`${BACKEND_URL}/api/catalog?include_reservations=true`)
       const productsData = await loadRes.json()
       setProducts(productsData)
       await openFamilyManager()

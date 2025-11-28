@@ -1341,14 +1341,14 @@ async def add_damage_during_audit(
         
         db.execute(text("""
             INSERT INTO product_damage_history 
-            (id, product_id, event_type, actor, order_id, notes, photo_url, created_at)
-            VALUES (:id, :product_id, 'damage_opened', :actor, :order_id, :notes, :photo_url, NOW())
+            (id, product_id, created_by, order_id, note, photo_url, created_at)
+            VALUES (:id, :product_id, :created_by, :order_id, :note, :photo_url, NOW())
         """), {
             'id': history_id,
             'product_id': product_id,
-            'actor': data.get('actor', 'Реквізитор'),
+            'created_by': data.get('actor', 'Реквізитор'),
             'order_id': order_id,
-            'notes': f"Пошкодження ({severity}): {damage_description}",
+            'note': f"Пошкодження ({severity}): {damage_description}",
             'photo_url': photo_url
         })
         

@@ -540,7 +540,7 @@ export default function CalendarBoardNew() {
   const handleUpdateItem = async (item, newDate, newLane, newTimeSlot) => {
     console.log('Update item:', { item, newDate, newLane, newTimeSlot })
     
-    // Update local state
+    // Update local state immediately for better UX
     setItems((prev) =>
       prev.map((i) =>
         i.id === item.id
@@ -549,8 +549,35 @@ export default function CalendarBoardNew() {
       )
     )
 
-    // TODO: Update backend
-    // await axios.put(`${BACKEND_URL}/api/orders/${item.orderData.order_id}`, { ... })
+    // Update backend
+    try {
+      // Only update for orders (issue and return lanes)
+      if (item.orderData && (newLane === 'issue' || newLane === 'return')) {
+        const orderId = item.orderData.order_id || item.orderData.id
+        
+        await axios.put(
+          `${BACKEND_URL}/api/orders/${orderId}/calendar-update`,
+          {
+            lane: newLane,
+            date: newDate,
+            timeSlot: newTimeSlot
+          }
+        )
+        
+        console.log('✅ Backend updated successfully')
+      }
+    } catch (err) {
+      console.error('Failed to update backend:', err)
+      // Revert local state on error
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? { ...i, date: item.date, lane: item.lane, timeSlot: item.timeSlot }
+            : i
+        )
+      )
+      alert('Помилка при оновленні. Спробуйте ще раз.')
+    }
   }
 
   const handleOpenDetails = (item) => {

@@ -638,6 +638,27 @@ export default function FinanceCabinet(){
     }
   }
 
+  const refund = async (orderId, amount)=>{
+    try {
+      await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
+        order_id: orderId,
+        transaction_type: 'refund',
+        amount: Number(amount),
+        currency: 'UAH',
+        status: 'completed',
+        description: 'Повернення коштів (скасоване замовлення)',
+        notes: `Повернено ₴${amount} через скасування замовлення`
+      })
+      
+      await loadTransactions()
+      alert(`✅ Повернено ₴${amount} клієнту!`)
+    } catch(e){
+      console.error('Error refund:', e)
+      alert('Помилка при поверненні коштів')
+    }
+  }
+
+
   const addDamage = async (orderId, dmg)=>{
     try {
       await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {

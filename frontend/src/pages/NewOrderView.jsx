@@ -1056,17 +1056,7 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
   };
   
   const handleMoveToPreparation = async () => {
-    // Перевірити чи є критичні конфлікти (вони вже перевірені автоматично)
-    const criticalConflicts = conflicts.filter(c => c.level === 'error');
-    if (criticalConflicts.length > 0) {
-      const conflictList = criticalConflicts.map(c => 
-        `• ${c.sku || c.article} (${c.name}): потрібно ${c.total_quantity}, доступно ${c.available_quantity}`
-      ).join('\n');
-      
-      alert(`❌ Неможливо відправити на збір!\n\nЗнайдено конфлікти наявності:\n${conflictList}\n\n` +
-            `Будь ласка, вирішіть конфлікти (змініть дати або кількість) і збережіть зміни.`);
-      return;
-    }
+    console.log('[MOVE TO PREP] Starting without conflict check...');
     
     if (!confirm('Відправити замовлення на збір? Комірники зможуть почати збирати товари.')) {
       return;

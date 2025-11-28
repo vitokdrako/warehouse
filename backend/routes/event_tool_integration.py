@@ -211,7 +211,7 @@ async def convert_event_board_to_order(
             INSERT INTO orders (
                 order_id, order_number, customer_id, customer_name, phone, email,
                 issue_date, return_date, rental_days,
-                total_amount, deposit_amount, discount,
+                total_price, deposit_amount, discount,
                 status, source, event_board_id,
                 delivery_address, city, delivery_type,
                 customer_comment, event_type, guest_count,
@@ -219,7 +219,7 @@ async def convert_event_board_to_order(
             ) VALUES (
                 :order_id, :order_number, :customer_id, :customer_name, :phone, :email,
                 :issue_date, :return_date, :rental_days,
-                :total_amount, :deposit_amount, :discount,
+                :total_price, :deposit_amount, :discount,
                 'pending', 'event_tool', :event_board_id,
                 :delivery_address, :city, :delivery_type,
                 :customer_comment, :event_type, :guest_count,

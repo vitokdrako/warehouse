@@ -774,6 +774,7 @@ export default function FinanceCabinet(){
                     onWriteoff={writeoff}
                     onReleaseDeposit={releaseDeposit}
                     onAddDamage={addDamage}
+                    onRefund={refund}
                     onCollapse={()=>setExpandedOrderId(null)}
                     onDelete={deleteOrder}
                   />

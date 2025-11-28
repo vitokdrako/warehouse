@@ -925,7 +925,6 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
             <th className="px-3 py-2 text-right font-medium">Ціна/д</th>
             <th className="px-3 py-2 text-right font-medium">Збиток</th>
             <th className="px-3 py-2 text-right font-medium">Кількість</th>
-            <th className="px-3 py-2 text-center font-medium">Наявність</th>
             <th className="px-3 py-2"></th>
           </tr>
         </thead>

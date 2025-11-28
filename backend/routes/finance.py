@@ -208,6 +208,9 @@ async def create_transaction(
     """
     transaction_id = str(uuid.uuid4())
     
+    order_id = data.get('order_id')
+    transaction_type = data.get('transaction_type', 'payment')
+    
     db.execute(text("""
         INSERT INTO finance_transactions (
             id, order_id, transaction_type, amount, currency, status, 
@@ -218,8 +221,8 @@ async def create_transaction(
         )
     """), {
         "id": transaction_id,
-        "order_id": data.get('order_id'),
-        "type": data.get('transaction_type', 'payment'),
+        "order_id": order_id,
+        "type": transaction_type,
         "amount": data.get('amount', 0),
         "currency": data.get('currency', 'UAH'),
         "status": data.get('status', 'pending'),
@@ -228,6 +231,31 @@ async def create_transaction(
         "notes": data.get('notes'),
         "created_by": data.get('created_by', 'Manager')
     })
+    
+    # Якщо це повернення застави - архівуємо замовлення автоматично
+    if transaction_type == 'deposit_release' and order_id:
+        # Перевірити чи залишився холд
+        held_check = db.execute(text("""
+            SELECT 
+                COALESCE(SUM(CASE WHEN transaction_type = 'deposit_hold' THEN amount ELSE 0 END), 0) -
+                COALESCE(SUM(CASE WHEN transaction_type IN ('deposit_release', 'deposit_writeoff') THEN amount ELSE 0 END), 0) as held
+            FROM finance_transactions
+            WHERE order_id = :order_id
+        """), {"order_id": order_id}).scalar()
+        
+        # Якщо холду не залишилось - архівуємо
+        if held_check <= 0:
+            db.execute(text("""
+                UPDATE orders 
+                SET is_archived = 1, updated_at = NOW()
+                WHERE order_id = :order_id AND is_archived = 0
+            """), {"order_id": order_id})
+            
+            # Додати запис в lifecycle
+            db.execute(text("""
+                INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+                VALUES (:order_id, 'auto_archived', 'Автоматично архівовано (заставу повернуто)', 'System', NOW())
+            """), {"order_id": order_id})
     
     db.commit()
     return {"message": "Transaction created", "transaction_id": transaction_id}

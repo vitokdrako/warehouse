@@ -1022,7 +1022,7 @@ async def get_product_history(
 @router.get("/items/{item_id}/rental-history")
 async def get_rental_history(
     item_id: str,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Отримати історію оренд товару з OpenCart таблиць

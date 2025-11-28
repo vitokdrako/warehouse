@@ -245,7 +245,7 @@ def migrate_orders():
             INSERT INTO orders (
                 order_id, order_number, customer_name, customer_phone, 
                 customer_email, event_date, rental_start_date, 
-                rental_end_date, rental_days, total_amount, 
+                rental_end_date, rental_days, total_price, 
                 deposit_amount, status, created_at, synced_at
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())

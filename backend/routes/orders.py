@@ -336,7 +336,7 @@ async def get_order_details(
         SELECT 
             order_id, order_number, customer_id, customer_name, 
             customer_phone, customer_email, rental_start_date, rental_end_date,
-            status, total_amount, deposit_amount, total_loss_value, rental_days, notes, created_at
+            status, total_price, deposit_amount, total_loss_value, rental_days, notes, created_at
         FROM orders
         WHERE order_id = :order_id
     """), {"order_id": order_id})

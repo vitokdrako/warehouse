@@ -114,6 +114,10 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
   const refunded = orderRows.filter(r => r.type === 'refund').reduce((s,r)=>s+(r.debit||0),0)
   const isRefunded = refunded > 0
   
+  // Чи були повернуті застави
+  const depositReleased = orderRows.filter(r => r.type === 'deposit_release').reduce((s,r)=>s+(r.amount||0),0)
+  const isDepositReturned = depositReleased > 0 && held === 0
+  
   // Дані про пошкодження з замовлення (з orders таблиці)
   const orderDamageInfo = useMemo(() => {
     if (orderRows.length === 0) return { damage_fee: 0, manager_notes: '' }

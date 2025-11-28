@@ -1428,9 +1428,8 @@ async def get_item_damages(
         # Отримати всі записи про пошкодження з історії включаючи фото
         result = db.execute(text("""
             SELECT id, created_at, actor, notes, order_id, photo_url
-            FROM decor_product_history
+            FROM product_damage_history
             WHERE product_id = :pid 
-            AND event_type IN ('damage_noted', 'damage_opened')
             ORDER BY created_at DESC
         """), {'pid': product_id})
         

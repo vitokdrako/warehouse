@@ -931,7 +931,7 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
         <tbody className="divide-y divide-slate-200">
           {items.length === 0 && (
             <tr>
-              <td colSpan={8} className="px-3 py-6 text-center text-slate-500">
+              <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
                 Додайте товари через пошук вище
               </td>
             </tr>

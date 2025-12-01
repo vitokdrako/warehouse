@@ -1176,13 +1176,23 @@ export default function CalendarBoardNew() {
         </div>
       </div>
 
-      {/* Тільки тижневий вигляд з нескінченним скролом */}
-      <WeekView
-        baseDate={baseDate}
-        items={filteredItems}
-        onOpen={handleOpenDetails}
-        onUpdateItem={handleUpdateItem}
-      />
+      {/* Main View */}
+      {view === 'day' && (
+        <DayView
+          date={baseDate}
+          items={filteredItems}
+          onOpen={handleOpenDetails}
+          onUpdateItem={handleUpdateItem}
+        />
+      )}
+      {view === 'week' && (
+        <WeekView
+          baseDate={baseDate}
+          items={filteredItems}
+          onOpen={handleOpenDetails}
+          onUpdateItem={handleUpdateItem}
+        />
+      )}
     </div>
   )
 }

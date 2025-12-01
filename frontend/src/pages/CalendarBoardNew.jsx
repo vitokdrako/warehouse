@@ -321,21 +321,48 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
 
 /************* Month View *************/
 function MonthView({ baseDate, items, onDateClick }) {
-  const monthDates = useMemo(() => {
+  const scrollRef = React.useRef(null)
+  const [touchStart, setTouchStart] = React.useState(0)
+  const [touchEnd, setTouchEnd] = React.useState(0)
+
+  // Генеруємо тижні для горизонтального скролу (попередній, поточний, наступний місяць)
+  const allWeeks = useMemo(() => {
+    const weeks = []
+    
+    // Попередній місяць (останній тиждень)
+    const prevMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() - 1, 1)
+    const prevMonthEnd = endOfMonth(prevMonth)
+    const prevWeekStart = startOfWeek(prevMonthEnd)
+    const prevWeek = []
+    for (let i = 0; i < 7; i++) {
+      prevWeek.push(addDays(prevWeekStart, i))
+    }
+    weeks.push({ id: 'prev', dates: prevWeek, month: prevMonth })
+    
+    // Поточний місяць (всі тижні)
     const start = startOfMonth(baseDate)
     const end = endOfMonth(baseDate)
-    const dates = []
-    
-    // Get start of week for first day
     let current = startOfWeek(start)
     
-    // Fill calendar grid (6 weeks)
-    for (let i = 0; i < 42; i++) {
-      dates.push(new Date(current))
-      current = addDays(current, 1)
+    while (current <= end) {
+      const week = []
+      for (let i = 0; i < 7; i++) {
+        week.push(new Date(current))
+        current = addDays(current, 1)
+      }
+      weeks.push({ id: `current-${weeks.length}`, dates: week, month: baseDate })
     }
     
-    return dates
+    // Наступний місяць (перший тиждень)
+    const nextMonth = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 1)
+    const nextWeekStart = startOfWeek(nextMonth)
+    const nextWeek = []
+    for (let i = 0; i < 7; i++) {
+      nextWeek.push(addDays(nextWeekStart, i))
+    }
+    weeks.push({ id: 'next', dates: nextWeek, month: nextMonth })
+    
+    return weeks
   }, [baseDate])
 
   const currentMonth = baseDate.getMonth()
@@ -352,46 +379,149 @@ function MonthView({ baseDate, items, onDateClick }) {
     }
   }
 
+  // Touch handlers для свайпу
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe) {
+      // Свайп вліво - наступний тиждень/місяць
+      if (scrollRef.current) {
+        scrollRef.current.scrollBy({ left: 300, behavior: 'smooth' })
+      }
+    }
+
+    if (isRightSwipe) {
+      // Свайп вправо - попередній тиждень/місяць
+      if (scrollRef.current) {
+        scrollRef.current.scrollBy({ left: -300, behavior: 'smooth' })
+      }
+    }
+
+    setTouchStart(0)
+    setTouchEnd(0)
+  }
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
       {/* Weekday headers */}
-      <div className="grid grid-cols-7 gap-2 mb-2 text-[10px] font-semibold text-slate-500">
+      <div className="grid grid-cols-7 gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
         {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].map((day) => (
-          <div key={day} className="text-center">{day}</div>
+          <div key={day} className="text-center text-[10px] font-semibold text-slate-500">{day}</div>
         ))}
       </div>
 
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-2">
-        {monthDates.map((date) => {
-          const counts = getCounts(date)
-          const isCurrentMonth = date.getMonth() === currentMonth
-          const isToday = toISO(date) === toISO(new Date())
-
-          return (
-            <button
-              key={toISO(date)}
-              onClick={() => onDateClick(date)}
-              className={cls(
-                'min-h-[80px] rounded-xl border p-2 text-left transition hover:shadow',
-                isCurrentMonth ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-100',
-                isToday && 'ring-2 ring-blue-500'
-              )}
+      {/* Горизонтальний скрол з тижнями */}
+      <div 
+        ref={scrollRef}
+        className="overflow-x-auto overflow-y-hidden scroll-smooth hide-scrollbar"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ 
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
+        <div className="flex">
+          {allWeeks.map((week, weekIndex) => (
+            <div 
+              key={week.id}
+              className="flex-shrink-0 w-full p-3"
+              style={{ scrollSnapAlign: 'start' }}
             >
-              <div className={cls('text-sm font-semibold mb-1', isCurrentMonth ? 'text-slate-900' : 'text-slate-400')}>
-                {date.getDate()}
+              {/* Назва місяця тижня */}
+              <div className="text-xs font-semibold text-slate-600 mb-2 text-center">
+                {week.dates[3].toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' })}
               </div>
-              {counts.total > 0 && (
-                <div className="space-y-0.5 text-[9px]">
-                  {counts.issue > 0 && <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span>{counts.issue}</div>}
-                  {counts.return > 0 && <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-sky-500"></span>{counts.return}</div>}
-                  {counts.task > 0 && <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-violet-500"></span>{counts.task}</div>}
-                  {counts.damage > 0 && <div className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500"></span>{counts.damage}</div>}
-                </div>
-              )}
-            </button>
-          )
-        })}
+              
+              {/* Тиждень */}
+              <div className="grid grid-cols-7 gap-2">
+                {week.dates.map((date) => {
+                  const counts = getCounts(date)
+                  const isCurrentMonth = date.getMonth() === currentMonth
+                  const isToday = toISO(date) === toISO(new Date())
+
+                  return (
+                    <button
+                      key={toISO(date)}
+                      onClick={() => onDateClick(date)}
+                      className={cls(
+                        'min-h-[100px] rounded-xl border p-2 text-left transition hover:shadow hover:scale-105',
+                        isCurrentMonth ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-100 opacity-60',
+                        isToday && 'ring-2 ring-blue-500 shadow-lg'
+                      )}
+                    >
+                      <div className={cls(
+                        'text-base font-bold mb-2',
+                        isToday ? 'text-blue-600' : isCurrentMonth ? 'text-slate-900' : 'text-slate-400'
+                      )}>
+                        {date.getDate()}
+                      </div>
+                      {counts.total > 0 && (
+                        <div className="space-y-1 text-[10px]">
+                          {counts.issue > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                              <span className="font-medium">{counts.issue}</span>
+                            </div>
+                          )}
+                          {counts.return > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                              <span className="font-medium">{counts.return}</span>
+                            </div>
+                          )}
+                          {counts.task > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-violet-500"></span>
+                              <span className="font-medium">{counts.task}</span>
+                            </div>
+                          )}
+                          {counts.damage > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                              <span className="font-medium">{counts.damage}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Індикатор свайпу */}
+      <div className="flex justify-center gap-1 py-2 bg-slate-50">
+        {allWeeks.map((week, idx) => (
+          <div 
+            key={week.id} 
+            className={cls(
+              'w-2 h-2 rounded-full transition-colors',
+              idx === 1 ? 'bg-blue-500' : 'bg-slate-300'
+            )}
+          />
+        ))}
+      </div>
+
+      {/* Підказка */}
+      <div className="px-3 py-2 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-slate-500">
+        👆 Протягніть вліво/вправо або прокрутіть для перегляду інших тижнів
       </div>
     </div>
   )

@@ -137,11 +137,14 @@ def parse_order_row(row, db: Session = None):
             })
     
     # Визначимо індекси полів у row - залежить від того, скільки полів повернуто
-    # Новий формат: order_id, order_number, customer_id, customer_name, customer_phone, 
-    #               customer_email, rental_start_date, rental_end_date, issue_date, return_date,
-    #               status, total_price, deposit_amount, notes, created_at, is_archived
+    # Формат 1 (новий з issue_date/return_date): 16+ колонок
+    # Формат 2 (з rental_days): 15 колонок - order_id, order_number, customer_id, customer_name, 
+    #          customer_phone, customer_email, rental_start_date, rental_end_date,
+    #          status, total_price, deposit_amount, total_loss_value, rental_days, notes, created_at
+    # Формат 3 (старий): <15 колонок
     
     has_new_format = len(row) >= 16  # Новий формат з issue_date і return_date
+    has_rental_days_format = len(row) == 15  # Формат з rental_days
     
     if has_new_format:
         # Новий формат з issue_date та return_date

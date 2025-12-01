@@ -418,7 +418,7 @@ export default function CalendarBoardNew() {
 
       const calendarItems = []
 
-      // 1. Load orders for Issue and Return lanes
+      // 1. Load ALL orders (awaiting confirmation)
       try {
         const ordersRes = await axios.get(`${BACKEND_URL}/api/orders`, {
           params: { from_date: toISO(start), to_date: toISO(end) }
@@ -428,43 +428,110 @@ export default function CalendarBoardNew() {
         
         orders.forEach((o) => {
           const issueDate = o.issue_date || o.rental_start_date
-          const returnDate = o.return_date || o.rental_end_date
           const clientName = o.client_name || o.customer_name
 
-          // Issue lane
-          if (issueDate && ['awaiting_customer', 'processing', 'ready_for_issue', 'pending'].includes(o.status)) {
+          // Issue lane - новi замовлення
+          if (issueDate) {
             calendarItems.push({
               id: `order-${o.order_number}-issue`,
               lane: 'issue',
               date: issueDate,
               timeSlot: 'morning',
               orderCode: o.order_number,
-              title: `Видача: ${clientName}`,
+              title: `Нове: ${clientName}`,
               client: clientName,
-              badge: o.status === 'ready_for_issue' ? 'Готово' : o.status === 'processing' ? 'На комплектації' : 'Очікує',
-              status: o.status,
-              orderData: o,
-            })
-          }
-
-          // Return lane
-          if (returnDate && ['issued', 'on_rent'].includes(o.status)) {
-            calendarItems.push({
-              id: `order-${o.order_number}-return`,
-              lane: 'return',
-              date: returnDate,
-              timeSlot: 'evening',
-              orderCode: o.order_number,
-              title: `Повернення: ${clientName}`,
-              client: clientName,
-              badge: 'Очікуємо',
+              badge: 'Очікує підтвердження',
               status: o.status,
               orderData: o,
             })
           }
         })
       } catch (err) {
-        console.error('Failed to load orders:', err)
+        console.error('Failed to load awaiting orders:', err)
+      }
+
+      // 2. Load decor-orders (на комплектації, готові, видані, повернення)
+      try {
+        const decorRes = await axios.get(`${BACKEND_URL}/api/decor-orders`, {
+          params: { 
+            status: 'processing,ready_for_issue,issued,on_rent,shipped,delivered,returning',
+            from_date: toISO(start), 
+            to_date: toISO(end) 
+          }
+        })
+
+        const decorOrders = decorRes.data.orders || []
+        
+        decorOrders.forEach((o) => {
+          const issueDate = o.issue_date || o.rental_start_date
+          const returnDate = o.return_date || o.rental_end_date
+          const clientName = o.client_name || o.customer_name
+
+          // Issue lane - комплектація і готові
+          if (issueDate && ['processing', 'ready_for_issue', 'ready'].includes(o.status)) {
+            calendarItems.push({
+              id: `decor-${o.order_number}-issue`,
+              lane: 'issue',
+              date: issueDate,
+              timeSlot: 'day',
+              orderCode: o.order_number,
+              title: `${o.status === 'ready_for_issue' || o.status === 'ready' ? 'Готово' : 'Комплектація'}: ${clientName}`,
+              client: clientName,
+              badge: o.status === 'ready_for_issue' || o.status === 'ready' ? 'Готово до видачі' : 'На комплектації',
+              status: o.status,
+              orderData: o,
+            })
+          }
+
+          // Return lane - видані і на повернення
+          if (returnDate && ['issued', 'on_rent', 'returning'].includes(o.status)) {
+            calendarItems.push({
+              id: `decor-${o.order_number}-return`,
+              lane: 'return',
+              date: returnDate,
+              timeSlot: 'evening',
+              orderCode: o.order_number,
+              title: `Повернення: ${clientName}`,
+              client: clientName,
+              badge: o.status === 'returning' ? 'Повертається' : 'Очікуємо',
+              status: o.status,
+              orderData: o,
+            })
+          }
+        })
+        
+        console.log(`[Calendar] Завантажено ${decorOrders.length} замовлень на комплектації/виданих`)
+      } catch (err) {
+        console.error('Failed to load decor orders:', err)
+      }
+
+      // 3. Load issue cards (картки видачі)
+      try {
+        const issueCardsRes = await axios.get(`${BACKEND_URL}/api/issue-cards`)
+        const issueCards = issueCardsRes.data || []
+        
+        issueCards.forEach((card) => {
+          const issueDate = card.issue_date || card.rental_start_date
+
+          if (issueDate && ['preparation', 'ready', 'ready_for_issue'].includes(card.status)) {
+            calendarItems.push({
+              id: `issue-card-${card.id}`,
+              lane: 'issue',
+              date: issueDate,
+              timeSlot: 'day',
+              orderCode: card.order_number,
+              title: `Картка видачі: ${card.customer_name}`,
+              client: card.customer_name,
+              badge: card.status === 'ready' || card.status === 'ready_for_issue' ? 'Готова' : 'Підготовка',
+              status: card.status,
+              orderData: card,
+            })
+          }
+        })
+        
+        console.log(`[Calendar] Завантажено ${issueCards.length} карток видачі`)
+      } catch (err) {
+        console.error('Failed to load issue cards:', err)
       }
 
       // 2. Load cleaning tasks for Task lane

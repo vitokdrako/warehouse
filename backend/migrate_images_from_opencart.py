@@ -259,6 +259,8 @@ def migrate_images(limit: int = None, skip_existing: bool = True):
         logger.info("")
         
         # Обробити кожен товар
+        start_time_batch = time.time()
+        
         for idx, product in enumerate(products, 1):
             product_id = product['product_id']
             sku = product['sku'] or f"P{product_id}"
@@ -282,11 +284,29 @@ def migrate_images(limit: int = None, skip_existing: bool = True):
                 stats["failed"] += 1
                 rh_conn.rollback()
             
-            logger.info("")  # Empty line for readability
-            
-            # Невелика пауза щоб не перевантажити сервер
+            # Показувати прогрес кожні 10 товарів
             if idx % 10 == 0:
+                elapsed = time.time() - start_time_batch
+                avg_time = elapsed / idx
+                remaining = stats['total'] - idx
+                eta_seconds = remaining * avg_time
+                eta_minutes = eta_seconds / 60
+                
+                percent = (idx / stats['total']) * 100
+                progress_bar = "█" * int(percent / 5) + "░" * (20 - int(percent / 5))
+                
+                logger.info("")
+                logger.info(f"{'='*70}")
+                logger.info(f"📊 ПРОГРЕС: [{progress_bar}] {percent:.1f}%")
+                logger.info(f"✅ Успішно: {stats['success']} | ❌ Помилки: {stats['failed']}")
+                logger.info(f"⏱️  Середній час: {avg_time:.2f}s/товар")
+                logger.info(f"⏳ Залишилось: ~{eta_minutes:.0f} хв ({remaining} товарів)")
+                logger.info(f"{'='*70}")
+                logger.info("")
+                
                 time.sleep(1)
+            else:
+                logger.info("")  # Empty line for readability
         
         # Закрити з'єднання
         oc_cur.close()

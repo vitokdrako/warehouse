@@ -1092,10 +1092,39 @@ export default function CalendarBoardNew() {
         <div>
           <h1 className="text-xl font-bold text-slate-900">Календар процесів</h1>
           <p className="text-xs text-slate-500">
-            Всі замовлення, видачі, повернення, завдання та кейси шкоди — скролинг тиждень за тижнем
+            Всі замовлення, видачі, повернення, завдання та кейси шкоди
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
+          <Segmented
+            value={view}
+            onChange={(v) => setView(v)}
+            options={[
+              { value: 'day', label: 'День' },
+              { value: 'week', label: 'Тиждень' },
+            ]}
+          />
+          {view === 'day' && (
+            <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1">
+              <button
+                type="button"
+                onClick={() => moveBase(-1)}
+                className="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+              >
+                ‹
+              </button>
+              <span className="px-2 text-[11px] font-medium text-slate-700">
+                {formatUA(baseDate)}
+              </span>
+              <button
+                type="button"
+                onClick={() => moveBase(1)}
+                className="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+              >
+                ›
+              </button>
+            </div>
+          )}
         </div>
       </header>
 

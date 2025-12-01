@@ -368,16 +368,30 @@ function MonthView({ baseDate, items, onDateClick }) {
 
   const currentMonth = baseDate.getMonth()
 
-  const getCounts = (date) => {
+  const getDateItems = (date) => {
     const dateKey = toISO(date)
     const dayItems = items.filter((i) => i.date === dateKey)
     return {
-      issue: dayItems.filter((i) => i.lane === 'issue').length,
-      return: dayItems.filter((i) => i.lane === 'return').length,
-      task: dayItems.filter((i) => i.lane === 'task').length,
-      damage: dayItems.filter((i) => i.lane === 'damage').length,
+      all: dayItems,
+      issue: dayItems.filter((i) => i.lane === 'issue'),
+      return: dayItems.filter((i) => i.lane === 'return'),
+      task: dayItems.filter((i) => i.lane === 'task'),
+      damage: dayItems.filter((i) => i.lane === 'damage'),
       total: dayItems.length,
     }
+  }
+
+  const toggleDateExpand = (date) => {
+    const dateKey = toISO(date)
+    setExpandedDates(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(dateKey)) {
+        newSet.delete(dateKey)
+      } else {
+        newSet.add(dateKey)
+      }
+      return newSet
+    })
   }
 
   // Touch handlers для свайпу

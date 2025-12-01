@@ -809,6 +809,7 @@ function MonthView({ baseDate, items, onDateClick }) {
 
 /************* Main Component *************/
 export default function CalendarBoardNew() {
+  const [view, setView] = useState('week')
   const [baseDate, setBaseDate] = useState(new Date())
   const [laneFilter, setLaneFilter] = useState('all')
   const [items, setItems] = useState([])

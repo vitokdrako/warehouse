@@ -464,55 +464,164 @@ function MonthView({ baseDate, items, onDateClick }) {
               {/* Тиждень */}
               <div className="grid grid-cols-7 gap-2">
                 {week.dates.map((date) => {
-                  const counts = getCounts(date)
+                  const dateItems = getDateItems(date)
                   const isCurrentMonth = date.getMonth() === currentMonth
                   const isToday = toISO(date) === toISO(new Date())
+                  const isExpanded = expandedDates.has(toISO(date))
 
                   return (
-                    <button
+                    <div
                       key={toISO(date)}
-                      onClick={() => onDateClick(date)}
                       className={cls(
-                        'min-h-[100px] rounded-xl border p-2 text-left transition hover:shadow hover:scale-105',
+                        'rounded-xl border transition',
                         isCurrentMonth ? 'bg-white border-slate-200' : 'bg-slate-50 border-slate-100 opacity-60',
-                        isToday && 'ring-2 ring-blue-500 shadow-lg'
+                        isToday && 'ring-2 ring-blue-500 shadow-lg',
+                        isExpanded ? 'col-span-1 row-span-2' : ''
                       )}
                     >
-                      <div className={cls(
-                        'text-base font-bold mb-2',
-                        isToday ? 'text-blue-600' : isCurrentMonth ? 'text-slate-900' : 'text-slate-400'
-                      )}>
-                        {date.getDate()}
-                      </div>
-                      {counts.total > 0 && (
-                        <div className="space-y-1 text-[10px]">
-                          {counts.issue > 0 && (
-                            <div className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                              <span className="font-medium">{counts.issue}</span>
-                            </div>
-                          )}
-                          {counts.return > 0 && (
-                            <div className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-sky-500"></span>
-                              <span className="font-medium">{counts.return}</span>
-                            </div>
-                          )}
-                          {counts.task > 0 && (
-                            <div className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-violet-500"></span>
-                              <span className="font-medium">{counts.task}</span>
-                            </div>
-                          )}
-                          {counts.damage > 0 && (
-                            <div className="flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                              <span className="font-medium">{counts.damage}</span>
-                            </div>
+                      {/* Header дня */}
+                      <div className="p-2 border-b border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <div className={cls(
+                            'text-base font-bold',
+                            isToday ? 'text-blue-600' : isCurrentMonth ? 'text-slate-900' : 'text-slate-400'
+                          )}>
+                            {date.getDate()}
+                          </div>
+                          {dateItems.total > 0 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleDateExpand(date)
+                              }}
+                              className="text-xs px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 transition"
+                            >
+                              {isExpanded ? '▲' : `▼ ${dateItems.total}`}
+                            </button>
                           )}
                         </div>
+                      </div>
+
+                      {/* Компактний вигляд (згорнуто) */}
+                      {!isExpanded && dateItems.total > 0 && (
+                        <div className="p-2 space-y-1">
+                          {dateItems.issue.length > 0 && (
+                            <div className="flex items-center gap-1 text-[9px]">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                              <span className="font-medium">{dateItems.issue.length} видача</span>
+                            </div>
+                          )}
+                          {dateItems.return.length > 0 && (
+                            <div className="flex items-center gap-1 text-[9px]">
+                              <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                              <span className="font-medium">{dateItems.return.length} повернення</span>
+                            </div>
+                          )}
+                          {dateItems.task.length > 0 && (
+                            <div className="flex items-center gap-1 text-[9px]">
+                              <span className="w-2 h-2 rounded-full bg-violet-500"></span>
+                              <span className="font-medium">{dateItems.task.length} таски</span>
+                            </div>
+                          )}
+                          {dateItems.damage.length > 0 && (
+                            <div className="flex items-center gap-1 text-[9px]">
+                              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                              <span className="font-medium">{dateItems.damage.length} шкода</span>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => onDateClick(date)}
+                            className="w-full mt-1 text-[9px] text-blue-600 hover:underline"
+                          >
+                            Відкрити день →
+                          </button>
+                        </div>
                       )}
-                    </button>
+
+                      {/* Розгорнутий вигляд (деталі) */}
+                      {isExpanded && (
+                        <div className="p-2 max-h-[400px] overflow-y-auto space-y-2">
+                          {/* Видача */}
+                          {dateItems.issue.length > 0 && (
+                            <div>
+                              <div className="text-[9px] font-semibold text-emerald-700 mb-1 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                Видача ({dateItems.issue.length})
+                              </div>
+                              {dateItems.issue.map(item => (
+                                <div key={item.id} className="text-[8px] bg-emerald-50 rounded p-1 mb-1">
+                                  <div className="font-medium truncate">{item.orderCode}</div>
+                                  <div className="text-slate-600 truncate">{item.client}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Повернення */}
+                          {dateItems.return.length > 0 && (
+                            <div>
+                              <div className="text-[9px] font-semibold text-sky-700 mb-1 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+                                Повернення ({dateItems.return.length})
+                              </div>
+                              {dateItems.return.map(item => (
+                                <div key={item.id} className="text-[8px] bg-sky-50 rounded p-1 mb-1">
+                                  <div className="font-medium truncate">{item.orderCode}</div>
+                                  <div className="text-slate-600 truncate">{item.client}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Таски */}
+                          {dateItems.task.length > 0 && (
+                            <div>
+                              <div className="text-[9px] font-semibold text-violet-700 mb-1 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-violet-500"></span>
+                                Завдання ({dateItems.task.length})
+                              </div>
+                              {dateItems.task.map(item => (
+                                <div key={item.id} className="text-[8px] bg-violet-50 rounded p-1 mb-1">
+                                  <div className="font-medium truncate">{item.title}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Шкода */}
+                          {dateItems.damage.length > 0 && (
+                            <div>
+                              <div className="text-[9px] font-semibold text-rose-700 mb-1 flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                                Пошкодження ({dateItems.damage.length})
+                              </div>
+                              {dateItems.damage.map(item => (
+                                <div key={item.id} className="text-[8px] bg-rose-50 rounded p-1 mb-1">
+                                  <div className="font-medium truncate">{item.title}</div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() => onDateClick(date)}
+                            className="w-full text-[9px] text-blue-600 hover:underline border-t border-slate-200 pt-2"
+                          >
+                            Відкрити повний день →
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Пустий день */}
+                      {dateItems.total === 0 && (
+                        <button
+                          onClick={() => onDateClick(date)}
+                          className="w-full p-2 text-[9px] text-slate-400 hover:text-slate-600 transition"
+                        >
+                          Немає подій
+                        </button>
+                      )}
+                    </div>
                   )
                 })}
               </div>

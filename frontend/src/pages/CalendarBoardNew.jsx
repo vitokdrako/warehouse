@@ -823,10 +823,18 @@ export default function CalendarBoardNew() {
   const loadCalendarData = async () => {
     try {
       setLoading(true)
-      // Завантажуємо великий діапазон: 6 місяців назад та 12 місяців вперед
-      const currentWeekStart = startOfWeek(baseDate)
-      const start = addDays(currentWeekStart, -180) // 6 місяців назад
-      const end = addDays(currentWeekStart, 365) // 12 місяців вперед
+      // Завантажуємо великий діапазон залежно від view
+      let start, end
+      if (view === 'day') {
+        // Для денного вигляду - тільки один день
+        start = baseDate
+        end = baseDate
+      } else {
+        // Для тижневого - великий діапазон для нескінченного скролу
+        const currentWeekStart = startOfWeek(baseDate)
+        start = addDays(currentWeekStart, -180) // 6 місяців назад
+        end = addDays(currentWeekStart, 365) // 12 місяців вперед
+      }
 
       const calendarItems = []
 

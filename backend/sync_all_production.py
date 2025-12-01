@@ -161,8 +161,8 @@ def sync_product_categories():
         oc_cur = oc.cursor(dictionary=True)
         rh_cur = rh.cursor()
         
-        # Get all products
-        rh_cur.execute("SELECT product_id FROM products LIMIT 2000")
+        # Get all products (no limit - синхронізуємо всі товари)
+        rh_cur.execute("SELECT product_id FROM products")
         product_ids = [row[0] for row in rh_cur.fetchall()]
         
         if not product_ids:

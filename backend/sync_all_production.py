@@ -264,13 +264,20 @@ def sync_product_quantities():
         
         count = 0
         for p in oc_cur.fetchall():
+            # Маппінг полів:
+            # OpenCart price → RentalHub rental_price (ціна оренди за день)
+            # OpenCart ean → RentalHub price (вартість товару/повний збиток)
+            rental_price = float(p['price']) if p.get('price') else 0
+            purchase_price = float(p['ean']) if p.get('ean') else 0
+            
             rh_cur.execute("""
                 UPDATE products 
-                SET quantity = %s, price = %s, color = %s, material = %s
+                SET quantity = %s, price = %s, rental_price = %s, color = %s, material = %s
                 WHERE product_id = %s
             """, (
                 p['quantity'] or 0, 
-                p['price'],
+                purchase_price,  # OpenCart ean → вартість товару
+                rental_price,    # OpenCart price → ціна оренди
                 (p['color'] or '')[:100] if p.get('color') else None,
                 (p['material'] or '')[:100] if p.get('material') else None,
                 p['product_id']

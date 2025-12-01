@@ -386,7 +386,6 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
             <div 
               key={week.id}
               className="flex-shrink-0 w-full p-3 text-[11px]"
-              style={{ scrollSnapAlign: 'start' }}
             >
               {/* Назва тижня */}
               <div className="text-xs font-semibold text-slate-600 mb-3 text-center">

@@ -109,15 +109,12 @@ def sync_products_incremental():
         for p in new_products:
             sku = p['model'] or f"SKU-{p['product_id']}"
             
-            # Calculate damage_cost from EAN (if available)
-            damage_cost = float(p['ean']) if p.get('ean') else None
-            
             rh_cur.execute("""
                 INSERT INTO products (
                     product_id, sku, name, description, price, status, quantity, 
-                    color, material, image_url, damage_cost, synced_at
+                    color, material, image_url, synced_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
             """, (
                 p['product_id'], 
                 sku[:100], 
@@ -128,8 +125,7 @@ def sync_products_incremental():
                 p['quantity'] or 0,
                 (p['color'] or '')[:100] if p.get('color') else None,
                 (p['material'] or '')[:100] if p.get('material') else None,
-                (p['image'] or '')[:500] if p['image'] else None,
-                damage_cost
+                (p['image'] or '')[:500] if p['image'] else None
             ))
             count += 1
         

@@ -571,7 +571,7 @@ export default function CalendarBoardNew() {
         console.error('Failed to load cleaning tasks:', err)
       }
 
-      // 3. Load damage cases for Damage lane
+      // 5. Load damage cases for Damage lane
       try {
         const damageRes = await axios.get(`${BACKEND_URL}/api/product-damage-history/recent?limit=50`)
         const damages = damageRes.data || []

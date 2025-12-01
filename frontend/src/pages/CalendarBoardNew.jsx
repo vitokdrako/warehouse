@@ -464,22 +464,14 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
         </div>
       </div>
 
-      {/* Індикатори тижнів */}
-      <div className="flex justify-center gap-2 py-2 bg-slate-50 border-t border-slate-200">
-        {allWeeks.map((week, idx) => (
-          <div 
-            key={week.id} 
-            className={cls(
-              'w-2 h-2 rounded-full transition-colors',
-              idx === 1 ? 'bg-blue-500' : 'bg-slate-300'
-            )}
-          />
-        ))}
-      </div>
-
-      {/* Підказка */}
-      <div className="px-3 py-2 bg-slate-50 text-center text-[10px] text-slate-500">
-        ← Протягніть для перегляду інших тижнів →
+      {/* Підказка з нескінченним скролом */}
+      <div className="px-3 py-2 bg-slate-50 border-t border-slate-200 text-center">
+        <div className="text-[10px] text-slate-500">
+          ← Нескінченний скрол: протягніть для перегляду інших тижнів →
+        </div>
+        <div className="text-[9px] text-slate-400 mt-1">
+          Показано {allWeeks.length} тижнів • Автоматично завантажується більше при скролі
+        </div>
       </div>
     </div>
   )

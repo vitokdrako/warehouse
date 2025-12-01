@@ -324,6 +324,7 @@ function MonthView({ baseDate, items, onDateClick }) {
   const scrollRef = React.useRef(null)
   const [touchStart, setTouchStart] = React.useState(0)
   const [touchEnd, setTouchEnd] = React.useState(0)
+  const [expandedDates, setExpandedDates] = React.useState(new Set())
 
   // Генеруємо тижні для горизонтального скролу (попередній, поточний, наступний місяць)
   const allWeeks = useMemo(() => {

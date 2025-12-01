@@ -824,10 +824,10 @@ export default function CalendarBoardNew() {
   const loadCalendarData = async () => {
     try {
       setLoading(true)
-      // Завантажуємо завжди 3 тижні: попередній, поточний, наступний
+      // Завантажуємо великий діапазон: 6 місяців назад та 12 місяців вперед
       const currentWeekStart = startOfWeek(baseDate)
-      const start = addDays(currentWeekStart, -7) // попередній тиждень
-      const end = addDays(currentWeekStart, 20) // наступний тиждень (7 + 7 + 6)
+      const start = addDays(currentWeekStart, -180) // 6 місяців назад
+      const end = addDays(currentWeekStart, 365) // 12 місяців вперед
 
       const calendarItems = []
 

@@ -1030,11 +1030,6 @@ export default function CalendarBoardNew() {
     setBaseDate((prev) => addDays(prev, offset))
   }
 
-  const handleMonthDateClick = (date) => {
-    setBaseDate(date)
-    setView('day')
-  }
-
   const filteredItems = useMemo(() => {
     if (laneFilter === 'all') return items
     return items.filter((i) => i.lane === laneFilter)

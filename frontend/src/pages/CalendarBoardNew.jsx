@@ -373,6 +373,7 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
       <div 
         ref={scrollRef}
         className="overflow-x-auto overflow-y-visible scroll-smooth hide-scrollbar"
+        onScroll={handleScroll}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

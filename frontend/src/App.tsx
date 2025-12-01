@@ -144,15 +144,6 @@ function App() {
           />
           
           <Route 
-            path="/calendar-old" 
-            element={
-              <ProtectedRoute>
-                <CalendarBoard />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
             path="/catalog" 
             element={
               <ProtectedRoute>

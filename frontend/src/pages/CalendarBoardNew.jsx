@@ -951,33 +951,32 @@ export default function CalendarBoardNew() {
         const cleaningTasks = cleaningRes.data || []
         
         cleaningTasks.forEach((task) => {
-          if (task.status && task.status !== 'clean') {
-            // Add task for today or tomorrow based on status and updated_at
-            const updatedDate = task.updated_at ? task.updated_at.slice(0, 10) : toISO(new Date())
-            const taskDate = task.status === 'wash' ? updatedDate : toISO(addDays(new Date(updatedDate), 1))
-            
-            const statusLabels = {
-              wash: 'Мийка',
-              dry: 'Сушка',
-              repair: 'Реставрація'
-            }
-            
-            calendarItems.push({
-              id: `task-${task.sku}-${task.status}`,
-              lane: 'task',
-              date: taskDate,
-              timeSlot: task.status === 'wash' ? 'morning' : task.status === 'dry' ? 'day' : 'evening',
-              orderCode: null,
-              title: `${statusLabels[task.status] || task.status}: ${task.sku}`,
-              client: `Оновлено: ${new Date(task.updated_at || new Date()).toLocaleDateString('uk-UA')}`,
-              badge: task.status === 'repair' ? 'Критично' : 'В процесі',
-              status: task.status,
-              orderData: task,
-            })
+          // Показуємо ВСІ завдання, не тільки активні
+          const updatedDate = task.updated_at ? task.updated_at.slice(0, 10) : toISO(new Date())
+          
+          const statusLabels = {
+            wash: 'Мийка',
+            dry: 'Сушка',
+            repair: 'Реставрація',
+            clean: 'Чисте',
+            damaged: 'Пошкоджено'
           }
+          
+          calendarItems.push({
+            id: `task-${task.sku}-${task.status}-${task.updated_at}`,
+            lane: 'task',
+            date: updatedDate,
+            timeSlot: task.status === 'wash' ? 'morning' : task.status === 'dry' ? 'day' : 'evening',
+            orderCode: null,
+            title: `${statusLabels[task.status] || task.status}: ${task.sku}`,
+            client: `Оновлено: ${new Date(task.updated_at || new Date()).toLocaleDateString('uk-UA')}`,
+            badge: task.status === 'repair' ? 'Критично' : task.status === 'clean' ? 'Завершено' : 'В процесі',
+            status: task.status,
+            orderData: task,
+          })
         })
         
-        console.log(`[Calendar] Завантажено ${cleaningTasks.length} завдань для реквізиторів`)
+        console.log(`[Calendar] Завантажено ${cleaningTasks.length} завдань (включаючи всі статуси)`)
       } catch (err) {
         console.error('Failed to load cleaning tasks:', err)
       }

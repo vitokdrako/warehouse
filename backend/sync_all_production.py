@@ -261,18 +261,15 @@ def sync_product_quantities():
         
         count = 0
         for p in oc_cur.fetchall():
-            damage_cost = float(p['ean']) if p.get('ean') else None
-            
             rh_cur.execute("""
                 UPDATE products 
-                SET quantity = %s, price = %s, color = %s, material = %s, damage_cost = %s
+                SET quantity = %s, price = %s, color = %s, material = %s
                 WHERE product_id = %s
             """, (
                 p['quantity'] or 0, 
                 p['price'],
                 (p['color'] or '')[:100] if p.get('color') else None,
                 (p['material'] or '')[:100] if p.get('material') else None,
-                damage_cost,
                 p['product_id']
             ))
             count += 1

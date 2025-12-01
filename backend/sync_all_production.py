@@ -109,18 +109,25 @@ def sync_products_incremental():
         for p in new_products:
             sku = p['model'] or f"SKU-{p['product_id']}"
             
+            # Маппінг полів:
+            # OpenCart price → RentalHub rental_price (ціна оренди за день)
+            # OpenCart ean → RentalHub price (вартість товару/повний збиток)
+            rental_price = float(p['price']) if p.get('price') else 0
+            purchase_price = float(p['ean']) if p.get('ean') else 0
+            
             rh_cur.execute("""
                 INSERT INTO products (
-                    product_id, sku, name, description, price, status, quantity, 
+                    product_id, sku, name, description, price, rental_price, status, quantity, 
                     color, material, image_url, synced_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
             """, (
                 p['product_id'], 
                 sku[:100], 
                 p['name'][:500], 
                 (p['description'] or '')[:2000], 
-                p['price'], 
+                purchase_price,  # OpenCart ean → вартість товару
+                rental_price,    # OpenCart price → ціна оренди
                 p['status'], 
                 p['quantity'] or 0,
                 (p['color'] or '')[:100] if p.get('color') else None,

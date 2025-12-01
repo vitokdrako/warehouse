@@ -930,3 +930,18 @@ export default function CalendarBoardNew() {
     </div>
   )
 }
+
+// CSS для приховання scrollbar
+const style = document.createElement('style')
+style.textContent = `
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+`
+if (typeof document !== 'undefined') {
+  document.head.appendChild(style)
+}

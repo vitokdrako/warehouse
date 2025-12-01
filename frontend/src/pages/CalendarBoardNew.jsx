@@ -788,8 +788,10 @@ export default function CalendarBoardNew() {
   const loadCalendarData = async () => {
     try {
       setLoading(true)
-      const start = view === 'month' ? startOfMonth(baseDate) : view === 'week' ? startOfWeek(baseDate) : baseDate
-      const end = view === 'month' ? endOfMonth(baseDate) : view === 'week' ? addDays(startOfWeek(baseDate), 6) : baseDate
+      // Завантажуємо завжди 3 тижні: попередній, поточний, наступний
+      const currentWeekStart = startOfWeek(baseDate)
+      const start = addDays(currentWeekStart, -7) // попередній тиждень
+      const end = addDays(currentWeekStart, 20) // наступний тиждень (7 + 7 + 6)
 
       const calendarItems = []
 

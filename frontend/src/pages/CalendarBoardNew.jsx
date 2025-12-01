@@ -534,7 +534,7 @@ export default function CalendarBoardNew() {
         console.error('Failed to load issue cards:', err)
       }
 
-      // 2. Load cleaning tasks for Task lane
+      // 4. Load cleaning tasks for Task lane
       try {
         const cleaningRes = await axios.get(`${BACKEND_URL}/api/product-cleaning/all`)
         const cleaningTasks = cleaningRes.data || []

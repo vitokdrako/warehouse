@@ -235,8 +235,8 @@ def sync_product_quantities():
         oc_cur = oc.cursor(dictionary=True)
         rh_cur = rh.cursor()
         
-        # Get all products
-        rh_cur.execute("SELECT product_id FROM products LIMIT 5000")
+        # Get all products (limit 10000 для оновлення цін)
+        rh_cur.execute("SELECT product_id FROM products LIMIT 10000")
         product_ids = [row[0] for row in rh_cur.fetchall()]
         
         if not product_ids:

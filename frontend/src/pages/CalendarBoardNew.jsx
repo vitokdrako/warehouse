@@ -818,7 +818,7 @@ export default function CalendarBoardNew() {
   // Load data from backend
   useEffect(() => {
     loadCalendarData()
-  }, [baseDate])
+  }, [view, baseDate])
 
   const loadCalendarData = async () => {
     try {

@@ -251,9 +251,39 @@ function DayView({ date, items, onOpen, onUpdateItem }) {
 
 /************* Week View *************/
 function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
-  const weekDates = useMemo(() => {
-    const start = startOfWeek(baseDate)
-    return Array.from({ length: 7 }, (_, i) => addDays(start, i))
+  const scrollRef = React.useRef(null)
+  const [touchStart, setTouchStart] = React.useState(0)
+  const [touchEnd, setTouchEnd] = React.useState(0)
+
+  // Генеруємо 3 тижні: попередній, поточний, наступний
+  const allWeeks = useMemo(() => {
+    const weeks = []
+    
+    // Попередній тиждень
+    const prevWeekStart = startOfWeek(addDays(baseDate, -7))
+    weeks.push({
+      id: 'prev',
+      dates: Array.from({ length: 7 }, (_, i) => addDays(prevWeekStart, i)),
+      label: 'Попередній тиждень'
+    })
+    
+    // Поточний тиждень
+    const currentWeekStart = startOfWeek(baseDate)
+    weeks.push({
+      id: 'current',
+      dates: Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i)),
+      label: 'Поточний тиждень'
+    })
+    
+    // Наступний тиждень
+    const nextWeekStart = startOfWeek(addDays(baseDate, 7))
+    weeks.push({
+      id: 'next',
+      dates: Array.from({ length: 7 }, (_, i) => addDays(nextWeekStart, i)),
+      label: 'Наступний тиждень'
+    })
+    
+    return weeks
   }, [baseDate])
 
   const handleDragStart = (e, item) => {
@@ -266,55 +296,147 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
     onUpdateItem(itemData, toISO(date), lane, itemData.timeSlot)
   }
 
+  // Touch handlers
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe && scrollRef.current) {
+      scrollRef.current.scrollBy({ left: scrollRef.current.offsetWidth, behavior: 'smooth' })
+    }
+
+    if (isRightSwipe && scrollRef.current) {
+      scrollRef.current.scrollBy({ left: -scrollRef.current.offsetWidth, behavior: 'smooth' })
+    }
+
+    setTouchStart(0)
+    setTouchEnd(0)
+  }
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3 text-[11px]">
-      {/* Header */}
-      <div className="mb-2 grid grid-cols-[120px,1fr] items-end gap-2 border-b border-slate-100 pb-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Потік</div>
-        <div className="grid grid-cols-7 gap-1">
-          {weekDates.map((d) => (
-            <div key={toISO(d)} className="text-center text-[10px] text-slate-500">
-              <div className="font-medium text-slate-800">{d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })}</div>
-              <div>{d.toLocaleDateString('uk-UA', { weekday: 'short' })}</div>
+    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+      {/* Горизонтальний скрол з тижнями */}
+      <div 
+        ref={scrollRef}
+        className="overflow-x-auto overflow-y-visible scroll-smooth hide-scrollbar"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ 
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch'
+        }}
+      >
+        <div className="flex">
+          {allWeeks.map((week, weekIndex) => (
+            <div 
+              key={week.id}
+              className="flex-shrink-0 w-full p-3 text-[11px]"
+              style={{ scrollSnapAlign: 'start' }}
+            >
+              {/* Назва тижня */}
+              <div className="text-xs font-semibold text-slate-600 mb-3 text-center">
+                {week.dates[0].toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })} - {week.dates[6].toLocaleDateString('uk-UA', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </div>
+
+              {/* Header */}
+              <div className="mb-2 grid grid-cols-[120px,1fr] items-end gap-2 border-b border-slate-100 pb-2">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Потік</div>
+                <div className="grid grid-cols-7 gap-1">
+                  {week.dates.map((d) => {
+                    const isToday = toISO(d) === toISO(new Date())
+                    return (
+                      <div 
+                        key={toISO(d)} 
+                        className={cls(
+                          "text-center text-[10px] p-1 rounded",
+                          isToday && "bg-blue-50 ring-1 ring-blue-200"
+                        )}
+                      >
+                        <div className={cls(
+                          "font-medium",
+                          isToday ? "text-blue-600" : "text-slate-800"
+                        )}>
+                          {d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })}
+                        </div>
+                        <div className={cls(
+                          isToday ? "text-blue-500" : "text-slate-500"
+                        )}>
+                          {d.toLocaleDateString('uk-UA', { weekday: 'short' })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Lanes */}
+              {Object.keys(laneMeta).map((lane) => {
+                const laneInfo = laneMeta[lane]
+                return (
+                  <div key={lane} className="grid grid-cols-[120px,1fr] gap-2 border-b border-slate-50 py-2 last:border-b-0">
+                    <div className="flex flex-col gap-1">
+                      <span className={cls('text-[11px] font-semibold', laneInfo.color)}>{laneInfo.label}</span>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-2">
+                      {week.dates.map((d) => {
+                        const dateKey = toISO(d)
+                        const dayItems = items.filter((i) => i.date === dateKey && i.lane === lane)
+                        return (
+                          <DropZone
+                            key={dateKey}
+                            onDrop={(e) => handleDrop(e, d, lane)}
+                            isEmpty={dayItems.length === 0}
+                          >
+                            {dayItems.map((item) => (
+                              <CalendarCard
+                                key={item.id}
+                                item={item}
+                                onOpen={onOpen}
+                                onDragStart={handleDragStart}
+                              />
+                            ))}
+                          </DropZone>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Lanes */}
-      {Object.keys(laneMeta).map((lane) => {
-        const laneInfo = laneMeta[lane]
-        return (
-          <div key={lane} className="grid grid-cols-[120px,1fr] gap-2 border-b border-slate-50 py-2 last:border-b-0">
-            <div className="flex flex-col gap-1">
-              <span className={cls('text-[11px] font-semibold', laneInfo.color)}>{laneInfo.label}</span>
-            </div>
+      {/* Індикатори тижнів */}
+      <div className="flex justify-center gap-2 py-2 bg-slate-50 border-t border-slate-200">
+        {allWeeks.map((week, idx) => (
+          <div 
+            key={week.id} 
+            className={cls(
+              'w-2 h-2 rounded-full transition-colors',
+              idx === 1 ? 'bg-blue-500' : 'bg-slate-300'
+            )}
+          />
+        ))}
+      </div>
 
-            <div className="grid grid-cols-7 gap-2">
-              {weekDates.map((d) => {
-                const dateKey = toISO(d)
-                const dayItems = items.filter((i) => i.date === dateKey && i.lane === lane)
-                return (
-                  <DropZone
-                    key={dateKey}
-                    onDrop={(e) => handleDrop(e, d, lane)}
-                    isEmpty={dayItems.length === 0}
-                  >
-                    {dayItems.map((item) => (
-                      <CalendarCard
-                        key={item.id}
-                        item={item}
-                        onOpen={onOpen}
-                        onDragStart={handleDragStart}
-                      />
-                    ))}
-                  </DropZone>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+      {/* Підказка */}
+      <div className="px-3 py-2 bg-slate-50 text-center text-[10px] text-slate-500">
+        ← Протягніть для перегляду інших тижнів →
+      </div>
     </div>
   )
 }

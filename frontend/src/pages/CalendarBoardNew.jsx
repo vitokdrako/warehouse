@@ -378,7 +378,6 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ 
-          scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch'
         }}
       >

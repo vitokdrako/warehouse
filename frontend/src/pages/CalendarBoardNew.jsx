@@ -1117,30 +1117,13 @@ export default function CalendarBoardNew() {
         </div>
       </div>
 
-      {/* Main View */}
-      {view === 'day' && (
-        <DayView
-          date={baseDate}
-          items={filteredItems}
-          onOpen={handleOpenDetails}
-          onUpdateItem={handleUpdateItem}
-        />
-      )}
-      {view === 'week' && (
-        <WeekView
-          baseDate={baseDate}
-          items={filteredItems}
-          onOpen={handleOpenDetails}
-          onUpdateItem={handleUpdateItem}
-        />
-      )}
-      {view === 'month' && (
-        <MonthView
-          baseDate={baseDate}
-          items={filteredItems}
-          onDateClick={handleMonthDateClick}
-        />
-      )}
+      {/* Тільки тижневий вигляд з нескінченним скролом */}
+      <WeekView
+        baseDate={baseDate}
+        items={filteredItems}
+        onOpen={handleOpenDetails}
+        onUpdateItem={handleUpdateItem}
+      />
     </div>
   )
 }

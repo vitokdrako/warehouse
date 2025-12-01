@@ -254,37 +254,80 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
   const scrollRef = React.useRef(null)
   const [touchStart, setTouchStart] = React.useState(0)
   const [touchEnd, setTouchEnd] = React.useState(0)
+  const [weeksOffset, setWeeksOffset] = React.useState(0)
+  const isLoadingMore = React.useRef(false)
 
-  // Генеруємо 3 тижні: попередній, поточний, наступний
+  // Генеруємо багато тижнів (12 місяців = 52 тижні)
   const allWeeks = useMemo(() => {
     const weeks = []
+    const weeksToShow = 52 // 1 рік
+    const startWeekOffset = weeksOffset - Math.floor(weeksToShow / 2)
     
-    // Попередній тиждень
-    const prevWeekStart = startOfWeek(addDays(baseDate, -7))
-    weeks.push({
-      id: 'prev',
-      dates: Array.from({ length: 7 }, (_, i) => addDays(prevWeekStart, i)),
-      label: 'Попередній тиждень'
-    })
-    
-    // Поточний тиждень
-    const currentWeekStart = startOfWeek(baseDate)
-    weeks.push({
-      id: 'current',
-      dates: Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i)),
-      label: 'Поточний тиждень'
-    })
-    
-    // Наступний тиждень
-    const nextWeekStart = startOfWeek(addDays(baseDate, 7))
-    weeks.push({
-      id: 'next',
-      dates: Array.from({ length: 7 }, (_, i) => addDays(nextWeekStart, i)),
-      label: 'Наступний тиждень'
-    })
+    for (let i = 0; i < weeksToShow; i++) {
+      const weekOffset = startWeekOffset + i
+      const weekStart = startOfWeek(addDays(baseDate, weekOffset * 7))
+      const weekDates = Array.from({ length: 7 }, (_, dayIdx) => addDays(weekStart, dayIdx))
+      
+      // Визначаємо чи це поточний тиждень
+      const currentWeekStart = startOfWeek(new Date())
+      const isCurrentWeek = toISO(weekStart) === toISO(currentWeekStart)
+      
+      weeks.push({
+        id: `week-${weekOffset}`,
+        offset: weekOffset,
+        dates: weekDates,
+        label: isCurrentWeek ? 'Поточний тиждень' : weekDates[0].toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' }),
+        isCurrentWeek
+      })
+    }
     
     return weeks
-  }, [baseDate])
+  }, [baseDate, weeksOffset])
+
+  // Знайти індекс поточного тижня
+  const currentWeekIndex = useMemo(() => {
+    return allWeeks.findIndex(w => w.isCurrentWeek)
+  }, [allWeeks])
+
+  // Scroll до поточного тижня при першому завантаженні
+  React.useEffect(() => {
+    if (scrollRef.current && currentWeekIndex >= 0) {
+      const weekWidth = scrollRef.current.offsetWidth
+      scrollRef.current.scrollLeft = currentWeekIndex * weekWidth
+    }
+  }, [currentWeekIndex])
+
+  // Infinite scroll detector
+  const handleScroll = React.useCallback((e) => {
+    if (isLoadingMore.current) return
+    
+    const container = e.target
+    const scrollLeft = container.scrollLeft
+    const scrollWidth = container.scrollWidth
+    const clientWidth = container.clientWidth
+    
+    // Якщо доскролили майже до кінця - завантажити більше тижнів вперед
+    if (scrollLeft + clientWidth > scrollWidth - clientWidth * 2) {
+      isLoadingMore.current = true
+      setTimeout(() => {
+        setWeeksOffset(prev => prev + 10)
+        isLoadingMore.current = false
+      }, 300)
+    }
+    
+    // Якщо доскролили майже до початку - завантажити більше тижнів назад
+    if (scrollLeft < clientWidth * 2) {
+      isLoadingMore.current = true
+      setTimeout(() => {
+        setWeeksOffset(prev => prev - 10)
+        // Відкоригувати scroll щоб користувач не помітив стрибка
+        if (scrollRef.current) {
+          scrollRef.current.scrollLeft = scrollLeft + (clientWidth * 10)
+        }
+        isLoadingMore.current = false
+      }, 300)
+    }
+  }, [])
 
   const handleDragStart = (e, item) => {
     e.dataTransfer.effectAllowed = 'move'

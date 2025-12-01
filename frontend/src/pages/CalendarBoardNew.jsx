@@ -983,7 +983,7 @@ export default function CalendarBoardNew() {
 
       // 5. Load damage cases for Damage lane
       try {
-        const damageRes = await axios.get(`${BACKEND_URL}/api/product-damage-history/recent?limit=50`)
+        const damageRes = await axios.get(`${BACKEND_URL}/api/product-damage-history/recent?limit=500`)
         const damages = damageRes.data || []
         
         damages.forEach((d) => {

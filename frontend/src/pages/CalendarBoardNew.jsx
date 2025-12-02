@@ -933,6 +933,7 @@ export default function CalendarBoardNew() {
         issueCards.forEach((card) => {
           const issueDate = card.issue_date || card.rental_start_date
 
+          // Показуємо картки на підготовці та готові до видачі
           if (issueDate && ['preparation', 'ready', 'ready_for_issue'].includes(card.status)) {
             calendarItems.push({
               id: `issue-card-${card.id}`,
@@ -946,6 +947,27 @@ export default function CalendarBoardNew() {
               status: card.status,
               orderData: card,
             })
+          }
+          
+          // Показуємо ВИДАНІ картки на поверненні (issued)
+          if (card.status === 'issued') {
+            // Використовуємо issued_at або created_at для дати
+            const returnDate = card.return_date || card.issued_at?.slice(0, 10) || card.created_at?.slice(0, 10)
+            
+            if (returnDate) {
+              calendarItems.push({
+                id: `return-card-${card.id}`,
+                lane: 'return',
+                date: returnDate,
+                timeSlot: 'day',
+                orderCode: card.order_number,
+                title: `Повернення: ${card.customer_name}`,
+                client: card.customer_name,
+                badge: 'На поверненні',
+                status: 'issued',
+                orderData: card,
+              })
+            }
           }
         })
         

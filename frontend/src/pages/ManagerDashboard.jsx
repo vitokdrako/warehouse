@@ -249,10 +249,9 @@ export default function ManagerDashboard() {
   );
   const issuedCards = issueCards.filter(c => c.status === 'issued');
   
-  // 4. На поверненні - ВСІ замовлення що видані і не повернуті (issued/on_rent)
-  const returnOrders = decorOrders.filter(o => {
-    return (o.status === 'issued' || o.status === 'on_rent');
-  });
+  // 4. На поверненні - ВСІ issue cards що видані (статус 'issued')
+  // Видані замовлення зберігаються в issueCards, а не в decorOrders!
+  const returnOrders = issueCards.filter(c => c.status === 'issued');
 
   const kpis = {
     today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length,  // Всі активні замовлення

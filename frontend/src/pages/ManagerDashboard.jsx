@@ -495,17 +495,17 @@ export default function ManagerDashboard() {
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
           ) : returnOrders.length > 0 ? (
             <>
-              {(showAllReturns ? returnOrders : returnOrders.slice(0, 4)).map(order => (
+              {(showAllReturns ? returnOrders : returnOrders.slice(0, 4)).map(card => (
                 <OrderCard 
-                  key={order.id}
-                  id={order.order_number}
-                  name={order.client_name}
-                  phone={order.client_phone}
-                  rent={`₴ ${order.total_rental?.toFixed(0)}`}
-                  deposit={`₴ ${(order.deposit_held || order.total_deposit || 0).toFixed(0)}`}
+                  key={card.id}
+                  id={card.order_number}
+                  name={card.customer_name}
+                  phone={card.customer_phone}
+                  rent={`₴ ${card.total_rental?.toFixed(0)}`}
+                  deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
                   badge="return"
-                  order={order}
-                  onClick={() => navigate(`/return/${order.id}`)}
+                  order={card}
+                  onClick={() => navigate(`/return/${card.order_id}`)}
                 />
               ))}
               {returnOrders.length > 4 && !showAllReturns && (

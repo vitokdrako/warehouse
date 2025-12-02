@@ -1244,3 +1244,86 @@ $100 USD
 
 ---
 
+
+---
+
+## 🔙 Виправлено: Повернення не відображалися на Dashboard і Календарі
+**Дата**: 02.12.2025
+**Проблема**: Користувач повідомив що є замовлення на повернення, але їх не видно на dashboard і календарі
+
+### Що виправлено:
+
+#### 1. Dashboard - Секція "Повернення"
+**Було:**
+```javascript
+// Шукав повернення в decorOrders
+const returnOrders = decorOrders.filter(o => {
+  return (o.status === 'issued' || o.status === 'on_rent');
+});
+```
+
+**Проблема:** Видані замовлення зберігаються в `issueCards`, а не в `decorOrders`!
+
+**Стало:**
+```javascript
+// Беремо issued cards зі статусом 'issued'
+const returnOrders = issueCards.filter(c => c.status === 'issued');
+```
+
+**Виправлено поля:**
+- `client_name` → `customer_name`
+- `client_phone` → `customer_phone`
+- `deposit_held || total_deposit` → `deposit_amount`
+- `navigate(/return/${order.id})` → `navigate(/return/${card.order_id})`
+
+#### 2. Календар - Lane "return"
+**Було:**
+Issue cards показувалися тільки для статусів: `preparation`, `ready`, `ready_for_issue`
+
+**Стало:**
+Додано відображення issued cards:
+```javascript
+// Показуємо ВИДАНІ картки на поверненні (issued)
+if (card.status === 'issued') {
+  // Розраховуємо дату повернення: issued_at + rental_days
+  let returnDate = card.return_date
+  
+  if (!returnDate && card.issued_at && card.rental_days) {
+    const issuedDate = new Date(card.issued_at)
+    issuedDate.setDate(issuedDate.getDate() + card.rental_days)
+    returnDate = issuedDate.toISOString().slice(0, 10)
+  }
+  
+  calendarItems.push({
+    lane: 'return',
+    date: returnDate,
+    badge: 'На поверненні',
+    ...
+  })
+}
+```
+
+### API Response (для перевірки):
+```bash
+curl https://rental-sync-debug.preview.emergentagent.com/api/issue-cards
+```
+
+**4 issued cards знайдено:**
+- OC-7040: инна мегеда (повернення 20.01.2026) - ₴2,730 / ₴5,900
+- OC-7033: Инна Мегеда (повернення 03.12.2025) - ₴1,590 / ₴6,000
+- OC-7048: Анна Овчаренко (повернення 02.12.2025) - ₴6,500 / ₴15,500
+- OC-7047: Тетяна Петренко (повернення 02.12.2025) - ₴3,200 / ₴8,000
+
+### Результат:
+✅ **Dashboard:** Секція "Повернення" тепер показує 4 issued cards  
+✅ **Календар:** Issue cards зі статусом `issued` відображаються на lane "return" з розрахованою датою повернення
+
+### Файли:
+- `/app/frontend/src/pages/ManagerDashboard.jsx` - оновлено логіку returnOrders
+- `/app/frontend/src/pages/CalendarBoardNew.jsx` - додано відображення issued cards
+- `/app/ВИПРАВЛЕННЯ_ПОВЕРНЕНЬ.md` - детальна документація
+- `/app/версія_19/frontend_build/` - оновлений build готовий до деплою
+
+### Статус: ✅ ВИПРАВЛЕНО
+
+---

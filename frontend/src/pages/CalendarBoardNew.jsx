@@ -951,15 +951,26 @@ export default function CalendarBoardNew() {
           
           // Показуємо ВИДАНІ картки на поверненні (issued)
           if (card.status === 'issued') {
-            // Використовуємо issued_at або created_at для дати
-            const returnDate = card.return_date || card.issued_at?.slice(0, 10) || card.created_at?.slice(0, 10)
+            // Розраховуємо дату повернення: issued_at + rental_days
+            let returnDate = card.return_date
+            
+            if (!returnDate && card.issued_at && card.rental_days) {
+              const issuedDate = new Date(card.issued_at)
+              issuedDate.setDate(issuedDate.getDate() + card.rental_days)
+              returnDate = issuedDate.toISOString().slice(0, 10)
+            }
+            
+            // Fallback на issued_at якщо немає rental_days
+            if (!returnDate) {
+              returnDate = card.issued_at?.slice(0, 10) || card.created_at?.slice(0, 10)
+            }
             
             if (returnDate) {
               calendarItems.push({
                 id: `return-card-${card.id}`,
                 lane: 'return',
                 date: returnDate,
-                timeSlot: 'day',
+                timeSlot: 'evening',
                 orderCode: card.order_number,
                 title: `Повернення: ${card.customer_name}`,
                 client: card.customer_name,

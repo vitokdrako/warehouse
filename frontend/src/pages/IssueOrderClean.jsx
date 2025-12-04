@@ -86,9 +86,24 @@ function CustomerBlock({order}){
   return (
     <Card title="Клієнт">
       <div className="grid gap-2 md:grid-cols-3 text-sm">
-        <div><div className="text-slate-500">Імʼя</div><div className="font-medium">{order.firstname} {order.lastname}</div></div>
-        <div><div className="text-slate-500">Телефон</div><div className="font-medium">{order.telephone}</div></div>
-        <div><div className="text-slate-500">Email</div><div className="font-medium">{order.email}</div></div>
+        <div>
+          <div className="text-slate-500 text-xs">Імʼя</div>
+          <div className="font-medium truncate" title={`${order.firstname} ${order.lastname}`}>
+            {order.firstname} {order.lastname}
+          </div>
+        </div>
+        <div>
+          <div className="text-slate-500 text-xs">Телефон</div>
+          <div className="font-medium break-all text-xs" title={order.telephone}>
+            {order.telephone}
+          </div>
+        </div>
+        <div>
+          <div className="text-slate-500 text-xs">Email</div>
+          <div className="font-medium break-all text-xs" title={order.email}>
+            {order.email}
+          </div>
+        </div>
       </div>
     </Card>
   )

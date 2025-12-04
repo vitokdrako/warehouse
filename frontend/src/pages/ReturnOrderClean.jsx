@@ -512,10 +512,16 @@ export default function ReturnCard(){
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card title="Клієнт">
-          <div className="text-sm">
-            <div className="font-medium">{order.firstname} {order.lastname}</div>
-            <div className="text-slate-500">{order.telephone}</div>
-            <div className="text-slate-500 text-xs mt-1">{order.email}</div>
+          <div className="text-sm space-y-1">
+            <div className="font-medium truncate" title={`${order.firstname} ${order.lastname}`}>
+              {order.firstname} {order.lastname}
+            </div>
+            <div className="text-slate-500 break-all text-xs" title={order.telephone}>
+              {order.telephone}
+            </div>
+            <div className="text-slate-500 break-all text-xs" title={order.email}>
+              {order.email}
+            </div>
           </div>
         </Card>
         <FinancePanel order={order} onSetFees={setFees} onDecideDeposit={decideDeposit} />

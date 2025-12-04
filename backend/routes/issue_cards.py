@@ -50,16 +50,34 @@ def parse_issue_card(row, db: Session = None):
         except:
             items = []
     
-    # Enrich with images if db session provided
+    # Enrich with images AND product statuses if db session provided
     if db:
         for item in items:
-            if 'sku' in item and not item.get('image'):
-                img_result = db.execute(text("""
-                    SELECT image_url FROM products WHERE sku = :sku LIMIT 1
+            if 'sku' in item:
+                # Завантажуємо актуальні дані товару
+                product_result = db.execute(text("""
+                    SELECT image_url, available, reserved, in_rent, in_restore, 
+                           price, rental_price, damage_cost
+                    FROM products WHERE sku = :sku LIMIT 1
                 """), {"sku": item['sku']})
-                img_row = img_result.fetchone()
-                if img_row and img_row[0]:
-                    item['image'] = img_row[0]
+                product_row = product_result.fetchone()
+                
+                if product_row:
+                    # Оновлюємо image якщо немає
+                    if not item.get('image') and product_row[0]:
+                        item['image'] = product_row[0]
+                    
+                    # ВАЖЛИВО: Завантажуємо актуальні статуси з БД
+                    item['available'] = int(product_row[1]) if product_row[1] is not None else 0
+                    item['reserved'] = int(product_row[2]) if product_row[2] is not None else 0
+                    item['in_rent'] = int(product_row[3]) if product_row[3] is not None else 0
+                    item['in_restore'] = int(product_row[4]) if product_row[4] is not None else 0
+                    
+                    # Додаємо ціни якщо немає
+                    if not item.get('deposit'):
+                        item['deposit'] = float(product_row[6]) if product_row[6] else 0
+                    if not item.get('damage_cost'):
+                        item['damage_cost'] = float(product_row[7]) if product_row[7] else float(product_row[6]) if product_row[6] else 0
     
     # Додати фінансові дані з таблиці orders для відображення на dashboard
     order_data = {}

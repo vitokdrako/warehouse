@@ -316,6 +316,25 @@ export default function ReturnCard(){
         {at: nowISO(), text:'Повернення розпочато', tone:'blue'}
       ])
       
+      // Завантажити фінансові транзакції
+      try {
+        const txRes = await axios.get(`${BACKEND_URL}/api/finance/transactions?order_id=${orderId}`)
+        const txData = Array.isArray(txRes.data) ? txRes.data : []
+        setTransactions(txData)
+        
+        // Розрахувати реальну заставу з транзакцій
+        const depositHoldTx = txData.filter(t => t.type === 'deposit_hold')
+        const depositReceivedAmount = depositHoldTx.reduce((sum, t) => sum + (t.amount || 0), 0)
+        
+        if (depositReceivedAmount > 0) {
+          // Оновити order з реальною заставою
+          setOrder(o => ({...o, deposit: depositReceivedAmount}))
+          console.log('[Return] Real deposit from transactions:', depositReceivedAmount)
+        }
+      } catch (txErr) {
+        console.error('[Return] Failed to load transactions:', txErr)
+      }
+      
     } catch(e){
       console.error('Error loading order for return:', e)
       toast({

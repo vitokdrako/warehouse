@@ -76,22 +76,41 @@ def parse_issue_card(row, db: Session = None):
                         item['damage_cost'] = float(product_row[2]) if product_row[2] else 0
                     
                     # ВАЖЛИВО: Завантажуємо актуальні статуси з inventory
-                    inventory_result = db.execute(text("""
-                        SELECT 
-                            SUM(CASE WHEN product_state = 'available' THEN quantity ELSE 0 END) as available,
-                            SUM(reserved_quantity) as reserved,
-                            SUM(CASE WHEN product_state = 'rented' THEN quantity ELSE 0 END) as in_rent,
-                            SUM(CASE WHEN product_state = 'maintenance' THEN quantity ELSE 0 END) as in_restore
-                        FROM inventory
-                        WHERE product_id = :product_id
-                    """), {"product_id": product_id})
-                    inv_row = inventory_result.fetchone()
-                    
-                    if inv_row:
-                        item['available'] = int(inv_row[0]) if inv_row[0] is not None else 0
-                        item['reserved'] = int(inv_row[1]) if inv_row[1] is not None else 0
-                        item['in_rent'] = int(inv_row[2]) if inv_row[2] is not None else 0
-                        item['in_restore'] = int(inv_row[3]) if inv_row[3] is not None else 0
+                    # Якщо inventory порожня - залишаємо значення з JSON або ставимо за замовчуванням
+                    try:
+                        inventory_result = db.execute(text("""
+                            SELECT 
+                                SUM(CASE WHEN product_state = 'available' THEN quantity ELSE 0 END) as available,
+                                SUM(reserved_quantity) as reserved,
+                                SUM(CASE WHEN product_state = 'rented' THEN quantity ELSE 0 END) as in_rent,
+                                SUM(CASE WHEN product_state = 'maintenance' THEN quantity ELSE 0 END) as in_restore
+                            FROM inventory
+                            WHERE product_id = :product_id
+                        """), {"product_id": product_id})
+                        inv_row = inventory_result.fetchone()
+                        
+                        if inv_row and (inv_row[0] is not None or inv_row[1] is not None):
+                            # Є дані в inventory - використовуємо їх
+                            item['available'] = int(inv_row[0]) if inv_row[0] is not None else 0
+                            item['reserved'] = int(inv_row[1]) if inv_row[1] is not None else 0
+                            item['in_rent'] = int(inv_row[2]) if inv_row[2] is not None else 0
+                            item['in_restore'] = int(inv_row[3]) if inv_row[3] is not None else 0
+                        else:
+                            # Немає даних в inventory - залишаємо існуючі значення або 0
+                            if 'available' not in item:
+                                item['available'] = 0
+                            if 'reserved' not in item:
+                                item['reserved'] = 0
+                            if 'in_rent' not in item:
+                                item['in_rent'] = 0
+                            if 'in_restore' not in item:
+                                item['in_restore'] = 0
+                    except Exception as e:
+                        # Якщо помилка з inventory - встановлюємо 0
+                        item['available'] = item.get('available', 0)
+                        item['reserved'] = item.get('reserved', 0)
+                        item['in_rent'] = item.get('in_rent', 0)
+                        item['in_restore'] = item.get('in_restore', 0)
     
     # Додати фінансові дані з таблиці orders для відображення на dashboard
     order_data = {}

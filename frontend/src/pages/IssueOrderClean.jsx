@@ -85,22 +85,22 @@ function Header({order}){
 function CustomerBlock({order}){
   return (
     <Card title="Клієнт">
-      <div className="grid gap-2 md:grid-cols-3 text-sm">
+      <div className="space-y-2 text-sm">
         <div>
           <div className="text-slate-500 text-xs">Імʼя</div>
-          <div className="font-medium truncate" title={`${order.firstname} ${order.lastname}`}>
+          <div className="font-medium" title={`${order.firstname} ${order.lastname}`}>
             {order.firstname} {order.lastname}
           </div>
         </div>
         <div>
           <div className="text-slate-500 text-xs">Телефон</div>
-          <div className="font-medium break-all text-xs" title={order.telephone}>
+          <div className="font-medium" title={order.telephone}>
             {order.telephone}
           </div>
         </div>
         <div>
           <div className="text-slate-500 text-xs">Email</div>
-          <div className="font-medium break-all text-xs" title={order.email}>
+          <div className="font-medium break-words" title={order.email}>
             {order.email}
           </div>
         </div>

@@ -53,19 +53,21 @@ export default function FinanceStatusCard({ orderId }) {
   const depositTransactions = transactions.filter((t) => t.type?.includes('deposit'))
   const rentTransactions = transactions.filter((t) => t.type?.includes('rent') || t.type === 'payment')
 
-  // Застава
+  // Застава - СУМУЄМО ВСІ deposit_hold транзакції (фактично отримані)
+  const depositHoldTransactions = depositTransactions.filter((t) => t.type === 'deposit_hold')
+  const depositReceivedAmount = depositHoldTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
   const depositExpected = depositTransactions.find((t) => t.type === 'deposit_expected')
-  const depositReceived = depositTransactions.find((t) => t.type === 'deposit_hold' && t.status === 'completed')
-  const depositStatus = depositReceived ? 'received' : depositExpected ? 'pending' : 'not_required'
+  const depositStatus = depositReceivedAmount > 0 ? 'received' : depositExpected ? 'pending' : 'not_required'
 
-  // Оплата оренди
+  // Оплата оренди - СУМУЄМО ВСІ payment транзакції
+  const paymentTransactions = rentTransactions.filter((t) => t.type === 'payment')
+  const rentPaidAmount = paymentTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
   const rentAccrual = rentTransactions.find((t) => t.type === 'rent_accrual')
-  const rentPaid = rentTransactions.find((t) => t.type === 'payment' && t.status === 'completed')
-  const rentStatus = rentPaid ? 'paid' : rentAccrual ? 'pending' : 'not_required'
+  const rentStatus = rentPaidAmount > 0 ? 'paid' : rentAccrual ? 'pending' : 'not_required'
 
-  // Суми - ВАЖЛИВО: Показуємо ФАКТИЧНО отриману заставу, а не очікувану!
-  const depositAmount = depositReceived?.amount || depositExpected?.amount || 0
-  const rentAmount = rentPaid?.amount || rentAccrual?.amount || 0
+  // Суми - ФАКТИЧНО отримані суми (сумування всіх транзакцій)
+  const depositAmount = depositReceivedAmount || depositExpected?.amount || 0
+  const rentAmount = rentPaidAmount || rentAccrual?.amount || 0
   const totalPaid = transactions
     .filter((t) => t.status === 'completed' && (t.type === 'payment' || t.type === 'deposit_hold'))
     .reduce((sum, t) => sum + (t.amount || 0), 0)

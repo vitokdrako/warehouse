@@ -63,9 +63,9 @@ export default function FinanceStatusCard({ orderId }) {
   const rentPaid = rentTransactions.find((t) => t.type === 'payment' && t.status === 'completed')
   const rentStatus = rentPaid ? 'paid' : rentAccrual ? 'pending' : 'not_required'
 
-  // Суми
-  const depositAmount = depositExpected?.amount || 0
-  const rentAmount = rentAccrual?.amount || 0
+  // Суми - ВАЖЛИВО: Показуємо ФАКТИЧНО отриману заставу, а не очікувану!
+  const depositAmount = depositReceived?.amount || depositExpected?.amount || 0
+  const rentAmount = rentPaid?.amount || rentAccrual?.amount || 0
   const totalPaid = transactions
     .filter((t) => t.status === 'completed' && (t.type === 'payment' || t.type === 'deposit_hold'))
     .reduce((sum, t) => sum + (t.amount || 0), 0)

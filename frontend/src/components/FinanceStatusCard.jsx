@@ -128,7 +128,7 @@ export default function FinanceStatusCard({ orderId }) {
                     </span>
                   </div>
                   <div className="font-mono text-slate-600">
-                    ₴ {fmtUA(t.amount)} {t.currency}
+                    ₴ {fmtUA(t.amount)}
                   </div>
                 </div>
               ))}

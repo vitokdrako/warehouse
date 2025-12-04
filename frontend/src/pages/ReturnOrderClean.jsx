@@ -6,6 +6,7 @@ import { useToast } from '../hooks/use-toast'
 import axios from 'axios'
 import { getImageUrl } from '../utils/imageHelper'
 import DamageModal from '../components/DamageModal'
+import FinanceStatusCard from '../components/FinanceStatusCard'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

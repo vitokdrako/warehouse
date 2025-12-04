@@ -54,30 +54,44 @@ def parse_issue_card(row, db: Session = None):
     if db:
         for item in items:
             if 'sku' in item:
-                # Завантажуємо актуальні дані товару
+                # Завантажуємо дані товару (image, price)
                 product_result = db.execute(text("""
-                    SELECT image_url, available, reserved, in_rent, in_restore, 
-                           price, rental_price, damage_cost
-                    FROM products WHERE sku = :sku LIMIT 1
+                    SELECT p.product_id, p.image_url, p.price, p.rental_price
+                    FROM products p
+                    WHERE p.sku = :sku LIMIT 1
                 """), {"sku": item['sku']})
                 product_row = product_result.fetchone()
                 
                 if product_row:
+                    product_id = product_row[0]
+                    
                     # Оновлюємо image якщо немає
-                    if not item.get('image') and product_row[0]:
-                        item['image'] = product_row[0]
+                    if not item.get('image') and product_row[1]:
+                        item['image'] = product_row[1]
                     
-                    # ВАЖЛИВО: Завантажуємо актуальні статуси з БД
-                    item['available'] = int(product_row[1]) if product_row[1] is not None else 0
-                    item['reserved'] = int(product_row[2]) if product_row[2] is not None else 0
-                    item['in_rent'] = int(product_row[3]) if product_row[3] is not None else 0
-                    item['in_restore'] = int(product_row[4]) if product_row[4] is not None else 0
-                    
-                    # Додаємо ціни якщо немає
+                    # Додаємо ціни
                     if not item.get('deposit'):
-                        item['deposit'] = float(product_row[6]) if product_row[6] else 0
+                        item['deposit'] = float(product_row[2]) if product_row[2] else 0
                     if not item.get('damage_cost'):
-                        item['damage_cost'] = float(product_row[7]) if product_row[7] else float(product_row[6]) if product_row[6] else 0
+                        item['damage_cost'] = float(product_row[2]) if product_row[2] else 0
+                    
+                    # ВАЖЛИВО: Завантажуємо актуальні статуси з inventory
+                    inventory_result = db.execute(text("""
+                        SELECT 
+                            SUM(CASE WHEN product_state = 'available' THEN quantity ELSE 0 END) as available,
+                            SUM(reserved_quantity) as reserved,
+                            SUM(CASE WHEN product_state = 'rented' THEN quantity ELSE 0 END) as in_rent,
+                            SUM(CASE WHEN product_state = 'maintenance' THEN quantity ELSE 0 END) as in_restore
+                        FROM inventory
+                        WHERE product_id = :product_id
+                    """), {"product_id": product_id})
+                    inv_row = inventory_result.fetchone()
+                    
+                    if inv_row:
+                        item['available'] = int(inv_row[0]) if inv_row[0] is not None else 0
+                        item['reserved'] = int(inv_row[1]) if inv_row[1] is not None else 0
+                        item['in_rent'] = int(inv_row[2]) if inv_row[2] is not None else 0
+                        item['in_restore'] = int(inv_row[3]) if inv_row[3] is not None else 0
     
     # Додати фінансові дані з таблиці orders для відображення на dashboard
     order_data = {}

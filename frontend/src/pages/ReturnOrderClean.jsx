@@ -487,6 +487,9 @@ export default function ReturnCard(){
     <div className="mx-auto max-w-7xl p-6 space-y-6">
       <Header order={order} />
 
+      {/* Фінансовий статус - показується ПЕРШИЙ */}
+      <FinanceStatusCard orderId={order?.order_id} />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card title="Клієнт">
           <div className="text-sm">

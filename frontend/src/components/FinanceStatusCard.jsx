@@ -121,19 +121,24 @@ export default function FinanceStatusCard({ orderId }) {
               📋 Історія транзакцій ({transactions.length})
             </summary>
             <div className="mt-2 space-y-1">
-              {transactions.map((t, idx) => (
-                <div key={idx} className="flex items-center justify-between border-l-2 border-slate-200 pl-2 py-1 text-xs">
-                  <div>
-                    <span className="font-medium text-slate-700">{getTransactionLabel(t.type)}</span>
-                    <span className={cls('ml-2 rounded px-1.5 py-0.5', t.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>
-                      {t.status === 'completed' ? '✓' : '⏳'}
-                    </span>
+              {transactions.map((t, idx) => {
+                // deposit_hold та payment завжди завершені (якщо є запис - гроші отримано)
+                const isCompleted = t.type === 'deposit_hold' || t.type === 'payment' || t.status === 'completed'
+                
+                return (
+                  <div key={idx} className="flex items-center justify-between border-l-2 border-slate-200 pl-2 py-1 text-xs">
+                    <div>
+                      <span className="font-medium text-slate-700">{getTransactionLabel(t.type)}</span>
+                      <span className={cls('ml-2 rounded px-1.5 py-0.5', isCompleted ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>
+                        {isCompleted ? '✓' : '⏳'}
+                      </span>
+                    </div>
+                    <div className="font-mono text-slate-600">
+                      ₴ {fmtUA(t.amount)}
+                    </div>
                   </div>
-                  <div className="font-mono text-slate-600">
-                    ₴ {fmtUA(t.amount)}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </details>
         )}

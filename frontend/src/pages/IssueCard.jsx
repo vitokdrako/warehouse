@@ -1069,7 +1069,7 @@ export default function IssueCard(){
       {/* Top summary */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <CustomerBlock order={order} />
-        <FinanceSummary order={order} />
+        <FinanceStatusCard orderId={order?.order_id} />
         <Timeline events={events} />
       </div>
 

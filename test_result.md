@@ -1529,3 +1529,89 @@ setOrder(o => ({...o, deposit: depositReceivedAmount}))
 ### Статус: ✅ ВИПРАВЛЕНО
 
 ---
+
+---
+
+## ✅ Виправлено: Статуси товарів на картках
+**Дата**: 02.12.2025
+**Проблема**: Статуси товарів (В наявн., Резерв, В оренді, В реставр.) не відображалися або були нулями
+
+### Дослідження системи перевірки конфліктів:
+
+**Джерело:** `utils/availability_checker.py`
+
+**Логіка:**
+1. **Загальна кількість** - `products.quantity`
+2. **Зарезервовано** - сума з `order_items` для статусів `processing`, `ready_for_issue`, `issued`, `on_rent` з перевіркою перетину дат
+3. **В оренді** - сума з `order_items` для статусів `issued`, `on_rent`
+4. **Доступно** - `total_quantity - reserved_quantity`
+
+### Що виправлено в `issue_cards.py`:
+
+**Було:**
+```python
+# Статуси не завантажувалися - всі значення 0
+items = json.loads(row[6])  # Просто JSON без актуалізації
+```
+
+**Стало:**
+```python
+# 1. Завантажуємо загальну кількість
+SELECT p.quantity FROM products p WHERE p.sku = :sku
+
+# 2. Рахуємо зарезервовані
+SELECT SUM(oi.quantity) FROM order_items oi
+JOIN orders o ON oi.order_id = o.order_id
+WHERE oi.product_id = :product_id
+AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent')
+
+# 3. Рахуємо в оренді
+SELECT SUM(oi.quantity) FROM order_items oi
+JOIN orders o ON oi.order_id = o.order_id
+WHERE oi.product_id = :product_id
+AND o.status IN ('issued', 'on_rent')
+
+# 4. Обчислюємо доступно
+item['available'] = total_quantity - reserved_qty
+item['reserved'] = reserved_qty
+item['in_rent'] = in_rent_qty
+```
+
+### Приклад з production:
+
+**Товар:** Колба (14 см, Ø-11) SKU: VA2768
+
+**Було:**
+```
+В наявн.: 0
+Резерв: 0
+В оренді: 0
+В реставр.: 0
+```
+
+**Стало:**
+```
+В наявн.: 117 (119 всього - 2 зарезервовано)
+Резерв: 2 (в замовленні OC-7040)
+В оренді: 0
+В реставр.: 0
+```
+
+### Статуси замовлень:
+
+**Заморожують товар:**
+- `processing` - очікує підтвердження
+- `ready_for_issue` - готовий до видачі
+- `issued` - виданий
+- `on_rent` - в оренді
+
+**Розморожують товар:**
+- `returned`, `completed`, `cancelled`
+
+### Файли:
+- `/app/backend/routes/issue_cards.py` - додано розрахунок статусів
+- `/app/СТАТУСИ_ТОВАРІВ.md` - детальна документація
+
+### Статус: ✅ ВИПРАВЛЕНО
+
+---

@@ -242,6 +242,7 @@ export default function ReturnCard(){
   const [notes, setNotes] = useState('')
   const [events, setEvents] = useState([])
   const [findingOpen, setFindingOpen] = useState({open:false, itemId:null})
+  const [transactions, setTransactions] = useState([]) // Фінансові транзакції
 
   useEffect(()=>{
     loadOrder()

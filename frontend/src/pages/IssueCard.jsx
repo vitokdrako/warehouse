@@ -6,6 +6,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { getImageUrl } from '../utils/imageHelper'
 import { DAMAGE_RULES, defaultFeeFor } from '../utils/damageRules'
 import DamageModal from '../components/DamageModal'
+import FinanceStatusCard from '../components/FinanceStatusCard'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

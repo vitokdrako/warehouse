@@ -1677,19 +1677,34 @@ async def complete_return(
         damage_fee = float(return_data.get('damage_fee', 0))
         total_fees = late_fee + cleaning_fee + damage_fee
         
-        # Оновити статус замовлення та зберегти manager_notes і damage_fee
+        # Оновити статус замовлення та зберегти damage_fee
+        # ВАЖЛИВО: НЕ перезаписуємо manager_comment (там коментар клієнта!)
         manager_notes = return_data.get('manager_notes', '')
         db.execute(text("""
             UPDATE orders 
             SET status = 'returned',
-                manager_comment = :manager_notes,
                 damage_fee = :damage_fee
             WHERE order_id = :order_id
         """), {
             "order_id": order_id,
-            "manager_notes": manager_notes,
             "damage_fee": damage_fee
         })
+        
+        # Зберегти нотатку про збиток в issue_cards.manager_notes (дописати)
+        if manager_notes:
+            db.execute(text("""
+                UPDATE issue_cards 
+                SET manager_notes = CONCAT(
+                    COALESCE(manager_notes, ''), 
+                    '\n\n--- Повернення ---\n',
+                    :return_notes
+                ),
+                updated_at = NOW()
+                WHERE order_id = :order_id
+            """), {
+                "order_id": order_id,
+                "return_notes": manager_notes
+            })
         
         # Оновити return card якщо існує таблиця
         try:

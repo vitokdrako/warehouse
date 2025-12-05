@@ -316,10 +316,11 @@ async def get_recent_damages(
                 "damage_code": row[9],
                 "severity": row[10],
                 "fee": float(row[11]) if row[11] else 0.0,
-                "photo_url": row[12],
+                "photo_url": row[12],  # Фото пошкодження
                 "note": row[13],
                 "created_by": row[14],
-                "created_at": row[15].isoformat() if row[15] else None
+                "created_at": row[15].isoformat() if row[15] else None,
+                "product_image": row[16]  # Фото товару з products
             })
         
         return damages

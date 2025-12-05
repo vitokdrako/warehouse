@@ -295,7 +295,7 @@ async def get_recent_damages(
                 pdh.photo_url, pdh.note, pdh.created_by, pdh.created_at,
                 p.image_url as product_image
             FROM product_damage_history pdh
-            LEFT JOIN products p ON p.sku = pdh.sku
+            LEFT JOIN products p ON p.sku COLLATE utf8mb4_unicode_ci = pdh.sku COLLATE utf8mb4_unicode_ci
             WHERE pdh.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
             ORDER BY pdh.created_at DESC
             LIMIT :limit

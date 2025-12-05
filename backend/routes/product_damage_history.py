@@ -289,13 +289,15 @@ async def get_recent_damages(
     try:
         result = db.execute(text("""
             SELECT 
-                id, product_id, sku, product_name, category,
-                order_id, order_number, stage,
-                damage_type, damage_code, severity, fee,
-                photo_url, note, created_by, created_at
-            FROM product_damage_history
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            ORDER BY created_at DESC
+                pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
+                pdh.order_id, pdh.order_number, pdh.stage,
+                pdh.damage_type, pdh.damage_code, pdh.severity, pdh.fee,
+                pdh.photo_url, pdh.note, pdh.created_by, pdh.created_at,
+                p.image_url as product_image
+            FROM product_damage_history pdh
+            LEFT JOIN products p ON p.sku = pdh.sku
+            WHERE pdh.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            ORDER BY pdh.created_at DESC
             LIMIT :limit
         """), {"limit": limit})
         

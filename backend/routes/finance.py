@@ -68,14 +68,16 @@ async def get_transactions(
         # 0: id, 1: transaction_type, 2: order_id, 3: amount,
         # 4: currency, 5: status, 6: description, 7: created_at, 8: payment_method,
         # 9: notes, 10: created_by, 11: customer_name, 12: deposit_amount (expected)
-        # 13: manager_comment, 14: damage_fee, 15: order_status
+        # 13: manager_comment (orders - коментар клієнта), 14: damage_fee, 15: order_status
+        # 16: manager_notes (issue_cards - внутрішні нотатки менеджера)
         
         transaction_type = row[1]  # transaction_type
         amount = float(row[3]) if row[3] else 0.0  # amount (index 3)
         description = row[6] or transaction_type.replace('_', ' ').title()
         
-        # Використовуємо колонки з таблиці orders замість парсингу з description
-        manager_comment = row[13] or ""  # manager_comment з orders
+        # ВАЖЛИВО: Використовуємо manager_notes з issue_cards (внутрішні нотатки)
+        # а не manager_comment з orders (коментар клієнта)!
+        manager_notes = row[16] or row[13] or ""  # Пріоритет: issue_cards.manager_notes, потім orders.manager_comment
         damage_fee = float(row[14]) if row[14] else 0.0  # damage_fee з orders
         order_status = row[15] if len(row) > 15 else None  # order status
         

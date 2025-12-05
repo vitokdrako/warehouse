@@ -170,7 +170,7 @@ export default function DamageCabinetPro({
           note: item.note || '',
           amountPerUnit: item.fee || 0,
           total: item.fee || 0,
-          image: item.photo_url
+          image: item.product_image || item.photo_url  // Пріоритет: фото товару, потім фото пошкодження
         }],
         createdAt: item.created_at,
         createdBy: item.created_by || 'Unknown',

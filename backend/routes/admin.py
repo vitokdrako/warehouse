@@ -230,33 +230,73 @@ async def get_categories(
     authorization: str = Header(None),
     rh_db: Session = Depends(get_rh_db)
 ):
-    """Отримати всі категорії (дерево)"""
+    """
+    Отримати всі категорії (використовує ту саму логіку що і audit/categories)
+    ДЖЕРЕЛО ПРАВДИ: /api/audit/categories
+    """
     require_admin(authorization)
     
     try:
-        query = text("""
-            SELECT 
-                category_id, name, parent_id, description, 
-                sort_order, is_active, created_at
+        # ✅ Використовуємо ту саму логіку що і в audit/categories (джерело правди)
+        
+        # 1. Головні категорії (parent_id = 0)
+        main_categories_query = rh_db.execute(text("""
+            SELECT DISTINCT name, category_id, description, sort_order, is_active, created_at
             FROM categories
-            ORDER BY parent_id, sort_order, name
-        """)
+            WHERE parent_id = 0
+            ORDER BY name
+        """))
         
-        results = rh_db.execute(query).fetchall()
+        main_categories_list = [
+            {
+                'category_id': row[1],
+                'name': row[0],
+                'parent_id': 0,
+                'description': row[2],
+                'sort_order': row[3] or 0,
+                'is_active': bool(row[4]) if row[4] is not None else True,
+                'created_at': row[5].isoformat() if row[5] else None,
+                'subcategories_count': 0  # Буде заповнено нижче
+            }
+            for row in main_categories_query if row[0]
+        ]
         
-        categories = []
-        for row in results:
-            categories.append({
-                'category_id': row[0],
-                'name': row[1],
-                'parent_id': row[2],
-                'description': row[3],
-                'sort_order': row[4],
-                'is_active': bool(row[5]),
-                'created_at': row[6].isoformat() if row[6] else None
-            })
+        # 2. Підкатегорії
+        if main_categories_list:
+            main_cat_ids = [cat['category_id'] for cat in main_categories_list]
+            all_subcategories_query = rh_db.execute(text("""
+                SELECT parent_id, category_id, name, description, sort_order, is_active, created_at
+                FROM categories
+                WHERE parent_id IN :parent_ids
+                ORDER BY parent_id, name
+            """), {"parent_ids": tuple(main_cat_ids)})
+            
+            # Рахуємо підкатегорії для кожної головної
+            subcategories_count = {}
+            all_subcategories = []
+            
+            for row in all_subcategories_query:
+                parent_id = row[0]
+                subcategories_count[parent_id] = subcategories_count.get(parent_id, 0) + 1
+                
+                all_subcategories.append({
+                    'category_id': row[1],
+                    'name': row[2],
+                    'parent_id': parent_id,
+                    'description': row[3],
+                    'sort_order': row[4] or 0,
+                    'is_active': bool(row[5]) if row[5] is not None else True,
+                    'created_at': row[6].isoformat() if row[6] else None
+                })
+            
+            # Оновлюємо кількість підкатегорій
+            for cat in main_categories_list:
+                cat['subcategories_count'] = subcategories_count.get(cat['category_id'], 0)
+            
+            # Повертаємо головні категорії + підкатегорії разом
+            return main_categories_list + all_subcategories
         
-        return categories
+        return main_categories_list
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")

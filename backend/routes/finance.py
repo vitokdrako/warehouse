@@ -31,14 +31,17 @@ async def get_transactions(
     ✅ MIGRATED: Using RentalHub DB
     """
     # Join with orders table to get client name, expected deposit, manager comment and damage fee
+    # ВАЖЛИВО: Беремо manager_notes з issue_cards (внутрішні нотатки менеджера), а не з orders!
     sql = """
         SELECT 
             ft.id, ft.transaction_type, ft.order_id, ft.amount,
             ft.currency, ft.status, ft.description, ft.created_at, ft.payment_method,
             ft.notes, ft.created_by,
-            o.customer_name, o.deposit_amount, o.manager_comment, o.damage_fee, o.status as order_status
+            o.customer_name, o.deposit_amount, o.manager_comment, o.damage_fee, o.status as order_status,
+            ic.manager_notes
         FROM finance_transactions ft
         LEFT JOIN orders o ON ft.order_id = o.order_id
+        LEFT JOIN issue_cards ic ON ic.order_id = o.order_id
         WHERE 1=1
     """
     params = {}

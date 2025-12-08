@@ -1396,13 +1396,20 @@ async def update_decor_order_status(
 async def update_decor_order_items(
     order_id: int,
     items_data: dict,
+    authorization: Optional[str] = Header(None),
     db: Session = Depends(get_rh_db)
 ):
     """
     Оновити товари в замовленні
-    ✅ MIGRATED: Using RentalHub DB
+    ✅ MIGRATED: Using RentalHub DB + User Tracking
     """
+    from utils.user_tracking_helper import get_current_user_from_header
+    
     try:
+        # Get current user for tracking
+        current_user = get_current_user_from_header(authorization)
+        user_id = current_user.get("id")
+        
         # Перевірити чи існує замовлення
         result = db.execute(text("SELECT order_id FROM orders WHERE order_id = :id"), {"id": order_id})
         if not result.fetchone():
@@ -1411,6 +1418,14 @@ async def update_decor_order_items(
         items = items_data.get('items', [])
         if not items:
             raise HTTPException(status_code=400, detail="No items provided")
+        
+        # Оновити updated_by_id в orders
+        if user_id:
+            db.execute(text("""
+                UPDATE orders 
+                SET updated_by_id = :user_id, updated_at = NOW()
+                WHERE order_id = :order_id
+            """), {"user_id": user_id, "order_id": order_id})
         
         # Видалити старі items
         db.execute(text("DELETE FROM order_items WHERE order_id = :order_id"), {"order_id": order_id})

@@ -1157,6 +1157,12 @@ export default function IssueCard(){
       <div className="text-xs text-slate-500 text-center">
         Підсвітка: рядки жовтого кольору — ще неукомплектовані; серійні номери клікабельні для скан/анскан.
       </div>
+
+      {/* User Tracking - Internal Notes & History */}
+      <div className="mt-6 space-y-6">
+        <OrderNotes orderId={order?.order_id} />
+        <OrderHistoryTimeline orderId={order?.order_id} />
+      </div>
     </div>
   )
 }

@@ -1305,7 +1305,7 @@ if (card.status === 'issued') {
 
 ### API Response (для перевірки):
 ```bash
-curl https://rental-sync-debug.preview.emergentagent.com/api/issue-cards
+curl https://rental-audit.preview.emergentagent.com/api/issue-cards
 ```
 
 **4 issued cards знайдено:**

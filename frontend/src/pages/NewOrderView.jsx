@@ -350,6 +350,24 @@ export default function NewOrderView() {
       if (response.ok) {
         const result = await response.json();
         console.log('[SAVE ITEMS] ✅ Товари збережено', result);
+        
+        // Перезавантажити замовлення з сервера для отримання свіжих даних
+        console.log('[SAVE ITEMS] 🔄 Перезавантаження замовлення...');
+        const reloadResponse = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}`);
+        if (reloadResponse.ok) {
+          const freshOrder = await reloadResponse.json();
+          console.log('[SAVE ITEMS] ✅ Отримано свіжі дані:', freshOrder.items?.length, 'товарів');
+          
+          // Оновити items зі свіжими даними з сервера
+          if (freshOrder.items) {
+            setItems(freshOrder.items);
+            console.log('[SAVE ITEMS] ✅ Items оновлено з сервера');
+          }
+          
+          // Оновити order об'єкт теж
+          setOrder(freshOrder);
+        }
+        
         return true;
       } else {
         console.error('[SAVE ITEMS] ❌ Помилка збереження');

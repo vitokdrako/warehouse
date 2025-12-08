@@ -287,6 +287,18 @@ frontend:
           agent: "testing"
           comment: "✅ COMPREHENSIVE TESTING COMPLETED: Calendar undefined length error fix VERIFIED! Successfully logged in with vitokdrako@gmail.com/test123, navigated to /calendar page. Tested all 3 calendar views (Day, Week, Month) extensively with rapid view switching, navigation (previous/next/today), side panel functionality, KPI counters, and month grid interactions. Monitored 27 console messages during testing - found 0 undefined length errors and 20 other errors (all related to dashboard API fetch failures, not calendar). Calendar loads properly, all views work without errors, view switching is smooth, navigation buttons function correctly. The fix with (orders || []) defensive programming is working perfectly. No 'Cannot read properties of undefined (reading 'length')' errors detected during comprehensive stress testing."
 
+  - task: "Bug fix: Item quantities save and persist in awaiting_customer orders"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/NewOrderView.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test bug fix for saving item quantities in orders with awaiting_customer status. Problem was: after changing quantity and saving, card would update but show old data. Fix: after saveItems() now reloads order from server for fresh data. Test scenario: 1) Login vitokdrako@gmail.com/test123, 2) Go to /manager, 3) Find awaiting_customer order, 4) Change item quantity (e.g. 2→5), 5) Verify quantity displays correctly, sums recalculate, data persists after F5 refresh. Expected: console.log '[SAVE ITEMS] ✅ Items оновлено з сервера'. API verification shows 4 awaiting orders exist (OC-7046, OC-7044, OC-7037, OC-6969) with editable items. Authentication issues prevented full UI testing completion."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"

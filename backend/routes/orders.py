@@ -1396,8 +1396,8 @@ async def update_decor_order_status(
 async def update_decor_order_items(
     order_id: int,
     items_data: dict,
-    authorization: Optional[str] = Header(None),
-    db: Session = Depends(get_rh_db)
+    db: Session = Depends(get_rh_db),
+    authorization: Optional[str] = Header(None)
 ):
     """
     Оновити товари в замовленні

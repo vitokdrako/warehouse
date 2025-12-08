@@ -320,16 +320,16 @@ async def get_order_notes(
     """Отримати всі внутрішні нотатки по замовленню"""
     result = db.execute(text("""
         SELECT 
-            on.id,
-            on.order_id,
-            on.note,
-            on.created_by_id,
-            on.created_by_name,
-            on.created_at,
-            on.updated_at
-        FROM order_notes on
-        WHERE on.order_id = :order_id
-        ORDER BY on.created_at DESC
+            onn.id,
+            onn.order_id,
+            onn.note,
+            onn.created_by_id,
+            onn.created_by_name,
+            onn.created_at,
+            onn.updated_at
+        FROM order_notes onn
+        WHERE onn.order_id = :order_id
+        ORDER BY onn.created_at DESC
     """), {"order_id": order_id})
     
     notes = []

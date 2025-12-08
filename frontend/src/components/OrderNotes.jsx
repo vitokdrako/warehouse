@@ -55,7 +55,7 @@ const OrderNotes = ({ orderId }) => {
   };
 
   const handleDeleteNote = async (noteId) => {
-    if (!confirm('Видалити цю нотатку?')) return;
+    if (!window.confirm('Видалити цю нотатку?')) return;
 
     try {
       await axios.delete(

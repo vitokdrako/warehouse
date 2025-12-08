@@ -1392,6 +1392,72 @@ async def update_decor_order_status(
     return await update_order_status(order_id=order_id, data=status_data, db=db)
 
 
+@decor_router.put("/{order_id}/items")
+async def update_decor_order_items(
+    order_id: int,
+    items_data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Оновити товари в замовленні
+    ✅ MIGRATED: Using RentalHub DB
+    """
+    try:
+        # Перевірити чи існує замовлення
+        result = db.execute(text("SELECT order_id FROM orders WHERE order_id = :id"), {"id": order_id})
+        if not result.fetchone():
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        items = items_data.get('items', [])
+        if not items:
+            raise HTTPException(status_code=400, detail="No items provided")
+        
+        # Видалити старі items
+        db.execute(text("DELETE FROM order_items WHERE order_id = :order_id"), {"order_id": order_id})
+        
+        # Додати нові items
+        for item in items:
+            inventory_id = item.get('inventory_id') or item.get('product_id')
+            product_name = item.get('name') or item.get('product_name', '')
+            quantity = int(item.get('quantity', 1))
+            price_per_day = float(item.get('price_per_day', 0))
+            total_rental = float(item.get('total_rental', price_per_day * quantity))
+            image_url = item.get('image') or item.get('photo', '')
+            
+            db.execute(text("""
+                INSERT INTO order_items (
+                    order_id, product_id, product_name, quantity, 
+                    price, total_rental, image_url
+                ) VALUES (
+                    :order_id, :product_id, :product_name, :quantity,
+                    :price, :total_rental, :image_url
+                )
+            """), {
+                "order_id": order_id,
+                "product_id": inventory_id,
+                "product_name": product_name,
+                "quantity": quantity,
+                "price": price_per_day,
+                "total_rental": total_rental,
+                "image_url": image_url
+            })
+        
+        db.commit()
+        
+        return {
+            "message": "Items updated successfully",
+            "order_id": order_id,
+            "items_count": len(items)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[UPDATE ITEMS] Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @decor_router.post("/{order_id}/confirm-by-client")
 async def confirm_order_by_client(
     order_id: int,

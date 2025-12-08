@@ -305,7 +305,8 @@ metadata:
   test_sequence: 2
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Bug fix: Item quantities save and persist in awaiting_customer orders"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

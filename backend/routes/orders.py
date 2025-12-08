@@ -2,7 +2,7 @@
 Orders routes - ПОВНА МІГРАЦІЯ
 ✅ MIGRATED: Using RentalHub DB з повною бізнес-логікою
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from typing import List, Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session

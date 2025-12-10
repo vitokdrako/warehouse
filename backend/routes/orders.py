@@ -589,6 +589,7 @@ async def update_order(
 async def update_order_from_calendar(
     order_id: int,
     data: dict,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -620,13 +621,14 @@ async def update_order_from_calendar(
     actual_time = time_map.get(time_slot, '09:00')
     
     # Determine which fields to update based on lane
-    params = {"order_id": order_id}
+    params = {"order_id": order_id, "updated_by_id": current_user["id"]}
     
     if lane == 'issue':
         # Update issue_date and issue_time
         sql = text("""
             UPDATE orders 
-            SET issue_date = :date, issue_time = :time, rental_start_date = :date
+            SET issue_date = :date, issue_time = :time, rental_start_date = :date,
+                updated_by_id = :updated_by_id, updated_at = NOW()
             WHERE order_id = :order_id
         """)
         params['date'] = new_date
@@ -635,7 +637,8 @@ async def update_order_from_calendar(
         # Update return_date and return_time
         sql = text("""
             UPDATE orders 
-            SET return_date = :date, return_time = :time, rental_end_date = :date
+            SET return_date = :date, return_time = :time, rental_end_date = :date,
+                updated_by_id = :updated_by_id, updated_at = NOW()
             WHERE order_id = :order_id
         """)
         params['date'] = new_date
@@ -647,11 +650,12 @@ async def update_order_from_calendar(
     
     # Log to lifecycle
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'calendar_update', :notes, NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+        VALUES (:order_id, 'calendar_update', :notes, :created_by, NOW())
     """), {
         "order_id": order_id,
-        "notes": f"Calendar: {lane} updated to {new_date} {actual_time}"
+        "notes": f"Calendar: {lane} updated to {new_date} {actual_time}",
+        "created_by": current_user["name"]
     })
     
     db.commit()

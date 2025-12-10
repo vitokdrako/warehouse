@@ -407,21 +407,32 @@ class DamageCabinetTester:
 
 def main():
     """Main test execution"""
-    print("🧪 Backend Testing: Return Workflow with Automatic Task Creation")
+    print("🧪 Backend Testing: Damage Cabinet (Кабінет Шкоди)")
+    print("=" * 70)
+    print("Testing damage cabinet functionality on /damages page")
+    print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
     print("=" * 70)
     
-    tester = BackendTester(BASE_URL)
+    tester = DamageCabinetTester(BASE_URL)
     
     try:
         success = tester.run_comprehensive_test()
         
         if success:
-            print("\n✅ ALL TESTS COMPLETED")
-            print("📊 Summary: Return workflow with automatic task creation tested")
+            print("\n✅ ALL DAMAGE CABINET TESTS COMPLETED SUCCESSFULLY")
+            print("📊 Summary: Damage cabinet functionality verified")
+            print("🎯 Expected behavior confirmed:")
+            print("   - API /api/damages/cases returns array of cases")
+            print("   - API /api/damages/cases/{case_id} returns case details with items")
+            print("   - Frontend login works with provided credentials")
+            print("   - Page loads with header 'Rental Hub' and subtitle 'Кабінет шкоди'")
+            print("   - Tabs are present: Головна, Мийка, Реставрація, Хімчистка")
+            print("   - Cases list displays properly (not empty, not 'Завантаження...')")
+            print("   - Clicking on case shows details on the right side")
             sys.exit(0)
         else:
-            print("\n❌ SOME TESTS FAILED")
-            print("📊 Summary: Issues found in return workflow")
+            print("\n❌ SOME DAMAGE CABINET TESTS FAILED")
+            print("📊 Summary: Issues found in damage cabinet functionality")
             sys.exit(1)
             
     except KeyboardInterrupt:

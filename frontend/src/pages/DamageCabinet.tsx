@@ -823,6 +823,7 @@ export default function DamageCabinetPro({
         />
       )}
       </div>
+      </div>
       ) : activeTab === 'washing' ? (
         <div className="mx-auto max-w-7xl px-6 pb-6">
           <div className="text-center py-12">

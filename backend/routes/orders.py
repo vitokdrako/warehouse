@@ -721,6 +721,7 @@ async def update_order_status(
 @router.post("")
 async def create_order(
     order: OrderCreate,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -741,16 +742,16 @@ async def create_order(
     # Generate order number
     order_number = f"ORD-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
     
-    # Insert order
+    # Insert order with user tracking
     db.execute(text("""
         INSERT INTO orders (
             order_number, customer_name, customer_phone, customer_email,
             rental_start_date, rental_end_date, status, total_price, deposit_amount,
-            notes, created_at
+            notes, created_by_id, created_at
         ) VALUES (
             :order_number, :customer_name, :customer_phone, :customer_email,
             :rental_start_date, :rental_end_date, 'pending', :total_price, :deposit_amount,
-            :notes, NOW()
+            :notes, :created_by_id, NOW()
         )
     """), {
         "order_number": order_number,
@@ -761,7 +762,8 @@ async def create_order(
         "rental_end_date": order.rental_end_date,
         "total_price": order.total_amount,
         "deposit_amount": order.deposit_amount,
-        "notes": order.notes
+        "notes": order.notes,
+        "created_by_id": current_user["id"]
     })
     
     # Get inserted ID

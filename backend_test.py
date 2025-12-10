@@ -224,42 +224,38 @@ class DamageCabinetTester:
             self.log(f"❌ Exception testing frontend page elements: {str(e)}", "ERROR")
             return False
     
-    def verify_task_creation(self, expected_skus: List[str], expected_statuses: List[str]) -> bool:
-        """Verify that tasks were created for specific SKUs with expected statuses"""
+    def test_case_selection_and_details(self, cases_data: List[Dict]) -> bool:
+        """Test clicking on first case and verifying details display"""
         try:
-            self.log("🔍 Verifying task creation...")
+            self.log("🧪 Testing case selection and details display...")
             
-            tasks_data = self.test_cleaning_tasks_endpoint()
-            if not tasks_data:
+            if not cases_data:
+                self.log("❌ No cases available for selection test", "ERROR")
                 return False
             
-            tasks = tasks_data.get('tasks', [])
+            # Get first case
+            first_case = cases_data[0]
+            case_id = first_case.get('id')
             
-            # Check each expected SKU
-            verification_results = []
-            for i, sku in enumerate(expected_skus):
-                expected_status = expected_statuses[i] if i < len(expected_statuses) else 'wash'
+            if not case_id:
+                self.log("❌ First case has no ID", "ERROR")
+                return False
+            
+            self.log(f"🔍 Testing details for case: {case_id}")
+            
+            # Test case details
+            details_result = self.test_damage_case_details(case_id)
+            
+            if details_result.get("success"):
+                items_count = details_result.get("items_count", 0)
+                self.log(f"✅ Case selection test passed - details loaded with {items_count} items")
+                return True
+            else:
+                self.log("❌ Case selection test failed - could not load details", "ERROR")
+                return False
                 
-                # Find task for this SKU
-                matching_tasks = [t for t in tasks if t.get('sku') == sku]
-                
-                if matching_tasks:
-                    task = matching_tasks[0]
-                    actual_status = task.get('status')
-                    if actual_status == expected_status:
-                        self.log(f"✅ SKU {sku}: Found task with correct status '{actual_status}'")
-                        verification_results.append(True)
-                    else:
-                        self.log(f"❌ SKU {sku}: Expected status '{expected_status}', got '{actual_status}'", "ERROR")
-                        verification_results.append(False)
-                else:
-                    self.log(f"❌ SKU {sku}: No task found", "ERROR")
-                    verification_results.append(False)
-            
-            return all(verification_results)
-            
         except Exception as e:
-            self.log(f"❌ Exception verifying task creation: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing case selection: {str(e)}", "ERROR")
             return False
     
     def check_backend_logs(self):

@@ -12,6 +12,7 @@ import uuid
 import json
 
 from database_rentalhub import get_rh_db
+from utils.user_tracking_helper import get_current_user_dependency
 
 router = APIRouter(prefix="/api/return-cards", tags=["return-cards"])
 

@@ -369,7 +369,7 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+    <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white overflow-hidden">
       {/* Горизонтальний скрол з тижнями */}
       <div 
         ref={scrollRef}
@@ -386,24 +386,24 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
           {allWeeks.map((week, weekIndex) => (
             <div 
               key={week.id}
-              className="flex-shrink-0 w-full p-3 text-[11px]"
+              className="flex-shrink-0 w-full p-2 md:p-3 text-[10px] md:text-[11px]"
             >
               {/* Назва тижня */}
-              <div className="text-xs font-semibold text-corp-text-main mb-3 text-center">
+              <div className="text-[10px] md:text-xs font-semibold text-corp-text-main mb-2 md:mb-3 text-center">
                 {week.dates[0].toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })} - {week.dates[6].toLocaleDateString('uk-UA', { day: '2-digit', month: 'short', year: 'numeric' })}
               </div>
 
               {/* Header */}
-              <div className="mb-2 grid grid-cols-[120px,1fr] items-end gap-2 border-b border-slate-100 pb-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-corp-text-muted">Потік</div>
-                <div className="grid grid-cols-7 gap-1">
+              <div className="mb-2 grid grid-cols-[60px,1fr] md:grid-cols-[120px,1fr] items-end gap-1 md:gap-2 border-b border-slate-100 pb-2 overflow-x-auto">
+                <div className="text-[8px] md:text-[10px] font-semibold uppercase tracking-wide text-corp-text-muted">Потік</div>
+                <div className="grid grid-cols-7 gap-0.5 md:gap-1 min-w-[280px] md:min-w-0">
                   {week.dates.map((d) => {
                     const isToday = toISO(d) === toISO(new Date())
                     return (
                       <div 
                         key={toISO(d)} 
                         className={cls(
-                          "text-center text-[10px] p-1 rounded",
+                          "text-center text-[8px] md:text-[10px] p-0.5 md:p-1 rounded",
                           isToday && "bg-blue-50 ring-1 ring-blue-200"
                         )}
                       >
@@ -411,9 +411,10 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
                           "font-medium",
                           isToday ? "text-blue-600" : "text-corp-text-dark"
                         )}>
-                          {d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })}
+                          {d.toLocaleDateString('uk-UA', { day: '2-digit' })}
                         </div>
                         <div className={cls(
+                          "hidden md:block",
                           isToday ? "text-blue-500" : "text-corp-text-muted"
                         )}>
                           {d.toLocaleDateString('uk-UA', { weekday: 'short' })}
@@ -425,39 +426,41 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
               </div>
 
               {/* Lanes */}
-              {Object.keys(laneMeta).map((lane) => {
-                const laneInfo = laneMeta[lane]
-                return (
-                  <div key={lane} className="grid grid-cols-[120px,1fr] gap-2 border-b border-slate-50 py-2 last:border-b-0">
-                    <div className="flex flex-col gap-1">
-                      <span className={cls('text-[11px] font-semibold', laneInfo.color)}>{laneInfo.label}</span>
-                    </div>
+              <div className="overflow-x-auto">
+                {Object.keys(laneMeta).map((lane) => {
+                  const laneInfo = laneMeta[lane]
+                  return (
+                    <div key={lane} className="grid grid-cols-[60px,1fr] md:grid-cols-[120px,1fr] gap-1 md:gap-2 border-b border-slate-50 py-1.5 md:py-2 last:border-b-0">
+                      <div className="flex flex-col gap-0.5 md:gap-1">
+                        <span className={cls('text-[9px] md:text-[11px] font-semibold', laneInfo.color)}>{laneInfo.label}</span>
+                      </div>
 
-                    <div className="grid grid-cols-7 gap-2">
-                      {week.dates.map((d) => {
-                        const dateKey = toISO(d)
-                        const dayItems = items.filter((i) => i.date === dateKey && i.lane === lane)
-                        return (
-                          <DropZone
-                            key={dateKey}
-                            onDrop={(e) => handleDrop(e, d, lane)}
-                            isEmpty={dayItems.length === 0}
-                          >
-                            {dayItems.map((item) => (
-                              <CalendarCard
-                                key={item.id}
-                                item={item}
-                                onOpen={onOpen}
-                                onDragStart={handleDragStart}
-                              />
-                            ))}
-                          </DropZone>
-                        )
-                      })}
+                      <div className="grid grid-cols-7 gap-0.5 md:gap-2 min-w-[280px] md:min-w-0">
+                        {week.dates.map((d) => {
+                          const dateKey = toISO(d)
+                          const dayItems = items.filter((i) => i.date === dateKey && i.lane === lane)
+                          return (
+                            <DropZone
+                              key={dateKey}
+                              onDrop={(e) => handleDrop(e, d, lane)}
+                              isEmpty={dayItems.length === 0}
+                            >
+                              {dayItems.map((item) => (
+                                <CalendarCard
+                                  key={item.id}
+                                  item={item}
+                                  onOpen={onOpen}
+                                  onDragStart={handleDragStart}
+                                />
+                              ))}
+                            </DropZone>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
           ))}
         </div>

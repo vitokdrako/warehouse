@@ -106,8 +106,9 @@ export default function Login() {
         </form>
 
         {/* Footer */}
-        <div className="mt-6 text-center text-xs text-corp-text-muted">
-          <p>Для отримання доступу зверніться до адміністратора</p>
+        <div className="mt-8 text-center text-xs text-corp-text-muted">
+          <p className="mb-2">Для отримання доступу зверніться до адміністратора</p>
+          <p>© 2024 Rental Hub • Powered by <span className="text-corp-primary font-semibold">FarforRent</span></p>
         </div>
       </div>
     </div>

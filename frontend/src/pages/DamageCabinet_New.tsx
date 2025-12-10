@@ -180,7 +180,7 @@ export default function DamageCabinetNew() {
   }
 
   return (
-    <MobileLayout title="🛡️ Кабінет Шкоди">
+    <MobileLayout currentPage="🛡️ Кабінет Шкоди">
       <div className="container mx-auto p-4 md:p-6 max-w-7xl">
         
         {/* Tabs */}

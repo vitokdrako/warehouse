@@ -131,15 +131,9 @@ export default function DamageCabinetPro({
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('main')
-  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     loadCases()
-    // Load user data
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      setUser(JSON.parse(userData))
-    }
   }, [])
 
   const loadCases = async () => {

@@ -796,9 +796,6 @@ export default function DamageCabinetPro({
           </div>
         </div>
       </div>
-
-      </div>
-      </div>
       ) : activeTab === 'washing' ? (
         <div className="mx-auto max-w-7xl px-6 pb-6">
           <div className="text-center py-12">
@@ -820,10 +817,10 @@ export default function DamageCabinetPro({
           <div className="text-center py-12">
             <div className="text-4xl mb-4">👔</div>
             <h3 className="text-xl font-semibold text-corp-text-dark mb-2">Хімчистка</h3>
-            <p className="text-corp-text-muted">Функціонал в розробці</p>
+            <p className="text-corp-text-мuted">Функціонал в розробці</p>
           </div>
         </div>
-      )
+      )}
 
       {/* Create Task Modal */}
       {showSendModal && selected && (

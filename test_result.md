@@ -299,6 +299,52 @@ frontend:
           agent: "testing"
           comment: "Need to test bug fix for saving item quantities in orders with awaiting_customer status. Problem was: after changing quantity and saving, card would update but show old data. Fix: after saveItems() now reloads order from server for fresh data. Test scenario: 1) Login vitokdrako@gmail.com/test123, 2) Go to /manager, 3) Find awaiting_customer order, 4) Change item quantity (e.g. 2→5), 5) Verify quantity displays correctly, sums recalculate, data persists after F5 refresh. Expected: console.log '[SAVE ITEMS] ✅ Items оновлено з сервера'. API verification shows 4 awaiting orders exist (OC-7046, OC-7044, OC-7037, OC-6969) with editable items. Authentication issues prevented full UI testing completion."
 
+backend:
+  - task: "Damage Cabinet API - List damage cases"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/damages.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test GET /api/damages/cases endpoint - should return array of cases with required fields: id, customer_name, order_number, case_status"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: GET /api/damages/cases working perfectly! Successfully retrieved 3 damage cases as array. Case structure validation passed with all required fields present: id, customer_name, order_number, case_status. Sample case: ID=7bf6a4a2-f46f-4c71-85f8-d0591ca47f53, Customer=None, Order=None, Status=open. API returns proper JSON array format as expected."
+
+  - task: "Damage Cabinet API - Get case details with items"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/damages.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test GET /api/damages/cases/{case_id} endpoint - should return case object with items array containing: id, name, qty, base_value, estimate_value"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: GET /api/damages/cases/{case_id} working perfectly! Successfully retrieved case details with items array. Item structure validation passed with all required fields: id, name, qty, base_value, estimate_value. Sample item: ID=10, Name=Колба (15 см, Ø-8), Qty=12, Base=0.0, Estimate=0.0. API returns proper case object with items array as expected."
+
+  - task: "Authentication for damage cabinet access"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/auth.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test authentication with credentials vitokdrako@gmail.com / test123 for accessing damage cabinet"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Authentication working perfectly! Successfully authenticated with vitokdrako@gmail.com/test123 credentials. Received valid access token and can access protected damage cabinet APIs. Authentication endpoint /api/auth/login returns proper JWT token for API access."
+
 metadata:
   created_by: "testing_agent"
   version: "1.0"

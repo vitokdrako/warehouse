@@ -797,31 +797,6 @@ export default function DamageCabinetPro({
         </div>
       </div>
 
-      {/* Create Task Modal */}
-      {showSendModal && selected && (
-        <SendToClientModal
-          damageCase={selected}
-          onClose={() => setShowSendModal(false)}
-          onSuccess={(method) => {
-            setShowSendModal(false)
-            updateCaseStatus(selected.id, 'awaiting_client')
-            alert(`✅ Кейс відправлено клієнту через ${method === 'email' ? 'Email' : 'CallBell'}`)
-          }}
-        />
-      )}
-
-      {showTaskModal && selected && (
-        <CreateTaskFromDamageModal
-          damageCase={selected}
-          onClose={() => setShowTaskModal(false)}
-          onSuccess={() => {
-            setShowTaskModal(false)
-            // Оновити статус на "awaiting_completion" (чекає завершення)
-            updateCaseStatus(selected.id, 'in_repair')
-            alert('✅ Завдання створено! Кейс чекає завершення.')
-          }}
-        />
-      )}
       </div>
       </div>
       ) : activeTab === 'washing' ? (

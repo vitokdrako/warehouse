@@ -345,7 +345,7 @@ export default function PackingCabinet({
   const [zoneFilter, setZoneFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
 
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
+  const API_URL = process.env.REACT_APP_API_URL || 'https://backrentalhub.farforrent.com.ua'
 
   // Завантажити список замовлень
   const loadOrders = async () => {
@@ -356,7 +356,7 @@ export default function PackingCabinet({
       if (zoneFilter !== 'all') params.append('zone', zoneFilter)
       if (searchQuery) params.append('search', searchQuery)
 
-      const response = await fetch(`${BACKEND_URL}/api/warehouse/packing-orders?${params}`)
+      const response = await fetch(`${API_URL}/api/warehouse/packing-orders?${params}`)
       const data = await response.json()
       
       // Перевірити чи data це масив
@@ -383,7 +383,7 @@ export default function PackingCabinet({
   const loadOrderDetails = async (orderId: string) => {
     setDetailsLoading(true)
     try {
-      const response = await fetch(`${BACKEND_URL}/api/warehouse/packing-orders/${orderId}`)
+      const response = await fetch(`${API_URL}/api/warehouse/packing-orders/${orderId}`)
       const data = await response.json()
       setSelectedOrder(data)
     } catch (error) {
@@ -407,7 +407,7 @@ export default function PackingCabinet({
   // Дії
   const handleMarkReady = async (orderId: string) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/warehouse/packing-orders/${orderId}/mark-ready`, {
+      const response = await fetch(`${API_URL}/api/warehouse/packing-orders/${orderId}/mark-ready`, {
         method: 'PUT'
       })
       const data = await response.json()
@@ -433,7 +433,7 @@ export default function PackingCabinet({
 
   const handleCreateChecklist = async (orderId: string) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/warehouse/packing-orders/${orderId}/return-checklist`, {
+      const response = await fetch(`${API_URL}/api/warehouse/packing-orders/${orderId}/return-checklist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: 'Чекліст створено автоматично' })

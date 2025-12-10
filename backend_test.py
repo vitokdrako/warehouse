@@ -76,38 +76,44 @@ class DamageCabinetTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def find_active_order(self) -> Dict[str, Any]:
-        """Find an active order with status 'issued' or 'on_rent'"""
+    def test_damage_cases_list(self) -> Dict[str, Any]:
+        """Test GET /api/damages/cases - should return array of cases"""
         try:
-            # Try to get the specific test order first
-            response = self.session.get(f"{self.base_url}/decor-orders/{TEST_ORDER_ID}")
-            if response.status_code == 200:
-                order = response.json()
-                if order.get('status') in ['issued', 'on_rent']:
-                    self.log(f"✅ Found test order {TEST_ORDER_ID} with status '{order.get('status')}'")
-                    return order
-                else:
-                    self.log(f"⚠️ Order {TEST_ORDER_ID} has status '{order.get('status')}', not 'issued' or 'on_rent'")
+            self.log("🧪 Testing damage cases list endpoint...")
             
-            # If specific order not suitable, search for any active order
-            response = self.session.get(f"{self.base_url}/decor-orders?status=issued,on_rent&limit=10")
+            response = self.session.get(f"{self.base_url}/damages/cases")
+            
             if response.status_code == 200:
                 data = response.json()
-                orders = data.get('orders', [])
-                if orders:
-                    order = orders[0]
-                    self.log(f"✅ Found active order {order.get('id')} with status '{order.get('status')}'")
-                    return order
-                else:
-                    self.log("❌ No active orders found with status 'issued' or 'on_rent'", "ERROR")
-                    return {}
+                
+                # Check if response is an array
+                if not isinstance(data, list):
+                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                self.log(f"✅ Retrieved {len(data)} damage cases")
+                
+                # Validate case structure if we have cases
+                if data:
+                    first_case = data[0]
+                    required_fields = ['id', 'customer_name', 'order_number', 'case_status']
+                    
+                    missing_fields = [field for field in required_fields if field not in first_case]
+                    if missing_fields:
+                        self.log(f"❌ Missing required fields in case: {missing_fields}", "ERROR")
+                        return {"success": False, "data": data}
+                    else:
+                        self.log("✅ Case structure validation passed")
+                        self.log(f"   Sample case: ID={first_case.get('id')}, Customer={first_case.get('customer_name')}, Order={first_case.get('order_number')}, Status={first_case.get('case_status')}")
+                
+                return {"success": True, "data": data, "count": len(data)}
             else:
-                self.log(f"❌ Failed to fetch orders: {response.status_code}", "ERROR")
-                return {}
+                self.log(f"❌ Failed to get damage cases: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception finding active order: {str(e)}", "ERROR")
-            return {}
+            self.log(f"❌ Exception testing damage cases list: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     
     def test_return_without_damage(self, order_id: int, items: List[Dict]) -> bool:
         """Test return workflow WITHOUT damage - should create 'wash' tasks"""

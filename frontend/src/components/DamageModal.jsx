@@ -69,6 +69,7 @@ export default function DamageModal({
         fee: 0,
         photoName: ''
       })
+      setPhotos([])
     }
   }, [isOpen])
   

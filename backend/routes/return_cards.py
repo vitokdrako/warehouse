@@ -213,6 +213,10 @@ async def update_return_card(
         db.execute(text(sql), params)
         db.commit()
     
+    # Автоматично створити damage case якщо є брудні або пошкоджені товари
+    if updates.status == 'checked' and updates.items_returned:
+        await _create_damage_cases_from_return(card_id, updates.items_returned, current_user, db)
+    
     return {"message": "Return card updated"}
 
 @router.post("/{card_id}/complete")

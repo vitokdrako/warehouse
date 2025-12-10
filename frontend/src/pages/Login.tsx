@@ -45,19 +45,21 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8">
+    <div className="min-h-screen bg-corp-bg-page flex items-center justify-center p-4 font-montserrat">
+      <div className="corp-card shadow-corp-lg w-full max-w-md">
         {/* Logo/Title */}
         <div className="text-center mb-8">
-          <div className="text-4xl mb-2">🏛️</div>
-          <h1 className="text-2xl font-bold text-corp-text-dark">RentalHub Warehouse</h1>
-          <p className="text-sm text-corp-text-muted mt-1">Кабінет реквізитора</p>
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-corp-primary">
+            <span className="text-4xl font-bold text-white">R</span>
+          </div>
+          <h1 className="text-3xl font-bold text-corp-text-dark">Rental Hub</h1>
+          <p className="text-sm text-corp-text-muted mt-2">Увійдіть у свій акаунт</p>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="email" className="text-xs text-corp-text-muted uppercase tracking-wide mb-2 block font-medium">
               Email
             </label>
             <input
@@ -66,14 +68,14 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              className="corp-input"
               placeholder="your@email.com"
               autoComplete="email"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+            <label htmlFor="password" className="text-xs text-corp-text-muted uppercase tracking-wide mb-2 block font-medium">
               Пароль
             </label>
             <input
@@ -82,14 +84,14 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+              className="corp-input"
               placeholder="••••••••"
               autoComplete="current-password"
             />
           </div>
 
           {error && (
-            <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-lg text-sm">
+            <div className="corp-badge corp-badge-error p-3 text-center w-full">
               ⚠️ {error}
             </div>
           )}
@@ -97,7 +99,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slate-900 text-white py-3 rounded-lg font-medium hover:bg-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full corp-btn corp-btn-primary py-3 text-base disabled:opacity-50"
           >
             {loading ? 'Завантаження...' : 'Увійти'}
           </button>

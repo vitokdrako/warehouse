@@ -172,6 +172,15 @@ function App() {
           />
           
           <Route 
+            path="/laundry" 
+            element={
+              <ProtectedRoute>
+                <LaundryCabinet />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
             path="/orders/new" 
             element={
               <ProtectedRoute>

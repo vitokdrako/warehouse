@@ -571,6 +571,11 @@ export default function ManagerDashboard() {
             description="Збір товарів для видачі"
             onClick={() => navigate('/packing')}
           />
+          <NavCard 
+            title="🧺 Хімчистка" 
+            description="Управління текстилем у хімчистці"
+            onClick={() => navigate('/laundry')}
+          />
           {user?.role === 'admin' && (
             <NavCard 
               title="⚙️ Адмін-панель" 

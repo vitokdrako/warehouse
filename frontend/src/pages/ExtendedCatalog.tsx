@@ -530,7 +530,7 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
   const [loading, setLoading] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
 
-  const API_URL = process.env.REACT_APP_API_URL || 'https://backrentalhub.farforrent.com.ua'
+  const API_URL = process.env.REACT_APP_BACKEND_URL
 
   // Завантажити список продуктів
   const loadProducts = async () => {

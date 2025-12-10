@@ -16,14 +16,14 @@ const todayISO = ()=> new Date().toISOString().slice(0,10)
 const addDays = (iso, d)=> { const x=new Date(iso); x.setDate(x.getDate()+d); return x.toISOString().slice(0,10) }
 
 const STATE = {
-  ok:{ label:'В наявності', tone:'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  fragile:{ label:'Крихке', tone:'bg-violet-100 text-violet-700 border-violet-200' },
-  damaged:{ label:'Пошкоджено', tone:'bg-rose-100 text-rose-700 border-rose-200' },
+  ok:{ label:'В наявності', tone:'corp-badge corp-badge-success' },
+  fragile:{ label:'Крихке', tone:'corp-badge corp-badge-primary' },
+  damaged:{ label:'Пошкоджено', tone:'corp-badge corp-badge-error' },
 }
 const CLEAN = {
   clean:{ label:'Чисте', tone:'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  wash:{ label:'На мийці', tone:'bg-sky-100 text-sky-700 border-sky-200' },
-  dry:{ label:'Сушка', tone:'bg-amber-100 text-amber-800 border-amber-200' },
+  wash:{ label:'На мийці', tone:'corp-badge corp-badge-info' },
+  dry:{ label:'Сушка', tone:'corp-badge corp-badge-warning' },
   repair:{ label:'Реставрація', tone:'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200' },
 }
 
@@ -33,9 +33,9 @@ function Badge({tone, children}){
 }
 function Pill({onClick, children, tone='slate'}){
   const tones={
-    slate:'bg-slate-800 hover:bg-slate-900 text-white',
-    green:'bg-emerald-600 hover:bg-emerald-700 text-white',
-    blue:'bg-blue-600 hover:bg-blue-700 text-white',
+    slate:'corp-btn corp-btn-secondary',
+    green:'corp-btn corp-btn-primary',
+    blue:'corp-btn corp-btn-primary',
     amber:'bg-amber-500 hover:bg-amber-600 text-slate-900'
   }
   return <button onClick={onClick} className={cls('rounded-full px-3 py-1 text-sm', tones[tone])}>{children}</button>

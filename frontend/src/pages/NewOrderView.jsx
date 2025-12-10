@@ -730,7 +730,7 @@ function ItemSearch({ searchQuery, onSearchChange, searchResults, searching, onA
       {searchResults.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {searchResults.map(product => (
-            <div key={product.product_id} className="rounded-xl border border-slate-200 p-3 hover:border-teal-300 transition">
+            <div key={product.product_id} className="corp-stat-card hover:border-teal-300 transition">
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <div className="text-sm font-medium">{product.name}</div>

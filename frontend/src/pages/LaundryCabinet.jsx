@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Badge } from '../components/ui/badge';
-import { Calendar, Package, TrendingUp, AlertCircle, CheckCircle2, Clock, Trash2, Plus } from 'lucide-react';
+import { Calendar, Package, TrendingUp, AlertCircle, CheckCircle2, Clock, Trash2, Plus, RefreshCw } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -108,111 +104,110 @@ const LaundryCabinet = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="min-h-screen bg-corp-bg-page flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Завантаження...</p>
+          <RefreshCw className="w-12 h-12 text-corp-primary animate-spin mx-auto mb-4" />
+          <p className="text-corp-text-muted font-montserrat">Завантаження...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Заголовок */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">🧺 Управління Хімчисткою</h1>
-          <p className="text-gray-600 mt-1">Відстеження текстилю у хімчистці</p>
-        </div>
-        <Button onClick={() => setShowCreateModal(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Нова партія
-        </Button>
-      </div>
-
-      {/* Статистика */}
-      {statistics && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Всього партій</p>
-                  <p className="text-2xl font-bold text-gray-800">{statistics.total_batches}</p>
-                </div>
-                <Package className="w-8 h-8 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Активні партії</p>
-                  <p className="text-2xl font-bold text-orange-600">{statistics.active_batches}</p>
-                </div>
-                <Clock className="w-8 h-8 text-orange-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Відправлено товарів</p>
-                  <p className="text-2xl font-bold text-purple-600">{statistics.total_items_sent}</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-purple-600" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Вартість</p>
-                  <p className="text-2xl font-bold text-green-600">{statistics.total_cost.toFixed(2)} ₴</p>
-                </div>
-                <CheckCircle2 className="w-8 h-8 text-green-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Фільтри */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-2 flex-wrap">
-          {['all', 'sent', 'partial_return', 'returned', 'completed'].map(status => (
-            <Button
-              key={status}
-              variant={filterStatus === status ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterStatus(status)}
-            >
-              {status === 'all' ? 'Всі' :
-               status === 'sent' ? 'Відправлено' :
-               status === 'partial_return' ? 'Часткове повернення' :
-               status === 'returned' ? 'Повернено' : 'Закрито'}
-            </Button>
-          ))}
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
+      {/* Header */}
+      <div className="corp-header sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-semibold text-corp-text-dark flex items-center gap-2">
+              🧺 Управління Хімчисткою
+            </h1>
+            <p className="text-sm text-corp-text-muted mt-1">Відстеження текстилю у хімчистці</p>
+          </div>
+          <button 
+            onClick={() => setShowCreateModal(true)} 
+            className="corp-btn corp-btn-primary"
+          >
+            <Plus className="w-4 h-4" />
+            Нова партія
+          </button>
         </div>
       </div>
 
-      {/* Список партій */}
-      <div className="space-y-4">
-        {batches.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">Партій не знайдено</p>
-            </CardContent>
-          </Card>
-        ) : (
+      <div className="max-w-7xl mx-auto p-6">
+
+        {/* Статистика */}
+        {statistics && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="corp-stat-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="corp-stat-label">Всього партій</p>
+                  <p className="corp-stat-value">{statistics.total_batches}</p>
+                </div>
+                <Package className="w-10 h-10 corp-icon-primary" />
+              </div>
+            </div>
+            
+            <div className="corp-stat-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="corp-stat-label">Активні партії</p>
+                  <p className="corp-stat-value text-corp-warning">{statistics.active_batches}</p>
+                </div>
+                <Clock className="w-10 h-10 corp-icon-warning" />
+              </div>
+            </div>
+            
+            <div className="corp-stat-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="corp-stat-label">Відправлено товарів</p>
+                  <p className="corp-stat-value text-corp-gold">{statistics.total_items_sent}</p>
+                </div>
+                <TrendingUp className="w-10 h-10 corp-icon-gold" />
+              </div>
+            </div>
+            
+            <div className="corp-stat-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="corp-stat-label">Вартість</p>
+                  <p className="corp-stat-value text-corp-success">{statistics.total_cost.toFixed(2)} ₴</p>
+                </div>
+                <CheckCircle2 className="w-10 h-10 corp-icon-success" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Фільтри */}
+        <div className="corp-card mb-6">
+          <div className="flex gap-2 flex-wrap">
+            {['all', 'sent', 'partial_return', 'returned', 'completed'].map(status => (
+              <button
+                key={status}
+                className={filterStatus === status ? 'corp-btn corp-btn-primary' : 'corp-btn corp-btn-secondary'}
+                onClick={() => setFilterStatus(status)}
+              >
+                {status === 'all' ? 'Всі' :
+                 status === 'sent' ? 'Відправлено' :
+                 status === 'partial_return' ? 'Часткове повернення' :
+                 status === 'returned' ? 'Повернено' : 'Закрито'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Список партій */}
+        <div className="space-y-4">
+          {batches.length === 0 ? (
+            <div className="corp-empty">
+              <AlertCircle className="corp-empty-icon mx-auto" />
+              <h3 className="corp-empty-title">Партій не знайдено</h3>
+              <p className="corp-empty-text">Створіть нову партію для відправки текстилю в хімчистку</p>
+            </div>
+          ) : (
           batches.map(batch => (
             <Card key={batch.id}>
               <CardHeader>

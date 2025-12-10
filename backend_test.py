@@ -115,46 +115,45 @@ class DamageCabinetTester:
             self.log(f"❌ Exception testing damage cases list: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_return_without_damage(self, order_id: int, items: List[Dict]) -> bool:
-        """Test return workflow WITHOUT damage - should create 'wash' tasks"""
+    def test_damage_case_details(self, case_id: str) -> Dict[str, Any]:
+        """Test GET /api/damages/cases/{case_id} - should return case with items"""
         try:
-            self.log(f"🧪 Testing return WITHOUT damage for order {order_id}")
+            self.log(f"🧪 Testing damage case details for case {case_id}...")
             
-            # Prepare return data without damage
-            return_data = {
-                "items_returned": [],
-                "late_fee": 0,
-                "cleaning_fee": 0,
-                "damage_fee": 0
-            }
-            
-            # Add items without findings (no damage)
-            for item in items[:2]:  # Test with first 2 items
-                return_data["items_returned"].append({
-                    "sku": item.get('sku', item.get('article', f"TEST-SKU-{item.get('inventory_id', '001')}")),
-                    "returned_qty": 1,
-                    "findings": []  # No damage
-                })
-            
-            self.log(f"Return data: {json.dumps(return_data, indent=2)}")
-            
-            # Execute return
-            response = self.session.post(
-                f"{self.base_url}/decor-orders/{order_id}/complete-return",
-                json=return_data
-            )
+            response = self.session.get(f"{self.base_url}/damages/cases/{case_id}")
             
             if response.status_code == 200:
-                result = response.json()
-                self.log(f"✅ Return completed successfully: {result.get('message', 'Success')}")
-                return True
+                data = response.json()
+                
+                # Check if response has items field
+                if 'items' not in data:
+                    self.log("❌ Response missing 'items' field", "ERROR")
+                    return {"success": False, "data": data}
+                
+                items = data.get('items', [])
+                self.log(f"✅ Retrieved case details with {len(items)} items")
+                
+                # Validate item structure if we have items
+                if items:
+                    first_item = items[0]
+                    required_fields = ['id', 'name', 'qty', 'base_value', 'estimate_value']
+                    
+                    missing_fields = [field for field in required_fields if field not in first_item]
+                    if missing_fields:
+                        self.log(f"❌ Missing required fields in item: {missing_fields}", "ERROR")
+                        return {"success": False, "data": data}
+                    else:
+                        self.log("✅ Item structure validation passed")
+                        self.log(f"   Sample item: ID={first_item.get('id')}, Name={first_item.get('name')}, Qty={first_item.get('qty')}, Base={first_item.get('base_value')}, Estimate={first_item.get('estimate_value')}")
+                
+                return {"success": True, "data": data, "items_count": len(items)}
             else:
-                self.log(f"❌ Return failed: {response.status_code} - {response.text}", "ERROR")
-                return False
+                self.log(f"❌ Failed to get case details: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception in return without damage test: {str(e)}", "ERROR")
-            return False
+            self.log(f"❌ Exception testing case details: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     
     def test_return_with_damage(self, order_id: int, items: List[Dict]) -> bool:
         """Test return workflow WITH damage - should create 'repair' tasks and financial transactions"""

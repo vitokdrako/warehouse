@@ -169,8 +169,8 @@ export default function AdminPanel() {
   const saveCategory = async () => {
     try {
       const url = editingCategory
-        ? `${BACKEND_URL}/api/admin/categories/${editingCategory.category_id}`
-        : `${BACKEND_URL}/api/admin/categories`
+        ? `${API_URL}/api/admin/categories/${editingCategory.category_id}`
+        : `${API_URL}/api/admin/categories`
       
       const response = await fetch(url, {
         method: editingCategory ? 'PUT' : 'POST',
@@ -200,7 +200,7 @@ export default function AdminPanel() {
     if (!window.confirm('Видалити категорію?')) return
     
     try {
-      const response = await fetch(`${BACKEND_URL}/api/admin/categories/${categoryId}`, {
+      const response = await fetch(`${API_URL}/api/admin/categories/${categoryId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${getToken()}`

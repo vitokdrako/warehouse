@@ -17,7 +17,7 @@ TEST_CREDENTIALS = {
     "password": "test123"
 }
 
-class BackendTester:
+class DamageCabinetTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
@@ -25,6 +25,7 @@ class BackendTester:
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         })
+        self.auth_token = None
         
     def log(self, message: str, level: str = "INFO"):
         """Log test messages with timestamp"""
@@ -43,6 +44,36 @@ class BackendTester:
                 return False
         except Exception as e:
             self.log(f"❌ API Health Check Exception: {str(e)}", "ERROR")
+            return False
+    
+    def authenticate(self) -> bool:
+        """Authenticate with the API"""
+        try:
+            self.log("🔐 Authenticating with provided credentials...")
+            
+            response = self.session.post(
+                f"{self.base_url}/auth/login",
+                json=TEST_CREDENTIALS
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.auth_token = data.get('access_token')
+                if self.auth_token:
+                    self.session.headers.update({
+                        'Authorization': f'Bearer {self.auth_token}'
+                    })
+                    self.log("✅ Authentication successful")
+                    return True
+                else:
+                    self.log("❌ No access token in response", "ERROR")
+                    return False
+            else:
+                self.log(f"❌ Authentication failed: {response.status_code} - {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
     def find_active_order(self) -> Dict[str, Any]:

@@ -848,7 +848,7 @@ export default function DamageCabinetPro({
             <p className="text-corp-text-muted">Функціонал в розробці</p>
           </div>
         </div>
-      )}
+      )
     </div>
   )
 }

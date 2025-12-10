@@ -517,38 +517,39 @@ export default function ReauditCabinetFull({
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-6 space-y-5">
-      {/* header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет переобліку PRO</h1>
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
+      <CorporateHeader 
+        cabinetName="Кабінет переобліку" 
+        showBackButton={true}
+        onBackClick={onBackToDashboard}
+      />
+      
+      <div className="mx-auto max-w-7xl px-6 py-4">
+        {/* Quick Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <p className="text-sm text-corp-text-muted">
-            Контроль стану декору, циклу використання та ризиків. Працює поверх каталогу, шкоди та фінансів.
+            Контроль стану декору, циклу використання та ризиків
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
-          <PillButton tone="green" onClick={handleExport}>
-            📥 Експорт в Excel
-          </PillButton>
-          <label className="cursor-pointer">
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImport}
-              className="hidden"
-            />
-            <PillButton tone="blue" onClick={() => {}}>
-              📤 Імпорт з Excel
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <PillButton tone="green" onClick={handleExport}>
+              Експорт в Excel
             </PillButton>
-          </label>
-          <button
-            onClick={onBackToDashboard}
-            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
-          >
-            ← До дашборду
-          </button>
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImport}
+                className="hidden"
+              />
+              <PillButton tone="blue" onClick={() => {}}>
+                Імпорт з Excel
+              </PillButton>
+            </label>
+          </div>
         </div>
-      </header>
+      </div>
+      
+      <div className="mx-auto max-w-7xl px-6 pb-6 space-y-5">
 
       {/* KPIs */}
       <div className="grid gap-3 md:grid-cols-5 text-[11px]">

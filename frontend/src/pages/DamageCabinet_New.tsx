@@ -693,7 +693,6 @@ function MainTab({
               </button>
             </div>
           ) : (
-            <>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>

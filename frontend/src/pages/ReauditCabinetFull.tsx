@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import ImageUpload from '../components/ImageUpload'
+import CorporateHeader from '../components/CorporateHeader'
 
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 const fmtUA = (n: number) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })

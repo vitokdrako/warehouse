@@ -120,7 +120,7 @@ export default function ImageUpload({ sku, currentImageUrl, onUploadSuccess }) {
   return (
     <div className="space-y-3">
       <div
-        className={`relative border-2 border-dashed rounded-lg p-6 transition-all cursor-pointer
+        className={`relative border-2 border-dashed rounded-lg p-4 sm:p-6 transition-all cursor-pointer
           ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
           ${uploading ? 'pointer-events-none opacity-60' : ''}
         `}
@@ -134,6 +134,7 @@ export default function ImageUpload({ sku, currentImageUrl, onUploadSuccess }) {
           ref={fileInputRef}
           type="file"
           accept="image/jpeg,image/jpg,image/png,image/webp"
+          capture="environment"
           onChange={handleFileSelect}
           className="hidden"
         />

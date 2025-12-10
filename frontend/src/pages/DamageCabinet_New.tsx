@@ -947,8 +947,7 @@ function MainTab({
             </>
           )}
         </div>
-      </div>
-    </>
+      </>
   )
 }
 

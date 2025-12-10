@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function CorporateHeader({ cabinetName = 'Кабінет менеджера', showBackButton = false, onBackClick = null }) {
+export default function CorporateHeader({ cabinetName = 'Кабінет менеджера', showBackButton = false, onBackClick }) {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 

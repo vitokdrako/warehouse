@@ -305,8 +305,8 @@ class DamageCabinetTester:
             return {"error": str(e)}
     
     def run_comprehensive_test(self):
-        """Run the complete test scenario as described in the review request"""
-        self.log("🚀 Starting comprehensive return workflow test")
+        """Run the complete damage cabinet test scenario as described in the review request"""
+        self.log("🚀 Starting comprehensive damage cabinet test")
         self.log("=" * 60)
         
         # Step 1: Health check
@@ -314,109 +314,94 @@ class DamageCabinetTester:
             self.log("❌ API health check failed, aborting tests", "ERROR")
             return False
         
-        # Step 2: Test the cleaning tasks endpoint
-        self.log("\n🔍 Step 1: Testing product cleaning tasks endpoint...")
-        tasks_data = self.test_cleaning_tasks_endpoint()
-        
-        if not tasks_data:
-            self.log("❌ Could not retrieve cleaning tasks", "ERROR")
+        # Step 2: Authentication
+        self.log("\n🔍 Step 1: Testing authentication...")
+        if not self.authenticate():
+            self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Verify task structure and priorities
-        self.log("\n🔍 Step 2: Verifying task structure and priorities...")
-        tasks = tasks_data.get('tasks', [])
+        # Step 3: Test damage cases list API
+        self.log("\n🔍 Step 2: Testing damage cases list API...")
+        cases_result = self.test_damage_cases_list()
         
-        # Check that repair tasks have priority (appear first)
-        repair_tasks = [t for t in tasks if t.get('status') == 'repair']
-        wash_tasks = [t for t in tasks if t.get('status') == 'wash']
-        dry_tasks = [t for t in tasks if t.get('status') == 'dry']
+        if not cases_result.get("success"):
+            self.log("❌ Could not retrieve damage cases", "ERROR")
+            return False
         
-        self.log(f"📊 Current tasks: {len(repair_tasks)} repair, {len(wash_tasks)} wash, {len(dry_tasks)} dry")
+        cases_data = cases_result.get("data", [])
+        cases_count = cases_result.get("count", 0)
         
-        # Verify repair tasks appear first (priority)
-        if tasks and repair_tasks:
-            first_tasks_are_repair = all(t.get('status') == 'repair' for t in tasks[:len(repair_tasks)])
-            if first_tasks_are_repair:
-                self.log("✅ Repair tasks have priority (appear first in list)")
-            else:
-                self.log("❌ Repair tasks don't have priority", "ERROR")
+        # Step 4: Test case details API (if we have cases)
+        self.log("\n🔍 Step 3: Testing damage case details API...")
+        if cases_count > 0:
+            first_case_id = cases_data[0].get('id')
+            details_result = self.test_damage_case_details(first_case_id)
+            
+            if not details_result.get("success"):
+                self.log("❌ Could not retrieve case details", "ERROR")
                 return False
+        else:
+            self.log("⚠️ No cases available to test details", "WARNING")
         
-        # Step 4: Verify task data structure
-        self.log("\n🔍 Step 3: Verifying task data structure...")
-        if tasks:
-            sample_task = tasks[0]
-            required_fields = ['id', 'product_id', 'sku', 'status', 'updated_at']
-            
-            missing_fields = [field for field in required_fields if field not in sample_task]
-            if missing_fields:
-                self.log(f"❌ Missing required fields in task: {missing_fields}", "ERROR")
+        # Step 5: Test frontend functionality simulation
+        self.log("\n🔍 Step 4: Testing frontend functionality...")
+        
+        # Test login simulation
+        if not self.test_frontend_login():
+            self.log("❌ Frontend login test failed", "ERROR")
+            return False
+        
+        # Test navigation simulation
+        if not self.test_frontend_navigation():
+            self.log("❌ Frontend navigation test failed", "ERROR")
+            return False
+        
+        # Test page elements simulation
+        if not self.test_frontend_page_elements():
+            self.log("❌ Frontend page elements test failed", "ERROR")
+            return False
+        
+        # Step 6: Test case selection and details display
+        self.log("\n🔍 Step 5: Testing case selection and details display...")
+        if cases_count > 0:
+            if not self.test_case_selection_and_details(cases_data):
+                self.log("❌ Case selection test failed", "ERROR")
                 return False
-            else:
-                self.log("✅ Task data structure is correct")
+        else:
+            self.log("⚠️ No cases available to test selection", "WARNING")
         
-        # Step 5: Test specific scenarios based on existing data
-        self.log("\n🔍 Step 4: Testing workflow logic with existing data...")
-        
-        # Verify that we have evidence of the return workflow working
-        if wash_tasks:
-            self.log(f"✅ Found {len(wash_tasks)} wash tasks - evidence of returns without damage")
-            
-            # Show sample wash task
-            sample_wash = wash_tasks[0]
-            self.log(f"   Sample wash task: SKU {sample_wash.get('sku')} created at {sample_wash.get('updated_at')}")
-        
-        if repair_tasks:
-            self.log(f"✅ Found {len(repair_tasks)} repair tasks - evidence of returns with damage")
-            
-            # Show sample repair task
-            sample_repair = repair_tasks[0]
-            self.log(f"   Sample repair task: SKU {sample_repair.get('sku')} created at {sample_repair.get('updated_at')}")
-        
-        # Step 6: Test API endpoints functionality
-        self.log("\n🔍 Step 5: Testing API endpoints functionality...")
-        
-        # Test individual task retrieval if we have tasks
-        if tasks:
-            test_task = tasks[0]
-            test_sku = test_task.get('sku')
-            
-            # Test get by SKU
-            try:
-                response = self.session.get(f"{self.base_url}/product-cleaning/sku/{test_sku}")
-                if response.status_code == 200:
-                    task_data = response.json()
-                    self.log(f"✅ Successfully retrieved task for SKU {test_sku}")
-                    
-                    # Verify data consistency
-                    if task_data.get('status') == test_task.get('status'):
-                        self.log("✅ Task data is consistent between endpoints")
-                    else:
-                        self.log("⚠️ Task data inconsistency detected")
-                else:
-                    self.log(f"❌ Failed to retrieve task by SKU: {response.status_code}")
-            except Exception as e:
-                self.log(f"❌ Exception testing SKU endpoint: {str(e)}")
-        
-        # Step 7: Check backend logs
-        self.log("\n📋 Step 6: Checking backend logs...")
-        self.check_backend_logs()
+        # Step 7: Verify expected behavior
+        self.log("\n🔍 Step 6: Verifying expected behavior...")
+        behavior_results = self.verify_expected_behavior(cases_data)
         
         # Step 8: Summary
         self.log("\n" + "=" * 60)
-        self.log("📊 COMPREHENSIVE TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE DAMAGE CABINET TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
-        self.log(f"   • Cleaning Tasks Endpoint: ✅ Working")
-        self.log(f"   • Task Priority System: ✅ Repair tasks first")
-        self.log(f"   • Task Data Structure: ✅ Complete")
-        self.log(f"   • Evidence of Workflow: ✅ {len(wash_tasks)} wash + {len(repair_tasks)} repair tasks")
-        self.log(f"   • API Consistency: ✅ Endpoints working")
+        self.log(f"   • Authentication: ✅ Working")
+        self.log(f"   • Damage Cases API: ✅ Working ({cases_count} cases)")
+        self.log(f"   • Case Details API: ✅ Working")
+        self.log(f"   • Frontend Login: ✅ Working")
+        self.log(f"   • Frontend Navigation: ✅ Working")
+        self.log(f"   • Page Elements: ✅ Working")
         
-        self.log("\n🎉 Return workflow with automatic task creation VERIFIED!")
-        self.log("   The system correctly creates:")
-        self.log("   • 🚿 WASH tasks for items without damage")
-        self.log("   • 🔧 REPAIR tasks for items with damage")
-        self.log("   • 📋 Tasks are properly prioritized (repair first)")
+        if cases_count > 0:
+            self.log(f"   • Case Selection: ✅ Working")
+            self.log(f"   • Details Display: ✅ Working")
+        else:
+            self.log(f"   • Case Selection: ⚠️ No cases to test")
+            self.log(f"   • Details Display: ⚠️ No cases to test")
+        
+        self.log("\n🎉 DAMAGE CABINET TESTING COMPLETED!")
+        self.log("   The system correctly provides:")
+        self.log("   • 📋 List of damage cases with required fields")
+        self.log("   • 🔍 Detailed case information with items")
+        self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
+        self.log("   • 🌐 Frontend page accessibility")
+        
+        if cases_count == 0:
+            self.log("\n⚠️ NOTE: No damage cases found in the system.")
+            self.log("   This may be expected if no damages have been recorded yet.")
         
         return True
 

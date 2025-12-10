@@ -864,9 +864,9 @@ function MainTab({
                       if (result.success) {
                         alert(`✅ ${result.message}`)
                         // Видалити кейс зі списку
-                        setCases(prev => prev.filter(c => c.id !== selected.id))
+                        setCases((prev: DamageCase[]) => prev.filter((c: DamageCase) => c.id !== selected.id))
                         // Вибрати інший кейс або очистити
-                        const remaining = cases.filter(c => c.id !== selected.id)
+                        const remaining = cases.filter((c: DamageCase) => c.id !== selected.id)
                         if (remaining.length > 0) {
                           setSelectedId(remaining[0].id)
                         } else {

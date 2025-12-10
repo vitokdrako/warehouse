@@ -526,6 +526,7 @@ async def get_order_details(
 async def update_order(
     order_id: int,
     data: dict,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -561,16 +562,22 @@ async def update_order(
             params[field] = data[field]
     
     if set_clauses:
+        # Add user tracking
+        set_clauses.append("updated_by_id = :updated_by_id")
+        set_clauses.append("updated_at = NOW()")
+        params["updated_by_id"] = current_user["id"]
+        
         sql = f"UPDATE orders SET {', '.join(set_clauses)} WHERE order_id = :order_id"
         db.execute(text(sql), params)
         
         # Log to lifecycle
         db.execute(text("""
-            INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-            VALUES (:order_id, 'updated', :notes, NOW())
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+            VALUES (:order_id, 'updated', :notes, :created_by, NOW())
         """), {
             "order_id": order_id,
-            "notes": f"Updated fields: {', '.join(data.keys())}"
+            "notes": f"Updated fields: {', '.join(data.keys())}",
+            "created_by": current_user["name"]
         })
         
         db.commit()

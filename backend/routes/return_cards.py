@@ -120,7 +120,11 @@ async def get_return_card(card_id: str, db: Session = Depends(get_rh_db)):
     return parse_return_card(row)
 
 @router.post("")
-async def create_return_card(card: ReturnCardCreate, db: Session = Depends(get_rh_db)):
+async def create_return_card(
+    card: ReturnCardCreate,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
     """Create new return card"""
     card_id = f"RETURN-{uuid.uuid4().hex[:8].upper()}"
     items_json = json.dumps(card.items_expected)
@@ -128,10 +132,11 @@ async def create_return_card(card: ReturnCardCreate, db: Session = Depends(get_r
     db.execute(text("""
         INSERT INTO return_cards (
             id, order_id, order_number, issue_card_id, status, 
-            items_expected, total_items_expected, created_at, updated_at
+            items_expected, total_items_expected, 
+            created_by_id, created_at, updated_at
         ) VALUES (
             :id, :order_id, :order_number, :issue_card_id, 'pending',
-            :items, :total, NOW(), NOW()
+            :items, :total, :created_by_id, NOW(), NOW()
         )
     """), {
         "id": card_id,
@@ -139,7 +144,8 @@ async def create_return_card(card: ReturnCardCreate, db: Session = Depends(get_r
         "order_number": card.order_number,
         "issue_card_id": card.issue_card_id,
         "items": items_json,
-        "total": len(card.items_expected)
+        "total": len(card.items_expected),
+        "created_by_id": current_user["id"]
     })
     
     db.commit()

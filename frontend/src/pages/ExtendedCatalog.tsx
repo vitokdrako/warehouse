@@ -530,13 +530,13 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
   const [loading, setLoading] = useState(false)
   const [detailsLoading, setDetailsLoading] = useState(false)
 
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
+  const API_URL = process.env.REACT_APP_API_URL || 'https://backrentalhub.farforrent.com.ua'
 
   // Завантажити список продуктів
   const loadProducts = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${BACKEND_URL}/api/catalog/extended/search?limit=9999`)
+      const response = await fetch(`${API_URL}/api/catalog/extended/search?limit=9999`)
       const data = await response.json()
       
       if (data.items && Array.isArray(data.items)) {
@@ -560,7 +560,7 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
     setDetailsLoading(true)
     try {
       const numericId = productId.replace('P-', '')
-      const response = await fetch(`${BACKEND_URL}/api/catalog/extended/product/${numericId}`)
+      const response = await fetch(`${API_URL}/api/catalog/extended/product/${numericId}`)
       const data = await response.json()
       setSelectedProduct(data)
     } catch (error) {
@@ -576,7 +576,7 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
     
     try {
       const numericId = selectedProduct.id.replace('P-', '')
-      const response = await fetch(`${BACKEND_URL}/api/catalog/extended/product/${numericId}`, {
+      const response = await fetch(`${API_URL}/api/catalog/extended/product/${numericId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

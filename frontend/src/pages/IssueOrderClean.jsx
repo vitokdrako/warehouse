@@ -31,7 +31,7 @@ function PillButton({tone='slate', onClick, children, disabled=false}){
     green:'corp-btn corp-btn-primary',
     red:'bg-rose-600 hover:bg-rose-700 text-white',
     blue:'corp-btn corp-btn-primary',
-    yellow:'bg-amber-500 hover:bg-amber-600 text-slate-900'
+    yellow:'bg-amber-500 hover:bg-amber-600 text-corp-text-dark'
   }
   return <button disabled={disabled} onClick={onClick} className={cls('rounded-full px-3 py-1 text-sm transition disabled:opacity-50 disabled:pointer-events-none', tones[tone])}>{children}</button>
 }
@@ -39,7 +39,7 @@ function Card({title, right=null, children}){
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-slate-800">{title}</h3>
+        <h3 className="text-base font-semibold text-corp-text-dark">{title}</h3>
         {right}
       </div>
       {children}
@@ -70,7 +70,7 @@ function Header({order}){
         <div className="text-2xl font-bold">Видача · #{order.order_id}</div>
         <Badge tone={tone}>{status}</Badge>
       </div>
-      <div className="flex flex-col items-end text-sm text-slate-600">
+      <div className="flex flex-col items-end text-sm text-corp-text-main">
         <div className="flex items-center gap-2">
           <span>Дата видачі: <b>{order.rent_issue_date || todayISO()}</b></span>
           <span className="mx-1">·</span>
@@ -87,19 +87,19 @@ function CustomerBlock({order}){
     <Card title="Клієнт">
       <div className="space-y-2 text-sm">
         <div>
-          <div className="text-slate-500 text-xs">Імʼя</div>
+          <div className="text-corp-text-muted text-xs">Імʼя</div>
           <div className="font-medium" title={`${order.firstname} ${order.lastname}`}>
             {order.firstname} {order.lastname}
           </div>
         </div>
         <div>
-          <div className="text-slate-500 text-xs">Телефон</div>
+          <div className="text-corp-text-muted text-xs">Телефон</div>
           <div className="font-medium" title={order.telephone}>
             {order.telephone}
           </div>
         </div>
         <div>
-          <div className="text-slate-500 text-xs">Email</div>
+          <div className="text-corp-text-muted text-xs">Email</div>
           <div className="font-medium break-words" title={order.email}>
             {order.email}
           </div>
@@ -118,10 +118,10 @@ function FinanceSummary({order}){
   return (
     <Card title="Фінанси" right={<Badge tone={due>0?'amber':'green'}>{due>0? `Залишок ₴ ${fmtUA(due)}`: 'Оплачено'}</Badge>}>
       <div className="grid gap-2 md:grid-cols-4 text-sm">
-        <div><div className="text-slate-500">Сума оренди</div><div className="font-semibold">₴ {fmtUA(total)}</div></div>
-        <div><div className="text-slate-500">Передплата</div><div className="font-semibold">₴ {fmtUA(prepay)}</div></div>
-        <div><div className="text-slate-500">Холд застави</div><div className="font-semibold">₴ {fmtUA(deposit)}</div></div>
-        <div><div className="text-slate-500">До сплати</div><div className="font-semibold">₴ {fmtUA(due)}</div></div>
+        <div><div className="text-corp-text-muted">Сума оренди</div><div className="font-semibold">₴ {fmtUA(total)}</div></div>
+        <div><div className="text-corp-text-muted">Передплата</div><div className="font-semibold">₴ {fmtUA(prepay)}</div></div>
+        <div><div className="text-corp-text-muted">Холд застави</div><div className="font-semibold">₴ {fmtUA(deposit)}</div></div>
+        <div><div className="text-corp-text-muted">До сплати</div><div className="font-semibold">₴ {fmtUA(due)}</div></div>
       </div>
     </Card>
   )
@@ -164,19 +164,19 @@ function ItemRow({it, onScan, onPick, onOpenDamage}){
           title="Натисніть щоб відкрити картку товару"
         />
       </td>
-      <td className="px-3 py-2 text-xs text-slate-500">{it.sku}</td>
+      <td className="px-3 py-2 text-xs text-corp-text-muted">{it.sku}</td>
       <td className="px-3 py-2 font-medium">
         <div className="flex items-center gap-2">
           <span>{it.name}</span>
           <button title="Додати пошкодження" onClick={()=>onOpenDamage(it.id)} className="rounded-md border px-2 py-0.5 text-xs hover:bg-slate-50">📷 +</button>
           {hasPreDamage && <Badge tone='amber'>{it.pre_damage.length} пошкоджень</Badge>}
         </div>
-        <div className="mt-1 text-xs text-slate-500 flex flex-wrap gap-2">
+        <div className="mt-1 text-xs text-corp-text-muted flex flex-wrap gap-2">
           <LocationBadge state={it.location?.state} zone={it.location?.zone} />
           {conflict && <Badge tone='red'>Конфлікт резерву</Badge>}
         </div>
       </td>
-      <td className="px-3 py-2 text-right tabular-nums text-slate-600">
+      <td className="px-3 py-2 text-right tabular-nums text-corp-text-main">
         ₴ {(it.damage_cost || 0).toLocaleString('uk-UA')}
       </td>
       <td className="px-3 py-2 text-right tabular-nums font-medium text-amber-700">
@@ -192,11 +192,11 @@ function ItemRow({it, onScan, onPick, onOpenDamage}){
           <div className={cls('w-10 text-center font-semibold', over && 'text-rose-600')}>{it.picked_qty}</div>
           <button onClick={()=>onPick(it.id, it.picked_qty+1)} className="h-7 w-7 rounded-lg border hover:bg-slate-50">+</button>
         </div>
-        <div className="text-xs text-slate-500">потрібно: {it.qty}</div>
+        <div className="text-xs text-corp-text-muted">потрібно: {it.qty}</div>
       </td>
       <td className="px-3 py-2">
         {!it.serials || it.serials.length===0 ? (
-          <span className="text-xs text-slate-500">безсерійний</span>
+          <span className="text-xs text-corp-text-muted">безсерійний</span>
         ) : (
           <div className="flex flex-wrap gap-1">
             {it.serials.map(s => (
@@ -215,7 +215,7 @@ function ItemsTable({items, onScan, onPick, onOpenDamage}){
     <Card title="Позиції до видачі">
       <div className="overflow-hidden rounded-xl border">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-500">
+          <thead className="bg-slate-50 text-left text-corp-text-muted">
             <tr>
               <th className="px-3 py-2">Фото</th>
               <th className="px-3 py-2">SKU</th>
@@ -301,7 +301,7 @@ function Timeline({events}){
             <div className={cls('mt-1 h-2 w-2 rounded-full flex-shrink-0', e.tone==='green'?'bg-emerald-500':e.tone==='red'?'bg-rose-500':'bg-blue-500')} />
             <div>
               <div className="font-medium">{e.title}</div>
-              <div className="text-xs text-slate-500">{e.when}</div>
+              <div className="text-xs text-corp-text-muted">{e.when}</div>
             </div>
           </li>
         ))}
@@ -558,7 +558,7 @@ export default function IssueCard(){
 
       {/* Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-corp-text-main">
           Статус: <b>{isIssued ? 'issued' : isReadyForIssue ? 'ready_for_issue' : 'processing'}</b> · 
           <span className="ml-2">Комплектовано: {items.reduce((s,it)=>s+it.picked_qty,0)}/{items.reduce((s,it)=>s+it.qty,0)}</span> ·
           <span className="ml-2">Серій відскановано: {items.reduce((s,it)=>s+(it.scanned?.length||0),0)}</span>
@@ -595,13 +595,13 @@ export default function IssueCard(){
           <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-semibold">Пошкодження · {items.find(i=>i.id===itemDamage.item_id)?.name || '—'}</h3>
-              <button onClick={()=>setItemDamage(s=>({...s, open:false}))} className="text-slate-500 hover:text-slate-700">✕</button>
+              <button onClick={()=>setItemDamage(s=>({...s, open:false}))} className="text-corp-text-muted hover:text-slate-700">✕</button>
             </div>
 
             <div className="grid gap-3 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-slate-500 mb-1">Тип</div>
+                  <div className="text-corp-text-muted mb-1">Тип</div>
                   <select className="w-full rounded-xl border px-3 py-2" value={itemDamage.kind} onChange={e=>setItemDamage(s=>({...s, kind:e.target.value}))}>
                     <option>подряпина</option>
                     <option>скол</option>
@@ -610,7 +610,7 @@ export default function IssueCard(){
                   </select>
                 </div>
                 <div>
-                  <div className="text-slate-500 mb-1">Рівень</div>
+                  <div className="text-corp-text-muted mb-1">Рівень</div>
                   <select className="w-full rounded-xl border px-3 py-2" value={itemDamage.severity} onChange={e=>setItemDamage(s=>({...s, severity:e.target.value}))}>
                     <option value="low">низький</option>
                     <option value="mid">середній</option>
@@ -620,17 +620,17 @@ export default function IssueCard(){
               </div>
 
               <div>
-                <div className="text-slate-500 mb-1">Нотатка</div>
+                <div className="text-corp-text-muted mb-1">Нотатка</div>
                 <input className="w-full rounded-xl border px-3 py-2" value={itemDamage.note} onChange={e=>setItemDamage(s=>({...s, note:e.target.value}))} placeholder="Опишіть пошкодження…" />
               </div>
 
               <div>
-                <div className="text-slate-500 mb-1">Фото</div>
+                <div className="text-corp-text-muted mb-1">Фото</div>
                 <input type="file" accept="image/*" onChange={(e)=>{
                   const f = e.target.files?.[0]
                   setItemDamage(s=>({...s, photoName: f? f.name : ''}))
                 }} className="w-full rounded-xl border px-3 py-2" />
-                {itemDamage.photoName && (<div className="mt-1 text-xs text-slate-500">Обрано: {itemDamage.photoName}</div>)}
+                {itemDamage.photoName && (<div className="mt-1 text-xs text-corp-text-muted">Обрано: {itemDamage.photoName}</div>)}
               </div>
 
               <div className="flex justify-end gap-2">
@@ -662,7 +662,7 @@ export default function IssueCard(){
                 <div className="max-h-40 overflow-auto text-sm">
                   {(() => {
                     const it = items.find(i=>i.id===itemDamage.item_id)
-                    if(!it || (it.pre_damage?.length||0)===0) return <div className="text-slate-500">Поки немає записів</div>
+                    if(!it || (it.pre_damage?.length||0)===0) return <div className="text-corp-text-muted">Поки немає записів</div>
                     return (
                       <ul className="space-y-1">
                         {it.pre_damage.map(d=> (
@@ -682,7 +682,7 @@ export default function IssueCard(){
       )}
 
       {/* Helper hints */}
-      <div className="text-xs text-slate-500 text-center">
+      <div className="text-xs text-corp-text-muted text-center">
         Підсвітка: рядки жовтого кольору — ще неукомплектовані; серійні номери клікабельні для скан/анскан.
       </div>
     </div>

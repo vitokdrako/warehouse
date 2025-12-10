@@ -63,7 +63,7 @@ function PillButton({
     slate: 'bg-slate-900 text-white hover:bg-slate-800',
     green: 'bg-emerald-600 text-white hover:bg-emerald-700',
     red: 'bg-rose-600 text-white hover:bg-rose-700',
-    amber: 'bg-amber-500 text-slate-900 hover:bg-amber-600',
+    amber: 'bg-amber-500 text-corp-text-dark hover:bg-amber-600',
     ghost: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50',
   }
   return (
@@ -225,12 +225,12 @@ export default function TasksCabinet({
             {onBackToDashboard && (
               <button
                 onClick={onBackToDashboard}
-                className="text-slate-600 hover:text-slate-900 transition"
+                className="text-corp-text-main hover:text-corp-text-dark transition"
               >
                 ← Назад
               </button>
             )}
-            <h1 className="text-2xl font-bold text-slate-900">🧾 Кабінет завдань</h1>
+            <h1 className="text-2xl font-bold text-corp-text-dark">🧾 Кабінет завдань</h1>
           </div>
           <PillButton tone="green" onClick={() => setShowCreateModal(true)}>
             ➕ Нове завдання
@@ -242,12 +242,12 @@ export default function TasksCabinet({
       <div className="px-6 py-4">
         <div className="grid grid-cols-5 gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="text-xs text-slate-500 mb-1">Всього завдань</div>
-            <div className="text-2xl font-bold text-slate-900">{tasks.length}</div>
+            <div className="text-xs text-corp-text-muted mb-1">Всього завдань</div>
+            <div className="text-2xl font-bold text-corp-text-dark">{tasks.length}</div>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="text-xs text-slate-500 mb-1">До виконання</div>
-            <div className="text-2xl font-bold text-slate-600">{tasksByStatus.todo.length}</div>
+            <div className="text-xs text-corp-text-muted mb-1">До виконання</div>
+            <div className="text-2xl font-bold text-corp-text-main">{tasksByStatus.todo.length}</div>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <div className="text-xs text-blue-600 mb-1">В роботі</div>
@@ -271,7 +271,7 @@ export default function TasksCabinet({
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <div className="grid grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs text-slate-600 mb-1">Пошук</label>
+              <label className="block text-xs text-corp-text-main mb-1">Пошук</label>
               <input
                 type="text"
                 value={searchQuery}
@@ -281,7 +281,7 @@ export default function TasksCabinet({
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-600 mb-1">Статус</label>
+              <label className="block text-xs text-corp-text-main mb-1">Статус</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -294,7 +294,7 @@ export default function TasksCabinet({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-600 mb-1">Тип</label>
+              <label className="block text-xs text-corp-text-main mb-1">Тип</label>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
@@ -310,7 +310,7 @@ export default function TasksCabinet({
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-600 mb-1">Пріоритет</label>
+              <label className="block text-xs text-corp-text-main mb-1">Пріоритет</label>
               <select
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value)}
@@ -453,11 +453,11 @@ function TaskCard({
         <PriorityBadge priority={task.priority} />
         <TaskTypeBadge type={task.task_type} />
       </div>
-      <h4 className="font-semibold text-sm text-slate-900 mb-1">{task.title}</h4>
+      <h4 className="font-semibold text-sm text-corp-text-dark mb-1">{task.title}</h4>
       {task.description && (
-        <p className="text-xs text-slate-600 mb-2 line-clamp-2">{task.description}</p>
+        <p className="text-xs text-corp-text-main mb-2 line-clamp-2">{task.description}</p>
       )}
-      <div className="flex items-center justify-between text-xs text-slate-500">
+      <div className="flex items-center justify-between text-xs text-corp-text-muted">
         <div>{task.assigned_to || '👤 Не призначено'}</div>
         {task.due_date && (
           <div className={isOverdue ? 'text-rose-600 font-medium' : ''}>
@@ -510,7 +510,7 @@ function TaskDetailsModal({
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-slate-900 mb-2">{task.title}</h2>
+              <h2 className="text-xl font-bold text-corp-text-dark mb-2">{task.title}</h2>
               <div className="flex items-center gap-2 mb-3">
                 <PriorityBadge priority={task.priority} />
                 <TaskTypeBadge type={task.task_type} />
@@ -519,7 +519,7 @@ function TaskDetailsModal({
             </div>
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+              className="text-slate-400 hover:text-corp-text-main text-2xl leading-none"
             >
               ×
             </button>
@@ -528,20 +528,20 @@ function TaskDetailsModal({
           {/* Description */}
           {task.description && (
             <div className="mb-4 p-4 bg-slate-50 rounded-lg">
-              <div className="text-xs text-slate-600 mb-1">Опис:</div>
-              <div className="text-sm text-slate-900">{task.description}</div>
+              <div className="text-xs text-corp-text-main mb-1">Опис:</div>
+              <div className="text-sm text-corp-text-dark">{task.description}</div>
             </div>
           )}
 
           {/* Details Grid */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="p-3 bg-slate-50 rounded-lg">
-              <div className="text-xs text-slate-600 mb-1">ID завдання</div>
-              <div className="text-sm font-mono text-slate-900">{task.id}</div>
+              <div className="text-xs text-corp-text-main mb-1">ID завдання</div>
+              <div className="text-sm font-mono text-corp-text-dark">{task.id}</div>
             </div>
             <div className="p-3 bg-slate-50 rounded-lg">
-              <div className="text-xs text-slate-600 mb-1">Створено</div>
-              <div className="text-sm text-slate-900">
+              <div className="text-xs text-corp-text-main mb-1">Створено</div>
+              <div className="text-sm text-corp-text-dark">
                 {new Date(task.created_at).toLocaleDateString('uk-UA')}
               </div>
             </div>
@@ -694,11 +694,11 @@ function CreateTaskModal({
       >
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-slate-900">➕ Нове завдання</h2>
+            <h2 className="text-xl font-bold text-corp-text-dark">➕ Нове завдання</h2>
             <button
               type="button"
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+              className="text-slate-400 hover:text-corp-text-main text-2xl leading-none"
             >
               ×
             </button>

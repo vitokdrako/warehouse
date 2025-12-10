@@ -58,8 +58,8 @@ function Segmented({ value, onChange, options }) {
           className={cls(
             'rounded-full px-3 py-1 transition',
             value === o.value
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800',
+              ? 'bg-white text-corp-text-dark shadow-sm'
+              : 'text-corp-text-muted hover:text-corp-text-dark',
           )}
         >
           {o.label}
@@ -118,12 +118,12 @@ function CalendarCard({ item, onOpen, onDragStart }) {
       )}
     >
       <div className="flex items-center justify-between gap-1">
-        <span className="font-semibold text-slate-900 truncate">{item.title}</span>
-        <span className="whitespace-nowrap text-[9px] text-slate-500">
+        <span className="font-semibold text-corp-text-dark truncate">{item.title}</span>
+        <span className="whitespace-nowrap text-[9px] text-corp-text-muted">
           {item.timeSlot === 'morning' ? '🌅' : item.timeSlot === 'day' ? '☀️' : '🌆'}
         </span>
       </div>
-      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px] text-slate-500">
+      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px] text-corp-text-muted">
         {item.orderCode && <span className="font-mono text-slate-700">{item.orderCode}</span>}
         {item.client && <span>· {item.client}</span>}
       </div>
@@ -198,12 +198,12 @@ function DayView({ date, items, onOpen, onUpdateItem }) {
     <div className="rounded-2xl border border-slate-200 bg-white p-3 text-[11px]">
       {/* Header */}
       <div className="mb-2 grid grid-cols-[120px,1fr] items-end gap-2 border-b border-slate-100 pb-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Потік</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-corp-text-muted">Потік</div>
         <div className="grid grid-cols-3 gap-1">
           {Object.values(timeSlots).map((slot) => (
             <div key={slot.label} className="text-center text-[10px]">
-              <div className="font-medium text-slate-800">{slot.label}</div>
-              <div className="text-slate-500">{slot.hours}</div>
+              <div className="font-medium text-corp-text-dark">{slot.label}</div>
+              <div className="text-corp-text-muted">{slot.hours}</div>
             </div>
           ))}
         </div>
@@ -388,13 +388,13 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
               className="flex-shrink-0 w-full p-3 text-[11px]"
             >
               {/* Назва тижня */}
-              <div className="text-xs font-semibold text-slate-600 mb-3 text-center">
+              <div className="text-xs font-semibold text-corp-text-main mb-3 text-center">
                 {week.dates[0].toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })} - {week.dates[6].toLocaleDateString('uk-UA', { day: '2-digit', month: 'short', year: 'numeric' })}
               </div>
 
               {/* Header */}
               <div className="mb-2 grid grid-cols-[120px,1fr] items-end gap-2 border-b border-slate-100 pb-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Потік</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-corp-text-muted">Потік</div>
                 <div className="grid grid-cols-7 gap-1">
                   {week.dates.map((d) => {
                     const isToday = toISO(d) === toISO(new Date())
@@ -408,12 +408,12 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
                       >
                         <div className={cls(
                           "font-medium",
-                          isToday ? "text-blue-600" : "text-slate-800"
+                          isToday ? "text-blue-600" : "text-corp-text-dark"
                         )}>
                           {d.toLocaleDateString('uk-UA', { day: '2-digit', month: 'short' })}
                         </div>
                         <div className={cls(
-                          isToday ? "text-blue-500" : "text-slate-500"
+                          isToday ? "text-blue-500" : "text-corp-text-muted"
                         )}>
                           {d.toLocaleDateString('uk-UA', { weekday: 'short' })}
                         </div>
@@ -464,7 +464,7 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
 
       {/* Підказка з нескінченним скролом */}
       <div className="px-3 py-2 bg-slate-50 border-t border-slate-200 text-center">
-        <div className="text-[10px] text-slate-500">
+        <div className="text-[10px] text-corp-text-muted">
           ← Нескінченний скрол: протягніть для перегляду інших тижнів →
         </div>
         <div className="text-[9px] text-slate-400 mt-1">
@@ -589,7 +589,7 @@ function MonthView({ baseDate, items, onDateClick }) {
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200">
         {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'].map((day) => (
-          <div key={day} className="text-center text-[10px] font-semibold text-slate-500">{day}</div>
+          <div key={day} className="text-center text-[10px] font-semibold text-corp-text-muted">{day}</div>
         ))}
       </div>
 
@@ -613,7 +613,7 @@ function MonthView({ baseDate, items, onDateClick }) {
               style={{ scrollSnapAlign: 'start' }}
             >
               {/* Назва місяця тижня */}
-              <div className="text-xs font-semibold text-slate-600 mb-2 text-center">
+              <div className="text-xs font-semibold text-corp-text-main mb-2 text-center">
                 {week.dates[3].toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' })}
               </div>
               
@@ -640,7 +640,7 @@ function MonthView({ baseDate, items, onDateClick }) {
                         <div className="flex items-center justify-between">
                           <div className={cls(
                             'text-base font-bold',
-                            isToday ? 'text-blue-600' : isCurrentMonth ? 'text-slate-900' : 'text-slate-400'
+                            isToday ? 'text-blue-600' : isCurrentMonth ? 'text-corp-text-dark' : 'text-slate-400'
                           )}>
                             {date.getDate()}
                           </div>
@@ -707,7 +707,7 @@ function MonthView({ baseDate, items, onDateClick }) {
                               {dateItems.issue.map(item => (
                                 <div key={item.id} className="text-[8px] bg-emerald-50 rounded p-1 mb-1">
                                   <div className="font-medium truncate">{item.orderCode}</div>
-                                  <div className="text-slate-600 truncate">{item.client}</div>
+                                  <div className="text-corp-text-main truncate">{item.client}</div>
                                 </div>
                               ))}
                             </div>
@@ -723,7 +723,7 @@ function MonthView({ baseDate, items, onDateClick }) {
                               {dateItems.return.map(item => (
                                 <div key={item.id} className="text-[8px] bg-sky-50 rounded p-1 mb-1">
                                   <div className="font-medium truncate">{item.orderCode}</div>
-                                  <div className="text-slate-600 truncate">{item.client}</div>
+                                  <div className="text-corp-text-main truncate">{item.client}</div>
                                 </div>
                               ))}
                             </div>
@@ -772,7 +772,7 @@ function MonthView({ baseDate, items, onDateClick }) {
                       {dateItems.total === 0 && (
                         <button
                           onClick={() => onDateClick(date)}
-                          className="w-full p-2 text-[9px] text-slate-400 hover:text-slate-600 transition"
+                          className="w-full p-2 text-[9px] text-slate-400 hover:text-corp-text-main transition"
                         >
                           Немає подій
                         </button>
@@ -800,7 +800,7 @@ function MonthView({ baseDate, items, onDateClick }) {
       </div>
 
       {/* Підказка */}
-      <div className="px-3 py-2 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-slate-500">
+      <div className="px-3 py-2 bg-slate-50 border-t border-slate-200 text-center text-[10px] text-corp-text-muted">
         👆 Протягніть вліво/вправо або прокрутіть для перегляду інших тижнів
       </div>
     </div>
@@ -1131,8 +1131,8 @@ export default function CalendarBoardNew() {
       {/* Header */}
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Календар процесів</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-xl font-bold text-corp-text-dark">Календар процесів</h1>
+          <p className="text-xs text-corp-text-muted">
             Всі замовлення, видачі, повернення, завдання та кейси шкоди
           </p>
         </div>
@@ -1150,7 +1150,7 @@ export default function CalendarBoardNew() {
               <button
                 type="button"
                 onClick={() => moveBase(-1)}
-                className="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                className="rounded-full px-2 py-1 text-xs text-corp-text-muted hover:bg-slate-100"
               >
                 ‹
               </button>
@@ -1160,7 +1160,7 @@ export default function CalendarBoardNew() {
               <button
                 type="button"
                 onClick={() => moveBase(1)}
-                className="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                className="rounded-full px-2 py-1 text-xs text-corp-text-muted hover:bg-slate-100"
               >
                 ›
               </button>
@@ -1172,8 +1172,8 @@ export default function CalendarBoardNew() {
       {/* Stats */}
       <div className="grid gap-3 text-[11px] md:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-3">
-          <div className="text-slate-500">Подій</div>
-          <div className="mt-1 text-lg font-semibold text-slate-900">{summary.total}</div>
+          <div className="text-corp-text-muted">Подій</div>
+          <div className="mt-1 text-lg font-semibold text-corp-text-dark">{summary.total}</div>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
           <div className="text-emerald-700">Видачі</div>
@@ -1196,7 +1196,7 @@ export default function CalendarBoardNew() {
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-[11px]">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-slate-500">Потік</span>
+          <span className="text-corp-text-muted">Потік</span>
           <Segmented
             value={laneFilter}
             onChange={(v) => setLaneFilter(v)}

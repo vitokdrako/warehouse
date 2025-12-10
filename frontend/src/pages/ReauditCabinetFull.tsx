@@ -56,7 +56,7 @@ function PillButton({ children, onClick, tone = 'slate' }: { children: React.Rea
     slate: 'bg-slate-900 text-white hover:bg-slate-800',
     green: 'bg-emerald-600 text-white hover:bg-emerald-700',
     red: 'bg-rose-600 text-white hover:bg-rose-700',
-    amber: 'bg-amber-500 text-slate-900 hover:bg-amber-600',
+    amber: 'bg-amber-500 text-corp-text-dark hover:bg-amber-600',
     ghost: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50',
   }
   return (
@@ -512,7 +512,7 @@ export default function ReauditCabinetFull({
   const totalProfit = items.reduce((s, i) => s + i.totalProfit, 0)
 
   if (!selected && !loading) {
-    return <div className="p-6 text-sm text-slate-600">Немає даних для переобліку.</div>
+    return <div className="p-6 text-sm text-corp-text-main">Немає даних для переобліку.</div>
   }
 
   return (
@@ -520,8 +520,8 @@ export default function ReauditCabinetFull({
       {/* header */}
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Кабінет переобліку PRO</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет переобліку PRO</h1>
+          <p className="text-sm text-corp-text-muted">
             Контроль стану декору, циклу використання та ризиків. Працює поверх каталогу, шкоди та фінансів.
           </p>
         </div>
@@ -552,7 +552,7 @@ export default function ReauditCabinetFull({
       {/* KPIs */}
       <div className="grid gap-3 md:grid-cols-5 text-[11px]">
         <div className="rounded-2xl border border-slate-200 bg-white p-3">
-          <div className="text-slate-500">Позицій в аудиті</div>
+          <div className="text-corp-text-muted">Позицій в аудиті</div>
           <div className="mt-1 text-xl font-semibold">{stats.total}</div>
           <div className="mt-1 text-slate-400">зараз у вибірці</div>
         </div>
@@ -580,7 +580,7 @@ export default function ReauditCabinetFull({
           <div className="rounded-2xl border border-slate-200 bg-white p-3 text-[11px] space-y-3">
             {/* Пошукова строка окремо */}
             <div>
-              <label className="block text-slate-500 font-medium mb-1">🔍 Пошук</label>
+              <label className="block text-corp-text-muted font-medium mb-1">🔍 Пошук</label>
               <input
                 className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Назва, код, категорія, зона..."
@@ -592,7 +592,7 @@ export default function ReauditCabinetFull({
             {/* Фільтри в окремому рядку */}
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="block text-slate-500 font-medium mb-1">Категорія</label>
+                <label className="block text-corp-text-muted font-medium mb-1">Категорія</label>
                 <select
                   className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs"
                   value={categoryFilter}
@@ -610,7 +610,7 @@ export default function ReauditCabinetFull({
                 </select>
               </div>
               <div>
-                <label className="block text-slate-500 font-medium mb-1">Підкатегорія</label>
+                <label className="block text-corp-text-muted font-medium mb-1">Підкатегорія</label>
                 <select
                   className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs disabled:bg-slate-100 disabled:text-slate-400"
                   value={subcategoryFilter}
@@ -626,7 +626,7 @@ export default function ReauditCabinetFull({
                 </select>
               </div>
               <div>
-                <label className="block text-slate-500 font-medium mb-1">Статус</label>
+                <label className="block text-corp-text-muted font-medium mb-1">Статус</label>
                 <select
                   className="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs"
                   value={sortByAudit}
@@ -639,8 +639,8 @@ export default function ReauditCabinetFull({
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-slate-500">
-                У вибірці: <span className="font-semibold text-slate-900">{filtered.length}</span> позицій
+              <div className="text-corp-text-muted">
+                У вибірці: <span className="font-semibold text-corp-text-dark">{filtered.length}</span> позицій
               </div>
               <PillButton tone="ghost" onClick={markCategoryAsAudited}>
                 ✅ Зафіксувати переоблік категорії
@@ -652,9 +652,9 @@ export default function ReauditCabinetFull({
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden text-[11px]">
-            <div className="border-b border-slate-100 px-3 py-2 text-slate-500">Позиції для переобліку</div>
+            <div className="border-b border-slate-100 px-3 py-2 text-corp-text-muted">Позиції для переобліку</div>
             {loading ? (
-              <div className="p-8 text-center text-sm text-slate-500">Завантаження...</div>
+              <div className="p-8 text-center text-sm text-corp-text-muted">Завантаження...</div>
             ) : (
               <div className="max-h-[360px] overflow-auto divide-y divide-slate-100">
                 {filtered.map((it) => (
@@ -667,8 +667,8 @@ export default function ReauditCabinetFull({
                     )}
                   >
                     <div className="flex-1">
-                      <div className="font-semibold text-slate-900">{it.name}</div>
-                      <div className="mt-0.5 text-[10px] text-slate-500">
+                      <div className="font-semibold text-corp-text-dark">{it.name}</div>
+                      <div className="mt-0.5 text-[10px] text-corp-text-muted">
                         <span className="font-mono text-slate-700">{it.code}</span>
                         <span> · {it.category}</span>
                         <span> · {it.zone}</span>
@@ -679,7 +679,7 @@ export default function ReauditCabinetFull({
                         <RiskBadge item={it} />
                       </div>
                     </div>
-                    <div className="text-[10px] text-slate-500 text-right">
+                    <div className="text-[10px] text-corp-text-muted text-right">
                       <div>К-сть: {it.qty}</div>
                       <div>Останній: {it.lastAuditDate}</div>
                       <div>{it.daysFromLastAudit} днів тому</div>
@@ -714,8 +714,8 @@ export default function ReauditCabinetFull({
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
                   <div>
-                    <div className="text-sm font-semibold text-slate-900">{selected.name}</div>
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-sm font-semibold text-corp-text-dark">{selected.name}</div>
+                    <div className="text-[10px] text-corp-text-muted">
                       {selected.category} · {selected.zone} · місце: {selected.location}
                     </div>
                   </div>
@@ -723,7 +723,7 @@ export default function ReauditCabinetFull({
                 <div className="flex flex-col items-end gap-1 text-[10px]">
                   <StatusCell status={selected.status} />
                   <RiskBadge item={selected} />
-                  <div className="text-slate-500">
+                  <div className="text-corp-text-muted">
                     Останній переоблік: {selected.lastAuditDate}
                     {selected.lastAuditBy && <> · {selected.lastAuditBy}</>}
                   </div>
@@ -735,17 +735,17 @@ export default function ReauditCabinetFull({
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-slate-500">Кількість на складі</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-900">{selected.qty}</div>
+                  <div className="text-corp-text-muted">Кількість на складі</div>
+                  <div className="mt-1 text-lg font-semibold text-corp-text-dark">{selected.qty}</div>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-slate-500">Було в оренді</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-900">{selected.rentalsCount} разів</div>
+                  <div className="text-corp-text-muted">Було в оренді</div>
+                  <div className="mt-1 text-lg font-semibold text-corp-text-dark">{selected.rentalsCount} разів</div>
                   <div className="mt-1 text-slate-400">останній: {selected.lastOrderId || '—'}</div>
                 </div>
                 <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-slate-500">Кейси шкоди</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-900">{selected.damagesCount}</div>
+                  <div className="text-corp-text-muted">Кейси шкоди</div>
+                  <div className="mt-1 text-lg font-semibold text-corp-text-dark">{selected.damagesCount}</div>
                   <div className="mt-1 text-slate-400">доходу: ₴ {fmtUA(selected.totalProfit)}</div>
                 </div>
               </div>
@@ -753,7 +753,7 @@ export default function ReauditCabinetFull({
               {/* Блок редагування */}
               <div className="mt-4 rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <div className="font-semibold text-slate-800">📝 Редагування картки</div>
+                  <div className="font-semibold text-corp-text-dark">📝 Редагування картки</div>
                   {!isEditing && (
                     <PillButton tone="slate" onClick={() => {
                       setIsEditing(true)
@@ -782,7 +782,7 @@ export default function ReauditCabinetFull({
                 {isEditing ? (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-[10px] text-slate-600 mb-1">📝 Назва товару</label>
+                      <label className="block text-[10px] text-corp-text-main mb-1">📝 Назва товару</label>
                       <input
                         type="text"
                         value={editData.name}
@@ -791,7 +791,7 @@ export default function ReauditCabinetFull({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-600 mb-1">🏷️ Код товару (SKU)</label>
+                      <label className="block text-[10px] text-corp-text-main mb-1">🏷️ Код товару (SKU)</label>
                       <input
                         type="text"
                         value={editData.code}
@@ -801,7 +801,7 @@ export default function ReauditCabinetFull({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] text-slate-600 mb-1">💰 Ціна купівлі</label>
+                        <label className="block text-[10px] text-corp-text-main mb-1">💰 Ціна купівлі</label>
                         <input
                           type="number"
                           step="0.01"
@@ -812,7 +812,7 @@ export default function ReauditCabinetFull({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] text-slate-600 mb-1">💵 Ціна оренди за день</label>
+                        <label className="block text-[10px] text-corp-text-main mb-1">💵 Ціна оренди за день</label>
                         <input
                           type="number"
                           step="0.01"
@@ -825,7 +825,7 @@ export default function ReauditCabinetFull({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] text-slate-600 mb-1">🎨 Колір</label>
+                        <label className="block text-[10px] text-corp-text-main mb-1">🎨 Колір</label>
                         <input
                           type="text"
                           value={editData.color}
@@ -835,7 +835,7 @@ export default function ReauditCabinetFull({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] text-slate-600 mb-1">🔨 Матеріал</label>
+                        <label className="block text-[10px] text-corp-text-main mb-1">🔨 Матеріал</label>
                         <input
                           type="text"
                           value={editData.material}
@@ -846,10 +846,10 @@ export default function ReauditCabinetFull({
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-600 mb-2">📏 Розміри (см)</label>
+                      <label className="block text-[10px] text-corp-text-main mb-2">📏 Розміри (см)</label>
                       <div className="grid grid-cols-3 gap-2">
                         <div>
-                          <label className="block text-[9px] text-slate-500 mb-1">Довжина</label>
+                          <label className="block text-[9px] text-corp-text-muted mb-1">Довжина</label>
                           <input
                             type="text"
                             value={editData.length}
@@ -859,7 +859,7 @@ export default function ReauditCabinetFull({
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] text-slate-500 mb-1">Ширина</label>
+                          <label className="block text-[9px] text-corp-text-muted mb-1">Ширина</label>
                           <input
                             type="text"
                             value={editData.width}
@@ -869,7 +869,7 @@ export default function ReauditCabinetFull({
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] text-slate-500 mb-1">Висота</label>
+                          <label className="block text-[9px] text-corp-text-muted mb-1">Висота</label>
                           <input
                             type="text"
                             value={editData.height}
@@ -882,7 +882,7 @@ export default function ReauditCabinetFull({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] text-slate-600 mb-1">📦 Кількість</label>
+                        <label className="block text-[10px] text-corp-text-main mb-1">📦 Кількість</label>
                         <input
                           type="number"
                           value={editData.qty}
@@ -891,7 +891,7 @@ export default function ReauditCabinetFull({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] text-slate-600 mb-1">🏢 Зона складу</label>
+                        <label className="block text-[10px] text-corp-text-main mb-1">🏢 Зона складу</label>
                         <input
                           type="text"
                           value={editData.zone}
@@ -902,7 +902,7 @@ export default function ReauditCabinetFull({
                       </div>
                     </div>
                     <div>
-                      <label className="block text-[10px] text-slate-600 mb-1">📍 Місце на складі</label>
+                      <label className="block text-[10px] text-corp-text-main mb-1">📍 Місце на складі</label>
                       <input
                         type="text"
                         value={editData.location}
@@ -958,32 +958,32 @@ export default function ReauditCabinetFull({
                 ) : (
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-600">🏷️ Код:</span>
-                      <span className="font-medium text-slate-900 font-mono">{selected.code}</span>
+                      <span className="text-corp-text-main">🏷️ Код:</span>
+                      <span className="font-medium text-corp-text-dark font-mono">{selected.code}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">💰 Ціна купівлі:</span>
-                      <span className="font-medium text-slate-900">{selected.price ? `₴${selected.price.toFixed(2)}` : '—'}</span>
+                      <span className="text-corp-text-main">💰 Ціна купівлі:</span>
+                      <span className="font-medium text-corp-text-dark">{selected.price ? `₴${selected.price.toFixed(2)}` : '—'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">💵 Ціна оренди:</span>
-                      <span className="font-medium text-slate-900">{selected.rentalPrice ? `₴${selected.rentalPrice.toFixed(2)}/день` : '—'}</span>
+                      <span className="text-corp-text-main">💵 Ціна оренди:</span>
+                      <span className="font-medium text-corp-text-dark">{selected.rentalPrice ? `₴${selected.rentalPrice.toFixed(2)}/день` : '—'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">🎨 Колір:</span>
-                      <span className="font-medium text-slate-900">{selected.color || '—'}</span>
+                      <span className="text-corp-text-main">🎨 Колір:</span>
+                      <span className="font-medium text-corp-text-dark">{selected.color || '—'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">🔨 Матеріал:</span>
-                      <span className="font-medium text-slate-900">{selected.material || '—'}</span>
+                      <span className="text-corp-text-main">🔨 Матеріал:</span>
+                      <span className="font-medium text-corp-text-dark">{selected.material || '—'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">📏 Розмір:</span>
-                      <span className="font-medium text-slate-900">{selected.size || '—'}</span>
+                      <span className="text-corp-text-main">📏 Розмір:</span>
+                      <span className="font-medium text-corp-text-dark">{selected.size || '—'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-600">📍 Місце:</span>
-                      <span className="font-medium text-slate-900">{selected.zone} / {selected.location}</span>
+                      <span className="text-corp-text-main">📍 Місце:</span>
+                      <span className="font-medium text-corp-text-dark">{selected.zone} / {selected.location}</span>
                     </div>
                   </div>
                 )}
@@ -994,7 +994,7 @@ export default function ReauditCabinetFull({
                 <div className="mt-4 space-y-3">
                   {selected.description && (
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <div className="mb-1 text-[10px] font-semibold text-slate-600">📄 Опис товару</div>
+                      <div className="mb-1 text-[10px] font-semibold text-corp-text-main">📄 Опис товару</div>
                       <div className="text-[11px] text-slate-700" dangerouslySetInnerHTML={{ __html: selected.description }} />
                     </div>
                   )}
@@ -1013,7 +1013,7 @@ export default function ReauditCabinetFull({
                   {/* Редагування опису та інструкції */}
                   <div className="space-y-3">
                     <div>
-                      <label className="mb-1 block text-[10px] font-semibold text-slate-800">📄 Опис товару</label>
+                      <label className="mb-1 block text-[10px] font-semibold text-corp-text-dark">📄 Опис товару</label>
                       <textarea
                         id="description-field"
                         rows={4}
@@ -1063,7 +1063,7 @@ export default function ReauditCabinetFull({
                   </div>
 
                   <div>
-                    <div className="mb-1 font-semibold text-slate-800">Швидкі дії</div>
+                    <div className="mb-1 font-semibold text-corp-text-dark">Швидкі дії</div>
                     <div className="flex flex-wrap gap-2">
                       <PillButton tone="green" onClick={() => markItemAudited(selected)}>
                         ✅ Зафіксувати переоблік
@@ -1090,7 +1090,7 @@ export default function ReauditCabinetFull({
                     {showDamageForm ? (
                       <div className="space-y-2">
                         <div>
-                          <label className="block text-[10px] text-slate-600 mb-1">Опис пошкодження</label>
+                          <label className="block text-[10px] text-corp-text-main mb-1">Опис пошкодження</label>
                           <textarea
                             value={damageData.description}
                             onChange={(e) => setDamageData({...damageData, description: e.target.value})}
@@ -1102,7 +1102,7 @@ export default function ReauditCabinetFull({
                         
                         {/* Завантаження фото пошкодження */}
                         <div>
-                          <label className="block text-[10px] text-slate-600 mb-1">📷 Фото пошкодження</label>
+                          <label className="block text-[10px] text-corp-text-main mb-1">📷 Фото пошкодження</label>
                           <div className="flex items-start gap-2">
                             <input 
                               type="file" 
@@ -1157,7 +1157,7 @@ export default function ReauditCabinetFull({
                         </div>
                         
                         <div>
-                          <label className="block text-[10px] text-slate-600 mb-1">🔧 Тип дії</label>
+                          <label className="block text-[10px] text-corp-text-main mb-1">🔧 Тип дії</label>
                           <select
                             value={damageData.action_type}
                             onChange={(e) => setDamageData({...damageData, action_type: e.target.value})}
@@ -1172,7 +1172,7 @@ export default function ReauditCabinetFull({
                         
                         <div className="grid grid-cols-3 gap-2">
                           <div>
-                            <label className="block text-[10px] text-slate-600 mb-1">Кількість</label>
+                            <label className="block text-[10px] text-corp-text-main mb-1">Кількість</label>
                             <input
                               type="number"
                               min="1"
@@ -1181,10 +1181,10 @@ export default function ReauditCabinetFull({
                               onChange={(e) => setDamageData({...damageData, qty: parseInt(e.target.value) || 1})}
                               className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                             />
-                            <div className="mt-0.5 text-[9px] text-slate-500">Макс: {selected?.qty || 0}</div>
+                            <div className="mt-0.5 text-[9px] text-corp-text-muted">Макс: {selected?.qty || 0}</div>
                           </div>
                           <div>
-                            <label className="block text-[10px] text-slate-600 mb-1">Ступінь</label>
+                            <label className="block text-[10px] text-corp-text-main mb-1">Ступінь</label>
                             <select
                               value={damageData.severity}
                               onChange={(e) => setDamageData({...damageData, severity: e.target.value})}
@@ -1195,7 +1195,7 @@ export default function ReauditCabinetFull({
                             </select>
                           </div>
                           <div>
-                            <label className="block text-[10px] text-slate-600 mb-1">Вартість ₴</label>
+                            <label className="block text-[10px] text-corp-text-main mb-1">Вартість ₴</label>
                             <input
                               type="number"
                               value={damageData.estimated_cost}
@@ -1304,7 +1304,7 @@ export default function ReauditCabinetFull({
                                     <div className="font-medium text-orange-900">
                                       {new Date(damage.date).toLocaleDateString('uk-UA')}
                                     </div>
-                                    <div className="text-slate-600 mt-1">{damage.notes}</div>
+                                    <div className="text-corp-text-main mt-1">{damage.notes}</div>
                                     <div className="text-[10px] text-slate-400 mt-1">
                                       Зафіксував: {damage.actor}
                                     </div>
@@ -1319,7 +1319,7 @@ export default function ReauditCabinetFull({
                             )}
                           </div>
                         ) : (
-                          <div className="text-sm text-slate-500">
+                          <div className="text-sm text-corp-text-muted">
                             Пошкоджень не зафіксовано
                           </div>
                         )}
@@ -1331,8 +1331,8 @@ export default function ReauditCabinetFull({
                 {/* right: lifecycle & history */}
                 <div className="space-y-3">
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <div className="mb-1 font-semibold text-slate-800">Життєвий цикл предмета</div>
-                    <div className="text-slate-600">
+                    <div className="mb-1 font-semibold text-corp-text-dark">Життєвий цикл предмета</div>
+                    <div className="text-corp-text-main">
                       <p>
                         Цей предмет був в оренді <strong>{selected.rentalsCount}</strong> разів та приніс{' '}
                         <strong>₴ {fmtUA(selected.totalProfit)}</strong> доходу. Кейсів шкоди:{' '}
@@ -1349,20 +1349,20 @@ export default function ReauditCabinetFull({
                   </div>
 
                   <div className="rounded-xl border border-slate-200 bg-white p-3">
-                    <div className="mb-2 font-semibold text-slate-800">Історія оренд</div>
+                    <div className="mb-2 font-semibold text-corp-text-dark">Історія оренд</div>
                     {loadingHistory ? (
-                      <div className="text-sm text-slate-500">Завантаження...</div>
+                      <div className="text-sm text-corp-text-muted">Завантаження...</div>
                     ) : rentalHistory.length > 0 ? (
                       <div className="max-h-64 space-y-2 overflow-y-auto">
                         {rentalHistory.map((rental, idx) => (
                           <div key={idx} className="rounded-lg border border-slate-100 bg-slate-50 p-2 text-[11px]">
                             <div className="mb-1 flex items-center justify-between">
-                              <span className="font-semibold text-slate-800">{rental.order_number}</span>
+                              <span className="font-semibold text-corp-text-dark">{rental.order_number}</span>
                               <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] text-emerald-700">
                                 ₴ {fmtUA(rental.total_rental)}
                               </span>
                             </div>
-                            <div className="text-slate-600">
+                            <div className="text-corp-text-main">
                               <div>📅 {rental.rent_date ? new Date(rental.rent_date).toLocaleDateString('uk-UA') : 'Н/Д'} 
                                 {rental.rent_return_date && ` → ${new Date(rental.rent_return_date).toLocaleDateString('uk-UA')}`}
                               </div>
@@ -1372,7 +1372,7 @@ export default function ReauditCabinetFull({
                                 <Badge tone={rental.status === 'completed' ? 'green' : rental.status === 'active' ? 'blue' : 'slate'}>
                                   {rental.status}
                                 </Badge>
-                                <span className="text-[10px] text-slate-500">
+                                <span className="text-[10px] text-corp-text-muted">
                                   {rental.rental_days} {rental.rental_days === 1 ? 'день' : rental.rental_days < 5 ? 'дні' : 'днів'} · 
                                   Кіл-сть: {rental.quantity}
                                 </span>
@@ -1382,7 +1382,7 @@ export default function ReauditCabinetFull({
                         ))}
                       </div>
                     ) : (
-                      <div className="text-sm text-slate-500">
+                      <div className="text-sm text-corp-text-muted">
                         📋 Цей товар ще не здавався в оренду
                       </div>
                     )}
@@ -1418,12 +1418,12 @@ export default function ReauditCabinetFull({
         }}>
           <div className="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900">➕ Додати новий товар</h2>
+              <h2 className="text-xl font-bold text-corp-text-dark">➕ Додати новий товар</h2>
               <button onClick={() => {
                 setShowCreateForm(false)
                 setUploadedImage(null)
                 setSelectedCategory('')
-              }} className="text-slate-400 hover:text-slate-600">✕</button>
+              }} className="text-slate-400 hover:text-corp-text-main">✕</button>
             </div>
             
             <form onSubmit={(e) => {
@@ -1449,7 +1449,7 @@ export default function ReauditCabinetFull({
               <div className="space-y-4">
                 {/* Завантаження фото */}
                 <div>
-                  <label className="block text-[11px] text-slate-600 mb-1">📷 Фото товару</label>
+                  <label className="block text-[11px] text-corp-text-main mb-1">📷 Фото товару</label>
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
                       <input 
@@ -1494,18 +1494,18 @@ export default function ReauditCabinetFull({
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-[11px] text-slate-600">Назва товару *</label>
+                    <label className="block text-[11px] text-corp-text-main">Назва товару *</label>
                     <input name="name" required className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Ваза скляна золота" />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600">SKU (артикул) *</label>
+                    <label className="block text-[11px] text-corp-text-main">SKU (артикул) *</label>
                     <input name="sku" required className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="8900" />
                   </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-[11px] text-slate-600">Категорія *</label>
+                    <label className="block text-[11px] text-corp-text-main">Категорія *</label>
                     <select 
                       name="category" 
                       required 
@@ -1520,7 +1520,7 @@ export default function ReauditCabinetFull({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600">Підкатегорія</label>
+                    <label className="block text-[11px] text-corp-text-main">Підкатегорія</label>
                     <select 
                       name="subcategory" 
                       disabled={!selectedCategory || !subcategoriesMap[selectedCategory]?.length}
@@ -1540,41 +1540,41 @@ export default function ReauditCabinetFull({
 
                 <div className="grid gap-4 md:grid-cols-4">
                   <div>
-                    <label className="block text-[11px] text-slate-600">Колір</label>
+                    <label className="block text-[11px] text-corp-text-main">Колір</label>
                     <input name="color" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Золотий" />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600">Матеріал</label>
+                    <label className="block text-[11px] text-corp-text-main">Матеріал</label>
                     <input name="material" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Скло" />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600">Розміри</label>
+                    <label className="block text-[11px] text-corp-text-main">Розміри</label>
                     <input name="size" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="30x20 см" />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600">Кількість *</label>
+                    <label className="block text-[11px] text-corp-text-main">Кількість *</label>
                     <input name="quantity" type="number" required defaultValue="1" min="1" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
                   </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-[11px] text-slate-600">Зона складу</label>
+                    <label className="block text-[11px] text-corp-text-main">Зона складу</label>
                     <input name="location_zone" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="A" />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-600">Локація (стелаж/полиця)</label>
+                    <label className="block text-[11px] text-corp-text-main">Локація (стелаж/полиця)</label>
                     <input name="location" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Р1/П3" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-600">Опис</label>
+                  <label className="block text-[11px] text-corp-text-main">Опис</label>
                   <textarea name="description" rows={3} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Детальний опис товару..." />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] text-slate-600">Інструкція по догляду</label>
+                  <label className="block text-[11px] text-corp-text-main">Інструкція по догляду</label>
                   <textarea name="care_instructions" rows={2} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" placeholder="Як мити, зберігати..." />
                 </div>
               </div>

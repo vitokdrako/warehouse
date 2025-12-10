@@ -196,12 +196,12 @@ export default function OrdersArchive() {
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => navigate('/manager')}
-                className="text-slate-600 hover:text-slate-900"
+                className="text-corp-text-main hover:text-corp-text-dark"
               >
                 ← Назад
               </button>
-              <h1 className="text-2xl font-bold text-slate-900">📂 Архів замовлень</h1>
-              <span className="text-sm text-slate-500">
+              <h1 className="text-2xl font-bold text-corp-text-dark">📂 Архів замовлень</h1>
+              <span className="text-sm text-corp-text-muted">
                 {sortedOrders.length} з {orders.length} замовлень
               </span>
             </div>
@@ -261,7 +261,7 @@ export default function OrdersArchive() {
               <option value="amount_asc">Сума ↑ (менші спочатку)</option>
             </select>
             
-            <div className="text-sm text-slate-600 flex items-center">
+            <div className="text-sm text-corp-text-main flex items-center">
               <span className="mr-2">📊</span>
               Всього: ₴{sortedOrders.reduce((sum, o) => sum + (o.total_rental || 0), 0).toFixed(0)}
             </div>
@@ -272,9 +272,9 @@ export default function OrdersArchive() {
       {/* Orders List */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         {loading ? (
-          <div className="text-center py-12 text-slate-500">Завантаження...</div>
+          <div className="text-center py-12 text-corp-text-muted">Завантаження...</div>
         ) : sortedOrders.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
+          <div className="text-center py-12 text-corp-text-muted">
             {searchQuery || statusFilter !== 'all' ? 'Немає замовлень за обраними фільтрами' : 'Немає замовлень'}
           </div>
         ) : (
@@ -288,7 +288,7 @@ export default function OrdersArchive() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <span className="text-lg font-semibold text-slate-900">
+                      <span className="text-lg font-semibold text-corp-text-dark">
                         {order.order_number}
                       </span>
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[order.status] || 'bg-slate-100 text-slate-700'}`}>
@@ -299,23 +299,23 @@ export default function OrdersArchive() {
                           📂 Архів
                         </span>
                       )}
-                      <span className="text-sm text-slate-600">
+                      <span className="text-sm text-corp-text-main">
                         {new Date(order.created_at).toLocaleDateString('uk-UA')}
                       </span>
                     </div>
                     
                     <div className="flex items-center gap-6">
                       <div className="text-right">
-                        <div className="text-sm text-slate-500">Клієнт</div>
-                        <div className="font-medium text-slate-900">{order.client_name}</div>
+                        <div className="text-sm text-corp-text-muted">Клієнт</div>
+                        <div className="font-medium text-corp-text-dark">{order.client_name}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-slate-500">Сума</div>
-                        <div className="font-semibold text-slate-900">₴{(order.total_rental || 0).toFixed(0)}</div>
+                        <div className="text-sm text-corp-text-muted">Сума</div>
+                        <div className="font-semibold text-corp-text-dark">₴{(order.total_rental || 0).toFixed(0)}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-slate-500">Дати</div>
-                        <div className="text-sm text-slate-900">
+                        <div className="text-sm text-corp-text-muted">Дати</div>
+                        <div className="text-sm text-corp-text-dark">
                           {order.issue_date || order.rental_start_date} → {order.return_date || order.rental_end_date}
                         </div>
                       </div>
@@ -332,22 +332,22 @@ export default function OrdersArchive() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       {/* Left: Order Info */}
                       <div>
-                        <h3 className="font-semibold text-slate-900 mb-3">Інформація про замовлення</h3>
+                        <h3 className="font-semibold text-corp-text-dark mb-3">Інформація про замовлення</h3>
                         <div className="space-y-2 text-sm">
                           <div className="grid grid-cols-2">
-                            <span className="text-slate-600">Телефон:</span>
+                            <span className="text-corp-text-main">Телефон:</span>
                             <span className="font-medium">{order.client_phone}</span>
                           </div>
                           <div className="grid grid-cols-2">
-                            <span className="text-slate-600">Email:</span>
+                            <span className="text-corp-text-main">Email:</span>
                             <span className="font-medium">{order.client_email || '—'}</span>
                           </div>
                           <div className="grid grid-cols-2">
-                            <span className="text-slate-600">Застава:</span>
+                            <span className="text-corp-text-main">Застава:</span>
                             <span className="font-medium">₴{(order.total_deposit || 0).toFixed(0)}</span>
                           </div>
                           <div className="grid grid-cols-2">
-                            <span className="text-slate-600">Знижка:</span>
+                            <span className="text-corp-text-main">Знижка:</span>
                             <span className="font-medium">{order.discount || 0}%</span>
                           </div>
                         </div>
@@ -389,21 +389,21 @@ export default function OrdersArchive() {
                       
                       {/* Middle: Lifecycle History */}
                       <div>
-                        <h3 className="font-semibold text-slate-900 mb-3">🕐 Історія статусів</h3>
+                        <h3 className="font-semibold text-corp-text-dark mb-3">🕐 Історія статусів</h3>
                         {lifecycle[order.order_id || parseInt(order.id)] ? (
                           <div className="space-y-2 max-h-64 overflow-y-auto">
                             {lifecycle[order.order_id || parseInt(order.id)].map((event, idx) => (
                               <div key={idx} className="flex gap-3 text-sm border-l-2 border-blue-200 pl-3 py-1">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-slate-900">{event.stage}</span>
+                                    <span className="font-semibold text-corp-text-dark">{event.stage}</span>
                                     {event.created_by && (
                                       <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
                                         {event.created_by}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-xs text-slate-500 mt-0.5">
+                                  <div className="text-xs text-corp-text-muted mt-0.5">
                                     {new Date(event.created_at).toLocaleString('uk-UA', {
                                       day: '2-digit',
                                       month: '2-digit',
@@ -412,27 +412,27 @@ export default function OrdersArchive() {
                                     })}
                                   </div>
                                   {event.notes && (
-                                    <div className="text-xs text-slate-600 mt-1">{event.notes}</div>
+                                    <div className="text-xs text-corp-text-main mt-1">{event.notes}</div>
                                   )}
                                 </div>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="text-sm text-slate-500">Завантаження...</div>
+                          <div className="text-sm text-corp-text-muted">Завантаження...</div>
                         )}
                       </div>
                       
                       {/* Right: Finance History */}
                       <div>
-                        <h3 className="font-semibold text-slate-900 mb-3">💰 Фінансова історія</h3>
+                        <h3 className="font-semibold text-corp-text-dark mb-3">💰 Фінансова історія</h3>
                         {financeHistory[order.order_id || parseInt(order.id)] ? (
                           <div className="space-y-2 max-h-64 overflow-y-auto">
                             {financeHistory[order.order_id || parseInt(order.id)].map((transaction, idx) => (
                               <div key={idx} className="flex gap-3 text-sm border-l-2 border-emerald-200 pl-3 py-1">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-slate-900">
+                                    <span className="font-semibold text-corp-text-dark">
                                       {transaction.type === 'payment' && '💵 Оплата'}
                                       {transaction.type === 'deposit_hold' && '🔒 Застава'}
                                       {transaction.type === 'deposit_release' && '↩️ Повернення застави'}
@@ -445,7 +445,7 @@ export default function OrdersArchive() {
                                       {transaction.credit > 0 ? '+' : '-'}₴{Math.abs(transaction.credit || transaction.debit || 0).toFixed(0)}
                                     </span>
                                   </div>
-                                  <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                                  <div className="text-xs text-corp-text-muted mt-0.5 flex items-center gap-2">
                                     <span>
                                       {new Date(transaction.date).toLocaleString('uk-UA', {
                                         day: '2-digit',
@@ -462,7 +462,7 @@ export default function OrdersArchive() {
                                     )}
                                   </div>
                                   {transaction.notes && (
-                                    <div className="text-xs text-slate-600 mt-1">{transaction.notes}</div>
+                                    <div className="text-xs text-corp-text-main mt-1">{transaction.notes}</div>
                                   )}
                                 </div>
                               </div>
@@ -481,7 +481,7 @@ export default function OrdersArchive() {
                             </div>
                           </div>
                         ) : (
-                          <div className="text-sm text-slate-500">Завантаження...</div>
+                          <div className="text-sm text-corp-text-muted">Завантаження...</div>
                         )}
                       </div>
                     </div>

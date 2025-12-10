@@ -47,7 +47,7 @@ function PillButton({ children, onClick, tone = 'slate' }: { children: React.Rea
     slate: 'bg-slate-900 text-white hover:bg-slate-800',
     green: 'bg-emerald-600 text-white hover:bg-emerald-700',
     red: 'bg-rose-600 text-white hover:bg-rose-700',
-    amber: 'bg-amber-500 text-slate-900 hover:bg-amber-600',
+    amber: 'bg-amber-500 text-corp-text-dark hover:bg-amber-600',
     ghost: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50',
   }
   return (
@@ -162,8 +162,8 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
     <div className="mx-auto max-w-7xl p-6 space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Кабінет переобліку PRO</h1>
-          <p className="text-sm text-slate-500">Контроль стану декору, циклу використання та ризиків</p>
+          <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет переобліку PRO</h1>
+          <p className="text-sm text-corp-text-muted">Контроль стану декору, циклу використання та ризиків</p>
         </div>
         <button
           onClick={onBackToDashboard}
@@ -176,7 +176,7 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
       {/* KPIs */}
       <div className="grid gap-3 md:grid-cols-5 text-[11px]">
         <div className="rounded-2xl border border-slate-200 bg-white p-3">
-          <div className="text-slate-500">Позицій в аудиті</div>
+          <div className="text-corp-text-muted">Позицій в аудиті</div>
           <div className="mt-1 text-xl font-semibold">{stats.total}</div>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
@@ -192,7 +192,7 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
           <div className="mt-1 text-xl font-semibold">{stats.crit + stats.lost}</div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-3">
-          <div className="text-slate-500">Сумарний дохід</div>
+          <div className="text-corp-text-muted">Сумарний дохід</div>
           <div className="mt-1 text-xl font-semibold">₴ {fmtUA(totalProfit)}</div>
         </div>
       </div>
@@ -222,11 +222,11 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-            <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-slate-500">
+            <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-corp-text-muted">
               Позиції ({items.length})
             </div>
             {loading ? (
-              <div className="p-8 text-center text-sm text-slate-500">Завантаження...</div>
+              <div className="p-8 text-center text-sm text-corp-text-muted">Завантаження...</div>
             ) : (
               <div className="max-h-[400px] overflow-auto divide-y divide-slate-100 text-[11px]">
                 {items.map((it) => (
@@ -239,8 +239,8 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
                     )}
                   >
                     <div className="flex-1">
-                      <div className="font-semibold text-slate-900">{it.name}</div>
-                      <div className="mt-0.5 text-[10px] text-slate-500">
+                      <div className="font-semibold text-corp-text-dark">{it.name}</div>
+                      <div className="mt-0.5 text-[10px] text-corp-text-muted">
                         {it.code} · {it.zone} · {it.location}
                       </div>
                       <div className="mt-1 flex gap-2">
@@ -248,7 +248,7 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
                         <RiskBadge item={it} />
                       </div>
                     </div>
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-[10px] text-corp-text-muted">
                       <div>К-сть: {it.qty}</div>
                       <div>{it.daysFromLastAudit} днів тому</div>
                     </div>
@@ -263,8 +263,8 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
         {selected && (
           <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 text-[11px]">
             <div>
-              <div className="text-sm font-semibold text-slate-900">{selected.name}</div>
-              <div className="text-[10px] text-slate-500">{selected.code} · {selected.zone} · {selected.location}</div>
+              <div className="text-sm font-semibold text-corp-text-dark">{selected.name}</div>
+              <div className="text-[10px] text-corp-text-muted">{selected.code} · {selected.zone} · {selected.location}</div>
               <div className="mt-2 flex gap-2">
                 <StatusCell status={selected.status} />
                 <RiskBadge item={selected} />
@@ -273,22 +273,22 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
 
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-xl bg-slate-50 p-3">
-                <div className="text-slate-500">Кількість</div>
+                <div className="text-corp-text-muted">Кількість</div>
                 <div className="mt-1 text-lg font-semibold">{selected.qty}</div>
               </div>
               <div className="rounded-xl bg-slate-50 p-3">
-                <div className="text-slate-500">В оренді</div>
+                <div className="text-corp-text-muted">В оренді</div>
                 <div className="mt-1 text-lg font-semibold">{selected.rentalsCount} разів</div>
               </div>
               <div className="rounded-xl bg-slate-50 p-3">
-                <div className="text-slate-500">Кейси шкоди</div>
+                <div className="text-corp-text-muted">Кейси шкоди</div>
                 <div className="mt-1 text-lg font-semibold">{selected.damagesCount}</div>
               </div>
             </div>
 
             <div>
-              <div className="mb-1 font-semibold text-slate-800">Чек-лист</div>
-              <ul className="space-y-1 text-slate-600">
+              <div className="mb-1 font-semibold text-corp-text-dark">Чек-лист</div>
+              <ul className="space-y-1 text-corp-text-main">
                 <li>▢ Перевірити кількість</li>
                 <li>▢ Оглянути стан</li>
                 <li>▢ Комплектація</li>

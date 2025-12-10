@@ -50,8 +50,8 @@ export default function Login() {
         {/* Logo/Title */}
         <div className="text-center mb-8">
           <div className="text-4xl mb-2">🏛️</div>
-          <h1 className="text-2xl font-bold text-slate-900">RentalHub Warehouse</h1>
-          <p className="text-sm text-slate-500 mt-1">Кабінет реквізитора</p>
+          <h1 className="text-2xl font-bold text-corp-text-dark">RentalHub Warehouse</h1>
+          <p className="text-sm text-corp-text-muted mt-1">Кабінет реквізитора</p>
         </div>
 
         {/* Login Form */}
@@ -104,7 +104,7 @@ export default function Login() {
         </form>
 
         {/* Footer */}
-        <div className="mt-6 text-center text-xs text-slate-500">
+        <div className="mt-6 text-center text-xs text-corp-text-muted">
           <p>Для отримання доступу зверніться до адміністратора</p>
         </div>
       </div>

@@ -327,11 +327,11 @@ export default function DamageCabinetPro({
   }
 
   if (loading) {
-    return <div className="p-6 text-sm text-slate-600">Завантаження...</div>
+    return <div className="p-6 text-sm text-corp-text-main">Завантаження...</div>
   }
 
   if (!selected) {
-    return <div className="p-6 text-sm text-slate-600">Немає кейсів шкоди.</div>
+    return <div className="p-6 text-sm text-corp-text-main">Немає кейсів шкоди.</div>
   }
 
   const linesTotal = (selected.lines || []).reduce((s, l) => s + l.total, 0)
@@ -346,14 +346,14 @@ export default function DamageCabinetPro({
           {onBackToDashboard && (
             <button
               onClick={onBackToDashboard}
-              className="text-slate-600 hover:text-slate-900 transition"
+              className="text-corp-text-main hover:text-corp-text-dark transition"
             >
               ← Назад
             </button>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Кабінет шкоди PRO</h1>
-            <p className="text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет шкоди PRO</h1>
+            <p className="text-sm text-corp-text-muted">
               Усі кейси пошкоджень: від повернення, переобліку та каталогу. Розрахунок збитків і зв&apos;язок з фінансами.
             </p>
           </div>
@@ -373,7 +373,7 @@ export default function DamageCabinetPro({
           <div className="rounded-2xl border border-slate-200 bg-white p-3 space-y-2">
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div className="flex-1">
-                <label className="block text-slate-500">Пошук</label>
+                <label className="block text-corp-text-muted">Пошук</label>
                 <input
                   className="mt-1 w-full rounded-full border border-slate-200 bg-white px-3 py-1.5"
                   placeholder="Клієнт, замовлення, товар, кейс..."
@@ -382,7 +382,7 @@ export default function DamageCabinetPro({
                 />
               </div>
               <div>
-                <label className="block text-slate-500">Статус</label>
+                <label className="block text-corp-text-muted">Статус</label>
                 <select
                   className="mt-1 w-40 rounded-full border border-slate-200 bg-white px-2 py-1.5"
                   value={statusFilter}
@@ -399,7 +399,7 @@ export default function DamageCabinetPro({
             </div>
             <div className="flex flex-col gap-2 md:flex-row md:items-end">
               <div>
-                <label className="block text-slate-500">Серйозність</label>
+                <label className="block text-corp-text-muted">Серйозність</label>
                 <select
                   className="mt-1 w-40 rounded-full border border-slate-200 bg-white px-2 py-1.5"
                   value={severityFilter}
@@ -413,7 +413,7 @@ export default function DamageCabinetPro({
                 </select>
               </div>
               <div>
-                <label className="block text-slate-500">Джерело</label>
+                <label className="block text-corp-text-muted">Джерело</label>
                 <select
                   className="mt-1 w-40 rounded-full border border-slate-200 bg-white px-2 py-1.5"
                   value={sourceFilter}
@@ -427,8 +427,8 @@ export default function DamageCabinetPro({
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="text-slate-500">
-                У вибірці: <span className="font-semibold text-slate-900">{filtered.length}</span> кейсів
+              <div className="text-corp-text-muted">
+                У вибірці: <span className="font-semibold text-corp-text-dark">{filtered.length}</span> кейсів
               </div>
               <div className="flex gap-2">
                 <PillButton tone="ghost" onClick={() => alert('Створення нового кейсу (TODO)')}>
@@ -439,7 +439,7 @@ export default function DamageCabinetPro({
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-            <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-slate-500">Список кейсів</div>
+            <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-corp-text-muted">Список кейсів</div>
             <div className="max-h-[360px] divide-y divide-slate-100 overflow-auto text-[11px]">
               {filtered.map((c) => {
                 const sum = (c.lines || []).reduce((s, l) => s + l.total, 0)
@@ -457,10 +457,10 @@ export default function DamageCabinetPro({
                   >
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-1">
-                        <span className="font-semibold text-slate-900">{c.clientName}</span>
-                        {c.orderId && <span className="text-[10px] text-slate-500">· замовлення #{c.orderId}</span>}
+                        <span className="font-semibold text-corp-text-dark">{c.clientName}</span>
+                        {c.orderId && <span className="text-[10px] text-corp-text-muted">· замовлення #{c.orderId}</span>}
                       </div>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-corp-text-muted">
                         <span>{c.eventName || 'Без назви події'}</span>
                         <span>· кейс: {c.id}</span>
                         <span>· створено: {c.createdAt?.slice(0,10)}</span>
@@ -472,7 +472,7 @@ export default function DamageCabinetPro({
                         {c.source === 'reaudit' && <Badge tone="violet">з переобліку</Badge>}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 text-[10px] text-slate-600">
+                    <div className="flex flex-col items-end gap-1 text-[10px] text-corp-text-main">
                       <span>Збитки: ₴ {fmtUA(sum)}</span>
                       <span>Застава: ₴ {fmtUA(c.depositHold)}</span>
                       {extra > 0 ? (
@@ -485,7 +485,7 @@ export default function DamageCabinetPro({
                 )
               })}
               {filtered.length === 0 && (
-                <div className="px-3 py-6 text-center text-[11px] text-slate-500">Кейсів за цими фільтрами немає</div>
+                <div className="px-3 py-6 text-center text-[11px] text-corp-text-muted">Кейсів за цими фільтрами немає</div>
               )}
             </div>
           </div>
@@ -497,15 +497,15 @@ export default function DamageCabinetPro({
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-semibold text-slate-900">{selected.clientName}</span>
+                  <span className="font-semibold text-corp-text-dark">{selected.clientName}</span>
                   {selected.orderId && (
-                    <span className="text-[11px] text-slate-500">· замовлення #{selected.orderId}</span>
+                    <span className="text-[11px] text-corp-text-muted">· замовлення #{selected.orderId}</span>
                   )}
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">
+                <div className="mt-0.5 text-[11px] text-corp-text-muted">
                   {selected.eventName || 'Без назви події'} · повернення: {selected.returnDate?.slice(0,10) || '—'}
                 </div>
-                <div className="mt-0.5 text-[11px] text-slate-500">
+                <div className="mt-0.5 text-[11px] text-corp-text-muted">
                   Створено: {selected.createdAt?.slice(0,10)} · {selected.createdBy}
                   {selected.source === 'reaudit' && <span> · створено з переобліку</span>}
                   {selected.fromReauditItemId && <span> · {selected.fromReauditItemId}</span>}
@@ -514,23 +514,23 @@ export default function DamageCabinetPro({
               <div className="flex flex-col items-end gap-1">
                 <StatusBadge status={selected.status} />
                 <SeverityBadge severity={selected.severity} />
-                <div className="text-[10px] text-slate-500">Кейс: {selected.id}</div>
+                <div className="text-[10px] text-corp-text-muted">Кейс: {selected.id}</div>
               </div>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               <div className="rounded-xl bg-slate-50 p-3">
-                <div className="text-slate-500">Загальні збитки</div>
-                <div className="mt-1 text-lg font-semibold text-slate-900">₴ {fmtUA(linesTotal)}</div>
+                <div className="text-corp-text-muted">Загальні збитки</div>
+                <div className="mt-1 text-lg font-semibold text-corp-text-dark">₴ {fmtUA(linesTotal)}</div>
               </div>
               <div className="rounded-xl bg-slate-50 p-3">
-                <div className="text-slate-500">Застава по замовленню</div>
-                <div className="mt-1 text-lg font-semibold text-slate-900">₴ {fmtUA(selected.depositHold)}</div>
+                <div className="text-corp-text-muted">Застава по замовленню</div>
+                <div className="mt-1 text-lg font-semibold text-corp-text-dark">₴ {fmtUA(selected.depositHold)}</div>
               </div>
               <div className="rounded-xl bg-slate-50 p-3">
-                <div className="text-slate-500">Розрахунок</div>
-                <div className="mt-1 text-sm text-slate-800">Застави списати: ₴ {fmtUA(chargeFromDeposit)}</div>
-                <div className="text-sm text-slate-800">
+                <div className="text-corp-text-muted">Розрахунок</div>
+                <div className="mt-1 text-sm text-corp-text-dark">Застави списати: ₴ {fmtUA(chargeFromDeposit)}</div>
+                <div className="text-sm text-corp-text-dark">
                   До доплати клієнтом: <span className={extraPayment > 0 ? 'text-rose-600' : ''}>₴ {fmtUA(extraPayment)}</span>
                 </div>
               </div>
@@ -540,14 +540,14 @@ export default function DamageCabinetPro({
               {/* lines table */}
               <div className="mb-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <div className="text-[11px] font-semibold text-slate-800">Пошкоджені позиції ({(selected.lines || []).length})</div>
+                  <div className="text-[11px] font-semibold text-corp-text-dark">Пошкоджені позиції ({(selected.lines || []).length})</div>
                   <PillButton tone="ghost" onClick={() => addLine(selected.id)}>
                     + Додати позицію
                   </PillButton>
                 </div>
                 <div className="max-h-[260px] overflow-auto rounded-xl border border-slate-200">
                   <table className="min-w-full text-[11px]">
-                    <thead className="bg-slate-50 text-slate-500">
+                    <thead className="bg-slate-50 text-corp-text-muted">
                       <tr>
                         <th className="px-2 py-1 text-left">Фото</th>
                         <th className="px-2 py-1 text-left">Предмет</th>
@@ -578,25 +578,25 @@ export default function DamageCabinetPro({
                             )}
                           </td>
                           <td className="px-2 py-1 align-top">
-                            <div className="font-semibold text-slate-900">{l.productName}</div>
-                            <div className="text-[10px] text-slate-500">
+                            <div className="font-semibold text-corp-text-dark">{l.productName}</div>
+                            <div className="text-[10px] text-corp-text-muted">
                               SKU: {l.sku || '—'} {l.inventoryCode && <>· інв. {l.inventoryCode}</>}
                             </div>
-                            <div className="text-[10px] text-slate-500">{l.category}</div>
+                            <div className="text-[10px] text-corp-text-muted">{l.category}</div>
                           </td>
-                          <td className="px-2 py-1 align-top text-slate-600">
+                          <td className="px-2 py-1 align-top text-corp-text-main">
                             <div>{l.ruleLabel || l.category || '-'}</div>
                             {l.minAmount !== undefined && (
                               <div className="text-[10px] text-slate-400">Мін. згідно прайсу: ₴ {fmtUA(l.minAmount)}</div>
                             )}
-                            {l.note && <div className="mt-0.5 text-[10px] text-slate-500">{l.note}</div>}
+                            {l.note && <div className="mt-0.5 text-[10px] text-corp-text-muted">{l.note}</div>}
                             {l.fromReauditItemId && (
                               <div className="mt-0.5 text-[10px] text-violet-700">з переобліку: {l.fromReauditItemId}</div>
                             )}
                           </td>
-                          <td className="px-2 py-1 align-top text-right text-slate-600">{l.qty}</td>
-                          <td className="px-2 py-1 align-top text-right text-slate-600">₴ {fmtUA(l.amountPerUnit)}</td>
-                          <td className="px-2 py-1 align-top text-right font-semibold text-slate-900">
+                          <td className="px-2 py-1 align-top text-right text-corp-text-main">{l.qty}</td>
+                          <td className="px-2 py-1 align-top text-right text-corp-text-main">₴ {fmtUA(l.amountPerUnit)}</td>
+                          <td className="px-2 py-1 align-top text-right font-semibold text-corp-text-dark">
                             ₴ {fmtUA(l.total)}
                           </td>
                           <td className="px-2 py-1 align-top text-right">
@@ -610,7 +610,7 @@ export default function DamageCabinetPro({
                         <tr>
                           <td
                             colSpan={6}
-                            className="px-3 py-4 text-center text-[11px] text-slate-500"
+                            className="px-3 py-4 text-center text-[11px] text-corp-text-muted"
                           >
                             Поки що немає позицій у цьому кейсі
                           </td>
@@ -623,7 +623,7 @@ export default function DamageCabinetPro({
 
               {/* actions */}
               <div className="mb-4">
-                <div className="mb-2 text-[11px] font-semibold text-slate-800">Швидкі дії</div>
+                <div className="mb-2 text-[11px] font-semibold text-corp-text-dark">Швидкі дії</div>
                 <div className="flex flex-wrap gap-2">
                   {selected.status === 'draft' && (
                     <PillButton
@@ -705,7 +705,7 @@ export default function DamageCabinetPro({
 
               {/* notes */}
               <div>
-                <div className="mb-2 text-[11px] font-semibold text-slate-800">Внутрішня примітка</div>
+                <div className="mb-2 text-[11px] font-semibold text-corp-text-dark">Внутрішня примітка</div>
                 <textarea
                   rows={4}
                   defaultValue={selected.internalNote}
@@ -776,7 +776,7 @@ function SendToClientModal({
         className="bg-white rounded-2xl w-full max-w-md m-4 p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">📧 Відправити клієнту</h3>
+        <h3 className="text-lg font-semibold text-corp-text-dark mb-4">📧 Відправити клієнту</h3>
         
         <div className="space-y-3 mb-6">
           <div 
@@ -791,8 +791,8 @@ function SendToClientModal({
             <div className="flex items-center gap-3">
               <div className="text-2xl">📧</div>
               <div>
-                <div className="font-semibold text-slate-900">Email (Лист)</div>
-                <div className="text-sm text-slate-600">Відправити на email клієнта</div>
+                <div className="font-semibold text-corp-text-dark">Email (Лист)</div>
+                <div className="text-sm text-corp-text-main">Відправити на email клієнта</div>
               </div>
             </div>
           </div>
@@ -809,8 +809,8 @@ function SendToClientModal({
             <div className="flex items-center gap-3">
               <div className="text-2xl">💬</div>
               <div>
-                <div className="font-semibold text-slate-900">CallBell</div>
-                <div className="text-sm text-slate-600">Через бот і месенджери</div>
+                <div className="font-semibold text-corp-text-dark">CallBell</div>
+                <div className="text-sm text-corp-text-main">Через бот і месенджери</div>
                 <div className="text-xs text-amber-600 mt-1">⚠️ Інтеграція в розробці</div>
               </div>
             </div>
@@ -886,11 +886,11 @@ function CreateTaskFromDamageModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-slate-900">🔧 Створити завдання на реставрацію</h2>
+          <h2 className="text-xl font-bold text-corp-text-dark">🔧 Створити завдання на реставрацію</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-2xl leading-none"
+            className="text-slate-400 hover:text-corp-text-main text-2xl leading-none"
           >
             ×
           </button>

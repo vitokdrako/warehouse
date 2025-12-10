@@ -93,19 +93,19 @@ function PackingList({
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Ордери в комплектації</h2>
-          <p className="text-[11px] text-slate-500">Тільки збір і пакування на видачу · статус progress / ready.</p>
+          <h2 className="text-sm font-semibold text-corp-text-dark">Ордери в комплектації</h2>
+          <p className="text-[11px] text-corp-text-muted">Тільки збір і пакування на видачу · статус progress / ready.</p>
         </div>
-        <div className="flex gap-2 text-[11px] text-slate-500">
+        <div className="flex gap-2 text-[11px] text-corp-text-muted">
           <Badge tone="blue">в роботі: {orders.filter((o) => o.status === 'progress').length}</Badge>
           <Badge tone="green">готові: {orders.filter((o) => o.status === 'ready').length}</Badge>
         </div>
       </div>
 
       {loading ? (
-        <div className="py-8 text-center text-sm text-slate-500">Завантаження...</div>
+        <div className="py-8 text-center text-sm text-corp-text-muted">Завантаження...</div>
       ) : orders.length === 0 ? (
-        <div className="py-8 text-center text-sm text-slate-500">Немає замовлень в комплектації</div>
+        <div className="py-8 text-center text-sm text-corp-text-muted">Немає замовлень в комплектації</div>
       ) : (
         <div className="space-y-2 text-xs">
           {orders.map((o) => (
@@ -120,10 +120,10 @@ function PackingList({
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-slate-900">#{o.order_id}</span>
-                  <span className="text-[11px] text-slate-500">{o.client}</span>
+                  <span className="text-[11px] font-semibold text-corp-text-dark">#{o.order_id}</span>
+                  <span className="text-[11px] text-corp-text-muted">{o.client}</span>
                 </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-corp-text-muted">
                   <span>
                     {o.skuCount} SKU · {o.itemsCount} од.
                   </span>
@@ -131,8 +131,8 @@ function PackingList({
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1 text-[10px]">
-                <span className="text-slate-500">Евент: {o.eventDate}</span>
-                <span className="text-slate-500">Видача: {o.issueTime}</span>
+                <span className="text-corp-text-muted">Евент: {o.eventDate}</span>
+                <span className="text-corp-text-muted">Видача: {o.issueTime}</span>
                 <span>
                   <Badge tone={o.status === 'ready' ? 'green' : 'blue'}>
                     {o.status === 'ready' ? 'Готово до видачі' : 'Комплектація'}
@@ -167,7 +167,7 @@ function PackingDetails({
 }) {
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-corp-text-muted">
         Завантаження...
       </div>
     )
@@ -175,7 +175,7 @@ function PackingDetails({
 
   if (!order) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-corp-text-muted">
         Оберіть ордер ліворуч, щоб побачити деталі комплектації.
       </div>
     )
@@ -188,12 +188,12 @@ function PackingDetails({
       {/* Header */}
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Комплектація #{order.order_id}</h2>
-          <p className="text-[11px] text-slate-500">
+          <h2 className="text-sm font-semibold text-corp-text-dark">Комплектація #{order.order_id}</h2>
+          <p className="text-[11px] text-corp-text-muted">
             {order.client} · {order.itemsCount} од. ({order.skuCount} SKU) · {order.warehouseZone}
           </p>
         </div>
-        <div className="flex flex-col items-end gap-1 text-[10px] text-slate-500">
+        <div className="flex flex-col items-end gap-1 text-[10px] text-corp-text-muted">
           <span>Евент: {order.eventDate}</span>
           <span>Видача: {order.issueTime}</span>
           <span>Очікуване повернення: {order.returnTime}</span>
@@ -205,15 +205,15 @@ function PackingDetails({
       <div className="mb-4 rounded-xl bg-slate-50 p-3">
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-slate-800">Комплектація на видачу</span>
+            <span className="text-[11px] font-semibold text-corp-text-dark">Комплектація на видачу</span>
             <Badge tone={isReady ? 'green' : 'blue'}>
               {isReady ? 'Готово до видачі' : 'В роботі (progress)'}
             </Badge>
           </div>
-          <span className="text-[11px] text-slate-500">Прогрес: {order.progressPack}%</span>
+          <span className="text-[11px] text-corp-text-muted">Прогрес: {order.progressPack}%</span>
         </div>
         <ProgressBar value={order.progressPack} />
-        <div className="mt-2 grid gap-2 text-[11px] text-slate-600 md:grid-cols-2">
+        <div className="mt-2 grid gap-2 text-[11px] text-corp-text-main md:grid-cols-2">
           <ul className="space-y-1">
             <li>• Усі позиції знайдені на складі</li>
             <li>• Підтягнули з мийки/реставрації (якщо щось ще не повернулось)</li>
@@ -225,7 +225,7 @@ function PackingDetails({
             <li>• Готово до передачі в картку видачі менеджера</li>
           </ul>
         </div>
-        <div className="mt-2 rounded-lg bg-white/70 px-2 py-1 text-[11px] text-slate-600">
+        <div className="mt-2 rounded-lg bg-white/70 px-2 py-1 text-[11px] text-corp-text-main">
           <span className="font-semibold">Нотатка:</span> {order.notes}
         </div>
         <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
@@ -249,9 +249,9 @@ function PackingDetails({
       <div className="grid gap-3 md:grid-cols-2 text-[11px]">
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="font-semibold text-slate-800">Підготовка до повернення</span>
+            <span className="font-semibold text-corp-text-dark">Підготовка до повернення</span>
           </div>
-          <div className="space-y-1 text-slate-600">
+          <div className="space-y-1 text-corp-text-main">
             <div className="flex items-center justify-between">
               <span>Очікувана дата/час:</span>
               <span className="font-medium">{order.returnTime}</span>
@@ -267,8 +267,8 @@ function PackingDetails({
               </span>
             </div>
           </div>
-          <div className="mt-2 space-y-1 text-slate-600">
-            <div className="font-semibold text-slate-800">План дій для складу:</div>
+          <div className="mt-2 space-y-1 text-corp-text-main">
+            <div className="font-semibold text-corp-text-dark">План дій для складу:</div>
             <ul className="space-y-1">
               <li>• Підготувати місце в зоні повернень</li>
               <li>• При необхідності — виділити додатковий простір біля рампи</li>
@@ -293,9 +293,9 @@ function PackingDetails({
 
         <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="font-semibold text-slate-800">Звʼязок з кабінетом шкоди</span>
+            <span className="font-semibold text-corp-text-dark">Звʼязок з кабінетом шкоди</span>
           </div>
-          <div className="space-y-1 text-slate-600">
+          <div className="space-y-1 text-corp-text-main">
             <p>
               Після фактичного повернення ордера комірник у картці повернення зможе створити кейс шкоди, якщо декор
               повернувся брудний або пошкоджений.
@@ -304,8 +304,8 @@ function PackingDetails({
               Тут комплектація тільки планує, де це буде складено, і фіксує, що ордер чекаємо назад у конкретну зону.
             </p>
           </div>
-          <div className="mt-2 space-y-1 text-slate-600">
-            <div className="font-semibold text-slate-800">Що побачить склад після повернення:</div>
+          <div className="mt-2 space-y-1 text-corp-text-main">
+            <div className="font-semibold text-corp-text-dark">Що побачить склад після повернення:</div>
             <ul className="space-y-1">
               <li>• Статус прийому: ок / є підозра на шкоду</li>
               <li>• Якщо є шкода — лінк на кейс у кабінеті шкоди</li>
@@ -457,12 +457,12 @@ export default function PackingCabinet({
     <div className="mx-auto max-w-7xl p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Кабінет комплектації</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет комплектації</h1>
+          <p className="text-sm text-corp-text-muted">
             Збір і пакування на видачу + планування повернення. Без мийки/сушки — це окремо в кабінеті шкоди.
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2 text-[11px] text-slate-500">
+        <div className="flex flex-col items-end gap-2 text-[11px] text-corp-text-muted">
           <div className="rounded-full bg-slate-900 px-3 py-1 text-[11px] text-white">Роль: реквізитор / склад</div>
           <button
             type="button"
@@ -474,7 +474,7 @@ export default function PackingCabinet({
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3 text-[11px] text-slate-500">
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-[11px] text-corp-text-muted">
         <div className="flex items-center gap-2">
           <span>Фільтр по статусу:</span>
           <select 
@@ -529,7 +529,7 @@ export default function PackingCabinet({
         />
       </div>
 
-      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-[11px] text-slate-500">
+      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-[11px] text-corp-text-muted">
         У реальній системі цей кабінет повʼязаний з: календарем реквізитора, карткою видачі (готовність до видачі) та
         кабінетом шкоди (після фактичного повернення і фіксації стану декору).
       </div>

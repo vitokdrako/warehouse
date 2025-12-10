@@ -253,7 +253,7 @@ const NewOrderClean = () => {
   }, [estimatedDeposit]);
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-white text-corp-text-dark">
       {/* Topbar */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70">
         <div className="mx-auto max-w-7xl px-6 py-3 flex items-center gap-4">
@@ -399,7 +399,7 @@ const NewOrderClean = () => {
                   </select>
                 </Field>
               </div>
-              <div className="px-4 pb-4 text-xs text-slate-500">
+              <div className="px-4 pb-4 text-xs text-corp-text-muted">
                 Правила підрахунку діб застосовуються автоматично (T+1, T+2, вихідні тощо).
               </div>
             </div>
@@ -421,7 +421,7 @@ const NewOrderClean = () => {
               />
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-slate-600">
+                  <thead className="bg-slate-50 text-corp-text-main">
                     <tr>
                       <th className="px-4 py-2 text-left font-medium">SKU</th>
                       <th className="px-4 py-2 text-left font-medium">Назва</th>
@@ -511,7 +511,7 @@ const NewOrderClean = () => {
                 >
                   + Додати позицію
                 </button>
-                <div className="text-sm text-slate-600">
+                <div className="text-sm text-corp-text-main">
                   Резерв по складу: <span className="font-medium">OK</span> • Конфлікти: <span className="font-medium text-amber-700">0</span>
                 </div>
               </div>
@@ -535,7 +535,7 @@ const NewOrderClean = () => {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-slate-600">
+                  <thead className="bg-slate-50 text-corp-text-main">
                     <tr>
                       <th className="px-4 py-2 text-left font-medium">Стаття</th>
                       <th className="px-4 py-2 text-left font-medium">Сума</th>
@@ -574,7 +574,7 @@ const NewOrderClean = () => {
                 </table>
               </div>
               <div className="px-4 py-3 border-t border-slate-200 bg-white flex flex-wrap items-center justify-between gap-3">
-                <div className="text-sm text-slate-600">
+                <div className="text-sm text-corp-text-main">
                   Метод: <Badge value="card" /> • Можна зробити <Badge value="hold" /> на заставу
                 </div>
                 <div className="flex gap-2">
@@ -594,7 +594,7 @@ const NewOrderClean = () => {
               <textarea 
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400" 
+                className="corp-input" 
                 rows={4} 
                 placeholder="Текст для складу / менеджера…"
               />
@@ -610,7 +610,7 @@ const NewOrderClean = () => {
 
             {/* Actions Bar */}
             <div className="rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
-              <div className="text-sm text-slate-600">
+              <div className="text-sm text-corp-text-main">
                 Статус: <Badge value="draft" /> → після створення стане <Badge value="new" />
               </div>
               <div className="flex gap-2">
@@ -634,7 +634,7 @@ const NewOrderClean = () => {
               <Header title="Історія подій" />
               <ul className="p-4 space-y-2 text-sm">
                 <li className="flex gap-3">
-                  <span className="w-14 shrink-0 tabular-nums text-slate-500">
+                  <span className="w-14 shrink-0 tabular-nums text-corp-text-muted">
                     {new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   <span>Створено чернетку</span>
@@ -736,14 +736,14 @@ const NewOrderClean = () => {
                     <Badge value="high" />
                     <span>Зібрати замовлення</span>
                   </div>
-                  <div className="text-slate-500 text-xs">у день видачі 09:00</div>
+                  <div className="text-corp-text-muted text-xs">у день видачі 09:00</div>
                 </li>
                 <li className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
                   <div className="flex items-center gap-2">
                     <Badge value="medium" />
                     <span>Підготувати пакування</span>
                   </div>
-                  <div className="text-slate-500 text-xs">за день до видачі</div>
+                  <div className="text-corp-text-muted text-xs">за день до видачі</div>
                 </li>
               </ul>
               <div className="mt-3 flex gap-2">
@@ -794,7 +794,7 @@ const NewOrderClean = () => {
         </main>
       </div>
 
-      <footer className="border-t border-slate-200 py-6 text-center text-slate-500 text-sm">
+      <footer className="border-t border-slate-200 py-6 text-center text-corp-text-muted text-sm">
         © FarforRent • new order
       </footer>
 
@@ -825,11 +825,11 @@ const NewOrderClean = () => {
               />
               
               {loadingInventory ? (
-                <div className="text-center py-8 text-slate-500">Завантаження...</div>
+                <div className="text-center py-8 text-corp-text-muted">Завантаження...</div>
               ) : (
                 <div className="max-h-96 overflow-y-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-slate-50 text-slate-600 sticky top-0">
+                    <thead className="bg-slate-50 text-corp-text-main sticky top-0">
                       <tr>
                         <th className="px-4 py-3 text-left font-medium">SKU</th>
                         <th className="px-4 py-3 text-left font-medium">Назва</th>
@@ -842,7 +842,7 @@ const NewOrderClean = () => {
                     <tbody className="divide-y divide-slate-200">
                       {filteredInventory.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                          <td colSpan={6} className="px-4 py-8 text-center text-corp-text-muted">
                             {searchTerm ? 'Нічого не знайдено' : 'Інвентар порожній'}
                           </td>
                         </tr>
@@ -851,11 +851,11 @@ const NewOrderClean = () => {
                           <tr key={item.id} className="hover:bg-slate-50">
                             <td className="px-4 py-3 font-mono text-xs">{item.article}</td>
                             <td className="px-4 py-3">{item.name}</td>
-                            <td className="px-4 py-3 text-slate-600">{item.category}</td>
+                            <td className="px-4 py-3 text-corp-text-main">{item.category}</td>
                             <td className="px-4 py-3 text-right tabular-nums">₴ {item.price_per_day}</td>
                             <td className="px-4 py-3 text-right">
                               <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                                item.quantity_available > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                                item.quantity_available > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-corp-text-main'
                               }`}>
                                 {item.quantity_available}/{item.quantity_total}
                               </span>
@@ -893,9 +893,9 @@ const SummaryCell = ({ title, value, note, tone }) => {
   
   return (
     <div className={`px-4 py-3 border-b md:border-b-0 md:border-r border-slate-200 last:border-r-0 ${tone ? toneMap[tone] : ''}`}>
-      <div className="text-xs text-slate-500">{title}</div>
+      <div className="text-xs text-corp-text-muted">{title}</div>
       <div className="text-lg font-semibold tracking-tight tabular-nums">{value}</div>
-      {note && <div className="text-xs text-slate-500 mt-0.5">{note}</div>}
+      {note && <div className="text-xs text-corp-text-muted mt-0.5">{note}</div>}
     </div>
   );
 };
@@ -912,7 +912,7 @@ const Header = ({ title, right }) => {
 const Field = ({ label, children }) => {
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="text-slate-600">{label}</span>
+      <span className="text-corp-text-main">{label}</span>
       {children}
     </label>
   );
@@ -923,7 +923,7 @@ const NumberInput = ({ value, onChange }) => {
     <div className="inline-flex items-center rounded-lg border border-slate-200 bg-white">
       <button 
         onClick={() => onChange(Math.max(0, value - 1))}
-        className="h-8 w-8 text-slate-500 hover:bg-slate-50"
+        className="h-8 w-8 text-corp-text-muted hover:bg-slate-50"
       >
         −
       </button>
@@ -934,7 +934,7 @@ const NumberInput = ({ value, onChange }) => {
       />
       <button 
         onClick={() => onChange(value + 1)}
-        className="h-8 w-8 text-slate-500 hover:bg-slate-50"
+        className="h-8 w-8 text-corp-text-muted hover:bg-slate-50"
       >
         +
       </button>
@@ -945,7 +945,7 @@ const NumberInput = ({ value, onChange }) => {
 const Stat = ({ label, value, emphasize }) => {
   return (
     <div className={`rounded-xl border ${emphasize ? 'border-teal-300 bg-teal-50' : 'border-slate-200 bg-white'} p-4`}>
-      <div className="text-xs text-slate-500">{label}</div>
+      <div className="text-xs text-corp-text-muted">{label}</div>
       <div className="text-lg font-semibold tabular-nums">{value}</div>
     </div>
   );

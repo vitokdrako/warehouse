@@ -107,7 +107,7 @@ export default function InventoryRecount() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-slate-600">Завантаження...</div>
+        <div className="text-corp-text-main">Завантаження...</div>
       </div>
     )
   }
@@ -118,7 +118,7 @@ export default function InventoryRecount() {
         <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 p-6 text-center">
           <div className="text-6xl mb-4">📦</div>
           <h2 className="text-xl font-semibold mb-2">Товар не знайдено</h2>
-          <p className="text-slate-600 mb-4">SKU: {sku}</p>
+          <p className="text-corp-text-main mb-4">SKU: {sku}</p>
           <button 
             onClick={() => navigate('/')}
             className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
@@ -138,8 +138,8 @@ export default function InventoryRecount() {
           <div className="flex items-center gap-4 mb-4">
             <div className="text-5xl">📋</div>
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-slate-900">Кабінет переобліку</h1>
-              <p className="text-slate-600">Швидка фіксація стану товару</p>
+              <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет переобліку</h1>
+              <p className="text-corp-text-main">Швидка фіксація стану товару</p>
             </div>
           </div>
         </div>
@@ -173,8 +173,8 @@ export default function InventoryRecount() {
                         <img src={getImageUrl(fp.image)} alt={fp.name} className="w-10 h-10 object-cover rounded" />
                       )}
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-slate-900">{fp.name}</div>
-                        <div className="text-xs text-slate-500">SKU: {fp.sku} • Є: {fp.quantity} шт</div>
+                        <div className="text-sm font-medium text-corp-text-dark">{fp.name}</div>
+                        <div className="text-xs text-corp-text-muted">SKU: {fp.sku} • Є: {fp.quantity} шт</div>
                       </div>
                     </div>
                   ))}
@@ -204,19 +204,19 @@ export default function InventoryRecount() {
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-600">SKU:</span>
+              <span className="text-corp-text-main">SKU:</span>
               <span className="font-semibold">{product.sku}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600">Назва:</span>
+              <span className="text-corp-text-main">Назва:</span>
               <span className="font-semibold">{product.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600">В наявності:</span>
+              <span className="text-corp-text-main">В наявності:</span>
               <span className="font-semibold">{product.quantity || 0} шт</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600">Локація:</span>
+              <span className="text-corp-text-main">Локація:</span>
               <span className="font-semibold">
                 {product.zone || '—'} / {product.aisle || '—'} / {product.shelf || '—'}
               </span>
@@ -235,12 +235,12 @@ export default function InventoryRecount() {
                 <div key={d.id} className="bg-white rounded-lg border border-amber-300 p-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="font-medium text-slate-900">{d.damage_type}</div>
-                      <div className="text-xs text-slate-500 mt-1">
+                      <div className="font-medium text-corp-text-dark">{d.damage_type}</div>
+                      <div className="text-xs text-corp-text-muted mt-1">
                         {d.stage_label} · Замовлення #{d.order_number}
                       </div>
                       {d.note && (
-                        <div className="text-sm text-slate-600 mt-1">{d.note}</div>
+                        <div className="text-sm text-corp-text-main mt-1">{d.note}</div>
                       )}
                       <div className="text-xs text-slate-400 mt-1">
                         {d.created_by} · {new Date(d.created_at).toLocaleString('uk-UA')}
@@ -254,7 +254,7 @@ export default function InventoryRecount() {
                       }`}>
                         ₴{d.fee}
                       </div>
-                      <div className="text-xs text-slate-500 mt-1">
+                      <div className="text-xs text-corp-text-muted mt-1">
                         {d.severity === 'high' ? '🔴 Високе' : 
                          d.severity === 'medium' ? '🟡 Середнє' : 
                          '🟢 Низьке'}
@@ -285,7 +285,7 @@ export default function InventoryRecount() {
                 className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
                   status === 'available'
                     ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    : 'border-slate-200 bg-white text-corp-text-main hover:border-slate-300'
                 }`}
               >
                 ✅ В нормі
@@ -295,7 +295,7 @@ export default function InventoryRecount() {
                 className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
                   status === 'damaged'
                     ? 'border-amber-500 bg-amber-50 text-amber-700'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    : 'border-slate-200 bg-white text-corp-text-main hover:border-slate-300'
                 }`}
               >
                 ⚠️ Пошкоджено
@@ -305,7 +305,7 @@ export default function InventoryRecount() {
                 className={`p-3 rounded-lg border-2 text-sm font-medium transition-colors ${
                   status === 'missing'
                     ? 'border-rose-500 bg-rose-50 text-rose-700'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    : 'border-slate-200 bg-white text-corp-text-main hover:border-slate-300'
                 }`}
               >
                 ❌ Відсутній

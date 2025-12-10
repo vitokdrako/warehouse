@@ -495,7 +495,7 @@ export default function NewOrderView() {
   if (loading) {
     return (
       <div className="min-h-screen bg-white grid place-content-center">
-        <div className="text-slate-500">Завантаження...</div>
+        <div className="text-corp-text-muted">Завантаження...</div>
       </div>
     );
   }
@@ -503,13 +503,13 @@ export default function NewOrderView() {
   if (!order) {
     return (
       <div className="min-h-screen bg-white grid place-content-center">
-        <div className="text-slate-500">Замовлення не знайдено</div>
+        <div className="text-corp-text-muted">Замовлення не знайдено</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-white text-corp-text-dark">
       <Header order={order} customerStats={customerStats} />
       
       <div className="mx-auto max-w-7xl px-6 py-6 grid gap-6">
@@ -548,7 +548,7 @@ export default function NewOrderView() {
                   <Field label="Статус клієнта">
                     <div className="flex items-center gap-2 h-10">
                       <CustomerBadge tier={customerStats.tier} />
-                      <span className="text-xs text-slate-500">({customerStats.order_count} зам.)</span>
+                      <span className="text-xs text-corp-text-muted">({customerStats.order_count} зам.)</span>
                     </div>
                   </Field>
                 )}
@@ -613,7 +613,7 @@ export default function NewOrderView() {
                   </button>
                 </div>
               </div>
-              <div className="mt-3 text-xs text-slate-500">
+              <div className="mt-3 text-xs text-corp-text-muted">
                 Оренда рахується за кількістю діб, вказаною вище (можна змінювати окремо від дат)
               </div>
             </Card>
@@ -671,7 +671,7 @@ export default function NewOrderView() {
                 </Field>
                 <div className="grid items-end">
                   <div className="text-sm">
-                    <span className="text-slate-600">Економія: </span>
+                    <span className="text-corp-text-main">Економія: </span>
                     <b className="text-emerald-600">₴ {calculations.discountAmount.toLocaleString('uk-UA')}</b>
                   </div>
                 </div>
@@ -734,15 +734,15 @@ function ItemSearch({ searchQuery, onSearchChange, searchResults, searching, onA
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <div className="text-sm font-medium">{product.name}</div>
-                  <div className="text-xs text-slate-500">SKU: {product.sku}</div>
+                  <div className="text-xs text-corp-text-muted">SKU: {product.sku}</div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-medium">₴ {product.price_per_day.toLocaleString('uk-UA')}/д</div>
-                  <div className="text-xs text-slate-500">Застава: ₴{product.deposit.toLocaleString('uk-UA')}</div>
+                  <div className="text-xs text-corp-text-muted">Застава: ₴{product.deposit.toLocaleString('uk-UA')}</div>
                 </div>
               </div>
               <div className="flex items-center justify-between mt-3">
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-corp-text-muted">
                   На складі: {product.total_quantity} шт
                 </div>
                 <button 
@@ -758,7 +758,7 @@ function ItemSearch({ searchQuery, onSearchChange, searchResults, searching, onA
       )}
       
       {searchQuery.length >= 2 && searchResults.length === 0 && !searching && (
-        <div className="text-center py-4 text-slate-500 text-sm">
+        <div className="text-center py-4 text-corp-text-muted text-sm">
           Товарів не знайдено
         </div>
       )}
@@ -771,7 +771,7 @@ function ConflictsPanel({ conflicts }) {
   return (
     <div className="overflow-auto rounded-xl border border-slate-200">
       <table className="w-full text-sm">
-        <thead className="bg-slate-50 text-slate-600">
+        <thead className="bg-slate-50 text-corp-text-main">
           <tr>
             <th className="px-3 py-2 text-left font-medium">SKU / Назва</th>
             <th className="px-3 py-2 text-left font-medium">Тип конфлікту</th>
@@ -786,8 +786,8 @@ function ConflictsPanel({ conflicts }) {
           {conflicts.map((c, i) => (
             <tr key={i} className={c.level === 'error' ? 'bg-rose-50' : 'bg-amber-50'}>
               <td className="px-3 py-2">
-                <div className="font-mono text-xs font-semibold text-slate-900">{c.sku || 'N/A'}</div>
-                <div className="text-xs text-slate-600 mt-0.5">{c.product_name || c.name || 'Невідомий товар'}</div>
+                <div className="font-mono text-xs font-semibold text-corp-text-dark">{c.sku || 'N/A'}</div>
+                <div className="text-xs text-corp-text-main mt-0.5">{c.product_name || c.name || 'Невідомий товар'}</div>
               </td>
               <td className="px-3 py-2">
                 <Badge tone={c.level === 'error' ? 'rose' : 'amber'}>
@@ -798,7 +798,7 @@ function ConflictsPanel({ conflicts }) {
                   {!['out_of_stock', 'insufficient', 'tight_schedule', 'low_stock'].includes(c.type) && c.type}
                 </Badge>
               </td>
-              <td className="px-3 py-2 text-slate-600">
+              <td className="px-3 py-2 text-corp-text-main">
                 {/* Основне повідомлення в залежності від типу */}
                 {c.type === 'out_of_stock' && 'Товар відсутній на складі (загальна кількість = 0)'}
                 {c.type === 'insufficient' && 'Товар зарезервований на ці дати іншими замовленнями'}
@@ -811,7 +811,7 @@ function ConflictsPanel({ conflicts }) {
                   </div>
                 )}
                 {c.nearby_orders && c.nearby_orders.length > 0 && (
-                  <div className="text-xs text-slate-600 mt-2 space-y-1">
+                  <div className="text-xs text-corp-text-main mt-2 space-y-1">
                     <div className="font-semibold">
                       {c.is_available ? '⚠️ Близькі замовлення (ризик):' : '🔒 Товар зайнятий в замовленнях:'}
                     </div>
@@ -868,7 +868,7 @@ function Header({ order, customerStats }) {
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto max-w-7xl px-6 py-4 flex flex-wrap items-center gap-4">
         <h1 className="text-lg font-semibold">Нове замовлення • #{order.order_number}</h1>
-        <div className="text-sm text-slate-600">Клієнт: <b>{order.client_name}</b></div>
+        <div className="text-sm text-corp-text-main">Клієнт: <b>{order.client_name}</b></div>
         {customerStats && (
           <CustomerBadge tier={customerStats.tier} count={customerStats.order_count} />
         )}
@@ -884,7 +884,7 @@ function CustomerBadge({ tier, count }) {
   const map = {
     novice: { label: 'Новачок', bg: 'bg-slate-100 text-slate-700' },
     regular: { label: 'Постійний', bg: 'bg-blue-100 text-blue-700' },
-    silver: { label: 'Срібний', bg: 'bg-slate-200 text-slate-800' },
+    silver: { label: 'Срібний', bg: 'bg-slate-200 text-corp-text-dark' },
     gold: { label: 'Золотий', bg: 'bg-amber-100 text-amber-700' },
     platinum: { label: 'Платина', bg: 'bg-purple-100 text-purple-700' }
   };
@@ -898,13 +898,13 @@ function CustomerBadge({ tier, count }) {
 
 function Breadcrumbs({ orderId }) {
   return (
-    <nav className="text-sm text-slate-500">
+    <nav className="text-sm text-corp-text-muted">
       <ol className="flex items-center gap-2">
-        <li><a href="/" className="hover:text-slate-900">Менеджер</a></li>
+        <li><a href="/" className="hover:text-corp-text-dark">Менеджер</a></li>
         <li>›</li>
         <li>Вхідні замовлення</li>
         <li>›</li>
-        <li className="text-slate-900">#{orderId}</li>
+        <li className="text-corp-text-dark">#{orderId}</li>
       </ol>
     </nav>
   );
@@ -925,7 +925,7 @@ function Card({ title, children, right }) {
 function Field({ label, children }) {
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="text-slate-600">{label}</span>
+      <span className="text-corp-text-main">{label}</span>
       {children}
     </label>
   );
@@ -933,7 +933,7 @@ function Field({ label, children }) {
 
 function Badge({ children, tone = 'slate' }) {
   const map = {
-    slate: 'bg-slate-100 text-slate-800',
+    slate: 'bg-slate-100 text-corp-text-dark',
     amber: 'bg-amber-100 text-amber-800',
     rose: 'bg-rose-100 text-rose-800',
     emerald: 'bg-emerald-100 text-emerald-800'
@@ -945,7 +945,7 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
   return (
     <div className="overflow-auto rounded-xl border border-slate-200">
       <table className="w-full text-sm">
-        <thead className="bg-slate-50 text-slate-600">
+        <thead className="bg-slate-50 text-corp-text-main">
           <tr>
             <th className="px-3 py-2 text-left font-medium">Фото</th>
             <th className="px-3 py-2 text-left font-medium">Назва</th>
@@ -959,7 +959,7 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
         <tbody className="divide-y divide-slate-200">
           {items.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-3 py-6 text-center text-slate-500">
+              <td colSpan={7} className="px-3 py-6 text-center text-corp-text-muted">
                 Додайте товари через пошук вище
               </td>
             </tr>
@@ -985,11 +985,11 @@ function ItemsTable({ items, onUpdateQuantity, onRemove, availability }) {
                   </div>
                 </td>
                 <td className="px-3 py-2 font-medium">{item.name}</td>
-                <td className="px-3 py-2 font-mono text-xs text-slate-600">{item.article || item.sku || '-'}</td>
+                <td className="px-3 py-2 font-mono text-xs text-corp-text-main">{item.article || item.sku || '-'}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   ₴ {item.price_per_day?.toLocaleString('uk-UA') || '0'}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-slate-500">
+                <td className="px-3 py-2 text-right tabular-nums text-corp-text-muted">
                   ₴ {item.damage_cost?.toLocaleString('uk-UA') || item.price_per_day?.toLocaleString('uk-UA') || '0'}
                 </td>
                 <td className="px-3 py-2">
@@ -1050,7 +1050,7 @@ function Summary({ calculations, rentalDays, discount }) {
         
         {/* Вартість втрати та застава */}
         <Row 
-          k={<span className="text-slate-500 text-xs">Повна вартість втрати декору (збиток)</span>} 
+          k={<span className="text-corp-text-muted text-xs">Повна вартість втрати декору (збиток)</span>} 
           v={<span className="text-rose-600">₴ {calculations.totalLossValue.toLocaleString('uk-UA')}</span>} 
         />
         <Row 
@@ -1073,8 +1073,8 @@ function Summary({ calculations, rentalDays, discount }) {
 function Row({ k, v }) {
   return (
     <div className="flex items-center justify-between">
-      <div className="text-slate-600">{k}</div>
-      <div className="text-slate-900">{v}</div>
+      <div className="text-corp-text-main">{k}</div>
+      <div className="text-corp-text-dark">{v}</div>
     </div>
   );
 }
@@ -1303,7 +1303,7 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
           </div>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-corp-text-main">
             Внесіть необхідні зміни, збережіть, та відправте email підтвердження клієнту.
           </div>
           <div className="flex gap-2">
@@ -1344,7 +1344,7 @@ function ActionsRow({ order, orderId, onSave, saving, decorOrderStatus }) {
   // Якщо замовлення ще не прийнято (нове з OpenCart)
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="text-sm text-slate-600">
+      <div className="text-sm text-corp-text-main">
         Це замовлення створено клієнтом. Перевірте дати, кількість товарів і підтвердіть бронь.
       </div>
       <div className="flex gap-2">

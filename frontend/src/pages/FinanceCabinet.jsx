@@ -181,7 +181,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
         <PillButton tone='blue' onClick={()=>setShowEmailDialog(true)}>📧 Email</PillButton>
         <PillButton tone='red' onClick={()=>onDelete(orderId)}>🗑️ Видалити</PillButton>
         <Badge tone={due>0? 'amber':'green'}>{due>0? `Борг ₴ ${fmtUA(due)}` : 'Боргів немає'}</Badge>
-        <button onClick={onCollapse} className="text-slate-400 hover:text-slate-600">✕</button>
+        <button onClick={onCollapse} className="text-slate-400 hover:text-corp-text-main">✕</button>
       </div>
     }>
       <div className="grid gap-4 md:grid-cols-5">
@@ -216,7 +216,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
           <div className="text-[10px] text-emerald-500 mt-0.5">прийнято від клієнта</div>
         </div>
         <div className="rounded-xl border border-slate-200 p-3">
-          <div className="text-xs text-slate-500">До сплати</div>
+          <div className="text-xs text-corp-text-muted">До сплати</div>
           <div className={cls('text-xl font-semibold', due>0 && 'text-rose-600')}>₴ {fmtUA(due)}</div>
         </div>
       </div>
@@ -258,7 +258,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
             <input className="md:col-span-3 rounded-xl border px-3 py-2" value={dmg.note} onChange={e=>setDmg({...dmg, note:e.target.value})} placeholder="Коментар / кейс"/>
             <PillButton tone='amber' onClick={()=>onAddDamage(orderId, dmg)}>Нарахувати збитки</PillButton>
           </div>
-          <div className="mt-2 text-xs text-slate-500">Після нарахування можна або списати частково/повністю із застави, або чекати доплату.</div>
+          <div className="mt-2 text-xs text-corp-text-muted">Після нарахування можна або списати частково/повністю із застави, або чекати доплату.</div>
         </Card>
 
         <Card title="Операції із заставою">
@@ -289,7 +289,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
               )
             )}
           </div>
-          <div className="mt-2 text-xs text-slate-500">
+          <div className="mt-2 text-xs text-corp-text-muted">
             {isCancelled && paid > 0 ? (
               isRefunded ? (
                 <span className="text-emerald-600 font-medium">✓ Гроші повернуті клієнту (₴{fmtUA(refunded)}). Не забудьте повернути всі застави.</span>
@@ -308,7 +308,7 @@ function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff
         <Card title="Журнал по замовленню">
           <div className="overflow-hidden rounded-xl border">
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-left text-slate-500">
+              <thead className="bg-slate-50 text-left text-corp-text-muted">
                 <tr>
                   <th className="px-3 py-2">Дата</th>
                   <th className="px-3 py-2">Тип</th>
@@ -396,9 +396,9 @@ function OrderListItem({orderId, rows, onClick, isExpanded}){
         <div>
           <div className="font-semibold text-lg">
             Замовлення #{orderId}
-            {clientName && <span className="text-slate-600 font-normal ml-2">· {clientName}</span>}
+            {clientName && <span className="text-corp-text-main font-normal ml-2">· {clientName}</span>}
           </div>
-          <div className="text-xs text-slate-500 mt-1">
+          <div className="text-xs text-corp-text-muted mt-1">
             {orderRows.length} транзакцій · Нараховано: ₴{fmtUA(accrued)} · Оплачено: ₴{fmtUA(paid)}
           </div>
         </div>
@@ -430,7 +430,7 @@ function LedgerTable({rows}){
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200">
       <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-left text-slate-500">
+        <thead className="bg-slate-50 text-left text-corp-text-muted">
           <tr><th className="px-3 py-2">Дата</th><th className="px-3 py-2">Замовлення</th><th className="px-3 py-2">Тип</th><th className="px-3 py-2">Назва</th><th className="px-3 py-2">Метод</th><th className="px-3 py-2">Дебет</th><th className="px-3 py-2">Кредит</th></tr>
         </thead>
         <tbody>
@@ -469,7 +469,7 @@ function MonthlyArchive({rows}){
         <div key={g.month} className="rounded-xl border p-3 flex items-center justify-between">
           <div>
             <div className="font-semibold">{g.month}</div>
-            <div className="text-xs text-slate-500">записів: {g.count}</div>
+            <div className="text-xs text-corp-text-muted">записів: {g.count}</div>
           </div>
           <div className="text-sm">
             <span className="mr-4">Дебет: ₴ {fmtUA(g.debit)}</span>
@@ -733,7 +733,7 @@ export default function FinanceCabinet(){
             📷 Сканувати
           </button>
           {['orders','ledger','monthly'].map(t => (
-            <button key={t} onClick={()=>{setTab(t); setExpandedOrderId(null)}} className={cls('rounded-full px-3 py-1 text-sm', tab===t? 'bg-slate-900 text-white':'bg-slate-200 text-slate-800')}>
+            <button key={t} onClick={()=>{setTab(t); setExpandedOrderId(null)}} className={cls('rounded-full px-3 py-1 text-sm', tab===t? 'bg-slate-900 text-white':'bg-slate-200 text-corp-text-dark')}>
               {t==='orders'?'Замовлення':t==='ledger'?'Журнал':'Архів'}
             </button>
           ))}
@@ -772,7 +772,7 @@ export default function FinanceCabinet(){
       {tab==='orders' && (
         <div className="space-y-4">
           <Card title={`Список замовлень (${orderIds.length})`} right={<Badge tone='slate'>Клікни на замовлення для деталей</Badge>}>
-            <div className="text-xs text-slate-500 mb-3">Показано всі замовлення з фінансовими транзакціями</div>
+            <div className="text-xs text-corp-text-muted mb-3">Показано всі замовлення з фінансовими транзакціями</div>
           </Card>
 
           {orderIds.map(orderId=> (
@@ -804,7 +804,7 @@ export default function FinanceCabinet(){
           ))}
 
           {orderIds.length === 0 && (
-            <div className="text-center py-12 text-slate-500">
+            <div className="text-center py-12 text-corp-text-muted">
               <div className="text-lg">Немає фінансових транзакцій</div>
               <div className="text-sm mt-2">Транзакції з'являться після прийняття замовлень</div>
             </div>

@@ -398,7 +398,7 @@ export default function ManagerDashboard() {
               {awaitingOrders.length > 4 && showAllAwaiting && (
                 <button 
                   onClick={() => setShowAllAwaiting(false)}
-                  className="text-center py-3 text-sm text-slate-600 hover:text-slate-800 font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                  className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                 >
                   Згорнути ↑
                 </button>
@@ -433,7 +433,7 @@ export default function ManagerDashboard() {
                 />
               ))}
               {preparationCards.length > 4 && (
-                <div className="text-center py-2 text-sm text-slate-500">
+                <div className="text-center py-2 text-sm text-corp-text-muted">
                   +{preparationCards.length - 4} більше карток
                 </div>
               )}
@@ -467,7 +467,7 @@ export default function ManagerDashboard() {
                 />
               ))}
               {readyCards.length > 4 && (
-                <div className="text-center py-2 text-sm text-slate-500">
+                <div className="text-center py-2 text-sm text-corp-text-muted">
                   +{readyCards.length - 4} більше карток
                 </div>
               )}
@@ -509,7 +509,7 @@ export default function ManagerDashboard() {
               {returnOrders.length > 4 && showAllReturns && (
                 <button 
                   onClick={() => setShowAllReturns(false)}
-                  className="text-center py-3 text-sm text-slate-600 hover:text-slate-800 font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                  className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                 >
                   Згорнути ↑
                 </button>
@@ -615,7 +615,7 @@ function Column({title, subtitle, children, tone}:{title:string,subtitle?:string
       <header className="mb-3 flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold leading-none">{title}</h3>
-          {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
+          {subtitle && <p className="mt-1 text-sm text-corp-text-muted">{subtitle}</p>}
         </div>
       </header>
       <div className="grid gap-3">{children}</div>
@@ -739,11 +739,11 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
       
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-xl bg-slate-50 px-3 py-2">
-          <div className="text-slate-500">Сума</div>
+          <div className="text-corp-text-muted">Сума</div>
           <div className="font-semibold tabular-nums">{rent}</div>
         </div>
         <div className="rounded-xl bg-slate-50 px-3 py-2">
-          <div className="text-slate-500">Застава</div>
+          <div className="text-corp-text-muted">Застава</div>
           <div className="font-semibold tabular-nums">{deposit}</div>
         </div>
       </div>
@@ -768,19 +768,19 @@ function OrderCardWithArchive({id,name,phone,rent,deposit,badge,onClick,order,on
   return (
     <article onClick={onClick} className="relative cursor-pointer rounded-xl border border-slate-200 bg-white p-3 transition hover:border-teal-400 hover:shadow-lg">
       <div className="mb-2 flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-900">{id}</div>
+        <div className="text-sm font-semibold text-corp-text-dark">{id}</div>
       </div>
       
-      <div className="mb-2 text-xs text-slate-500">{name}</div>
-      <div className="mb-3 text-xs text-slate-500">{phone}</div>
+      <div className="mb-2 text-xs text-corp-text-muted">{name}</div>
+      <div className="mb-3 text-xs text-corp-text-muted">{phone}</div>
       
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-xl bg-slate-50 px-3 py-2">
-          <div className="text-slate-500">Сума</div>
+          <div className="text-corp-text-muted">Сума</div>
           <div className="font-semibold tabular-nums">{rent}</div>
         </div>
         <div className="rounded-xl bg-slate-50 px-3 py-2">
-          <div className="text-slate-500">Застава</div>
+          <div className="text-corp-text-muted">Застава</div>
           <div className="font-semibold tabular-nums">{deposit}</div>
         </div>
       </div>
@@ -791,7 +791,7 @@ function OrderCardWithArchive({id,name,phone,rent,deposit,badge,onClick,order,on
             e.stopPropagation();
             onArchive(order?.order_id, id);
           }}
-          className="mt-2 w-full text-xs text-slate-600 border border-slate-300 rounded-lg px-2 py-1.5 hover:bg-slate-50 transition-colors"
+          className="mt-2 w-full text-xs text-corp-text-main border border-slate-300 rounded-lg px-2 py-1.5 hover:bg-slate-50 transition-colors"
         >
           📂 В архів
         </button>

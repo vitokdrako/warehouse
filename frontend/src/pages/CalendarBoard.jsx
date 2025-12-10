@@ -49,7 +49,7 @@ function Toolbar({view,setView, date,setDate, onToday}){
       </div>
       <div className="flex gap-2">
         {['day','week','month'].map(v=> (
-          <button key={v} onClick={()=>setView(v)} className={cls('rounded-full px-3 py-1 text-sm', view===v? 'bg-slate-900 text-white':'bg-slate-200 text-slate-800')}>{v}</button>
+          <button key={v} onClick={()=>setView(v)} className={cls('rounded-full px-3 py-1 text-sm', view===v? 'bg-slate-900 text-white':'bg-slate-200 text-corp-text-dark')}>{v}</button>
         ))}
       </div>
     </div>
@@ -74,13 +74,13 @@ function DayView({date, orders, onOpen}){
   }
   const Block = ({title, kind, arr})=> (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
-      <div className="mb-3 flex items-center gap-2"><Badge kind={kind}>{title}</Badge><span className="text-xs text-slate-500">{(arr || []).length}</span></div>
+      <div className="mb-3 flex items-center gap-2"><Badge kind={kind}>{title}</Badge><span className="text-xs text-corp-text-muted">{(arr || []).length}</span></div>
       <div className="space-y-2">
         {(arr || []).map(o=> (
           <div key={o.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 hover:bg-slate-50">
             <div>
-              <div className="font-medium text-slate-800">#{o.order_id} · {o.customer}</div>
-              <div className="text-xs text-slate-500">{fmtTime(o.time)} · {o.items} позицій · {o.status}</div>
+              <div className="font-medium text-corp-text-dark">#{o.order_id} · {o.customer}</div>
+              <div className="text-xs text-corp-text-muted">{fmtTime(o.time)} · {o.items} позицій · {o.status}</div>
             </div>
             <div className="flex items-center gap-2">
               <span className={cls('h-2 w-2 rounded-full', KIND_META[o.kind].dot)} />
@@ -90,7 +90,7 @@ function DayView({date, orders, onOpen}){
             </div>
           </div>
         ))}
-        {(arr || []).length===0 && <div className="text-sm text-slate-500">Немає записів</div>}
+        {(arr || []).length===0 && <div className="text-sm text-corp-text-muted">Немає записів</div>}
       </div>
     </div>
   )
@@ -166,7 +166,7 @@ function MonthView({date, orders, onOpen, onPickDay}){
   return (
     <div className="grid grid-cols-7 gap-1">
       {['Пн','Вт','Ср','Чт','Пт','Сб','Нд'].map(h=> (
-        <div key={h} className="px-2 py-1 text-center text-xs text-slate-500">{h}</div>
+        <div key={h} className="px-2 py-1 text-center text-xs text-corp-text-muted">{h}</div>
       ))}
       {days.map(d=> {
         const arr = byDay(d) || []
@@ -212,13 +212,13 @@ function SidePanel({open, onClose, date, orders, onOpen}){
           {list.map(o=> (
             <div key={o.id} className="flex items-center justify-between rounded-xl border p-3">
               <div>
-                <div className="font-medium text-slate-800">#{o.order_id} · {o.customer}</div>
-                <div className="text-xs text-slate-500">{KIND_META[o.kind].label} · {fmtTime(o.time)} · {o.items} позицій</div>
+                <div className="font-medium text-corp-text-dark">#{o.order_id} · {o.customer}</div>
+                <div className="text-xs text-corp-text-muted">{KIND_META[o.kind].label} · {fmtTime(o.time)} · {o.items} позицій</div>
               </div>
               <button onClick={()=>onOpen(o)} className="rounded-full bg-slate-900 px-3 py-1 text-sm text-white">Відкрити</button>
             </div>
           ))}
-          {list.length===0 && <div className="text-sm text-slate-500">Записів немає</div>}
+          {list.length===0 && <div className="text-sm text-corp-text-muted">Записів немає</div>}
         </div>
       </div>
     </div>
@@ -358,7 +358,7 @@ export default function CalendarBoard(){
       {/* KPI Bar - Horizontal */}
       <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="text-sm text-slate-600">
+          <div className="text-sm text-corp-text-main">
             На <span className="font-semibold">{new Date(date).toLocaleDateString('uk-UA')}</span>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -375,7 +375,7 @@ export default function CalendarBoard(){
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2">
               <i className="h-2 w-2 rounded-full bg-slate-500" />
               <span className="text-xs text-slate-700">Разом:</span>
-              <span className="text-lg font-semibold text-slate-900">{counters.total}</span>
+              <span className="text-lg font-semibold text-corp-text-dark">{counters.total}</span>
             </div>
           </div>
         </div>

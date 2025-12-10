@@ -64,7 +64,7 @@ const TasksClean = () => {
   const completedCount = tasks.filter(t => t.status === 'completed').length;
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
+    <div className="min-h-screen bg-white text-corp-text-dark">
       {/* Topbar */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70">
         <div className="mx-auto max-w-7xl px-6 py-3 flex items-center gap-4">
@@ -88,10 +88,10 @@ const TasksClean = () => {
       <div className="mx-auto max-w-7xl px-6 py-6 grid gap-6">
         {/* Filters */}
         <section className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          <label className="flex flex-col gap-1 text-sm text-slate-600">
+          <label className="flex flex-col gap-1 text-sm text-corp-text-main">
             <span className="font-medium">Період</span>
             <select 
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              className="corp-input"
               value={filterPeriod}
               onChange={(e) => setFilterPeriod(e.target.value)}
             >
@@ -102,10 +102,10 @@ const TasksClean = () => {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-slate-600">
+          <label className="flex flex-col gap-1 text-sm text-corp-text-main">
             <span className="font-medium">Виконавець</span>
             <select 
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              className="corp-input"
               value={filterAssignee}
               onChange={(e) => setFilterAssignee(e.target.value)}
             >
@@ -117,10 +117,10 @@ const TasksClean = () => {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-slate-600">
+          <label className="flex flex-col gap-1 text-sm text-corp-text-main">
             <span className="font-medium">Пріоритет</span>
             <select 
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              className="corp-input"
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value)}
             >
@@ -132,10 +132,10 @@ const TasksClean = () => {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-slate-600">
+          <label className="flex flex-col gap-1 text-sm text-corp-text-main">
             <span className="font-medium">Статус</span>
             <select 
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              className="corp-input"
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
             >
@@ -148,10 +148,10 @@ const TasksClean = () => {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-slate-600">
+          <label className="flex flex-col gap-1 text-sm text-corp-text-main">
             <span className="font-medium">Пов'язано з</span>
             <select 
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              className="corp-input"
               value={filterRelated}
               onChange={(e) => setFilterRelated(e.target.value)}
             >
@@ -166,10 +166,10 @@ const TasksClean = () => {
             </select>
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-slate-600">
+          <label className="flex flex-col gap-1 text-sm text-corp-text-main">
             <span className="font-medium">Пошук</span>
             <input 
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400" 
+              className="corp-input" 
               placeholder="Текст / № замовлення / тег"
               value={filterSearch}
               onChange={(e) => setFilterSearch(e.target.value)}
@@ -180,35 +180,35 @@ const TasksClean = () => {
         {/* KPIs */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="rounded-2xl border border-slate-200 p-4 shadow-sm">
-            <div className="text-sm text-slate-600">Завдань на сьогодні</div>
+            <div className="text-sm text-corp-text-main">Завдань на сьогодні</div>
             <div className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
               {todayCount}
             </div>
-            <div className="mt-1 text-xs text-slate-500">2 високий / 1 терміновий</div>
+            <div className="mt-1 text-xs text-corp-text-muted">2 високий / 1 терміновий</div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 p-4 shadow-sm bg-slate-50 text-slate-700">
-            <div className="text-sm text-slate-600">В роботі</div>
+            <div className="text-sm text-corp-text-main">В роботі</div>
             <div className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
               {inProgressCount}
             </div>
-            <div className="mt-1 text-xs text-slate-500">пакування, фото, інвойс</div>
+            <div className="mt-1 text-xs text-corp-text-muted">пакування, фото, інвойс</div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 p-4 shadow-sm bg-amber-50 text-amber-700">
-            <div className="text-sm text-slate-600">Заблоковано</div>
+            <div className="text-sm text-corp-text-main">Заблоковано</div>
             <div className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
               {blockedCount}
             </div>
-            <div className="mt-1 text-xs text-slate-500">oc-db-ping</div>
+            <div className="mt-1 text-xs text-corp-text-muted">oc-db-ping</div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 p-4 shadow-sm bg-emerald-50 text-emerald-700">
-            <div className="text-sm text-slate-600">Виконано (період)</div>
+            <div className="text-sm text-corp-text-main">Виконано (період)</div>
             <div className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
               {completedCount}
             </div>
-            <div className="mt-1 text-xs text-slate-500">за тиждень</div>
+            <div className="mt-1 text-xs text-corp-text-muted">за тиждень</div>
           </div>
         </section>
 
@@ -224,9 +224,9 @@ const TasksClean = () => {
             </header>
             <div className="grid gap-3">
               {loading ? (
-                <div className="text-center py-8 text-slate-500">Завантаження...</div>
+                <div className="text-center py-8 text-corp-text-muted">Завантаження...</div>
               ) : backlogTasks.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">Немає завдань</div>
+                <div className="text-center py-8 text-corp-text-muted">Немає завдань</div>
               ) : (
                 backlogTasks.slice(0, 5).map(t => <TaskCard key={t.id} task={t} getPriorityBadge={getPriorityBadge} />)
               )}
@@ -243,9 +243,9 @@ const TasksClean = () => {
             </header>
             <div className="grid gap-3">
               {loading ? (
-                <div className="text-center py-8 text-slate-500">Завантаження...</div>
+                <div className="text-center py-8 text-corp-text-muted">Завантаження...</div>
               ) : todayTasks.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">Немає завдань</div>
+                <div className="text-center py-8 text-corp-text-muted">Немає завдань</div>
               ) : (
                 todayTasks.slice(0, 5).map(t => <TaskCard key={t.id} task={t} getPriorityBadge={getPriorityBadge} />)
               )}
@@ -262,9 +262,9 @@ const TasksClean = () => {
             </header>
             <div className="grid gap-3">
               {loading ? (
-                <div className="text-center py-8 text-slate-500">Завантаження...</div>
+                <div className="text-center py-8 text-corp-text-muted">Завантаження...</div>
               ) : inProgressTasks.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">Немає завдань</div>
+                <div className="text-center py-8 text-corp-text-muted">Немає завдань</div>
               ) : (
                 inProgressTasks.slice(0, 5).map(t => <TaskCard key={t.id} task={t} getPriorityBadge={getPriorityBadge} />)
               )}
@@ -281,9 +281,9 @@ const TasksClean = () => {
             </header>
             <div className="grid gap-3">
               {loading ? (
-                <div className="text-center py-8 text-slate-500">Завантаження...</div>
+                <div className="text-center py-8 text-corp-text-muted">Завантаження...</div>
               ) : blockedTasks.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">Немає завдань</div>
+                <div className="text-center py-8 text-corp-text-muted">Немає завдань</div>
               ) : (
                 blockedTasks.slice(0, 5).map(t => <TaskCard key={t.id} task={t} getPriorityBadge={getPriorityBadge} />)
               )}
@@ -302,7 +302,7 @@ const TasksClean = () => {
               </button>
             </div>
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-600">
+              <thead className="bg-slate-50 text-corp-text-main">
                 <tr>
                   <th className="px-4 py-2 text-left font-medium">Час</th>
                   <th className="px-4 py-2 text-left font-medium">Що</th>
@@ -343,11 +343,11 @@ const TasksClean = () => {
                     <div className="h-2 bg-teal-500" style={{ width: `${Math.min(100, r.today * 14)}%` }} />
                   </div>
                   <div className="w-16 text-right tabular-nums">{r.today}</div>
-                  <div className="w-16 text-right tabular-nums text-slate-500">{r.week}</div>
+                  <div className="w-16 text-right tabular-nums text-corp-text-muted">{r.week}</div>
                 </li>
               ))}
             </ul>
-            <div className="mt-3 text-xs text-slate-500">* Сьогодні / за тиждень</div>
+            <div className="mt-3 text-xs text-corp-text-muted">* Сьогодні / за тиждень</div>
           </div>
 
           {/* Quick Add */}
@@ -389,7 +389,7 @@ const TasksClean = () => {
         </section>
       </div>
 
-      <footer className="border-t border-slate-200 py-6 text-center text-slate-500 text-sm">
+      <footer className="border-t border-slate-200 py-6 text-center text-corp-text-muted text-sm">
         © FarforRent • tasks
       </footer>
     </div>
@@ -428,7 +428,7 @@ const TaskCard = ({ task, getPriorityBadge }) => {
           <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${bg} ${tc}`}>
             {label}
           </span>
-          <span className="text-slate-500 text-sm" title={task.id}>
+          <span className="text-corp-text-muted text-sm" title={task.id}>
             {truncateId(task.id)}
             {task.order_number && ` • #${task.order_number}`}
           </span>
@@ -447,11 +447,11 @@ const TaskCard = ({ task, getPriorityBadge }) => {
       <div className="text-sm font-medium mb-3">{task.title || task.description}</div>
       <div className="grid grid-cols-2 gap-2 text-sm mb-3">
         <div className="rounded-xl bg-slate-50 px-3 py-2">
-          <div className="text-xs text-slate-500 mb-1">Виконавець</div>
+          <div className="text-xs text-corp-text-muted mb-1">Виконавець</div>
           <div className="font-medium truncate">{task.assigned_to || '—'}</div>
         </div>
         <div className="rounded-xl bg-slate-50 px-3 py-2">
-          <div className="text-xs text-slate-500 mb-1">Термін</div>
+          <div className="text-xs text-corp-text-muted mb-1">Термін</div>
           <div className="font-medium">{formatDate(task.due_date)}</div>
         </div>
       </div>
@@ -463,7 +463,7 @@ const TaskCard = ({ task, getPriorityBadge }) => {
             </span>
           ))}
           {task.tags.length > 3 && (
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-500">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-corp-text-muted">
               +{task.tags.length - 3}
             </span>
           )}

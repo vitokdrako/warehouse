@@ -36,7 +36,7 @@ function Pill({onClick, children, tone='slate'}){
     slate:'corp-btn corp-btn-secondary',
     green:'corp-btn corp-btn-primary',
     blue:'corp-btn corp-btn-primary',
-    amber:'bg-amber-500 hover:bg-amber-600 text-slate-900'
+    amber:'bg-amber-500 hover:bg-amber-600 text-corp-text-dark'
   }
   return <button onClick={onClick} className={cls('rounded-full px-3 py-1 text-sm', tones[tone])}>{children}</button>
 }
@@ -55,7 +55,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
     <div className="space-y-3">
       {/* Пошукова строчка */}
       <div className="w-full">
-        <label className="text-xs text-slate-500 font-medium">Пошук (назва / SKU / штрих‑код)</label>
+        <label className="text-xs text-corp-text-muted font-medium">Пошук (назва / SKU / штрих‑код)</label>
         <input 
           value={q} 
           onChange={e=>setQ(e.target.value)} 
@@ -67,7 +67,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
       {/* Фільтри в один ряд */}
       <div className="flex flex-wrap gap-3 items-end">
         <div className="min-w-[180px]">
-          <label className="text-xs text-slate-500 font-medium">Категорія</label>
+          <label className="text-xs text-corp-text-muted font-medium">Категорія</label>
           <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={cat} onChange={e=>setCat(e.target.value)}>
             <option value="all">Всі</option>
             {categories.map(c => (
@@ -76,7 +76,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
           </select>
         </div>
         <div className="min-w-[150px]">
-          <label className="text-xs text-slate-500 font-medium">Стан</label>
+          <label className="text-xs text-corp-text-muted font-medium">Стан</label>
           <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={state} onChange={e=>setState(e.target.value)}>
             <option value="all">Будь‑який</option>
             <option value="ok">В наявності</option>
@@ -85,7 +85,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
           </select>
         </div>
         <div className="min-w-[150px]">
-          <label className="text-xs text-slate-500 font-medium">Чистка</label>
+          <label className="text-xs text-corp-text-muted font-medium">Чистка</label>
           <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={clean} onChange={e=>setClean(e.target.value)}>
             <option value="all">Будь‑яка</option>
             <option value="clean">Чисте</option>
@@ -102,14 +102,14 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
       
       {/* Quick Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-slate-500 font-medium">Швидкі фільтри:</span>
+        <span className="text-xs text-corp-text-muted font-medium">Швидкі фільтри:</span>
         <button
           onClick={() => {setClean('repair'); setState('all')}}
           className={cls(
             'rounded-full px-3 py-1 text-xs font-medium border transition-colors',
             clean === 'repair' 
               ? 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-300' 
-              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              : 'bg-white text-corp-text-main border-slate-200 hover:bg-slate-50'
           )}
         >
           🔧 В реставрації
@@ -120,7 +120,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
             'rounded-full px-3 py-1 text-xs font-medium border transition-colors',
             clean === 'wash' 
               ? 'bg-sky-100 text-sky-700 border-sky-300' 
-              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              : 'bg-white text-corp-text-main border-slate-200 hover:bg-slate-50'
           )}
         >
           🚿 На мийці
@@ -131,14 +131,14 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
             'rounded-full px-3 py-1 text-xs font-medium border transition-colors',
             state === 'damaged' 
               ? 'bg-rose-100 text-rose-700 border-rose-300' 
-              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              : 'bg-white text-corp-text-main border-slate-200 hover:bg-slate-50'
           )}
         >
           ⚠️ Пошкоджено
         </button>
         <button
           onClick={() => {setState('all'); setClean('all'); setCat('all')}}
-          className="rounded-full px-3 py-1 text-xs font-medium border bg-white text-slate-600 border-slate-200 hover:bg-slate-50 transition-colors"
+          className="rounded-full px-3 py-1 text-xs font-medium border bg-white text-corp-text-main border-slate-200 hover:bg-slate-50 transition-colors"
         >
           ✖️ Скинути фільтри
         </button>
@@ -152,7 +152,7 @@ function Table({rows, onOpen, loading}){
   if (loading) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
-        <div className="text-slate-500">Завантаження каталогу...</div>
+        <div className="text-corp-text-muted">Завантаження каталогу...</div>
       </div>
     )
   }
@@ -160,7 +160,7 @@ function Table({rows, onOpen, loading}){
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200">
       <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-left text-slate-500">
+        <thead className="bg-slate-50 text-left text-corp-text-muted">
           <tr>
             <th className="px-3 py-2">Фото</th>
             <th className="px-3 py-2">SKU / Назва</th>
@@ -189,8 +189,8 @@ function Table({rows, onOpen, loading}){
                 )}
               </td>
               <td className="px-3 py-2">
-                <div className="font-medium text-slate-800">{p.sku}</div>
-                <div className="text-xs text-slate-500">{p.name}</div>
+                <div className="font-medium text-corp-text-dark">{p.sku}</div>
+                <div className="text-xs text-corp-text-muted">{p.name}</div>
               </td>
               <td className="px-3 py-2">{p.cat}</td>
               <td className="px-3 py-2">
@@ -204,7 +204,7 @@ function Table({rows, onOpen, loading}){
               <td className="px-3 py-2">
                 <div className="space-y-1">
                   {p.due_back.map(d=> (
-                    <div key={d.order_id} className="text-xs text-slate-600">#{d.order_id} · {d.customer} · {d.qty} шт · поверн: {d.date}</div>
+                    <div key={d.order_id} className="text-xs text-corp-text-main">#{d.order_id} · {d.customer} · {d.qty} шт · поверн: {d.date}</div>
                   ))}
                   {p.due_back.length===0 && <div className="text-xs text-slate-400">—</div>}
                 </div>
@@ -221,7 +221,7 @@ function Table({rows, onOpen, loading}){
               </td>
               <td className="px-3 py-2">
                 <Badge tone={CLEAN[p.cleaning.status].tone}>{CLEAN[p.cleaning.status].label}</Badge>
-                <div className="text-xs text-slate-500">ост. оновл.: {p.cleaning.last}</div>
+                <div className="text-xs text-corp-text-muted">ост. оновл.: {p.cleaning.last}</div>
               </td>
               <td className="px-3 py-2 text-right">
                 <button onClick={()=>onOpen(p)} className="rounded-full bg-slate-900 px-3 py-1 text-sm text-white">Деталі</button>
@@ -288,7 +288,7 @@ function Drawer({open, item, onClose, onSave}){
         <div className="mb-3 flex items-center justify-between">
           <div>
             <div className="text-lg font-semibold">{item.name}</div>
-            <div className="text-xs text-slate-500">{item.sku} · {item.cat}</div>
+            <div className="text-xs text-corp-text-muted">{item.sku} · {item.cat}</div>
           </div>
           <div className="flex gap-2">
             {editing ? (
@@ -354,7 +354,7 @@ function Drawer({open, item, onClose, onSave}){
                 ) : (
                   <>
                     <div className="text-sm">Статус: {CLEAN[item.cleaning.status].label}</div>
-                    <div className="text-xs text-slate-500">Останнє оновлення: {item.cleaning.last}</div>
+                    <div className="text-xs text-corp-text-muted">Останнє оновлення: {item.cleaning.last}</div>
                   </>
                 )}
               </Card>
@@ -368,10 +368,10 @@ function Drawer({open, item, onClose, onSave}){
               {item.due_back.map(d => (
                 <div key={d.order_id} className="flex items-center justify-between rounded-lg border px-2 py-1">
                   <div>#{d.order_id} · {d.customer} · {d.qty} шт</div>
-                  <div className="text-xs text-slate-500">до {d.date}</div>
+                  <div className="text-xs text-corp-text-muted">до {d.date}</div>
                 </div>
               ))}
-              {item.due_back.length===0 && <div className="text-sm text-slate-500">Порожньо</div>}
+              {item.due_back.length===0 && <div className="text-sm text-corp-text-muted">Порожньо</div>}
             </div>
           </Card>
           <Card title="Штрих‑коди / одиниці">
@@ -385,7 +385,7 @@ function Drawer({open, item, onClose, onSave}){
                   </div>
                 </div>
               ))}
-              {item.barcodes.length===0 && <div className="text-sm text-slate-500">Немає даних</div>}
+              {item.barcodes.length===0 && <div className="text-sm text-corp-text-muted">Немає даних</div>}
             </div>
           </Card>
           <Card title="Варіанти / комплекти">
@@ -393,7 +393,7 @@ function Drawer({open, item, onClose, onSave}){
               {item.variants && item.variants.map(v => (
                 <span key={v.code} className="rounded-md border px-2 py-1">{v.label}</span>
               ))}
-              {(!item.variants || item.variants.length === 0) && <div className="text-sm text-slate-500">Немає варіантів</div>}
+              {(!item.variants || item.variants.length === 0) && <div className="text-sm text-corp-text-muted">Немає варіантів</div>}
             </div>
           </Card>
           <Card title={`🔨 Історія пошкоджень (${damageHistory.length})`}>
@@ -405,11 +405,11 @@ function Drawer({open, item, onClose, onSave}){
                   <div key={d.id} className="rounded-lg border p-2">
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="font-medium text-slate-900">{d.damage_type}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="font-medium text-corp-text-dark">{d.damage_type}</div>
+                        <div className="text-xs text-corp-text-muted">
                           {d.stage_label} · Замовлення #{d.order_number}
                         </div>
-                        {d.note && <div className="mt-1 text-xs text-slate-600">{d.note}</div>}
+                        {d.note && <div className="mt-1 text-xs text-corp-text-main">{d.note}</div>}
                       </div>
                       <div className="text-right">
                         <div className={`text-sm font-semibold ${d.severity === 'high' ? 'text-red-600' : d.severity === 'medium' ? 'text-amber-600' : 'text-green-600'}`}>
@@ -424,7 +424,7 @@ function Drawer({open, item, onClose, onSave}){
                 ))}
               </div>
             ) : (
-              <div className="text-sm text-slate-500">✅ Пошкоджень не зафіксовано</div>
+              <div className="text-sm text-corp-text-muted">✅ Пошкоджень не зафіксовано</div>
             )}
           </Card>
         </div>
@@ -698,7 +698,7 @@ export default function CatalogBoard(){
           <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">🔗 Керування наборами</h2>
-              <button onClick={() => setFamilyModal({...familyModal, open: false})} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+              <button onClick={() => setFamilyModal({...familyModal, open: false})} className="text-slate-400 hover:text-corp-text-main text-2xl">×</button>
             </div>
 
             {/* Створити новий набір */}
@@ -713,7 +713,7 @@ export default function CatalogBoard(){
               {/* Список наборів */}
               <div className="space-y-4 mb-6">
                 {familyModal.families.length === 0 ? (
-                  <div className="text-center text-slate-500 py-8">
+                  <div className="text-center text-corp-text-muted py-8">
                     Немає наборів. Створіть перший набір!
                   </div>
                 ) : (
@@ -729,7 +729,7 @@ export default function CatalogBoard(){
                               "px-3 py-1 rounded text-sm transition-colors",
                               selectedProducts.length > 0 
                                 ? "bg-blue-500 text-white hover:bg-blue-600" 
-                                : "bg-slate-300 text-slate-500 cursor-not-allowed"
+                                : "bg-slate-300 text-corp-text-muted cursor-not-allowed"
                             )}
                           >
                             Прив'язати обрані ({selectedProducts.length})
@@ -756,7 +756,7 @@ export default function CatalogBoard(){
                         </div>
                       </div>
                       {family.description && (
-                        <p className="text-sm text-slate-600 mb-2">{family.description}</p>
+                        <p className="text-sm text-corp-text-main mb-2">{family.description}</p>
                       )}
                       
                       {/* Товари в наборі */}
@@ -821,8 +821,8 @@ export default function CatalogBoard(){
                                   📦
                                 </div>
                                 <div className="flex-1 text-sm">
-                                  <div className="font-medium text-slate-800">{prod.name}</div>
-                                  <div className="text-xs text-slate-500">SKU: {prod.sku}</div>
+                                  <div className="font-medium text-corp-text-dark">{prod.name}</div>
+                                  <div className="text-xs text-corp-text-muted">SKU: {prod.sku}</div>
                                 </div>
                                 <button 
                                   onClick={() => removeFromFamily(prod.product_id)}
@@ -853,7 +853,7 @@ export default function CatalogBoard(){
                   {selectedProducts.length > 0 && (
                     <button 
                       onClick={() => setSelectedProducts([])}
-                      className="text-sm text-slate-500 hover:text-slate-700"
+                      className="text-sm text-corp-text-muted hover:text-slate-700"
                     >
                       Скасувати вибір ({selectedProducts.length})
                     </button>
@@ -921,7 +921,7 @@ export default function CatalogBoard(){
                         )}
                         <div className="text-xs flex-1 min-w-0">
                           <div className="font-medium truncate">{p.name}</div>
-                          <div className="text-slate-500">{p.sku}</div>
+                          <div className="text-corp-text-muted">{p.sku}</div>
                         </div>
                       </label>
                     ))}

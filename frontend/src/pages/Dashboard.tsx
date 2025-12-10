@@ -91,8 +91,8 @@ function TopTiles({ active, onTileClick }: { active: string; onTileClick: (key: 
               <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white">активно</span>
             )}
           </div>
-          <div className="text-sm font-semibold text-slate-900">{t.title}</div>
-          <div className="mt-1 text-xs text-slate-500">{t.desc}</div>
+          <div className="text-sm font-semibold text-corp-text-dark">{t.title}</div>
+          <div className="mt-1 text-xs text-corp-text-muted">{t.desc}</div>
         </div>
       ))}
     </div>
@@ -114,7 +114,7 @@ function CalendarToolbar({ view, setView, date, setDate }: any) {
       <div className="flex items-center gap-2 text-sm">
         <button
           onClick={() => shift(-1)}
-          className="rounded-full border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+          className="rounded-full border border-slate-200 px-2 py-1 text-xs text-corp-text-main hover:bg-slate-50"
         >
           ◀
         </button>
@@ -126,15 +126,15 @@ function CalendarToolbar({ view, setView, date, setDate }: any) {
         </button>
         <button
           onClick={() => shift(1)}
-          className="rounded-full border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+          className="rounded-full border border-slate-200 px-2 py-1 text-xs text-corp-text-main hover:bg-slate-50"
         >
           ▶
         </button>
-        <div className="ml-2 text-sm font-medium text-slate-900">{formatDate(date)}</div>
+        <div className="ml-2 text-sm font-medium text-corp-text-dark">{formatDate(date)}</div>
       </div>
 
       <div className="flex items-center gap-2 text-xs">
-        <span className="text-slate-500">Вигляд:</span>
+        <span className="text-corp-text-muted">Вигляд:</span>
         <button
           onClick={() => setView('day')}
           className={cls(
@@ -183,7 +183,7 @@ function OrderCardComponent({ card, onOpenFull }: { card: OrderCard; onOpenFull?
     <div
       className={cls(
         'mb-1 flex cursor-pointer flex-col gap-1 rounded-xl border px-2 py-1 text-[11px] shadow-sm hover:shadow-md transition',
-        palette[card.color] || 'bg-slate-100 text-slate-800 border-slate-200',
+        palette[card.color] || 'bg-slate-100 text-corp-text-dark border-slate-200',
       )}
       onClick={(e) => {
         // Open full card on click
@@ -224,7 +224,7 @@ function DayGrid({ view, cards, onDrop, onOpenCard }: { view: 'day' | 'week', ca
     const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд']
     return (
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-xs font-medium text-slate-600">
+        <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50 text-xs font-medium text-corp-text-main">
           {days.map((d) => (
             <div key={d} className="px-2 py-2 text-center">
               {d}
@@ -264,7 +264,7 @@ function DayGrid({ view, cards, onDrop, onOpenCard }: { view: 'day' | 'week', ca
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-      <div className="grid grid-cols-[60px,1fr,1fr] border-b border-slate-100 bg-slate-50 text-xs font-medium text-slate-600">
+      <div className="grid grid-cols-[60px,1fr,1fr] border-b border-slate-100 bg-slate-50 text-xs font-medium text-corp-text-main">
         <div className="px-2 py-2" />
         <div className="px-2 py-2">Видача</div>
         <div className="px-2 py-2 border-l border-slate-100">Повернення</div>
@@ -388,13 +388,13 @@ export default function RentalHubRekvisitorDashboard({
       {/* Header */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">RentalHub Warehouse</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-corp-text-dark">RentalHub Warehouse</h1>
+          <p className="text-sm text-corp-text-muted">
             Дашборд реквізитора: календар видачі та повернення, швидкий доступ до каталогу, шкод і завдань.
           </p>
         </div>
         {dashboardStats && (
-          <div className="flex gap-2 text-xs text-slate-500">
+          <div className="flex gap-2 text-xs text-corp-text-muted">
             <div className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
               {dashboardStats.quick_summary || 'Завантаження...'}
             </div>
@@ -429,14 +429,14 @@ export default function RentalHubRekvisitorDashboard({
       {/* Filters row */}
       <div className="mb-4 flex flex-wrap items-center gap-3 text-xs">
         <div className="flex items-center gap-2">
-          <span className="text-slate-500">Склад:</span>
+          <span className="text-corp-text-muted">Склад:</span>
           <select className="rounded-full border border-slate-200 bg-white px-3 py-1">
             <option>Основний склад</option>
             <option>Склад текстилю</option>
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-slate-500">Комірник:</span>
+          <span className="text-corp-text-muted">Комірник:</span>
           <select className="rounded-full border border-slate-200 bg-white px-3 py-1">
             <option>Всі</option>
             <option>Олег</option>
@@ -456,7 +456,7 @@ export default function RentalHubRekvisitorDashboard({
       <div className="rounded-2xl bg-slate-50 p-4">
         <CalendarToolbar view={view} setView={setView} date={date} setDate={setDate} />
         {loading ? (
-          <div className="flex h-[480px] items-center justify-center text-slate-500">
+          <div className="flex h-[480px] items-center justify-center text-corp-text-muted">
             Завантаження...
           </div>
         ) : (
@@ -511,19 +511,19 @@ function FullCardModal({ card, onClose }: { card: OrderCard; onClose: () => void
         <div className="p-6 space-y-6">
           {/* Client Info */}
           <div className="bg-slate-50 rounded-2xl p-5">
-            <div className="text-xs text-slate-600 mb-2 uppercase tracking-wide">Клієнт</div>
-            <div className="text-xl font-semibold text-slate-900">{card.client}</div>
+            <div className="text-xs text-corp-text-main mb-2 uppercase tracking-wide">Клієнт</div>
+            <div className="text-xl font-semibold text-corp-text-dark">{card.client}</div>
           </div>
 
           {/* Order Details */}
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-50 rounded-2xl p-5">
-              <div className="text-xs text-slate-600 mb-2 uppercase tracking-wide">Склад / Зона</div>
-              <div className="text-lg font-semibold text-slate-900">{card.warehouseZone}</div>
+              <div className="text-xs text-corp-text-main mb-2 uppercase tracking-wide">Склад / Зона</div>
+              <div className="text-lg font-semibold text-corp-text-dark">{card.warehouseZone}</div>
             </div>
             <div className="bg-slate-50 rounded-2xl p-5">
-              <div className="text-xs text-slate-600 mb-2 uppercase tracking-wide">Статус</div>
-              <div className="text-lg font-semibold text-slate-900">
+              <div className="text-xs text-corp-text-main mb-2 uppercase tracking-wide">Статус</div>
+              <div className="text-lg font-semibold text-corp-text-dark">
                 {card.status === 'progress' && '🔄 В роботі'}
                 {card.status === 'done' && '✅ Завершено'}
                 {card.status === 'issued' && '📤 Видано'}
@@ -543,13 +543,13 @@ function FullCardModal({ card, onClose }: { card: OrderCard; onClose: () => void
           {card.status === 'progress' && (
             <div className="bg-slate-50 rounded-2xl p-5">
               <div className="flex items-center justify-between mb-3">
-                <div className="text-sm font-medium text-slate-900">Прогрес комплектації</div>
-                <div className="text-sm text-slate-600">В процесі</div>
+                <div className="text-sm font-medium text-corp-text-dark">Прогрес комплектації</div>
+                <div className="text-sm text-corp-text-main">В процесі</div>
               </div>
               <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
                 <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500" />
               </div>
-              <div className="mt-2 text-xs text-slate-600">Приблизно 67% завершено</div>
+              <div className="mt-2 text-xs text-corp-text-main">Приблизно 67% завершено</div>
             </div>
           )}
 

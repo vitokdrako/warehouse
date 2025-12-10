@@ -46,7 +46,7 @@ function Pill({tone='slate', onClick, children, disabled=false}){
     green:'corp-btn corp-btn-primary',
     red:'bg-rose-600 hover:bg-rose-700 text-white',
     blue:'corp-btn corp-btn-primary',
-    yellow:'bg-amber-500 hover:bg-amber-600 text-slate-900'
+    yellow:'bg-amber-500 hover:bg-amber-600 text-corp-text-dark'
   }
   return <button disabled={disabled} onClick={onClick} className={cls('rounded-full px-3 py-1 text-sm transition disabled:opacity-50 disabled:pointer-events-none', tones[tone])}>{children}</button>
 }
@@ -54,7 +54,7 @@ function Card({title, right=null, children}){
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-slate-800">{title}</h3>
+        <h3 className="text-base font-semibold text-corp-text-dark">{title}</h3>
         {right}
       </div>
       {children}
@@ -78,7 +78,7 @@ function Header({order}){
         <div className="text-2xl font-bold">Повернення · #{order.order_id}</div>
         <Badge tone={tone}>{status}</Badge>
       </div>
-      <div className="text-sm text-slate-600">
+      <div className="text-sm text-corp-text-main">
         Видали: <b>{order.rent_issue_date || '—'}</b> · Повернення за планом: <b>{order.rent_return_date || '—'}</b> · Факт: <b>{todayISO()}</b>
       </div>
     </div>
@@ -91,7 +91,7 @@ function ItemsTable({items, onToggleSerialOK, onSetCounts, onOpenFinding, onTogg
     <Card title="Перелік позицій">
       <div className="overflow-hidden rounded-xl border">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left text-slate-500">
+          <thead className="bg-slate-50 text-left text-corp-text-muted">
             <tr>
               <th className="px-3 py-2">Фото</th>
               <th className="px-3 py-2">SKU</th>
@@ -124,13 +124,13 @@ function ItemsTable({items, onToggleSerialOK, onSetCounts, onOpenFinding, onTogg
                     title="Натисніть щоб відкрити картку товару"
                   />
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-500">{it.sku}</td>
+                <td className="px-3 py-2 text-xs text-corp-text-muted">{it.sku}</td>
                 <td className="px-3 py-2 font-medium">
                   <div className="flex items-center gap-2">
                     <span>{it.name}</span>
                     {it.findings.length>0 && <Badge tone='amber'>{it.findings.length} зауважень</Badge>}
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="mt-1 text-xs text-corp-text-muted">
                     <LocationBadge state={it.location?.state || 'shelf'} zone={it.location?.zone || it.shelf || ''} />
                   </div>
                 </td>
@@ -148,7 +148,7 @@ function ItemsTable({items, onToggleSerialOK, onSetCounts, onOpenFinding, onTogg
                 </td>
                 <td className="px-3 py-2">
                   {!it.serials || it.serials.length===0 ? (
-                    <span className="text-xs text-slate-500">безсерійний</span>
+                    <span className="text-xs text-corp-text-muted">безсерійний</span>
                   ) : (
                     <div className="flex flex-wrap gap-1 max-w-[240px]">
                       {it.serials.map(s => (
@@ -184,17 +184,17 @@ function FinancePanel({order, onSetFees, onDecideDeposit}){
   return (
     <Card title="Фінанси" right={<Badge tone={totalFees>0?'amber':'green'}>{totalFees>0? `До доплати ₴ ${fmtUA(totalFees)}`:'Без збитків'}</Badge>}>
       <div className="space-y-3">
-        <div className="text-sm text-slate-600">Нараховані збитки після повернення:</div>
+        <div className="text-sm text-corp-text-main">Нараховані збитки після повернення:</div>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-slate-500">Пеня за прострочку</span>
+          <div className="flex justify-between"><span className="text-corp-text-muted">Пеня за прострочку</span>
             <input type="number" className="w-28 rounded-lg border px-2 py-1 text-right" value={order.late_fee||0}
                    onChange={e=>onSetFees('late_fee', Number(e.target.value)||0)} />
           </div>
-          <div className="flex justify-between"><span className="text-slate-500">Миття/сушка/чистка</span>
+          <div className="flex justify-between"><span className="text-corp-text-muted">Миття/сушка/чистка</span>
             <input type="number" className="w-28 rounded-lg border px-2 py-1 text-right" value={order.cleaning_fee||0}
                    onChange={e=>onSetFees('cleaning_fee', Number(e.target.value)||0)} />
           </div>
-          <div className="flex justify-between"><span className="text-slate-500">Збитки (пошкодження)</span>
+          <div className="flex justify-between"><span className="text-corp-text-muted">Збитки (пошкодження)</span>
             <input type="number" className="w-28 rounded-lg border px-2 py-1 text-right" value={order.damage_fee||0}
                    onChange={e=>onSetFees('damage_fee', Number(e.target.value)||0)} />
           </div>
@@ -221,7 +221,7 @@ function Timeline({events}){
             <div className={cls('mt-1 h-2 w-2 rounded-full flex-shrink-0', e.tone==='green'?'bg-emerald-500':e.tone==='red'?'bg-rose-500':'bg-blue-500')} />
             <div>
               <div className="font-medium">{e.text}</div>
-              <div className="text-xs text-slate-500">{e.at}</div>
+              <div className="text-xs text-corp-text-muted">{e.at}</div>
             </div>
           </li>
         ))}
@@ -514,19 +514,19 @@ export default function ReturnCard(){
         <Card title="Клієнт">
           <div className="space-y-2 text-sm">
             <div>
-              <div className="text-slate-500 text-xs">Імʼя</div>
+              <div className="text-corp-text-muted text-xs">Імʼя</div>
               <div className="font-medium" title={`${order.firstname} ${order.lastname}`}>
                 {order.firstname} {order.lastname}
               </div>
             </div>
             <div>
-              <div className="text-slate-500 text-xs">Телефон</div>
+              <div className="text-corp-text-muted text-xs">Телефон</div>
               <div className="font-medium" title={order.telephone}>
                 {order.telephone}
               </div>
             </div>
             <div>
-              <div className="text-slate-500 text-xs">Email</div>
+              <div className="text-corp-text-muted text-xs">Email</div>
               <div className="font-medium break-words" title={order.email}>
                 {order.email}
               </div>
@@ -551,10 +551,10 @@ export default function ReturnCard(){
 
       <Card title="Підсумок приймання" right={<Badge tone={allOkToSettle?'green':'amber'}>{allOkToSettle?'Можна завершити':'Ще є невідповідності'}</Badge>}>
         <div className="grid gap-3 md:grid-cols-4 text-sm">
-          <div><div className="text-slate-500">Повернуто позицій</div><div className="font-semibold">{items.reduce((s,i)=>s + i.returned_qty,0)} / {items.reduce((s,i)=>s + i.rented_qty,0)}</div></div>
-          <div><div className="text-slate-500">Фіксацій пошкоджень</div><div className="font-semibold">{items.reduce((s,i)=>s + i.findings.length,0)}</div></div>
-          <div><div className="text-slate-500">Додаткові витрати</div><div className="font-semibold">₴ {fmtUA(totals.totalFees)}</div></div>
-          <div><div className="text-slate-500">До сплати</div><div className="font-semibold">₴ {fmtUA(totals.totalDue)}</div></div>
+          <div><div className="text-corp-text-muted">Повернуто позицій</div><div className="font-semibold">{items.reduce((s,i)=>s + i.returned_qty,0)} / {items.reduce((s,i)=>s + i.rented_qty,0)}</div></div>
+          <div><div className="text-corp-text-muted">Фіксацій пошкоджень</div><div className="font-semibold">{items.reduce((s,i)=>s + i.findings.length,0)}</div></div>
+          <div><div className="text-corp-text-muted">Додаткові витрати</div><div className="font-semibold">₴ {fmtUA(totals.totalFees)}</div></div>
+          <div><div className="text-corp-text-muted">До сплати</div><div className="font-semibold">₴ {fmtUA(totals.totalDue)}</div></div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <Pill tone='green' onClick={settle} disabled={!allOkToSettle}>Завершити приймання</Pill>
@@ -573,7 +573,7 @@ export default function ReturnCard(){
         existingHistory={currentItem?.findings || []}
       />
 
-      <div className="text-xs text-slate-500 text-center">Підказка: клік по серійному номеру відмічає, що екземпляр повернувся та OK.</div>
+      <div className="text-xs text-corp-text-muted text-center">Підказка: клік по серійному номеру відмічає, що екземпляр повернувся та OK.</div>
     </div>
   )
 }

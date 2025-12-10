@@ -107,10 +107,10 @@ export default function DashboardHome() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 mb-2">
+          <h1 className="text-3xl font-bold text-corp-text-dark mb-2">
             Rental Hub — Кабінет менеджера
           </h1>
-          <p className="text-slate-600">
+          <p className="text-corp-text-main">
             Оберіть розділ для роботи
           </p>
         </div>
@@ -134,17 +134,17 @@ export default function DashboardHome() {
                 </div>
                 
                 {/* Title */}
-                <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-slate-900">
+                <h3 className="text-xl font-bold text-corp-text-dark mb-2 group-hover:text-corp-text-dark">
                   {cabinet.title}
                 </h3>
                 
                 {/* Description */}
-                <p className="text-sm text-slate-600 leading-relaxed">
+                <p className="text-sm text-corp-text-main leading-relaxed">
                   {cabinet.description}
                 </p>
                 
                 {/* Arrow indicator */}
-                <div className="mt-4 flex items-center text-slate-400 group-hover:text-slate-600 transition-colors">
+                <div className="mt-4 flex items-center text-slate-400 group-hover:text-corp-text-main transition-colors">
                   <span className="text-sm font-medium">Відкрити</span>
                   <svg 
                     className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" 
@@ -164,7 +164,7 @@ export default function DashboardHome() {
         </div>
 
         {/* Footer Info */}
-        <div className="mt-12 text-center text-slate-500 text-sm">
+        <div className="mt-12 text-center text-corp-text-muted text-sm">
           <p>© Rental Hub • manager cabinet</p>
         </div>
       </div>

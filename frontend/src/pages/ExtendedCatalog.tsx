@@ -123,7 +123,7 @@ function Card({ title, children, right }: { title: string; children: React.React
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <h3 className="text-sm font-semibold text-corp-text-dark">{title}</h3>
         {right}
       </div>
       {children}
@@ -146,7 +146,7 @@ function StatusPill({ summary }: { summary: StatusSummary }) {
 }
 
 function TagChip({ label }: { label: string }) {
-  return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">{label}</span>
+  return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-corp-text-main">{label}</span>
 }
 
 /**************** left: list & filters ****************/
@@ -191,7 +191,7 @@ function CatalogList({
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-slate-500">Категорія:</span>
+            <span className="text-corp-text-muted">Категорія:</span>
             <select
               className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px]"
               value={cat}
@@ -209,9 +209,9 @@ function CatalogList({
       </Card>
 
       <div className="rounded-2xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-slate-500">Список товарів</div>
+        <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-corp-text-muted">Список товарів</div>
         {loading ? (
-          <div className="py-8 text-center text-sm text-slate-500">Завантаження...</div>
+          <div className="py-8 text-center text-sm text-corp-text-muted">Завантаження...</div>
         ) : (
           <div className="max-h-[460px] divide-y divide-slate-100 overflow-auto text-xs">
             {filtered.map((p) => (
@@ -226,9 +226,9 @@ function CatalogList({
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-semibold text-slate-900">{p.name}</span>
+                    <span className="text-[11px] font-semibold text-corp-text-dark">{p.name}</span>
                   </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-corp-text-muted">
                     <span>{p.category}</span>
                     {p.subcategory && <span>· {p.subcategory}</span>}
                     <span>· SKU: {p.mainSku}</span>
@@ -237,14 +237,14 @@ function CatalogList({
                     <StatusPill summary={p.statusSummary} />
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1 text-[10px] text-slate-500">
+                <div className="flex flex-col items-end gap-1 text-[10px] text-corp-text-muted">
                   <span>Стелаж: {p.defaultLocation}</span>
                   <span>Оновлено: {p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('uk-UA') : 'N/A'}</span>
                 </div>
               </button>
             ))}
             {filtered.length === 0 && (
-              <div className="px-3 py-6 text-center text-[11px] text-slate-500">За фільтрами нічого не знайдено</div>
+              <div className="px-3 py-6 text-center text-[11px] text-corp-text-muted">За фільтрами нічого не знайдено</div>
             )}
           </div>
         )}
@@ -296,7 +296,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
         <div className="md:col-span-2 space-y-3">
           <div className="grid gap-2 md:grid-cols-2">
             <div>
-              <label className="block text-slate-500">Назва</label>
+              <label className="block text-corp-text-muted">Назва</label>
               <input
                 disabled={!edit}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 disabled:bg-slate-50"
@@ -305,7 +305,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
               />
             </div>
             <div>
-              <label className="block text-slate-500">Основний SKU</label>
+              <label className="block text-corp-text-muted">Основний SKU</label>
               <input
                 disabled={!edit}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 disabled:bg-slate-50"
@@ -316,7 +316,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
           </div>
           <div className="grid gap-2 md:grid-cols-3">
             <div>
-              <label className="block text-slate-500">Категорія</label>
+              <label className="block text-corp-text-muted">Категорія</label>
               <input
                 disabled={!edit}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 disabled:bg-slate-50"
@@ -325,7 +325,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
               />
             </div>
             <div>
-              <label className="block text-slate-500">Підкатегорія</label>
+              <label className="block text-corp-text-muted">Підкатегорія</label>
               <input
                 disabled={!edit}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 disabled:bg-slate-50"
@@ -334,7 +334,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
               />
             </div>
             <div>
-              <label className="block text-slate-500">Колір</label>
+              <label className="block text-corp-text-muted">Колір</label>
               <input
                 disabled={!edit}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 disabled:bg-slate-50"
@@ -345,7 +345,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
           </div>
           <div className="grid gap-2 md:grid-cols-3">
             <div>
-              <label className="block text-slate-500">Матеріал</label>
+              <label className="block text-corp-text-muted">Матеріал</label>
               <input
                 disabled={!edit}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 disabled:bg-slate-50"
@@ -354,7 +354,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
               />
             </div>
             <div>
-              <label className="block text-slate-500">Розмір / тип</label>
+              <label className="block text-corp-text-muted">Розмір / тип</label>
               <input
                 disabled={!edit}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 disabled:bg-slate-50"
@@ -363,7 +363,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
               />
             </div>
             <div>
-              <label className="block text-slate-500">Базове місцезнаходження</label>
+              <label className="block text-corp-text-muted">Базове місцезнаходження</label>
               <input
                 disabled={!edit}
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 disabled:bg-slate-50"
@@ -373,7 +373,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
             </div>
           </div>
           <div>
-            <label className="block text-slate-500">Опис</label>
+            <label className="block text-corp-text-muted">Опис</label>
             <textarea
               disabled={!edit}
               rows={3}
@@ -383,7 +383,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
             />
           </div>
           <div>
-            <label className="block text-slate-500">Нотатки по догляду</label>
+            <label className="block text-corp-text-muted">Нотатки по догляду</label>
             <textarea
               disabled={!edit}
               rows={3}
@@ -395,7 +395,7 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
         </div>
         <div className="space-y-3">
           <div>
-            <div className="mb-1 text-slate-500">Теги</div>
+            <div className="mb-1 text-corp-text-muted">Теги</div>
             <div className="flex flex-wrap gap-1">
               {product.tags.map((t) => (
                 <TagChip key={t} label={t} />
@@ -403,16 +403,16 @@ function PassportTab({ product, onSave }: { product: Product; onSave: (data: any
             </div>
           </div>
           <div>
-            <div className="mb-1 text-slate-500">Статуси</div>
+            <div className="mb-1 text-corp-text-muted">Статуси</div>
             <StatusPill summary={product.statusSummary} />
           </div>
-          <div className="text-[10px] text-slate-500">
+          <div className="text-[10px] text-corp-text-muted">
             Створено: {product.createdAt ? new Date(product.createdAt).toLocaleDateString('uk-UA') : 'N/A'}
             <br />
             Оновлено: {product.updatedAt ? new Date(product.updatedAt).toLocaleDateString('uk-UA') : 'N/A'}
           </div>
-          <div className="rounded-xl bg-slate-50 p-2 text-[10px] text-slate-600">
-            <div className="mb-1 font-semibold text-slate-800">Швидкі дії</div>
+          <div className="rounded-xl bg-slate-50 p-2 text-[10px] text-corp-text-main">
+            <div className="mb-1 font-semibold text-corp-text-dark">Швидкі дії</div>
             <div className="flex flex-wrap gap-2">
               <PillButton
                 tone="ghost"
@@ -440,7 +440,7 @@ function InventoryTab({ product }: { product: Product }) {
   return (
     <Card title="Інвентарні одиниці" right={<Badge tone="blue">{inventory.length} од.</Badge>}>
       {inventory.length === 0 ? (
-        <div className="py-8 text-center text-[11px] text-slate-500">
+        <div className="py-8 text-center text-[11px] text-corp-text-muted">
           Інвентарні одиниці не створені. Натисніть "+ Додати одиницю" щоб створити.
         </div>
       ) : (
@@ -449,17 +449,17 @@ function InventoryTab({ product }: { product: Product }) {
             <div key={item.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold text-slate-900">{item.code}</div>
-                  <div className="mt-1 text-[10px] text-slate-600">
+                  <div className="font-semibold text-corp-text-dark">{item.code}</div>
+                  <div className="mt-1 text-[10px] text-corp-text-main">
                     📍 {item.location}
                   </div>
                   {item.note && (
-                    <div className="mt-1 text-[10px] text-slate-500">{item.note}</div>
+                    <div className="mt-1 text-[10px] text-corp-text-muted">{item.note}</div>
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <Badge tone={item.status === 'available' ? 'green' : 'amber'}>{item.status}</Badge>
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[10px] text-corp-text-muted">
                     {item.lastMovementAt ? new Date(item.lastMovementAt).toLocaleDateString('uk-UA') : 'N/A'}
                   </span>
                 </div>
@@ -489,7 +489,7 @@ function HistoryTab({ product }: { product: Product }) {
   return (
     <Card title="Історія операцій" right={<Badge tone="blue">{history.length} подій</Badge>}>
       {history.length === 0 ? (
-        <div className="py-8 text-center text-[11px] text-slate-500">
+        <div className="py-8 text-center text-[11px] text-corp-text-muted">
           Історія порожня
         </div>
       ) : (
@@ -498,18 +498,18 @@ function HistoryTab({ product }: { product: Product }) {
             <div key={event.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="font-semibold text-slate-900">
+                  <div className="font-semibold text-corp-text-dark">
                     {eventLabels[event.kind] || event.kind}
                   </div>
-                  <div className="mt-1 text-[10px] text-slate-600">
+                  <div className="mt-1 text-[10px] text-corp-text-main">
                     {event.note}
                   </div>
-                  <div className="mt-1 text-[10px] text-slate-500">
+                  <div className="mt-1 text-[10px] text-corp-text-muted">
                     Виконав: {event.actor}
                     {event.orderId && ` · Замовлення: #${event.orderId}`}
                   </div>
                 </div>
-                <div className="text-[10px] text-slate-500">
+                <div className="text-[10px] text-corp-text-muted">
                   {new Date(event.date).toLocaleDateString('uk-UA')}
                 </div>
               </div>
@@ -607,8 +607,8 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
     <div className="mx-auto max-w-7xl p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Розширений каталог</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-2xl font-bold text-corp-text-dark">Розширений каталог</h1>
+          <p className="text-sm text-corp-text-muted">
             Повна інформація про товари: паспорт, інвентарні одиниці, історія руху
           </p>
         </div>
@@ -662,7 +662,7 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
 
           {/* Content */}
           {detailsLoading ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-corp-text-muted">
               Завантаження...
             </div>
           ) : selectedProduct ? (
@@ -672,7 +672,7 @@ export default function ExtendedCatalog({ onBackToDashboard }: { onBackToDashboa
               {activeTab === 'history' && <HistoryTab product={selectedProduct} />}
             </>
           ) : (
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-corp-text-muted">
               Оберіть товар зі списку
             </div>
           )}

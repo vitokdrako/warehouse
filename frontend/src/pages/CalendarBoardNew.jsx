@@ -168,13 +168,13 @@ function DropZone({ onDrop, children, isEmpty }) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cls(
-        'min-h-[70px] rounded-xl p-1.5 ring-1 transition-colors',
+        'min-h-[50px] md:min-h-[70px] rounded-lg md:rounded-xl p-1 md:p-1.5 ring-1 transition-colors overflow-y-auto max-h-[120px] md:max-h-[200px]',
         isOver ? 'bg-blue-50 ring-blue-300' : 'bg-slate-50/60 ring-slate-100'
       )}
     >
       {isEmpty && !isOver ? (
-        <div className="flex h-full items-center justify-center text-[9px] text-slate-300">
-          — немає подій —
+        <div className="flex h-full items-center justify-center text-[8px] md:text-[9px] text-slate-300">
+          —
         </div>
       ) : children}
     </div>

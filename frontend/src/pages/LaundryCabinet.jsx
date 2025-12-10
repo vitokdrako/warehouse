@@ -612,72 +612,73 @@ const ReturnItemsModal = ({ batch, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Прийом товарів</h2>
-          <p className="text-gray-600 mb-4">Партія: {batch.batch_number}</p>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {batch.items.map(item => {
-              const remaining = item.quantity - item.returned_quantity;
-              if (remaining <= 0) return null;
+    <div className="corp-modal-overlay">
+      <div className="corp-modal-content max-w-2xl w-full p-6">
+        <h2 className="text-2xl font-semibold text-corp-text-dark mb-2">Прийом товарів</h2>
+        <p className="text-corp-text-muted mb-6">Партія: <span className="font-medium text-corp-primary">{batch.batch_number}</span></p>
+        
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {batch.items.map(item => {
+            const remaining = item.quantity - item.returned_quantity;
+            if (remaining <= 0) return null;
 
-              return (
-                <div key={item.id} className="border rounded p-3">
-                  <p className="font-medium">{item.product_name}</p>
-                  <p className="text-sm text-gray-600 mb-2">{item.sku} • Залишок: {remaining} од.</p>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs mb-1">Кількість</label>
-                      <Input 
-                        type="number"
-                        min="0"
-                        max={remaining}
-                        value={returns[item.id]?.quantity || 0}
-                        onChange={(e) => setReturns({
-                          ...returns,
-                          [item.id]: {
-                            ...returns[item.id],
-                            quantity: parseInt(e.target.value) || 0,
-                            condition: returns[item.id]?.condition || 'clean'
-                          }
-                        })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs mb-1">Стан</label>
-                      <select 
-                        className="w-full border rounded p-2"
-                        value={returns[item.id]?.condition || 'clean'}
-                        onChange={(e) => setReturns({
-                          ...returns,
-                          [item.id]: {
-                            ...returns[item.id],
-                            quantity: returns[item.id]?.quantity || 0,
-                            condition: e.target.value
-                          }
-                        })}
-                      >
-                        <option value="clean">Чисто</option>
-                        <option value="damaged">Пошкоджено</option>
-                        <option value="lost">Втрачено</option>
-                      </select>
-                    </div>
+            return (
+              <div key={item.id} className="corp-card-flat">
+                <p className="font-medium text-corp-text-dark">{item.product_name}</p>
+                <p className="text-sm text-corp-text-muted mb-3">{item.sku} • Залишок: <span className="font-semibold text-corp-gold">{remaining} од.</span></p>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-corp-text-muted uppercase tracking-wide mb-1 block">Кількість</label>
+                    <input 
+                      className="corp-input"
+                      type="number"
+                      min="0"
+                      max={remaining}
+                      value={returns[item.id]?.quantity || 0}
+                      onChange={(e) => setReturns({
+                        ...returns,
+                        [item.id]: {
+                          ...returns[item.id],
+                          quantity: parseInt(e.target.value) || 0,
+                          condition: returns[item.id]?.condition || 'clean'
+                        }
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-corp-text-muted uppercase tracking-wide mb-1 block">Стан</label>
+                    <select 
+                      className="corp-select w-full"
+                      value={returns[item.id]?.condition || 'clean'}
+                      onChange={(e) => setReturns({
+                        ...returns,
+                        [item.id]: {
+                          ...returns[item.id],
+                          quantity: returns[item.id]?.quantity || 0,
+                          condition: e.target.value
+                        }
+                      })}
+                    >
+                      <option value="clean">Чисто</option>
+                      <option value="damaged">Пошкоджено</option>
+                      <option value="lost">Втрачено</option>
+                    </select>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
 
-            <div className="flex gap-2 pt-4">
-              <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Обробка...' : 'Прийняти товари'}
-              </Button>
-              <Button type="button" variant="outline" onClick={onClose}>Скасувати</Button>
-            </div>
-          </form>
-        </div>
+          <div className="flex gap-3 pt-4">
+            <button type="submit" disabled={loading} className="corp-btn corp-btn-primary flex-1">
+              {loading ? 'Обробка...' : 'Прийняти товари'}
+            </button>
+            <button type="button" className="corp-btn corp-btn-secondary" onClick={onClose}>
+              Скасувати
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

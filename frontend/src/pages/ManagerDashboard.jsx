@@ -319,13 +319,13 @@ export default function ManagerDashboard() {
       <section className="mx-auto max-w-7xl px-6 py-4">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Filter label="Менеджер">
-            <select className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400">
+            <select className="corp-select">
               <option>Всі</option>
             </select>
           </Filter>
           <Filter label="Статус замовлення">
             <select 
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              className="corp-select"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
@@ -336,7 +336,7 @@ export default function ManagerDashboard() {
             </select>
           </Filter>
           <Filter label="Фінанси">
-            <select className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400">
+            <select className="corp-select">
               <option>Всі</option>
               <option>Очікує оплати</option>
               <option>Закрито</option>
@@ -345,7 +345,7 @@ export default function ManagerDashboard() {
           <Filter label="Пошук">
             <input 
               placeholder="Імʼя / телефон / №" 
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-teal-400"
+              className="corp-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -598,8 +598,8 @@ export default function ManagerDashboard() {
 
 function Filter({label, children}:{label:string, children:any}){
   return (
-    <label className="flex flex-col gap-1 text-sm text-slate-600">
-      <span className="font-medium">{label}</span>
+    <label className="flex flex-col gap-2">
+      <span className="text-xs text-corp-text-muted uppercase tracking-wide font-medium">{label}</span>
       {children}
     </label>
   );
@@ -607,15 +607,15 @@ function Filter({label, children}:{label:string, children:any}){
 
 function Kpi({title, value, note, tone}:{title:string,value:string,note?:string,tone?:'ok'|'warn'|'info'}){
   const toneMap:any={
-    ok:'bg-emerald-50 text-emerald-700',
-    warn:'bg-amber-50 text-amber-700',
-    info:'bg-slate-50 text-slate-700'
+    ok:'text-corp-success',
+    warn:'text-corp-warning',
+    info:'text-corp-primary'
   };
   return (
-    <div className={`rounded-2xl border border-slate-200 p-4 shadow-sm ${tone?toneMap[tone]:''}`}>
-      <div className="text-sm text-slate-600">{title}</div>
-      <div className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
-      {note && <div className="mt-1 text-xs text-slate-500">{note}</div>}
+    <div className="corp-stat-card">
+      <div className="corp-stat-label">{title}</div>
+      <div className={`corp-stat-value ${tone?toneMap[tone]:''}`}>{value}</div>
+      {note && <div className="text-xs text-corp-text-muted mt-2">{note}</div>}
     </div>
   );
 }

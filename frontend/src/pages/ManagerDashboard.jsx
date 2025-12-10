@@ -261,45 +261,48 @@ export default function ManagerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-slate-900">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70">
-        <div className="mx-auto max-w-7xl px-6 py-3 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full border border-slate-300 grid place-content-center font-semibold">RH</div>
-            <span className="text-lg font-semibold tracking-tight">Rental Hub — Кабінет менеджера</span>
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
+      {/* Corporate Header */}
+      <header className="corp-header sticky top-0 z-30">
+        <div className="mx-auto max-w-7xl flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-corp-primary grid place-content-center text-white font-bold text-sm">RH</div>
+            <div>
+              <h1 className="text-lg font-semibold text-corp-text-dark">Rental Hub</h1>
+              <p className="text-xs text-corp-text-muted">Кабінет менеджера</p>
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 grid place-content-center text-white text-xs font-semibold">
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-2 bg-corp-bg-light rounded-corp border border-corp-border">
+              <div className="h-8 w-8 rounded-full bg-corp-gold grid place-content-center text-white text-xs font-semibold">
                 {user?.email?.[0]?.toUpperCase() || 'U'}
               </div>
               <div className="text-sm">
-                <div className="font-medium text-slate-900">{user?.email || 'Користувач'}</div>
-                <div className="text-xs text-slate-500">{user?.role === 'admin' ? 'Адміністратор' : user?.role === 'manager' ? 'Менеджер' : 'Реквізитор'}</div>
+                <div className="font-medium text-corp-text-dark">{user?.email || 'Користувач'}</div>
+                <div className="text-xs text-corp-text-muted">{user?.role === 'admin' ? 'Адміністратор' : user?.role === 'manager' ? 'Менеджер' : 'Реквізитор'}</div>
               </div>
             </div>
             <button 
-              className="h-9 rounded-xl border border-purple-500 bg-purple-50 px-3 text-sm hover:shadow"
+              className="corp-btn corp-btn-secondary"
               onClick={() => navigate('/settings')}
               title="Налаштування"
             >
               ⚙️
             </button>
             <button 
-              className="h-9 rounded-xl border border-orange-500 bg-orange-50 px-3 text-sm hover:shadow"
+              className="corp-btn corp-btn-gold"
               onClick={handleReload}
             >
-              🔄 Оновити
+              🔄
             </button>
             <button 
-              className="h-9 rounded-xl border border-slate-200 px-3 text-sm hover:shadow"
+              className="corp-btn corp-btn-primary"
               onClick={() => navigate('/order/new')}
             >
-              Новий заказ
+              + Новий замовлення
             </button>
             <button 
-              className="h-9 rounded-xl bg-red-500 px-3 text-sm text-white hover:bg-red-600"
+              className="corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white"
               onClick={() => {
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');

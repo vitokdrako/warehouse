@@ -128,6 +128,7 @@ export default function DamageCabinetPro({
   const [sourceFilter, setSourceFilter] = useState<'all' | DamageSource>('all')
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<'main' | 'washing' | 'restoration' | 'dry-cleaning'>('main')
 
   useEffect(() => {
     loadCases()

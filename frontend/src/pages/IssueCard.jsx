@@ -297,7 +297,8 @@ function ItemRow({it, onScan, onPick, onOpenDamage}){
 function ItemsTable({items, onScan, onPick, onOpenDamage}){
   return (
     <Card title="Позиції до видачі">
-      <div className="overflow-hidden rounded-xl border">
+      {/* Desktop View */}
+      <div className="hidden md:block overflow-hidden rounded-xl border">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-corp-text-muted">
             <tr>
@@ -319,6 +320,11 @@ function ItemsTable({items, onScan, onPick, onOpenDamage}){
             {items.map(it => <ItemRow key={it.id} it={it} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} />)}
           </tbody>
         </table>
+      </div>
+      
+      {/* Mobile View */}
+      <div className="md:hidden space-y-3">
+        {items.map(it => <ItemCardMobile key={it.id} it={it} onScan={onScan} onPick={onPick} onOpenDamage={onOpenDamage} />)}
       </div>
     </Card>
   )

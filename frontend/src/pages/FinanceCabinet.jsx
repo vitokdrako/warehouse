@@ -13,30 +13,30 @@ const todayISO = ()=> new Date().toISOString().slice(0,10)
 /*********** ui ***********/
 function Badge({tone='slate', children}){
   const tones={
-    slate:'bg-slate-100 text-slate-700 border-slate-200',
-    green:'bg-emerald-100 text-emerald-700 border-emerald-200',
-    amber:'bg-amber-100 text-amber-800 border-amber-200',
-    red:'bg-rose-100 text-rose-700 border-rose-200',
-    blue:'bg-blue-100 text-blue-700 border-blue-200',
-    violet:'bg-violet-100 text-violet-700 border-violet-200'
+    slate:'corp-badge corp-badge-neutral',
+    green:'corp-badge corp-badge-success',
+    amber:'corp-badge corp-badge-warning',
+    red:'corp-badge corp-badge-error',
+    blue:'corp-badge corp-badge-info',
+    violet:'corp-badge corp-badge-primary'
   }
-  return <span className={cls('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs', tones[tone])}>{children}</span>
+  return <span className={tones[tone]}>{children}</span>
 }
 function PillButton({tone='slate', onClick, children, disabled=false}){
   const tones={
-    slate:'bg-slate-800 hover:bg-slate-900 text-white',
-    green:'bg-emerald-600 hover:bg-emerald-700 text-white',
-    red:'bg-rose-600 hover:bg-rose-700 text-white',
-    blue:'bg-blue-600 hover:bg-blue-700 text-white',
-    yellow:'bg-amber-500 hover:bg-amber-600 text-slate-900'
+    slate:'corp-btn corp-btn-secondary',
+    green:'corp-btn corp-btn-primary',
+    red:'corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white',
+    blue:'corp-btn corp-btn-primary',
+    yellow:'corp-btn corp-btn-gold'
   }
-  return <button disabled={disabled} onClick={onClick} className={cls('rounded-full px-3 py-1 text-sm transition disabled:opacity-50', tones[tone])}>{children}</button>
+  return <button disabled={disabled} onClick={onClick} className={cls(tones[tone], 'disabled:opacity-50')}>{children}</button>
 }
 function Card({title, right=null, children}){
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-slate-800">{title}</h3>{right}
+    <div className="corp-card">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-base font-semibold text-corp-text-dark">{title}</h3>{right}
       </div>
       {children}
     </div>

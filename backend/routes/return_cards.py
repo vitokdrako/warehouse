@@ -261,3 +261,167 @@ async def get_return_card_by_order(order_id: int, db: Session = Depends(get_rh_d
         raise HTTPException(status_code=404, detail="Return card not found for this order")
     
     return parse_return_card(row)
+
+
+
+async def _create_damage_cases_from_return(card_id: str, items_returned: List[dict], current_user: dict, db: Session):
+    """
+    Створити damage cases для брудних та пошкоджених товарів
+    """
+    try:
+        # Отримати інформацію про return card
+        card_result = db.execute(text("""
+            SELECT order_id, order_number FROM return_cards WHERE id = :id
+        """), {"id": card_id})
+        card = card_result.fetchone()
+        
+        if not card:
+            print(f"⚠ Return card {card_id} not found")
+            return
+        
+        order_id = card[0]
+        order_number = card[1]
+        
+        # Отримати інформацію про клієнта з замовлення
+        order_result = db.execute(text("""
+            SELECT customer_name, customer_phone, event_name FROM orders WHERE order_id = :order_id
+        """), {"order_id": order_id})
+        order = order_result.fetchone()
+        
+        customer_name = order[0] if order else None
+        customer_phone = order[1] if order else None
+        event_name = order[2] if order else None
+        
+        created_by = current_user.get('username') or current_user.get('email') or 'Unknown'
+        
+        # Групувати товари за типом пошкодження
+        dirty_items = []
+        damaged_items = []
+        
+        for item in items_returned:
+            condition = item.get('condition', 'ok')
+            if condition == 'dirty':
+                dirty_items.append(item)
+            elif condition == 'damaged':
+                damaged_items.append(item)
+        
+        # Створити damage case для брудних товарів
+        if dirty_items:
+            await _create_single_damage_case(
+                db=db,
+                order_id=order_id,
+                order_number=order_number,
+                customer_name=customer_name,
+                customer_phone=customer_phone,
+                event_name=event_name,
+                items=dirty_items,
+                source='return',
+                severity='minor',
+                created_by=created_by,
+                notes=f"Брудні товари з повернення {order_number}"
+            )
+            print(f"✅ Створено damage case для {len(dirty_items)} брудних товарів з return card {card_id}")
+        
+        # Створити damage case для пошкоджених товарів
+        if damaged_items:
+            await _create_single_damage_case(
+                db=db,
+                order_id=order_id,
+                order_number=order_number,
+                customer_name=customer_name,
+                customer_phone=customer_phone,
+                event_name=event_name,
+                items=damaged_items,
+                source='return',
+                severity='major',
+                created_by=created_by,
+                notes=f"Пошкоджені товари з повернення {order_number}"
+            )
+            print(f"✅ Створено damage case для {len(damaged_items)} пошкоджених товарів з return card {card_id}")
+    
+    except Exception as e:
+        print(f"❌ Помилка створення damage cases з return: {e}")
+        # Не викидаємо помилку, щоб не заблокувати update return card
+
+
+async def _create_single_damage_case(db: Session, order_id: int, order_number: str, 
+                                     customer_name: str, customer_phone: str, event_name: str,
+                                     items: List[dict], source: str, severity: str, 
+                                     created_by: str, notes: str):
+    """
+    Створити один damage case з items
+    """
+    damage_id = str(uuid.uuid4())
+    
+    # Створити запис в damages
+    db.execute(text("""
+        INSERT INTO damages (
+            id, order_id, order_number, customer_name, customer_phone, event_name,
+            case_status, severity, source, notes, created_by, created_at, updated_at
+        ) VALUES (
+            :id, :order_id, :order_number, :customer_name, :customer_phone, :event_name,
+            'open', :severity, :source, :notes, :created_by, NOW(), NOW()
+        )
+    """), {
+        'id': damage_id,
+        'order_id': order_id,
+        'order_number': order_number,
+        'customer_name': customer_name,
+        'customer_phone': customer_phone,
+        'event_name': event_name,
+        'severity': severity,
+        'source': source,
+        'notes': notes,
+        'created_by': created_by
+    })
+    
+    # Створити damage_items для кожного товару
+    for item in items:
+        sku = item.get('sku', '')
+        name = item.get('name', 'Товар')
+        qty = item.get('quantity_returned', 1)
+        condition = item.get('condition', 'dirty')
+        item_notes = item.get('notes', '')
+        photos = item.get('photos', [])
+        
+        # Отримати product_id та ціну з products
+        product_result = db.execute(text("""
+            SELECT product_id, name, image_url, rental_price FROM products WHERE sku = :sku
+        """), {"sku": sku})
+        product = product_result.fetchone()
+        
+        if product:
+            product_id = product[0]
+            product_name = product[1] or name
+            image = product[2]
+            base_value = float(product[3]) if product[3] else 0.0
+            
+            # Оцінити вартість пошкодження
+            if condition == 'dirty':
+                estimate_value = base_value * 0.1  # 10% від вартості на прання
+            else:  # damaged
+                estimate_value = base_value * 0.5  # 50% від вартості на ремонт
+            
+            # Створити damage_item
+            db.execute(text("""
+                INSERT INTO damage_items (
+                    damage_id, product_id, barcode, name, image, qty,
+                    damage_type, base_value, estimate_value, comment, created_at
+                ) VALUES (
+                    :damage_id, :product_id, :sku, :name, :image, :qty,
+                    :damage_type, :base_value, :estimate_value, :comment, NOW()
+                )
+            """), {
+                'damage_id': damage_id,
+                'product_id': product_id,
+                'sku': sku,
+                'name': product_name,
+                'image': image,
+                'qty': qty,
+                'damage_type': condition,
+                'base_value': base_value,
+                'estimate_value': estimate_value,
+                'comment': item_notes
+            })
+    
+    db.commit()

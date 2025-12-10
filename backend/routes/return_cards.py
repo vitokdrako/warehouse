@@ -216,13 +216,20 @@ async def update_return_card(
     return {"message": "Return card updated"}
 
 @router.post("/{card_id}/complete")
-async def complete_return_card(card_id: str, db: Session = Depends(get_rh_db)):
+async def complete_return_card(
+    card_id: str,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
     """Mark return card as completed"""
     db.execute(text("""
         UPDATE return_cards 
-        SET status = 'resolved', checked_at = NOW(), updated_at = NOW()
+        SET status = 'resolved',
+            checked_by_id = :checked_by_id,
+            checked_at = NOW(), 
+            updated_at = NOW()
         WHERE id = :id
-    """), {"id": card_id})
+    """), {"id": card_id, "checked_by_id": current_user["id"]})
     
     db.commit()
     return {"message": "Return card completed"}

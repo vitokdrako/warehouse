@@ -440,15 +440,15 @@ const CreateBatchModal = ({ onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Нова партія в хімчистку</h2>
+    <div className="corp-modal-overlay">
+      <div className="corp-modal-content max-w-2xl w-full p-6">
+        <h2 className="text-2xl font-semibold text-corp-text-dark mb-6">Нова партія в хімчистку</h2>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Компанія хімчистки *</label>
-              <Input 
+              <label className="text-xs text-corp-text-muted uppercase tracking-wide mb-2 block">Компанія хімчистки *</label>
+              <input 
+                className="corp-input"
                 value={formData.laundry_company}
                 onChange={(e) => setFormData({...formData, laundry_company: e.target.value})}
                 required
@@ -458,8 +458,9 @@ const CreateBatchModal = ({ onClose, onSuccess }) => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Очікувана дата повернення *</label>
-                <Input 
+                <label className="text-xs text-corp-text-muted uppercase tracking-wide mb-2 block">Очікувана дата повернення *</label>
+                <input 
+                  className="corp-input"
                   type="date"
                   value={formData.expected_return_date}
                   onChange={(e) => setFormData({...formData, expected_return_date: e.target.value})}
@@ -468,8 +469,9 @@ const CreateBatchModal = ({ onClose, onSuccess }) => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1">Вартість послуги</label>
-                <Input 
+                <label className="text-xs text-corp-text-muted uppercase tracking-wide mb-2 block">Вартість послуги</label>
+                <input 
+                  className="corp-input"
                   type="number"
                   step="0.01"
                   value={formData.cost}
@@ -480,9 +482,9 @@ const CreateBatchModal = ({ onClose, onSuccess }) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Примітки</label>
+              <label className="text-xs text-corp-text-muted uppercase tracking-wide mb-2 block">Примітки</label>
               <textarea 
-                className="w-full border rounded p-2"
+                className="corp-input"
                 rows="2"
                 value={formData.notes}
                 onChange={(e) => setFormData({...formData, notes: e.target.value})}
@@ -492,8 +494,9 @@ const CreateBatchModal = ({ onClose, onSuccess }) => {
 
             {/* Пошук товарів */}
             <div>
-              <label className="block text-sm font-medium mb-1">Додати товари *</label>
-              <Input 
+              <label className="text-xs text-corp-text-muted uppercase tracking-wide mb-2 block">Додати товари *</label>
+              <input 
+                className="corp-input"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -503,15 +506,15 @@ const CreateBatchModal = ({ onClose, onSuccess }) => {
               />
               
               {searchResults.length > 0 && (
-                <div className="border rounded mt-1 max-h-40 overflow-y-auto">
+                <div className="border border-corp-border rounded-corp-sm mt-2 max-h-40 overflow-y-auto bg-white">
                   {searchResults.map(product => (
                     <div 
                       key={product.product_id}
-                      className="p-2 hover:bg-gray-100 cursor-pointer"
+                      className="p-3 hover:bg-corp-bg-light cursor-pointer transition-colors border-b border-corp-border-light last:border-b-0"
                       onClick={() => addItem(product)}
                     >
-                      <p className="font-medium text-sm">{product.name}</p>
-                      <p className="text-xs text-gray-600">{product.sku}</p>
+                      <p className="font-medium text-sm text-corp-text-dark">{product.name}</p>
+                      <p className="text-xs text-corp-text-muted">{product.sku}</p>
                     </div>
                   ))}
                 </div>
@@ -520,16 +523,17 @@ const CreateBatchModal = ({ onClose, onSuccess }) => {
 
             {/* Список доданих товарів */}
             {items.length > 0 && (
-              <div className="border rounded p-3">
-                <p className="font-medium mb-2">Додані товари ({items.length}):</p>
+              <div className="corp-card-flat">
+                <p className="text-xs text-corp-text-muted uppercase tracking-wide mb-3">Додані товари ({items.length}):</p>
                 <div className="space-y-2">
                   {items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                    <div key={idx} className="flex justify-between items-center bg-corp-bg-card p-3 rounded-corp-sm border border-corp-border-light">
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{item.product_name}</p>
-                        <p className="text-xs text-gray-600">{item.sku}</p>
+                        <p className="font-medium text-sm text-corp-text-dark">{item.product_name}</p>
+                        <p className="text-xs text-corp-text-muted">{item.sku}</p>
                       </div>
-                      <Input 
+                      <input 
+                        className="corp-input w-20 mr-2"
                         type="number"
                         min="1"
                         value={item.quantity}
@@ -538,30 +542,29 @@ const CreateBatchModal = ({ onClose, onSuccess }) => {
                           newItems[idx].quantity = parseInt(e.target.value) || 1;
                           setItems(newItems);
                         }}
-                        className="w-20 mr-2"
                       />
-                      <Button 
+                      <button 
                         type="button"
-                        variant="ghost"
-                        size="sm"
+                        className="corp-btn corp-btn-secondary p-2"
                         onClick={() => setItems(items.filter((_, i) => i !== idx))}
                       >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
+                        <Trash2 className="w-4 h-4 text-corp-error" />
+                      </button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            <div className="flex gap-2 pt-4">
-              <Button type="submit" disabled={loading} className="flex-1">
+            <div className="flex gap-3 pt-4">
+              <button type="submit" disabled={loading} className="corp-btn corp-btn-primary flex-1">
                 {loading ? 'Створення...' : 'Створити партію'}
-              </Button>
-              <Button type="button" variant="outline" onClick={onClose}>Скасувати</Button>
+              </button>
+              <button type="button" className="corp-btn corp-btn-secondary" onClick={onClose}>
+                Скасувати
+              </button>
             </div>
           </form>
-        </div>
       </div>
     </div>
   );

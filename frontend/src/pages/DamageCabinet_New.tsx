@@ -623,8 +623,8 @@ function MainTab({
           <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-corp-text-muted">Список кейсів</div>
             <div className="max-h-[360px] divide-y divide-slate-100 overflow-auto text-[11px]">
-              {filtered.map((c) => {
-                const sum = (c.lines || []).reduce((s, l) => s + l.total, 0)
+              {filtered.map((c: DamageCase) => {
+                const sum = (c.lines || []).reduce((s: number, l: DamageLine) => s + l.total, 0)
                 const fromDeposit = Math.min(c.depositHold, sum)
                 const extra = Math.max(0, sum - c.depositHold)
                 return (

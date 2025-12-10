@@ -263,45 +263,19 @@ export default function ManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-corp-bg-page font-montserrat">
-      {/* Corporate Header */}
-      <header className="corp-header sticky top-0 z-30">
-        <div className="mx-auto max-w-7xl flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-corp-primary grid place-content-center text-white font-bold text-sm">RH</div>
-            <div>
-              <h1 className="text-lg font-semibold text-corp-text-dark">Rental Hub</h1>
-              <p className="text-xs text-corp-text-muted">Кабінет менеджера</p>
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <div className="flex items-center gap-2 px-3 py-2 bg-corp-bg-light rounded-corp border border-corp-border">
-              <div className="h-8 w-8 rounded-full bg-corp-gold grid place-content-center text-white text-xs font-semibold">
-                {user?.email?.[0]?.toUpperCase() || 'U'}
-              </div>
-              <div className="text-sm">
-                <div className="font-medium text-corp-text-dark">{user?.email || 'Користувач'}</div>
-                <div className="text-xs text-corp-text-muted">{user?.role === 'admin' ? 'Адміністратор' : user?.role === 'manager' ? 'Менеджер' : 'Реквізитор'}</div>
-              </div>
-            </div>
-            <button 
-              className="corp-btn corp-btn-primary"
-              onClick={() => navigate('/order/new')}
-            >
-              + Нове замовлення
-            </button>
-            <button 
-              className="corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white"
-              onClick={() => {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                navigate('/login');
-              }}
-            >
-              Вихід
-            </button>
-          </div>
+      <CorporateHeader cabinetName="Кабінет менеджера" />
+      
+      {/* Quick Actions Bar */}
+      <div className="bg-white border-b border-corp-border">
+        <div className="mx-auto max-w-7xl px-6 py-3">
+          <button 
+            className="corp-btn corp-btn-primary"
+            onClick={() => navigate('/order/new')}
+          >
+            + Нове замовлення
+          </button>
         </div>
-      </header>
+      </div>
 
       {/* Filters */}
       <section className="mx-auto max-w-7xl px-6 py-4">

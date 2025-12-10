@@ -132,17 +132,6 @@ export default function DamageCabinetPro({
   const [showSendModal, setShowSendModal] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('main')
 
-  useEffect(() => {
-    loadCases()
-  }, [])
-
-  // Load items when case is selected
-  useEffect(() => {
-    if (selectedId) {
-      loadCaseDetails(selectedId)
-    }
-  }, [selectedId])
-
   const loadCases = async () => {
     try {
       setLoading(true)

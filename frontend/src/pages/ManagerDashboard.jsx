@@ -816,11 +816,11 @@ function OrderCardWithArchive({id,name,phone,rent,deposit,badge,onClick,order,on
 function NavCard({title, description, onClick}:{title:string, description:string, onClick:()=>void}){
   return (
     <article 
-      className="rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      className="corp-card cursor-pointer hover:border-corp-primary group"
       onClick={onClick}
     >
-      <h3 className="text-lg font-semibold mb-2">{title}</h3>
-      <p className="text-sm text-slate-500">{description}</p>
+      <h3 className="text-lg font-semibold text-corp-text-dark mb-2 group-hover:text-corp-primary transition-colors">{title}</h3>
+      <p className="text-sm text-corp-text-muted group-hover:text-corp-text-main transition-colors">{description}</p>
     </article>
   );
 }

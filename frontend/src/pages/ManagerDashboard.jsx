@@ -637,18 +637,18 @@ function Column({title, subtitle, children, tone}:{title:string,subtitle?:string
 
 function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,onCancelByClient}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:'new'|'issue'|'return'|'ready'|'issued'|'awaiting'|'processing'|'preparation',onClick:()=>void,order?:any,onDateUpdate?:(orderId:string,issueDate:string,returnDate:string)=>void,onCancelByClient?:(orderId:number,orderNumber:string)=>void}){
   const map:any={
-    new:{label:'Нове',bg:'bg-slate-100 text-slate-700'},
-    awaiting:{label:'Очікує',bg:'bg-yellow-100 text-yellow-800'},
-    processing:{label:'В роботі',bg:'bg-blue-100 text-blue-800'},
-    preparation:{label:'На комплектації',bg:'bg-purple-100 text-purple-800'},
-    issue:{label:'Видача',bg:'bg-emerald-100 text-emerald-800'},
-    return:{label:'Повернення',bg:'bg-amber-100 text-amber-800'},
-    ready:{label:'Готово',bg:'bg-emerald-100 text-emerald-800'},
-    issued:{label:'Видано',bg:'bg-green-100 text-green-800'}
+    new:{label:'Нове',css:'corp-badge corp-badge-info'},
+    awaiting:{label:'Очікує',css:'corp-badge corp-badge-warning'},
+    processing:{label:'В роботі',css:'corp-badge corp-badge-primary'},
+    preparation:{label:'На комплектації',css:'corp-badge corp-badge-gold'},
+    issue:{label:'Видача',css:'corp-badge corp-badge-success'},
+    return:{label:'Повернення',css:'corp-badge corp-badge-warning'},
+    ready:{label:'Готово',css:'corp-badge corp-badge-success'},
+    issued:{label:'Видано',css:'corp-badge corp-badge-success'}
   }
   
   // Fallback якщо badge невідомий
-  const badgeInfo = map[badge] || {label: badge, bg: 'bg-slate-100 text-slate-700'}
+  const badgeInfo = map[badge] || {label: badge, css: 'corp-badge corp-badge-neutral'}
   
   const [isEditing, setIsEditing] = React.useState(false);
   const [issueDate, setIssueDate] = React.useState(order?.issue_date || '');
@@ -679,16 +679,16 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
   };
   
   return (
-    <article className="rounded-2xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow" onClick={isEditing ? undefined : onClick}>
+    <article className="corp-card-flat cursor-pointer hover:shadow-corp transition-shadow" onClick={isEditing ? undefined : onClick}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${badgeInfo.bg}`}>{badgeInfo.label}</span>
-          <span className="text-slate-500 text-sm">#{id}</span>
+          <span className={badgeInfo.css}>{badgeInfo.label}</span>
+          <span className="text-corp-text-muted text-sm">#{id}</span>
         </div>
         {badge === 'new' && onDateUpdate && !isEditing && (
           <button 
             onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-            className="text-xs text-slate-500 hover:text-slate-700"
+            className="text-xs text-corp-primary hover:text-corp-primary-hover font-medium"
             title="Редагувати дати"
           >
             📅 Змінити дати
@@ -696,30 +696,30 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
         )}
       </div>
       <div className="text-sm mb-3">
-        <div className="font-medium">{name}</div>
-        <div className="text-slate-500">{phone}</div>
+        <div className="font-medium text-corp-text-dark">{name}</div>
+        <div className="text-corp-text-muted">{phone}</div>
       </div>
       
       {/* Дати (з можливістю редагування для нових замовлень) */}
       {badge === 'new' && isEditing ? (
-        <div className="mb-3 space-y-2 bg-blue-50 p-3 rounded-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 space-y-2 bg-corp-bg-light p-3 rounded-corp" onClick={(e) => e.stopPropagation()}>
           <div>
-            <label className="text-xs text-slate-600 block mb-1">Дата видачі</label>
+            <label className="text-xs text-corp-text-muted uppercase tracking-wide block mb-1">Дата видачі</label>
             <input 
               type="date" 
               value={issueDate}
               onChange={(e) => setIssueDate(e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-slate-300 rounded"
+              className="corp-input text-sm"
               disabled={isSaving}
             />
           </div>
           <div>
-            <label className="text-xs text-slate-600 block mb-1">Дата повернення</label>
+            <label className="text-xs text-corp-text-muted uppercase tracking-wide block mb-1">Дата повернення</label>
             <input 
               type="date" 
               value={returnDate}
               onChange={(e) => setReturnDate(e.target.value)}
-              className="w-full px-2 py-1 text-sm border border-slate-300 rounded"
+              className="corp-input text-sm"
               disabled={isSaving}
             />
           </div>
@@ -727,14 +727,14 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
             <button 
               onClick={handleSaveDates}
               disabled={isSaving}
-              className="flex-1 px-3 py-1 text-xs bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50"
+              className="flex-1 corp-btn corp-btn-primary text-xs disabled:opacity-50"
             >
               {isSaving ? '⏳ Збереження...' : '✓ Зберегти'}
             </button>
             <button 
               onClick={handleCancel}
               disabled={isSaving}
-              className="px-3 py-1 text-xs bg-slate-200 rounded hover:bg-slate-300 disabled:opacity-50"
+              className="corp-btn corp-btn-secondary text-xs disabled:opacity-50"
             >
               ✕ Скасувати
             </button>
@@ -742,7 +742,7 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
         </div>
       ) : (
         order?.issue_date || order?.return_date ? (
-          <div className="mb-3 text-xs text-slate-600 bg-slate-50 p-2 rounded-xl">
+          <div className="mb-3 text-xs text-corp-text-main bg-corp-bg-card p-2 rounded-corp-sm">
             {order.issue_date && <div>📅 Видача: {order.issue_date}</div>}
             {order.return_date && <div>📅 Повернення: {order.return_date}</div>}
           </div>

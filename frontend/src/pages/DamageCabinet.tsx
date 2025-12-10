@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { getImageUrl } from '../utils/imageHelper'
+import CorporateHeader from '../components/CorporateHeader'
 
-const API_URL = process.env.REACT_APP_API_URL
+const API_URL = process.env.REACT_APP_BACKEND_URL
 
 /*************** helpers ***************/
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')

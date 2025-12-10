@@ -20,18 +20,23 @@ def test_order_creation_with_user():
     try:
         order_number = f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
+        # Отримати наступний order_id
+        result = db.execute(text("SELECT COALESCE(MAX(order_id), 0) + 1 as next_id FROM orders"))
+        order_id = result.scalar()
+        
         # Створити замовлення
-        result = db.execute(text("""
+        db.execute(text("""
             INSERT INTO orders (
-                order_number, customer_name, customer_phone, customer_email,
+                order_id, order_number, customer_name, customer_phone, customer_email,
                 rental_start_date, rental_end_date, status, total_price, deposit_amount,
                 notes, created_by_id, created_at
             ) VALUES (
-                :order_number, :customer_name, :customer_phone, :customer_email,
+                :order_id, :order_number, :customer_name, :customer_phone, :customer_email,
                 :rental_start_date, :rental_end_date, 'pending', :total_price, :deposit_amount,
                 :notes, :created_by_id, NOW()
             )
         """), {
+            "order_id": order_id,
             "order_number": order_number,
             "customer_name": "Test User Tracking",
             "customer_phone": "+380501234567",
@@ -44,8 +49,6 @@ def test_order_creation_with_user():
             "created_by_id": test_user_id
         })
         
-        # Отримати ID замовлення
-        order_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar()
         db.commit()
         
         # Перевірити created_by_id

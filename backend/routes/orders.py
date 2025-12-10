@@ -753,18 +753,23 @@ async def create_order(
     # Generate order number
     order_number = f"ORD-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
     
+    # Get next order_id (since table doesn't have AUTO_INCREMENT)
+    result = db.execute(text("SELECT COALESCE(MAX(order_id), 0) + 1 as next_id FROM orders"))
+    order_id = result.scalar()
+    
     # Insert order with user tracking
     db.execute(text("""
         INSERT INTO orders (
-            order_number, customer_name, customer_phone, customer_email,
+            order_id, order_number, customer_name, customer_phone, customer_email,
             rental_start_date, rental_end_date, status, total_price, deposit_amount,
             notes, created_by_id, created_at
         ) VALUES (
-            :order_number, :customer_name, :customer_phone, :customer_email,
+            :order_id, :order_number, :customer_name, :customer_phone, :customer_email,
             :rental_start_date, :rental_end_date, 'pending', :total_price, :deposit_amount,
             :notes, :created_by_id, NOW()
         )
     """), {
+        "order_id": order_id,
         "order_number": order_number,
         "customer_name": order.customer_name,
         "customer_phone": order.customer_phone,
@@ -776,10 +781,6 @@ async def create_order(
         "notes": order.notes,
         "created_by_id": current_user["id"]
     })
-    
-    # Get inserted ID
-    result = db.execute(text("SELECT LAST_INSERT_ID()"))
-    order_id = result.scalar()
     
     # Insert items
     for item in order.items:

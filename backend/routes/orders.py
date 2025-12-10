@@ -1110,6 +1110,7 @@ async def cancel_order_by_client(
 @router.post("/{order_id}/archive")
 async def archive_order(
     order_id: int,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -1134,15 +1135,16 @@ async def archive_order(
     db.execute(text("""
         UPDATE orders 
         SET is_archived = 1,
+            updated_by_id = :updated_by_id,
             updated_at = NOW()
         WHERE order_id = :order_id
-    """), {"order_id": order_id})
+    """), {"order_id": order_id, "updated_by_id": current_user["id"]})
     
     # Залогувати
     db.execute(text("""
         INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', 'Manager', NOW())
-    """), {"order_id": order_id})
+        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', :created_by, NOW())
+    """), {"order_id": order_id, "created_by": current_user["name"]})
     
     db.commit()
     

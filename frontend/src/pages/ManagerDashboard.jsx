@@ -283,23 +283,10 @@ export default function ManagerDashboard() {
               </div>
             </div>
             <button 
-              className="corp-btn corp-btn-secondary"
-              onClick={() => navigate('/settings')}
-              title="Налаштування"
-            >
-              ⚙️
-            </button>
-            <button 
-              className="corp-btn corp-btn-gold"
-              onClick={handleReload}
-            >
-              🔄
-            </button>
-            <button 
               className="corp-btn corp-btn-primary"
               onClick={() => navigate('/order/new')}
             >
-              + Новий замовлення
+              + Нове замовлення
             </button>
             <button 
               className="corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white"

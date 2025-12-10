@@ -32,12 +32,12 @@ const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0)
 /************* UI components *************/
 function Badge({ children, tone = 'slate' }) {
   const map = {
-    slate: 'bg-slate-100 text-slate-700 border-slate-200',
-    green: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    blue: 'bg-sky-100 text-sky-700 border-sky-200',
-    violet: 'bg-violet-100 text-violet-700 border-violet-200',
-    amber: 'bg-amber-100 text-amber-800 border-amber-200',
-    red: 'bg-rose-100 text-rose-700 border-rose-200',
+    slate: 'corp-badge corp-badge-neutral',
+    green: 'corp-badge corp-badge-success',
+    blue: 'corp-badge corp-badge-info',
+    violet: 'corp-badge corp-badge-primary',
+    amber: 'corp-badge corp-badge-warning',
+    red: 'corp-badge corp-badge-error',
   }
 
   return (

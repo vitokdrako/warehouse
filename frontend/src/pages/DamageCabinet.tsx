@@ -849,6 +849,7 @@ export default function DamageCabinetPro({
           </div>
         </div>
       )}
+    </div>
   )
 }
 

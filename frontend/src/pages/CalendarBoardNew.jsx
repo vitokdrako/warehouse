@@ -196,15 +196,15 @@ function DayView({ date, items, onOpen, onUpdateItem }) {
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3 text-[11px]">
+    <div className="rounded-xl md:rounded-2xl border border-slate-200 bg-white p-2 md:p-3 text-[10px] md:text-[11px] overflow-x-auto">
       {/* Header */}
-      <div className="mb-2 grid grid-cols-[120px,1fr] items-end gap-2 border-b border-slate-100 pb-2">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-corp-text-muted">Потік</div>
-        <div className="grid grid-cols-3 gap-1">
+      <div className="mb-2 grid grid-cols-[70px,1fr] md:grid-cols-[120px,1fr] items-end gap-1 md:gap-2 border-b border-slate-100 pb-2 min-w-[350px]">
+        <div className="text-[8px] md:text-[10px] font-semibold uppercase tracking-wide text-corp-text-muted">Потік</div>
+        <div className="grid grid-cols-3 gap-0.5 md:gap-1">
           {Object.values(timeSlots).map((slot) => (
-            <div key={slot.label} className="text-center text-[10px]">
+            <div key={slot.label} className="text-center text-[8px] md:text-[10px]">
               <div className="font-medium text-corp-text-dark">{slot.label}</div>
-              <div className="text-corp-text-muted">{slot.hours}</div>
+              <div className="text-corp-text-muted hidden md:block">{slot.hours}</div>
             </div>
           ))}
         </div>
@@ -214,13 +214,13 @@ function DayView({ date, items, onOpen, onUpdateItem }) {
       {Object.keys(laneMeta).map((lane) => {
         const laneInfo = laneMeta[lane]
         return (
-          <div key={lane} className="grid grid-cols-[120px,1fr] gap-2 border-b border-slate-50 py-2 last:border-b-0">
-            <div className="flex flex-col gap-1">
-              <span className={cls('text-[11px] font-semibold', laneInfo.color)}>{laneInfo.label}</span>
-              <span className="text-[10px] text-slate-400">{laneInfo.desc}</span>
+          <div key={lane} className="grid grid-cols-[70px,1fr] md:grid-cols-[120px,1fr] gap-1 md:gap-2 border-b border-slate-50 py-1.5 md:py-2 last:border-b-0 min-w-[350px]">
+            <div className="flex flex-col gap-0.5 md:gap-1">
+              <span className={cls('text-[9px] md:text-[11px] font-semibold', laneInfo.color)}>{laneInfo.label}</span>
+              <span className="text-[8px] md:text-[10px] text-slate-400 hidden md:block">{laneInfo.desc}</span>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1 md:gap-2">
               {Object.keys(timeSlots).map((timeSlot) => {
                 const slotItems = items.filter(
                   (i) => i.date === dateKey && i.lane === lane && i.timeSlot === timeSlot

@@ -860,7 +860,6 @@ function SendToClientModal({
           </button>
         </div>
       </div>
-      </div>
     </div>
   )
 }

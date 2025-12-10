@@ -197,7 +197,7 @@ export default function DamageCabinetPro({
 
   const filtered = useMemo(() => {
     return cases.filter((c) => {
-      const linesText = (c.lines || []).map((l) => l.productName + l.sku + l.category + (l.note || '')).join(' ')
+      const linesText = (c.lines || []).map((l: DamageLine) => l.productName + l.sku + l.category + (l.note || '')).join(' ')
       const text = (
         c.id +
         (c.orderId || '') +

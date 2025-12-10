@@ -88,32 +88,32 @@ const OrderNotes = ({ orderId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-corp-primary"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold flex items-center gap-2">
-        <MessageSquare className="w-5 h-5" />
+      <h3 className="text-lg font-semibold text-corp-text-dark flex items-center gap-2">
+        <MessageSquare className="w-5 h-5 text-corp-primary" />
         Внутрішні нотатки ({notes.length})
       </h3>
 
       {/* Add note form */}
-      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+      <div className="bg-corp-bg-light rounded-corp p-4 border border-corp-border">
         <textarea
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
           placeholder="Додати внутрішню нотатку (не видима клієнту)..."
-          className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="corp-input resize-none"
           rows="3"
         />
-        <div className="flex justify-end mt-2">
+        <div className="flex justify-end mt-3">
           <button
             onClick={handleAddNote}
             disabled={!newNote.trim() || submitting}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="corp-btn corp-btn-primary flex items-center gap-2 disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
             {submitting ? 'Додаємо...' : 'Додати нотатку'}
@@ -123,26 +123,26 @@ const OrderNotes = ({ orderId }) => {
 
       {/* Notes list */}
       {notes.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Нотатки відсутні</p>
+        <div className="corp-empty">
+          <MessageSquare className="corp-empty-icon mx-auto" />
+          <p className="corp-empty-text">Нотатки відсутні</p>
         </div>
       ) : (
         <div className="space-y-3">
           {notes.map((note) => (
-            <div key={note.id} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <div key={note.id} className="corp-card-flat">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <p className="text-gray-900 whitespace-pre-wrap">{note.note}</p>
-                  <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
-                    <span className="font-medium">{note.created_by_name}</span>
+                  <p className="text-corp-text-dark whitespace-pre-wrap">{note.note}</p>
+                  <div className="flex items-center gap-3 mt-2 text-sm text-corp-text-muted">
+                    <span className="font-medium text-corp-primary">{note.created_by_name}</span>
                     <span>•</span>
                     <span>{formatDate(note.created_at)}</span>
                   </div>
                 </div>
                 <button
                   onClick={() => handleDeleteNote(note.id)}
-                  className="text-gray-400 hover:text-red-600 transition-colors"
+                  className="text-corp-text-muted hover:text-corp-error transition-colors"
                   title="Видалити нотатку"
                 >
                   <Trash2 className="w-4 h-4" />

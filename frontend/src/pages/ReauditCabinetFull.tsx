@@ -1590,13 +1590,14 @@ export default function ReauditCabinetFull({
                   Скасувати
                 </button>
                 <button type="submit" className="rounded-full px-3 py-1 text-[11px] font-medium transition bg-emerald-600 text-white hover:bg-emerald-700">
-                  ✅ Створити і переоблікувати
+                  Створити і переоблікувати
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

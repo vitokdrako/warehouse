@@ -14,6 +14,7 @@ import os
 
 from database_rentalhub import get_rh_db
 from utils.image_helper import normalize_image_url
+from utils.user_tracking_helper import get_current_user_dependency
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 

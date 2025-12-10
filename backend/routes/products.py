@@ -327,3 +327,53 @@ async def get_recounts_batch(
             detail=f"Помилка: {str(e)}"
         )
 
+
+
+@router.get("/search")
+async def search_products(
+    q: str,
+    category: str = None,
+    limit: int = 20,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Пошук товарів за назвою, SKU або категорією
+    """
+    try:
+        sql = """
+            SELECT 
+                product_id, sku, name, category_name, quantity, price
+            FROM products
+            WHERE (name LIKE :query OR sku LIKE :query)
+        """
+        
+        params = {"query": f"%{q}%"}
+        
+        if category:
+            sql += " AND category_name = :category"
+            params["category"] = category
+        
+        sql += " ORDER BY name LIMIT :limit"
+        params["limit"] = limit
+        
+        result = db.execute(text(sql), params)
+        
+        products = []
+        for row in result:
+            products.append({
+                "product_id": row[0],
+                "sku": row[1],
+                "name": row[2],
+                "category_name": row[3],
+                "quantity": row[4] or 0,
+                "price": float(row[5]) if row[5] else 0.0
+            })
+        
+        return products
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка пошуку: {str(e)}"
+        )
+

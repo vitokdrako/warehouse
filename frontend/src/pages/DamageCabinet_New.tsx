@@ -944,6 +944,10 @@ function MainTab({
           }}
         />
       )}
+      </>
+          )}
+        </div>
+      </div>
     </>
   )
 }

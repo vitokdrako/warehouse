@@ -158,7 +158,7 @@ export default function ImageUpload({ sku, currentImageUrl, onUploadSuccess }) {
         ) : (
           <div className="text-center">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400"
               stroke="currentColor"
               fill="none"
               viewBox="0 0 48 48"
@@ -171,7 +171,9 @@ export default function ImageUpload({ sku, currentImageUrl, onUploadSuccess }) {
               />
             </svg>
             <p className="mt-2 text-sm text-gray-600">
-              <span className="font-semibold">Клікніть для вибору</span> або перетягніть фото
+              <span className="font-semibold hidden sm:inline">Клікніть для вибору</span>
+              <span className="font-semibold sm:hidden">📸 Зробити фото</span>
+              <span className="hidden sm:inline"> або перетягніть фото</span>
             </p>
             <p className="text-xs text-gray-500 mt-1">
               JPG, PNG, WEBP до 10MB

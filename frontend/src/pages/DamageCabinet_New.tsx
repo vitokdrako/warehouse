@@ -136,40 +136,36 @@ export default function DamageCabinetPro({
     try {
       setLoading(true)
       
-      // Завантажити всі пошкодження з product_damage_history
-      const response = await fetch(`${API_URL}/api/product-damage-history/recent?limit=200`)
+      // Завантажити всі кейси з damages
+      const response = await fetch(`${API_URL}/api/damages/cases`)
       const data = await response.json()
       
-      console.log('[DamageCabinet] Loaded damage history:', data.length)
+      console.log('[DamageCabinet] Loaded cases:', data)
       
-      // Трансформувати дані з product_damage_history
+      // Перевірка чи data це масив
+      if (!Array.isArray(data)) {
+        console.error('[DamageCabinet] Response is not an array:', data)
+        setCases([])
+        return
+      }
+      
+      // Дані вже в правильному форматі
       const transformedData = data.map((item: any) => ({
-        id: String(item.id),
-        orderId: item.order_id ? String(item.order_id) : null,
-        clientName: item.product_name || 'Без назви',
-        eventName: item.order_number 
-          ? `Замовлення ${item.order_number}` 
-          : (item.note || 'Кейс пошкодження'),
-        status: 'closed', // Всі історичні пошкодження вважаються закритими
-        severity: item.severity === 'high' ? 'critical' : 
-                  item.severity === 'medium' ? 'medium' : 'low',
-        source: item.stage === 'return' ? 'return' : 
-                item.stage === 'audit' ? 'reaudit' : 'other',
-        depositHold: 0,
-        lines: [{
-          id: String(item.id),
-          productName: item.product_name,
-          sku: item.sku,
-          category: item.category || 'Unknown',
-          qty: 1,
-          note: item.note || '',
-          amountPerUnit: item.fee || 0,
-          total: item.fee || 0,
-          image: item.product_image || item.photo_url  // Пріоритет: фото товару, потім фото пошкодження
-        }],
+        id: item.id,
+        orderId: item.order_id,
+        orderNumber: item.order_number,
+        clientName: item.customer_name || 'Без імені',
+        clientPhone: item.customer_phone,
+        eventName: item.event_name || item.order_number || 'Кейс пошкодження',
+        status: item.case_status || 'open',
+        severity: item.severity || 'minor',
+        source: item.source || 'other',
+        financeStatus: item.finance_status,
+        depositHold: item.withheld_total || 0,
+        lines: [], // Завантажуються окремо
         createdAt: item.created_at,
         createdBy: item.created_by || 'Unknown',
-        returnDate: item.created_at
+        returnDate: item.return_date
       }))
       
       setCases(transformedData)

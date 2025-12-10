@@ -863,10 +863,10 @@ async def accept_order(
     db.execute(text("""
         INSERT INTO issue_cards (
             id, order_id, order_number, status, items, 
-            prepared_by, created_at, updated_at
+            prepared_by, created_by_id, created_at, updated_at
         ) VALUES (
             :id, :order_id, :order_number, 'preparation', :items, 
-            :prepared_by, NOW(), NOW()
+            :prepared_by, :created_by_id, NOW(), NOW()
         )
         ON DUPLICATE KEY UPDATE
             items = :items, 
@@ -877,7 +877,8 @@ async def accept_order(
         "order_id": order_id,
         "order_number": order_number,
         "items": json.dumps(items),
-        "prepared_by": data.get('accepted_by', 'system')
+        "prepared_by": current_user["name"],
+        "created_by_id": current_user["id"]
     })
     
     # Log lifecycle
@@ -887,7 +888,7 @@ async def accept_order(
     """), {
         "order_id": order_id,
         "notes": f"Замовлення прийнято",
-        "created_by": data.get('accepted_by', 'system')
+        "created_by": current_user["name"]
     })
     
     # Створити фінансові транзакції автоматично

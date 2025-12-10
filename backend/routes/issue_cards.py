@@ -230,6 +230,7 @@ async def create_issue_card(card: IssueCardCreate, db: Session = Depends(get_rh_
 async def update_issue_card(
     card_id: str,
     updates: IssueCardUpdate,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """Update issue card"""

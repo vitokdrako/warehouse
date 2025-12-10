@@ -214,6 +214,17 @@ export default function DamageCabinetPro({
     }
   }
 
+  useEffect(() => {
+    loadCases()
+  }, [])
+
+  // Load items when case is selected
+  useEffect(() => {
+    if (selectedId) {
+      loadCaseDetails(selectedId)
+    }
+  }, [selectedId])
+
   const selected = useMemo(() => {
     if (!cases.length) return null
     if (!selectedId) return cases[0]

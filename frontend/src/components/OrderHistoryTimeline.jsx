@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, User, Package, FileText, DollarSign, AlertCircle, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+const API_URL = process.env.REACT_APP_API_URL;
 
 const OrderHistoryTimeline = ({ orderId }) => {
   const [history, setHistory] = useState([]);
@@ -18,7 +18,7 @@ const OrderHistoryTimeline = ({ orderId }) => {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${BACKEND_URL}/api/user-tracking/orders/${orderId}/history`);
+      const response = await axios.get(`${API_URL}/api/user-tracking/orders/${orderId}/history`);
       setHistory(response.data.history || []);
     } catch (err) {
       console.error('Error fetching order history:', err);

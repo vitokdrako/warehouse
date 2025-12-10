@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, Trash2, Send } from 'lucide-react';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+const API_URL = process.env.REACT_APP_API_URL;
 
 const OrderNotes = ({ orderId }) => {
   const [notes, setNotes] = useState([]);
@@ -19,7 +19,7 @@ const OrderNotes = ({ orderId }) => {
   const fetchNotes = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${BACKEND_URL}/api/user-tracking/orders/${orderId}/notes`);
+      const response = await axios.get(`${API_URL}/api/user-tracking/orders/${orderId}/notes`);
       setNotes(response.data.notes || []);
     } catch (err) {
       console.error('Error fetching notes:', err);
@@ -34,7 +34,7 @@ const OrderNotes = ({ orderId }) => {
     try {
       setSubmitting(true);
       await axios.post(
-        `${BACKEND_URL}/api/user-tracking/orders/${orderId}/notes`,
+        `${API_URL}/api/user-tracking/orders/${orderId}/notes`,
         { note: newNote },
         {
           headers: {
@@ -59,7 +59,7 @@ const OrderNotes = ({ orderId }) => {
 
     try {
       await axios.delete(
-        `${BACKEND_URL}/api/user-tracking/notes/${noteId}`,
+        `${API_URL}/api/user-tracking/notes/${noteId}`,
         {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`

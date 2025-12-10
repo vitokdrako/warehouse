@@ -84,7 +84,7 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
   const [statusFilter, setStatusFilter] = useState<'all' | AuditStatus>('all')
   const [stats, setStats] = useState({ total: 0, ok: 0, minor: 0, crit: 0, lost: 0, overdueCnt: 0 })
 
-  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
+  const API_URL = process.env.REACT_APP_API_URL
 
   const loadItems = async () => {
     setLoading(true)
@@ -93,7 +93,7 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
       if (q) params.append('q', q)
       if (statusFilter !== 'all') params.append('status', statusFilter)
       
-      const response = await fetch(`${BACKEND_URL}/api/audit/items?${params}`)
+      const response = await fetch(`${API_URL}/api/audit/items?${params}`)
       const data = await response.json()
       
       if (data.items && Array.isArray(data.items)) {
@@ -111,7 +111,7 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
 
   const loadStats = async () => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/audit/stats`)
+      const response = await fetch(`${API_URL}/api/audit/stats`)
       const data = await response.json()
       setStats(data)
     } catch (error) {
@@ -134,7 +134,7 @@ export default function ReauditCabinet({ onBackToDashboard }: { onBackToDashboar
     
     try {
       // Використовуємо НОВИЙ робочий endpoint
-      const response = await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/mark-as-audited`, {
+      const response = await fetch(`${API_URL}/api/audit/items/${item.id}/mark-as-audited`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

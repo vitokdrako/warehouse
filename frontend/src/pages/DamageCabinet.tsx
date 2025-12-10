@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { getImageUrl } from '../utils/imageHelper'
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
+const API_URL = process.env.REACT_APP_API_URL
 
 /*************** helpers ***************/
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
@@ -137,7 +137,7 @@ export default function DamageCabinetPro({
       setLoading(true)
       
       // Завантажити всі пошкодження з product_damage_history
-      const response = await fetch(`${BACKEND_URL}/api/product-damage-history/recent?limit=200`)
+      const response = await fetch(`${API_URL}/api/product-damage-history/recent?limit=200`)
       const data = await response.json()
       
       console.log('[DamageCabinet] Loaded damage history:', data.length)
@@ -219,7 +219,7 @@ export default function DamageCabinetPro({
 
   const updateCaseStatus = async (id: string, status: DamageStatus) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/damages/cases/${id}/status`, {
+      const response = await fetch(`${API_URL}/api/damages/cases/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -251,7 +251,7 @@ export default function DamageCabinetPro({
     const amountPerUnit = Math.max(line.minAmount || 0, value)
     
     try {
-      const response = await fetch(`${BACKEND_URL}/api/damages/cases/${caseId}/lines/${lineId}`, {
+      const response = await fetch(`${API_URL}/api/damages/cases/${caseId}/lines/${lineId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount_per_unit: amountPerUnit })
@@ -289,7 +289,7 @@ export default function DamageCabinetPro({
     const qty = Math.max(1, Number(qtyStr) || 1)
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/damages/cases/${caseId}/lines`, {
+      const response = await fetch(`${API_URL}/api/damages/cases/${caseId}/lines`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -674,7 +674,7 @@ export default function DamageCabinetPro({
                     }
                     
                     try {
-                      const response = await fetch(`${BACKEND_URL}/api/damage-cases/${selected.id}`, {
+                      const response = await fetch(`${API_URL}/api/damage-cases/${selected.id}`, {
                         method: 'DELETE'
                       })
                       const result = await response.json()
@@ -859,7 +859,7 @@ function CreateTaskFromDamageModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch(`${BACKEND_URL}/api/tasks`, {
+      const response = await fetch(`${API_URL}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

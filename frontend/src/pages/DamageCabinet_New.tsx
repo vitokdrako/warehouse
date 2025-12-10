@@ -453,6 +453,7 @@ export default function DamageCabinetPro({
         {activeTab === 'main' && (
           <MainTab
             cases={cases}
+            setCases={setCases}
             loading={loading}
             filtered={filtered}
             selected={selected}

@@ -208,40 +208,41 @@ const LaundryCabinet = () => {
               <p className="corp-empty-text">Створіть нову партію для відправки текстилю в хімчистку</p>
             </div>
           ) : (
-          batches.map(batch => (
-            <Card key={batch.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
+            batches.map(batch => (
+              <div key={batch.id} className="corp-card">
+                {/* Header партії */}
+                <div className="flex justify-between items-start mb-4">
                   <div>
-                    <CardTitle className="text-xl">{batch.batch_number}</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <h3 className="text-lg font-semibold text-corp-text-dark">{batch.batch_number}</h3>
+                    <p className="text-sm text-corp-text-muted mt-1">
                       🏢 {batch.laundry_company}
                     </p>
                   </div>
                   <div className="text-right">
                     {getStatusBadge(batch.status)}
-                    <p className="text-sm text-gray-600 mt-2">
-                      {batch.cost > 0 && `${batch.cost} ₴`}
-                    </p>
+                    {batch.cost > 0 && (
+                      <p className="text-sm font-medium text-corp-gold mt-2">
+                        {batch.cost.toFixed(2)} ₴
+                      </p>
+                    )}
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {/* Інформація про партію */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 border-b border-corp-border-light">
                   <div>
-                    <p className="text-sm text-gray-600">📅 Відправлено</p>
-                    <p className="font-medium">{new Date(batch.sent_date).toLocaleDateString('uk-UA')}</p>
+                    <p className="text-xs text-corp-text-muted uppercase tracking-wide mb-1">📅 Відправлено</p>
+                    <p className="font-medium text-corp-text-dark">{new Date(batch.sent_date).toLocaleDateString('uk-UA')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">📆 Очікується</p>
-                    <p className="font-medium">{new Date(batch.expected_return_date).toLocaleDateString('uk-UA')}</p>
+                    <p className="text-xs text-corp-text-muted uppercase tracking-wide mb-1">📆 Очікується</p>
+                    <p className="font-medium text-corp-text-dark">{new Date(batch.expected_return_date).toLocaleDateString('uk-UA')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">📦 Товарів</p>
-                    <p className="font-medium">{batch.returned_items} / {batch.total_items}</p>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <p className="text-xs text-corp-text-muted uppercase tracking-wide mb-1">📦 Товарів</p>
+                    <p className="font-medium text-corp-text-dark mb-2">{batch.returned_items} / {batch.total_items}</p>
+                    <div className="corp-progress">
                       <div 
-                        className="bg-blue-600 h-2 rounded-full" 
+                        className="corp-progress-bar" 
                         style={{ width: `${(batch.returned_items / batch.total_items) * 100}%` }}
                       ></div>
                     </div>
@@ -249,29 +250,33 @@ const LaundryCabinet = () => {
                 </div>
 
                 {batch.notes && (
-                  <div className="bg-gray-50 p-3 rounded mb-4">
-                    <p className="text-sm text-gray-700">{batch.notes}</p>
+                  <div className="bg-corp-bg-light p-3 rounded-corp-sm mb-4">
+                    <p className="text-sm text-corp-text-main">{batch.notes}</p>
                   </div>
                 )}
 
                 {/* Товари в партії */}
                 {batch.items && batch.items.length > 0 && (
                   <div className="mt-4">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Товари:</p>
+                    <p className="text-xs text-corp-text-muted uppercase tracking-wide mb-2">Товари:</p>
                     <div className="space-y-2">
                       {batch.items.map(item => (
-                        <div key={item.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                          <div>
-                            <p className="font-medium text-sm">{item.product_name}</p>
-                            <p className="text-xs text-gray-600">{item.sku} • {item.category}</p>
+                        <div key={item.id} className="flex justify-between items-center bg-corp-bg-card p-3 rounded-corp-sm border border-corp-border-light">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm text-corp-text-dark">{item.product_name}</p>
+                            <p className="text-xs text-corp-text-muted">{item.sku} • {item.category}</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium">{item.returned_quantity} / {item.quantity} од.</p>
+                          <div className="text-right ml-4">
+                            <p className="text-sm font-semibold text-corp-text-dark">{item.returned_quantity} / {item.quantity} од.</p>
                             {item.condition_after && (
-                              <Badge variant="outline" className="text-xs mt-1">
+                              <span className={`inline-flex items-center gap-1 text-xs mt-1 ${
+                                item.condition_after === 'clean' ? 'corp-badge corp-badge-success' : 
+                                item.condition_after === 'damaged' ? 'corp-badge corp-badge-warning' : 
+                                'corp-badge corp-badge-neutral'
+                              }`}>
                                 {item.condition_after === 'clean' ? '✨ Чисто' : 
                                  item.condition_after === 'damaged' ? '⚠️ Пошкоджено' : item.condition_after}
-                              </Badge>
+                              </span>
                             )}
                           </div>
                         </div>

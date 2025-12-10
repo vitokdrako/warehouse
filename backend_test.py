@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Return Workflow with Automatic Task Creation
-Testing the complete return workflow as described in the Ukrainian review request.
+Backend Testing Script for Damage Cabinet (Кабінет Шкоди)
+Testing the damage cabinet functionality as described in the Ukrainian review request.
 """
 
 import requests
@@ -12,7 +12,10 @@ from typing import Dict, List, Any
 
 # Configuration
 BASE_URL = "https://action-audit.preview.emergentagent.com/api"
-TEST_ORDER_ID = 6996  # Default test order from review request
+TEST_CREDENTIALS = {
+    "email": "vitokdrako@gmail.com",
+    "password": "test123"
+}
 
 class BackendTester:
     def __init__(self, base_url: str):

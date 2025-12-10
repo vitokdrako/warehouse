@@ -542,17 +542,9 @@ function MainTab({
   setShowSendModal,
   onNavigateToTasks,
 }: any) {
-  if (loading) {
-    return <div className="p-6 text-sm text-corp-text-main">Завантаження...</div>
-  }
-
-  if (!selected) {
-    return <div className="p-6 text-sm text-corp-text-main">Немає кейсів шкоди.</div>
-  }
-
-  const linesTotal = (selected.lines || []).reduce((s: number, l: any) => s + l.total, 0)
-  const chargeFromDeposit = Math.min(selected.depositHold, linesTotal)
-  const extraPayment = Math.max(0, linesTotal - selected.depositHold)
+  const linesTotal = selected ? (selected.lines || []).reduce((s: number, l: any) => s + l.total, 0) : 0
+  const chargeFromDeposit = selected ? Math.min(selected.depositHold, linesTotal) : 0
+  const extraPayment = selected ? Math.max(0, linesTotal - selected.depositHold) : 0
 
   return (
     <>

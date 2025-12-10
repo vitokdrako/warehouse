@@ -816,6 +816,7 @@ async def create_order(
 async def accept_order(
     order_id: int,
     data: dict,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -840,12 +841,20 @@ async def accept_order(
             detail=f"Cannot accept order in status: {current_status}"
         )
     
-    # Update order status
+    # Update order status with user tracking
     db.execute(text("""
         UPDATE orders 
-        SET status = 'processing'
+        SET status = 'processing',
+            confirmed_by_id = :confirmed_by_id,
+            confirmed_at = NOW(),
+            updated_by_id = :updated_by_id,
+            updated_at = NOW()
         WHERE order_id = :order_id
-    """), {"order_id": order_id})
+    """), {
+        "order_id": order_id,
+        "confirmed_by_id": current_user["id"],
+        "updated_by_id": current_user["id"]
+    })
     
     # Create issue card
     issue_card_id = f"issue_{order_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"

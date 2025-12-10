@@ -21,17 +21,20 @@ const MobileLayout = ({ children, currentPage = 'dashboard' }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
       {/* Mobile header */}
-      <div className="lg:hidden sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden corp-header">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-corp-bg-light"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-6 h-6 text-corp-text-dark" /> : <Menu className="w-6 h-6 text-corp-text-dark" />}
           </button>
-          <h1 className="text-lg font-semibold">FarForRent</h1>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-full bg-corp-primary grid place-content-center text-white font-bold text-sm">R</div>
+            <h1 className="text-lg font-semibold text-corp-text-dark">Rental Hub</h1>
+          </div>
         </div>
       </div>
 
@@ -53,10 +56,10 @@ const MobileLayout = ({ children, currentPage = 'dashboard' }) => {
                   <a
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-3 rounded-corp transition-colors ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-corp-primary text-white'
+                        : 'text-corp-text-dark hover:bg-corp-bg-light'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -82,7 +85,7 @@ const MobileLayout = ({ children, currentPage = 'dashboard' }) => {
  */
 export const MobileCard = ({ children, className = '' }) => {
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6 ${className}`}>
+    <div className={`corp-card ${className}`}>
       {children}
     </div>
   );
@@ -118,11 +121,11 @@ export const MobileButton = ({
   className = '' 
 }) => {
   const variants = {
-    primary: 'bg-blue-600 hover:bg-blue-700 text-white',
-    secondary: 'bg-gray-600 hover:bg-gray-700 text-white',
-    success: 'bg-green-600 hover:bg-green-700 text-white',
-    danger: 'bg-red-600 hover:bg-red-700 text-white',
-    outline: 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-300',
+    primary: 'corp-btn corp-btn-primary',
+    secondary: 'corp-btn corp-btn-secondary',
+    success: 'corp-btn corp-btn-primary',
+    danger: 'corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white',
+    outline: 'corp-btn corp-btn-outline',
   };
 
   return (

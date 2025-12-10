@@ -905,7 +905,7 @@ function MainTab({
         <SendToClientModal
           damageCase={selected}
           onClose={() => setShowSendModal(false)}
-          onSuccess={(method) => {
+          onSuccess={(method: 'email' | 'callbell') => {
             setShowSendModal(false)
             updateCaseStatus(selected.id, 'awaiting_client')
             alert(`✅ Кейс відправлено клієнту через ${method === 'email' ? 'Email' : 'CallBell'}`)
@@ -925,7 +925,7 @@ function MainTab({
           }}
         />
       )}
-    </div>
+    </>
   )
 }
 

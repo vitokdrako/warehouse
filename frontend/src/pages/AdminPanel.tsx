@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
+const API_URL = process.env.REACT_APP_BACKEND_URL
 
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 
@@ -78,7 +78,7 @@ export default function AdminPanel() {
   const loadUsers = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${BACKEND_URL}/api/admin/users`, {
+      const response = await fetch(`${API_URL}/api/admin/users`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }
@@ -97,7 +97,7 @@ export default function AdminPanel() {
   const loadCategories = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${BACKEND_URL}/api/admin/categories`, {
+      const response = await fetch(`${API_URL}/api/admin/categories`, {
         headers: {
           'Authorization': `Bearer ${getToken()}`
         }

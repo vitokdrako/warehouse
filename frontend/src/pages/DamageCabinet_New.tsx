@@ -509,6 +509,7 @@ export default function DamageCabinetPro({
 /*************** Main Tab Component ***************/
 function MainTab({
   cases,
+  setCases,
   loading,
   filtered,
   selected,

@@ -251,6 +251,19 @@ async def update_issue_card(
     if updates.status is not None:
         set_clauses.append("status = :status")
         params['status'] = updates.status
+        
+        # Track user based on status change
+        if updates.status == 'ready':
+            # Товар підготовлено
+            set_clauses.append("prepared_by_id = :prepared_by_id")
+            set_clauses.append("prepared_at = NOW()")
+            params['prepared_by_id'] = current_user["id"]
+        elif updates.status == 'issued':
+            # Товар видано клієнту
+            set_clauses.append("issued_by_id = :issued_by_id")
+            set_clauses.append("issued_at = NOW()")
+            params['issued_by_id'] = current_user["id"]
+    
     if updates.items is not None:
         set_clauses.append("items = :items")
         params['items'] = json.dumps(updates.items)

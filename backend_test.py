@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://wash-wizard-27.preview.emergentagent.com/api"
+BASE_URL = "https://rentalhub-20.preview.emergentagent.com/api"
 TEST_ORDER_ID = 6996  # Default test order from review request
 
 class BackendTester:

@@ -64,7 +64,7 @@ APACHE (.htaccess):
 ═══════════════════════════════════════════════════════════════
 
 Поточний build frontend зроблений для:
-    REACT_APP_BACKEND_URL=https://wash-wizard-27.preview.emergentagent.com
+    REACT_APP_BACKEND_URL=https://rentalhub-20.preview.emergentagent.com
 
 Якщо ваш backend на ІНШОМУ URL (наприклад, api.farforrent.com.ua):
 

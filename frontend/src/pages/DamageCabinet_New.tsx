@@ -448,6 +448,107 @@ export default function DamageCabinetPro({
         </div>
       </div>
 
+      {/* Main Content */}
+      <div className="mx-auto max-w-7xl px-6 pb-6">
+        {activeTab === 'main' && (
+          <MainTab
+            cases={cases}
+            loading={loading}
+            filtered={filtered}
+            selected={selected}
+            selectedId={selectedId}
+            setSelectedId={setSelectedId}
+            q={q}
+            setQ={setQ}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            severityFilter={severityFilter}
+            setSeverityFilter={setSeverityFilter}
+            sourceFilter={sourceFilter}
+            setSourceFilter={setSourceFilter}
+            counters={counters}
+            loadCases={loadCases}
+            updateCaseStatus={updateCaseStatus}
+            editLineAmount={editLineAmount}
+            addLine={addLine}
+            openInFinance={openInFinance}
+            openInReaudit={openInReaudit}
+            showTaskModal={showTaskModal}
+            setShowTaskModal={setShowTaskModal}
+            showSendModal={showSendModal}
+            setShowSendModal={setShowSendModal}
+            onNavigateToTasks={onNavigateToTasks}
+          />
+        )}
+        {activeTab === 'washing' && (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">🧼</div>
+            <h3 className="text-xl font-semibold text-corp-text-dark mb-2">Мийка</h3>
+            <p className="text-corp-text-muted">Функціонал в розробці</p>
+          </div>
+        )}
+        {activeTab === 'restoration' && (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">🔧</div>
+            <h3 className="text-xl font-semibold text-corp-text-dark mb-2">Реставрація</h3>
+            <p className="text-corp-text-muted">Функціонал в розробці</p>
+          </div>
+        )}
+        {activeTab === 'dry-cleaning' && (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-4">👔</div>
+            <h3 className="text-xl font-semibold text-corp-text-dark mb-2">Хімчистка</h3>
+            <p className="text-corp-text-muted">Функціонал в розробці</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/*************** Main Tab Component ***************/
+function MainTab({
+  cases,
+  loading,
+  filtered,
+  selected,
+  selectedId,
+  setSelectedId,
+  q,
+  setQ,
+  statusFilter,
+  setStatusFilter,
+  severityFilter,
+  setSeverityFilter,
+  sourceFilter,
+  setSourceFilter,
+  counters,
+  loadCases,
+  updateCaseStatus,
+  editLineAmount,
+  addLine,
+  openInFinance,
+  openInReaudit,
+  showTaskModal,
+  setShowTaskModal,
+  showSendModal,
+  setShowSendModal,
+  onNavigateToTasks,
+}: any) {
+  if (loading) {
+    return <div className="p-6 text-sm text-corp-text-main">Завантаження...</div>
+  }
+
+  if (!selected) {
+    return <div className="p-6 text-sm text-corp-text-main">Немає кейсів шкоди.</div>
+  }
+
+  const linesTotal = (selected.lines || []).reduce((s: number, l: any) => s + l.total, 0)
+  const chargeFromDeposit = Math.min(selected.depositHold, linesTotal)
+  const extraPayment = Math.max(0, linesTotal - selected.depositHold)
+
+  return (
+    <>
       {/* filters & list */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.25fr),minmax(0,1.75fr)]">
         <div className="space-y-3 text-[11px]">

@@ -743,7 +743,7 @@ function MainTab({
                       </tr>
                     </thead>
                     <tbody>
-                      {(selected.lines || []).map((l) => (
+                      {(selected.lines || []).map((l: DamageLine) => (
                         <tr key={l.id} className="border-t border-slate-100 hover:bg-slate-50/60">
                           <td className="px-2 py-1 align-top">
                             {l.image ? (

@@ -178,6 +178,7 @@ export default function DamageCabinetPro({
       if (transformedData.length > 0 && !selectedId) {
         setSelectedId(transformedData[0].id)
       }
+      setLoading(false)
     } catch (error) {
       console.error('[DamageCabinet] Error loading cases:', error)
       setCases([])

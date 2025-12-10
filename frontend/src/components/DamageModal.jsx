@@ -241,23 +241,25 @@ export default function DamageModal({
             </div>
           </div>
 
-          {/* Photo & Note */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-slate-500 mb-1">Фото</div>
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e)=>{
-                  const f = e.target.files?.[0]
-                  setFormData(prev=>({...prev, photoName: f? f.name : ''}))
-                }} 
-                className="w-full rounded-xl border px-3 py-2 text-sm" 
-              />
-              {formData.photoName && (
-                <div className="mt-1 text-xs text-slate-500">Обрано: {formData.photoName}</div>
-              )}
-            </div>
+          {/* Mobile Photo Capture */}
+          <div className="mb-4">
+            <MobilePhotoCapture
+              onPhotosCapture={(capturedPhotos) => {
+                setPhotos(capturedPhotos)
+                setFormData(prev => ({
+                  ...prev, 
+                  photoName: capturedPhotos.length > 0 ? capturedPhotos[0].name : ''
+                }))
+              }}
+              maxPhotos={3}
+              label="Фото пошкодження"
+              allowMultiple={true}
+              compact={false}
+            />
+          </div>
+
+          {/* Note */}
+          <div className="grid grid-cols-1 gap-3">
             <div>
               <div className="text-slate-500 mb-1">Нотатка</div>
               <input 

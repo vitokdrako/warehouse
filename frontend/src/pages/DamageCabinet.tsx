@@ -340,33 +340,25 @@ export default function DamageCabinetPro({
   const extraPayment = Math.max(0, linesTotal - selected.depositHold)
 
   return (
-    <div className="mx-auto max-w-7xl p-6 space-y-5">
-      {/* header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {onBackToDashboard && (
-            <button
-              onClick={onBackToDashboard}
-              className="text-corp-text-main hover:text-corp-text-dark transition"
-            >
-              ← Назад
-            </button>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет шкоди PRO</h1>
-            <p className="text-sm text-corp-text-muted">
-              Усі кейси пошкоджень: від повернення, переобліку та каталогу. Розрахунок збитків і зв&apos;язок з фінансами.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
+      <CorporateHeader 
+        cabinetName="Кабінет шкоди" 
+        showBackButton={!!onBackToDashboard}
+        onBackClick={onBackToDashboard}
+      />
+      
+      <div className="mx-auto max-w-7xl px-6 py-4">
+        {/* Stats Badges */}
+        <div className="flex flex-wrap items-center gap-2 text-[11px] mb-4">
           <Badge tone="amber">Відкриті кейси: {counters.open}</Badge>
           <Badge tone="amber">Чекаємо клієнта: {counters.awaitingClient}</Badge>
           <Badge tone="amber">Чекаємо оплату: {counters.awaitingPayment}</Badge>
           <Badge tone="blue">В реставрації: {counters.inRepair}</Badge>
           <Badge tone="green">Закрито: {counters.closed}</Badge>
         </div>
-      </header>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-6 pb-6 space-y-5">
 
       {/* filters & list */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.25fr),minmax(0,1.75fr)]">

@@ -1,12 +1,7 @@
 /* eslint-disable */
 /**
- * Damage Cabinet - Кабінет Шкоди (Новий з вкладками)
- * 
- * Вкладки:
- * 1. Головна - Картки шкоди згруповані по замовленнях
- * 2. Мийка - Товари на мийці
- * 3. Реставрація - Товари в реставрації
- * 4. Хімчистка - Інтеграція з laundry
+ * Damage Cabinet - Кабінет Шкоди
+ * Корпоративний стиль, без емодзі
  */
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -41,6 +36,7 @@ interface DamageItem {
   photo_url: string | null
   note: string | null
   processing_status: string
+  processing_type?: string
   sent_to_processing_at: string | null
   returned_from_processing_at: string | null
   processing_notes: string | null
@@ -57,13 +53,11 @@ export default function DamageCabinetNew() {
   const [activeTab, setActiveTab] = useState<TabType>('main')
   const [loading, setLoading] = useState(false)
   
-  // Data states
   const [damageCases, setDamageCases] = useState<DamageCase[]>([])
   const [washItems, setWashItems] = useState<DamageItem[]>([])
   const [restorationItems, setRestorationItems] = useState<DamageItem[]>([])
   const [laundryItems, setLaundryItems] = useState<DamageItem[]>([])
   
-  // Selected case for details
   const [selectedCase, setSelectedCase] = useState<number | null>(null)
   const [caseDetails, setCaseDetails] = useState<DamageItem[]>([])
 
@@ -109,12 +103,12 @@ export default function DamageCabinetNew() {
       await axios.post(`${API_URL}/api/product-damage-history/${damageId}/send-to-wash`, {
         notes: 'Відправлено на мийку'
       })
-      alert('✅ Товар відправлено на мийку')
+      alert('Товар відправлено на мийку')
       loadData()
       if (selectedCase) loadCaseDetails(selectedCase)
     } catch (error) {
       console.error('Помилка:', error)
-      alert('❌ Помилка відправлення')
+      alert('Помилка відправлення')
     }
   }
 
@@ -123,12 +117,12 @@ export default function DamageCabinetNew() {
       await axios.post(`${API_URL}/api/product-damage-history/${damageId}/send-to-restoration`, {
         notes: 'Відправлено в реставрацію'
       })
-      alert('✅ Товар відправлено в реставрацію')
+      alert('Товар відправлено в реставрацію')
       loadData()
       if (selectedCase) loadCaseDetails(selectedCase)
     } catch (error) {
       console.error('Помилка:', error)
-      alert('❌ Помилка відправлення')
+      alert('Помилка відправлення')
     }
   }
 
@@ -141,12 +135,12 @@ export default function DamageCabinetNew() {
         laundry_company: company,
         notes: 'Відправлено в хімчистку'
       })
-      alert('✅ Товар відправлено в хімчистку')
+      alert('Товар відправлено в хімчистку')
       loadData()
       if (selectedCase) loadCaseDetails(selectedCase)
     } catch (error) {
       console.error('Помилка:', error)
-      alert('❌ Помилка відправлення')
+      alert('Помилка відправлення')
     }
   }
 
@@ -155,11 +149,11 @@ export default function DamageCabinetNew() {
       await axios.post(`${API_URL}/api/product-damage-history/${damageId}/complete-processing`, {
         notes: 'Повернуто на склад'
       })
-      alert('✅ Обробку завершено')
+      alert('Обробку завершено')
       loadData()
     } catch (error) {
       console.error('Помилка:', error)
-      alert('❌ Помилка')
+      alert('Помилка')
     }
   }
 
@@ -171,131 +165,135 @@ export default function DamageCabinetNew() {
       await axios.post(`${API_URL}/api/product-damage-history/${damageId}/mark-failed`, {
         notes: reason
       })
-      alert('⚠️ Позначено як невдалу обробку')
+      alert('Позначено як невдалу обробку')
       loadData()
     } catch (error) {
       console.error('Помилка:', error)
-      alert('❌ Помилка')
+      alert('Помилка')
     }
   }
 
   return (
-    <MobileLayout currentPage="🛡️ Кабінет Шкоди">
-      <div className="container mx-auto p-4 md:p-6 max-w-7xl">
-        
+    <MobileLayout currentPage="Кабінет Шкоди">
+      <div className="min-h-screen bg-corp-bg-page font-montserrat">
+        {/* Header */}
+        <header className="corp-header sticky top-0 z-30">
+          <div className="mx-auto max-w-7xl flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-corp-primary grid place-content-center text-white font-bold text-sm">ШК</div>
+              <div>
+                <h1 className="text-lg font-semibold text-corp-text-dark">Кабінет Шкоди</h1>
+                <p className="text-xs text-corp-text-muted">Управління пошкодженнями</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/manager-dashboard')}
+              className="ml-auto corp-button-secondary"
+            >
+              Назад
+            </button>
+          </div>
+        </header>
+
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          <TabButton 
-            active={activeTab === 'main'} 
-            onClick={() => setActiveTab('main')}
-            icon="📋"
-          >
-            Головна
-          </TabButton>
-          <TabButton 
-            active={activeTab === 'wash'} 
-            onClick={() => setActiveTab('wash')}
-            icon="🧼"
-          >
-            Мийка
-          </TabButton>
-          <TabButton 
-            active={activeTab === 'restoration'} 
-            onClick={() => setActiveTab('restoration')}
-            icon="🔨"
-          >
-            Реставрація
-          </TabButton>
-          <TabButton 
-            active={activeTab === 'laundry'} 
-            onClick={() => setActiveTab('laundry')}
-            icon="🧺"
-          >
-            Хімчистка
-          </TabButton>
-        </div>
+        <section className="mx-auto max-w-7xl px-6 py-4">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <TabButton active={activeTab === 'main'} onClick={() => setActiveTab('main')}>
+              Головна
+            </TabButton>
+            <TabButton active={activeTab === 'wash'} onClick={() => setActiveTab('wash')}>
+              Мийка
+            </TabButton>
+            <TabButton active={activeTab === 'restoration'} onClick={() => setActiveTab('restoration')}>
+              Реставрація
+            </TabButton>
+            <TabButton active={activeTab === 'laundry'} onClick={() => setActiveTab('laundry')}>
+              Хімчистка
+            </TabButton>
+          </div>
+        </section>
 
         {/* Content */}
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">Завантаження...</div>
-        ) : (
-          <>
-            {activeTab === 'main' && (
-              <MainTab 
-                cases={damageCases} 
-                selectedCase={selectedCase}
-                caseDetails={caseDetails}
-                onSelectCase={loadCaseDetails}
-                onCloseDetails={() => setSelectedCase(null)}
-                onSendToWash={sendToWash}
-                onSendToRestoration={sendToRestoration}
-                onSendToLaundry={sendToLaundry}
-              />
-            )}
-            
-            {activeTab === 'wash' && (
-              <ProcessingTab 
-                items={washItems}
-                type="wash"
-                onComplete={completeProcessing}
-                onMarkFailed={markFailed}
-              />
-            )}
-            
-            {activeTab === 'restoration' && (
-              <ProcessingTab 
-                items={restorationItems}
-                type="restoration"
-                onComplete={completeProcessing}
-                onMarkFailed={markFailed}
-              />
-            )}
-            
-            {activeTab === 'laundry' && (
-              <LaundryTab 
-                items={laundryItems}
-                onComplete={completeProcessing}
-                onMarkFailed={markFailed}
-              />
-            )}
-          </>
-        )}
+        <main className="mx-auto max-w-7xl px-6 py-6">
+          {loading ? (
+            <div className="text-center py-12 text-gray-500">Завантаження...</div>
+          ) : (
+            <>
+              {activeTab === 'main' && (
+                <MainTab 
+                  cases={damageCases} 
+                  selectedCase={selectedCase}
+                  caseDetails={caseDetails}
+                  onSelectCase={loadCaseDetails}
+                  onCloseDetails={() => setSelectedCase(null)}
+                  onSendToWash={sendToWash}
+                  onSendToRestoration={sendToRestoration}
+                  onSendToLaundry={sendToLaundry}
+                />
+              )}
+              
+              {activeTab === 'wash' && (
+                <ProcessingTab 
+                  items={washItems}
+                  type="wash"
+                  onComplete={completeProcessing}
+                  onMarkFailed={markFailed}
+                />
+              )}
+              
+              {activeTab === 'restoration' && (
+                <ProcessingTab 
+                  items={restorationItems}
+                  type="restoration"
+                  onComplete={completeProcessing}
+                  onMarkFailed={markFailed}
+                />
+              )}
+              
+              {activeTab === 'laundry' && (
+                <LaundryTab 
+                  items={laundryItems}
+                  onComplete={completeProcessing}
+                  onMarkFailed={markFailed}
+                />
+              )}
+            </>
+          )}
+        </main>
       </div>
     </MobileLayout>
   )
 }
 
-// ============ TAB BUTTON ============
-function TabButton({ 
-  active, 
-  onClick, 
-  children, 
-  icon 
-}: { 
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-  icon: string
-}) {
+// ============ COMPONENTS ============
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       onClick={onClick}
       className={`
-        flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm
-        transition-all whitespace-nowrap
+        px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap
         ${active 
           ? 'bg-corp-primary text-white shadow-lg' 
           : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-corp-primary'
         }
       `}
     >
-      <span className="text-lg">{icon}</span>
       {children}
     </button>
   )
 }
 
-// ============ MAIN TAB (Damage Cases) ============
+function Kpi({ title, value, note }: { title: string; value: string; note?: string }) {
+  return (
+    <div className="rounded-2xl border border-corp-border bg-white p-4 shadow-sm hover:shadow-md transition-shadow">
+      <div className="mb-1 text-sm font-medium text-corp-text-muted">{title}</div>
+      <div className="mb-1 text-2xl font-bold text-corp-text-dark">{value}</div>
+      {note && <div className="text-xs text-corp-text-muted">{note}</div>}
+    </div>
+  )
+}
+
 function MainTab({ 
   cases, 
   selectedCase,
@@ -320,14 +318,14 @@ function MainTab({
       <div>
         <button 
           onClick={onCloseDetails}
-          className="mb-4 text-corp-primary hover:underline"
+          className="mb-4 corp-button-secondary"
         >
           ← Назад до списку
         </button>
         
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-2">Замовлення {caseDetails[0].order_number}</h2>
-          <div className="flex gap-4 text-sm text-gray-600">
+        <div className="rounded-2xl border border-corp-border bg-white p-6 shadow-lg mb-6">
+          <h2 className="text-2xl font-bold text-corp-text-dark mb-2">Замовлення {caseDetails[0].order_number}</h2>
+          <div className="flex gap-4 text-sm text-corp-text-muted">
             <span>Товарів: {caseDetails.length}</span>
             <span>Загальна сума: ₴{caseDetails.reduce((sum, item) => sum + item.fee, 0).toLocaleString()}</span>
           </div>
@@ -350,9 +348,9 @@ function MainTab({
 
   if (cases.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-6xl mb-4">🎉</div>
-        <div className="text-xl text-gray-600">Немає активних кейсів шкоди</div>
+      <div className="rounded-2xl border border-slate-200 p-12 text-center">
+        <div className="text-6xl mb-4 text-slate-300">✓</div>
+        <div className="text-xl text-corp-text-muted">Немає активних кейсів шкоди</div>
       </div>
     )
   }
@@ -370,21 +368,20 @@ function MainTab({
   )
 }
 
-// ============ DAMAGE CASE CARD ============
-function DamageCaseCard({ caseData, onClick }: { caseData: DamageCase, onClick: () => void }) {
+function DamageCaseCard({ caseData, onClick }: { caseData: DamageCase; onClick: () => void }) {
   return (
     <div 
       onClick={onClick}
-      className="bg-white rounded-xl shadow-lg p-5 hover:shadow-xl transition-all cursor-pointer border-2 border-transparent hover:border-corp-primary"
+      className="rounded-2xl border-2 border-corp-border bg-white p-5 shadow-sm hover:shadow-xl hover:border-corp-primary transition-all cursor-pointer"
     >
       <div className="flex justify-between items-start mb-3">
         <div>
-          <div className="text-xs text-gray-500 mb-1">Замовлення</div>
+          <div className="text-xs text-corp-text-muted mb-1">Замовлення</div>
           <div className="font-bold text-lg text-corp-primary">{caseData.order_number}</div>
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold text-red-600">₴{caseData.total_fee.toLocaleString()}</div>
-          <div className="text-xs text-gray-500">{caseData.items_count} поз.</div>
+          <div className="text-xs text-corp-text-muted">{caseData.items_count} поз.</div>
         </div>
       </div>
 
@@ -394,14 +391,13 @@ function DamageCaseCard({ caseData, onClick }: { caseData: DamageCase, onClick: 
         ))}
       </div>
 
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-corp-text-muted">
         {new Date(caseData.latest_damage).toLocaleString('uk-UA')}
       </div>
     </div>
   )
 }
 
-// ============ DAMAGE ITEM CARD (with actions) ============
 function DamageItemCard({ 
   item, 
   onSendToWash,
@@ -414,10 +410,10 @@ function DamageItemCard({
   onSendToLaundry: (id: string) => void
 }) {
   const imageUrl = item.product_image || item.photo_url || '/placeholder.png'
-  const processingType = (item as any).processing_type || 'none'
+  const processingType = item.processing_type || 'none'
   
   return (
-    <div className="bg-white rounded-xl shadow-lg p-5 border-2 border-gray-100">
+    <div className="rounded-2xl border-2 border-corp-border bg-white p-5 shadow-sm">
       <div className="flex gap-4 mb-4">
         <img 
           src={imageUrl}
@@ -426,11 +422,11 @@ function DamageItemCard({
         />
         
         <div className="flex-1">
-          <h3 className="font-bold text-lg mb-1">{item.product_name}</h3>
-          <div className="text-sm text-gray-600 mb-2">SKU: {item.sku}</div>
+          <h3 className="font-bold text-lg text-corp-text-dark mb-1">{item.product_name}</h3>
+          <div className="text-sm text-corp-text-muted mb-2">SKU: {item.sku}</div>
           <div className="flex items-center gap-2">
             <SeverityBadge severity={item.severity} />
-            <span className="text-sm text-gray-600">{item.damage_type}</span>
+            <span className="text-sm text-corp-text-muted">{item.damage_type}</span>
           </div>
         </div>
         
@@ -440,9 +436,9 @@ function DamageItemCard({
       </div>
 
       {item.note && (
-        <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
-          <div className="text-gray-600 mb-1">Примітка:</div>
-          <div>{item.note}</div>
+        <div className="bg-corp-bg-light rounded-lg p-3 mb-4 text-sm border border-corp-border">
+          <div className="text-corp-text-muted mb-1">Примітка:</div>
+          <div className="text-corp-text-dark">{item.note}</div>
         </div>
       )}
 
@@ -450,21 +446,21 @@ function DamageItemCard({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onSendToWash(item.id)}
-            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium text-sm"
+            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors"
           >
-            🧼 На мийку
+            На мийку
           </button>
           <button
             onClick={() => onSendToRestoration(item.id)}
-            className="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium text-sm"
+            className="flex-1 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors"
           >
-            🔨 Реставрація
+            Реставрація
           </button>
           <button
             onClick={() => onSendToLaundry(item.id)}
-            className="flex-1 bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-lg font-medium text-sm"
+            className="flex-1 bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-xl font-medium text-sm transition-colors"
           >
-            🧺 Хімчистка
+            Хімчистка
           </button>
         </div>
       )}
@@ -472,7 +468,7 @@ function DamageItemCard({
       {processingType !== 'none' && (
         <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
           <ProcessingBadge type={processingType} />
-          <div className="text-sm text-gray-600 mt-2">
+          <div className="text-sm text-corp-text-muted mt-2">
             Статус: {item.processing_status}
           </div>
         </div>
@@ -481,7 +477,6 @@ function DamageItemCard({
   )
 }
 
-// ============ PROCESSING TAB (Wash / Restoration) ============
 function ProcessingTab({ 
   items, 
   type,
@@ -493,7 +488,7 @@ function ProcessingTab({
   onComplete: (id: string) => void
   onMarkFailed: (id: string) => void
 }) {
-  const title = type === 'wash' ? '🧼 Мийка' : '🔨 Реставрація'
+  const title = type === 'wash' ? 'Мийка' : 'Реставрація'
   
   const pending = items.filter(i => i.processing_status === 'pending')
   const inProgress = items.filter(i => i.processing_status === 'in_progress')
@@ -502,18 +497,18 @@ function ProcessingTab({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-4">{title}</h2>
+      <div className="rounded-2xl border border-corp-border bg-white p-6 shadow-sm">
+        <h2 className="text-2xl font-bold text-corp-text-dark mb-4">{title}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="Очікують" value={pending.length} color="yellow" />
-          <StatCard label="В обробці" value={inProgress.length} color="blue" />
-          <StatCard label="Готово" value={completed.length} color="green" />
-          <StatCard label="Невдалі" value={failed.length} color="red" />
+          <Kpi title="Очікують" value={pending.length.toString()} />
+          <Kpi title="В обробці" value={inProgress.length.toString()} />
+          <Kpi title="Готово" value={completed.length.toString()} />
+          <Kpi title="Невдалі" value={failed.length.toString()} />
         </div>
       </div>
 
       {items.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">Немає товарів</div>
+        <div className="text-center py-12 text-corp-text-muted">Немає товарів</div>
       ) : (
         <div className="space-y-4">
           {items.map(item => (
@@ -530,7 +525,6 @@ function ProcessingTab({
   )
 }
 
-// ============ PROCESSING ITEM CARD ============
 function ProcessingItemCard({
   item,
   onComplete,
@@ -543,7 +537,7 @@ function ProcessingItemCard({
   const imageUrl = item.product_image || item.photo_url || '/placeholder.png'
   
   return (
-    <div className="bg-white rounded-xl shadow-lg p-5">
+    <div className="rounded-2xl border-2 border-corp-border bg-white p-5 shadow-sm">
       <div className="flex gap-4">
         <img 
           src={imageUrl}
@@ -552,22 +546,22 @@ function ProcessingItemCard({
         />
         
         <div className="flex-1">
-          <h3 className="font-bold text-lg mb-1">{item.product_name}</h3>
-          <div className="text-sm text-gray-600 mb-2">
+          <h3 className="font-bold text-lg text-corp-text-dark mb-1">{item.product_name}</h3>
+          <div className="text-sm text-corp-text-muted mb-2">
             SKU: {item.sku} | Замовлення: {item.order_number}
           </div>
           
           <div className="flex items-center gap-2 mb-3">
             <StatusBadge status={item.processing_status} />
             {item.sent_to_processing_at && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-corp-text-muted">
                 Відправлено: {new Date(item.sent_to_processing_at).toLocaleDateString('uk-UA')}
               </span>
             )}
           </div>
 
           {item.processing_notes && (
-            <div className="bg-gray-50 rounded p-2 text-sm mb-3">
+            <div className="bg-corp-bg-light rounded p-2 text-sm mb-3 border border-corp-border">
               {item.processing_notes}
             </div>
           )}
@@ -576,15 +570,15 @@ function ProcessingItemCard({
             <div className="flex gap-2">
               <button
                 onClick={() => onComplete(item.id)}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm"
+                className="corp-button-primary"
               >
-                ✅ Готово
+                Готово
               </button>
               <button
                 onClick={() => onMarkFailed(item.id)}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-sm transition-colors"
               >
-                ❌ Невдало
+                Невдало
               </button>
             </div>
           )}
@@ -594,7 +588,6 @@ function ProcessingItemCard({
   )
 }
 
-// ============ LAUNDRY TAB ============
 function LaundryTab({
   items,
   onComplete,
@@ -604,7 +597,6 @@ function LaundryTab({
   onComplete: (id: string) => void
   onMarkFailed: (id: string) => void
 }) {
-  // Group by batch
   const batches = items.reduce((acc, item) => {
     const batchId = item.laundry_batch_id || 'unknown'
     if (!acc[batchId]) {
@@ -616,25 +608,25 @@ function LaundryTab({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h2 className="text-2xl font-bold mb-2">🧺 Хімчистка</h2>
-        <div className="text-gray-600">Партій: {Object.keys(batches).length} | Товарів: {items.length}</div>
+      <div className="rounded-2xl border border-corp-border bg-white p-6 shadow-sm">
+        <h2 className="text-2xl font-bold text-corp-text-dark mb-2">Хімчистка</h2>
+        <div className="text-corp-text-muted">Партій: {Object.keys(batches).length} | Товарів: {items.length}</div>
       </div>
 
       {Object.entries(batches).map(([batchId, batchItems]) => (
-        <div key={batchId} className="bg-white rounded-xl shadow-lg p-6">
+        <div key={batchId} className="rounded-2xl border border-corp-border bg-white p-6 shadow-sm">
           <div className="mb-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold">Партія {batchId}</h3>
+              <h3 className="text-xl font-bold text-corp-text-dark">Партія {batchId}</h3>
               <div className="text-sm">
                 {batchItems[0]?.laundry_company && (
-                  <span className="bg-teal-100 text-teal-700 px-3 py-1 rounded-full">
+                  <span className="bg-teal-100 text-teal-700 px-3 py-1 rounded-full font-medium">
                     {batchItems[0].laundry_company}
                   </span>
                 )}
               </div>
             </div>
-            <div className="text-sm text-gray-600 mt-1">
+            <div className="text-sm text-corp-text-muted mt-1">
               Товарів: {batchItems.length}
             </div>
           </div>
@@ -655,13 +647,12 @@ function LaundryTab({
   )
 }
 
-// ============ HELPER COMPONENTS ============
 function ProcessingBadge({ type }: { type: string }) {
-  const config: Record<string, { label: string, color: string }> = {
-    wash: { label: '🧼 Мийка', color: 'bg-blue-100 text-blue-700' },
-    restoration: { label: '🔨 Реставрація', color: 'bg-purple-100 text-purple-700' },
-    laundry: { label: '🧺 Хімчистка', color: 'bg-teal-100 text-teal-700' },
-    none: { label: '💰 Штраф', color: 'bg-gray-100 text-gray-700' }
+  const config: Record<string, { label: string; color: string }> = {
+    wash: { label: 'Мийка', color: 'bg-blue-100 text-blue-700' },
+    restoration: { label: 'Реставрація', color: 'bg-purple-100 text-purple-700' },
+    laundry: { label: 'Хімчистка', color: 'bg-teal-100 text-teal-700' },
+    none: { label: 'Штраф', color: 'bg-gray-100 text-gray-700' }
   }
   
   const { label, color } = config[type] || config.none
@@ -691,7 +682,7 @@ function SeverityBadge({ severity }: { severity: string }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { label: string, color: string }> = {
+  const config: Record<string, { label: string; color: string }> = {
     pending: { label: 'Очікує', color: 'bg-yellow-100 text-yellow-700' },
     in_progress: { label: 'В обробці', color: 'bg-blue-100 text-blue-700' },
     completed: { label: 'Готово', color: 'bg-green-100 text-green-700' },
@@ -704,21 +695,5 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`text-xs px-2 py-1 rounded-full font-medium ${color}`}>
       {label}
     </span>
-  )
-}
-
-function StatCard({ label, value, color }: { label: string, value: number, color: string }) {
-  const colorClasses: Record<string, string> = {
-    yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
-    green: 'bg-green-50 border-green-200 text-green-700',
-    red: 'bg-red-50 border-red-200 text-red-700'
-  }
-  
-  return (
-    <div className={`border-2 rounded-lg p-4 ${colorClasses[color]}`}>
-      <div className="text-sm mb-1">{label}</div>
-      <div className="text-3xl font-bold">{value}</div>
-    </div>
   )
 }

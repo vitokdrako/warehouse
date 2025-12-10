@@ -915,9 +915,6 @@ function MainTab({
               </div>
             </div>
           </div>
-        </div>
-      </div>
-            </>
           )}
         </div>
       </div>

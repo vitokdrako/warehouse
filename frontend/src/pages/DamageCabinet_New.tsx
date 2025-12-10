@@ -918,6 +918,10 @@ function MainTab({
           </div>
         </div>
       </div>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Create Task Modal */}
       {showSendModal && selected && (
@@ -944,10 +948,7 @@ function MainTab({
           }}
         />
       )}
-            </>
-          )}
-        </div>
-      </>
+    </>
   )
 }
 

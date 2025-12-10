@@ -1,6 +1,7 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CorporateHeader from '../components/CorporateHeader';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 

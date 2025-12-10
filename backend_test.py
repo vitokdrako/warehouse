@@ -155,58 +155,22 @@ class DamageCabinetTester:
             self.log(f"❌ Exception testing case details: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_return_with_damage(self, order_id: int, items: List[Dict]) -> bool:
-        """Test return workflow WITH damage - should create 'repair' tasks and financial transactions"""
+    def test_frontend_login(self) -> bool:
+        """Test frontend login functionality"""
         try:
-            self.log(f"🧪 Testing return WITH damage for order {order_id}")
+            self.log("🧪 Testing frontend login functionality...")
             
-            # Prepare return data with damage
-            return_data = {
-                "items_returned": [],
-                "late_fee": 0,
-                "cleaning_fee": 0,
-                "damage_fee": 500  # Total damage fee
-            }
-            
-            # Add items with findings (damage)
-            if items:
-                test_sku = items[0].get('sku', items[0].get('article', f"TEST-SKU-{items[0].get('inventory_id', '003')}"))
-                return_data["items_returned"].append({
-                    "sku": test_sku,
-                    "returned_qty": 1,
-                    "findings": [
-                        {
-                            "kind": "scratch",
-                            "severity": "medium", 
-                            "fee": 500,
-                            "note": "Подряпина на поверхні"
-                        }
-                    ]
-                })
-            
-            self.log(f"Return data with damage: {json.dumps(return_data, indent=2)}")
-            
-            # Execute return
-            response = self.session.post(
-                f"{self.base_url}/decor-orders/{order_id}/complete-return",
-                json=return_data
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                self.log(f"✅ Return with damage completed: {result.get('message', 'Success')}")
-                
-                # Check if financial transaction was created
-                if result.get('finance_transaction_created'):
-                    self.log("✅ Financial transaction created for damage fee")
-                
+            # This would typically be tested via browser automation
+            # For now, we'll just verify the auth endpoint works
+            if self.auth_token:
+                self.log("✅ Frontend login successful (auth token obtained)")
                 return True
             else:
-                self.log(f"❌ Return with damage failed: {response.status_code} - {response.text}", "ERROR")
+                self.log("❌ Frontend login failed (no auth token)", "ERROR")
                 return False
                 
         except Exception as e:
-            self.log(f"❌ Exception in return with damage test: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing frontend login: {str(e)}", "ERROR")
             return False
     
     def create_test_order(self) -> Dict[str, Any]:

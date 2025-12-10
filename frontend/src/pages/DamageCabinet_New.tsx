@@ -134,6 +134,11 @@ export default function DamageCabinetPro({
 
   useEffect(() => {
     loadCases()
+    // Load user data
+    const userData = localStorage.getItem('user')
+    if (userData) {
+      setUser(JSON.parse(userData))
+    }
   }, [])
 
   const loadCases = async () => {

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { getImageUrl } from '../utils/imageHelper'
+import CorporateHeader from '../components/CorporateHeader'
 
 const API_URL = process.env.REACT_APP_BACKEND_URL
 

@@ -674,6 +674,26 @@ function MainTab({
 
         {/* right: details */}
         <div className="space-y-3 text-[11px]">
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
+              <div className="text-corp-text-muted">Завантаження...</div>
+            </div>
+          ) : !selected ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
+              <div className="text-4xl mb-3">📋</div>
+              <div className="text-lg font-semibold text-corp-text-dark mb-2">Немає кейсів шкоди</div>
+              <div className="text-corp-text-muted mb-4">
+                Кейси створюються автоматично при поверненні брудних або пошкоджених товарів
+              </div>
+              <button 
+                onClick={() => alert('Функція створення кейсу вручну (TODO)')}
+                className="corp-btn corp-btn-primary"
+              >
+                + Створити кейс вручну
+              </button>
+            </div>
+          ) : (
+            <>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>

@@ -116,8 +116,8 @@ export default function AdminPanel() {
   const saveUser = async () => {
     try {
       const url = editingUser
-        ? `${BACKEND_URL}/api/admin/users/${editingUser.user_id}`
-        : `${BACKEND_URL}/api/admin/users`
+        ? `${API_URL}/api/admin/users/${editingUser.user_id}`
+        : `${API_URL}/api/admin/users`
       
       const response = await fetch(url, {
         method: editingUser ? 'PUT' : 'POST',
@@ -147,7 +147,7 @@ export default function AdminPanel() {
     if (!window.confirm('Видалити користувача?')) return
     
     try {
-      const response = await fetch(`${BACKEND_URL}/api/admin/users/${userId}`, {
+      const response = await fetch(`${API_URL}/api/admin/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${getToken()}`

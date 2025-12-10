@@ -48,20 +48,15 @@ interface DamageCase {
 /*************** small UI ***************/
 function Badge({ tone = 'slate', children }: { tone?: string; children: React.ReactNode }) {
   const tones: Record<string, string> = {
-    slate: 'bg-slate-100 text-slate-700 border-slate-200',
-    green: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    blue: 'bg-sky-100 text-sky-700 border-sky-200',
-    amber: 'bg-amber-100 text-amber-800 border-amber-200',
-    red: 'bg-rose-100 text-rose-700 border-rose-200',
-    violet: 'bg-violet-100 text-violet-700 border-violet-200',
+    slate: 'corp-badge corp-badge-neutral',
+    green: 'corp-badge corp-badge-success',
+    blue: 'corp-badge corp-badge-info',
+    amber: 'corp-badge corp-badge-warning',
+    red: 'corp-badge corp-badge-error',
+    violet: 'corp-badge corp-badge-primary',
   }
   return (
-    <span
-      className={cls(
-        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]',
-        tones[tone] || tones.slate,
-      )}
-    >
+    <span className={tones[tone] || tones.slate}>
       {children}
     </span>
   )
@@ -77,17 +72,17 @@ function PillButton({
   tone?: 'slate' | 'green' | 'ghost' | 'red' | 'amber'
 }) {
   const tones: Record<string, string> = {
-    slate: 'bg-slate-900 text-white hover:bg-slate-800',
-    green: 'bg-emerald-600 text-white hover:bg-emerald-700',
-    red: 'bg-rose-600 text-white hover:bg-rose-700',
-    amber: 'bg-amber-500 text-slate-900 hover:bg-amber-600',
-    ghost: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50',
+    slate: 'corp-btn corp-btn-secondary',
+    green: 'corp-btn corp-btn-primary',
+    red: 'corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white',
+    amber: 'corp-btn corp-btn-gold',
+    ghost: 'corp-btn corp-btn-outline',
   }
   return (
     <button
       type="button"
       onClick={onClick}
-      className={cls('rounded-full px-3 py-1 text-[11px] font-medium transition', tones[tone])}
+      className={tones[tone]}
     >
       {children}
     </button>

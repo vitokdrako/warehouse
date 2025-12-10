@@ -258,19 +258,51 @@ class DamageCabinetTester:
             self.log(f"❌ Exception testing case selection: {str(e)}", "ERROR")
             return False
     
-    def check_backend_logs(self):
-        """Check backend logs for task creation messages"""
+    def verify_expected_behavior(self, cases_data: List[Dict]) -> Dict[str, Any]:
+        """Verify expected behavior according to review request"""
         try:
-            self.log("📋 Checking backend logs for task creation messages...")
+            self.log("🔍 Verifying expected behavior...")
             
-            # This would require access to supervisor logs
-            # For now, we'll just note that logs should be checked manually
-            self.log("ℹ️ Manual check required: Backend logs should show:")
-            self.log("   - '🚿 Товар XXX → мийка' for items without damage")
-            self.log("   - '🔧 Товар XXX → реставрація' for damaged items")
+            results = {
+                "cases_loaded": len(cases_data) > 0,
+                "cases_not_loading": False,
+                "case_details_available": False,
+                "items_display": False
+            }
+            
+            # Check if cases are loaded (not empty, not "Завантаження...")
+            if len(cases_data) > 0:
+                results["cases_loaded"] = True
+                self.log(f"✅ Cases loaded successfully ({len(cases_data)} cases)")
+                
+                # Test first case details
+                first_case = cases_data[0]
+                case_id = first_case.get('id')
+                
+                if case_id:
+                    details_result = self.test_damage_case_details(case_id)
+                    if details_result.get("success"):
+                        results["case_details_available"] = True
+                        items_count = details_result.get("items_count", 0)
+                        
+                        if items_count > 0:
+                            results["items_display"] = True
+                            self.log(f"✅ Case details display items correctly ({items_count} items)")
+                        else:
+                            self.log("⚠️ Case has no items to display", "WARNING")
+                    else:
+                        self.log("❌ Could not load case details", "ERROR")
+                else:
+                    self.log("❌ First case has no ID", "ERROR")
+            else:
+                results["cases_not_loading"] = True
+                self.log("❌ No cases loaded", "ERROR")
+            
+            return results
             
         except Exception as e:
-            self.log(f"❌ Exception checking logs: {str(e)}", "ERROR")
+            self.log(f"❌ Exception verifying expected behavior: {str(e)}", "ERROR")
+            return {"error": str(e)}
     
     def run_comprehensive_test(self):
         """Run the complete test scenario as described in the review request"""

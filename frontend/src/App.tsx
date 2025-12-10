@@ -8,7 +8,7 @@ import DashboardHome from './pages/DashboardHome';
 import Dashboard from './pages/Dashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
 import ReauditCabinetFull from './pages/ReauditCabinetFull';
-import DamageCabinet from './pages/DamageCabinet';
+import DamageCabinet from './pages/DamageCabinet_New';
 import TasksCabinet from './pages/TasksCabinet';
 import PackingCabinet from './pages/PackingCabinet';
 import AdminPanel from './pages/AdminPanel';

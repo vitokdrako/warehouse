@@ -136,6 +136,13 @@ export default function DamageCabinetPro({
     loadCases()
   }, [])
 
+  // Load items when case is selected
+  useEffect(() => {
+    if (selectedId) {
+      loadCaseDetails(selectedId)
+    }
+  }, [selectedId])
+
   const loadCases = async () => {
     try {
       setLoading(true)

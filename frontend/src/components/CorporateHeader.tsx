@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+interface CorporateHeaderProps {
+  cabinetName?: string;
+  showBackButton?: boolean;
+  onBackClick?: () => void;
+}
+
 export default function CorporateHeader({ 
   cabinetName = 'Кабінет менеджера', 
   showBackButton = false, 
-  onBackClick = undefined 
-}) {
-  const [user, setUser] = useState(null);
+  onBackClick
+}: CorporateHeaderProps) {
+  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {

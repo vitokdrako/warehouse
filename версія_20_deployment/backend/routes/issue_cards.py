@@ -202,7 +202,11 @@ async def get_issue_card(card_id: str, db: Session = Depends(get_rh_db)):
     return parse_issue_card(row, db)
 
 @router.post("")
-async def create_issue_card(card: IssueCardCreate, db: Session = Depends(get_rh_db)):
+async def create_issue_card(
+    card: IssueCardCreate,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
     """Create new issue card"""
     card_id = f"issue_{card.order_id}"
     items_json = json.dumps([item.dict() for item in card.items])
@@ -210,17 +214,18 @@ async def create_issue_card(card: IssueCardCreate, db: Session = Depends(get_rh_
     db.execute(text("""
         INSERT INTO issue_cards (
             id, order_id, order_number, status, items, preparation_notes,
-            created_at, updated_at
+            created_by_id, created_at, updated_at
         ) VALUES (
             :id, :order_id, :order_number, 'preparation', :items, :notes,
-            NOW(), NOW()
+            :created_by_id, NOW(), NOW()
         )
     """), {
         "id": card_id,
         "order_id": card.order_id,
         "order_number": card.order_number,
         "items": items_json,
-        "notes": card.preparation_notes
+        "notes": card.preparation_notes,
+        "created_by_id": current_user["id"]
     })
     
     db.commit()
@@ -246,6 +251,19 @@ async def update_issue_card(
     if updates.status is not None:
         set_clauses.append("status = :status")
         params['status'] = updates.status
+        
+        # Track user based on status change
+        if updates.status == 'ready':
+            # Товар підготовлено
+            set_clauses.append("prepared_by_id = :prepared_by_id")
+            set_clauses.append("prepared_at = NOW()")
+            params['prepared_by_id'] = current_user["id"]
+        elif updates.status == 'issued':
+            # Товар видано клієнту
+            set_clauses.append("issued_by_id = :issued_by_id")
+            set_clauses.append("issued_at = NOW()")
+            params['issued_by_id'] = current_user["id"]
+    
     if updates.items is not None:
         set_clauses.append("items = :items")
         params['items'] = json.dumps(updates.items)
@@ -304,13 +322,20 @@ async def update_issue_card(
     return {"message": "Issue card updated"}
 
 @router.post("/{card_id}/complete")
-async def complete_issue_card(card_id: str, db: Session = Depends(get_rh_db)):
+async def complete_issue_card(
+    card_id: str,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
     """Mark issue card as issued/completed"""
     db.execute(text("""
         UPDATE issue_cards 
-        SET status = 'issued', issued_at = NOW(), updated_at = NOW()
+        SET status = 'issued', 
+            issued_by_id = :issued_by_id,
+            issued_at = NOW(), 
+            updated_at = NOW()
         WHERE id = :id
-    """), {"id": card_id})
+    """), {"id": card_id, "issued_by_id": current_user["id"]})
     
     db.commit()
     return {"message": "Issue card completed"}

@@ -12,6 +12,7 @@ import uuid
 import json
 
 from database_rentalhub import get_rh_db
+from utils.user_tracking_helper import get_current_user_dependency
 
 router = APIRouter(prefix="/api/return-cards", tags=["return-cards"])
 
@@ -119,7 +120,11 @@ async def get_return_card(card_id: str, db: Session = Depends(get_rh_db)):
     return parse_return_card(row)
 
 @router.post("")
-async def create_return_card(card: ReturnCardCreate, db: Session = Depends(get_rh_db)):
+async def create_return_card(
+    card: ReturnCardCreate,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
     """Create new return card"""
     card_id = f"RETURN-{uuid.uuid4().hex[:8].upper()}"
     items_json = json.dumps(card.items_expected)
@@ -127,10 +132,11 @@ async def create_return_card(card: ReturnCardCreate, db: Session = Depends(get_r
     db.execute(text("""
         INSERT INTO return_cards (
             id, order_id, order_number, issue_card_id, status, 
-            items_expected, total_items_expected, created_at, updated_at
+            items_expected, total_items_expected, 
+            created_by_id, created_at, updated_at
         ) VALUES (
             :id, :order_id, :order_number, :issue_card_id, 'pending',
-            :items, :total, NOW(), NOW()
+            :items, :total, :created_by_id, NOW(), NOW()
         )
     """), {
         "id": card_id,
@@ -138,7 +144,8 @@ async def create_return_card(card: ReturnCardCreate, db: Session = Depends(get_r
         "order_number": card.order_number,
         "issue_card_id": card.issue_card_id,
         "items": items_json,
-        "total": len(card.items_expected)
+        "total": len(card.items_expected),
+        "created_by_id": current_user["id"]
     })
     
     db.commit()
@@ -148,6 +155,7 @@ async def create_return_card(card: ReturnCardCreate, db: Session = Depends(get_r
 async def update_return_card(
     card_id: str,
     updates: ReturnCardUpdate,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """Update return card"""
@@ -161,6 +169,19 @@ async def update_return_card(
     if updates.status is not None:
         set_clauses.append("status = :status")
         params['status'] = updates.status
+        
+        # Track user based on status
+        if updates.status == 'received':
+            # Товар прийнято від клієнта
+            set_clauses.append("received_by_id = :received_by_id")
+            set_clauses.append("returned_at = NOW()")
+            params['received_by_id'] = current_user["id"]
+        elif updates.status == 'checked':
+            # Товар перевірено на пошкодження
+            set_clauses.append("checked_by_id = :checked_by_id")
+            set_clauses.append("checked_at = NOW()")
+            params['checked_by_id'] = current_user["id"]
+    
     if updates.items_returned is not None:
         set_clauses.append("items_returned = :items")
         params['items'] = json.dumps(updates.items_returned)
@@ -195,13 +216,20 @@ async def update_return_card(
     return {"message": "Return card updated"}
 
 @router.post("/{card_id}/complete")
-async def complete_return_card(card_id: str, db: Session = Depends(get_rh_db)):
+async def complete_return_card(
+    card_id: str,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
     """Mark return card as completed"""
     db.execute(text("""
         UPDATE return_cards 
-        SET status = 'resolved', checked_at = NOW(), updated_at = NOW()
+        SET status = 'resolved',
+            checked_by_id = :checked_by_id,
+            checked_at = NOW(), 
+            updated_at = NOW()
         WHERE id = :id
-    """), {"id": card_id})
+    """), {"id": card_id, "checked_by_id": current_user["id"]})
     
     db.commit()
     return {"message": "Return card completed"}

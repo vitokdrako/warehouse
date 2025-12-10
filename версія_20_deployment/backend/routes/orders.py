@@ -526,6 +526,7 @@ async def get_order_details(
 async def update_order(
     order_id: int,
     data: dict,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -561,16 +562,22 @@ async def update_order(
             params[field] = data[field]
     
     if set_clauses:
+        # Add user tracking
+        set_clauses.append("updated_by_id = :updated_by_id")
+        set_clauses.append("updated_at = NOW()")
+        params["updated_by_id"] = current_user["id"]
+        
         sql = f"UPDATE orders SET {', '.join(set_clauses)} WHERE order_id = :order_id"
         db.execute(text(sql), params)
         
         # Log to lifecycle
         db.execute(text("""
-            INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-            VALUES (:order_id, 'updated', :notes, NOW())
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+            VALUES (:order_id, 'updated', :notes, :created_by, NOW())
         """), {
             "order_id": order_id,
-            "notes": f"Updated fields: {', '.join(data.keys())}"
+            "notes": f"Updated fields: {', '.join(data.keys())}",
+            "created_by": current_user["name"]
         })
         
         db.commit()
@@ -582,6 +589,7 @@ async def update_order(
 async def update_order_from_calendar(
     order_id: int,
     data: dict,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -613,13 +621,14 @@ async def update_order_from_calendar(
     actual_time = time_map.get(time_slot, '09:00')
     
     # Determine which fields to update based on lane
-    params = {"order_id": order_id}
+    params = {"order_id": order_id, "updated_by_id": current_user["id"]}
     
     if lane == 'issue':
         # Update issue_date and issue_time
         sql = text("""
             UPDATE orders 
-            SET issue_date = :date, issue_time = :time, rental_start_date = :date
+            SET issue_date = :date, issue_time = :time, rental_start_date = :date,
+                updated_by_id = :updated_by_id, updated_at = NOW()
             WHERE order_id = :order_id
         """)
         params['date'] = new_date
@@ -628,7 +637,8 @@ async def update_order_from_calendar(
         # Update return_date and return_time
         sql = text("""
             UPDATE orders 
-            SET return_date = :date, return_time = :time, rental_end_date = :date
+            SET return_date = :date, return_time = :time, rental_end_date = :date,
+                updated_by_id = :updated_by_id, updated_at = NOW()
             WHERE order_id = :order_id
         """)
         params['date'] = new_date
@@ -640,11 +650,12 @@ async def update_order_from_calendar(
     
     # Log to lifecycle
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'calendar_update', :notes, NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+        VALUES (:order_id, 'calendar_update', :notes, :created_by, NOW())
     """), {
         "order_id": order_id,
-        "notes": f"Calendar: {lane} updated to {new_date} {actual_time}"
+        "notes": f"Calendar: {lane} updated to {new_date} {actual_time}",
+        "created_by": current_user["name"]
     })
     
     db.commit()
@@ -742,18 +753,23 @@ async def create_order(
     # Generate order number
     order_number = f"ORD-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
     
+    # Get next order_id (since table doesn't have AUTO_INCREMENT)
+    result = db.execute(text("SELECT COALESCE(MAX(order_id), 0) + 1 as next_id FROM orders"))
+    order_id = result.scalar()
+    
     # Insert order with user tracking
     db.execute(text("""
         INSERT INTO orders (
-            order_number, customer_name, customer_phone, customer_email,
+            order_id, order_number, customer_name, customer_phone, customer_email,
             rental_start_date, rental_end_date, status, total_price, deposit_amount,
             notes, created_by_id, created_at
         ) VALUES (
-            :order_number, :customer_name, :customer_phone, :customer_email,
+            :order_id, :order_number, :customer_name, :customer_phone, :customer_email,
             :rental_start_date, :rental_end_date, 'pending', :total_price, :deposit_amount,
             :notes, :created_by_id, NOW()
         )
     """), {
+        "order_id": order_id,
         "order_number": order_number,
         "customer_name": order.customer_name,
         "customer_phone": order.customer_phone,
@@ -765,10 +781,6 @@ async def create_order(
         "notes": order.notes,
         "created_by_id": current_user["id"]
     })
-    
-    # Get inserted ID
-    result = db.execute(text("SELECT LAST_INSERT_ID()"))
-    order_id = result.scalar()
     
     # Insert items
     for item in order.items:
@@ -805,6 +817,7 @@ async def create_order(
 async def accept_order(
     order_id: int,
     data: dict,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -829,12 +842,20 @@ async def accept_order(
             detail=f"Cannot accept order in status: {current_status}"
         )
     
-    # Update order status
+    # Update order status with user tracking
     db.execute(text("""
         UPDATE orders 
-        SET status = 'processing'
+        SET status = 'processing',
+            confirmed_by_id = :confirmed_by_id,
+            confirmed_at = NOW(),
+            updated_by_id = :updated_by_id,
+            updated_at = NOW()
         WHERE order_id = :order_id
-    """), {"order_id": order_id})
+    """), {
+        "order_id": order_id,
+        "confirmed_by_id": current_user["id"],
+        "updated_by_id": current_user["id"]
+    })
     
     # Create issue card
     issue_card_id = f"issue_{order_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
@@ -843,10 +864,10 @@ async def accept_order(
     db.execute(text("""
         INSERT INTO issue_cards (
             id, order_id, order_number, status, items, 
-            prepared_by, created_at, updated_at
+            prepared_by, created_by_id, created_at, updated_at
         ) VALUES (
             :id, :order_id, :order_number, 'preparation', :items, 
-            :prepared_by, NOW(), NOW()
+            :prepared_by, :created_by_id, NOW(), NOW()
         )
         ON DUPLICATE KEY UPDATE
             items = :items, 
@@ -857,7 +878,8 @@ async def accept_order(
         "order_id": order_id,
         "order_number": order_number,
         "items": json.dumps(items),
-        "prepared_by": data.get('accepted_by', 'system')
+        "prepared_by": current_user["name"],
+        "created_by_id": current_user["id"]
     })
     
     # Log lifecycle
@@ -867,7 +889,7 @@ async def accept_order(
     """), {
         "order_id": order_id,
         "notes": f"Замовлення прийнято",
-        "created_by": data.get('accepted_by', 'system')
+        "created_by": current_user["name"]
     })
     
     # Створити фінансові транзакції автоматично
@@ -934,6 +956,7 @@ async def accept_order(
 @router.delete("/{order_id}")
 async def delete_order(
     order_id: int,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -961,15 +984,18 @@ async def delete_order(
     # Soft delete - mark as cancelled
     db.execute(text("""
         UPDATE orders 
-        SET status = 'cancelled', notes = CONCAT(COALESCE(notes, ''), '\n[DELETED]')
+        SET status = 'cancelled', 
+            notes = CONCAT(COALESCE(notes, ''), '\n[DELETED]'),
+            updated_by_id = :updated_by_id,
+            updated_at = NOW()
         WHERE order_id = :id
-    """), {"id": order_id})
+    """), {"id": order_id, "updated_by_id": current_user["id"]})
     
     # Log
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'deleted', 'Order deleted', NOW())
-    """), {"order_id": order_id})
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+        VALUES (:order_id, 'deleted', 'Order deleted', :created_by, NOW())
+    """), {"order_id": order_id, "created_by": current_user["name"]})
     
     db.commit()
     
@@ -1089,6 +1115,7 @@ async def cancel_order_by_client(
 @router.post("/{order_id}/archive")
 async def archive_order(
     order_id: int,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -1113,15 +1140,16 @@ async def archive_order(
     db.execute(text("""
         UPDATE orders 
         SET is_archived = 1,
+            updated_by_id = :updated_by_id,
             updated_at = NOW()
         WHERE order_id = :order_id
-    """), {"order_id": order_id})
+    """), {"order_id": order_id, "updated_by_id": current_user["id"]})
     
     # Залогувати
     db.execute(text("""
         INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', 'Manager', NOW())
-    """), {"order_id": order_id})
+        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', :created_by, NOW())
+    """), {"order_id": order_id, "created_by": current_user["name"]})
     
     db.commit()
     
@@ -1138,6 +1166,7 @@ async def archive_order(
 @router.post("/{order_id}/unarchive")
 async def unarchive_order(
     order_id: int,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -1162,15 +1191,16 @@ async def unarchive_order(
     db.execute(text("""
         UPDATE orders 
         SET is_archived = 0,
+            updated_by_id = :updated_by_id,
             updated_at = NOW()
         WHERE order_id = :order_id
-    """), {"order_id": order_id})
+    """), {"order_id": order_id, "updated_by_id": current_user["id"]})
     
     # Залогувати
     db.execute(text("""
         INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'unarchived', 'Замовлення відновлено з архіву', 'Manager', NOW())
-    """), {"order_id": order_id})
+        VALUES (:order_id, 'unarchived', 'Замовлення відновлено з архіву', :created_by, NOW())
+    """), {"order_id": order_id, "created_by": current_user["name"]})
     
     db.commit()
     

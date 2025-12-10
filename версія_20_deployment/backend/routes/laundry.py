@@ -252,6 +252,7 @@ async def create_laundry_batch(
 async def update_laundry_batch(
     batch_id: str,
     updates: LaundryBatchUpdate,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """Оновити інформацію про партію"""
@@ -269,6 +270,14 @@ async def update_laundry_batch(
     if updates.status is not None:
         set_clauses.append("status = :status")
         params['status'] = updates.status
+        
+        # Якщо статус змінюється на 'returned', зберігаємо хто прийняв
+        if updates.status == 'returned':
+            set_clauses.append("received_by_id = :received_by_id")
+            set_clauses.append("received_by_name = :received_by_name")
+            params['received_by_id'] = current_user["id"]
+            params['received_by_name'] = current_user["name"]
+    
     if updates.actual_return_date is not None:
         set_clauses.append("actual_return_date = :return_date")
         params['return_date'] = updates.actual_return_date

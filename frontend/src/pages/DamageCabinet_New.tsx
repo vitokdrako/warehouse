@@ -138,6 +138,11 @@ export default function DamageCabinetPro({
       
       // Завантажити всі кейси з damages
       const response = await fetch(`${API_URL}/api/damages/cases`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
       const data = await response.json()
       
       console.log('[DamageCabinet] Loaded cases:', data)
@@ -146,6 +151,7 @@ export default function DamageCabinetPro({
       if (!Array.isArray(data)) {
         console.error('[DamageCabinet] Response is not an array:', data)
         setCases([])
+        setLoading(false)
         return
       }
       

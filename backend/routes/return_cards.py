@@ -155,6 +155,7 @@ async def create_return_card(
 async def update_return_card(
     card_id: str,
     updates: ReturnCardUpdate,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """Update return card"""
@@ -168,6 +169,19 @@ async def update_return_card(
     if updates.status is not None:
         set_clauses.append("status = :status")
         params['status'] = updates.status
+        
+        # Track user based on status
+        if updates.status == 'received':
+            # Товар прийнято від клієнта
+            set_clauses.append("received_by_id = :received_by_id")
+            set_clauses.append("returned_at = NOW()")
+            params['received_by_id'] = current_user["id"]
+        elif updates.status == 'checked':
+            # Товар перевірено на пошкодження
+            set_clauses.append("checked_by_id = :checked_by_id")
+            set_clauses.append("checked_at = NOW()")
+            params['checked_by_id'] = current_user["id"]
+    
     if updates.items_returned is not None:
         set_clauses.append("items_returned = :items")
         params['items'] = json.dumps(updates.items_returned)

@@ -95,10 +95,7 @@ function App() {
             path="/damages" 
             element={
               <ProtectedRoute>
-                <DamageCabinet 
-                  onBackToDashboard={handleBackToDashboard}
-                  onNavigateToTasks={handleNavigateToTasks}
-                />
+                <DamageCabinet />
               </ProtectedRoute>
             } 
           />

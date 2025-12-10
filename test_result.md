@@ -352,7 +352,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Bug fix: Item quantities save and persist in awaiting_customer orders"
+    - "Damage Cabinet API - List damage cases"
+    - "Damage Cabinet API - Get case details with items"
+    - "Authentication for damage cabinet access"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

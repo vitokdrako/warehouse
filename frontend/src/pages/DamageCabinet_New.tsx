@@ -109,6 +109,8 @@ function StatusBadge({ status }: { status: DamageStatus }) {
 }
 
 /*************** main component ***************/
+type TabType = 'main' | 'washing' | 'restoration' | 'dry-cleaning'
+
 export default function DamageCabinetPro({ 
   onBackToDashboard,
   onNavigateToTasks,
@@ -127,6 +129,8 @@ export default function DamageCabinetPro({
   const [sourceFilter, setSourceFilter] = useState<'all' | DamageSource>('all')
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
+  const [activeTab, setActiveTab] = useState<TabType>('main')
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     loadCases()

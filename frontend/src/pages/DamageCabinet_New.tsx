@@ -344,25 +344,101 @@ export default function DamageCabinetPro({
   const extraPayment = Math.max(0, linesTotal - selected.depositHold)
 
   return (
-    <div className="mx-auto max-w-7xl p-6 space-y-5">
-      {/* header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {onBackToDashboard && (
-            <button
-              onClick={onBackToDashboard}
-              className="text-corp-text-main hover:text-corp-text-dark transition"
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
+      {/* Corporate Header */}
+      <header className="corp-header sticky top-0 z-30">
+        <div className="mx-auto max-w-7xl flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-corp-primary grid place-content-center text-white font-bold text-sm">RH</div>
+            <div>
+              <h1 className="text-lg font-semibold text-corp-text-dark">Rental Hub</h1>
+              <p className="text-xs text-corp-text-muted">Кабінет шкоди</p>
+            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-2 bg-corp-bg-light rounded-corp border border-corp-border">
+              <div className="h-8 w-8 rounded-full bg-corp-gold grid place-content-center text-white text-xs font-semibold">
+                {user?.email?.[0]?.toUpperCase() || 'U'}
+              </div>
+              <div className="text-sm">
+                <div className="font-medium text-corp-text-dark">{user?.email || 'Користувач'}</div>
+                <div className="text-xs text-corp-text-muted">{user?.role === 'admin' ? 'Адміністратор' : user?.role === 'manager' ? 'Менеджер' : 'Реквізитор'}</div>
+              </div>
+            </div>
+            {onBackToDashboard && (
+              <button 
+                className="corp-btn corp-btn-secondary"
+                onClick={onBackToDashboard}
+              >
+                ← Назад до дашборду
+              </button>
+            )}
+            <button 
+              className="corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white"
+              onClick={() => {
+                localStorage.removeItem('token')
+                localStorage.removeItem('user')
+                window.location.href = '/login'
+              }}
             >
-              ← Назад
+              Вихід
             </button>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет шкоди PRO</h1>
-            <p className="text-sm text-corp-text-muted">
-              Усі кейси пошкоджень: від повернення, переобліку та каталогу. Розрахунок збитків і зв&apos;язок з фінансами.
-            </p>
           </div>
         </div>
+      </header>
+
+      {/* Tabs Navigation */}
+      <div className="mx-auto max-w-7xl px-6 pt-4">
+        <div className="flex gap-2 border-b border-corp-border">
+          <button
+            onClick={() => setActiveTab('main')}
+            className={cls(
+              'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+              activeTab === 'main'
+                ? 'border-corp-primary text-corp-primary'
+                : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+            )}
+          >
+            Головна
+          </button>
+          <button
+            onClick={() => setActiveTab('washing')}
+            className={cls(
+              'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+              activeTab === 'washing'
+                ? 'border-corp-primary text-corp-primary'
+                : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+            )}
+          >
+            Мийка
+          </button>
+          <button
+            onClick={() => setActiveTab('restoration')}
+            className={cls(
+              'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+              activeTab === 'restoration'
+                ? 'border-corp-primary text-corp-primary'
+                : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+            )}
+          >
+            Реставрація
+          </button>
+          <button
+            onClick={() => setActiveTab('dry-cleaning')}
+            className={cls(
+              'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+              activeTab === 'dry-cleaning'
+                ? 'border-corp-primary text-corp-primary'
+                : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+            )}
+          >
+            Хімчистка
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Badges */}
+      <div className="mx-auto max-w-7xl px-6 py-3">
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
           <Badge tone="amber">Відкриті кейси: {counters.open}</Badge>
           <Badge tone="amber">Чекаємо клієнта: {counters.awaitingClient}</Badge>
@@ -370,7 +446,7 @@ export default function DamageCabinetPro({
           <Badge tone="blue">В реставрації: {counters.inRepair}</Badge>
           <Badge tone="green">Закрито: {counters.closed}</Badge>
         </div>
-      </header>
+      </div>
 
       {/* filters & list */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,1.25fr),minmax(0,1.75fr)]">

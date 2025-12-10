@@ -955,6 +955,7 @@ async def accept_order(
 @router.delete("/{order_id}")
 async def delete_order(
     order_id: int,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -982,15 +983,18 @@ async def delete_order(
     # Soft delete - mark as cancelled
     db.execute(text("""
         UPDATE orders 
-        SET status = 'cancelled', notes = CONCAT(COALESCE(notes, ''), '\n[DELETED]')
+        SET status = 'cancelled', 
+            notes = CONCAT(COALESCE(notes, ''), '\n[DELETED]'),
+            updated_by_id = :updated_by_id,
+            updated_at = NOW()
         WHERE order_id = :id
-    """), {"id": order_id})
+    """), {"id": order_id, "updated_by_id": current_user["id"]})
     
     # Log
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'deleted', 'Order deleted', NOW())
-    """), {"order_id": order_id})
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+        VALUES (:order_id, 'deleted', 'Order deleted', :created_by, NOW())
+    """), {"order_id": order_id, "created_by": current_user["name"]})
     
     db.commit()
     

@@ -382,9 +382,59 @@ export default function DamageCabinetPro({
         onBackClick={onBackToDashboard}
       />
       
-      <div className="mx-auto max-w-7xl px-6 py-4">
-        {/* Stats Badges */}
-        <div className="flex flex-wrap items-center gap-2 text-[11px] mb-4">
+      {/* Tabs Navigation */}
+      <div className="mx-auto max-w-7xl px-6 pt-4">
+        <div className="flex gap-2 border-b border-corp-border">
+          <button
+            onClick={() => setActiveTab('main')}
+            className={cls(
+              'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+              activeTab === 'main'
+                ? 'border-corp-primary text-corp-primary'
+                : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+            )}
+          >
+            Головна
+          </button>
+          <button
+            onClick={() => setActiveTab('washing')}
+            className={cls(
+              'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+              activeTab === 'washing'
+                ? 'border-corp-primary text-corp-primary'
+                : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+            )}
+          >
+            Мийка
+          </button>
+          <button
+            onClick={() => setActiveTab('restoration')}
+            className={cls(
+              'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+              activeTab === 'restoration'
+                ? 'border-corp-primary text-corp-primary'
+                : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+            )}
+          >
+            Реставрація
+          </button>
+          <button
+            onClick={() => setActiveTab('dry-cleaning')}
+            className={cls(
+              'px-4 py-2 text-sm font-medium transition-colors border-b-2',
+              activeTab === 'dry-cleaning'
+                ? 'border-corp-primary text-corp-primary'
+                : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+            )}
+          >
+            Хімчистка
+          </button>
+        </div>
+      </div>
+
+      {/* Stats Badges */}
+      <div className="mx-auto max-w-7xl px-6 py-3">
+        <div className="flex flex-wrap items-center gap-2 text-[11px]">
           <Badge tone="amber">Відкриті кейси: {counters.open}</Badge>
           <Badge tone="amber">Чекаємо клієнта: {counters.awaitingClient}</Badge>
           <Badge tone="amber">Чекаємо оплату: {counters.awaitingPayment}</Badge>
@@ -393,6 +443,7 @@ export default function DamageCabinetPro({
         </div>
       </div>
 
+      {activeTab === 'main' ? (
       <div className="mx-auto max-w-7xl px-6 pb-6 space-y-5">
 
       {/* filters & list */}

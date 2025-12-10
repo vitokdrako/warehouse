@@ -52,6 +52,21 @@ module.exports = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
+  			},
+  			corp: {
+  				primary: '#b1cb29',
+  				'primary-hover': '#9fb524',
+  				gold: '#C9A961',
+  				'gold-hover': '#B89851',
+  				'text-main': '#838182',
+  				'text-dark': '#2b292b',
+  				'text-light': '#4D4D4D',
+  				'text-muted': '#999999',
+  				'bg-page': '#f8f8f8',
+  				'bg-light': '#f7f7f7',
+  				'bg-card': '#fafafa',
+  				'border': '#e5ecf3',
+  				'border-light': '#eeeeee',
   			}
   		},
   		keyframes: {

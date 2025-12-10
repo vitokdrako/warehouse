@@ -280,3 +280,98 @@
 .ptr-indicator.active {
   transform: translateY(0);
 }
+
+
+
+/* Corporate colors integration for mobile */
+@media (max-width: 768px) {
+  /* Corporate buttons on mobile */
+  .corp-btn {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .corp-btn-primary {
+    background: var(--corp-primary);
+  }
+
+  .corp-btn-gold {
+    background: var(--corp-gold);
+  }
+
+  /* Corporate cards on mobile */
+  .corp-card,
+  .corp-card-flat,
+  .corp-stat-card {
+    margin-bottom: 0.75rem;
+  }
+
+  /* Corporate header on mobile */
+  .corp-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .corp-header h1 {
+    font-size: 1.125rem;
+  }
+
+  /* Corporate modal on mobile */
+  .corp-modal-content {
+    max-width: 95vw;
+    padding: 1rem;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+
+  /* Corporate badges on mobile */
+  .corp-badge {
+    font-size: 0.625rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Corporate stats on mobile */
+  .corp-stat-value {
+    font-size: 1.5rem;
+  }
+
+  .corp-stat-label {
+    font-size: 0.625rem;
+  }
+
+  /* Hide desktop nav on mobile */
+  .desktop-nav {
+    display: none;
+  }
+
+  /* Mobile navigation */
+  .mobile-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid var(--corp-border);
+    padding: 0.5rem;
+    display: flex;
+    justify-content: space-around;
+    z-index: 100;
+  }
+
+  .mobile-nav button {
+    flex: 1;
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Touch-friendly corporate elements */
+@media (hover: none) and (pointer: coarse) {
+  .corp-btn:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+
+  .corp-card:active {
+    transform: scale(0.99);
+  }
+}

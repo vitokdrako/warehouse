@@ -55,6 +55,7 @@ export default function DamageModal({
     photoName: ''
   })
   
+  const [photos, setPhotos] = useState([])
   const [saving, setSaving] = useState(false)
   
   useEffect(() => {

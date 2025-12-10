@@ -202,7 +202,11 @@ async def get_issue_card(card_id: str, db: Session = Depends(get_rh_db)):
     return parse_issue_card(row, db)
 
 @router.post("")
-async def create_issue_card(card: IssueCardCreate, db: Session = Depends(get_rh_db)):
+async def create_issue_card(
+    card: IssueCardCreate,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
     """Create new issue card"""
     card_id = f"issue_{card.order_id}"
     items_json = json.dumps([item.dict() for item in card.items])
@@ -210,17 +214,18 @@ async def create_issue_card(card: IssueCardCreate, db: Session = Depends(get_rh_
     db.execute(text("""
         INSERT INTO issue_cards (
             id, order_id, order_number, status, items, preparation_notes,
-            created_at, updated_at
+            created_by_id, created_at, updated_at
         ) VALUES (
             :id, :order_id, :order_number, 'preparation', :items, :notes,
-            NOW(), NOW()
+            :created_by_id, NOW(), NOW()
         )
     """), {
         "id": card_id,
         "order_id": card.order_id,
         "order_number": card.order_number,
         "items": items_json,
-        "notes": card.preparation_notes
+        "notes": card.preparation_notes,
+        "created_by_id": current_user["id"]
     })
     
     db.commit()

@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import axios from 'axios';
 import BarcodeScanner from '../components/BarcodeScanner';
+import CorporateHeader from '../components/CorporateHeader';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 

@@ -179,9 +179,8 @@ export default function DamageCabinetPro({
         setSelectedId(transformedData[0].id)
       }
     } catch (error) {
-      console.error('Error loading cases:', error)
-      alert('Помилка завантаження кейсів')
-    } finally {
+      console.error('[DamageCabinet] Error loading cases:', error)
+      setCases([])
       setLoading(false)
     }
   }

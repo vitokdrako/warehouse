@@ -345,7 +345,7 @@ export default function PackingCabinet({
   const [zoneFilter, setZoneFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
 
-  const API_URL = process.env.REACT_APP_API_URL || 'https://backrentalhub.farforrent.com.ua'
+  const API_URL = process.env.REACT_APP_BACKEND_URL
 
   // Завантажити список замовлень
   const loadOrders = async () => {

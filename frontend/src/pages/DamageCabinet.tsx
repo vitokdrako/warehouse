@@ -185,6 +185,40 @@ export default function DamageCabinetPro({
     }
   }
 
+  const loadCaseDetails = async (caseId: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/damages/cases/${caseId}`)
+      const data = await response.json()
+      
+      console.log('[DamageCabinet] Loaded case details:', data)
+      
+      // Трансформувати items в lines
+      const lines = (data.items || []).map((item: any) => ({
+        id: item.id,
+        productName: item.name || 'Товар',
+        sku: item.barcode || '',
+        inventoryCode: item.product_id ? String(item.product_id) : '',
+        category: item.damage_type || 'Пошкодження',
+        ruleLabel: item.comment || item.damage_type || '',
+        minAmount: item.base_value || 0,
+        qty: item.qty || 1,
+        amountPerUnit: item.estimate_value || item.base_value || 0,
+        total: (item.estimate_value || item.base_value || 0) * (item.qty || 1),
+        note: item.comment || '',
+        image: item.image || ''
+      }))
+      
+      // Оновити кейс з lines
+      setCases((prev: DamageCase[]) =>
+        prev.map((c: DamageCase) =>
+          c.id === caseId ? { ...c, lines } : c
+        )
+      )
+    } catch (error) {
+      console.error('[DamageCabinet] Error loading case details:', error)
+    }
+  }
+
   const selected = useMemo(() => {
     if (!cases.length) return null
     if (!selectedId) return cases[0]

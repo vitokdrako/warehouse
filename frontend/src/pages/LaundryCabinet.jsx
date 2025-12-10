@@ -92,14 +92,14 @@ const LaundryCabinet = () => {
   // Статус badge
   const getStatusBadge = (status) => {
     const statusMap = {
-      sent: { label: 'Відправлено', variant: 'secondary' },
-      partial_return: { label: 'Часткове повернення', variant: 'default' },
-      returned: { label: 'Повернено', variant: 'outline' },
-      completed: { label: 'Закрито', variant: 'outline' }
+      sent: { label: 'Відправлено', class: 'corp-badge corp-badge-info' },
+      partial_return: { label: 'Часткове повернення', class: 'corp-badge corp-badge-warning' },
+      returned: { label: 'Повернено', class: 'corp-badge corp-badge-success' },
+      completed: { label: 'Закрито', class: 'corp-badge corp-badge-neutral' }
     };
     
     const config = statusMap[status] || statusMap.sent;
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return <span className={config.class}>{config.label}</span>;
   };
 
   if (loading) {
@@ -286,10 +286,9 @@ const LaundryCabinet = () => {
                 )}
 
                 {/* Дії */}
-                <div className="flex gap-2 mt-4 pt-4 border-t">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
+                <div className="flex gap-2 mt-4 pt-4 border-t border-corp-border-light">
+                  <button 
+                    className={batch.status === 'completed' ? 'corp-btn corp-btn-secondary opacity-50 cursor-not-allowed' : 'corp-btn corp-btn-outline'}
                     onClick={() => {
                       setSelectedBatch(batch);
                       setShowReturnModal(true);
@@ -297,36 +296,32 @@ const LaundryCabinet = () => {
                     disabled={batch.status === 'completed'}
                   >
                     Прийняти повернення
-                  </Button>
+                  </button>
                   
                   {batch.status === 'returned' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
+                    <button 
+                      className="corp-btn corp-btn-primary"
                       onClick={() => handleCompleteBatch(batch.id)}
-                      className="text-green-600 hover:text-green-700"
                     >
-                      <CheckCircle2 className="w-4 h-4 mr-1" />
+                      <CheckCircle2 className="w-4 h-4" />
                       Закрити партію
-                    </Button>
+                    </button>
                   )}
                   
                   {batch.status === 'sent' && batch.returned_items === 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
+                    <button 
+                      className="corp-btn corp-btn-secondary text-corp-error hover:text-white hover:bg-corp-error"
                       onClick={() => handleDeleteBatch(batch.id)}
-                      className="text-red-600 hover:text-red-700"
                     >
-                      <Trash2 className="w-4 h-4 mr-1" />
+                      <Trash2 className="w-4 h-4" />
                       Видалити
-                    </Button>
+                    </button>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Модалки створення та повернення */}

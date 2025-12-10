@@ -821,7 +821,7 @@ export default function DamageCabinetPro({
             alert('✅ Завдання створено! Кейс чекає завершення.')
           }}
         />
-      }
+      )}
       </div>
       </div>
       ) : activeTab === 'washing' ? (

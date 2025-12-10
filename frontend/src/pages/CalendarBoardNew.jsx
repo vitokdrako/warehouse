@@ -113,22 +113,23 @@ function CalendarCard({ item, onOpen, onDragStart }) {
       onDragStart={(e) => onDragStart(e, item)}
       onClick={() => onOpen(item)}
       className={cls(
-        'mb-1 cursor-move rounded-xl border px-2 py-1.5 text-left text-[10px] shadow-sm transition hover:-translate-y-0.5 hover:shadow',
+        'mb-1 cursor-move rounded-lg border px-1.5 py-1 text-left text-[9px] shadow-sm transition hover:-translate-y-0.5 hover:shadow',
+        'md:px-2 md:py-1.5 md:text-[10px]',
         laneInfo.bg,
       )}
     >
       <div className="flex items-center justify-between gap-1">
-        <span className="font-semibold text-corp-text-dark truncate">{item.title}</span>
-        <span className="whitespace-nowrap text-[9px] text-corp-text-muted">
+        <span className="font-semibold text-corp-text-dark truncate text-[8px] md:text-[10px]">{item.title}</span>
+        <span className="whitespace-nowrap text-[8px] md:text-[9px] text-corp-text-muted">
           {item.timeSlot === 'morning' ? '🌅' : item.timeSlot === 'day' ? '☀️' : '🌆'}
         </span>
       </div>
-      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px] text-corp-text-muted">
+      <div className="mt-0.5 flex flex-wrap items-center gap-0.5 text-[8px] md:text-[9px] text-corp-text-muted">
         {item.orderCode && <span className="font-mono text-slate-700">{item.orderCode}</span>}
-        {item.client && <span>· {item.client}</span>}
+        {item.client && <span className="hidden md:inline">· {item.client}</span>}
       </div>
       {item.badge && (
-        <div className="mt-1">
+        <div className="mt-0.5 md:mt-1">
           <Badge tone={
             item.lane === 'issue' ? 'green' :
             item.lane === 'return' ? 'blue' :

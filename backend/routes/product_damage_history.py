@@ -79,21 +79,25 @@ async def create_damage_record(
     - photo_url: URL фото (опціонально)
     - note: Примітка (опціонально)
     - created_by: Хто зафіксував (опціонально)
+    - processing_type: 'none', 'wash', 'restoration', 'laundry' (NEW)
     """
     try:
         damage_id = str(uuid.uuid4())
+        processing_type = damage_data.get("processing_type", "none")
         
         db.execute(text("""
             INSERT INTO product_damage_history (
                 id, product_id, sku, product_name, category,
                 order_id, order_number, stage,
                 damage_type, damage_code, severity, fee,
-                photo_url, note, created_by, created_at
+                photo_url, note, created_by, created_at,
+                processing_type, processing_status
             ) VALUES (
                 :id, :product_id, :sku, :product_name, :category,
                 :order_id, :order_number, :stage,
                 :damage_type, :damage_code, :severity, :fee,
-                :photo_url, :note, :created_by, NOW()
+                :photo_url, :note, :created_by, NOW(),
+                :processing_type, :processing_status
             )
         """), {
             "id": damage_id,
@@ -110,7 +114,9 @@ async def create_damage_record(
             "fee": damage_data.get("fee", 0.0),
             "photo_url": damage_data.get("photo_url"),
             "note": damage_data.get("note"),
-            "created_by": damage_data.get("created_by", "system")
+            "created_by": damage_data.get("created_by", "system"),
+            "processing_type": processing_type,
+            "processing_status": "pending" if processing_type != "none" else "completed"
         })
         
         db.commit()

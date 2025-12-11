@@ -167,46 +167,37 @@ class TaskManagementTester:
             self.log(f"❌ Exception testing {task_type} task creation: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_laundry_batches(self) -> Dict[str, Any]:
-        """Test GET /api/laundry/batches - should return laundry batches"""
+    def test_task_status_update(self, task_id: str, new_status: str) -> Dict[str, Any]:
+        """Test PUT /api/tasks/{task_id} - should update task status"""
         try:
-            self.log("🧪 Testing laundry batches endpoint...")
+            self.log(f"🧪 Testing task status update: {task_id} -> {new_status}...")
             
-            response = self.session.get(f"{self.base_url}/laundry/batches")
+            update_data = {"status": new_status}
+            
+            response = self.session.put(
+                f"{self.base_url}/tasks/{task_id}",
+                json=update_data
+            )
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response is an array
-                if not isinstance(data, list):
-                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
+                # Check if update was successful
+                if data.get('status') != new_status:
+                    self.log(f"❌ Status update failed: expected {new_status}, got {data.get('status')}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Retrieved {len(data)} laundry batches")
+                self.log(f"✅ Task status updated successfully")
+                self.log(f"   Task ID: {task_id}")
+                self.log(f"   New Status: {data.get('status')}")
                 
-                # Validate batch structure if data exists
-                if data:
-                    sample_batch = data[0]
-                    required_fields = ['id', 'batch_number', 'status', 'laundry_company', 'total_items']
-                    missing_fields = [field for field in required_fields if field not in sample_batch]
-                    
-                    if missing_fields:
-                        self.log(f"❌ Missing required batch fields: {missing_fields}", "ERROR")
-                        return {"success": False, "missing_fields": missing_fields}
-                    
-                    self.log(f"✅ Batch structure validation passed")
-                    
-                    # Log some examples
-                    for batch in data[:3]:  # Show first 3
-                        self.log(f"   - Batch {batch.get('batch_number')}: Company={batch.get('laundry_company')}, Status={batch.get('status')}, Items={batch.get('total_items')}")
-                
-                return {"success": True, "data": data, "count": len(data)}
+                return {"success": True, "data": data}
             else:
-                self.log(f"❌ Failed to get laundry batches: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to update task status: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing laundry batches: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing task status update: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_laundry_statistics(self) -> Dict[str, Any]:

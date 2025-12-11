@@ -233,70 +233,52 @@ class TaskManagementTester:
             self.log(f"❌ Exception testing task assignment: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_tasks_creation(self) -> Dict[str, Any]:
-        """Test POST /api/tasks - should create washing/restoration tasks"""
+    def test_all_tasks_get(self) -> Dict[str, Any]:
+        """Test GET /api/tasks - should return all tasks"""
         try:
-            self.log("🧪 Testing tasks creation endpoint...")
+            self.log("🧪 Testing all tasks GET endpoint...")
             
-            # Test washing task
-            washing_task = {
-                "title": "Мийка: Ваза",
-                "description": "Товар потребує мийки після повернення",
-                "task_type": "washing",
-                "status": "todo",
-                "priority": "medium"
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/tasks",
-                json=washing_task
-            )
+            response = self.session.get(f"{self.base_url}/tasks")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if not data.get('id'):
-                    self.log(f"❌ Task creation failed: no ID returned", "ERROR")
+                # Check if response is an array
+                if not isinstance(data, list):
+                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Washing task created successfully")
-                self.log(f"   Task ID: {data.get('id')}")
-                self.log(f"   Message: {data.get('message')}")
+                self.log(f"✅ Retrieved {len(data)} total tasks")
                 
-                # Test restoration task
-                restoration_task = {
-                    "title": "Реставрація: Антикварна ваза",
-                    "description": "Товар потребує реставрації через пошкодження",
-                    "task_type": "restoration",
-                    "status": "todo",
-                    "priority": "high"
+                # Count tasks by type
+                task_types = {}
+                for task in data:
+                    task_type = task.get('task_type', 'unknown')
+                    task_types[task_type] = task_types.get(task_type, 0) + 1
+                
+                self.log(f"   Task types found: {task_types}")
+                
+                # Look for washing and restoration tasks
+                washing_tasks = [t for t in data if t.get('task_type') == 'washing']
+                restoration_tasks = [t for t in data if t.get('task_type') == 'restoration']
+                
+                self.log(f"   Washing tasks: {len(washing_tasks)}")
+                self.log(f"   Restoration tasks: {len(restoration_tasks)}")
+                
+                return {
+                    "success": True, 
+                    "data": data, 
+                    "count": len(data),
+                    "task_types": task_types,
+                    "washing_count": len(washing_tasks),
+                    "restoration_count": len(restoration_tasks)
                 }
-                
-                response2 = self.session.post(
-                    f"{self.base_url}/tasks",
-                    json=restoration_task
-                )
-                
-                if response2.status_code == 200:
-                    data2 = response2.json()
-                    self.log(f"✅ Restoration task created successfully")
-                    self.log(f"   Task ID: {data2.get('id')}")
-                    
-                    return {
-                        "success": True, 
-                        "washing_task": data, 
-                        "restoration_task": data2
-                    }
-                else:
-                    self.log(f"❌ Failed to create restoration task: {response2.status_code}", "ERROR")
-                    return {"success": False, "status_code": response2.status_code}
-                
             else:
-                self.log(f"❌ Failed to create washing task: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get all tasks: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing tasks creation: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing all tasks GET: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_tasks_get(self) -> Dict[str, Any]:

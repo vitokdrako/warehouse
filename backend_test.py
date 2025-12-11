@@ -384,50 +384,7 @@ class TaskManagementTester:
             self.log(f"❌ Exception testing complete workflow: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_batch_creation_from_queue(self, queue_items: List[str]) -> Dict[str, Any]:
-        """Test POST /api/laundry/batches/from-queue - should create batch from queue items"""
-        try:
-            self.log("🧪 Testing batch creation from queue...")
-            
-            if not queue_items:
-                self.log("⚠️ No queue items provided for batch creation", "WARNING")
-                return {"success": False, "error": "No queue items"}
-            
-            # Test data for batch creation
-            tomorrow = (date.today() + timedelta(days=1)).isoformat()
-            batch_data = {
-                "item_ids": queue_items[:3],  # Take first 3 items
-                "laundry_company": "Прана",
-                "expected_return_date": tomorrow,
-                "cost": 150.0,
-                "notes": "Тестова партія хімчистки"
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/laundry/batches/from-queue",
-                json=batch_data
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                if not data.get('success'):
-                    self.log(f"❌ Batch creation failed: {data.get('message', 'Unknown error')}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                self.log(f"✅ Batch created from queue successfully")
-                self.log(f"   Batch ID: {data.get('batch_id')}")
-                self.log(f"   Batch Number: {data.get('batch_number')}")
-                self.log(f"   Message: {data.get('message')}")
-                
-                return {"success": True, "data": data}
-            else:
-                self.log(f"❌ Failed to create batch from queue: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing batch creation: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
+    # Removed unused laundry batch methods - focusing on task management
     
     def find_queue_items_for_testing(self) -> Dict[str, Any]:
         """Find queue items that can be used for testing batch creation"""

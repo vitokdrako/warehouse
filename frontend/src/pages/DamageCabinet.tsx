@@ -147,6 +147,16 @@ export default function DamageCabinetPro({
   const [selectedBatch, setSelectedBatch] = useState<any>(null)
   const [showReturnModal, setShowReturnModal] = useState(false)
 
+  // Washing tab state
+  const [washingTasks, setWashingTasks] = useState<any[]>([])
+  const [washingLoading, setWashingLoading] = useState(false)
+  const [washingFilter, setWashingFilter] = useState('all')
+
+  // Restoration tab state
+  const [restorationTasks, setRestorationTasks] = useState<any[]>([])
+  const [restorationLoading, setRestorationLoading] = useState(false)
+  const [restorationFilter, setRestorationFilter] = useState('all')
+
   useEffect(() => {
     loadCases()
   }, [])

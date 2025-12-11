@@ -182,16 +182,27 @@ class TaskManagementTester:
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if update was successful
-                if data.get('status') != new_status:
-                    self.log(f"❌ Status update failed: expected {new_status}, got {data.get('status')}", "ERROR")
+                # Check if update message was successful
+                if data.get('message') != "Task updated successfully":
+                    self.log(f"❌ Status update failed: {data.get('message')}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Task status updated successfully")
-                self.log(f"   Task ID: {task_id}")
-                self.log(f"   New Status: {data.get('status')}")
+                # Verify the update by fetching the task
+                verify_response = self.session.get(f"{self.base_url}/tasks/{task_id}")
+                if verify_response.status_code == 200:
+                    task_data = verify_response.json()
+                    if task_data.get('status') == new_status:
+                        self.log(f"✅ Task status updated successfully")
+                        self.log(f"   Task ID: {task_id}")
+                        self.log(f"   New Status: {task_data.get('status')}")
+                        return {"success": True, "data": task_data}
+                    else:
+                        self.log(f"❌ Status verification failed: expected {new_status}, got {task_data.get('status')}", "ERROR")
+                        return {"success": False, "data": task_data}
+                else:
+                    self.log(f"❌ Failed to verify task update: {verify_response.status_code}", "ERROR")
+                    return {"success": False, "status_code": verify_response.status_code}
                 
-                return {"success": True, "data": data}
             else:
                 self.log(f"❌ Failed to update task status: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}

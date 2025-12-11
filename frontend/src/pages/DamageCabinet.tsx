@@ -292,15 +292,14 @@ export default function DamageCabinetPro({
       const token = localStorage.getItem('token')
       const response = await axios.post(
         `${BACKEND_URL}/api/laundry/batches/from-queue`,
-        null,
         {
-          params: {
-            item_ids: itemIds,
-            laundry_company: laundryCompany,
-            expected_return_date: expectedReturnDate,
-            cost: cost,
-            notes: notes
-          },
+          item_ids: itemIds,
+          laundry_company: laundryCompany,
+          expected_return_date: expectedReturnDate,
+          cost: cost,
+          notes: notes
+        },
+        {
           headers: { Authorization: `Bearer ${token}` }
         }
       )

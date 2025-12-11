@@ -76,12 +76,12 @@ class LaundrySystemTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_damage_cases_list(self) -> Dict[str, Any]:
-        """Test GET /api/damages/cases - should return array of damage cases"""
+    def test_laundry_queue_get(self) -> Dict[str, Any]:
+        """Test GET /api/laundry/queue - should return array of items in laundry queue"""
         try:
-            self.log("🧪 Testing damage cases list endpoint...")
+            self.log("🧪 Testing laundry queue GET endpoint...")
             
-            response = self.session.get(f"{self.base_url}/damages/cases")
+            response = self.session.get(f"{self.base_url}/laundry/queue")
             
             if response.status_code == 200:
                 data = response.json()
@@ -91,31 +91,31 @@ class LaundrySystemTester:
                     self.log(f"❌ Expected array, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Retrieved {len(data)} damage cases")
+                self.log(f"✅ Retrieved {len(data)} items in laundry queue")
                 
-                # Validate case structure
+                # Validate queue item structure
                 if data:
-                    sample_case = data[0]
-                    required_fields = ['id', 'customer_name', 'order_number', 'case_status']
-                    missing_fields = [field for field in required_fields if field not in sample_case]
+                    sample_item = data[0]
+                    required_fields = ['id', 'product_name', 'sku']
+                    missing_fields = [field for field in required_fields if field not in sample_item]
                     
                     if missing_fields:
                         self.log(f"❌ Missing required fields: {missing_fields}", "ERROR")
                         return {"success": False, "missing_fields": missing_fields}
                     
-                    self.log(f"✅ Case structure validation passed")
+                    self.log(f"✅ Queue item structure validation passed")
                     
                     # Log some examples
-                    for case in data[:3]:  # Show first 3
-                        self.log(f"   - Case {case.get('id')}: Customer={case.get('customer_name')}, Order={case.get('order_number')}, Status={case.get('case_status')}")
+                    for item in data[:3]:  # Show first 3
+                        self.log(f"   - Item {item.get('id')}: {item.get('product_name')} ({item.get('sku')})")
                 
                 return {"success": True, "data": data, "count": len(data)}
             else:
-                self.log(f"❌ Failed to get damage cases: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get laundry queue: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing damage cases list: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing laundry queue: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_damage_case_details(self, case_id: str) -> Dict[str, Any]:

@@ -286,39 +286,55 @@ class CompleteReturnTester:
             self.log(f"❌ Exception finding issued cards: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_case_selection_and_details(self, cases_data: List[Dict]) -> bool:
-        """Test clicking on first case and verifying details display"""
+    def test_complete_return_workflow(self, order_id: int) -> Dict[str, Any]:
+        """Test the complete return workflow for a specific order"""
         try:
-            self.log("🧪 Testing case selection and details display...")
+            self.log(f"🧪 Testing complete return workflow for order {order_id}...")
             
-            if not cases_data:
-                self.log("❌ No cases available for selection test", "ERROR")
-                return False
+            # Step 1: Get initial state
+            self.log("   Step 1: Getting initial state...")
+            initial_issue_cards = self.test_issue_cards_list()
+            initial_archive = self.test_archive_endpoint()
             
-            # Get first case
-            first_case = cases_data[0]
-            case_id = first_case.get('id')
+            if not initial_issue_cards.get("success") or not initial_archive.get("success"):
+                return {"success": False, "error": "Could not get initial state"}
             
-            if not case_id:
-                self.log("❌ First case has no ID", "ERROR")
-                return False
+            # Find the order in initial state
+            initial_cards = initial_issue_cards.get("data", [])
+            initial_card = None
+            for card in initial_cards:
+                if card.get("order_id") == order_id:
+                    initial_card = card
+                    break
             
-            self.log(f"🔍 Testing details for case: {case_id}")
+            if not initial_card:
+                return {"success": False, "error": f"Order {order_id} not found in issue cards"}
             
-            # Test case details
-            details_result = self.test_damage_case_details(case_id)
+            initial_status = initial_card.get("status")
+            self.log(f"   Initial issue card status: {initial_status}")
             
-            if details_result.get("success"):
-                items_count = details_result.get("items_count", 0)
-                self.log(f"✅ Case selection test passed - details loaded with {items_count} items")
-                return True
-            else:
-                self.log("❌ Case selection test failed - could not load details", "ERROR")
-                return False
+            # Step 2: Execute complete return
+            self.log("   Step 2: Executing complete return...")
+            complete_result = self.test_complete_return_endpoint(order_id)
+            
+            if not complete_result.get("success"):
+                return {"success": False, "error": "Complete return failed", "details": complete_result}
+            
+            # Step 3: Verify changes
+            self.log("   Step 3: Verifying status changes...")
+            verification_result = self.verify_order_status_change(order_id)
+            
+            return {
+                "success": verification_result.get("success", False),
+                "order_id": order_id,
+                "initial_status": initial_status,
+                "complete_return_result": complete_result,
+                "verification_result": verification_result
+            }
                 
         except Exception as e:
-            self.log(f"❌ Exception testing case selection: {str(e)}", "ERROR")
-            return False
+            self.log(f"❌ Exception testing complete return workflow: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     
     def verify_expected_behavior(self, cases_data: List[Dict]) -> Dict[str, Any]:
         """Verify expected behavior according to review request"""

@@ -625,6 +625,9 @@ export default function DamageCabinetPro({
             setSelectedBatch={setSelectedBatch}
             setShowReturnModal={setShowReturnModal}
             getStatusBadge={getLaundryStatusBadge}
+            queue={laundryQueue}
+            onCreateBatchFromQueue={handleCreateBatchFromQueue}
+            onRemoveFromQueue={handleRemoveFromQueue}
           />
         )}
       </div>

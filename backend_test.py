@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Laundry System (Система обробки пошкоджень з Кабінету шкоди)
-Testing the laundry workflow: Queue → Batches → Tasks → Statistics
+Backend Testing Script for Washing and Restoration Tasks in Damage Cabinet
+Testing the task management workflow: Create → Filter → Update → Assign
 """
 
 import requests
@@ -17,7 +17,7 @@ TEST_CREDENTIALS = {
     "password": "test123"
 }
 
-class LaundrySystemTester:
+class TaskManagementTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

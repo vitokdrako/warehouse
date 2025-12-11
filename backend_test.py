@@ -404,38 +404,41 @@ class LaundrySystemTester:
             return {"success": False, "error": str(e)}
     
     def find_queue_items_for_testing(self) -> Dict[str, Any]:
-        """Find damage cases that can be used for testing case details"""
+        """Find queue items that can be used for testing batch creation"""
         try:
-            self.log("🔍 Finding damage cases for testing...")
+            self.log("🔍 Finding queue items for testing...")
             
-            # Get damage cases
-            cases_result = self.test_damage_cases_list()
-            if not cases_result.get("success"):
-                return {"success": False, "error": "Could not fetch damage cases"}
+            # Get queue items
+            queue_result = self.test_laundry_queue_get()
+            if not queue_result.get("success"):
+                return {"success": False, "error": "Could not fetch queue items"}
             
-            cases = cases_result.get("data", [])
+            items = queue_result.get("data", [])
             
-            if not cases:
-                self.log("⚠️ No damage cases found for testing", "WARNING")
-                return {"success": True, "cases": [], "count": 0}
+            if not items:
+                self.log("⚠️ No queue items found for testing", "WARNING")
+                return {"success": True, "items": [], "count": 0}
             
-            self.log(f"✅ Found {len(cases)} damage cases for testing")
+            self.log(f"✅ Found {len(items)} queue items for testing")
             
-            # Show details of available cases
-            for i, case in enumerate(cases[:5]):  # Show first 5
-                case_id = case.get('id')
-                customer = case.get('customer_name', 'Unknown')
-                order = case.get('order_number', 'Unknown')
-                self.log(f"   {i+1}. Case {case_id}: Customer={customer}, Order={order}")
+            # Show details of available items
+            item_ids = []
+            for i, item in enumerate(items[:5]):  # Show first 5
+                item_id = item.get('id')
+                product_name = item.get('product_name', 'Unknown')
+                sku = item.get('sku', 'Unknown')
+                self.log(f"   {i+1}. Item {item_id}: {product_name} ({sku})")
+                item_ids.append(item_id)
             
             return {
                 "success": True,
-                "cases": cases,
-                "count": len(cases)
+                "items": items,
+                "item_ids": item_ids,
+                "count": len(items)
             }
                 
         except Exception as e:
-            self.log(f"❌ Exception finding damage cases: {str(e)}", "ERROR")
+            self.log(f"❌ Exception finding queue items: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_damage_cabinet_workflow(self, case_id: str) -> Dict[str, Any]:

@@ -416,6 +416,63 @@ export default function DamageCabinetPro({
     alert(`Мок: відкриємо кабінет переобліку з позицією ${c.fromReauditItemId}.`)
   }
 
+  // Відправка товару на обробку (хімчистка, мийка, реставрація)
+  const onSendToProcess = async (damageCase: DamageCase, line: DamageLine, processType: 'laundry' | 'washing' | 'restoration') => {
+    const token = localStorage.getItem('token')
+    const processNames = {
+      laundry: 'хімчистку',
+      washing: 'мийку',
+      restoration: 'реставрацію'
+    }
+
+    try {
+      if (processType === 'laundry') {
+        // Додати до черги хімчистки
+        const response = await axios.post(`${BACKEND_URL}/api/laundry/queue`, {
+          damage_id: damageCase.id,
+          order_id: damageCase.orderId ? parseInt(damageCase.orderId) : null,
+          order_number: damageCase.orderId ? `Замовлення #${damageCase.orderId}` : null,
+          product_name: line.productName,
+          sku: line.sku,
+          category: line.category || 'textile',
+          quantity: line.qty,
+          condition: 'dirty',
+          notes: line.note || line.ruleLabel || 'З кабінету шкоди',
+          source: 'damage_cabinet'
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        alert(`✅ "${line.productName}" додано до черги хімчистки!\nСтворено завдання в Кабінеті завдань.`)
+        
+        // Оновити вкладку хімчистки
+        if (activeTab === 'laundry') {
+          loadLaundryData()
+        }
+      } else {
+        // Для мийки та реставрації - створити завдання
+        const taskType = processType === 'washing' ? 'washing' : 'restoration'
+        const response = await axios.post(`${BACKEND_URL}/api/tasks`, {
+          damage_id: damageCase.id,
+          order_id: damageCase.orderId ? parseInt(damageCase.orderId) : null,
+          order_number: damageCase.orderId ? `Замовлення #${damageCase.orderId}` : null,
+          title: `${processType === 'washing' ? '🚿 Мийка' : '🔧 Реставрація'}: ${line.productName} (${line.sku})`,
+          description: `Товар потребує ${processNames[processType]}.\nСтан: ${line.ruleLabel || 'Пошкодження'}.\n${line.note || ''}`,
+          task_type: taskType,
+          status: 'todo',
+          priority: 'medium'
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+
+        alert(`✅ "${line.productName}" відправлено на ${processNames[processType]}!\nСтворено завдання в Кабінеті завдань.`)
+      }
+    } catch (error: any) {
+      console.error('Error sending to process:', error)
+      alert(`❌ Помилка: ${error.response?.data?.detail || error.message}`)
+    }
+  }
+
   if (loading && activeTab === 'main') {
     return (
       <div className="min-h-screen bg-corp-bg-main">

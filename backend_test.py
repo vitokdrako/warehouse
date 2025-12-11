@@ -252,35 +252,39 @@ class CompleteReturnTester:
             self.log(f"❌ Exception verifying status changes: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_frontend_page_elements(self) -> bool:
-        """Test that frontend page has required elements"""
+    def find_issued_cards_for_testing(self) -> Dict[str, Any]:
+        """Find issued cards that can be used for testing complete-return"""
         try:
-            self.log("🧪 Testing frontend page elements...")
+            self.log("🔍 Finding issued cards for testing...")
             
-            # This would typically require browser automation to check:
-            # - Header "Rental Hub" exists
-            # - Subtitle "Кабінет шкоди" exists  
-            # - Tabs: Головна, Мийка, Реставрація, Хімчистка exist
-            # - Cases list is not empty or "Завантаження..."
+            # Get issue cards
+            issue_cards_result = self.test_issue_cards_list()
+            if not issue_cards_result.get("success"):
+                return {"success": False, "error": "Could not fetch issue cards"}
             
-            # For backend testing, we'll verify the data is available
-            cases_result = self.test_damage_cases_list()
+            issued_cards = issue_cards_result.get("issued_cards", [])
             
-            if cases_result.get("success"):
-                case_count = cases_result.get("count", 0)
-                if case_count > 0:
-                    self.log(f"✅ Frontend page elements test passed ({case_count} cases available)")
-                    return True
-                else:
-                    self.log("⚠️ No cases available for display", "WARNING")
-                    return True  # Still pass as this is not an error
-            else:
-                self.log("❌ Frontend page elements test failed (no data available)", "ERROR")
-                return False
+            if not issued_cards:
+                self.log("⚠️ No issued cards found for testing", "WARNING")
+                return {"success": True, "issued_cards": [], "count": 0}
+            
+            self.log(f"✅ Found {len(issued_cards)} issued cards for testing")
+            
+            # Show details of available cards
+            for i, card in enumerate(issued_cards[:5]):  # Show first 5
+                order_id = card.get('order_id')
+                customer = card.get('customer_name', 'Unknown')
+                self.log(f"   {i+1}. Order {order_id}: {customer}")
+            
+            return {
+                "success": True,
+                "issued_cards": issued_cards,
+                "count": len(issued_cards)
+            }
                 
         except Exception as e:
-            self.log(f"❌ Exception testing frontend page elements: {str(e)}", "ERROR")
-            return False
+            self.log(f"❌ Exception finding issued cards: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     
     def test_case_selection_and_details(self, cases_data: List[Dict]) -> bool:
         """Test clicking on first case and verifying details display"""

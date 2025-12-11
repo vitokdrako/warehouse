@@ -635,13 +635,16 @@ async def remove_from_laundry_queue(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+class BatchFromQueueCreate(BaseModel):
+    item_ids: List[str]
+    laundry_company: str
+    expected_return_date: str
+    cost: Optional[float] = None
+    notes: Optional[str] = None
+
 @router.post("/batches/from-queue")
 async def create_batch_from_queue(
-    item_ids: List[str],
-    laundry_company: str,
-    expected_return_date: str,
-    cost: Optional[float] = None,
-    notes: Optional[str] = None,
+    data: BatchFromQueueCreate,
     current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
@@ -649,15 +652,15 @@ async def create_batch_from_queue(
     Створити партію хімчистки з товарів черги
     """
     try:
-        if not item_ids:
+        if not data.item_ids:
             raise HTTPException(status_code=400, detail="Виберіть товари для партії")
         
         batch_id = str(uuid.uuid4())[:8]
         batch_number = f"LB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         
         # Отримати товари з черги (tasks)
-        placeholders = ','.join([f':id_{i}' for i in range(len(item_ids))])
-        params = {f'id_{i}': item_id for i, item_id in enumerate(item_ids)}
+        placeholders = ','.join([f':id_{i}' for i in range(len(data.item_ids))])
+        params = {f'id_{i}': item_id for i, item_id in enumerate(data.item_ids)}
         
         result = db.execute(text(f"""
             SELECT id, title, description, order_id, order_number

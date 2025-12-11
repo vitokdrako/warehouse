@@ -705,7 +705,7 @@ function MainTabContent({
                 <div key={line.id} className="flex items-center gap-3 px-3 py-2">
                   {line.image && (
                     <img
-                      src={getImageUrl(line.image)}
+                      src={getImageUrl(line.image) || ''}
                       alt={line.productName}
                       className="w-12 h-12 rounded-lg object-cover border border-slate-200"
                     />

@@ -280,6 +280,51 @@ export default function DamageCabinetPro({
     return <Badge tone={config.tone}>{config.label}</Badge>
   }
 
+  // Створення партії з черги
+  const handleCreateBatchFromQueue = async (
+    itemIds: string[],
+    laundryCompany: string,
+    expectedReturnDate: string,
+    cost: number | null,
+    notes: string
+  ) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.post(
+        `${BACKEND_URL}/api/laundry/batches/from-queue`,
+        null,
+        {
+          params: {
+            item_ids: itemIds,
+            laundry_company: laundryCompany,
+            expected_return_date: expectedReturnDate,
+            cost: cost,
+            notes: notes
+          },
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      )
+      alert(`✅ ${response.data.message}`)
+      loadLaundryData()
+    } catch (error: any) {
+      alert('Помилка: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
+  // Видалення з черги
+  const handleRemoveFromQueue = async (itemId: string) => {
+    if (!window.confirm('Видалити товар з черги?')) return
+    try {
+      const token = localStorage.getItem('token')
+      await axios.delete(`${BACKEND_URL}/api/laundry/queue/${itemId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      loadLaundryData()
+    } catch (error: any) {
+      alert('Помилка: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
   const selected = useMemo(() => {
     if (!cases.length) return null
     if (!selectedId) return cases[0]

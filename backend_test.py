@@ -167,37 +167,47 @@ class DamageCabinetTester:
             self.log(f"❌ Exception testing case details: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_complete_return_endpoint(self, order_id: int) -> Dict[str, Any]:
-        """Test POST /api/decor-orders/{order_id}/complete-return"""
+    def test_laundry_batches(self) -> Dict[str, Any]:
+        """Test GET /api/laundry/batches - should return laundry batches for Хімчистка tab"""
         try:
-            self.log(f"🧪 Testing complete-return endpoint for order {order_id}...")
+            self.log("🧪 Testing laundry batches endpoint...")
             
-            # Prepare test data for complete return
-            return_data = {
-                "late_fee": 0,
-                "cleaning_fee": 0,
-                "damage_fee": 0,
-                "manager_notes": "Test complete return via API",
-                "items_returned": []
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/decor-orders/{order_id}/complete-return",
-                json=return_data
-            )
+            response = self.session.get(f"{self.base_url}/laundry/batches")
             
             if response.status_code == 200:
                 data = response.json()
-                self.log(f"✅ Complete return successful for order {order_id}")
-                self.log(f"   Response: {data}")
-                return {"success": True, "data": data, "order_id": order_id}
+                
+                # Check if response is an array
+                if not isinstance(data, list):
+                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                self.log(f"✅ Retrieved {len(data)} laundry batches")
+                
+                # Validate batch structure if data exists
+                if data:
+                    sample_batch = data[0]
+                    required_fields = ['id', 'batch_number', 'status', 'laundry_company', 'total_items']
+                    missing_fields = [field for field in required_fields if field not in sample_batch]
+                    
+                    if missing_fields:
+                        self.log(f"❌ Missing required batch fields: {missing_fields}", "ERROR")
+                        return {"success": False, "missing_fields": missing_fields}
+                    
+                    self.log(f"✅ Batch structure validation passed")
+                    
+                    # Log some examples
+                    for batch in data[:3]:  # Show first 3
+                        self.log(f"   - Batch {batch.get('batch_number')}: Company={batch.get('laundry_company')}, Status={batch.get('status')}, Items={batch.get('total_items')}")
+                
+                return {"success": True, "data": data, "count": len(data)}
             else:
-                self.log(f"❌ Complete return failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "order_id": order_id}
+                self.log(f"❌ Failed to get laundry batches: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing complete return: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e), "order_id": order_id}
+            self.log(f"❌ Exception testing laundry batches: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     
     def verify_order_status_change(self, order_id: int) -> Dict[str, Any]:
         """Verify that order status changed to 'returned' and issue_card status to 'completed'"""

@@ -1806,3 +1806,53 @@ manager_notes = row[16] or row[13] or ""  # issue_cards → orders
 ### Статус: ✅ ВИПРАВЛЕНО
 
 ---
+
+---
+
+## 🔧 Виправлено: Картка повернення не архівується після завершення приймання
+**Дата**: 11.12.2025
+**Проблема**: Після натискання "Завершити приймання" картка не переходила в архів, залишалася в розділі "Повернення"
+
+### Причина:
+У endpoint `/api/decor-orders/{order_id}/complete-return` оновлювалися:
+- ✅ `orders.status` → `'returned'`
+- ✅ `decor_return_cards.status` → `'completed'`
+- ❌ `issue_cards.status` — НЕ ОНОВЛЮВАВСЯ!
+
+Dashboard показує "Повернення" з картками `issue_cards` зі статусом `issued`. Якщо статус не змінювався на `completed`, картка залишалася у "Поверненнях".
+
+### Виправлення:
+Додано оновлення статусу `issue_cards` в endpoint `complete-return`:
+
+```python
+# ✅ ВИПРАВЛЕННЯ: Оновити статус issue_cards на 'completed' (для архіву)
+try:
+    db.execute(text("""
+        UPDATE issue_cards 
+        SET status = 'completed', 
+            updated_at = NOW()
+        WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    print(f"[Orders] Issue card для замовлення {order_id} позначено як 'completed'")
+except Exception as e:
+    print(f"[Orders] Error updating issue_cards status: {e}")
+```
+
+### Результат тесту:
+```
+До виправлення:
+  Issue card: OC-7047 | status: issued
+  Order: OC-7047 | status: ready_for_issue
+
+Після виклику complete-return:
+  Issue card: OC-7047 | status: completed ✅
+  Order: OC-7047 | status: returned ✅
+```
+
+### Файли:
+- `/app/backend/routes/orders.py` - додано оновлення issue_cards.status
+
+### Статус: ✅ ВИПРАВЛЕНО І ПРОТЕСТОВАНО
+
+---
+

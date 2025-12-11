@@ -328,58 +328,66 @@ class DamageCabinetTester:
             return {"success": False, "error": str(e)}
     
     def verify_expected_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior according to review request"""
+        """Verify expected behavior according to damage cabinet review request"""
         try:
-            self.log("🔍 Verifying expected behavior for complete return fix...")
+            self.log("🔍 Verifying expected behavior for damage cabinet tabs...")
             
             results = {
-                "issue_cards_accessible": False,
-                "archive_accessible": False,
-                "issued_cards_found": False,
-                "complete_return_working": False,
-                "status_changes_working": False
+                "damage_cases_accessible": False,
+                "damage_case_details_working": False,
+                "laundry_batches_accessible": False,
+                "laundry_statistics_accessible": False,
+                "damage_cases_found": False,
+                "laundry_integration_working": False
             }
             
-            # Test 1: Issue cards endpoint accessible
-            issue_cards_result = self.test_issue_cards_list()
-            if issue_cards_result.get("success"):
-                results["issue_cards_accessible"] = True
-                self.log("✅ Issue cards endpoint accessible")
+            # Test 1: Damage cases endpoint accessible (Головна tab)
+            cases_result = self.test_damage_cases_list()
+            if cases_result.get("success"):
+                results["damage_cases_accessible"] = True
+                self.log("✅ Damage cases endpoint accessible")
                 
-                # Check for issued cards
-                issued_cards = issue_cards_result.get("issued_cards", [])
-                if issued_cards:
-                    results["issued_cards_found"] = True
-                    self.log(f"✅ Found {len(issued_cards)} issued cards")
-                else:
-                    self.log("⚠️ No issued cards found", "WARNING")
-            else:
-                self.log("❌ Issue cards endpoint not accessible", "ERROR")
-            
-            # Test 2: Archive endpoint accessible
-            archive_result = self.test_archive_endpoint()
-            if archive_result.get("success"):
-                results["archive_accessible"] = True
-                self.log("✅ Archive endpoint accessible")
-            else:
-                self.log("❌ Archive endpoint not accessible", "ERROR")
-            
-            # Test 3: Complete return functionality (if we have issued cards)
-            if results["issued_cards_found"]:
-                issued_cards = issue_cards_result.get("issued_cards", [])
-                if issued_cards:
-                    # Test with first issued card
-                    test_order_id = issued_cards[0].get("order_id")
-                    self.log(f"🧪 Testing complete return with order {test_order_id}...")
+                # Check for damage cases
+                cases = cases_result.get("data", [])
+                if cases:
+                    results["damage_cases_found"] = True
+                    self.log(f"✅ Found {len(cases)} damage cases")
                     
-                    workflow_result = self.test_complete_return_workflow(test_order_id)
-                    if workflow_result.get("success"):
-                        results["complete_return_working"] = True
-                        results["status_changes_working"] = True
-                        self.log("✅ Complete return workflow working correctly")
+                    # Test case details with first case
+                    test_case_id = cases[0].get("id")
+                    self.log(f"🧪 Testing case details with case {test_case_id}...")
+                    
+                    details_result = self.test_damage_case_details(test_case_id)
+                    if details_result.get("success"):
+                        results["damage_case_details_working"] = True
+                        self.log("✅ Damage case details working correctly")
                     else:
-                        self.log("❌ Complete return workflow failed", "ERROR")
-                        self.log(f"   Details: {workflow_result.get('error', 'Unknown error')}")
+                        self.log("❌ Damage case details failed", "ERROR")
+                else:
+                    self.log("⚠️ No damage cases found", "WARNING")
+            else:
+                self.log("❌ Damage cases endpoint not accessible", "ERROR")
+            
+            # Test 2: Laundry batches endpoint accessible (Хімчистка tab)
+            batches_result = self.test_laundry_batches()
+            if batches_result.get("success"):
+                results["laundry_batches_accessible"] = True
+                self.log("✅ Laundry batches endpoint accessible")
+            else:
+                self.log("❌ Laundry batches endpoint not accessible", "ERROR")
+            
+            # Test 3: Laundry statistics endpoint accessible (Хімчистка tab)
+            stats_result = self.test_laundry_statistics()
+            if stats_result.get("success"):
+                results["laundry_statistics_accessible"] = True
+                self.log("✅ Laundry statistics endpoint accessible")
+                
+                # Check if both laundry endpoints work
+                if results["laundry_batches_accessible"]:
+                    results["laundry_integration_working"] = True
+                    self.log("✅ Laundry integration (Хімчистка tab) working correctly")
+            else:
+                self.log("❌ Laundry statistics endpoint not accessible", "ERROR")
             
             return results
             

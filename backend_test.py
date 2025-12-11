@@ -281,55 +281,107 @@ class TaskManagementTester:
             self.log(f"❌ Exception testing all tasks GET: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_tasks_get(self) -> Dict[str, Any]:
-        """Test GET /api/tasks - should return tasks with correct types"""
+    def test_complete_task_workflow(self) -> Dict[str, Any]:
+        """Test complete task workflow: Create → Filter → Update → Assign"""
         try:
-            self.log("🧪 Testing tasks GET endpoint...")
+            self.log("🧪 Testing complete task workflow...")
             
-            response = self.session.get(f"{self.base_url}/tasks")
+            created_tasks = []
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Check if response is an array
-                if not isinstance(data, list):
-                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                self.log(f"✅ Retrieved {len(data)} tasks")
-                
-                # Count tasks by type
-                task_types = {}
-                for task in data:
-                    task_type = task.get('task_type', 'unknown')
-                    task_types[task_type] = task_types.get(task_type, 0) + 1
-                
-                self.log(f"   Task types found: {task_types}")
-                
-                # Look for laundry_queue, washing, restoration tasks
-                laundry_queue_tasks = [t for t in data if t.get('task_type') == 'laundry_queue']
-                washing_tasks = [t for t in data if t.get('task_type') == 'washing']
-                restoration_tasks = [t for t in data if t.get('task_type') == 'restoration']
-                
-                self.log(f"   Laundry queue tasks: {len(laundry_queue_tasks)}")
-                self.log(f"   Washing tasks: {len(washing_tasks)}")
-                self.log(f"   Restoration tasks: {len(restoration_tasks)}")
-                
-                return {
-                    "success": True, 
-                    "data": data, 
-                    "count": len(data),
-                    "task_types": task_types,
-                    "laundry_queue_count": len(laundry_queue_tasks),
-                    "washing_count": len(washing_tasks),
-                    "restoration_count": len(restoration_tasks)
-                }
+            # Step 1: Create washing task
+            self.log("   Step 1: Creating washing task...")
+            washing_result = self.test_task_creation("washing")
+            
+            if washing_result.get("success"):
+                washing_task_id = washing_result.get("task_id")
+                created_tasks.append({"id": washing_task_id, "type": "washing"})
+                self.log(f"   ✅ Washing task created: {washing_task_id}")
             else:
-                self.log(f"❌ Failed to get tasks: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
+                self.log("   ❌ Failed to create washing task", "ERROR")
+                return {"success": False, "error": "Could not create washing task"}
+            
+            # Step 2: Create restoration task
+            self.log("   Step 2: Creating restoration task...")
+            restoration_result = self.test_task_creation("restoration")
+            
+            if restoration_result.get("success"):
+                restoration_task_id = restoration_result.get("task_id")
+                created_tasks.append({"id": restoration_task_id, "type": "restoration"})
+                self.log(f"   ✅ Restoration task created: {restoration_task_id}")
+            else:
+                self.log("   ❌ Failed to create restoration task", "ERROR")
+                return {"success": False, "error": "Could not create restoration task"}
+            
+            # Step 3: Test filtering by type
+            self.log("   Step 3: Testing task filtering...")
+            washing_filter_result = self.test_tasks_filter_by_type("washing")
+            restoration_filter_result = self.test_tasks_filter_by_type("restoration")
+            
+            filtering_success = (
+                washing_filter_result.get("success", False) and 
+                restoration_filter_result.get("success", False)
+            )
+            
+            if filtering_success:
+                self.log("   ✅ Task filtering working correctly")
+            else:
+                self.log("   ❌ Task filtering failed", "ERROR")
+            
+            # Step 4: Test status updates
+            self.log("   Step 4: Testing status updates...")
+            status_updates_success = True
+            
+            for task in created_tasks:
+                # Update to in_progress
+                progress_result = self.test_task_status_update(task["id"], "in_progress")
+                if not progress_result.get("success"):
+                    status_updates_success = False
+                    break
+                
+                # Update to done
+                done_result = self.test_task_status_update(task["id"], "done")
+                if not done_result.get("success"):
+                    status_updates_success = False
+                    break
+            
+            if status_updates_success:
+                self.log("   ✅ Status updates working correctly")
+            else:
+                self.log("   ❌ Status updates failed", "ERROR")
+            
+            # Step 5: Test task assignment
+            self.log("   Step 5: Testing task assignment...")
+            assignment_success = True
+            
+            for task in created_tasks:
+                assign_result = self.test_task_assignment(task["id"], "Тестовий виконавець")
+                if not assign_result.get("success"):
+                    assignment_success = False
+                    break
+            
+            if assignment_success:
+                self.log("   ✅ Task assignment working correctly")
+            else:
+                self.log("   ❌ Task assignment failed", "ERROR")
+            
+            # Overall success
+            overall_success = (
+                len(created_tasks) == 2 and
+                filtering_success and
+                status_updates_success and
+                assignment_success
+            )
+            
+            return {
+                "success": overall_success,
+                "created_tasks": created_tasks,
+                "filtering_success": filtering_success,
+                "status_updates_success": status_updates_success,
+                "assignment_success": assignment_success
+            }
                 
         except Exception as e:
-            self.log(f"❌ Exception testing tasks GET: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing complete workflow: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_batch_creation_from_queue(self, queue_items: List[str]) -> Dict[str, Any]:

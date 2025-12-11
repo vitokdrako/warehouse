@@ -226,16 +226,27 @@ class TaskManagementTester:
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if assignment was successful
-                if data.get('assigned_to') != assignee:
-                    self.log(f"❌ Task assignment failed: expected {assignee}, got {data.get('assigned_to')}", "ERROR")
+                # Check if assignment message was successful
+                if data.get('message') != "Task updated successfully":
+                    self.log(f"❌ Task assignment failed: {data.get('message')}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Task assigned successfully")
-                self.log(f"   Task ID: {task_id}")
-                self.log(f"   Assigned to: {data.get('assigned_to')}")
+                # Verify the assignment by fetching the task
+                verify_response = self.session.get(f"{self.base_url}/tasks/{task_id}")
+                if verify_response.status_code == 200:
+                    task_data = verify_response.json()
+                    if task_data.get('assigned_to') == assignee:
+                        self.log(f"✅ Task assigned successfully")
+                        self.log(f"   Task ID: {task_id}")
+                        self.log(f"   Assigned to: {task_data.get('assigned_to')}")
+                        return {"success": True, "data": task_data}
+                    else:
+                        self.log(f"❌ Assignment verification failed: expected {assignee}, got {task_data.get('assigned_to')}", "ERROR")
+                        return {"success": False, "data": task_data}
+                else:
+                    self.log(f"❌ Failed to verify task assignment: {verify_response.status_code}", "ERROR")
+                    return {"success": False, "status_code": verify_response.status_code}
                 
-                return {"success": True, "data": data}
             else:
                 self.log(f"❌ Failed to assign task: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}

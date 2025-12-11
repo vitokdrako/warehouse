@@ -307,7 +307,7 @@ export default function DamageCabinetPro({
     return { open, awaitingClient, awaitingPayment, inRepair, closed }
   }, [cases])
 
-  const updateCaseStatus = async (id: string, status: DamageStatus) => {
+  const onStatusChange = async (id: string, status: DamageStatus) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/damages/cases/${id}/status`, {
         method: 'PUT',

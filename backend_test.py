@@ -592,8 +592,8 @@ class LaundrySystemTester:
             return {"error": str(e)}
     
     def run_comprehensive_test(self):
-        """Run the damage cabinet tab structure test scenario as described in the review request"""
-        self.log("🚀 Starting comprehensive damage cabinet tab structure test")
+        """Run the laundry system test scenario as described in the Ukrainian review request"""
+        self.log("🚀 Starting comprehensive laundry system test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -607,49 +607,34 @@ class LaundrySystemTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test damage cases API (Головна tab)
-        self.log("\n🔍 Step 2: Testing damage cases API (Головна tab)...")
-        cases_result = self.test_damage_cases_list()
+        # Step 3: Test laundry queue endpoints
+        self.log("\n🔍 Step 2: Testing laundry queue endpoints...")
+        queue_get_result = self.test_laundry_queue_get()
+        queue_post_result = self.test_laundry_queue_post()
         
-        if not cases_result.get("success"):
-            self.log("❌ Could not retrieve damage cases", "ERROR")
-            return False
+        queue_success = queue_get_result.get("success", False) and queue_post_result.get("success", False)
+        initial_queue_count = queue_get_result.get("count", 0)
         
-        cases = cases_result.get("data", [])
-        total_cases = cases_result.get("count", 0)
+        # Step 4: Test tasks creation and retrieval
+        self.log("\n🔍 Step 3: Testing tasks creation and retrieval...")
+        tasks_create_result = self.test_tasks_creation()
+        tasks_get_result = self.test_tasks_get()
         
-        # Step 4: Test damage case details
-        self.log("\n🔍 Step 3: Testing damage case details...")
-        cases_for_testing = self.find_damage_cases_for_testing()
+        tasks_success = tasks_create_result.get("success", False) and tasks_get_result.get("success", False)
+        total_tasks = tasks_get_result.get("count", 0) if tasks_get_result.get("success") else 0
         
-        if not cases_for_testing.get("success"):
-            self.log("❌ Could not find damage cases for testing", "ERROR")
-            return False
-        
-        available_cases = cases_for_testing.get("cases", [])
-        
-        # Step 5: Test case details workflow (if we have cases)
-        case_details_success = True
-        if available_cases:
-            self.log("\n🔍 Step 4: Testing case details workflow...")
-            
-            # Test with first available case
-            test_case_id = available_cases[0].get("id")
-            workflow_result = self.test_damage_cabinet_workflow(test_case_id)
-            
-            if not workflow_result.get("success"):
-                self.log("❌ Damage cabinet workflow test failed", "ERROR")
-                case_details_success = False
-        else:
-            self.log("\n⚠️ Step 4: No damage cases available for workflow testing", "WARNING")
-        
-        # Step 6: Test laundry integration (Хімчистка tab)
-        self.log("\n🔍 Step 5: Testing laundry integration (Хімчистка tab)...")
+        # Step 5: Test laundry batches and statistics
+        self.log("\n🔍 Step 4: Testing laundry batches and statistics...")
         batches_result = self.test_laundry_batches()
         stats_result = self.test_laundry_statistics()
         
         laundry_success = batches_result.get("success", False) and stats_result.get("success", False)
         batches_count = batches_result.get("count", 0) if batches_result.get("success") else 0
+        
+        # Step 6: Test complete workflow
+        self.log("\n🔍 Step 5: Testing complete laundry workflow...")
+        workflow_result = self.test_complete_laundry_workflow()
+        workflow_success = workflow_result.get("success", False)
         
         # Step 7: Verify expected behavior
         self.log("\n🔍 Step 6: Verifying expected behavior...")
@@ -657,39 +642,57 @@ class LaundrySystemTester:
         
         # Step 8: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE DAMAGE CABINET TAB STRUCTURE TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE LAUNDRY SYSTEM TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
-        self.log(f"   • Damage Cases API (Головна): ✅ Working ({total_cases} cases)")
         
-        if available_cases:
-            if case_details_success:
-                self.log(f"   • Case Details: ✅ Working")
-            else:
-                self.log(f"   • Case Details: ❌ Failed")
+        if queue_success:
+            self.log(f"   • Laundry Queue: ✅ Working ({initial_queue_count} items initially)")
         else:
-            self.log(f"   • Case Details: ⚠️ No cases to test")
+            self.log(f"   • Laundry Queue: ❌ Failed")
+        
+        if tasks_success:
+            self.log(f"   • Tasks System: ✅ Working ({total_tasks} total tasks)")
+            task_types = tasks_get_result.get("task_types", {}) if tasks_get_result.get("success") else {}
+            if task_types:
+                self.log(f"     - Task types: {', '.join(task_types.keys())}")
+        else:
+            self.log(f"   • Tasks System: ❌ Failed")
         
         if laundry_success:
-            self.log(f"   • Laundry Batches (Хімчистка): ✅ Working ({batches_count} batches)")
-            self.log(f"   • Laundry Statistics (Хімчистка): ✅ Working")
+            self.log(f"   • Laundry Batches: ✅ Working ({batches_count} batches)")
+            self.log(f"   • Laundry Statistics: ✅ Working")
         else:
-            self.log(f"   • Laundry Integration (Хімчистка): ❌ Failed")
+            self.log(f"   • Laundry Integration: ❌ Failed")
         
-        self.log("\n🎉 DAMAGE CABINET TAB STRUCTURE TESTING COMPLETED!")
+        if workflow_success:
+            self.log(f"   • Complete Workflow: ✅ Working")
+        else:
+            self.log(f"   • Complete Workflow: ❌ Failed")
+        
+        self.log("\n🎉 LAUNDRY SYSTEM TESTING COMPLETED!")
         self.log("   The system correctly provides:")
-        self.log("   • 📋 Damage cases list for Головна tab")
-        self.log("   • 🔍 Damage case details with items")
-        self.log("   • 🧺 Laundry batches for Хімчистка tab")
-        self.log("   • 📊 Laundry statistics for Хімчистка tab")
+        self.log("   • 🧺 Laundry queue management (GET/POST /api/laundry/queue)")
+        self.log("   • 📋 Task creation with types: laundry_queue, washing, restoration")
+        self.log("   • 🏭 Batch creation from queue items")
+        self.log("   • 📊 Laundry statistics and monitoring")
+        self.log("   • 🔄 Complete workflow: Queue → Batch → Statistics")
         self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
         
-        if not available_cases:
-            self.log("\n⚠️ NOTE: No damage cases found in the system.")
-            self.log("   This may be expected if no damage cases exist yet.")
-            self.log("   The API endpoints are still working correctly.")
+        # Check if all critical components work
+        critical_success = (
+            queue_success and 
+            tasks_success and 
+            laundry_success and 
+            workflow_success
+        )
         
-        return True
+        if critical_success:
+            self.log("\n✅ ALL CRITICAL COMPONENTS WORKING!")
+        else:
+            self.log("\n⚠️ SOME CRITICAL COMPONENTS FAILED - CHECK LOGS ABOVE")
+        
+        return critical_success
 
 def main():
     """Main test execution"""

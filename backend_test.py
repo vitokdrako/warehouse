@@ -283,54 +283,48 @@ class DamageCabinetTester:
             self.log(f"❌ Exception finding damage cases: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_complete_return_workflow(self, order_id: int) -> Dict[str, Any]:
-        """Test the complete return workflow for a specific order"""
+    def test_damage_cabinet_workflow(self, case_id: str) -> Dict[str, Any]:
+        """Test the damage cabinet workflow for a specific case"""
         try:
-            self.log(f"🧪 Testing complete return workflow for order {order_id}...")
+            self.log(f"🧪 Testing damage cabinet workflow for case {case_id}...")
             
-            # Step 1: Get initial state
-            self.log("   Step 1: Getting initial state...")
-            initial_issue_cards = self.test_issue_cards_list()
-            initial_archive = self.test_archive_endpoint()
+            # Step 1: Get case details
+            self.log("   Step 1: Getting case details...")
+            case_details_result = self.test_damage_case_details(case_id)
             
-            if not initial_issue_cards.get("success") or not initial_archive.get("success"):
-                return {"success": False, "error": "Could not get initial state"}
+            if not case_details_result.get("success"):
+                return {"success": False, "error": "Could not get case details", "details": case_details_result}
             
-            # Find the order in initial state
-            initial_cards = initial_issue_cards.get("data", [])
-            initial_card = None
-            for card in initial_cards:
-                if card.get("order_id") == order_id:
-                    initial_card = card
-                    break
+            case_data = case_details_result.get("data", {})
+            items_count = case_details_result.get("items_count", 0)
             
-            if not initial_card:
-                return {"success": False, "error": f"Order {order_id} not found in issue cards"}
+            self.log(f"   Case has {items_count} items")
             
-            initial_status = initial_card.get("status")
-            self.log(f"   Initial issue card status: {initial_status}")
+            # Step 2: Test laundry integration (for Хімчистка tab)
+            self.log("   Step 2: Testing laundry integration...")
+            laundry_batches_result = self.test_laundry_batches()
+            laundry_stats_result = self.test_laundry_statistics()
             
-            # Step 2: Execute complete return
-            self.log("   Step 2: Executing complete return...")
-            complete_result = self.test_complete_return_endpoint(order_id)
+            if not laundry_batches_result.get("success") or not laundry_stats_result.get("success"):
+                return {"success": False, "error": "Laundry integration failed"}
             
-            if not complete_result.get("success"):
-                return {"success": False, "error": "Complete return failed", "details": complete_result}
+            batches_count = laundry_batches_result.get("count", 0)
+            stats_data = laundry_stats_result.get("data", {})
             
-            # Step 3: Verify changes
-            self.log("   Step 3: Verifying status changes...")
-            verification_result = self.verify_order_status_change(order_id)
+            self.log(f"   Found {batches_count} laundry batches")
+            self.log(f"   Laundry statistics: {stats_data.get('total_batches', 0)} total batches")
             
             return {
-                "success": verification_result.get("success", False),
-                "order_id": order_id,
-                "initial_status": initial_status,
-                "complete_return_result": complete_result,
-                "verification_result": verification_result
+                "success": True,
+                "case_id": case_id,
+                "case_details": case_data,
+                "items_count": items_count,
+                "laundry_batches_count": batches_count,
+                "laundry_statistics": stats_data
             }
                 
         except Exception as e:
-            self.log(f"❌ Exception testing complete return workflow: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing damage cabinet workflow: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def verify_expected_behavior(self) -> Dict[str, Any]:

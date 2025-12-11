@@ -118,38 +118,53 @@ class DamageCabinetTester:
             self.log(f"❌ Exception testing damage cases list: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_archive_endpoint(self) -> Dict[str, Any]:
-        """Test GET /api/archive - should return archived orders"""
+    def test_damage_case_details(self, case_id: str) -> Dict[str, Any]:
+        """Test GET /api/damages/cases/{case_id} - should return case details with items"""
         try:
-            self.log("🧪 Testing archive endpoint...")
+            self.log(f"🧪 Testing damage case details for case {case_id}...")
             
-            response = self.session.get(f"{self.base_url}/archive")
+            response = self.session.get(f"{self.base_url}/damages/cases/{case_id}")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response is an array
-                if not isinstance(data, list):
-                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
+                # Check if response has required structure
+                if not isinstance(data, dict):
+                    self.log(f"❌ Expected object, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Retrieved {len(data)} archived orders")
+                # Validate case details structure
+                required_fields = ['id', 'items']
+                missing_fields = [field for field in required_fields if field not in data]
                 
-                # Find orders with status 'returned'
-                returned_orders = [order for order in data if order.get('status') == 'returned']
-                self.log(f"   Found {len(returned_orders)} orders with status 'returned'")
+                if missing_fields:
+                    self.log(f"❌ Missing required fields: {missing_fields}", "ERROR")
+                    return {"success": False, "missing_fields": missing_fields}
                 
-                # Log some examples
-                for order in returned_orders[:3]:  # Show first 3
-                    self.log(f"   - Order {order.get('order_id')}: {order.get('customer_name')} (status: {order.get('status')})")
+                # Validate items structure
+                items = data.get('items', [])
+                if items:
+                    sample_item = items[0]
+                    required_item_fields = ['id', 'name', 'qty', 'base_value', 'estimate_value']
+                    missing_item_fields = [field for field in required_item_fields if field not in sample_item]
+                    
+                    if missing_item_fields:
+                        self.log(f"❌ Missing required item fields: {missing_item_fields}", "ERROR")
+                        return {"success": False, "missing_item_fields": missing_item_fields}
+                    
+                    self.log(f"✅ Item structure validation passed")
+                    
+                    # Log sample item
+                    self.log(f"   Sample item: ID={sample_item.get('id')}, Name={sample_item.get('name')}, Qty={sample_item.get('qty')}, Base={sample_item.get('base_value')}, Estimate={sample_item.get('estimate_value')}")
                 
-                return {"success": True, "data": data, "returned_orders": returned_orders, "count": len(data)}
+                self.log(f"✅ Retrieved case details with {len(items)} items")
+                return {"success": True, "data": data, "items_count": len(items)}
             else:
-                self.log(f"❌ Failed to get archive: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get case details: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing archive endpoint: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing case details: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_complete_return_endpoint(self, order_id: int) -> Dict[str, Any]:

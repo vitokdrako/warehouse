@@ -531,85 +531,74 @@ class TaskManagementTester:
             return {"success": False, "error": str(e)}
     
     def verify_expected_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior according to laundry system review request"""
+        """Verify expected behavior according to task management review request"""
         try:
-            self.log("🔍 Verifying expected behavior for laundry system...")
+            self.log("🔍 Verifying expected behavior for task management system...")
             
             results = {
-                "laundry_queue_get_working": False,
-                "laundry_queue_post_working": False,
-                "tasks_creation_working": False,
-                "tasks_get_working": False,
-                "laundry_batches_accessible": False,
-                "laundry_statistics_accessible": False,
-                "batch_creation_working": False,
+                "task_filtering_working": False,
+                "task_creation_working": False,
+                "task_status_update_working": False,
+                "task_assignment_working": False,
                 "complete_workflow_working": False
             }
             
-            # Test 1: Laundry queue GET endpoint
-            queue_get_result = self.test_laundry_queue_get()
-            if queue_get_result.get("success"):
-                results["laundry_queue_get_working"] = True
-                self.log("✅ Laundry queue GET endpoint working")
-            else:
-                self.log("❌ Laundry queue GET endpoint failed", "ERROR")
+            # Test 1: Task filtering by type
+            washing_filter_result = self.test_tasks_filter_by_type("washing")
+            restoration_filter_result = self.test_tasks_filter_by_type("restoration")
             
-            # Test 2: Laundry queue POST endpoint
-            queue_post_result = self.test_laundry_queue_post()
-            if queue_post_result.get("success"):
-                results["laundry_queue_post_working"] = True
-                self.log("✅ Laundry queue POST endpoint working")
+            if washing_filter_result.get("success") and restoration_filter_result.get("success"):
+                results["task_filtering_working"] = True
+                self.log("✅ Task filtering by type working")
+                self.log(f"   Found {washing_filter_result.get('count', 0)} washing tasks")
+                self.log(f"   Found {restoration_filter_result.get('count', 0)} restoration tasks")
             else:
-                self.log("❌ Laundry queue POST endpoint failed", "ERROR")
+                self.log("❌ Task filtering by type failed", "ERROR")
             
-            # Test 3: Tasks creation
-            tasks_create_result = self.test_tasks_creation()
-            if tasks_create_result.get("success"):
-                results["tasks_creation_working"] = True
-                self.log("✅ Tasks creation working")
-            else:
-                self.log("❌ Tasks creation failed", "ERROR")
+            # Test 2: Task creation
+            washing_create_result = self.test_task_creation("washing")
+            restoration_create_result = self.test_task_creation("restoration")
             
-            # Test 4: Tasks GET endpoint
-            tasks_get_result = self.test_tasks_get()
-            if tasks_get_result.get("success"):
-                results["tasks_get_working"] = True
-                self.log("✅ Tasks GET endpoint working")
+            if washing_create_result.get("success") and restoration_create_result.get("success"):
+                results["task_creation_working"] = True
+                self.log("✅ Task creation working")
                 
-                # Check for specific task types
-                task_types = tasks_get_result.get("task_types", {})
-                if "laundry_queue" in task_types:
-                    self.log(f"   Found {task_types['laundry_queue']} laundry_queue tasks")
-                if "washing" in task_types:
-                    self.log(f"   Found {task_types['washing']} washing tasks")
-                if "restoration" in task_types:
-                    self.log(f"   Found {task_types['restoration']} restoration tasks")
+                # Store created task IDs for further testing
+                washing_task_id = washing_create_result.get("task_id")
+                restoration_task_id = restoration_create_result.get("task_id")
+                
+                # Test 3: Task status updates
+                if washing_task_id and restoration_task_id:
+                    progress_result1 = self.test_task_status_update(washing_task_id, "in_progress")
+                    done_result1 = self.test_task_status_update(washing_task_id, "done")
+                    progress_result2 = self.test_task_status_update(restoration_task_id, "in_progress")
+                    
+                    if (progress_result1.get("success") and done_result1.get("success") and 
+                        progress_result2.get("success")):
+                        results["task_status_update_working"] = True
+                        self.log("✅ Task status updates working")
+                    else:
+                        self.log("❌ Task status updates failed", "ERROR")
+                    
+                    # Test 4: Task assignment
+                    assign_result1 = self.test_task_assignment(washing_task_id, "Марія Іванівна")
+                    assign_result2 = self.test_task_assignment(restoration_task_id, "Петро Петренко")
+                    
+                    if assign_result1.get("success") and assign_result2.get("success"):
+                        results["task_assignment_working"] = True
+                        self.log("✅ Task assignment working")
+                    else:
+                        self.log("❌ Task assignment failed", "ERROR")
             else:
-                self.log("❌ Tasks GET endpoint failed", "ERROR")
+                self.log("❌ Task creation failed", "ERROR")
             
-            # Test 5: Laundry batches endpoint
-            batches_result = self.test_laundry_batches()
-            if batches_result.get("success"):
-                results["laundry_batches_accessible"] = True
-                self.log("✅ Laundry batches endpoint accessible")
-            else:
-                self.log("❌ Laundry batches endpoint not accessible", "ERROR")
-            
-            # Test 6: Laundry statistics endpoint
-            stats_result = self.test_laundry_statistics()
-            if stats_result.get("success"):
-                results["laundry_statistics_accessible"] = True
-                self.log("✅ Laundry statistics endpoint accessible")
-            else:
-                self.log("❌ Laundry statistics endpoint not accessible", "ERROR")
-            
-            # Test 7: Complete workflow
-            workflow_result = self.test_complete_laundry_workflow()
+            # Test 5: Complete workflow
+            workflow_result = self.test_complete_task_workflow()
             if workflow_result.get("success"):
                 results["complete_workflow_working"] = True
-                self.log("✅ Complete laundry workflow working")
+                self.log("✅ Complete task workflow working")
             else:
-                self.log("❌ Complete laundry workflow failed", "ERROR")
+                self.log("❌ Complete task workflow failed", "ERROR")
             
             return results
             

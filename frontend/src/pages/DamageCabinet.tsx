@@ -917,7 +917,56 @@ function LaundryTabContent({
   setSelectedBatch,
   setShowReturnModal,
   getStatusBadge,
+  queue,
+  onCreateBatchFromQueue,
+  onRemoveFromQueue,
 }: any) {
+  const [selectedQueueItems, setSelectedQueueItems] = useState<string[]>([])
+  const [showBatchModal, setShowBatchModal] = useState(false)
+  const [batchForm, setBatchForm] = useState({
+    laundry_company: '',
+    expected_return_date: '',
+    cost: '',
+    notes: ''
+  })
+
+  const toggleQueueItem = (id: string) => {
+    setSelectedQueueItems(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    )
+  }
+
+  const selectAllQueue = () => {
+    if (selectedQueueItems.length === queue?.length) {
+      setSelectedQueueItems([])
+    } else {
+      setSelectedQueueItems(queue?.map((q: any) => q.id) || [])
+    }
+  }
+
+  const handleCreateBatch = async () => {
+    if (selectedQueueItems.length === 0) {
+      alert('Виберіть товари для партії')
+      return
+    }
+    if (!batchForm.laundry_company || !batchForm.expected_return_date) {
+      alert('Заповніть назву хімчистки та очікувану дату повернення')
+      return
+    }
+    
+    await onCreateBatchFromQueue(
+      selectedQueueItems,
+      batchForm.laundry_company,
+      batchForm.expected_return_date,
+      batchForm.cost ? parseFloat(batchForm.cost) : null,
+      batchForm.notes
+    )
+    
+    setSelectedQueueItems([])
+    setShowBatchModal(false)
+    setBatchForm({ laundry_company: '', expected_return_date: '', cost: '', notes: '' })
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -928,6 +977,132 @@ function LaundryTabContent({
 
   return (
     <div className="space-y-6">
+      {/* Queue Section */}
+      {queue && queue.length > 0 && (
+        <div className="corp-card border-amber-200 bg-amber-50">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-corp-text-dark flex items-center gap-2">
+                📥 Черга на хімчистку
+                <span className="text-sm font-normal text-amber-600">({queue.length} товарів)</span>
+              </h3>
+              <p className="text-sm text-corp-text-muted">Товари очікують на формування партії для відправки</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={selectAllQueue}
+                className="corp-btn corp-btn-secondary text-sm"
+              >
+                {selectedQueueItems.length === queue.length ? '☐ Зняти всі' : '☑ Вибрати всі'}
+              </button>
+              {selectedQueueItems.length > 0 && (
+                <button
+                  onClick={() => setShowBatchModal(true)}
+                  className="corp-btn corp-btn-primary text-sm"
+                >
+                  📦 Створити партію ({selectedQueueItems.length})
+                </button>
+              )}
+            </div>
+          </div>
+          
+          <div className="divide-y divide-amber-200">
+            {queue.map((item: any) => (
+              <div 
+                key={item.id} 
+                className={cls(
+                  'flex items-center gap-3 py-2 px-2 rounded-lg cursor-pointer transition-colors',
+                  selectedQueueItems.includes(item.id) ? 'bg-amber-100' : 'hover:bg-amber-100/50'
+                )}
+                onClick={() => toggleQueueItem(item.id)}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedQueueItems.includes(item.id)}
+                  onChange={() => {}}
+                  className="w-4 h-4 rounded border-amber-300"
+                />
+                <div className="flex-1">
+                  <div className="font-medium text-corp-text-dark">{item.product_name}</div>
+                  <div className="text-xs text-corp-text-muted">
+                    SKU: {item.sku} • {item.order_number || 'Без замовлення'} • {item.condition}
+                  </div>
+                </div>
+                <div className="text-xs text-corp-text-muted">
+                  {new Date(item.created_at).toLocaleDateString('uk-UA')}
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onRemoveFromQueue(item.id); }}
+                  className="text-red-500 hover:text-red-700 p-1"
+                  title="Видалити з черги"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Create Batch Modal */}
+      {showBatchModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowBatchModal(false)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-corp-text-dark mb-4">
+              📦 Створити партію ({selectedQueueItems.length} товарів)
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-corp-text-muted mb-1">Хімчистка *</label>
+                <input
+                  type="text"
+                  value={batchForm.laundry_company}
+                  onChange={e => setBatchForm({...batchForm, laundry_company: e.target.value})}
+                  placeholder="Назва компанії хімчистки"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-corp-text-muted mb-1">Очікувана дата повернення *</label>
+                <input
+                  type="date"
+                  value={batchForm.expected_return_date}
+                  onChange={e => setBatchForm({...batchForm, expected_return_date: e.target.value})}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-corp-text-muted mb-1">Вартість (грн)</label>
+                <input
+                  type="number"
+                  value={batchForm.cost}
+                  onChange={e => setBatchForm({...batchForm, cost: e.target.value})}
+                  placeholder="0"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-corp-text-muted mb-1">Примітки</label>
+                <textarea
+                  value={batchForm.notes}
+                  onChange={e => setBatchForm({...batchForm, notes: e.target.value})}
+                  placeholder="Додаткова інформація..."
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2 h-20"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={handleCreateBatch} className="flex-1 corp-btn corp-btn-primary">
+                ✅ Створити
+              </button>
+              <button onClick={() => setShowBatchModal(false)} className="corp-btn corp-btn-secondary">
+                Скасувати
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       {statistics && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

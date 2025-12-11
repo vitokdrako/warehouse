@@ -144,23 +144,37 @@ class CompleteReturnTester:
             self.log(f"❌ Exception testing archive endpoint: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_frontend_login(self) -> bool:
-        """Test frontend login functionality"""
+    def test_complete_return_endpoint(self, order_id: int) -> Dict[str, Any]:
+        """Test POST /api/decor-orders/{order_id}/complete-return"""
         try:
-            self.log("🧪 Testing frontend login functionality...")
+            self.log(f"🧪 Testing complete-return endpoint for order {order_id}...")
             
-            # This would typically be tested via browser automation
-            # For now, we'll just verify the auth endpoint works
-            if self.auth_token:
-                self.log("✅ Frontend login successful (auth token obtained)")
-                return True
+            # Prepare test data for complete return
+            return_data = {
+                "late_fee": 0,
+                "cleaning_fee": 0,
+                "damage_fee": 0,
+                "manager_notes": "Test complete return via API",
+                "items_returned": []
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/decor-orders/{order_id}/complete-return",
+                json=return_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log(f"✅ Complete return successful for order {order_id}")
+                self.log(f"   Response: {data}")
+                return {"success": True, "data": data, "order_id": order_id}
             else:
-                self.log("❌ Frontend login failed (no auth token)", "ERROR")
-                return False
+                self.log(f"❌ Complete return failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "order_id": order_id}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing frontend login: {str(e)}", "ERROR")
-            return False
+            self.log(f"❌ Exception testing complete return: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e), "order_id": order_id}
     
     def test_frontend_navigation(self) -> bool:
         """Test frontend navigation to /damages page"""

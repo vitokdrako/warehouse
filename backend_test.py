@@ -336,45 +336,59 @@ class CompleteReturnTester:
             self.log(f"❌ Exception testing complete return workflow: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def verify_expected_behavior(self, cases_data: List[Dict]) -> Dict[str, Any]:
+    def verify_expected_behavior(self) -> Dict[str, Any]:
         """Verify expected behavior according to review request"""
         try:
-            self.log("🔍 Verifying expected behavior...")
+            self.log("🔍 Verifying expected behavior for complete return fix...")
             
             results = {
-                "cases_loaded": len(cases_data) > 0,
-                "cases_not_loading": False,
-                "case_details_available": False,
-                "items_display": False
+                "issue_cards_accessible": False,
+                "archive_accessible": False,
+                "issued_cards_found": False,
+                "complete_return_working": False,
+                "status_changes_working": False
             }
             
-            # Check if cases are loaded (not empty, not "Завантаження...")
-            if len(cases_data) > 0:
-                results["cases_loaded"] = True
-                self.log(f"✅ Cases loaded successfully ({len(cases_data)} cases)")
+            # Test 1: Issue cards endpoint accessible
+            issue_cards_result = self.test_issue_cards_list()
+            if issue_cards_result.get("success"):
+                results["issue_cards_accessible"] = True
+                self.log("✅ Issue cards endpoint accessible")
                 
-                # Test first case details
-                first_case = cases_data[0]
-                case_id = first_case.get('id')
-                
-                if case_id:
-                    details_result = self.test_damage_case_details(case_id)
-                    if details_result.get("success"):
-                        results["case_details_available"] = True
-                        items_count = details_result.get("items_count", 0)
-                        
-                        if items_count > 0:
-                            results["items_display"] = True
-                            self.log(f"✅ Case details display items correctly ({items_count} items)")
-                        else:
-                            self.log("⚠️ Case has no items to display", "WARNING")
-                    else:
-                        self.log("❌ Could not load case details", "ERROR")
+                # Check for issued cards
+                issued_cards = issue_cards_result.get("issued_cards", [])
+                if issued_cards:
+                    results["issued_cards_found"] = True
+                    self.log(f"✅ Found {len(issued_cards)} issued cards")
                 else:
-                    self.log("❌ First case has no ID", "ERROR")
+                    self.log("⚠️ No issued cards found", "WARNING")
             else:
-                results["cases_not_loading"] = True
-                self.log("❌ No cases loaded", "ERROR")
+                self.log("❌ Issue cards endpoint not accessible", "ERROR")
+            
+            # Test 2: Archive endpoint accessible
+            archive_result = self.test_archive_endpoint()
+            if archive_result.get("success"):
+                results["archive_accessible"] = True
+                self.log("✅ Archive endpoint accessible")
+            else:
+                self.log("❌ Archive endpoint not accessible", "ERROR")
+            
+            # Test 3: Complete return functionality (if we have issued cards)
+            if results["issued_cards_found"]:
+                issued_cards = issue_cards_result.get("issued_cards", [])
+                if issued_cards:
+                    # Test with first issued card
+                    test_order_id = issued_cards[0].get("order_id")
+                    self.log(f"🧪 Testing complete return with order {test_order_id}...")
+                    
+                    workflow_result = self.test_complete_return_workflow(test_order_id)
+                    if workflow_result.get("success"):
+                        results["complete_return_working"] = True
+                        results["status_changes_working"] = True
+                        self.log("✅ Complete return workflow working correctly")
+                    else:
+                        self.log("❌ Complete return workflow failed", "ERROR")
+                        self.log(f"   Details: {workflow_result.get('error', 'Unknown error')}")
             
             return results
             

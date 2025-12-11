@@ -110,44 +110,38 @@ class CompleteReturnTester:
             self.log(f"❌ Exception testing issue cards list: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_damage_case_details(self, case_id: str) -> Dict[str, Any]:
-        """Test GET /api/damages/cases/{case_id} - should return case with items"""
+    def test_archive_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/archive - should return archived orders"""
         try:
-            self.log(f"🧪 Testing damage case details for case {case_id}...")
+            self.log("🧪 Testing archive endpoint...")
             
-            response = self.session.get(f"{self.base_url}/damages/cases/{case_id}")
+            response = self.session.get(f"{self.base_url}/archive")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response has items field
-                if 'items' not in data:
-                    self.log("❌ Response missing 'items' field", "ERROR")
+                # Check if response is an array
+                if not isinstance(data, list):
+                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                items = data.get('items', [])
-                self.log(f"✅ Retrieved case details with {len(items)} items")
+                self.log(f"✅ Retrieved {len(data)} archived orders")
                 
-                # Validate item structure if we have items
-                if items:
-                    first_item = items[0]
-                    required_fields = ['id', 'name', 'qty', 'base_value', 'estimate_value']
-                    
-                    missing_fields = [field for field in required_fields if field not in first_item]
-                    if missing_fields:
-                        self.log(f"❌ Missing required fields in item: {missing_fields}", "ERROR")
-                        return {"success": False, "data": data}
-                    else:
-                        self.log("✅ Item structure validation passed")
-                        self.log(f"   Sample item: ID={first_item.get('id')}, Name={first_item.get('name')}, Qty={first_item.get('qty')}, Base={first_item.get('base_value')}, Estimate={first_item.get('estimate_value')}")
+                # Find orders with status 'returned'
+                returned_orders = [order for order in data if order.get('status') == 'returned']
+                self.log(f"   Found {len(returned_orders)} orders with status 'returned'")
                 
-                return {"success": True, "data": data, "items_count": len(items)}
+                # Log some examples
+                for order in returned_orders[:3]:  # Show first 3
+                    self.log(f"   - Order {order.get('order_id')}: {order.get('customer_name')} (status: {order.get('status')})")
+                
+                return {"success": True, "data": data, "returned_orders": returned_orders, "count": len(data)}
             else:
-                self.log(f"❌ Failed to get case details: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get archive: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing case details: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing archive endpoint: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_frontend_login(self) -> bool:

@@ -498,32 +498,35 @@ class CompleteReturnTester:
 
 def main():
     """Main test execution"""
-    print("🧪 Backend Testing: Damage Cabinet (Кабінет Шкоди)")
-    print("=" * 70)
-    print("Testing damage cabinet functionality on /damages page")
+    print("🧪 Backend Testing: Complete Return Fix (Завершення приймання)")
+    print("=" * 80)
+    print("Testing the fix for 'Завершити приймання' functionality")
+    print("Problem: Cards remained in 'Returns' and didn't move to archive")
+    print("Fix: Added issue_cards.status = 'completed' to complete-return endpoint")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
-    print("=" * 70)
+    print("=" * 80)
     
-    tester = DamageCabinetTester(BASE_URL)
+    tester = CompleteReturnTester(BASE_URL)
     
     try:
         success = tester.run_comprehensive_test()
         
         if success:
-            print("\n✅ ALL DAMAGE CABINET TESTS COMPLETED SUCCESSFULLY")
-            print("📊 Summary: Damage cabinet functionality verified")
+            print("\n✅ ALL COMPLETE RETURN FIX TESTS COMPLETED SUCCESSFULLY")
+            print("📊 Summary: Complete return fix functionality verified")
             print("🎯 Expected behavior confirmed:")
-            print("   - API /api/damages/cases returns array of cases")
-            print("   - API /api/damages/cases/{case_id} returns case details with items")
-            print("   - Frontend login works with provided credentials")
-            print("   - Page loads with header 'Rental Hub' and subtitle 'Кабінет шкоди'")
-            print("   - Tabs are present: Головна, Мийка, Реставрація, Хімчистка")
-            print("   - Cases list displays properly (not empty, not 'Завантаження...')")
-            print("   - Clicking on case shows details on the right side")
+            print("   - API /api/issue-cards returns cards with status information")
+            print("   - API /api/archive returns archived orders including returned ones")
+            print("   - API /api/decor-orders/{order_id}/complete-return works correctly")
+            print("   - After complete-return: orders.status becomes 'returned'")
+            print("   - After complete-return: issue_cards.status becomes 'completed'")
+            print("   - Completed returns appear in /api/archive")
+            print("   - Dashboard 'Returns' section shows only issued cards")
+            print("   - Archive shows orders with status 'returned'")
             sys.exit(0)
         else:
-            print("\n❌ SOME DAMAGE CABINET TESTS FAILED")
-            print("📊 Summary: Issues found in damage cabinet functionality")
+            print("\n❌ SOME COMPLETE RETURN FIX TESTS FAILED")
+            print("📊 Summary: Issues found in complete return fix functionality")
             sys.exit(1)
             
     except KeyboardInterrupt:

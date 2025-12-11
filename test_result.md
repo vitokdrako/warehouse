@@ -313,7 +313,7 @@ backend:
           comment: "Need to test GET /api/damages/cases endpoint - should return array of cases with required fields: id, customer_name, order_number, case_status"
         - working: true
           agent: "testing"
-          comment: "✅ TESTED: GET /api/damages/cases working perfectly! Successfully retrieved 3 damage cases as array. Case structure validation passed with all required fields present: id, customer_name, order_number, case_status. Sample case: ID=7bf6a4a2-f46f-4c71-85f8-d0591ca47f53, Customer=None, Order=None, Status=open. API returns proper JSON array format as expected."
+          comment: "✅ TESTED: GET /api/damages/cases working perfectly! Successfully retrieved 3 damage cases as array. Case structure validation passed with all required fields present: id, customer_name, order_number, case_status. Sample case: ID=rental-manager-54, Customer=None, Order=None, Status=open. API returns proper JSON array format as expected."
 
   - task: "Damage Cabinet API - Get case details with items"
     implemented: true
@@ -1370,7 +1370,7 @@ if (card.status === 'issued') {
 
 ### API Response (для перевірки):
 ```bash
-curl https://action-audit.preview.emergentagent.com/api/issue-cards
+curl https://rental-manager-54.preview.emergentagent.com/api/issue-cards
 ```
 
 **4 issued cards знайдено:**

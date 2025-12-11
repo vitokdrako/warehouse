@@ -209,80 +209,43 @@ class DamageCabinetTester:
             self.log(f"❌ Exception testing laundry batches: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def verify_order_status_change(self, order_id: int) -> Dict[str, Any]:
-        """Verify that order status changed to 'returned' and issue_card status to 'completed'"""
+    def test_laundry_statistics(self) -> Dict[str, Any]:
+        """Test GET /api/laundry/statistics - should return laundry statistics for Хімчистка tab"""
         try:
-            self.log(f"🔍 Verifying status changes for order {order_id}...")
+            self.log("🧪 Testing laundry statistics endpoint...")
             
-            # Check issue cards for the order
-            issue_cards_result = self.test_issue_cards_list()
-            if not issue_cards_result.get("success"):
-                return {"success": False, "error": "Could not fetch issue cards"}
+            response = self.session.get(f"{self.base_url}/laundry/statistics")
             
-            # Find the specific order in issue cards
-            issue_cards = issue_cards_result.get("data", [])
-            target_card = None
-            for card in issue_cards:
-                if card.get("order_id") == order_id:
-                    target_card = card
-                    break
-            
-            if not target_card:
-                self.log(f"❌ Order {order_id} not found in issue cards", "ERROR")
-                return {"success": False, "error": f"Order {order_id} not found in issue cards"}
-            
-            # Check if issue_card status is 'completed'
-            card_status = target_card.get("status")
-            self.log(f"   Issue card status: {card_status}")
-            
-            # Check archive for the order
-            archive_result = self.test_archive_endpoint()
-            if not archive_result.get("success"):
-                return {"success": False, "error": "Could not fetch archive"}
-            
-            # Find the order in archive
-            archived_orders = archive_result.get("data", [])
-            target_order = None
-            for order in archived_orders:
-                if order.get("order_id") == order_id:
-                    target_order = order
-                    break
-            
-            order_status = target_order.get("status") if target_order else "not found"
-            self.log(f"   Order status in archive: {order_status}")
-            
-            # Verify expected changes
-            success = True
-            issues = []
-            
-            if card_status != "completed":
-                success = False
-                issues.append(f"Issue card status is '{card_status}', expected 'completed'")
-            
-            if order_status != "returned":
-                success = False
-                issues.append(f"Order status is '{order_status}', expected 'returned'")
-            
-            if success:
-                self.log("✅ Status changes verified successfully")
-                return {
-                    "success": True,
-                    "issue_card_status": card_status,
-                    "order_status": order_status,
-                    "order_in_archive": target_order is not None
-                }
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if response has required structure
+                if not isinstance(data, dict):
+                    self.log(f"❌ Expected object, got {type(data)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                # Validate statistics structure
+                required_fields = ['total_batches', 'active_batches', 'total_items_sent', 'total_items_returned', 'total_cost']
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log(f"❌ Missing required statistics fields: {missing_fields}", "ERROR")
+                    return {"success": False, "missing_fields": missing_fields}
+                
+                self.log(f"✅ Statistics structure validation passed")
+                self.log(f"   Total batches: {data.get('total_batches')}")
+                self.log(f"   Active batches: {data.get('active_batches')}")
+                self.log(f"   Total items sent: {data.get('total_items_sent')}")
+                self.log(f"   Total items returned: {data.get('total_items_returned')}")
+                self.log(f"   Total cost: {data.get('total_cost')}")
+                
+                return {"success": True, "data": data}
             else:
-                self.log(f"❌ Status verification failed: {'; '.join(issues)}", "ERROR")
-                return {
-                    "success": False,
-                    "issues": issues,
-                    "issue_card_status": card_status,
-                    "order_status": order_status,
-                    "order_in_archive": target_order is not None
-                }
+                self.log(f"❌ Failed to get laundry statistics: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception verifying status changes: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing laundry statistics: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def find_issued_cards_for_testing(self) -> Dict[str, Any]:

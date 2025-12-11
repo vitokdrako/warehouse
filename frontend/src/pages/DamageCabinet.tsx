@@ -548,6 +548,7 @@ export default function DamageCabinetPro({
             showSendModal={showSendModal}
             setShowSendModal={setShowSendModal}
             onNavigateToTasks={onNavigateToTasks}
+            onSendToProcess={onSendToProcess}
           />
         )}
 

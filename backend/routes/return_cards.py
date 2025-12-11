@@ -214,8 +214,12 @@ async def update_return_card(
         db.commit()
     
     # Автоматично створити damage case якщо є брудні або пошкоджені товари
+    print(f"[DEBUG] Checking damage case creation: status={updates.status}, items_returned={len(updates.items_returned) if updates.items_returned else 0}")
     if updates.status == 'checked' and updates.items_returned:
+        print(f"[DEBUG] Creating damage cases for return card {card_id}")
         await _create_damage_cases_from_return(card_id, updates.items_returned, current_user, db)
+    else:
+        print(f"[DEBUG] Skipping damage case creation: status={updates.status}, has_items={bool(updates.items_returned)}")
     
     return {"message": "Return card updated"}
 

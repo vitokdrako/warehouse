@@ -416,38 +416,574 @@ export default function DamageCabinetPro({
     alert(`Мок: відкриємо кабінет переобліку з позицією ${c.fromReauditItemId}.`)
   }
 
-  if (loading) {
-    return <div className="p-6 text-sm text-corp-text-main">Завантаження...</div>
+  if (loading && activeTab === 'main') {
+    return (
+      <div className="min-h-screen bg-corp-bg-main">
+        <CorporateHeader cabinetName="Кабінет шкоди" showBackButton={true} onBackClick={onBackToDashboard} />
+        <div className="p-6 text-sm text-corp-text-main">Завантаження...</div>
+      </div>
+    )
   }
 
-  if (!selected) {
-    return <div className="p-6 text-sm text-corp-text-main">Немає кейсів шкоди.</div>
-  }
+  const linesTotal = selected ? (selected.lines || []).reduce((s, l) => s + l.total, 0) : 0
+  const chargeFromDeposit = selected ? Math.min(selected.depositHold, linesTotal) : 0
+  const extraPayment = Math.max(0, linesTotal - (selected?.depositHold || 0))
 
-  const linesTotal = (selected.lines || []).reduce((s, l) => s + l.total, 0)
-  const chargeFromDeposit = Math.min(selected.depositHold, linesTotal)
-  const extraPayment = Math.max(0, linesTotal - selected.depositHold)
+  // Tab definitions
+  const tabs: { id: DamageTab; label: string; icon: string }[] = [
+    { id: 'main', label: 'Головна', icon: '📋' },
+    { id: 'washing', label: 'Мийка', icon: '🚿' },
+    { id: 'restoration', label: 'Реставрація', icon: '🔧' },
+    { id: 'laundry', label: 'Хімчистка', icon: '🧺' },
+  ]
 
   return (
-    <div className="mx-auto max-w-7xl p-6 space-y-5">
-      {/* header */}
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {onBackToDashboard && (
+    <div className="min-h-screen bg-corp-bg-main">
+      <CorporateHeader cabinetName="Кабінет шкоди" showBackButton={true} onBackClick={onBackToDashboard} />
+      
+      <div className="mx-auto max-w-7xl p-6 space-y-5">
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-slate-200 pb-3">
+          {tabs.map((tab) => (
             <button
-              onClick={onBackToDashboard}
-              className="text-corp-text-main hover:text-corp-text-dark transition"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cls(
+                'px-4 py-2 rounded-t-lg text-sm font-medium transition-all',
+                activeTab === tab.id
+                  ? 'bg-corp-primary text-white'
+                  : 'bg-slate-100 text-corp-text-muted hover:bg-slate-200'
+              )}
             >
-              ← Назад
+              {tab.icon} {tab.label}
             </button>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет шкоди PRO</h1>
-            <p className="text-sm text-corp-text-muted">
-              Усі кейси пошкоджень: від повернення, переобліку та каталогу. Розрахунок збитків і зв&apos;язок з фінансами.
-            </p>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === 'main' && (
+          <MainTabContent
+            cases={cases}
+            filtered={filtered}
+            selected={selected}
+            selectedId={selectedId}
+            setSelectedId={setSelectedId}
+            q={q}
+            setQ={setQ}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            severityFilter={severityFilter}
+            setSeverityFilter={setSeverityFilter}
+            sourceFilter={sourceFilter}
+            setSourceFilter={setSourceFilter}
+            counters={counters}
+            linesTotal={linesTotal}
+            chargeFromDeposit={chargeFromDeposit}
+            extraPayment={extraPayment}
+            onStatusChange={onStatusChange}
+            editLineAmount={editLineAmount}
+            addLine={addLine}
+            openInFinance={openInFinance}
+            openInReaudit={openInReaudit}
+            loadCases={loadCases}
+            showTaskModal={showTaskModal}
+            setShowTaskModal={setShowTaskModal}
+            showSendModal={showSendModal}
+            setShowSendModal={setShowSendModal}
+            onNavigateToTasks={onNavigateToTasks}
+          />
+        )}
+
+        {activeTab === 'washing' && (
+          <WashingTabContent />
+        )}
+
+        {activeTab === 'restoration' && (
+          <RestorationTabContent />
+        )}
+
+        {activeTab === 'laundry' && (
+          <LaundryTabContent
+            batches={laundryBatches}
+            statistics={laundryStats}
+            loading={laundryLoading}
+            filterStatus={laundryFilter}
+            setFilterStatus={setLaundryFilter}
+            onDeleteBatch={handleDeleteBatch}
+            onCompleteBatch={handleCompleteBatch}
+            onRefresh={loadLaundryData}
+            setShowCreateModal={setShowCreateBatchModal}
+            setSelectedBatch={setSelectedBatch}
+            setShowReturnModal={setShowReturnModal}
+            getStatusBadge={getLaundryStatusBadge}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/*************** Main Tab Content ***************/
+function MainTabContent({
+  cases,
+  filtered,
+  selected,
+  selectedId,
+  setSelectedId,
+  q,
+  setQ,
+  statusFilter,
+  setStatusFilter,
+  severityFilter,
+  setSeverityFilter,
+  sourceFilter,
+  setSourceFilter,
+  counters,
+  linesTotal,
+  chargeFromDeposit,
+  extraPayment,
+  onStatusChange,
+  editLineAmount,
+  addLine,
+  openInFinance,
+  openInReaudit,
+  loadCases,
+  showTaskModal,
+  setShowTaskModal,
+  showSendModal,
+  setShowSendModal,
+  onNavigateToTasks,
+}: any) {
+  if (!selected) {
+    return <div className="text-sm text-corp-text-main">Немає кейсів шкоди.</div>
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Stats */}
+      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+        <Badge tone="amber">Відкриті кейси: {counters.open}</Badge>
+        <Badge tone="amber">Чекаємо клієнта: {counters.awaitingClient}</Badge>
+        <Badge tone="amber">Чекаємо оплату: {counters.awaitingPayment}</Badge>
+        <Badge tone="blue">В реставрації: {counters.inRepair}</Badge>
+        <Badge tone="green">Закрито: {counters.closed}</Badge>
+      </div>
+
+      {/* filters & list */}
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1.25fr),minmax(0,1.75fr)]">
+        <div className="space-y-3 text-[11px]">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 space-y-2">
+            <div className="flex flex-col gap-2 md:flex-row md:items-end">
+              <div className="flex-1">
+                <label className="block text-corp-text-muted">Пошук</label>
+                <input
+                  className="mt-1 w-full rounded-full border border-slate-200 bg-white px-3 py-1.5"
+                  placeholder="Клієнт, замовлення, товар, кейс..."
+                  value={q}
+                  onChange={(e: any) => setQ(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-corp-text-muted">Статус</label>
+                <select
+                  className="mt-1 w-40 rounded-full border border-slate-200 bg-white px-2 py-1.5"
+                  value={statusFilter}
+                  onChange={(e: any) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">Усі</option>
+                  <option value="draft">Чернетка</option>
+                  <option value="awaiting_client">Очікуємо клієнта</option>
+                  <option value="awaiting_payment">Очікуємо оплату</option>
+                  <option value="in_repair">В реставрації</option>
+                  <option value="closed">Закрито</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 md:flex-row md:items-end">
+              <div>
+                <label className="block text-corp-text-muted">Серйозність</label>
+                <select
+                  className="mt-1 w-32 rounded-full border border-slate-200 bg-white px-2 py-1.5"
+                  value={severityFilter}
+                  onChange={(e: any) => setSeverityFilter(e.target.value)}
+                >
+                  <option value="all">Усі</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-corp-text-muted">Джерело</label>
+                <select
+                  className="mt-1 w-40 rounded-full border border-slate-200 bg-white px-2 py-1.5"
+                  value={sourceFilter}
+                  onChange={(e: any) => setSourceFilter(e.target.value)}
+                >
+                  <option value="all">Усі</option>
+                  <option value="return">Повернення</option>
+                  <option value="reaudit">Переоблік</option>
+                  <option value="other">Інше</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-corp-text-muted">
+                Показано {filtered.length} з {cases.length} кейсів
+              </div>
+              <div className="flex gap-2">
+                <PillButton tone="ghost" onClick={loadCases}>🔄 Оновити</PillButton>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+            <div className="border-b border-slate-100 px-3 py-2 text-[11px] text-corp-text-muted">Список кейсів</div>
+            <div className="max-h-[360px] divide-y divide-slate-100 overflow-auto text-[11px]">
+              {filtered.length === 0 ? (
+                <div className="px-3 py-6 text-center text-[11px] text-corp-text-muted">Кейсів за цими фільтрами немає</div>
+              ) : (
+                filtered.map((c: DamageCase) => (
+                  <div
+                    key={c.id}
+                    onClick={() => setSelectedId(c.id)}
+                    className={cls(
+                      'flex cursor-pointer gap-2 px-3 py-2 hover:bg-slate-50',
+                      c.id === selectedId && 'bg-slate-100 ring-1 ring-inset ring-slate-300'
+                    )}
+                  >
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="font-semibold text-corp-text-dark">{c.clientName}</span>
+                        <SeverityBadge severity={c.severity} />
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px] text-corp-text-muted">
+                        <span>Кейс #{c.id}</span>
+                        {c.orderId && <span>• Замовлення #{c.orderId}</span>}
+                      </div>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[10px]">
+                        <StatusBadge status={c.status} />
+                        {c.source === 'return' && <Badge tone="blue">з повернення</Badge>}
+                        {c.source === 'reaudit' && <Badge tone="violet">з переобліку</Badge>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 text-[10px] text-corp-text-main">
+                      <span className="font-semibold">{fmtUA((c.lines || []).reduce((s, l) => s + l.total, 0))} ₴</span>
+                      <span className="text-corp-text-muted">{(c.lines || []).length} поз.</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Right Panel - Selected Case Details */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4 text-[11px]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-corp-text-dark">
+                {selected.clientName}
+              </h2>
+              <p className="text-corp-text-muted">
+                Кейс #{selected.id} • {selected.eventName || 'Без події'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <StatusBadge status={selected.status} />
+              <SeverityBadge severity={selected.severity} />
+            </div>
+          </div>
+
+          {/* Lines Table */}
+          <div className="rounded-xl border border-slate-200 overflow-hidden">
+            <div className="bg-slate-50 px-3 py-2 text-[10px] font-semibold text-corp-text-muted uppercase tracking-wide">
+              Позиції пошкоджень ({(selected.lines || []).length})
+            </div>
+            <div className="divide-y divide-slate-100">
+              {(selected.lines || []).map((line: DamageLine) => (
+                <div key={line.id} className="flex items-center gap-3 px-3 py-2">
+                  {line.image && (
+                    <img
+                      src={getImageUrl(line.image)}
+                      alt={line.productName}
+                      className="w-12 h-12 rounded-lg object-cover border border-slate-200"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <div className="font-semibold text-corp-text-dark">{line.productName}</div>
+                    <div className="text-[10px] text-corp-text-muted">
+                      {line.sku && <span>SKU: {line.sku} • </span>}
+                      {line.ruleLabel || 'Пошкодження'}
+                    </div>
+                    {line.note && <div className="text-[10px] text-corp-text-muted italic mt-1">{line.note}</div>}
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-corp-text-dark">{fmtUA(line.total)} ₴</div>
+                    <div className="text-[10px] text-corp-text-muted">
+                      {line.qty} × {fmtUA(line.amountPerUnit)} ₴
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => editLineAmount(selected.id, line.id)}
+                    className="text-corp-text-muted hover:text-corp-text-dark"
+                  >
+                    ✏️
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="flex justify-between items-center bg-slate-50 rounded-xl px-4 py-3">
+            <div>
+              <div className="text-corp-text-muted">Всього збитків</div>
+              <div className="text-xl font-bold text-corp-text-dark">{fmtUA(linesTotal)} ₴</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] text-corp-text-muted">
+                З депозиту: {fmtUA(chargeFromDeposit)} ₴
+              </div>
+              {extraPayment > 0 && (
+                <div className="text-[10px] text-red-600 font-semibold">
+                  До оплати: {fmtUA(extraPayment)} ₴
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap gap-2">
+            <PillButton tone="green" onClick={() => onStatusChange(selected.id, 'closed')}>
+              ✅ Закрити кейс
+            </PillButton>
+            <PillButton tone="slate" onClick={() => addLine(selected.id)}>
+              ➕ Додати позицію
+            </PillButton>
+            <PillButton tone="ghost" onClick={() => openInFinance(selected)}>
+              💰 До фінансів
+            </PillButton>
+            {onNavigateToTasks && (
+              <PillButton tone="ghost" onClick={() => onNavigateToTasks(selected.id)}>
+                📝 Створити завдання
+              </PillButton>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/*************** Washing Tab Content ***************/
+function WashingTabContent() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
+      <div className="text-4xl mb-4">🚿</div>
+      <h3 className="text-lg font-semibold text-corp-text-dark mb-2">Мийка товарів</h3>
+      <p className="text-sm text-corp-text-muted mb-4">
+        Тут буде відображатися список товарів, що потребують мийки після повернення.
+      </p>
+      <div className="inline-block px-4 py-2 bg-slate-100 rounded-full text-sm text-corp-text-muted">
+        🚧 В розробці
+      </div>
+    </div>
+  )
+}
+
+/*************** Restoration Tab Content ***************/
+function RestorationTabContent() {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
+      <div className="text-4xl mb-4">🔧</div>
+      <h3 className="text-lg font-semibold text-corp-text-dark mb-2">Реставрація</h3>
+      <p className="text-sm text-corp-text-muted mb-4">
+        Управління товарами, що потребують реставрації або ремонту.
+      </p>
+      <div className="inline-block px-4 py-2 bg-slate-100 rounded-full text-sm text-corp-text-muted">
+        🚧 В розробці
+      </div>
+    </div>
+  )
+}
+
+/*************** Laundry Tab Content ***************/
+function LaundryTabContent({
+  batches,
+  statistics,
+  loading,
+  filterStatus,
+  setFilterStatus,
+  onDeleteBatch,
+  onCompleteBatch,
+  onRefresh,
+  setShowCreateModal,
+  setSelectedBatch,
+  setShowReturnModal,
+  getStatusBadge,
+}: any) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="w-8 h-8 text-corp-primary animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Stats */}
+      {statistics && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="corp-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-corp-text-muted mb-1">Всього партій</p>
+                <p className="text-2xl font-bold text-corp-text-dark">{statistics.total_batches}</p>
+              </div>
+              <Package className="w-10 h-10 text-corp-primary opacity-50" />
+            </div>
+          </div>
+          <div className="corp-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-corp-text-muted mb-1">Активні партії</p>
+                <p className="text-2xl font-bold text-amber-600">{statistics.active_batches}</p>
+              </div>
+              <Clock className="w-10 h-10 text-amber-500 opacity-50" />
+            </div>
+          </div>
+          <div className="corp-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-corp-text-muted mb-1">Відправлено товарів</p>
+                <p className="text-2xl font-bold text-corp-gold">{statistics.total_items_sent}</p>
+              </div>
+              <TrendingUp className="w-10 h-10 text-corp-gold opacity-50" />
+            </div>
+          </div>
+          <div className="corp-card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-corp-text-muted mb-1">Вартість</p>
+                <p className="text-2xl font-bold text-emerald-600">{statistics.total_cost?.toFixed(2) || 0} ₴</p>
+              </div>
+              <CheckCircle2 className="w-10 h-10 text-emerald-500 opacity-50" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filters & Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex gap-2 flex-wrap">
+          {['all', 'sent', 'partial_return', 'returned', 'completed'].map(status => (
+            <button
+              key={status}
+              className={cls(
+                'corp-btn',
+                filterStatus === status ? 'corp-btn-primary' : 'corp-btn-secondary'
+              )}
+              onClick={() => setFilterStatus(status)}
+            >
+              {status === 'all' ? 'Всі' :
+               status === 'sent' ? 'Відправлено' :
+               status === 'partial_return' ? 'Часткове' :
+               status === 'returned' ? 'Повернено' : 'Закрито'}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onRefresh} className="corp-btn corp-btn-secondary">
+            <RefreshCw className="w-4 h-4" /> Оновити
+          </button>
+          <button onClick={() => setShowCreateModal(true)} className="corp-btn corp-btn-primary">
+            <Plus className="w-4 h-4" /> Нова партія
+          </button>
+        </div>
+      </div>
+
+      {/* Batches List */}
+      <div className="space-y-4">
+        {batches.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+            <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-corp-text-dark mb-2">Партій не знайдено</h3>
+            <p className="text-sm text-corp-text-muted">
+              Створіть нову партію для відправки текстилю в хімчистку
+            </p>
+          </div>
+        ) : (
+          batches.map((batch: any) => (
+            <div key={batch.id} className="corp-card">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-corp-text-dark">{batch.batch_number}</h3>
+                  <p className="text-sm text-corp-text-muted mt-1">🏢 {batch.laundry_company}</p>
+                </div>
+                <div className="text-right">
+                  {getStatusBadge(batch.status)}
+                  {batch.cost > 0 && (
+                    <p className="text-sm font-medium text-corp-gold mt-2">{batch.cost.toFixed(2)} ₴</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pb-4 border-b border-corp-border-light">
+                <div>
+                  <p className="text-xs text-corp-text-muted uppercase mb-1">📅 Відправлено</p>
+                  <p className="font-medium text-corp-text-dark">
+                    {new Date(batch.sent_date).toLocaleDateString('uk-UA')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-corp-text-muted uppercase mb-1">📆 Очікується</p>
+                  <p className="font-medium text-corp-text-dark">
+                    {new Date(batch.expected_return_date).toLocaleDateString('uk-UA')}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-corp-text-muted uppercase mb-1">📦 Товарів</p>
+                  <p className="font-medium text-corp-text-dark mb-2">{batch.returned_items} / {batch.total_items}</p>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div 
+                      className="bg-corp-primary h-2 rounded-full" 
+                      style={{ width: `${(batch.returned_items / batch.total_items) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setSelectedBatch(batch); setShowReturnModal(true); }}
+                  className="corp-btn corp-btn-secondary text-sm"
+                >
+                  📥 Прийняти товари
+                </button>
+                {batch.status !== 'completed' && (
+                  <button
+                    onClick={() => onCompleteBatch(batch.id)}
+                    className="corp-btn corp-btn-primary text-sm"
+                  >
+                    ✅ Закрити партію
+                  </button>
+                )}
+                <button
+                  onClick={() => onDeleteBatch(batch.id)}
+                  className="corp-btn corp-btn-secondary text-sm text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 className="w-4 h-4" /> Видалити
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
         <div className="flex flex-wrap items-center gap-2 text-[11px]">
           <Badge tone="amber">Відкриті кейси: {counters.open}</Badge>
           <Badge tone="amber">Чекаємо клієнта: {counters.awaitingClient}</Badge>

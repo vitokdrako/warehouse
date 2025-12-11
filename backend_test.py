@@ -161,7 +161,7 @@ class LaundrySystemTester:
             return {"success": False, "error": str(e)}
     
     def test_laundry_batches(self) -> Dict[str, Any]:
-        """Test GET /api/laundry/batches - should return laundry batches for Хімчистка tab"""
+        """Test GET /api/laundry/batches - should return laundry batches"""
         try:
             self.log("🧪 Testing laundry batches endpoint...")
             

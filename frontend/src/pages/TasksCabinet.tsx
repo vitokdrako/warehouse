@@ -341,7 +341,7 @@ export default function TasksCabinet({
           </div>
 
           {/* In Progress Column */}
-          <div className="bg-blue-50 rounded-xl p-4">
+          <div className="bg-blue-50 rounded-corp p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-blue-700">🔄 В роботі</h3>
               <span className="text-xs bg-blue-200 text-blue-700 px-2 py-0.5 rounded-full">
@@ -365,7 +365,7 @@ export default function TasksCabinet({
           </div>
 
           {/* Done Column */}
-          <div className="bg-emerald-50 rounded-xl p-4">
+          <div className="bg-emerald-50 rounded-corp p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-emerald-700">✅ Виконано</h3>
               <span className="text-xs bg-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full">
@@ -388,7 +388,6 @@ export default function TasksCabinet({
             </div>
           </div>
         </div>
-      </div>
 
       {/* Task Details Modal */}
       {selectedTask && (
@@ -410,6 +409,7 @@ export default function TasksCabinet({
           prefilledData={prefilledData}
         />
       )}
+      </div>
     </div>
   )
 }

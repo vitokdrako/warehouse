@@ -1846,58 +1846,64 @@ async def complete_return(
         print(f"[Orders] Замовлення {order_id} повернуто (товари розморожені)")
         
         # ✅ НОВЕ: Автоматично створити завдання для реквізиторів
-        # Отримати всі товари з замовлення
-        order_items_result = db.execute(text("""
-            SELECT oi.product_id, p.sku, p.name, oi.quantity
-            FROM order_items oi
-            LEFT JOIN products p ON oi.product_id = p.product_id
-            WHERE oi.order_id = :order_id
-        """), {"order_id": order_id})
-        
-        order_items = [dict(row._mapping) for row in order_items_result]
-        
-        # Отримати список пошкоджених товарів з items_returned
-        items_returned = return_data.get('items_returned', [])
-        damaged_skus = set()
-        
-        for item in items_returned:
-            # Якщо є findings (пошкодження), додати SKU до списку пошкоджених
-            findings = item.get('findings', [])
-            if findings and len(findings) > 0:
-                damaged_skus.add(item.get('sku'))
-        
-        print(f"[Orders] Знайдено {len(damaged_skus)} пошкоджених товарів: {damaged_skus}")
-        
-        # Створити завдання для кожного товару
+        # Обгорнуто в try-except щоб помилка не блокувала основну логіку
         tasks_created = 0
-        for item in order_items:
-            sku = item['sku']
+        try:
+            # Отримати всі товари з замовлення
+            order_items_result = db.execute(text("""
+                SELECT oi.product_id, p.sku, p.name, oi.quantity
+                FROM order_items oi
+                LEFT JOIN products p ON oi.product_id = p.product_id
+                WHERE oi.order_id = :order_id
+            """), {"order_id": order_id})
             
-            # Якщо товар пошкоджений - в реставрацію
-            if sku in damaged_skus:
-                status = 'repair'
-                print(f"[Orders] 🔧 Товар {sku} ({item['name']}) → реставрація")
-            else:
-                # Інакше - на мийку
-                status = 'wash'
-                print(f"[Orders] 🚿 Товар {sku} ({item['name']}) → мийка")
+            order_items = [dict(row._mapping) for row in order_items_result]
             
-            # Оновити або створити запис в product_cleaning_status
-            try:
-                db.execute(text("""
-                    INSERT INTO product_cleaning_status (product_id, sku, status, updated_at)
-                    VALUES (:product_id, :sku, :status, NOW())
-                    ON DUPLICATE KEY UPDATE status = :status, updated_at = NOW()
-                """), {
-                    "product_id": item['product_id'] if item['product_id'] else 0,
-                    "sku": sku,
-                    "status": status
-                })
-                tasks_created += 1
-            except Exception as e:
-                print(f"[Orders] ⚠️ Помилка створення завдання для {sku}: {e}")
-        
-        print(f"[Orders] ✅ Створено {tasks_created} завдань для реквізиторів (з {len(order_items)} товарів)")
+            # Отримати список пошкоджених товарів з items_returned
+            items_returned = return_data.get('items_returned', [])
+            damaged_skus = set()
+            
+            for item in items_returned:
+                # Якщо є findings (пошкодження), додати SKU до списку пошкоджених
+                findings = item.get('findings', [])
+                if findings and len(findings) > 0:
+                    damaged_skus.add(item.get('sku'))
+            
+            print(f"[Orders] Знайдено {len(damaged_skus)} пошкоджених товарів: {damaged_skus}")
+            
+            # Створити завдання для кожного товару
+            for item in order_items:
+                sku = item.get('sku')
+                if not sku:
+                    continue
+                
+                # Якщо товар пошкоджений - в реставрацію
+                if sku in damaged_skus:
+                    status = 'repair'
+                    print(f"[Orders] 🔧 Товар {sku} ({item.get('name', '?')}) → реставрація")
+                else:
+                    # Інакше - на мийку
+                    status = 'wash'
+                    print(f"[Orders] 🚿 Товар {sku} ({item.get('name', '?')}) → мийка")
+                
+                # Оновити або створити запис в product_cleaning_status
+                try:
+                    db.execute(text("""
+                        INSERT INTO product_cleaning_status (product_id, sku, status, updated_at)
+                        VALUES (:product_id, :sku, :status, NOW())
+                        ON DUPLICATE KEY UPDATE status = :status, updated_at = NOW()
+                    """), {
+                        "product_id": item.get('product_id') or 0,
+                        "sku": sku,
+                        "status": status
+                    })
+                    tasks_created += 1
+                except Exception as e:
+                    print(f"[Orders] ⚠️ Помилка створення завдання для {sku}: {e}")
+            
+            print(f"[Orders] ✅ Створено {tasks_created} завдань для реквізиторів (з {len(order_items)} товарів)")
+        except Exception as e:
+            print(f"[Orders] ⚠️ Помилка при створенні завдань (не критично): {e}")
         
         # Створити фінансову транзакцію для збитків (якщо є)
         if total_fees > 0:

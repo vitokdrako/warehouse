@@ -455,25 +455,15 @@ export default function PackingCabinet({
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-corp-text-dark">Кабінет комплектації</h1>
+    <div className="min-h-screen bg-corp-bg-main">
+      <CorporateHeader cabinetName="Кабінет комплектації" showBackButton={true} onBackClick={onBackToDashboard} />
+      
+      <div className="mx-auto max-w-7xl p-6">
+        <div className="mb-4">
           <p className="text-sm text-corp-text-muted">
             Збір і пакування на видачу + планування повернення. Без мийки/сушки — це окремо в кабінеті шкоди.
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2 text-[11px] text-corp-text-muted">
-          <div className="rounded-full bg-slate-900 px-3 py-1 text-[11px] text-white">Роль: реквізитор / склад</div>
-          <button
-            type="button"
-            onClick={onBackToDashboard}
-            className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-700 hover:bg-slate-50"
-          >
-            ← До дашборду реквізитора
-          </button>
-        </div>
-      </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3 text-[11px] text-corp-text-muted">
         <div className="flex items-center gap-2">

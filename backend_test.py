@@ -115,46 +115,56 @@ class TaskManagementTester:
             self.log(f"❌ Exception testing task filtering: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_laundry_queue_post(self) -> Dict[str, Any]:
-        """Test POST /api/laundry/queue - should add item to laundry queue"""
+    def test_task_creation(self, task_type: str) -> Dict[str, Any]:
+        """Test POST /api/tasks - should create washing/restoration task"""
         try:
-            self.log("🧪 Testing laundry queue POST endpoint...")
+            self.log(f"🧪 Testing task creation for type: {task_type}...")
             
-            # Test data for adding to queue
-            test_item = {
-                "product_name": "Скатертина",
-                "sku": "TX-001",
-                "category": "textile",
-                "quantity": 1,
-                "condition": "dirty",
-                "notes": "Тестовий товар для хімчистки",
-                "source": "damage_cabinet"
-            }
+            # Test data for task creation
+            if task_type == "washing":
+                test_task = {
+                    "title": "🚿 Мийка: Тестовий товар (TEST-001)",
+                    "description": "Товар потребує мийки",
+                    "task_type": "washing",
+                    "status": "todo",
+                    "priority": "medium"
+                }
+            elif task_type == "restoration":
+                test_task = {
+                    "title": "🔧 Реставрація: Тестовий товар (TEST-002)",
+                    "description": "Товар потребує реставрації",
+                    "task_type": "restoration",
+                    "status": "todo",
+                    "priority": "high"
+                }
+            else:
+                return {"success": False, "error": f"Unknown task type: {task_type}"}
             
             response = self.session.post(
-                f"{self.base_url}/laundry/queue",
-                json=test_item
+                f"{self.base_url}/tasks",
+                json=test_task
             )
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response has success field
-                if not data.get('success'):
-                    self.log(f"❌ Queue addition failed: {data.get('message', 'Unknown error')}", "ERROR")
+                # Check if task was created successfully
+                if not data.get('id'):
+                    self.log(f"❌ Task creation failed: no ID returned", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Item added to laundry queue successfully")
-                self.log(f"   Queue ID: {data.get('queue_id')}")
-                self.log(f"   Message: {data.get('message')}")
+                self.log(f"✅ {task_type.capitalize()} task created successfully")
+                self.log(f"   Task ID: {data.get('id')}")
+                self.log(f"   Title: {data.get('title')}")
+                self.log(f"   Status: {data.get('status')}")
                 
-                return {"success": True, "data": data, "queue_id": data.get('queue_id')}
+                return {"success": True, "data": data, "task_id": data.get('id')}
             else:
-                self.log(f"❌ Failed to add to laundry queue: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to create {task_type} task: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing laundry queue POST: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing {task_type} task creation: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_laundry_batches(self) -> Dict[str, Any]:

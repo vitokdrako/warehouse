@@ -76,12 +76,12 @@ class DamageCabinetTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_issue_cards_list(self) -> Dict[str, Any]:
-        """Test GET /api/issue-cards - should return array of issue cards"""
+    def test_damage_cases_list(self) -> Dict[str, Any]:
+        """Test GET /api/damages/cases - should return array of damage cases"""
         try:
-            self.log("🧪 Testing issue cards list endpoint...")
+            self.log("🧪 Testing damage cases list endpoint...")
             
-            response = self.session.get(f"{self.base_url}/issue-cards")
+            response = self.session.get(f"{self.base_url}/damages/cases")
             
             if response.status_code == 200:
                 data = response.json()
@@ -91,23 +91,31 @@ class DamageCabinetTester:
                     self.log(f"❌ Expected array, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Retrieved {len(data)} issue cards")
+                self.log(f"✅ Retrieved {len(data)} damage cases")
                 
-                # Find cards with status 'issued' for testing
-                issued_cards = [card for card in data if card.get('status') == 'issued']
-                self.log(f"   Found {len(issued_cards)} cards with status 'issued'")
+                # Validate case structure
+                if data:
+                    sample_case = data[0]
+                    required_fields = ['id', 'customer_name', 'order_number', 'case_status']
+                    missing_fields = [field for field in required_fields if field not in sample_case]
+                    
+                    if missing_fields:
+                        self.log(f"❌ Missing required fields: {missing_fields}", "ERROR")
+                        return {"success": False, "missing_fields": missing_fields}
+                    
+                    self.log(f"✅ Case structure validation passed")
+                    
+                    # Log some examples
+                    for case in data[:3]:  # Show first 3
+                        self.log(f"   - Case {case.get('id')}: Customer={case.get('customer_name')}, Order={case.get('order_number')}, Status={case.get('case_status')}")
                 
-                # Log some examples
-                for card in issued_cards[:3]:  # Show first 3
-                    self.log(f"   - Order {card.get('order_id')}: {card.get('customer_name')} (status: {card.get('status')})")
-                
-                return {"success": True, "data": data, "issued_cards": issued_cards, "count": len(data)}
+                return {"success": True, "data": data, "count": len(data)}
             else:
-                self.log(f"❌ Failed to get issue cards: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get damage cases: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing issue cards list: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing damage cases list: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_archive_endpoint(self) -> Dict[str, Any]:

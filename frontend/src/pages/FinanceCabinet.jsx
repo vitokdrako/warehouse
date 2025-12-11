@@ -825,6 +825,7 @@ export default function FinanceCabinet(){
       {tab==='monthly' && (
         <Card title="Місячні підсумки та архів"><MonthlyArchive rows={rowsFiltered} /></Card>
       )}
+      </div>
     </div>
   )
 }

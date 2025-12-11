@@ -118,53 +118,46 @@ class LaundrySystemTester:
             self.log(f"❌ Exception testing laundry queue: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_damage_case_details(self, case_id: str) -> Dict[str, Any]:
-        """Test GET /api/damages/cases/{case_id} - should return case details with items"""
+    def test_laundry_queue_post(self) -> Dict[str, Any]:
+        """Test POST /api/laundry/queue - should add item to laundry queue"""
         try:
-            self.log(f"🧪 Testing damage case details for case {case_id}...")
+            self.log("🧪 Testing laundry queue POST endpoint...")
             
-            response = self.session.get(f"{self.base_url}/damages/cases/{case_id}")
+            # Test data for adding to queue
+            test_item = {
+                "product_name": "Скатертина",
+                "sku": "TX-001",
+                "category": "textile",
+                "quantity": 1,
+                "condition": "dirty",
+                "notes": "Тестовий товар для хімчистки",
+                "source": "damage_cabinet"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/laundry/queue",
+                json=test_item
+            )
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response has required structure
-                if not isinstance(data, dict):
-                    self.log(f"❌ Expected object, got {type(data)}", "ERROR")
+                # Check if response has success field
+                if not data.get('success'):
+                    self.log(f"❌ Queue addition failed: {data.get('message', 'Unknown error')}", "ERROR")
                     return {"success": False, "data": data}
                 
-                # Validate case details structure
-                required_fields = ['id', 'items']
-                missing_fields = [field for field in required_fields if field not in data]
+                self.log(f"✅ Item added to laundry queue successfully")
+                self.log(f"   Queue ID: {data.get('queue_id')}")
+                self.log(f"   Message: {data.get('message')}")
                 
-                if missing_fields:
-                    self.log(f"❌ Missing required fields: {missing_fields}", "ERROR")
-                    return {"success": False, "missing_fields": missing_fields}
-                
-                # Validate items structure
-                items = data.get('items', [])
-                if items:
-                    sample_item = items[0]
-                    required_item_fields = ['id', 'name', 'qty', 'base_value', 'estimate_value']
-                    missing_item_fields = [field for field in required_item_fields if field not in sample_item]
-                    
-                    if missing_item_fields:
-                        self.log(f"❌ Missing required item fields: {missing_item_fields}", "ERROR")
-                        return {"success": False, "missing_item_fields": missing_item_fields}
-                    
-                    self.log(f"✅ Item structure validation passed")
-                    
-                    # Log sample item
-                    self.log(f"   Sample item: ID={sample_item.get('id')}, Name={sample_item.get('name')}, Qty={sample_item.get('qty')}, Base={sample_item.get('base_value')}, Estimate={sample_item.get('estimate_value')}")
-                
-                self.log(f"✅ Retrieved case details with {len(items)} items")
-                return {"success": True, "data": data, "items_count": len(items)}
+                return {"success": True, "data": data, "queue_id": data.get('queue_id')}
             else:
-                self.log(f"❌ Failed to get case details: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to add to laundry queue: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing case details: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing laundry queue POST: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_laundry_batches(self) -> Dict[str, Any]:

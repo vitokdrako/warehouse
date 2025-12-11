@@ -505,47 +505,63 @@ class LaundrySystemTester:
             return {"success": False, "error": str(e)}
     
     def verify_expected_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior according to damage cabinet review request"""
+        """Verify expected behavior according to laundry system review request"""
         try:
-            self.log("🔍 Verifying expected behavior for damage cabinet tabs...")
+            self.log("🔍 Verifying expected behavior for laundry system...")
             
             results = {
-                "damage_cases_accessible": False,
-                "damage_case_details_working": False,
+                "laundry_queue_get_working": False,
+                "laundry_queue_post_working": False,
+                "tasks_creation_working": False,
+                "tasks_get_working": False,
                 "laundry_batches_accessible": False,
                 "laundry_statistics_accessible": False,
-                "damage_cases_found": False,
-                "laundry_integration_working": False
+                "batch_creation_working": False,
+                "complete_workflow_working": False
             }
             
-            # Test 1: Damage cases endpoint accessible (Головна tab)
-            cases_result = self.test_damage_cases_list()
-            if cases_result.get("success"):
-                results["damage_cases_accessible"] = True
-                self.log("✅ Damage cases endpoint accessible")
-                
-                # Check for damage cases
-                cases = cases_result.get("data", [])
-                if cases:
-                    results["damage_cases_found"] = True
-                    self.log(f"✅ Found {len(cases)} damage cases")
-                    
-                    # Test case details with first case
-                    test_case_id = cases[0].get("id")
-                    self.log(f"🧪 Testing case details with case {test_case_id}...")
-                    
-                    details_result = self.test_damage_case_details(test_case_id)
-                    if details_result.get("success"):
-                        results["damage_case_details_working"] = True
-                        self.log("✅ Damage case details working correctly")
-                    else:
-                        self.log("❌ Damage case details failed", "ERROR")
-                else:
-                    self.log("⚠️ No damage cases found", "WARNING")
+            # Test 1: Laundry queue GET endpoint
+            queue_get_result = self.test_laundry_queue_get()
+            if queue_get_result.get("success"):
+                results["laundry_queue_get_working"] = True
+                self.log("✅ Laundry queue GET endpoint working")
             else:
-                self.log("❌ Damage cases endpoint not accessible", "ERROR")
+                self.log("❌ Laundry queue GET endpoint failed", "ERROR")
             
-            # Test 2: Laundry batches endpoint accessible (Хімчистка tab)
+            # Test 2: Laundry queue POST endpoint
+            queue_post_result = self.test_laundry_queue_post()
+            if queue_post_result.get("success"):
+                results["laundry_queue_post_working"] = True
+                self.log("✅ Laundry queue POST endpoint working")
+            else:
+                self.log("❌ Laundry queue POST endpoint failed", "ERROR")
+            
+            # Test 3: Tasks creation
+            tasks_create_result = self.test_tasks_creation()
+            if tasks_create_result.get("success"):
+                results["tasks_creation_working"] = True
+                self.log("✅ Tasks creation working")
+            else:
+                self.log("❌ Tasks creation failed", "ERROR")
+            
+            # Test 4: Tasks GET endpoint
+            tasks_get_result = self.test_tasks_get()
+            if tasks_get_result.get("success"):
+                results["tasks_get_working"] = True
+                self.log("✅ Tasks GET endpoint working")
+                
+                # Check for specific task types
+                task_types = tasks_get_result.get("task_types", {})
+                if "laundry_queue" in task_types:
+                    self.log(f"   Found {task_types['laundry_queue']} laundry_queue tasks")
+                if "washing" in task_types:
+                    self.log(f"   Found {task_types['washing']} washing tasks")
+                if "restoration" in task_types:
+                    self.log(f"   Found {task_types['restoration']} restoration tasks")
+            else:
+                self.log("❌ Tasks GET endpoint failed", "ERROR")
+            
+            # Test 5: Laundry batches endpoint
             batches_result = self.test_laundry_batches()
             if batches_result.get("success"):
                 results["laundry_batches_accessible"] = True
@@ -553,18 +569,21 @@ class LaundrySystemTester:
             else:
                 self.log("❌ Laundry batches endpoint not accessible", "ERROR")
             
-            # Test 3: Laundry statistics endpoint accessible (Хімчистка tab)
+            # Test 6: Laundry statistics endpoint
             stats_result = self.test_laundry_statistics()
             if stats_result.get("success"):
                 results["laundry_statistics_accessible"] = True
                 self.log("✅ Laundry statistics endpoint accessible")
-                
-                # Check if both laundry endpoints work
-                if results["laundry_batches_accessible"]:
-                    results["laundry_integration_working"] = True
-                    self.log("✅ Laundry integration (Хімчистка tab) working correctly")
             else:
                 self.log("❌ Laundry statistics endpoint not accessible", "ERROR")
+            
+            # Test 7: Complete workflow
+            workflow_result = self.test_complete_laundry_workflow()
+            if workflow_result.get("success"):
+                results["complete_workflow_working"] = True
+                self.log("✅ Complete laundry workflow working")
+            else:
+                self.log("❌ Complete laundry workflow failed", "ERROR")
             
             return results
             

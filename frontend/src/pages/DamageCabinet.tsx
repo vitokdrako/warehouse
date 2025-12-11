@@ -203,6 +203,77 @@ export default function DamageCabinetPro({
     }
   }
 
+  // ========== Laundry Functions ==========
+  const loadLaundryData = async () => {
+    try {
+      setLaundryLoading(true)
+      const token = localStorage.getItem('token')
+      const params = laundryFilter !== 'all' ? { status: laundryFilter } : {}
+      
+      const [batchesRes, statsRes] = await Promise.all([
+        axios.get(`${BACKEND_URL}/api/laundry/batches`, {
+          params,
+          headers: { Authorization: `Bearer ${token}` }
+        }),
+        axios.get(`${BACKEND_URL}/api/laundry/statistics`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ])
+      
+      setLaundryBatches(batchesRes.data)
+      setLaundryStats(statsRes.data)
+    } catch (error) {
+      console.error('Error loading laundry data:', error)
+    } finally {
+      setLaundryLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'laundry') {
+      loadLaundryData()
+    }
+  }, [activeTab, laundryFilter])
+
+  const handleDeleteBatch = async (batchId: string) => {
+    if (!window.confirm('Видалити партію? Товари повернуться на склад.')) return
+    try {
+      const token = localStorage.getItem('token')
+      await axios.delete(`${BACKEND_URL}/api/laundry/batches/${batchId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      alert('Партію видалено')
+      loadLaundryData()
+    } catch (error: any) {
+      alert('Помилка видалення: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
+  const handleCompleteBatch = async (batchId: string) => {
+    if (!window.confirm('Закрити партію?')) return
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${BACKEND_URL}/api/laundry/batches/${batchId}/complete`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      alert('Партію закрито')
+      loadLaundryData()
+    } catch (error: any) {
+      alert('Помилка: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
+  const getLaundryStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; tone: string }> = {
+      sent: { label: 'Відправлено', tone: 'blue' },
+      partial_return: { label: 'Часткове повернення', tone: 'amber' },
+      returned: { label: 'Повернено', tone: 'green' },
+      completed: { label: 'Закрито', tone: 'slate' }
+    }
+    const config = statusMap[status] || statusMap.sent
+    return <Badge tone={config.tone}>{config.label}</Badge>
+  }
+
   const selected = useMemo(() => {
     if (!cases.length) return null
     if (!selectedId) return cases[0]

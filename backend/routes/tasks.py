@@ -47,6 +47,7 @@ class TaskUpdate(BaseModel):
 @router.get("")
 async def get_tasks(
     status: Optional[str] = None,
+    task_type: Optional[str] = None,
     order_id: Optional[int] = None,
     assigned_to: Optional[str] = None,
     db: Session = Depends(get_rh_db)  # ✅ MIGRATED
@@ -68,6 +69,9 @@ async def get_tasks(
     if status:
         sql_query += " AND t.status = :status"
         params['status'] = status
+    if task_type:
+        sql_query += " AND t.task_type = :task_type"
+        params['task_type'] = task_type
     if order_id:
         sql_query += " AND t.order_id = :order_id"
         params['order_id'] = order_id

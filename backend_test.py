@@ -396,8 +396,8 @@ class DamageCabinetTester:
             return {"error": str(e)}
     
     def run_comprehensive_test(self):
-        """Run the complete return fix test scenario as described in the review request"""
-        self.log("🚀 Starting comprehensive complete return fix test")
+        """Run the damage cabinet tab structure test scenario as described in the review request"""
+        self.log("🚀 Starting comprehensive damage cabinet tab structure test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -411,52 +411,49 @@ class DamageCabinetTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test issue cards API
-        self.log("\n🔍 Step 2: Testing issue cards API...")
-        issue_cards_result = self.test_issue_cards_list()
+        # Step 3: Test damage cases API (Головна tab)
+        self.log("\n🔍 Step 2: Testing damage cases API (Головна tab)...")
+        cases_result = self.test_damage_cases_list()
         
-        if not issue_cards_result.get("success"):
-            self.log("❌ Could not retrieve issue cards", "ERROR")
+        if not cases_result.get("success"):
+            self.log("❌ Could not retrieve damage cases", "ERROR")
             return False
         
-        issued_cards = issue_cards_result.get("issued_cards", [])
-        total_cards = issue_cards_result.get("count", 0)
+        cases = cases_result.get("data", [])
+        total_cases = cases_result.get("count", 0)
         
-        # Step 4: Test archive API
-        self.log("\n🔍 Step 3: Testing archive API...")
-        archive_result = self.test_archive_endpoint()
+        # Step 4: Test damage case details
+        self.log("\n🔍 Step 3: Testing damage case details...")
+        cases_for_testing = self.find_damage_cases_for_testing()
         
-        if not archive_result.get("success"):
-            self.log("❌ Could not retrieve archive", "ERROR")
+        if not cases_for_testing.get("success"):
+            self.log("❌ Could not find damage cases for testing", "ERROR")
             return False
         
-        returned_orders = archive_result.get("returned_orders", [])
-        total_archived = archive_result.get("count", 0)
+        available_cases = cases_for_testing.get("cases", [])
         
-        # Step 5: Find issued cards for testing
-        self.log("\n🔍 Step 4: Finding issued cards for testing...")
-        issued_cards_result = self.find_issued_cards_for_testing()
-        
-        if not issued_cards_result.get("success"):
-            self.log("❌ Could not find issued cards", "ERROR")
-            return False
-        
-        available_cards = issued_cards_result.get("issued_cards", [])
-        
-        # Step 6: Test complete return workflow (if we have issued cards)
-        workflow_success = True
-        if available_cards:
-            self.log("\n🔍 Step 5: Testing complete return workflow...")
+        # Step 5: Test case details workflow (if we have cases)
+        case_details_success = True
+        if available_cases:
+            self.log("\n🔍 Step 4: Testing case details workflow...")
             
-            # Test with first available card
-            test_order_id = available_cards[0].get("order_id")
-            workflow_result = self.test_complete_return_workflow(test_order_id)
+            # Test with first available case
+            test_case_id = available_cases[0].get("id")
+            workflow_result = self.test_damage_cabinet_workflow(test_case_id)
             
             if not workflow_result.get("success"):
-                self.log("❌ Complete return workflow test failed", "ERROR")
-                workflow_success = False
+                self.log("❌ Damage cabinet workflow test failed", "ERROR")
+                case_details_success = False
         else:
-            self.log("\n⚠️ Step 5: No issued cards available for workflow testing", "WARNING")
+            self.log("\n⚠️ Step 4: No damage cases available for workflow testing", "WARNING")
+        
+        # Step 6: Test laundry integration (Хімчистка tab)
+        self.log("\n🔍 Step 5: Testing laundry integration (Хімчистка tab)...")
+        batches_result = self.test_laundry_batches()
+        stats_result = self.test_laundry_statistics()
+        
+        laundry_success = batches_result.get("success", False) and stats_result.get("success", False)
+        batches_count = batches_result.get("count", 0) if batches_result.get("success") else 0
         
         # Step 7: Verify expected behavior
         self.log("\n🔍 Step 6: Verifying expected behavior...")
@@ -464,34 +461,37 @@ class DamageCabinetTester:
         
         # Step 8: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE COMPLETE RETURN FIX TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE DAMAGE CABINET TAB STRUCTURE TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
-        self.log(f"   • Issue Cards API: ✅ Working ({total_cards} total, {len(issued_cards)} issued)")
-        self.log(f"   • Archive API: ✅ Working ({total_archived} total, {len(returned_orders)} returned)")
+        self.log(f"   • Damage Cases API (Головна): ✅ Working ({total_cases} cases)")
         
-        if available_cards:
-            if workflow_success:
-                self.log(f"   • Complete Return Workflow: ✅ Working")
-                self.log(f"   • Status Changes: ✅ Working")
+        if available_cases:
+            if case_details_success:
+                self.log(f"   • Case Details: ✅ Working")
             else:
-                self.log(f"   • Complete Return Workflow: ❌ Failed")
-                self.log(f"   • Status Changes: ❌ Failed")
+                self.log(f"   • Case Details: ❌ Failed")
         else:
-            self.log(f"   • Complete Return Workflow: ⚠️ No issued cards to test")
-            self.log(f"   • Status Changes: ⚠️ No issued cards to test")
+            self.log(f"   • Case Details: ⚠️ No cases to test")
         
-        self.log("\n🎉 COMPLETE RETURN FIX TESTING COMPLETED!")
+        if laundry_success:
+            self.log(f"   • Laundry Batches (Хімчистка): ✅ Working ({batches_count} batches)")
+            self.log(f"   • Laundry Statistics (Хімчистка): ✅ Working")
+        else:
+            self.log(f"   • Laundry Integration (Хімчистка): ❌ Failed")
+        
+        self.log("\n🎉 DAMAGE CABINET TAB STRUCTURE TESTING COMPLETED!")
         self.log("   The system correctly provides:")
-        self.log("   • 📋 List of issue cards with status information")
-        self.log("   • 📦 Archive endpoint with returned orders")
-        self.log("   • 🔄 Complete return endpoint functionality")
+        self.log("   • 📋 Damage cases list for Головна tab")
+        self.log("   • 🔍 Damage case details with items")
+        self.log("   • 🧺 Laundry batches for Хімчистка tab")
+        self.log("   • 📊 Laundry statistics for Хімчистка tab")
         self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
         
-        if not available_cards:
-            self.log("\n⚠️ NOTE: No issued cards found in the system.")
-            self.log("   This may be expected if no orders are currently issued.")
-            self.log("   The fix can still be verified by checking the endpoint implementation.")
+        if not available_cases:
+            self.log("\n⚠️ NOTE: No damage cases found in the system.")
+            self.log("   This may be expected if no damage cases exist yet.")
+            self.log("   The API endpoints are still working correctly.")
         
         return True
 

@@ -607,8 +607,8 @@ class TaskManagementTester:
             return {"error": str(e)}
     
     def run_comprehensive_test(self):
-        """Run the laundry system test scenario as described in the Ukrainian review request"""
-        self.log("🚀 Starting comprehensive laundry system test")
+        """Run the task management test scenario as described in the Ukrainian review request"""
+        self.log("🚀 Starting comprehensive task management test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -622,33 +622,50 @@ class TaskManagementTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test laundry queue endpoints
-        self.log("\n🔍 Step 2: Testing laundry queue endpoints...")
-        queue_get_result = self.test_laundry_queue_get()
-        queue_post_result = self.test_laundry_queue_post()
+        # Step 3: Test task filtering by type
+        self.log("\n🔍 Step 2: Testing task filtering by type...")
+        washing_filter_result = self.test_tasks_filter_by_type("washing")
+        restoration_filter_result = self.test_tasks_filter_by_type("restoration")
         
-        queue_success = queue_get_result.get("success", False) and queue_post_result.get("success", False)
-        initial_queue_count = queue_get_result.get("count", 0)
+        filtering_success = (
+            washing_filter_result.get("success", False) and 
+            restoration_filter_result.get("success", False)
+        )
+        initial_washing_count = washing_filter_result.get("count", 0)
+        initial_restoration_count = restoration_filter_result.get("count", 0)
         
-        # Step 4: Test tasks creation and retrieval
-        self.log("\n🔍 Step 3: Testing tasks creation and retrieval...")
-        tasks_create_result = self.test_tasks_creation()
-        tasks_get_result = self.test_tasks_get()
+        # Step 4: Test task creation
+        self.log("\n🔍 Step 3: Testing task creation...")
+        washing_create_result = self.test_task_creation("washing")
+        restoration_create_result = self.test_task_creation("restoration")
         
-        tasks_success = tasks_create_result.get("success", False) and tasks_get_result.get("success", False)
-        total_tasks = tasks_get_result.get("count", 0) if tasks_get_result.get("success") else 0
+        creation_success = (
+            washing_create_result.get("success", False) and 
+            restoration_create_result.get("success", False)
+        )
         
-        # Step 5: Test laundry batches and statistics
-        self.log("\n🔍 Step 4: Testing laundry batches and statistics...")
-        batches_result = self.test_laundry_batches()
-        stats_result = self.test_laundry_statistics()
+        # Step 5: Test task status updates and assignment
+        self.log("\n🔍 Step 4: Testing task updates...")
+        update_success = True
+        assignment_success = True
         
-        laundry_success = batches_result.get("success", False) and stats_result.get("success", False)
-        batches_count = batches_result.get("count", 0) if batches_result.get("success") else 0
+        if creation_success:
+            washing_task_id = washing_create_result.get("task_id")
+            restoration_task_id = restoration_create_result.get("task_id")
+            
+            # Test status updates
+            progress_result = self.test_task_status_update(washing_task_id, "in_progress")
+            done_result = self.test_task_status_update(washing_task_id, "done")
+            
+            update_success = progress_result.get("success", False) and done_result.get("success", False)
+            
+            # Test task assignment
+            assign_result = self.test_task_assignment(restoration_task_id, "Марія Іванівна")
+            assignment_success = assign_result.get("success", False)
         
         # Step 6: Test complete workflow
-        self.log("\n🔍 Step 5: Testing complete laundry workflow...")
-        workflow_result = self.test_complete_laundry_workflow()
+        self.log("\n🔍 Step 5: Testing complete workflow...")
+        workflow_result = self.test_complete_task_workflow()
         workflow_success = workflow_result.get("success", False)
         
         # Step 7: Verify expected behavior
@@ -657,48 +674,52 @@ class TaskManagementTester:
         
         # Step 8: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE LAUNDRY SYSTEM TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE TASK MANAGEMENT TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        if queue_success:
-            self.log(f"   • Laundry Queue: ✅ Working ({initial_queue_count} items initially)")
+        if filtering_success:
+            self.log(f"   • Task Filtering: ✅ Working")
+            self.log(f"     - Washing tasks: {initial_washing_count}")
+            self.log(f"     - Restoration tasks: {initial_restoration_count}")
         else:
-            self.log(f"   • Laundry Queue: ❌ Failed")
+            self.log(f"   • Task Filtering: ❌ Failed")
         
-        if tasks_success:
-            self.log(f"   • Tasks System: ✅ Working ({total_tasks} total tasks)")
-            task_types = tasks_get_result.get("task_types", {}) if tasks_get_result.get("success") else {}
-            if task_types:
-                self.log(f"     - Task types: {', '.join(task_types.keys())}")
+        if creation_success:
+            self.log(f"   • Task Creation: ✅ Working")
         else:
-            self.log(f"   • Tasks System: ❌ Failed")
+            self.log(f"   • Task Creation: ❌ Failed")
         
-        if laundry_success:
-            self.log(f"   • Laundry Batches: ✅ Working ({batches_count} batches)")
-            self.log(f"   • Laundry Statistics: ✅ Working")
+        if update_success:
+            self.log(f"   • Task Status Updates: ✅ Working")
         else:
-            self.log(f"   • Laundry Integration: ❌ Failed")
+            self.log(f"   • Task Status Updates: ❌ Failed")
+        
+        if assignment_success:
+            self.log(f"   • Task Assignment: ✅ Working")
+        else:
+            self.log(f"   • Task Assignment: ❌ Failed")
         
         if workflow_success:
             self.log(f"   • Complete Workflow: ✅ Working")
         else:
             self.log(f"   • Complete Workflow: ❌ Failed")
         
-        self.log("\n🎉 LAUNDRY SYSTEM TESTING COMPLETED!")
+        self.log("\n🎉 TASK MANAGEMENT TESTING COMPLETED!")
         self.log("   The system correctly provides:")
-        self.log("   • 🧺 Laundry queue management (GET/POST /api/laundry/queue)")
-        self.log("   • 📋 Task creation with types: laundry_queue, washing, restoration")
-        self.log("   • 🏭 Batch creation from queue items")
-        self.log("   • 📊 Laundry statistics and monitoring")
-        self.log("   • 🔄 Complete workflow: Queue → Batch → Statistics")
+        self.log("   • 🔍 Task filtering by type (GET /api/tasks?task_type=washing|restoration)")
+        self.log("   • ➕ Task creation (POST /api/tasks)")
+        self.log("   • 🔄 Task status updates (PUT /api/tasks/{id} with status)")
+        self.log("   • 👤 Task assignment (PUT /api/tasks/{id} with assigned_to)")
+        self.log("   • 📋 Complete workflow: Create → Filter → Update → Assign")
         self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
         
         # Check if all critical components work
         critical_success = (
-            queue_success and 
-            tasks_success and 
-            laundry_success and 
+            filtering_success and 
+            creation_success and 
+            update_success and 
+            assignment_success and
             workflow_success
         )
         

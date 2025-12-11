@@ -176,26 +176,81 @@ class CompleteReturnTester:
             self.log(f"❌ Exception testing complete return: {str(e)}", "ERROR")
             return {"success": False, "error": str(e), "order_id": order_id}
     
-    def test_frontend_navigation(self) -> bool:
-        """Test frontend navigation to /damages page"""
+    def verify_order_status_change(self, order_id: int) -> Dict[str, Any]:
+        """Verify that order status changed to 'returned' and issue_card status to 'completed'"""
         try:
-            self.log("🧪 Testing frontend navigation to /damages...")
+            self.log(f"🔍 Verifying status changes for order {order_id}...")
             
-            # This would typically require browser automation
-            # For backend testing, we'll simulate by checking if the page would load
-            # by verifying the required APIs are accessible
+            # Check issue cards for the order
+            issue_cards_result = self.test_issue_cards_list()
+            if not issue_cards_result.get("success"):
+                return {"success": False, "error": "Could not fetch issue cards"}
             
-            cases_result = self.test_damage_cases_list()
-            if cases_result.get("success"):
-                self.log("✅ Frontend navigation test passed (APIs accessible)")
-                return True
+            # Find the specific order in issue cards
+            issue_cards = issue_cards_result.get("data", [])
+            target_card = None
+            for card in issue_cards:
+                if card.get("order_id") == order_id:
+                    target_card = card
+                    break
+            
+            if not target_card:
+                self.log(f"❌ Order {order_id} not found in issue cards", "ERROR")
+                return {"success": False, "error": f"Order {order_id} not found in issue cards"}
+            
+            # Check if issue_card status is 'completed'
+            card_status = target_card.get("status")
+            self.log(f"   Issue card status: {card_status}")
+            
+            # Check archive for the order
+            archive_result = self.test_archive_endpoint()
+            if not archive_result.get("success"):
+                return {"success": False, "error": "Could not fetch archive"}
+            
+            # Find the order in archive
+            archived_orders = archive_result.get("data", [])
+            target_order = None
+            for order in archived_orders:
+                if order.get("order_id") == order_id:
+                    target_order = order
+                    break
+            
+            order_status = target_order.get("status") if target_order else "not found"
+            self.log(f"   Order status in archive: {order_status}")
+            
+            # Verify expected changes
+            success = True
+            issues = []
+            
+            if card_status != "completed":
+                success = False
+                issues.append(f"Issue card status is '{card_status}', expected 'completed'")
+            
+            if order_status != "returned":
+                success = False
+                issues.append(f"Order status is '{order_status}', expected 'returned'")
+            
+            if success:
+                self.log("✅ Status changes verified successfully")
+                return {
+                    "success": True,
+                    "issue_card_status": card_status,
+                    "order_status": order_status,
+                    "order_in_archive": target_order is not None
+                }
             else:
-                self.log("❌ Frontend navigation test failed (APIs not accessible)", "ERROR")
-                return False
+                self.log(f"❌ Status verification failed: {'; '.join(issues)}", "ERROR")
+                return {
+                    "success": False,
+                    "issues": issues,
+                    "issue_card_status": card_status,
+                    "order_status": order_status,
+                    "order_in_archive": target_order is not None
+                }
                 
         except Exception as e:
-            self.log(f"❌ Exception testing frontend navigation: {str(e)}", "ERROR")
-            return False
+            self.log(f"❌ Exception verifying status changes: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     
     def test_frontend_page_elements(self) -> bool:
         """Test that frontend page has required elements"""

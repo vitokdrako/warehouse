@@ -497,35 +497,38 @@ class DamageCabinetTester:
 
 def main():
     """Main test execution"""
-    print("🧪 Backend Testing: Complete Return Fix (Завершення приймання)")
+    print("🧪 Backend Testing: Damage Cabinet Tab Structure (Кабінет шкоди)")
     print("=" * 80)
-    print("Testing the fix for 'Завершити приймання' functionality")
-    print("Problem: Cards remained in 'Returns' and didn't move to archive")
-    print("Fix: Added issue_cards.status = 'completed' to complete-return endpoint")
+    print("Testing the damage cabinet functionality with 4 tabs:")
+    print("   1. Головна - Damage cases list and details")
+    print("   2. Мийка - Placeholder (В розробці)")
+    print("   3. Реставрація - Placeholder (В розробці)")
+    print("   4. Хімчистка - Laundry batches and statistics integration")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
+    print("URL: https://rental-manager-54.preview.emergentagent.com/damages")
     print("=" * 80)
     
-    tester = CompleteReturnTester(BASE_URL)
+    tester = DamageCabinetTester(BASE_URL)
     
     try:
         success = tester.run_comprehensive_test()
         
         if success:
-            print("\n✅ ALL COMPLETE RETURN FIX TESTS COMPLETED SUCCESSFULLY")
-            print("📊 Summary: Complete return fix functionality verified")
+            print("\n✅ ALL DAMAGE CABINET TAB STRUCTURE TESTS COMPLETED SUCCESSFULLY")
+            print("📊 Summary: Damage cabinet functionality verified")
             print("🎯 Expected behavior confirmed:")
-            print("   - API /api/issue-cards returns cards with status information")
-            print("   - API /api/archive returns archived orders including returned ones")
-            print("   - API /api/decor-orders/{order_id}/complete-return works correctly")
-            print("   - After complete-return: orders.status becomes 'returned'")
-            print("   - After complete-return: issue_cards.status becomes 'completed'")
-            print("   - Completed returns appear in /api/archive")
-            print("   - Dashboard 'Returns' section shows only issued cards")
-            print("   - Archive shows orders with status 'returned'")
+            print("   - API /api/damages/cases returns damage cases for Головна tab")
+            print("   - API /api/damages/cases/{case_id} returns case details with items")
+            print("   - API /api/laundry/batches returns laundry batches for Хімчистка tab")
+            print("   - API /api/laundry/statistics returns statistics for Хімчистка tab")
+            print("   - Authentication works with provided credentials")
+            print("   - All required data structures are present and valid")
+            print("   - Damage cabinet has proper Corporate Header")
+            print("   - 4 tabs with Ukrainian names and icons are supported by backend")
             sys.exit(0)
         else:
-            print("\n❌ SOME COMPLETE RETURN FIX TESTS FAILED")
-            print("📊 Summary: Issues found in complete return fix functionality")
+            print("\n❌ SOME DAMAGE CABINET TAB STRUCTURE TESTS FAILED")
+            print("📊 Summary: Issues found in damage cabinet functionality")
             sys.exit(1)
             
     except KeyboardInterrupt:

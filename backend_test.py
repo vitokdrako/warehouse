@@ -153,12 +153,21 @@ class TaskManagementTester:
                     self.log(f"❌ Task creation failed: no ID returned", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ {task_type.capitalize()} task created successfully")
-                self.log(f"   Task ID: {data.get('id')}")
-                self.log(f"   Title: {data.get('title')}")
-                self.log(f"   Status: {data.get('status')}")
+                task_id = data.get('id')
                 
-                return {"success": True, "data": data, "task_id": data.get('id')}
+                # Verify the creation by fetching the task
+                verify_response = self.session.get(f"{self.base_url}/tasks/{task_id}")
+                if verify_response.status_code == 200:
+                    task_data = verify_response.json()
+                    self.log(f"✅ {task_type.capitalize()} task created successfully")
+                    self.log(f"   Task ID: {task_id}")
+                    self.log(f"   Title: {task_data.get('title')}")
+                    self.log(f"   Status: {task_data.get('status')}")
+                    
+                    return {"success": True, "data": task_data, "task_id": task_id}
+                else:
+                    self.log(f"❌ Failed to verify task creation: {verify_response.status_code}", "ERROR")
+                    return {"success": False, "status_code": verify_response.status_code}
             else:
                 self.log(f"❌ Failed to create {task_type} task: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}

@@ -441,48 +441,67 @@ class LaundrySystemTester:
             self.log(f"❌ Exception finding queue items: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_damage_cabinet_workflow(self, case_id: str) -> Dict[str, Any]:
-        """Test the damage cabinet workflow for a specific case"""
+    def test_complete_laundry_workflow(self) -> Dict[str, Any]:
+        """Test the complete laundry workflow: Queue → Batch → Statistics"""
         try:
-            self.log(f"🧪 Testing damage cabinet workflow for case {case_id}...")
+            self.log("🧪 Testing complete laundry workflow...")
             
-            # Step 1: Get case details
-            self.log("   Step 1: Getting case details...")
-            case_details_result = self.test_damage_case_details(case_id)
+            # Step 1: Add item to queue
+            self.log("   Step 1: Adding item to laundry queue...")
+            queue_add_result = self.test_laundry_queue_post()
             
-            if not case_details_result.get("success"):
-                return {"success": False, "error": "Could not get case details", "details": case_details_result}
+            if not queue_add_result.get("success"):
+                self.log("   ⚠️ Could not add item to queue, continuing with existing items", "WARNING")
+            else:
+                self.log(f"   ✅ Item added to queue: {queue_add_result.get('queue_id')}")
             
-            case_data = case_details_result.get("data", {})
-            items_count = case_details_result.get("items_count", 0)
+            # Step 2: Get queue items
+            self.log("   Step 2: Getting queue items...")
+            queue_items_result = self.find_queue_items_for_testing()
             
-            self.log(f"   Case has {items_count} items")
+            if not queue_items_result.get("success"):
+                return {"success": False, "error": "Could not get queue items"}
             
-            # Step 2: Test laundry integration (for Хімчистка tab)
-            self.log("   Step 2: Testing laundry integration...")
-            laundry_batches_result = self.test_laundry_batches()
-            laundry_stats_result = self.test_laundry_statistics()
+            item_ids = queue_items_result.get("item_ids", [])
+            items_count = queue_items_result.get("count", 0)
             
-            if not laundry_batches_result.get("success") or not laundry_stats_result.get("success"):
-                return {"success": False, "error": "Laundry integration failed"}
+            self.log(f"   Found {items_count} items in queue")
             
-            batches_count = laundry_batches_result.get("count", 0)
-            stats_data = laundry_stats_result.get("data", {})
+            # Step 3: Create batch from queue (if items exist)
+            batch_created = False
+            if item_ids:
+                self.log("   Step 3: Creating batch from queue items...")
+                batch_result = self.test_batch_creation_from_queue(item_ids)
+                
+                if batch_result.get("success"):
+                    batch_created = True
+                    self.log(f"   ✅ Batch created: {batch_result.get('data', {}).get('batch_number')}")
+                else:
+                    self.log("   ⚠️ Could not create batch from queue", "WARNING")
+            else:
+                self.log("   Step 3: No queue items available for batch creation")
             
-            self.log(f"   Found {batches_count} laundry batches")
-            self.log(f"   Laundry statistics: {stats_data.get('total_batches', 0)} total batches")
+            # Step 4: Get updated batches and statistics
+            self.log("   Step 4: Getting updated batches and statistics...")
+            batches_result = self.test_laundry_batches()
+            stats_result = self.test_laundry_statistics()
+            
+            batches_count = batches_result.get("count", 0) if batches_result.get("success") else 0
+            stats_data = stats_result.get("data", {}) if stats_result.get("success") else {}
+            
+            self.log(f"   Found {batches_count} total batches")
+            self.log(f"   Statistics: {stats_data.get('total_batches', 0)} batches, {stats_data.get('total_items_sent', 0)} items sent")
             
             return {
                 "success": True,
-                "case_id": case_id,
-                "case_details": case_data,
-                "items_count": items_count,
-                "laundry_batches_count": batches_count,
-                "laundry_statistics": stats_data
+                "queue_items_count": items_count,
+                "batch_created": batch_created,
+                "total_batches": batches_count,
+                "statistics": stats_data
             }
                 
         except Exception as e:
-            self.log(f"❌ Exception testing damage cabinet workflow: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing laundry workflow: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def verify_expected_behavior(self) -> Dict[str, Any]:

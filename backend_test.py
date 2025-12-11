@@ -241,7 +241,169 @@ class LaundrySystemTester:
             self.log(f"❌ Exception testing laundry statistics: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def find_damage_cases_for_testing(self) -> Dict[str, Any]:
+    def test_tasks_creation(self) -> Dict[str, Any]:
+        """Test POST /api/tasks - should create washing/restoration tasks"""
+        try:
+            self.log("🧪 Testing tasks creation endpoint...")
+            
+            # Test washing task
+            washing_task = {
+                "title": "Мийка: Ваза",
+                "description": "Товар потребує мийки після повернення",
+                "task_type": "washing",
+                "status": "todo",
+                "priority": "medium"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/tasks",
+                json=washing_task
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if not data.get('id'):
+                    self.log(f"❌ Task creation failed: no ID returned", "ERROR")
+                    return {"success": False, "data": data}
+                
+                self.log(f"✅ Washing task created successfully")
+                self.log(f"   Task ID: {data.get('id')}")
+                self.log(f"   Message: {data.get('message')}")
+                
+                # Test restoration task
+                restoration_task = {
+                    "title": "Реставрація: Антикварна ваза",
+                    "description": "Товар потребує реставрації через пошкодження",
+                    "task_type": "restoration",
+                    "status": "todo",
+                    "priority": "high"
+                }
+                
+                response2 = self.session.post(
+                    f"{self.base_url}/tasks",
+                    json=restoration_task
+                )
+                
+                if response2.status_code == 200:
+                    data2 = response2.json()
+                    self.log(f"✅ Restoration task created successfully")
+                    self.log(f"   Task ID: {data2.get('id')}")
+                    
+                    return {
+                        "success": True, 
+                        "washing_task": data, 
+                        "restoration_task": data2
+                    }
+                else:
+                    self.log(f"❌ Failed to create restoration task: {response2.status_code}", "ERROR")
+                    return {"success": False, "status_code": response2.status_code}
+                
+            else:
+                self.log(f"❌ Failed to create washing task: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing tasks creation: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+    
+    def test_tasks_get(self) -> Dict[str, Any]:
+        """Test GET /api/tasks - should return tasks with correct types"""
+        try:
+            self.log("🧪 Testing tasks GET endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/tasks")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if response is an array
+                if not isinstance(data, list):
+                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                self.log(f"✅ Retrieved {len(data)} tasks")
+                
+                # Count tasks by type
+                task_types = {}
+                for task in data:
+                    task_type = task.get('task_type', 'unknown')
+                    task_types[task_type] = task_types.get(task_type, 0) + 1
+                
+                self.log(f"   Task types found: {task_types}")
+                
+                # Look for laundry_queue, washing, restoration tasks
+                laundry_queue_tasks = [t for t in data if t.get('task_type') == 'laundry_queue']
+                washing_tasks = [t for t in data if t.get('task_type') == 'washing']
+                restoration_tasks = [t for t in data if t.get('task_type') == 'restoration']
+                
+                self.log(f"   Laundry queue tasks: {len(laundry_queue_tasks)}")
+                self.log(f"   Washing tasks: {len(washing_tasks)}")
+                self.log(f"   Restoration tasks: {len(restoration_tasks)}")
+                
+                return {
+                    "success": True, 
+                    "data": data, 
+                    "count": len(data),
+                    "task_types": task_types,
+                    "laundry_queue_count": len(laundry_queue_tasks),
+                    "washing_count": len(washing_tasks),
+                    "restoration_count": len(restoration_tasks)
+                }
+            else:
+                self.log(f"❌ Failed to get tasks: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing tasks GET: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+    
+    def test_batch_creation_from_queue(self, queue_items: List[str]) -> Dict[str, Any]:
+        """Test POST /api/laundry/batches/from-queue - should create batch from queue items"""
+        try:
+            self.log("🧪 Testing batch creation from queue...")
+            
+            if not queue_items:
+                self.log("⚠️ No queue items provided for batch creation", "WARNING")
+                return {"success": False, "error": "No queue items"}
+            
+            # Test data for batch creation
+            tomorrow = (date.today() + timedelta(days=1)).isoformat()
+            batch_data = {
+                "item_ids": queue_items[:3],  # Take first 3 items
+                "laundry_company": "Прана",
+                "expected_return_date": tomorrow,
+                "cost": 150.0,
+                "notes": "Тестова партія хімчистки"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/laundry/batches/from-queue",
+                json=batch_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if not data.get('success'):
+                    self.log(f"❌ Batch creation failed: {data.get('message', 'Unknown error')}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                self.log(f"✅ Batch created from queue successfully")
+                self.log(f"   Batch ID: {data.get('batch_id')}")
+                self.log(f"   Batch Number: {data.get('batch_number')}")
+                self.log(f"   Message: {data.get('message')}")
+                
+                return {"success": True, "data": data}
+            else:
+                self.log(f"❌ Failed to create batch from queue: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing batch creation: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+    
+    def find_queue_items_for_testing(self) -> Dict[str, Any]:
         """Find damage cases that can be used for testing case details"""
         try:
             self.log("🔍 Finding damage cases for testing...")

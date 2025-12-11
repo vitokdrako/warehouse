@@ -689,11 +689,11 @@ async def create_batch_from_queue(
         """), {
             "id": batch_id,
             "batch_number": batch_number,
-            "laundry_company": laundry_company,
-            "expected_return_date": expected_return_date,
+            "laundry_company": data.laundry_company,
+            "expected_return_date": data.expected_return_date,
             "total_items": total_items,
-            "cost": cost or 0,
-            "notes": notes,
+            "cost": data.cost or 0,
+            "notes": data.notes,
             "sent_by_id": current_user.get('id'),
             "sent_by_name": current_user.get('name', 'System')
         })

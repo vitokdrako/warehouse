@@ -1,7 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { getImageUrl } from '../utils/imageHelper'
+import CorporateHeader from '../components/CorporateHeader'
+import axios from 'axios'
+import { Package, Clock, TrendingUp, CheckCircle2, AlertCircle, Trash2, Plus, RefreshCw, Calendar } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua'
+
+/*************** Tab Types ***************/
+type DamageTab = 'main' | 'washing' | 'restoration' | 'laundry'
 
 /*************** helpers ***************/
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')

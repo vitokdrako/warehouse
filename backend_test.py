@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Complete Return Fix
-Testing the fix for "Завершити приймання" functionality where cards should move to archive.
+Backend Testing Script for Damage Cabinet Tab Structure
+Testing the damage cabinet functionality with 4 tabs: Головна, Мийка, Реставрація, Хімчистка
 """
 
 import requests

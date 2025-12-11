@@ -218,54 +218,43 @@ export default function TasksCabinet({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-6 py-4">
+    <div className="min-h-screen bg-corp-bg-main">
+      <CorporateHeader cabinetName="Кабінет завдань" showBackButton={true} onBackClick={onBackToDashboard} />
+      
+      <div className="mx-auto max-w-7xl p-6 space-y-4">
+        {/* Header with create button */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {onBackToDashboard && (
-              <button
-                onClick={onBackToDashboard}
-                className="text-corp-text-main hover:text-corp-text-dark transition"
-              >
-                ← Назад
-              </button>
-            )}
-            <h1 className="text-2xl font-bold text-corp-text-dark">🧾 Кабінет завдань</h1>
-          </div>
+          <h2 className="text-xl font-semibold text-corp-text-dark">Управління завданнями</h2>
           <PillButton tone="green" onClick={() => setShowCreateModal(true)}>
             ➕ Нове завдання
           </PillButton>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="px-6 py-4">
+        {/* Stats */}
         <div className="grid grid-cols-5 gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="corp-card">
             <div className="text-xs text-corp-text-muted mb-1">Всього завдань</div>
             <div className="text-2xl font-bold text-corp-text-dark">{tasks.length}</div>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="corp-card">
             <div className="text-xs text-corp-text-muted mb-1">До виконання</div>
             <div className="text-2xl font-bold text-corp-text-main">{tasksByStatus.todo.length}</div>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="corp-card">
             <div className="text-xs text-blue-600 mb-1">В роботі</div>
             <div className="text-2xl font-bold text-blue-600">{tasksByStatus.in_progress.length}</div>
           </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="corp-card">
             <div className="text-xs text-emerald-600 mb-1">Виконано</div>
             <div className="text-2xl font-bold text-emerald-600">{tasksByStatus.done.length}</div>
           </div>
-          <div className="bg-white rounded-xl border border-rose-200 p-4">
+          <div className="corp-card border-rose-200">
             <div className="text-xs text-rose-600 mb-1">Прострочено</div>
             <div className="text-2xl font-bold text-rose-600">
               {tasks.filter((t) => isOverdue(t)).length}
             </div>
           </div>
         </div>
-      </div>
 
       {/* Filters */}
       <div className="px-6 pb-4">

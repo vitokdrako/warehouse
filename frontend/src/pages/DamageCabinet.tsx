@@ -553,7 +553,19 @@ function MainTabContent({
   showSendModal,
   setShowSendModal,
   onNavigateToTasks,
+  onSendToProcess,
 }: any) {
+  const [sendingLineId, setSendingLineId] = useState<string | null>(null)
+
+  const handleSendToProcess = async (line: DamageLine, processType: 'laundry' | 'washing' | 'restoration') => {
+    setSendingLineId(line.id)
+    try {
+      await onSendToProcess(selected, line, processType)
+    } finally {
+      setSendingLineId(null)
+    }
+  }
+
   if (!selected) {
     return <div className="text-sm text-corp-text-main">Немає кейсів шкоди.</div>
   }

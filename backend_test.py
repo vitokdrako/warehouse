@@ -200,43 +200,37 @@ class TaskManagementTester:
             self.log(f"❌ Exception testing task status update: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_laundry_statistics(self) -> Dict[str, Any]:
-        """Test GET /api/laundry/statistics - should return laundry statistics for Хімчистка tab"""
+    def test_task_assignment(self, task_id: str, assignee: str) -> Dict[str, Any]:
+        """Test PUT /api/tasks/{task_id} - should assign task to executor"""
         try:
-            self.log("🧪 Testing laundry statistics endpoint...")
+            self.log(f"🧪 Testing task assignment: {task_id} -> {assignee}...")
             
-            response = self.session.get(f"{self.base_url}/laundry/statistics")
+            update_data = {"assigned_to": assignee}
+            
+            response = self.session.put(
+                f"{self.base_url}/tasks/{task_id}",
+                json=update_data
+            )
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response has required structure
-                if not isinstance(data, dict):
-                    self.log(f"❌ Expected object, got {type(data)}", "ERROR")
+                # Check if assignment was successful
+                if data.get('assigned_to') != assignee:
+                    self.log(f"❌ Task assignment failed: expected {assignee}, got {data.get('assigned_to')}", "ERROR")
                     return {"success": False, "data": data}
                 
-                # Validate statistics structure
-                required_fields = ['total_batches', 'active_batches', 'total_items_sent', 'total_items_returned', 'total_cost']
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if missing_fields:
-                    self.log(f"❌ Missing required statistics fields: {missing_fields}", "ERROR")
-                    return {"success": False, "missing_fields": missing_fields}
-                
-                self.log(f"✅ Statistics structure validation passed")
-                self.log(f"   Total batches: {data.get('total_batches')}")
-                self.log(f"   Active batches: {data.get('active_batches')}")
-                self.log(f"   Total items sent: {data.get('total_items_sent')}")
-                self.log(f"   Total items returned: {data.get('total_items_returned')}")
-                self.log(f"   Total cost: {data.get('total_cost')}")
+                self.log(f"✅ Task assigned successfully")
+                self.log(f"   Task ID: {task_id}")
+                self.log(f"   Assigned to: {data.get('assigned_to')}")
                 
                 return {"success": True, "data": data}
             else:
-                self.log(f"❌ Failed to get laundry statistics: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to assign task: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing laundry statistics: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing task assignment: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_tasks_creation(self) -> Dict[str, Any]:

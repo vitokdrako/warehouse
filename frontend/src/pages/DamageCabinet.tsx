@@ -730,15 +730,40 @@ function MainTabContent({
                     </div>
                     {line.note && <div className="text-[10px] text-corp-text-muted italic mt-1">{line.note}</div>}
                   </div>
-                  <div className="text-right">
+                  <div className="text-right mr-2">
                     <div className="font-semibold text-corp-text-dark">{fmtUA(line.total)} ₴</div>
                     <div className="text-[10px] text-corp-text-muted">
                       {line.qty} × {fmtUA(line.amountPerUnit)} ₴
                     </div>
                   </div>
+                  
+                  {/* Action Selector */}
+                  <div className="flex items-center gap-1">
+                    <select
+                      className="text-[10px] rounded-lg border border-slate-200 px-2 py-1 bg-white"
+                      disabled={sendingLineId === line.id}
+                      defaultValue=""
+                      onChange={(e) => {
+                        const value = e.target.value as 'laundry' | 'washing' | 'restoration'
+                        if (value) {
+                          handleSendToProcess(line, value)
+                          e.target.value = ''
+                        }
+                      }}
+                    >
+                      <option value="" disabled>Відправити →</option>
+                      <option value="laundry">🧺 Хімчистка</option>
+                      <option value="washing">🚿 Мийка</option>
+                      <option value="restoration">🔧 Реставрація</option>
+                    </select>
+                    {sendingLineId === line.id && (
+                      <span className="text-[10px] text-corp-text-muted">⏳</span>
+                    )}
+                  </div>
+                  
                   <button
                     onClick={() => editLineAmount(selected.id, line.id)}
-                    className="text-corp-text-muted hover:text-corp-text-dark"
+                    className="text-corp-text-muted hover:text-corp-text-dark ml-1"
                   >
                     ✏️
                   </button>

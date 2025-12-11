@@ -76,12 +76,12 @@ class TaskManagementTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_laundry_queue_get(self) -> Dict[str, Any]:
-        """Test GET /api/laundry/queue - should return array of items in laundry queue"""
+    def test_tasks_filter_by_type(self, task_type: str) -> Dict[str, Any]:
+        """Test GET /api/tasks?task_type={type} - should return filtered tasks"""
         try:
-            self.log("🧪 Testing laundry queue GET endpoint...")
+            self.log(f"🧪 Testing tasks filtering by type: {task_type}...")
             
-            response = self.session.get(f"{self.base_url}/laundry/queue")
+            response = self.session.get(f"{self.base_url}/tasks?task_type={task_type}")
             
             if response.status_code == 200:
                 data = response.json()
@@ -91,31 +91,28 @@ class TaskManagementTester:
                     self.log(f"❌ Expected array, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Retrieved {len(data)} items in laundry queue")
+                self.log(f"✅ Retrieved {len(data)} tasks with type '{task_type}'")
                 
-                # Validate queue item structure
+                # Validate that all tasks have the correct type
                 if data:
-                    sample_item = data[0]
-                    required_fields = ['id', 'product_name', 'sku']
-                    missing_fields = [field for field in required_fields if field not in sample_item]
+                    for task in data:
+                        if task.get('task_type') != task_type:
+                            self.log(f"❌ Task {task.get('id')} has wrong type: {task.get('task_type')}", "ERROR")
+                            return {"success": False, "error": "Wrong task type in results"}
                     
-                    if missing_fields:
-                        self.log(f"❌ Missing required fields: {missing_fields}", "ERROR")
-                        return {"success": False, "missing_fields": missing_fields}
-                    
-                    self.log(f"✅ Queue item structure validation passed")
+                    self.log(f"✅ All tasks have correct type '{task_type}'")
                     
                     # Log some examples
-                    for item in data[:3]:  # Show first 3
-                        self.log(f"   - Item {item.get('id')}: {item.get('product_name')} ({item.get('sku')})")
+                    for task in data[:3]:  # Show first 3
+                        self.log(f"   - Task {task.get('id')}: {task.get('title')} (Status: {task.get('status')})")
                 
                 return {"success": True, "data": data, "count": len(data)}
             else:
-                self.log(f"❌ Failed to get laundry queue: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to filter tasks by type: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing laundry queue: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing task filtering: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_laundry_queue_post(self) -> Dict[str, Any]:

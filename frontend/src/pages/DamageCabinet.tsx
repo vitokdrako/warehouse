@@ -124,6 +124,10 @@ export default function DamageCabinetPro({
   onNavigateToTasks?: (damageId: string) => void
   initialDamageId?: string
 }) {
+  // Tab state
+  const [activeTab, setActiveTab] = useState<DamageTab>('main')
+  
+  // Main tab state
   const [cases, setCases] = useState<DamageCase[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(initialDamageId || null)
@@ -133,6 +137,15 @@ export default function DamageCabinetPro({
   const [sourceFilter, setSourceFilter] = useState<'all' | DamageSource>('all')
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
+  
+  // Laundry tab state
+  const [laundryBatches, setLaundryBatches] = useState<any[]>([])
+  const [laundryStats, setLaundryStats] = useState<any>(null)
+  const [laundryLoading, setLaundryLoading] = useState(false)
+  const [laundryFilter, setLaundryFilter] = useState('all')
+  const [showCreateBatchModal, setShowCreateBatchModal] = useState(false)
+  const [selectedBatch, setSelectedBatch] = useState<any>(null)
+  const [showReturnModal, setShowReturnModal] = useState(false)
 
   useEffect(() => {
     loadCases()

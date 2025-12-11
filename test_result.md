@@ -30,6 +30,66 @@
         - working: true
           agent: "testing"
           comment: "✅ COMPREHENSIVE TESTING COMPLETED: Return workflow with automatic task creation FULLY VERIFIED! Successfully tested all components: 1) ✅ API Health Check passed, 2) ✅ Product cleaning tasks endpoint working (/api/product-cleaning/all), 3) ✅ Task priority system working (repair tasks appear first), 4) ✅ Task data structure complete with all required fields, 5) ✅ Evidence of workflow found: 3 wash tasks + 1 repair task, 6) ✅ API consistency verified between endpoints, 7) ✅ Backend logs show task creation messages: '🚿 Товар DI5239 → мийка', '🚿 Товар DI5240 → мийка', '🚿 Товар DI5678 → мийка'. System correctly creates WASH tasks for items without damage and REPAIR tasks for items with damage. Tasks are properly prioritized with repair tasks appearing first. All requirements from Ukrainian review request satisfied."
+
+  - task: "Task filtering by type (washing/restoration)"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/tasks.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test GET /api/tasks?task_type=washing and GET /api/tasks?task_type=restoration endpoints for filtering tasks by type in damage cabinet"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Task filtering by type working perfectly! GET /api/tasks?task_type=washing returned 6 washing tasks, GET /api/tasks?task_type=restoration returned 7 restoration tasks. All returned tasks have correct task_type field matching the filter. API correctly filters tasks and returns proper JSON array structure."
+
+  - task: "Task status updates"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/tasks.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test PUT /api/tasks/{task_id} with body {\"status\": \"in_progress\"} and {\"status\": \"done\"} for updating task status"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Task status updates working correctly! Successfully tested status transitions: todo → in_progress → done. PUT /api/tasks/{id} returns success message, verification by GET /api/tasks/{id} confirms status changes are persisted. Multiple tasks tested with different status values."
+
+  - task: "Task assignment to executor"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/tasks.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test PUT /api/tasks/{task_id} with body {\"assigned_to\": \"Name\"} for assigning tasks to executors"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Task assignment working perfectly! Successfully assigned tasks to different executors: 'Марія Іванівна', 'Петро Петренко', 'Тестовий виконавець'. PUT /api/tasks/{id} updates assigned_to field correctly, changes are verified and persisted in database."
+
+  - task: "Task creation for washing and restoration"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/tasks.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "testing"
+          comment: "Need to test POST /api/tasks for creating new washing and restoration tasks with proper structure"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Task creation working excellently! Successfully created multiple washing tasks with title '🚿 Мийка: Тестовий товар (TEST-001)' and restoration tasks with title '🔧 Реставрація: Тестовий товар (TEST-002)'. POST /api/tasks returns task ID, all fields (title, description, task_type, status, priority) are correctly saved and retrievable."
 ##   - task: "Task name"
 ##     implemented: true
 ##     working: true  # or false or "NA"

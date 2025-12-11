@@ -17,7 +17,7 @@ TEST_CREDENTIALS = {
     "password": "test123"
 }
 
-class CompleteReturnTester:
+class DamageCabinetTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

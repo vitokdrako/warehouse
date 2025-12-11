@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Damage Cabinet Tab Structure
-Testing the damage cabinet functionality with 4 tabs: Головна, Мийка, Реставрація, Хімчистка
+Backend Testing Script for Laundry System (Система обробки пошкоджень з Кабінету шкоди)
+Testing the laundry workflow: Queue → Batches → Tasks → Statistics
 """
 
 import requests
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration

@@ -508,3 +508,251 @@ async def get_laundry_companies(db: Session = Depends(get_rh_db)):
     
     companies = [row[0] for row in result]
     return {"companies": companies}
+
+# ==================== Laundry Queue Endpoints ====================
+
+class QueueItemCreate(BaseModel):
+    damage_id: Optional[str] = None
+    order_id: Optional[int] = None
+    order_number: Optional[str] = None
+    product_id: Optional[int] = None
+    product_name: str
+    sku: str
+    category: Optional[str] = "textile"
+    quantity: int = 1
+    condition: Optional[str] = "dirty"
+    notes: Optional[str] = None
+    source: Optional[str] = "damage_cabinet"  # damage_cabinet, return, manual
+
+@router.get("/queue")
+async def get_laundry_queue(db: Session = Depends(get_rh_db)):
+    """
+    Отримати чергу товарів для відправки в хімчистку
+    Товари, які ще не додані до жодної партії
+    """
+    try:
+        result = db.execute(text("""
+            SELECT 
+                lq.id, lq.damage_id, lq.order_id, lq.order_number,
+                lq.product_id, lq.product_name, lq.sku, lq.category,
+                lq.quantity, lq.condition, lq.notes, lq.source,
+                lq.created_at, lq.created_by
+            FROM laundry_queue lq
+            WHERE lq.batch_id IS NULL
+            ORDER BY lq.created_at DESC
+        """))
+        
+        items = []
+        for row in result:
+            items.append({
+                "id": row[0],
+                "damage_id": row[1],
+                "order_id": row[2],
+                "order_number": row[3],
+                "product_id": row[4],
+                "product_name": row[5],
+                "sku": row[6],
+                "category": row[7],
+                "quantity": row[8],
+                "condition": row[9],
+                "notes": row[10],
+                "source": row[11],
+                "created_at": row[12].isoformat() if row[12] else None,
+                "created_by": row[13]
+            })
+        
+        return items
+    except Exception as e:
+        print(f"[Laundry] Queue error: {e}")
+        # Якщо таблиця не існує - повернемо пустий список
+        return []
+
+@router.post("/queue")
+async def add_to_laundry_queue(
+    item: QueueItemCreate,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Додати товар до черги хімчистки
+    Автоматично створює завдання в TasksCabinet
+    """
+    try:
+        queue_id = str(uuid.uuid4())[:8]
+        
+        # Додати до черги хімчистки
+        db.execute(text("""
+            INSERT INTO laundry_queue (
+                id, damage_id, order_id, order_number, product_id, product_name, 
+                sku, category, quantity, `condition`, notes, source, 
+                created_at, created_by
+            ) VALUES (
+                :id, :damage_id, :order_id, :order_number, :product_id, :product_name,
+                :sku, :category, :quantity, :condition, :notes, :source,
+                NOW(), :created_by
+            )
+        """), {
+            "id": queue_id,
+            "damage_id": item.damage_id,
+            "order_id": item.order_id,
+            "order_number": item.order_number,
+            "product_id": item.product_id,
+            "product_name": item.product_name,
+            "sku": item.sku,
+            "category": item.category,
+            "quantity": item.quantity,
+            "condition": item.condition,
+            "notes": item.notes,
+            "source": item.source,
+            "created_by": current_user.get('name', 'System')
+        })
+        
+        # Автоматично створити завдання
+        task_id = str(uuid.uuid4())[:8]
+        db.execute(text("""
+            INSERT INTO tasks (
+                id, order_id, order_number, damage_id, title, description,
+                task_type, status, priority, assigned_to, created_at, updated_at
+            ) VALUES (
+                :id, :order_id, :order_number, :damage_id, :title, :description,
+                'laundry', 'todo', 'medium', NULL, NOW(), NOW()
+            )
+        """), {
+            "id": task_id,
+            "order_id": item.order_id,
+            "order_number": item.order_number,
+            "damage_id": item.damage_id,
+            "title": f"Хімчистка: {item.product_name} ({item.sku})",
+            "description": f"Товар потребує хімчистки. Стан: {item.condition}. {item.notes or ''}"
+        })
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Товар '{item.product_name}' додано до черги хімчистки",
+            "queue_id": queue_id,
+            "task_id": task_id
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"[Laundry] Error adding to queue: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/queue/{item_id}")
+async def remove_from_laundry_queue(
+    item_id: str,
+    db: Session = Depends(get_rh_db)
+):
+    """Видалити товар з черги хімчистки"""
+    try:
+        db.execute(text("DELETE FROM laundry_queue WHERE id = :id"), {"id": item_id})
+        db.commit()
+        return {"message": "Товар видалено з черги"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/batches/from-queue")
+async def create_batch_from_queue(
+    item_ids: List[str],
+    laundry_company: str,
+    expected_return_date: str,
+    cost: Optional[float] = None,
+    notes: Optional[str] = None,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Створити партію хімчистки з товарів черги
+    """
+    try:
+        if not item_ids:
+            raise HTTPException(status_code=400, detail="Виберіть товари для партії")
+        
+        batch_id = str(uuid.uuid4())[:8]
+        batch_number = f"LB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # Отримати товари з черги
+        placeholders = ','.join([f':id_{i}' for i in range(len(item_ids))])
+        params = {f'id_{i}': item_id for i, item_id in enumerate(item_ids)}
+        
+        result = db.execute(text(f"""
+            SELECT id, product_id, product_name, sku, category, quantity, `condition`, notes
+            FROM laundry_queue
+            WHERE id IN ({placeholders}) AND batch_id IS NULL
+        """), params)
+        
+        queue_items = list(result)
+        
+        if not queue_items:
+            raise HTTPException(status_code=400, detail="Обрані товари вже додано до іншої партії")
+        
+        total_items = sum(row[5] for row in queue_items)
+        
+        # Створити партію
+        db.execute(text("""
+            INSERT INTO laundry_batches (
+                id, batch_number, status, laundry_company, sent_date,
+                expected_return_date, total_items, returned_items, cost, notes,
+                sent_by_id, sent_by_name, created_at, updated_at
+            ) VALUES (
+                :id, :batch_number, 'sent', :laundry_company, NOW(),
+                :expected_return_date, :total_items, 0, :cost, :notes,
+                :sent_by_id, :sent_by_name, NOW(), NOW()
+            )
+        """), {
+            "id": batch_id,
+            "batch_number": batch_number,
+            "laundry_company": laundry_company,
+            "expected_return_date": expected_return_date,
+            "total_items": total_items,
+            "cost": cost or 0,
+            "notes": notes,
+            "sent_by_id": current_user.get('id'),
+            "sent_by_name": current_user.get('name', 'System')
+        })
+        
+        # Додати товари до партії
+        for row in queue_items:
+            item_id = str(uuid.uuid4())[:8]
+            db.execute(text("""
+                INSERT INTO laundry_items (
+                    id, batch_id, product_id, product_name, sku, category,
+                    quantity, returned_quantity, condition_before, created_at
+                ) VALUES (
+                    :id, :batch_id, :product_id, :product_name, :sku, :category,
+                    :quantity, 0, :condition, NOW()
+                )
+            """), {
+                "id": item_id,
+                "batch_id": batch_id,
+                "product_id": row[1],
+                "product_name": row[2],
+                "sku": row[3],
+                "category": row[4],
+                "quantity": row[5],
+                "condition": row[6]
+            })
+        
+        # Оновити статус товарів в черзі
+        db.execute(text(f"""
+            UPDATE laundry_queue SET batch_id = :batch_id WHERE id IN ({placeholders})
+        """), {**params, "batch_id": batch_id})
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Партію {batch_number} створено з {len(queue_items)} товарів",
+            "batch_id": batch_id,
+            "batch_number": batch_number
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[Laundry] Error creating batch: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -257,8 +257,7 @@ export default function TasksCabinet({
         </div>
 
       {/* Filters */}
-      <div className="px-6 pb-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4">
+        <div className="corp-card">
           <div className="grid grid-cols-4 gap-3">
             <div>
               <label className="block text-xs text-corp-text-main mb-1">Пошук</label>
@@ -267,7 +266,7 @@ export default function TasksCabinet({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Назва, опис, виконавець..."
-                className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+                className="w-full rounded-corp border border-corp-border px-3 py-1.5 text-sm"
               />
             </div>
             <div>
@@ -275,7 +274,7 @@ export default function TasksCabinet({
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+                className="w-full rounded-corp border border-corp-border px-3 py-1.5 text-sm"
               >
                 <option value="all">Всі</option>
                 <option value="todo">До виконання</option>
@@ -288,7 +287,7 @@ export default function TasksCabinet({
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+                className="w-full rounded-corp border border-corp-border px-3 py-1.5 text-sm"
               >
                 <option value="all">Всі типи</option>
                 <option value="packing">Комплектація</option>
@@ -304,7 +303,7 @@ export default function TasksCabinet({
               <select
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+                className="w-full rounded-corp border border-corp-border px-3 py-1.5 text-sm"
               >
                 <option value="all">Всі</option>
                 <option value="high">Високий</option>
@@ -314,13 +313,11 @@ export default function TasksCabinet({
             </div>
           </div>
         </div>
-      </div>
 
       {/* Kanban Board */}
-      <div className="px-6 pb-6">
         <div className="grid grid-cols-3 gap-4">
           {/* Todo Column */}
-          <div className="bg-slate-100 rounded-xl p-4">
+          <div className="bg-slate-100 rounded-corp p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-slate-700">📋 До виконання</h3>
               <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">

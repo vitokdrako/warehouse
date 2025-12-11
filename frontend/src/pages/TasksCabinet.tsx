@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { tasksAPI } from '../api/client'
+import CorporateHeader from '../components/CorporateHeader'
 
 /*************** helpers ***************/
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')

@@ -714,11 +714,27 @@ export default function DamageCabinetPro({
         )}
 
         {activeTab === 'washing' && (
-          <WashingTabContent />
+          <WashingTabContent 
+            tasks={washingTasks}
+            loading={washingLoading}
+            filterStatus={washingFilter}
+            setFilterStatus={setWashingFilter}
+            onRefresh={loadWashingData}
+            onUpdateStatus={(taskId: string, status: string) => handleUpdateTaskStatus(taskId, status, 'washing')}
+            onAssignTask={(taskId: string, assignee: string) => handleAssignTask(taskId, assignee, 'washing')}
+          />
         )}
 
         {activeTab === 'restoration' && (
-          <RestorationTabContent />
+          <RestorationTabContent 
+            tasks={restorationTasks}
+            loading={restorationLoading}
+            filterStatus={restorationFilter}
+            setFilterStatus={setRestorationFilter}
+            onRefresh={loadRestorationData}
+            onUpdateStatus={(taskId: string, status: string) => handleUpdateTaskStatus(taskId, status, 'restoration')}
+            onAssignTask={(taskId: string, assignee: string) => handleAssignTask(taskId, assignee, 'restoration')}
+          />
         )}
 
         {activeTab === 'laundry' && (

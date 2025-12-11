@@ -204,24 +204,30 @@ export default function DamageCabinetPro({
   }
 
   // ========== Laundry Functions ==========
+  const [laundryQueue, setLaundryQueue] = useState<any[]>([])
+
   const loadLaundryData = async () => {
     try {
       setLaundryLoading(true)
       const token = localStorage.getItem('token')
       const params = laundryFilter !== 'all' ? { status: laundryFilter } : {}
       
-      const [batchesRes, statsRes] = await Promise.all([
+      const [batchesRes, statsRes, queueRes] = await Promise.all([
         axios.get(`${BACKEND_URL}/api/laundry/batches`, {
           params,
           headers: { Authorization: `Bearer ${token}` }
         }),
         axios.get(`${BACKEND_URL}/api/laundry/statistics`, {
           headers: { Authorization: `Bearer ${token}` }
-        })
+        }),
+        axios.get(`${BACKEND_URL}/api/laundry/queue`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => ({ data: [] })) // Якщо endpoint не існує
       ])
       
       setLaundryBatches(batchesRes.data)
       setLaundryStats(statsRes.data)
+      setLaundryQueue(queueRes.data || [])
     } catch (error) {
       console.error('Error loading laundry data:', error)
     } finally {

@@ -412,9 +412,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Damage Cabinet API - List damage cases"
-    - "Damage Cabinet API - Get case details with items"
-    - "Authentication for damage cabinet access"
+    - "Task filtering by type (washing/restoration)"
+    - "Task status updates"
+    - "Task assignment to executor"
+    - "Task creation for washing and restoration"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

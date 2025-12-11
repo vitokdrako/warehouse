@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Damage Cabinet (Кабінет Шкоди)
-Testing the damage cabinet functionality as described in the Ukrainian review request.
+Backend Testing Script for Complete Return Fix
+Testing the fix for "Завершити приймання" functionality where cards should move to archive.
 """
 
 import requests

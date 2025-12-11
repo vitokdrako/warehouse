@@ -1052,32 +1052,381 @@ function MainTabContent({
 }
 
 /*************** Washing Tab Content ***************/
-function WashingTabContent() {
+function WashingTabContent({
+  tasks,
+  loading,
+  filterStatus,
+  setFilterStatus,
+  onRefresh,
+  onUpdateStatus,
+  onAssignTask,
+}: any) {
+  const [selectedTask, setSelectedTask] = useState<any>(null)
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; tone: string }> = {
+      todo: { label: 'Очікує', tone: 'amber' },
+      in_progress: { label: 'В роботі', tone: 'blue' },
+      done: { label: 'Виконано', tone: 'green' }
+    }
+    const config = statusMap[status] || statusMap.todo
+    return <Badge tone={config.tone}>{config.label}</Badge>
+  }
+
+  const stats = {
+    total: tasks.length,
+    todo: tasks.filter((t: any) => t.status === 'todo').length,
+    inProgress: tasks.filter((t: any) => t.status === 'in_progress').length,
+    done: tasks.filter((t: any) => t.status === 'done').length,
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="w-8 h-8 text-corp-primary animate-spin" />
+      </div>
+    )
+  }
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
-      <div className="text-4xl mb-4">🚿</div>
-      <h3 className="text-lg font-semibold text-corp-text-dark mb-2">Мийка товарів</h3>
-      <p className="text-sm text-corp-text-muted mb-4">
-        Тут буде відображатися список товарів, що потребують мийки після повернення.
-      </p>
-      <div className="inline-block px-4 py-2 bg-slate-100 rounded-full text-sm text-corp-text-muted">
-        🚧 В розробці
+    <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="corp-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-corp-text-muted mb-1">Всього на мийці</p>
+              <p className="text-2xl font-bold text-corp-text-dark">{stats.total}</p>
+            </div>
+            <div className="text-4xl opacity-50">🚿</div>
+          </div>
+        </div>
+        <div className="corp-card border-amber-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-amber-600 mb-1">Очікує</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.todo}</p>
+            </div>
+            <Clock className="w-10 h-10 text-amber-500 opacity-50" />
+          </div>
+        </div>
+        <div className="corp-card border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-blue-600 mb-1">В роботі</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
+            </div>
+            <RefreshCw className="w-10 h-10 text-blue-500 opacity-50" />
+          </div>
+        </div>
+        <div className="corp-card border-emerald-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-emerald-600 mb-1">Виконано</p>
+              <p className="text-2xl font-bold text-emerald-600">{stats.done}</p>
+            </div>
+            <CheckCircle2 className="w-10 h-10 text-emerald-500 opacity-50" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters & Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex gap-2 flex-wrap">
+          {['all', 'todo', 'in_progress', 'done'].map(status => (
+            <button
+              key={status}
+              className={cls(
+                'corp-btn',
+                filterStatus === status ? 'corp-btn-primary' : 'corp-btn-secondary'
+              )}
+              onClick={() => setFilterStatus(status)}
+            >
+              {status === 'all' ? 'Всі' :
+               status === 'todo' ? 'Очікує' :
+               status === 'in_progress' ? 'В роботі' : 'Виконано'}
+            </button>
+          ))}
+        </div>
+        <button onClick={onRefresh} className="corp-btn corp-btn-secondary">
+          <RefreshCw className="w-4 h-4" /> Оновити
+        </button>
+      </div>
+
+      {/* Tasks List */}
+      <div className="space-y-3">
+        {tasks.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+            <div className="text-4xl mb-4">🚿</div>
+            <h3 className="text-lg font-semibold text-corp-text-dark mb-2">Немає товарів на мийці</h3>
+            <p className="text-sm text-corp-text-muted">
+              Товари з'являться тут після відправки з Кабінету шкоди
+            </p>
+          </div>
+        ) : (
+          tasks.map((task: any) => (
+            <div key={task.id} className="corp-card hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-semibold text-corp-text-dark">{task.title}</h3>
+                    {getStatusBadge(task.status)}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
+                    <div>
+                      <span className="text-corp-text-muted">📦 Джерело:</span>
+                      <p className="font-medium">{task.order_number || 'Кабінет шкоди'}</p>
+                    </div>
+                    <div>
+                      <span className="text-corp-text-muted">👤 Створив:</span>
+                      <p className="font-medium">{task.created_by || 'Система'}</p>
+                    </div>
+                    <div>
+                      <span className="text-corp-text-muted">🎯 Виконавець:</span>
+                      <p className="font-medium">{task.assigned_to || <span className="text-amber-600">Не призначено</span>}</p>
+                    </div>
+                    <div>
+                      <span className="text-corp-text-muted">📅 Створено:</span>
+                      <p className="font-medium">{task.created_at ? new Date(task.created_at).toLocaleDateString('uk-UA') : '—'}</p>
+                    </div>
+                  </div>
+
+                  {task.description && (
+                    <p className="text-sm text-corp-text-muted bg-slate-50 rounded-lg p-2 mb-3">
+                      {task.description}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {task.status === 'todo' && (
+                      <>
+                        <button
+                          onClick={() => onUpdateStatus(task.id, 'in_progress')}
+                          className="corp-btn corp-btn-primary text-sm"
+                        >
+                          ▶️ Взяти в роботу
+                        </button>
+                        <button
+                          onClick={() => {
+                            const assignee = prompt('Введіть ім\'я виконавця:')
+                            if (assignee) onAssignTask(task.id, assignee)
+                          }}
+                          className="corp-btn corp-btn-secondary text-sm"
+                        >
+                          👤 Призначити
+                        </button>
+                      </>
+                    )}
+                    {task.status === 'in_progress' && (
+                      <button
+                        onClick={() => onUpdateStatus(task.id, 'done')}
+                        className="corp-btn corp-btn-primary text-sm"
+                      >
+                        ✅ Виконано
+                      </button>
+                    )}
+                    {task.status === 'done' && (
+                      <span className="text-sm text-emerald-600">
+                        ✓ Завершено {task.completed_at ? new Date(task.completed_at).toLocaleDateString('uk-UA') : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   )
 }
 
 /*************** Restoration Tab Content ***************/
-function RestorationTabContent() {
+function RestorationTabContent({
+  tasks,
+  loading,
+  filterStatus,
+  setFilterStatus,
+  onRefresh,
+  onUpdateStatus,
+  onAssignTask,
+}: any) {
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; tone: string }> = {
+      todo: { label: 'Очікує', tone: 'amber' },
+      in_progress: { label: 'В роботі', tone: 'blue' },
+      done: { label: 'Виконано', tone: 'green' }
+    }
+    const config = statusMap[status] || statusMap.todo
+    return <Badge tone={config.tone}>{config.label}</Badge>
+  }
+
+  const stats = {
+    total: tasks.length,
+    todo: tasks.filter((t: any) => t.status === 'todo').length,
+    inProgress: tasks.filter((t: any) => t.status === 'in_progress').length,
+    done: tasks.filter((t: any) => t.status === 'done').length,
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="w-8 h-8 text-corp-primary animate-spin" />
+      </div>
+    )
+  }
+
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center">
-      <div className="text-4xl mb-4">🔧</div>
-      <h3 className="text-lg font-semibold text-corp-text-dark mb-2">Реставрація</h3>
-      <p className="text-sm text-corp-text-muted mb-4">
-        Управління товарами, що потребують реставрації або ремонту.
-      </p>
-      <div className="inline-block px-4 py-2 bg-slate-100 rounded-full text-sm text-corp-text-muted">
-        🚧 В розробці
+    <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="corp-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-corp-text-muted mb-1">Всього на реставрації</p>
+              <p className="text-2xl font-bold text-corp-text-dark">{stats.total}</p>
+            </div>
+            <div className="text-4xl opacity-50">🔧</div>
+          </div>
+        </div>
+        <div className="corp-card border-amber-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-amber-600 mb-1">Очікує</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.todo}</p>
+            </div>
+            <Clock className="w-10 h-10 text-amber-500 opacity-50" />
+          </div>
+        </div>
+        <div className="corp-card border-blue-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-blue-600 mb-1">В роботі</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.inProgress}</p>
+            </div>
+            <RefreshCw className="w-10 h-10 text-blue-500 opacity-50" />
+          </div>
+        </div>
+        <div className="corp-card border-emerald-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-emerald-600 mb-1">Виконано</p>
+              <p className="text-2xl font-bold text-emerald-600">{stats.done}</p>
+            </div>
+            <CheckCircle2 className="w-10 h-10 text-emerald-500 opacity-50" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters & Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex gap-2 flex-wrap">
+          {['all', 'todo', 'in_progress', 'done'].map(status => (
+            <button
+              key={status}
+              className={cls(
+                'corp-btn',
+                filterStatus === status ? 'corp-btn-primary' : 'corp-btn-secondary'
+              )}
+              onClick={() => setFilterStatus(status)}
+            >
+              {status === 'all' ? 'Всі' :
+               status === 'todo' ? 'Очікує' :
+               status === 'in_progress' ? 'В роботі' : 'Виконано'}
+            </button>
+          ))}
+        </div>
+        <button onClick={onRefresh} className="corp-btn corp-btn-secondary">
+          <RefreshCw className="w-4 h-4" /> Оновити
+        </button>
+      </div>
+
+      {/* Tasks List */}
+      <div className="space-y-3">
+        {tasks.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+            <div className="text-4xl mb-4">🔧</div>
+            <h3 className="text-lg font-semibold text-corp-text-dark mb-2">Немає товарів на реставрації</h3>
+            <p className="text-sm text-corp-text-muted">
+              Товари з'являться тут після відправки з Кабінету шкоди
+            </p>
+          </div>
+        ) : (
+          tasks.map((task: any) => (
+            <div key={task.id} className="corp-card hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="font-semibold text-corp-text-dark">{task.title}</h3>
+                    {getStatusBadge(task.status)}
+                    {task.priority === 'high' && <Badge tone="red">Терміново</Badge>}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-3">
+                    <div>
+                      <span className="text-corp-text-muted">📦 Джерело:</span>
+                      <p className="font-medium">{task.order_number || 'Кабінет шкоди'}</p>
+                    </div>
+                    <div>
+                      <span className="text-corp-text-muted">👤 Створив:</span>
+                      <p className="font-medium">{task.created_by || 'Система'}</p>
+                    </div>
+                    <div>
+                      <span className="text-corp-text-muted">🎯 Виконавець:</span>
+                      <p className="font-medium">{task.assigned_to || <span className="text-amber-600">Не призначено</span>}</p>
+                    </div>
+                    <div>
+                      <span className="text-corp-text-muted">📅 Створено:</span>
+                      <p className="font-medium">{task.created_at ? new Date(task.created_at).toLocaleDateString('uk-UA') : '—'}</p>
+                    </div>
+                  </div>
+
+                  {task.description && (
+                    <p className="text-sm text-corp-text-muted bg-slate-50 rounded-lg p-2 mb-3">
+                      {task.description}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {task.status === 'todo' && (
+                      <>
+                        <button
+                          onClick={() => onUpdateStatus(task.id, 'in_progress')}
+                          className="corp-btn corp-btn-primary text-sm"
+                        >
+                          ▶️ Взяти в роботу
+                        </button>
+                        <button
+                          onClick={() => {
+                            const assignee = prompt('Введіть ім\'я виконавця:')
+                            if (assignee) onAssignTask(task.id, assignee)
+                          }}
+                          className="corp-btn corp-btn-secondary text-sm"
+                        >
+                          👤 Призначити
+                        </button>
+                      </>
+                    )}
+                    {task.status === 'in_progress' && (
+                      <button
+                        onClick={() => onUpdateStatus(task.id, 'done')}
+                        className="corp-btn corp-btn-primary text-sm"
+                      >
+                        ✅ Виконано
+                      </button>
+                    )}
+                    {task.status === 'done' && (
+                      <span className="text-sm text-emerald-600">
+                        ✓ Завершено {task.completed_at ? new Date(task.completed_at).toLocaleDateString('uk-UA') : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   )

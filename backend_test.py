@@ -248,38 +248,39 @@ class DamageCabinetTester:
             self.log(f"❌ Exception testing laundry statistics: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def find_issued_cards_for_testing(self) -> Dict[str, Any]:
-        """Find issued cards that can be used for testing complete-return"""
+    def find_damage_cases_for_testing(self) -> Dict[str, Any]:
+        """Find damage cases that can be used for testing case details"""
         try:
-            self.log("🔍 Finding issued cards for testing...")
+            self.log("🔍 Finding damage cases for testing...")
             
-            # Get issue cards
-            issue_cards_result = self.test_issue_cards_list()
-            if not issue_cards_result.get("success"):
-                return {"success": False, "error": "Could not fetch issue cards"}
+            # Get damage cases
+            cases_result = self.test_damage_cases_list()
+            if not cases_result.get("success"):
+                return {"success": False, "error": "Could not fetch damage cases"}
             
-            issued_cards = issue_cards_result.get("issued_cards", [])
+            cases = cases_result.get("data", [])
             
-            if not issued_cards:
-                self.log("⚠️ No issued cards found for testing", "WARNING")
-                return {"success": True, "issued_cards": [], "count": 0}
+            if not cases:
+                self.log("⚠️ No damage cases found for testing", "WARNING")
+                return {"success": True, "cases": [], "count": 0}
             
-            self.log(f"✅ Found {len(issued_cards)} issued cards for testing")
+            self.log(f"✅ Found {len(cases)} damage cases for testing")
             
-            # Show details of available cards
-            for i, card in enumerate(issued_cards[:5]):  # Show first 5
-                order_id = card.get('order_id')
-                customer = card.get('customer_name', 'Unknown')
-                self.log(f"   {i+1}. Order {order_id}: {customer}")
+            # Show details of available cases
+            for i, case in enumerate(cases[:5]):  # Show first 5
+                case_id = case.get('id')
+                customer = case.get('customer_name', 'Unknown')
+                order = case.get('order_number', 'Unknown')
+                self.log(f"   {i+1}. Case {case_id}: Customer={customer}, Order={order}")
             
             return {
                 "success": True,
-                "issued_cards": issued_cards,
-                "count": len(issued_cards)
+                "cases": cases,
+                "count": len(cases)
             }
                 
         except Exception as e:
-            self.log(f"❌ Exception finding issued cards: {str(e)}", "ERROR")
+            self.log(f"❌ Exception finding damage cases: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_complete_return_workflow(self, order_id: int) -> Dict[str, Any]:

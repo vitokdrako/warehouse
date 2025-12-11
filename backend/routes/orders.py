@@ -1830,6 +1830,18 @@ async def complete_return(
         except Exception as e:
             print(f"[Orders] Return cards table not found or error updating: {e}")
         
+        # ✅ ВИПРАВЛЕННЯ: Оновити статус issue_cards на 'completed' (для архіву)
+        try:
+            db.execute(text("""
+                UPDATE issue_cards 
+                SET status = 'completed', 
+                    updated_at = NOW()
+                WHERE order_id = :order_id
+            """), {"order_id": order_id})
+            print(f"[Orders] Issue card для замовлення {order_id} позначено як 'completed'")
+        except Exception as e:
+            print(f"[Orders] Error updating issue_cards status: {e}")
+        
         # Статус 'returned' автоматично "розморожує" товари в order_items
         print(f"[Orders] Замовлення {order_id} повернуто (товари розморожені)")
         

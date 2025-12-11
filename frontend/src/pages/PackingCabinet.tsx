@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import CorporateHeader from '../components/CorporateHeader'
 
 /************** helpers **************/
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')

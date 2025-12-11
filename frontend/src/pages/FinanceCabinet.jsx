@@ -723,23 +723,26 @@ export default function FinanceCabinet(){
   if(loading) return <div className="flex items-center justify-center h-screen"><div className="text-xl">Завантаження...</div></div>
 
   return (
-    <div className="mx-auto max-w-7xl p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Фінансовий кабінет</h1>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setScannerOpen(true)}
-            className="rounded-full px-3 py-1 text-sm bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-1"
-          >
-            📷 Сканувати
-          </button>
-          {['orders','ledger','monthly'].map(t => (
-            <button key={t} onClick={()=>{setTab(t); setExpandedOrderId(null)}} className={cls('rounded-full px-3 py-1 text-sm', tab===t? 'bg-slate-900 text-white':'bg-slate-200 text-corp-text-dark')}>
-              {t==='orders'?'Замовлення':t==='ledger'?'Журнал':'Архів'}
+    <div className="min-h-screen bg-corp-bg-main">
+      <CorporateHeader cabinetName="Фінансовий кабінет" showBackButton={true} />
+      
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-corp-text-dark">Фінансові операції</h2>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setScannerOpen(true)}
+              className="corp-btn corp-btn-primary flex items-center gap-1"
+            >
+              📷 Сканувати
             </button>
-          ))}
+            {['orders','ledger','monthly'].map(t => (
+              <button key={t} onClick={()=>{setTab(t); setExpandedOrderId(null)}} className={cls('corp-btn', tab===t? 'corp-btn-primary':'corp-btn-secondary')}>
+                {t==='orders'?'Замовлення':t==='ledger'?'Журнал':'Архів'}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
       
       {/* Barcode Scanner */}
       <BarcodeScanner

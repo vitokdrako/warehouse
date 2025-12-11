@@ -245,11 +245,112 @@ export default function DamageCabinetPro({
     }
   }
 
+  // ========== Washing Functions ==========
+  const loadWashingData = async () => {
+    try {
+      setWashingLoading(true)
+      const token = localStorage.getItem('token')
+      
+      const response = await axios.get(`${BACKEND_URL}/api/tasks`, {
+        params: { task_type: 'washing' },
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      let tasks = response.data || []
+      
+      // Фільтруємо за статусом якщо не "all"
+      if (washingFilter !== 'all') {
+        tasks = tasks.filter((t: any) => t.status === washingFilter)
+      }
+      
+      setWashingTasks(tasks)
+    } catch (error) {
+      console.error('Error loading washing data:', error)
+      setWashingTasks([])
+    } finally {
+      setWashingLoading(false)
+    }
+  }
+
+  // ========== Restoration Functions ==========
+  const loadRestorationData = async () => {
+    try {
+      setRestorationLoading(true)
+      const token = localStorage.getItem('token')
+      
+      const response = await axios.get(`${BACKEND_URL}/api/tasks`, {
+        params: { task_type: 'restoration' },
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      let tasks = response.data || []
+      
+      // Фільтруємо за статусом якщо не "all"
+      if (restorationFilter !== 'all') {
+        tasks = tasks.filter((t: any) => t.status === restorationFilter)
+      }
+      
+      setRestorationTasks(tasks)
+    } catch (error) {
+      console.error('Error loading restoration data:', error)
+      setRestorationTasks([])
+    } finally {
+      setRestorationLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (activeTab === 'laundry') {
       loadLaundryData()
+    } else if (activeTab === 'washing') {
+      loadWashingData()
+    } else if (activeTab === 'restoration') {
+      loadRestorationData()
     }
-  }, [activeTab, laundryFilter])
+  }, [activeTab, laundryFilter, washingFilter, restorationFilter])
+
+  // Функція оновлення статусу завдання
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: string, taskType: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      await axios.put(`${BACKEND_URL}/api/tasks/${taskId}`, 
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      
+      // Оновити відповідний список
+      if (taskType === 'washing') {
+        loadWashingData()
+      } else if (taskType === 'restoration') {
+        loadRestorationData()
+      }
+      
+      alert('✅ Статус оновлено')
+    } catch (error: any) {
+      alert('Помилка: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
+  // Функція призначення виконавця
+  const handleAssignTask = async (taskId: string, assignee: string, taskType: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      await axios.put(`${BACKEND_URL}/api/tasks/${taskId}`, 
+        { assigned_to: assignee },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      
+      if (taskType === 'washing') {
+        loadWashingData()
+      } else if (taskType === 'restoration') {
+        loadRestorationData()
+      }
+      
+      alert('✅ Виконавця призначено')
+    } catch (error: any) {
+      alert('Помилка: ' + (error.response?.data?.detail || error.message))
+    }
+  }
 
   const handleDeleteBatch = async (batchId: string) => {
     if (!window.confirm('Видалити партію? Товари повернуться на склад.')) return

@@ -16,6 +16,18 @@
 # 
 ## user_problem_statement: {problem_statement}
 ## backend:
+  - task: "Order Workspace - Staff API"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/admin.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "✅ Created GET /api/admin/staff endpoint that returns managers and requisitors with user_id, full_name, role. Tested via curl - returns all 5 managers correctly grouped."
+
   - task: "Return workflow with automatic task creation"
     implemented: true
     working: true

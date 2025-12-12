@@ -113,7 +113,7 @@ export default function NewOrderViewWorkspace() {
         setRentalDays(decorOrder.rental_days || 1)
         
         setItems(decorOrder.items || [])
-        setNotes(decorOrder.manager_notes || decorOrder.manager_comment || '')
+        setManagerNotes(decorOrder.manager_notes || decorOrder.manager_comment || '')
         setClientComment(decorOrder.client_comment || '')
         setDecorOrderStatus(decorOrder.status)
         

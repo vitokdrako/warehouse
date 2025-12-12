@@ -1,6 +1,19 @@
 // Конфігурація статусів замовлень
 
 export const STATUS_CONFIG = {
+  // Чернетка / Нове замовлення
+  DRAFT: {
+    key: 'DRAFT',
+    title: 'Чернетка',
+    mode: 'Режим створення',
+    tone: 'neutral',
+    color: 'bg-slate-50',
+    borderColor: 'border-slate-200',
+    icon: '📝',
+    primaryAction: 'Створити замовлення',
+    secondaryActions: ['Зберегти чернетку']
+  },
+  
   // Нове замовлення / Очікує підтвердження
   WAITING_CONFIRMATION: {
     key: 'WAITING_CONFIRMATION',

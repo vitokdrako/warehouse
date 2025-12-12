@@ -194,6 +194,15 @@ function App() {
             path="/order/:id/view" 
             element={
               <ProtectedRoute>
+                <NewOrderViewWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/order/:id/view-old" 
+            element={
+              <ProtectedRoute>
                 <NewOrderView />
               </ProtectedRoute>
             } 

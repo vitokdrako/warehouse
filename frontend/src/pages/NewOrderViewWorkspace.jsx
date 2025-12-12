@@ -654,13 +654,18 @@ export default function NewOrderViewWorkspace() {
       }
       
       // Footer
-      onPrimaryAction={handleAcceptOrder}
-      primaryLabel={decorOrderStatus ? 'Зберегти' : 'Підтвердити та прийняти'}
+      onPrimaryAction={decorOrderStatus ? handleSendToAssembly : handleAcceptOrder}
+      primaryLabel={decorOrderStatus ? '📦 Відправити на збір' : 'Підтвердити та прийняти'}
       primaryDisabled={saving || !canAccept}
       primaryDisabledReason={!canAccept ? 'Заповніть дати та позиції' : ''}
       onSave={handleSave}
       saving={saving}
       footerActions={[
+        { 
+          label: sendingEmail ? '⏳...' : '✉️ Email клієнту', 
+          onClick: handleSendEmail,
+          disabled: sendingEmail || !clientEmail
+        },
         { 
           label: '🚫 Відхилити', 
           onClick: () => navigate('/'), 

@@ -310,14 +310,16 @@ export default function NewOrderClean() {
         clientPhone={clientPhone}
         clientEmail={clientEmail}
         clientType={clientType}
-        manager={manager}
+        managerId={managerId}
+        managerName={managerName}
         discount={discount}
         onUpdate={(data) => {
           setClientName(data.name)
           setClientPhone(data.phone)
           setClientEmail(data.email)
           setClientType(data.type)
-          setManager(data.manager)
+          setManagerId(data.managerId)
+          setManagerName(data.managerName)
           setDiscount(data.discount)
         }}
       />

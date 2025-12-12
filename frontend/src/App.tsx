@@ -24,6 +24,7 @@ import ReturnOrderClean from './pages/ReturnOrderClean';
 import InventoryRecount from './pages/InventoryRecount';
 import OrdersArchive from './pages/OrdersArchive';
 import SyncPanel from './pages/SyncPanel';
+import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
 // LaundryCabinet removed - functionality moved to Damage Cabinet tabs
 
 // Protected Route component

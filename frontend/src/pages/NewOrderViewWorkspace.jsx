@@ -139,7 +139,7 @@ export default function NewOrderViewWorkspace() {
         setRentalDays(1)
         
         setItems(data.items || [])
-        setNotes(data.manager_comment || '')
+        setManagerNotes(data.manager_comment || '')
         setClientComment(data.customer_notes || data.comment || '')
         
         // Таймлайн

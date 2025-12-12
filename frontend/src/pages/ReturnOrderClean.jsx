@@ -594,7 +594,7 @@ export default function ReturnCard(){
   if(!order) return <div className="flex items-center justify-center h-screen"><div className="text-xl">Замовлення не знайдено</div></div>
 
   return (
-    <div className="mx-auto max-w-7xl p-6 space-y-6">
+    <div className="mx-auto max-w-7xl px-3 py-4 md:p-6 space-y-4 md:space-y-6 pb-24 md:pb-6">
       <Header order={order} />
 
       {/* Фінансовий статус - показується ПЕРШИЙ */}
@@ -611,9 +611,9 @@ export default function ReturnCard(){
             </div>
             <div>
               <div className="text-corp-text-muted text-xs">Телефон</div>
-              <div className="font-medium" title={order.telephone}>
+              <a href={`tel:${order.telephone}`} className="font-medium text-blue-600">
                 {order.telephone}
-              </div>
+              </a>
             </div>
             <div>
               <div className="text-corp-text-muted text-xs">Email</div>
@@ -639,19 +639,58 @@ export default function ReturnCard(){
         <textarea value={notes} onChange={e=>setNotes(e.target.value)} className="w-full rounded-xl border p-3 text-sm" rows={3} placeholder="Службова нотатка про повернення"/>
       </Card>
 
-      <Card title="Підсумок приймання" right={<Badge tone={allOkToSettle?'green':'amber'}>{allOkToSettle?'Можна завершити':'Ще є невідповідності'}</Badge>}>
-        <div className="grid gap-3 md:grid-cols-4 text-sm">
-          <div><div className="text-corp-text-muted">Повернуто позицій</div><div className="font-semibold">{items.reduce((s,i)=>s + i.returned_qty,0)} / {items.reduce((s,i)=>s + i.rented_qty,0)}</div></div>
-          <div><div className="text-corp-text-muted">Фіксацій пошкоджень</div><div className="font-semibold">{items.reduce((s,i)=>s + i.findings.length,0)}</div></div>
-          <div><div className="text-corp-text-muted">Додаткові витрати</div><div className="font-semibold">₴ {fmtUA(totals.totalFees)}</div></div>
-          <div><div className="text-corp-text-muted">До сплати</div><div className="font-semibold">₴ {fmtUA(totals.totalDue)}</div></div>
+      {/* Desktop Summary Card */}
+      <div className="hidden md:block">
+        <Card title="Підсумок приймання" right={<Badge tone={allOkToSettle?'green':'amber'}>{allOkToSettle?'Можна завершити':'Ще є невідповідності'}</Badge>}>
+          <div className="grid gap-3 md:grid-cols-4 text-sm">
+            <div><div className="text-corp-text-muted">Повернуто позицій</div><div className="font-semibold">{items.reduce((s,i)=>s + i.returned_qty,0)} / {items.reduce((s,i)=>s + i.rented_qty,0)}</div></div>
+            <div><div className="text-corp-text-muted">Фіксацій пошкоджень</div><div className="font-semibold">{items.reduce((s,i)=>s + i.findings.length,0)}</div></div>
+            <div><div className="text-corp-text-muted">Додаткові витрати</div><div className="font-semibold">₴ {fmtUA(totals.totalFees)}</div></div>
+            <div><div className="text-corp-text-muted">До сплати</div><div className="font-semibold">₴ {fmtUA(totals.totalDue)}</div></div>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Pill tone='green' onClick={settle} disabled={!allOkToSettle}>Завершити приймання</Pill>
+            <Pill tone='blue' onClick={()=>window.print()}>Друк акта</Pill>
+            <Pill tone='slate' onClick={()=>navigate('/')}>Назад</Pill>
+          </div>
+        </Card>
+      </div>
+
+      {/* Mobile Fixed Bottom Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 space-y-2 z-50 shadow-lg">
+        <div className="flex justify-between text-sm">
+          <div>
+            <span className="text-corp-text-muted">Повернуто:</span>{' '}
+            <span className="font-semibold">{items.reduce((s,i)=>s + i.returned_qty,0)}/{items.reduce((s,i)=>s + i.rented_qty,0)}</span>
+          </div>
+          <div>
+            <span className="text-corp-text-muted">Пошкоджень:</span>{' '}
+            <span className="font-semibold text-amber-600">{items.reduce((s,i)=>s + i.findings.length,0)}</span>
+          </div>
+          <div>
+            <span className="text-corp-text-muted">До сплати:</span>{' '}
+            <span className="font-semibold">₴{fmtUA(totals.totalDue)}</span>
+          </div>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Pill tone='green' onClick={settle} disabled={!allOkToSettle}>Завершити приймання</Pill>
-          <Pill tone='blue' onClick={()=>window.print()}>Друк акта</Pill>
-          <Pill tone='slate' onClick={()=>navigate('/')}>Назад</Pill>
+        <div className="flex gap-2">
+          <button 
+            onClick={()=>navigate('/')}
+            className="flex-none px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium"
+          >
+            ← Назад
+          </button>
+          <button 
+            onClick={settle}
+            disabled={!allOkToSettle}
+            className={cls(
+              'flex-1 py-2.5 rounded-lg text-white font-medium text-sm',
+              allOkToSettle ? 'bg-emerald-500 active:bg-emerald-600' : 'bg-slate-300'
+            )}
+          >
+            ✅ Завершити приймання
+          </button>
         </div>
-      </Card>
+      </div>
 
       <DamageModal 
         isOpen={findingOpen.open}

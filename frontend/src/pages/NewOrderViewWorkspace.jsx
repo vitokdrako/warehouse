@@ -375,7 +375,7 @@ export default function NewOrderViewWorkspace() {
         issue_time: issueTime,
         return_time: returnTime,
         rental_days: rentalDays,
-        manager_comment: notes,
+        manager_comment: managerNotes,
         discount: discount,
         manager_id: managerId
       })
@@ -389,6 +389,132 @@ export default function NewOrderViewWorkspace() {
       toast({
         title: '❌ Помилка',
         description: 'Не вдалося зберегти',
+        variant: 'destructive',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  // === ВІДПРАВИТИ EMAIL КЛІЄНТУ ===
+  const handleSendEmail = async () => {
+    if (!clientEmail) {
+      toast({
+        title: '⚠️ Увага',
+        description: 'У клієнта немає email',
+        variant: 'destructive',
+      })
+      return
+    }
+    
+    setSendingEmail(true)
+    try {
+      await axios.post(`${BACKEND_URL}/api/orders/${orderId}/send-confirmation-email`, {
+        email: clientEmail,
+        client_name: clientName,
+        order_number: order?.order_number || orderId,
+        issue_date: issueDate,
+        return_date: returnDate,
+        issue_time: issueTime,
+        return_time: returnTime,
+        items: items,
+        total_rent: calculations.rentAfterDiscount,
+        total_deposit: calculations.totalDeposit,
+        manager_notes: managerNotes
+      })
+      
+      toast({
+        title: '✉️ Відправлено',
+        description: `Email відправлено на ${clientEmail}`,
+      })
+      
+      // Додати в таймлайн
+      setTimeline(prev => [...prev, {
+        text: 'Відправлено email клієнту',
+        at: new Date().toLocaleString('uk-UA'),
+        tone: 'green',
+        user: managerName || 'Менеджер'
+      }])
+    } catch (error) {
+      console.error('Error sending email:', error)
+      toast({
+        title: '❌ Помилка',
+        description: 'Не вдалося відправити email',
+        variant: 'destructive',
+      })
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+  
+  // === ВІДПРАВИТИ НА ЗБІР ===
+  const handleSendToAssembly = async () => {
+    // Валідація
+    if (!issueDate || !returnDate) {
+      toast({
+        title: '⚠️ Увага',
+        description: 'Вкажіть дати видачі та повернення',
+        variant: 'destructive',
+      })
+      return
+    }
+    
+    if (items.length === 0) {
+      toast({
+        title: '⚠️ Увага',
+        description: 'Додайте хоча б одну позицію',
+        variant: 'destructive',
+      })
+      return
+    }
+    
+    const hasErrors = conflicts.some(c => c.level === 'error')
+    if (hasErrors) {
+      toast({
+        title: '⚠️ Увага',
+        description: 'Є критичні конфлікти доступності. Виправте їх перед відправкою на збір.',
+        variant: 'destructive',
+      })
+      return
+    }
+    
+    setSaving(true)
+    try {
+      // Спочатку зберігаємо всі зміни
+      await axios.put(`${BACKEND_URL}/api/decor-orders/${orderId}`, {
+        rental_start_date: issueDate,
+        rental_end_date: returnDate,
+        issue_time: issueTime,
+        return_time: returnTime,
+        rental_days: rentalDays,
+        manager_comment: managerNotes,
+        discount: discount,
+        manager_id: managerId
+      })
+      
+      // Заморожуємо декор на ці дати та відправляємо на збір
+      await axios.post(`${BACKEND_URL}/api/decor-orders/${orderId}/send-to-assembly`, {
+        items: items.map(item => ({
+          inventory_id: item.inventory_id,
+          name: item.name,
+          article: item.article,
+          quantity: item.quantity || 1,
+          price_per_day: item.price_per_day || 0,
+          deposit: item.deposit || item.damage_cost || 0
+        }))
+      })
+      
+      toast({
+        title: '📦 Відправлено на збір',
+        description: 'Замовлення передано реквізиторам. Декор заморожено на вказані дати.',
+      })
+      
+      setTimeout(() => navigate('/'), 1500)
+    } catch (error) {
+      console.error('Error sending to assembly:', error)
+      toast({
+        title: '❌ Помилка',
+        description: error.response?.data?.detail || 'Не вдалося відправити на збір',
         variant: 'destructive',
       })
     } finally {

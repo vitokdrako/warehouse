@@ -467,81 +467,54 @@ class NewOrderWorkspaceTester:
         
         return critical_success
     
-    def verify_expected_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior according to task management review request"""
-        try:
-            self.log("🔍 Verifying expected behavior for task management system...")
+def main():
+    """Main test execution"""
+    print("🧪 Backend Testing: NewOrderViewWorkspace Bug Fixes")
+    print("=" * 80)
+    print("Testing the bug fixes for Ukrainian rental management system:")
+    print("   1. 🔍 Wrong Price Bug - API should return rent_price (not just price)")
+    print("      - GET /api/orders/inventory/search?query=ваза&limit=3")
+    print("      - Should return rent_price field for rental pricing")
+    print("   2. 🔄 Quantity Bug - Items should use inventory_id for identification")
+    print("      - Order details should have proper inventory_id fields")
+    print("   3. ✅ 405 Error Bug - check-availability should work with POST")
+    print("      - POST /api/orders/check-availability with JSON body")
+    print("      - Should return 200 OK, not 405 Method Not Allowed")
+    print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
+    print("URL: https://unified-orders-2.preview.emergentagent.com")
+    print("Test Order: #7121 (awaiting_customer status)")
+    print("=" * 80)
+    
+    tester = NewOrderWorkspaceTester(BASE_URL)
+    
+    try:
+        success = tester.run_comprehensive_bug_fix_test()
+        
+        if success:
+            print("\n✅ ALL BUG FIXES VERIFIED SUCCESSFULLY")
+            print("📊 Summary: NewOrderViewWorkspace bug fixes working correctly")
+            print("🎯 Expected behavior confirmed:")
+            print("   ✅ Bug Fix #1: rent_price field available in inventory search")
+            print("   ✅ Bug Fix #3: POST method working for check-availability")
+            print("   ✅ Order details accessible for quantity bug context")
+            print("   - API GET /api/orders/inventory/search returns rent_price field")
+            print("   - API POST /api/orders/check-availability works without 405 error")
+            print("   - API GET /api/orders/{id} provides order details with inventory_id")
+            print("   - Authentication works with provided credentials")
+            print("   - All required data structures are present and valid")
+            sys.exit(0)
+        else:
+            print("\n❌ SOME BUG FIXES FAILED VERIFICATION")
+            print("📊 Summary: Issues found in bug fix implementation")
+            print("🔍 Check the detailed logs above for specific failures")
+            sys.exit(1)
             
-            results = {
-                "task_filtering_working": False,
-                "task_creation_working": False,
-                "task_status_update_working": False,
-                "task_assignment_working": False,
-                "complete_workflow_working": False
-            }
-            
-            # Test 1: Task filtering by type
-            washing_filter_result = self.test_tasks_filter_by_type("washing")
-            restoration_filter_result = self.test_tasks_filter_by_type("restoration")
-            
-            if washing_filter_result.get("success") and restoration_filter_result.get("success"):
-                results["task_filtering_working"] = True
-                self.log("✅ Task filtering by type working")
-                self.log(f"   Found {washing_filter_result.get('count', 0)} washing tasks")
-                self.log(f"   Found {restoration_filter_result.get('count', 0)} restoration tasks")
-            else:
-                self.log("❌ Task filtering by type failed", "ERROR")
-            
-            # Test 2: Task creation
-            washing_create_result = self.test_task_creation("washing")
-            restoration_create_result = self.test_task_creation("restoration")
-            
-            if washing_create_result.get("success") and restoration_create_result.get("success"):
-                results["task_creation_working"] = True
-                self.log("✅ Task creation working")
-                
-                # Store created task IDs for further testing
-                washing_task_id = washing_create_result.get("task_id")
-                restoration_task_id = restoration_create_result.get("task_id")
-                
-                # Test 3: Task status updates
-                if washing_task_id and restoration_task_id:
-                    progress_result1 = self.test_task_status_update(washing_task_id, "in_progress")
-                    done_result1 = self.test_task_status_update(washing_task_id, "done")
-                    progress_result2 = self.test_task_status_update(restoration_task_id, "in_progress")
-                    
-                    if (progress_result1.get("success") and done_result1.get("success") and 
-                        progress_result2.get("success")):
-                        results["task_status_update_working"] = True
-                        self.log("✅ Task status updates working")
-                    else:
-                        self.log("❌ Task status updates failed", "ERROR")
-                    
-                    # Test 4: Task assignment
-                    assign_result1 = self.test_task_assignment(washing_task_id, "Марія Іванівна")
-                    assign_result2 = self.test_task_assignment(restoration_task_id, "Петро Петренко")
-                    
-                    if assign_result1.get("success") and assign_result2.get("success"):
-                        results["task_assignment_working"] = True
-                        self.log("✅ Task assignment working")
-                    else:
-                        self.log("❌ Task assignment failed", "ERROR")
-            else:
-                self.log("❌ Task creation failed", "ERROR")
-            
-            # Test 5: Complete workflow
-            workflow_result = self.test_complete_task_workflow()
-            if workflow_result.get("success"):
-                results["complete_workflow_working"] = True
-                self.log("✅ Complete task workflow working")
-            else:
-                self.log("❌ Complete task workflow failed", "ERROR")
-            
-            return results
-            
-        except Exception as e:
-            self.log(f"❌ Exception verifying expected behavior: {str(e)}", "ERROR")
-            return {"error": str(e)}
+    except KeyboardInterrupt:
+        print("\n⚠️ Tests interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n💥 Unexpected error: {str(e)}")
+        sys.exit(1)
     
     def run_comprehensive_test(self):
         """Run the task management test scenario as described in the Ukrainian review request"""

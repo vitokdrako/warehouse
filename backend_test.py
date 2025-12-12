@@ -515,8 +515,9 @@ def main():
     except Exception as e:
         print(f"\n💥 Unexpected error: {str(e)}")
         sys.exit(1)
-    
-    def run_comprehensive_test(self):
+
+if __name__ == "__main__":
+    main()
         """Run the task management test scenario as described in the Ukrainian review request"""
         self.log("🚀 Starting comprehensive task management test")
         self.log("=" * 70)

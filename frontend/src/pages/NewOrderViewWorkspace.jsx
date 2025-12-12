@@ -561,7 +561,7 @@ export default function NewOrderViewWorkspace() {
         issue_time: issueTime,
         return_time: returnTime,
         rental_days: rentalDays,
-        manager_comment: notes,
+        manager_comment: managerNotes,
         discount: discount,
         manager_id: managerId,
         items: items.map(item => ({

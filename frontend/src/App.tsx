@@ -175,6 +175,15 @@ function App() {
             path="/orders/new" 
             element={
               <ProtectedRoute>
+                <NewOrderCleanWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/orders/new-old" 
+            element={
+              <ProtectedRoute>
                 <NewOrderClean />
               </ProtectedRoute>
             } 

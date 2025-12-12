@@ -167,15 +167,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          
-          <Route 
-            path="/laundry" 
-            element={
-              <ProtectedRoute>
-                <LaundryCabinet />
-              </ProtectedRoute>
-            } 
-          />
+          {/* Laundry Cabinet removed - functionality moved to Damage Cabinet tabs */}
           
           <Route 
             path="/orders/new" 

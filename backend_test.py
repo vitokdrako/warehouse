@@ -125,65 +125,46 @@ class MobileOrderCardTester:
             self.log(f"❌ Exception testing awaiting customer orders: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_task_creation(self, task_type: str) -> Dict[str, Any]:
-        """Test POST /api/tasks - should create washing/restoration task"""
+    def test_issue_cards_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/issue-cards - should return issue cards for dashboard"""
         try:
-            self.log(f"🧪 Testing task creation for type: {task_type}...")
+            self.log("🧪 Testing issue cards endpoint...")
             
-            # Test data for task creation
-            if task_type == "washing":
-                test_task = {
-                    "title": "🚿 Мийка: Тестовий товар (TEST-001)",
-                    "description": "Товар потребує мийки",
-                    "task_type": "washing",
-                    "status": "todo",
-                    "priority": "medium"
-                }
-            elif task_type == "restoration":
-                test_task = {
-                    "title": "🔧 Реставрація: Тестовий товар (TEST-002)",
-                    "description": "Товар потребує реставрації",
-                    "task_type": "restoration",
-                    "status": "todo",
-                    "priority": "high"
-                }
-            else:
-                return {"success": False, "error": f"Unknown task type: {task_type}"}
-            
-            response = self.session.post(
-                f"{self.base_url}/tasks",
-                json=test_task
-            )
+            response = self.session.get(f"{self.base_url}/issue-cards")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if task was created successfully
-                if not data.get('id'):
-                    self.log(f"❌ Task creation failed: no ID returned", "ERROR")
+                # Check if response is an array
+                if not isinstance(data, list):
+                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                task_id = data.get('id')
+                self.log(f"✅ Retrieved {len(data)} issue cards")
                 
-                # Verify the creation by fetching the task
-                verify_response = self.session.get(f"{self.base_url}/tasks/{task_id}")
-                if verify_response.status_code == 200:
-                    task_data = verify_response.json()
-                    self.log(f"✅ {task_type.capitalize()} task created successfully")
-                    self.log(f"   Task ID: {task_id}")
-                    self.log(f"   Title: {task_data.get('title')}")
-                    self.log(f"   Status: {task_data.get('status')}")
-                    
-                    return {"success": True, "data": task_data, "task_id": task_id}
-                else:
-                    self.log(f"❌ Failed to verify task creation: {verify_response.status_code}", "ERROR")
-                    return {"success": False, "status_code": verify_response.status_code}
+                # Validate issue card structure for OrderCard component
+                if data:
+                    for card in data[:3]:  # Check first 3 cards
+                        required_fields = ['id', 'order_id', 'customer_name', 'customer_phone', 'status']
+                        missing_fields = []
+                        
+                        for field in required_fields:
+                            if field not in card:
+                                missing_fields.append(field)
+                        
+                        if missing_fields:
+                            self.log(f"❌ Issue card {card.get('id')} missing fields: {missing_fields}", "ERROR")
+                            return {"success": False, "error": f"Missing required fields: {missing_fields}"}
+                        
+                        self.log(f"   - Card #{card.get('id')}: {card.get('customer_name')} - Status: {card.get('status')}")
+                
+                return {"success": True, "data": data, "count": len(data)}
             else:
-                self.log(f"❌ Failed to create {task_type} task: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get issue cards: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing {task_type} task creation: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing issue cards: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_task_status_update(self, task_id: str, new_status: str) -> Dict[str, Any]:

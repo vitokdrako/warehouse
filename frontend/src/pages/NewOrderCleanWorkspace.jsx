@@ -39,7 +39,8 @@ export default function NewOrderClean() {
   const [clientEmail, setClientEmail] = useState('')
   const [clientType, setClientType] = useState('retail')
   const [discount, setDiscount] = useState(0)
-  const [manager, setManager] = useState('Вікторія')
+  const [managerId, setManagerId] = useState(null)
+  const [managerName, setManagerName] = useState('')
   
   // Дати
   const [issueDate, setIssueDate] = useState('')

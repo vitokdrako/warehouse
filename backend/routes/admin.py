@@ -83,6 +83,64 @@ async def get_users(
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
+@router.get("/staff")
+async def get_staff_by_role(
+    role: str = None,
+    rh_db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати активних співробітників за ролями (публічний endpoint)
+    
+    Query params:
+    - role: filter by role (manager, requisitor, admin, office_manager)
+    
+    Returns staff grouped by role if no role specified
+    """
+    try:
+        if role:
+            query = text("""
+                SELECT user_id, username, email, firstname, lastname, role
+                FROM users
+                WHERE role = :role AND is_active = 1
+                ORDER BY firstname
+            """)
+            results = rh_db.execute(query, {'role': role}).fetchall()
+        else:
+            query = text("""
+                SELECT user_id, username, email, firstname, lastname, role
+                FROM users
+                WHERE is_active = 1
+                ORDER BY role, firstname
+            """)
+            results = rh_db.execute(query).fetchall()
+        
+        staff = []
+        for row in results:
+            staff.append({
+                'user_id': row[0],
+                'username': row[1],
+                'email': row[2],
+                'firstname': row[3],
+                'lastname': row[4],
+                'full_name': f"{row[3] or ''} {row[4] or ''}".strip(),
+                'role': row[5]
+            })
+        
+        # Групуємо за ролями якщо не вказано конкретну роль
+        if not role:
+            grouped = {
+                'managers': [s for s in staff if s['role'] in ('manager', 'admin', 'office_manager')],
+                'requisitors': [s for s in staff if s['role'] == 'requisitor'],
+                'all': staff
+            }
+            return grouped
+        
+        return staff
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
 @router.post("/users")
 async def create_user(
     data: dict,

@@ -119,10 +119,19 @@ export const STATUS_MAP = {
 }
 
 export function getStatusConfig(backendStatus) {
+  // Якщо передано напряму ключ з STATUS_CONFIG - використовуємо його
+  if (STATUS_CONFIG[backendStatus]) {
+    return STATUS_CONFIG[backendStatus]
+  }
+  // Інакше маппимо через STATUS_MAP
   const mappedKey = STATUS_MAP[backendStatus] || 'WAITING_CONFIRMATION'
   return STATUS_CONFIG[mappedKey] || STATUS_CONFIG.WAITING_CONFIRMATION
 }
 
 export function getStatusKey(backendStatus) {
+  // Якщо передано напряму ключ з STATUS_CONFIG - повертаємо його
+  if (STATUS_CONFIG[backendStatus]) {
+    return backendStatus
+  }
   return STATUS_MAP[backendStatus] || 'WAITING_CONFIRMATION'
 }

@@ -205,7 +205,7 @@ function ItemCardMobile({it, onScan, onPick, onOpenDamage}){
   const photoUrl = getImageUrl(it.image || it.image_url)
   const missing = Math.max(0, it.qty - (it.available || 0))
   const over = it.picked_qty > it.qty
-  const conflict = it.qty > (it.available || 0)
+  const isComplete = it.picked_qty >= it.qty
   const hasPreDamage = it.pre_damage && it.pre_damage.length > 0
   
   const handlePhotoClick = () => {
@@ -215,98 +215,132 @@ function ItemCardMobile({it, onScan, onPick, onOpenDamage}){
   }
   
   return (
-    <div className={cls('rounded-xl border p-3 bg-white', missing > 0 && 'bg-amber-50 border-amber-200')}>
-      {/* Header з фото та QR */}
+    <div className={cls(
+      'rounded-xl border p-3 bg-white',
+      isComplete ? 'border-emerald-200 bg-emerald-50' : missing > 0 ? 'bg-amber-50 border-amber-200' : ''
+    )}>
+      {/* Header з фото та інформацією */}
       <div className="flex gap-3 mb-3">
         {/* Фото */}
         <img 
           src={photoUrl} 
           alt={it.name}
-          className="h-20 w-24 flex-shrink-0 rounded-lg object-cover cursor-pointer hover:ring-2 hover:ring-blue-500 transition"
+          className="h-20 w-24 flex-shrink-0 rounded-lg object-cover"
           onClick={handlePhotoClick}
-          title="Натисніть щоб відкрити картку товару"
         />
-        
-        {/* QR код */}
-        <div className="flex flex-col items-center justify-center flex-shrink-0">
-          <div className="p-2 bg-white border border-slate-200 rounded-lg">
-            <QRCodeSVG 
-              value={`${window.location.origin}/inventory/${it.sku || it.id}`}
-              size={70}
-              level="L"
-              includeMargin={false}
-            />
-          </div>
-          <div className="text-[8px] text-center text-slate-400 mt-1">Скан</div>
-        </div>
         
         {/* Основна інформація */}
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm mb-1 truncate">{it.name}</div>
-          <div className="text-xs text-corp-text-muted mb-2">SKU: {it.sku}</div>
-          <button 
-            onClick={()=>onOpenDamage(it.id)} 
-            className="rounded-md border border-amber-200 px-2 py-1 text-xs hover:bg-amber-50 bg-white"
-          >
-            📷 Додати пошкодження
-          </button>
-          {hasPreDamage && (
-            <div className="mt-1">
-              <Badge tone='amber'>{it.pre_damage.length} пошкодж.</Badge>
-            </div>
-          )}
+          <div className="font-semibold text-sm mb-1 line-clamp-2">{it.name}</div>
+          <div className="text-xs text-corp-text-muted mb-1">SKU: {it.sku}</div>
+          <div className="flex flex-wrap gap-1">
+            {isComplete && <Badge tone='green'>✓ Готово</Badge>}
+            {hasPreDamage && <Badge tone='amber'>{it.pre_damage.length} пошкодж.</Badge>}
+            {missing > 0 && <Badge tone='red'>Бракує {missing}</Badge>}
+          </div>
         </div>
       </div>
       
-      {/* Статистика */}
+      {/* Укомплектування - головний елемент */}
+      <div className="flex items-center justify-between mb-3 p-3 bg-slate-100 rounded-xl">
+        <span className="text-sm font-medium">Укомплектовано:</span>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={()=>onPick(it.id, Math.max(0, it.picked_qty-1))} 
+            className="h-10 w-10 rounded-xl border-2 border-slate-300 bg-white text-lg font-bold active:bg-slate-100"
+          >
+            −
+          </button>
+          <div className={cls(
+            'w-14 text-center text-xl font-bold py-1 rounded-lg',
+            isComplete ? 'text-emerald-600 bg-emerald-100' : over ? 'text-rose-600 bg-rose-100' : 'bg-white'
+          )}>
+            {it.picked_qty}
+          </div>
+          <button 
+            onClick={()=>onPick(it.id, it.picked_qty+1)} 
+            className="h-10 w-10 rounded-xl border-2 border-slate-300 bg-white text-lg font-bold active:bg-slate-100"
+          >
+            +
+          </button>
+          <span className="text-sm text-corp-text-muted ml-1">/ {it.qty}</span>
+        </div>
+      </div>
+
+      {/* Серійні номери (якщо є) */}
+      {it.serials && it.serials.length > 0 && (
+        <div className="mb-3">
+          <div className="text-xs text-corp-text-muted mb-1">Серійні номери:</div>
+          <div className="flex flex-wrap gap-1">
+            {it.serials.map(s => {
+              const isScanned = it.scanned?.includes(s)
+              return (
+                <button 
+                  key={s}
+                  onClick={() => onScan(it.id, s)}
+                  className={cls(
+                    'rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all',
+                    isScanned 
+                      ? 'border-emerald-400 bg-emerald-100 text-emerald-700' 
+                      : 'border-slate-200 bg-white active:bg-slate-50'
+                  )}
+                >
+                  {s} {isScanned && '✓'}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Інформація про наявність - компактна */}
       <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
         <div className="text-center p-2 bg-slate-50 rounded-lg">
           <div className="text-corp-text-muted">Наявність</div>
-          <div className="font-semibold mt-1">{it.available}</div>
+          <div className="font-bold mt-0.5">{it.available}</div>
         </div>
-        <div className="text-center p-2 bg-blue-50 rounded-lg">
+        <div className="text-center p-2 bg-slate-50 rounded-lg">
           <div className="text-corp-text-muted">Резерв</div>
-          <div className="font-semibold mt-1">{it.reserved||0}</div>
+          <div className="font-bold mt-0.5">{it.reserved||0}</div>
         </div>
-        <div className="text-center p-2 bg-amber-50 rounded-lg">
+        <div className="text-center p-2 bg-slate-50 rounded-lg">
           <div className="text-corp-text-muted">В оренді</div>
-          <div className="font-semibold mt-1">{it.in_rent||0}</div>
-        </div>
-      </div>
-      
-      {/* Ціни */}
-      <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
-        <div className="flex justify-between p-2 bg-slate-50 rounded-lg">
-          <span className="text-corp-text-muted">Збиток:</span>
-          <span className="font-semibold">₴ {(it.damage_cost || 0).toLocaleString('uk-UA')}</span>
-        </div>
-        <div className="flex justify-between p-2 bg-amber-50 rounded-lg">
-          <span className="text-corp-text-muted">Застава:</span>
-          <span className="font-semibold text-amber-700">₴ {(it.deposit || 0).toLocaleString('uk-UA')}</span>
-        </div>
-      </div>
-      
-      {/* Укомплектування */}
-      <div className="flex items-center justify-between mb-3 p-2 bg-slate-50 rounded-lg">
-        <span className="text-xs text-corp-text-muted">Укомплектовано:</span>
-        <div className="flex items-center gap-2">
-          <button onClick={()=>onPick(it.id, Math.max(0, it.picked_qty-1))} className="h-8 w-8 rounded-lg border bg-white hover:bg-slate-50 font-semibold">-</button>
-          <div className={cls('w-12 text-center font-bold', over && 'text-rose-600')}>{it.picked_qty}</div>
-          <button onClick={()=>onPick(it.id, it.picked_qty+1)} className="h-8 w-8 rounded-lg border bg-white hover:bg-slate-50 font-semibold">+</button>
-          <span className="text-xs text-corp-text-muted ml-2">/ {it.qty}</span>
+          <div className="font-bold mt-0.5">{it.in_rent||0}</div>
         </div>
       </div>
       
       {/* Пакування */}
-      <div className="flex flex-wrap gap-2 text-xs">
-        <label className="flex items-center gap-1.5 cursor-pointer bg-white hover:bg-slate-50 rounded-lg px-2 py-1.5 border">
-          <input type="checkbox" checked={it.packaging?.cover || false} onChange={(e)=>onPick(it.id, 'packaging_cover', e.target.checked)} className="h-4 w-4" />
-          <span>Чохол</span>
+      <div className="flex flex-wrap gap-2 mb-3">
+        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[120px]">
+          <input 
+            type="checkbox" 
+            checked={it.packaging?.cover || false} 
+            onChange={(e)=>onPick(it.id, 'packaging_cover', e.target.checked)} 
+            className="h-5 w-5 rounded" 
+          />
+          <span className="text-sm">Чохол</span>
         </label>
-        <label className="flex items-center gap-1.5 cursor-pointer bg-white hover:bg-slate-50 rounded-lg px-2 py-1.5 border">
-          <input type="checkbox" checked={it.packaging?.box || false} onChange={(e)=>onPick(it.id, 'packaging_box', e.target.checked)} className="h-4 w-4" />
-          <span>Коробка</span>
+        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[120px]">
+          <input 
+            type="checkbox" 
+            checked={it.packaging?.box || false} 
+            onChange={(e)=>onPick(it.id, 'packaging_box', e.target.checked)} 
+            className="h-5 w-5 rounded" 
+          />
+          <span className="text-sm">Коробка</span>
         </label>
+      </div>
+      
+      {/* Кнопка пошкодження */}
+      <button 
+        onClick={()=>onOpenDamage(it.id)} 
+        className="w-full py-2.5 rounded-lg bg-amber-500 text-white font-medium text-sm active:bg-amber-600"
+      >
+        📷 Зафіксувати пошкодження
+      </button>
+    </div>
+  )
+}
         <label className="flex items-center gap-1.5 cursor-pointer bg-white hover:bg-slate-50 rounded-lg px-2 py-1.5 border">
           <input type="checkbox" checked={it.packaging?.stretch || false} onChange={(e)=>onPick(it.id, 'packaging_stretch', e.target.checked)} className="h-4 w-4" />
           <span>Стретч</span>

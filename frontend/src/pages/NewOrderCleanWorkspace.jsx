@@ -304,14 +304,21 @@ export default function NewOrderClean() {
       {/* === WORKSPACE ZONES === */}
       
       {/* Клієнт */}
-      <ZoneClientSetup
+      <ZoneClientForm
         clientName={clientName}
         clientPhone={clientPhone}
         clientEmail={clientEmail}
         clientType={clientType}
         manager={manager}
         discount={discount}
-        onUpdateDiscount={setDiscount}
+        onUpdate={(data) => {
+          setClientName(data.name)
+          setClientPhone(data.phone)
+          setClientEmail(data.email)
+          setClientType(data.type)
+          setManager(data.manager)
+          setDiscount(data.discount)
+        }}
       />
       
       {/* Дати */}

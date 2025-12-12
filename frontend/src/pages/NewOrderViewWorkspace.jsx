@@ -747,13 +747,23 @@ export default function NewOrderViewWorkspace() {
         itemsCount={calculations.itemsCount}
       />
       
-      {/* Нотатки */}
+      {/* Коментар клієнта (read-only) */}
+      {clientComment && (
+        <ZoneNotes
+          notes=""
+          clientComment={clientComment}
+          readOnly={true}
+          title="💬 Коментар клієнта"
+          hint="Побажання клієнта до замовлення"
+        />
+      )}
+      
+      {/* Внутрішні нотатки менеджера */}
       <ZoneNotes
-        notes={notes}
-        clientComment={clientComment}
-        onUpdateNotes={setNotes}
-        title="📝 Нотатки менеджера"
-        hint="Внутрішні нотатки для команди"
+        notes={managerNotes}
+        onUpdateNotes={setManagerNotes}
+        title="📝 Внутрішні нотатки"
+        hint="Нотатки для команди (не бачить клієнт)"
       />
     </OrderWorkspaceLayout>
   )

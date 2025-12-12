@@ -66,8 +66,11 @@ export default function NewOrderViewWorkspace() {
   const [checkingConflicts, setCheckingConflicts] = useState(false)
   
   // Нотатки
-  const [notes, setNotes] = useState('')
-  const [clientComment, setClientComment] = useState('')
+  const [managerNotes, setManagerNotes] = useState('')  // Внутрішні нотатки менеджера
+  const [clientComment, setClientComment] = useState('') // Коментар клієнта (read-only)
+  
+  // Email
+  const [sendingEmail, setSendingEmail] = useState(false)
   
   // Стан збереження
   const [saving, setSaving] = useState(false)

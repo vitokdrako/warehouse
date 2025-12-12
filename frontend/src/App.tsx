@@ -252,6 +252,16 @@ function App() {
             } 
           />
           
+          {/* Order Workspace Demo */}
+          <Route 
+            path="/workspace-demo" 
+            element={
+              <ProtectedRoute>
+                <OrderWorkspaceDemo />
+              </ProtectedRoute>
+            } 
+          />
+          
           {/* Default redirect */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

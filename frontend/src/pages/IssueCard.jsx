@@ -154,9 +154,9 @@ function CustomerBlock({order}){
         </div>
         <div>
           <div className="text-corp-text-muted text-xs">Телефон</div>
-          <div className="font-medium" title={order.telephone}>
+          <a href={`tel:${order.telephone}`} className="font-medium text-blue-600">
             {order.telephone}
-          </div>
+          </a>
         </div>
         <div>
           <div className="text-corp-text-muted text-xs">Email</div>

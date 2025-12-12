@@ -181,15 +181,20 @@ export default function NewOrderViewWorkspace() {
     setCheckingConflicts(true)
     try {
       const inventoryIds = items.map(i => i.inventory_id).filter(Boolean)
-      if (inventoryIds.length === 0) return
+      if (inventoryIds.length === 0) {
+        setConflicts([])
+        setCheckingConflicts(false)
+        return
+      }
       
-      const response = await axios.get(`${BACKEND_URL}/api/orders/inventory/check-availability`, {
-        params: {
-          inventory_ids: inventoryIds.join(','),
-          start_date: issueDate,
-          end_date: returnDate,
-          exclude_order_id: orderId
-        }
+      // Backend очікує POST з body
+      const response = await axios.post(`${BACKEND_URL}/api/orders/check-availability`, {
+        start_date: issueDate,
+        end_date: returnDate,
+        items: items.map(item => ({
+          product_id: item.inventory_id,
+          quantity: item.quantity || item.qty || 1
+        }))
       })
       
       if (response.data?.items) {
@@ -227,9 +232,13 @@ export default function NewOrderViewWorkspace() {
           .filter(Boolean)
         
         setConflicts(foundConflicts)
+      } else {
+        setConflicts([])
       }
     } catch (error) {
       console.error('Error checking availability:', error)
+      // Не блокуємо роботу якщо перевірка не вдалась
+      setConflicts([])
     } finally {
       setCheckingConflicts(false)
     }

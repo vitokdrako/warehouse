@@ -255,57 +255,53 @@ class NewOrderWorkspaceTester:
             self.log(f"❌ Exception testing order details: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_manager_dashboard_syntax(self) -> Dict[str, Any]:
-        """Test ManagerDashboard.jsx for JavaScript syntax errors"""
+    def test_comprehensive_bug_fixes(self) -> Dict[str, Any]:
+        """Test all three bug fixes comprehensively"""
         try:
-            self.log("🧪 Testing ManagerDashboard.jsx syntax...")
+            self.log("🧪 Testing comprehensive bug fixes...")
             
-            dashboard_file = "/app/frontend/src/pages/ManagerDashboard.jsx"
-            if not os.path.exists(dashboard_file):
-                self.log(f"❌ ManagerDashboard.jsx not found: {dashboard_file}", "ERROR")
-                return {"success": False, "error": "ManagerDashboard.jsx not found"}
-            
-            # Read the file and check for basic syntax issues
-            with open(dashboard_file, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # Check for OrderCard component definition
-            if "function OrderCard(" not in content:
-                self.log("❌ OrderCard component not found in ManagerDashboard.jsx", "ERROR")
-                return {"success": False, "error": "OrderCard component not found"}
-            
-            # Check for mobile optimization features
-            mobile_features = {
-                "tel: links": "tel:" in content,
-                "touch targets (py-2.5)": "py-2.5" in content,
-                "active states": "active:" in content,
-                "phone click handler": "handlePhoneClick" in content
+            results = {
+                "inventory_search_rent_price": False,
+                "check_availability_post": False,
+                "order_details_accessible": False
             }
             
-            self.log("✅ ManagerDashboard.jsx syntax check passed")
-            self.log("   Mobile optimization features:")
+            # Test 1: Inventory search returns rent_price
+            inventory_result = self.test_inventory_search_rent_price()
+            if inventory_result.get("success") and inventory_result.get("rent_price_found"):
+                results["inventory_search_rent_price"] = True
+                self.log("✅ Bug Fix #1: rent_price field working")
+            else:
+                self.log("❌ Bug Fix #1: rent_price field failed", "ERROR")
             
-            all_features_present = True
-            for feature, present in mobile_features.items():
-                status = "✅" if present else "❌"
-                self.log(f"   {status} {feature}: {'Found' if present else 'Missing'}")
-                if not present:
-                    all_features_present = False
+            # Test 2: Check availability with POST method
+            availability_result = self.test_check_availability_post_method()
+            if availability_result.get("success"):
+                results["check_availability_post"] = True
+                self.log("✅ Bug Fix #3: POST check-availability working")
+            else:
+                self.log("❌ Bug Fix #3: POST check-availability failed", "ERROR")
             
-            # Check for OrderCard usage
-            ordercard_usage = content.count("<OrderCard")
-            self.log(f"   OrderCard component used {ordercard_usage} times")
+            # Test 3: Order details accessible (for quantity bug context)
+            order_result = self.test_order_details_endpoint()
+            if order_result.get("success"):
+                results["order_details_accessible"] = True
+                self.log("✅ Order details accessible for testing")
+            else:
+                self.log("❌ Order details not accessible", "ERROR")
+            
+            overall_success = all(results.values())
             
             return {
-                "success": True, 
-                "mobile_features": mobile_features,
-                "all_features_present": all_features_present,
-                "ordercard_usage": ordercard_usage,
-                "file_size": len(content)
+                "success": overall_success,
+                "results": results,
+                "inventory_data": inventory_result.get("pricing_data", []),
+                "availability_data": availability_result.get("data", {}),
+                "order_data": order_result.get("data", {})
             }
                 
         except Exception as e:
-            self.log(f"❌ Exception testing ManagerDashboard.jsx syntax: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing comprehensive bug fixes: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_decor_orders_endpoint(self) -> Dict[str, Any]:

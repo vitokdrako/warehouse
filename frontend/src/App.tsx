@@ -17,6 +17,7 @@ import CalendarBoardNew from './pages/CalendarBoardNew';
 import CatalogBoard from './pages/CatalogBoard';
 import FinanceCabinet from './pages/FinanceCabinet';
 import NewOrderClean from './pages/NewOrderClean';
+import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderView from './pages/NewOrderView';
 import IssueOrderClean from './pages/IssueOrderClean';
 import IssueCard from './pages/IssueCard';

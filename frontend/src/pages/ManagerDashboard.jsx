@@ -635,39 +635,53 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
     setIssueDate(order?.issue_date || '');
     setReturnDate(order?.return_date || '');
   };
+
+  const handlePhoneClick = (e) => {
+    e.stopPropagation();
+    window.location.href = `tel:${phone}`;
+  };
   
   return (
-    <article className="corp-card-flat cursor-pointer hover:shadow-corp transition-shadow" onClick={isEditing ? undefined : onClick}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
+    <article className="corp-card-flat cursor-pointer hover:shadow-corp transition-shadow active:bg-slate-50" onClick={isEditing ? undefined : onClick}>
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className={badgeInfo.css}>{badgeInfo.label}</span>
-          <span className="text-corp-text-muted text-sm">#{id}</span>
+          <span className="text-corp-text-muted text-sm font-medium">#{id}</span>
         </div>
         {badge === 'new' && onDateUpdate && !isEditing && (
           <button 
             onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
-            className="text-xs text-corp-primary hover:text-corp-primary-hover font-medium"
+            className="text-xs text-corp-primary hover:text-corp-primary-hover font-medium px-2 py-1 rounded-lg bg-blue-50 active:bg-blue-100"
             title="Редагувати дати"
           >
-            📅 Змінити дати
+            📅 Дати
           </button>
         )}
       </div>
-      <div className="text-sm mb-3">
-        <div className="font-medium text-corp-text-dark">{name}</div>
-        <div className="text-corp-text-muted">{phone}</div>
+      
+      {/* Customer info - mobile optimized */}
+      <div className="mb-3">
+        <div className="font-semibold text-corp-text-dark text-base">{name}</div>
+        <a 
+          href={`tel:${phone}`}
+          onClick={handlePhoneClick}
+          className="text-blue-600 font-medium text-sm flex items-center gap-1 mt-1"
+        >
+          📞 {phone}
+        </a>
       </div>
       
-      {/* Дати (з можливістю редагування для нових замовлень) */}
+      {/* Dates section */}
       {badge === 'new' && isEditing ? (
-        <div className="mb-3 space-y-2 bg-corp-bg-light p-3 rounded-corp" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 space-y-3 bg-corp-bg-light p-3 rounded-xl" onClick={(e) => e.stopPropagation()}>
           <div>
             <label className="text-xs text-corp-text-muted uppercase tracking-wide block mb-1">Дата видачі</label>
             <input 
               type="date" 
               value={issueDate}
               onChange={(e) => setIssueDate(e.target.value)}
-              className="corp-input text-sm"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               disabled={isSaving}
             />
           </div>
@@ -677,7 +691,7 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
               type="date" 
               value={returnDate}
               onChange={(e) => setReturnDate(e.target.value)}
-              className="corp-input text-sm"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
               disabled={isSaving}
             />
           </div>
@@ -685,47 +699,48 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
             <button 
               onClick={handleSaveDates}
               disabled={isSaving}
-              className="flex-1 corp-btn corp-btn-primary text-xs disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-lg bg-emerald-500 text-white font-medium text-sm disabled:opacity-50 active:bg-emerald-600"
             >
-              {isSaving ? '⏳ Збереження...' : '✓ Зберегти'}
+              {isSaving ? '⏳ ...' : '✓ Зберегти'}
             </button>
             <button 
               onClick={handleCancel}
               disabled={isSaving}
-              className="corp-btn corp-btn-secondary text-xs disabled:opacity-50"
+              className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white font-medium text-sm disabled:opacity-50 active:bg-slate-50"
             >
-              ✕ Скасувати
+              ✕
             </button>
           </div>
         </div>
       ) : (
         order?.issue_date || order?.return_date ? (
-          <div className="mb-3 text-xs text-corp-text-main bg-corp-bg-card p-2 rounded-corp-sm">
-            {order.issue_date && <div>📅 Видача: {order.issue_date}</div>}
-            {order.return_date && <div>📅 Повернення: {order.return_date}</div>}
+          <div className="mb-3 text-sm text-corp-text-main bg-slate-50 p-2.5 rounded-lg space-y-1">
+            {order.issue_date && <div>📅 Видача: <span className="font-medium">{order.issue_date}</span></div>}
+            {order.return_date && <div>📆 Поверн.: <span className="font-medium">{order.return_date}</span></div>}
           </div>
         ) : null
       )}
       
+      {/* Finance row */}
       <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-xl bg-slate-50 px-3 py-2">
-          <div className="text-corp-text-muted">Сума</div>
-          <div className="font-semibold tabular-nums">{rent}</div>
+        <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-center">
+          <div className="text-corp-text-muted text-xs">Сума</div>
+          <div className="font-bold text-base tabular-nums">{rent}</div>
         </div>
-        <div className="rounded-xl bg-slate-50 px-3 py-2">
-          <div className="text-corp-text-muted">Застава</div>
-          <div className="font-semibold tabular-nums">{deposit}</div>
+        <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-center">
+          <div className="text-corp-text-muted text-xs">Застава</div>
+          <div className="font-bold text-base tabular-nums text-amber-700">{deposit}</div>
         </div>
       </div>
       
-      {/* Кнопка "Клієнт відмовився" для статусів до видачі */}
+      {/* Cancel button - bigger for mobile */}
       {onCancelByClient && ['awaiting', 'processing', 'preparation', 'ready'].includes(badge) && (
         <button
           onClick={(e) => {
             e.stopPropagation();
             onCancelByClient(order?.order_id, id);
           }}
-          className="mt-2 w-full text-xs text-rose-600 border border-rose-300 rounded-lg px-2 py-1.5 hover:bg-rose-50 transition-colors"
+          className="mt-3 w-full text-sm text-rose-600 border-2 border-rose-200 rounded-xl px-3 py-2.5 font-medium hover:bg-rose-50 active:bg-rose-100 transition-colors"
         >
           🚫 Клієнт відмовився
         </button>

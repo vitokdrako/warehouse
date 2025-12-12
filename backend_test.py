@@ -304,62 +304,88 @@ class NewOrderWorkspaceTester:
             self.log(f"❌ Exception testing comprehensive bug fixes: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_decor_orders_endpoint(self) -> Dict[str, Any]:
-        """Test GET /api/decor-orders - should return orders for dashboard columns"""
+    def verify_bug_fixes_behavior(self) -> Dict[str, Any]:
+        """Verify expected behavior according to bug fix review request"""
         try:
-            self.log("🧪 Testing decor orders endpoint...")
+            self.log("🔍 Verifying expected behavior for NewOrderViewWorkspace bug fixes...")
             
-            # Test with multiple statuses as used in dashboard
-            statuses = "processing,ready_for_issue,issued,on_rent,shipped,delivered,returning"
-            response = self.session.get(f"{self.base_url}/decor-orders?status={statuses}")
+            results = {
+                "wrong_price_bug_fixed": False,
+                "quantity_bug_context_verified": False,
+                "method_405_error_fixed": False,
+                "all_endpoints_accessible": False
+            }
             
-            if response.status_code == 200:
-                data = response.json()
+            # Test 1: Wrong Price Bug - inventory search should return rent_price
+            self.log("   Testing Bug Fix #1: Wrong Price (rent_price vs price)...")
+            inventory_result = self.test_inventory_search_rent_price()
+            
+            if inventory_result.get("success") and inventory_result.get("rent_price_found"):
+                results["wrong_price_bug_fixed"] = True
+                self.log("   ✅ Wrong Price Bug: rent_price field available")
                 
-                # Check if response has orders array
-                if not isinstance(data, dict) or 'orders' not in data:
-                    self.log(f"❌ Expected dict with 'orders' key, got {type(data)}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                orders = data['orders']
-                if not isinstance(orders, list):
-                    self.log(f"❌ Expected orders array, got {type(orders)}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                self.log(f"✅ Retrieved {len(orders)} decor orders")
-                
-                # Count orders by status for dashboard columns
-                status_counts = {}
-                for order in orders:
-                    status = order.get('status', 'unknown')
-                    status_counts[status] = status_counts.get(status, 0) + 1
-                
-                self.log(f"   Status distribution: {status_counts}")
-                
-                # Validate order structure
-                if orders:
-                    for order in orders[:2]:  # Check first 2 orders
-                        required_fields = ['id', 'status']
-                        missing_fields = []
-                        
-                        for field in required_fields:
-                            if field not in order:
-                                missing_fields.append(field)
-                        
-                        if missing_fields:
-                            self.log(f"❌ Order {order.get('id')} missing fields: {missing_fields}", "ERROR")
-                            return {"success": False, "error": f"Missing required fields: {missing_fields}"}
-                        
-                        self.log(f"   - Order #{order.get('id')}: Status {order.get('status')}")
-                
-                return {"success": True, "data": orders, "count": len(orders), "status_counts": status_counts}
+                # Check if pricing makes sense (rent_price should be much lower than price)
+                pricing_data = inventory_result.get("pricing_data", [])
+                for item in pricing_data:
+                    if item['rent_price'] > 0 and item['price'] > 0:
+                        ratio = item['price'] / item['rent_price']
+                        self.log(f"     {item['name']}: price/rent_price ratio = {ratio:.1f}")
             else:
-                self.log(f"❌ Failed to get decor orders: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
+                self.log("   ❌ Wrong Price Bug: rent_price field missing or failed", "ERROR")
+            
+            # Test 2: 405 Error Bug - check-availability should work with POST
+            self.log("   Testing Bug Fix #3: 405 Error (POST method)...")
+            availability_result = self.test_check_availability_post_method()
+            
+            if availability_result.get("success"):
+                results["method_405_error_fixed"] = True
+                self.log("   ✅ 405 Error Bug: POST method working")
+            else:
+                error = availability_result.get("error", "")
+                if "405" in str(error):
+                    self.log("   ❌ 405 Error Bug: Still getting 405 Method Not Allowed", "ERROR")
+                else:
+                    self.log(f"   ❌ 405 Error Bug: Other error - {error}", "ERROR")
+            
+            # Test 3: Order details for quantity bug context
+            self.log("   Testing context for Bug Fix #2: Quantity Bug...")
+            order_result = self.test_order_details_endpoint()
+            
+            if order_result.get("success"):
+                results["quantity_bug_context_verified"] = True
+                self.log("   ✅ Quantity Bug Context: Order details accessible")
                 
+                # Check if order has items with inventory_id (needed for quantity bug fix)
+                order_data = order_result.get("data", {})
+                items = order_data.get("items", [])
+                if items:
+                    for item in items[:2]:
+                        inventory_id = item.get("inventory_id")
+                        if inventory_id:
+                            self.log(f"     Item has inventory_id: {inventory_id}")
+                        else:
+                            self.log(f"     ⚠️ Item missing inventory_id: {item.get('name')}")
+            else:
+                self.log("   ❌ Quantity Bug Context: Order details not accessible", "ERROR")
+            
+            # Overall endpoint accessibility
+            endpoints_working = (
+                inventory_result.get("success", False) and
+                availability_result.get("success", False) and
+                order_result.get("success", False)
+            )
+            
+            if endpoints_working:
+                results["all_endpoints_accessible"] = True
+                self.log("   ✅ All required endpoints accessible")
+            else:
+                self.log("   ❌ Some endpoints not accessible", "ERROR")
+            
+            return results
+            
         except Exception as e:
-            self.log(f"❌ Exception testing decor orders: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
+            self.log(f"❌ Exception verifying bug fixes behavior: {str(e)}", "ERROR")
+            return {"error": str(e)}
     
     def test_complete_task_workflow(self) -> Dict[str, Any]:
         """Test complete task workflow: Create → Filter → Update → Assign"""

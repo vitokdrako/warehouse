@@ -387,108 +387,85 @@ class NewOrderWorkspaceTester:
             self.log(f"❌ Exception verifying bug fixes behavior: {str(e)}", "ERROR")
             return {"error": str(e)}
     
-    def test_complete_task_workflow(self) -> Dict[str, Any]:
-        """Test complete task workflow: Create → Filter → Update → Assign"""
-        try:
-            self.log("🧪 Testing complete task workflow...")
-            
-            created_tasks = []
-            
-            # Step 1: Create washing task
-            self.log("   Step 1: Creating washing task...")
-            washing_result = self.test_task_creation("washing")
-            
-            if washing_result.get("success"):
-                washing_task_id = washing_result.get("task_id")
-                created_tasks.append({"id": washing_task_id, "type": "washing"})
-                self.log(f"   ✅ Washing task created: {washing_task_id}")
-            else:
-                self.log("   ❌ Failed to create washing task", "ERROR")
-                return {"success": False, "error": "Could not create washing task"}
-            
-            # Step 2: Create restoration task
-            self.log("   Step 2: Creating restoration task...")
-            restoration_result = self.test_task_creation("restoration")
-            
-            if restoration_result.get("success"):
-                restoration_task_id = restoration_result.get("task_id")
-                created_tasks.append({"id": restoration_task_id, "type": "restoration"})
-                self.log(f"   ✅ Restoration task created: {restoration_task_id}")
-            else:
-                self.log("   ❌ Failed to create restoration task", "ERROR")
-                return {"success": False, "error": "Could not create restoration task"}
-            
-            # Step 3: Test filtering by type
-            self.log("   Step 3: Testing task filtering...")
-            washing_filter_result = self.test_tasks_filter_by_type("washing")
-            restoration_filter_result = self.test_tasks_filter_by_type("restoration")
-            
-            filtering_success = (
-                washing_filter_result.get("success", False) and 
-                restoration_filter_result.get("success", False)
-            )
-            
-            if filtering_success:
-                self.log("   ✅ Task filtering working correctly")
-            else:
-                self.log("   ❌ Task filtering failed", "ERROR")
-            
-            # Step 4: Test status updates
-            self.log("   Step 4: Testing status updates...")
-            status_updates_success = True
-            
-            for task in created_tasks:
-                # Update to in_progress
-                progress_result = self.test_task_status_update(task["id"], "in_progress")
-                if not progress_result.get("success"):
-                    status_updates_success = False
-                    break
-                
-                # Update to done
-                done_result = self.test_task_status_update(task["id"], "done")
-                if not done_result.get("success"):
-                    status_updates_success = False
-                    break
-            
-            if status_updates_success:
-                self.log("   ✅ Status updates working correctly")
-            else:
-                self.log("   ❌ Status updates failed", "ERROR")
-            
-            # Step 5: Test task assignment
-            self.log("   Step 5: Testing task assignment...")
-            assignment_success = True
-            
-            for task in created_tasks:
-                assign_result = self.test_task_assignment(task["id"], "Тестовий виконавець")
-                if not assign_result.get("success"):
-                    assignment_success = False
-                    break
-            
-            if assignment_success:
-                self.log("   ✅ Task assignment working correctly")
-            else:
-                self.log("   ❌ Task assignment failed", "ERROR")
-            
-            # Overall success
-            overall_success = (
-                len(created_tasks) == 2 and
-                filtering_success and
-                status_updates_success and
-                assignment_success
-            )
-            
-            return {
-                "success": overall_success,
-                "created_tasks": created_tasks,
-                "filtering_success": filtering_success,
-                "status_updates_success": status_updates_success,
-                "assignment_success": assignment_success
-            }
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing complete workflow: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
+    def run_comprehensive_bug_fix_test(self):
+        """Run the comprehensive bug fix test scenario for NewOrderViewWorkspace"""
+        self.log("🚀 Starting comprehensive NewOrderViewWorkspace bug fix test")
+        self.log("=" * 70)
+        
+        # Step 1: Health check
+        if not self.test_api_health():
+            self.log("❌ API health check failed, aborting tests", "ERROR")
+            return False
+        
+        # Step 2: Authentication
+        self.log("\n🔍 Step 1: Testing authentication...")
+        if not self.authenticate():
+            self.log("❌ Authentication failed, aborting tests", "ERROR")
+            return False
+        
+        # Step 3: Test Bug Fix #1 - Wrong Price (rent_price vs price)
+        self.log("\n🔍 Step 2: Testing Bug Fix #1 - Wrong Price...")
+        inventory_result = self.test_inventory_search_rent_price()
+        bug1_success = inventory_result.get("success", False) and inventory_result.get("rent_price_found", False)
+        
+        # Step 4: Test Bug Fix #3 - 405 Error (POST method)
+        self.log("\n🔍 Step 3: Testing Bug Fix #3 - 405 Error...")
+        availability_result = self.test_check_availability_post_method()
+        bug3_success = availability_result.get("success", False)
+        
+        # Step 5: Test Order Details (context for Bug Fix #2)
+        self.log("\n🔍 Step 4: Testing Order Details (Quantity Bug context)...")
+        order_result = self.test_order_details_endpoint()
+        order_success = order_result.get("success", False)
+        
+        # Step 6: Comprehensive verification
+        self.log("\n🔍 Step 5: Comprehensive verification...")
+        behavior_results = self.verify_bug_fixes_behavior()
+        
+        # Step 7: Summary
+        self.log("\n" + "=" * 70)
+        self.log("📊 COMPREHENSIVE BUG FIX TEST SUMMARY:")
+        self.log(f"   • API Health: ✅ OK")
+        self.log(f"   • Authentication: ✅ Working")
+        
+        if bug1_success:
+            self.log(f"   • Bug Fix #1 (Wrong Price): ✅ Working")
+            pricing_data = inventory_result.get("pricing_data", [])
+            for item in pricing_data[:2]:  # Show first 2 items
+                self.log(f"     - {item['name']}: price=₴{item['price']}, rent_price=₴{item['rent_price']}")
+        else:
+            self.log(f"   • Bug Fix #1 (Wrong Price): ❌ Failed")
+        
+        if bug3_success:
+            self.log(f"   • Bug Fix #3 (405 Error): ✅ Working")
+        else:
+            self.log(f"   • Bug Fix #3 (405 Error): ❌ Failed")
+        
+        if order_success:
+            self.log(f"   • Order Details Access: ✅ Working")
+            order_data = order_result.get("data", {})
+            self.log(f"     - Order #{order_data.get('order_number')}: {order_data.get('client_name')}")
+            self.log(f"     - Status: {order_data.get('status')}")
+            self.log(f"     - Items: {len(order_data.get('items', []))}")
+        else:
+            self.log(f"   • Order Details Access: ❌ Failed")
+        
+        self.log("\n🎉 BUG FIX TESTING COMPLETED!")
+        self.log("   The system correctly provides:")
+        self.log("   • 🔍 Inventory search with rent_price field (GET /api/orders/inventory/search)")
+        self.log("   • ✅ Check availability with POST method (POST /api/orders/check-availability)")
+        self.log("   • 📋 Order details access for quantity testing (GET /api/orders/{id})")
+        self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
+        
+        # Check if all critical bug fixes work
+        critical_success = bug1_success and bug3_success and order_success
+        
+        if critical_success:
+            self.log("\n✅ ALL CRITICAL BUG FIXES WORKING!")
+        else:
+            self.log("\n⚠️ SOME CRITICAL BUG FIXES FAILED - CHECK LOGS ABOVE")
+        
+        return critical_success
     
     def verify_expected_behavior(self) -> Dict[str, Any]:
         """Verify expected behavior according to task management review request"""

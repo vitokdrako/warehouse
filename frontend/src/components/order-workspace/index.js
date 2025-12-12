@@ -9,4 +9,5 @@ export { default as LeftRailFinance } from './LeftRailFinance'
 export { default as LeftRailTimeline } from './LeftRailTimeline'
 export { default as WorkspaceHeader } from './WorkspaceHeader'
 export { default as FooterActions } from './FooterActions'
-export { STATUS_CONFIG, getStatusConfig } from './statusConfig'
+export { STATUS_CONFIG, STATUS_MAP, getStatusConfig, getStatusKey } from './statusConfig'
+

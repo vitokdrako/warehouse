@@ -130,14 +130,14 @@ function ItemRow({
           {canEdit ? (
             <div className="flex items-center gap-1">
               <button
-                onClick={() => onUpdateQuantity?.(item.id, Math.max(1, qty - 1))}
+                onClick={() => onUpdateQuantity?.(item.inventory_id || item.id, Math.max(1, qty - 1))}
                 className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 text-slate-600"
               >
                 −
               </button>
               <span className="w-8 text-center font-medium">{qty}</span>
               <button
-                onClick={() => onUpdateQuantity?.(item.id, qty + 1)}
+                onClick={() => onUpdateQuantity?.(item.inventory_id || item.id, qty + 1)}
                 className="w-7 h-7 rounded bg-slate-100 hover:bg-slate-200 text-slate-600"
               >
                 +
@@ -207,7 +207,7 @@ function ItemRow({
       {/* Видалити */}
       {canEdit && onRemoveItem && (
         <button
-          onClick={() => onRemoveItem?.(item.id)}
+          onClick={() => onRemoveItem?.(item.inventory_id || item.id)}
           className="text-rose-500 hover:text-rose-700 text-lg"
           title="Видалити"
         >

@@ -1305,7 +1305,7 @@ async def search_inventory(
     """
     result = db.execute(text("""
         SELECT 
-            p.product_id, p.sku, p.name, p.price, p.image_url,
+            p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
             i.quantity, i.zone, i.product_state
         FROM products p
         LEFT JOIN inventory i ON p.product_id = i.product_id
@@ -1320,11 +1320,12 @@ async def search_inventory(
             "product_id": row[0],
             "sku": row[1],
             "name": row[2],
-            "price": float(row[3]) if row[3] else 0.0,
-            "image": row[4],
-            "available_quantity": row[5] or 0,
-            "location": row[6],
-            "condition": row[7]
+            "price": float(row[3]) if row[3] else 0.0,  # Full price (damage cost)
+            "rent_price": float(row[4]) if row[4] else 0.0,  # Rental price per day
+            "image": row[5],
+            "available_quantity": row[6] or 0,
+            "location": row[7],
+            "condition": row[8]
         })
     
     return {"products": products, "total": len(products)}

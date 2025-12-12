@@ -280,8 +280,8 @@ export default function NewOrderViewWorkspace() {
         product_id: p.product_id,
         sku: p.sku,
         name: p.name,
-        price_per_day: p.price || 0,
-        deposit: p.deposit || 0,
+        price_per_day: p.rent_price || 0,  // Ціна оренди за день
+        deposit: p.price || 0,  // Застава = повна вартість товару
         total_quantity: p.available_quantity || 0
       }))
       

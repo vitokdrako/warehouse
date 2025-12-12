@@ -1774,6 +1774,19 @@ async def move_to_preparation(
         )
 
 
+# Alias для send-to-assembly (викликає move-to-preparation)
+@decor_router.post("/{order_id}/send-to-assembly")
+async def send_to_assembly(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Alias для move-to-preparation
+    Відправити замовлення на збір - заморозити декор та передати реквізиторам
+    """
+    return await move_to_preparation(order_id, db)
+
+
 @decor_router.post("/{order_id}/complete-return")
 async def complete_return(
     order_id: int,

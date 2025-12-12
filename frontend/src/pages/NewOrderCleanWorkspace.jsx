@@ -17,7 +17,7 @@ import {
 } from '../components/order-workspace'
 
 import {
-  ZoneClientSetup,
+  ZoneClientForm,
   ZonePlanDates,
   ZoneItemsEditor,
   ZoneCommercialSummary,

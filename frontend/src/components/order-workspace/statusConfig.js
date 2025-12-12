@@ -96,6 +96,7 @@ export const STATUS_CONFIG = {
 // Мапа з backend статусів на наші
 export const STATUS_MAP = {
   // DecorOrder statuses
+  'draft': 'DRAFT',
   'awaiting_customer': 'WAITING_CONFIRMATION',
   'processing': 'PROCESSING',
   'ready_for_issue': 'READY_FOR_ISSUE',

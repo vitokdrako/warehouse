@@ -204,55 +204,55 @@ class NewOrderWorkspaceTester:
             self.log(f"❌ Exception testing check-availability POST: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_frontend_build(self) -> Dict[str, Any]:
-        """Test that frontend builds successfully with yarn build"""
+    def test_order_details_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/orders/{order_id} - should return order details for order #7121"""
         try:
-            self.log("🧪 Testing frontend build process...")
+            self.log("🧪 Testing order details endpoint for order #7121...")
             
-            # Change to frontend directory
-            frontend_dir = "/app/frontend"
-            if not os.path.exists(frontend_dir):
-                self.log(f"❌ Frontend directory not found: {frontend_dir}", "ERROR")
-                return {"success": False, "error": "Frontend directory not found"}
+            # Test order #7121 as specified in the review request
+            order_id = 7121
+            response = self.session.get(f"{self.base_url}/orders/{order_id}")
             
-            # Run yarn build
-            result = subprocess.run(
-                ["yarn", "build"],
-                cwd=frontend_dir,
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 minutes timeout
-            )
-            
-            if result.returncode == 0:
-                self.log("✅ Frontend build successful")
-                self.log(f"   Build output: {len(result.stdout.splitlines())} lines")
+            if response.status_code == 200:
+                data = response.json()
+                self.log(f"✅ Retrieved order details for #{order_id}")
                 
-                # Check if build directory exists
-                build_dir = os.path.join(frontend_dir, "build")
-                if os.path.exists(build_dir):
-                    self.log(f"   Build directory created: {build_dir}")
-                    
-                    # Check for key files
-                    key_files = ["index.html", "static"]
-                    for file in key_files:
-                        file_path = os.path.join(build_dir, file)
-                        if os.path.exists(file_path):
-                            self.log(f"   ✅ Found: {file}")
-                        else:
-                            self.log(f"   ⚠️ Missing: {file}")
+                # Validate order structure
+                required_fields = ['id', 'order_number', 'client_name', 'status', 'items']
+                missing_fields = []
                 
-                return {"success": True, "output": result.stdout}
+                for field in required_fields:
+                    if field not in data:
+                        missing_fields.append(field)
+                
+                if missing_fields:
+                    self.log(f"❌ Order missing fields: {missing_fields}", "ERROR")
+                    return {"success": False, "error": f"Missing required fields: {missing_fields}"}
+                
+                # Check if order has awaiting_customer status
+                status = data.get('status')
+                self.log(f"   Order #{data.get('order_number')}: {data.get('client_name')} - Status: {status}")
+                
+                # Check items structure
+                items = data.get('items', [])
+                self.log(f"   Items count: {len(items)}")
+                
+                if items:
+                    for item in items[:2]:  # Check first 2 items
+                        item_fields = ['inventory_id', 'name', 'quantity', 'price_per_day']
+                        for field in item_fields:
+                            if field not in item:
+                                self.log(f"⚠️ Item missing field: {field}")
+                        
+                        self.log(f"   - {item.get('name')}: qty={item.get('quantity')}, price_per_day=₴{item.get('price_per_day', 0)}")
+                
+                return {"success": True, "data": data, "order_id": order_id, "status": status}
             else:
-                self.log(f"❌ Frontend build failed with exit code: {result.returncode}", "ERROR")
-                self.log(f"   Error output: {result.stderr}", "ERROR")
-                return {"success": False, "error": result.stderr, "exit_code": result.returncode}
+                self.log(f"❌ Failed to get order details: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
                 
-        except subprocess.TimeoutExpired:
-            self.log("❌ Frontend build timed out after 5 minutes", "ERROR")
-            return {"success": False, "error": "Build timeout"}
         except Exception as e:
-            self.log(f"❌ Exception testing frontend build: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing order details: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_manager_dashboard_syntax(self) -> Dict[str, Any]:

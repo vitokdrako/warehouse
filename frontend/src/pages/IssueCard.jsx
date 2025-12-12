@@ -341,43 +341,6 @@ function ItemCardMobile({it, onScan, onPick, onOpenDamage}){
     </div>
   )
 }
-        <label className="flex items-center gap-1.5 cursor-pointer bg-white hover:bg-slate-50 rounded-lg px-2 py-1.5 border">
-          <input type="checkbox" checked={it.packaging?.stretch || false} onChange={(e)=>onPick(it.id, 'packaging_stretch', e.target.checked)} className="h-4 w-4" />
-          <span>Стретч</span>
-        </label>
-      </div>
-      
-      {/* Серійні номери */}
-      {it.serials && it.serials.length > 0 && (
-        <div className="mt-3 pt-3 border-t">
-          <div className="text-xs text-corp-text-muted mb-2">Серійні номери:</div>
-          <div className="flex flex-wrap gap-1.5">
-            {it.serials.map(s => (
-              <button 
-                key={s} 
-                onClick={()=>onScan(it.id, s)} 
-                className={cls(
-                  'rounded-lg border px-2.5 py-1 text-xs font-medium',
-                  it.scanned.includes(s) 
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-700' 
-                    : 'border-slate-200 bg-white hover:bg-slate-50'
-                )}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {conflict && (
-        <div className="mt-3 p-2 bg-rose-50 border border-rose-200 rounded-lg">
-          <Badge tone='red'>⚠️ Конфлікт резерву</Badge>
-        </div>
-      )}
-    </div>
-  )
-}
 
 function ItemRow({it, onScan, onPick, onOpenDamage}){
   const missing = it.qty - it.picked_qty

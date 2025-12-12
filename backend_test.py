@@ -271,52 +271,61 @@ class MobileOrderCardTester:
             self.log(f"❌ Exception testing ManagerDashboard.jsx syntax: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_all_tasks_get(self) -> Dict[str, Any]:
-        """Test GET /api/tasks - should return all tasks"""
+    def test_decor_orders_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/decor-orders - should return orders for dashboard columns"""
         try:
-            self.log("🧪 Testing all tasks GET endpoint...")
+            self.log("🧪 Testing decor orders endpoint...")
             
-            response = self.session.get(f"{self.base_url}/tasks")
+            # Test with multiple statuses as used in dashboard
+            statuses = "processing,ready_for_issue,issued,on_rent,shipped,delivered,returning"
+            response = self.session.get(f"{self.base_url}/decor-orders?status={statuses}")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response is an array
-                if not isinstance(data, list):
-                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
+                # Check if response has orders array
+                if not isinstance(data, dict) or 'orders' not in data:
+                    self.log(f"❌ Expected dict with 'orders' key, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Retrieved {len(data)} total tasks")
+                orders = data['orders']
+                if not isinstance(orders, list):
+                    self.log(f"❌ Expected orders array, got {type(orders)}", "ERROR")
+                    return {"success": False, "data": data}
                 
-                # Count tasks by type
-                task_types = {}
-                for task in data:
-                    task_type = task.get('task_type', 'unknown')
-                    task_types[task_type] = task_types.get(task_type, 0) + 1
+                self.log(f"✅ Retrieved {len(orders)} decor orders")
                 
-                self.log(f"   Task types found: {task_types}")
+                # Count orders by status for dashboard columns
+                status_counts = {}
+                for order in orders:
+                    status = order.get('status', 'unknown')
+                    status_counts[status] = status_counts.get(status, 0) + 1
                 
-                # Look for washing and restoration tasks
-                washing_tasks = [t for t in data if t.get('task_type') == 'washing']
-                restoration_tasks = [t for t in data if t.get('task_type') == 'restoration']
+                self.log(f"   Status distribution: {status_counts}")
                 
-                self.log(f"   Washing tasks: {len(washing_tasks)}")
-                self.log(f"   Restoration tasks: {len(restoration_tasks)}")
+                # Validate order structure
+                if orders:
+                    for order in orders[:2]:  # Check first 2 orders
+                        required_fields = ['id', 'status']
+                        missing_fields = []
+                        
+                        for field in required_fields:
+                            if field not in order:
+                                missing_fields.append(field)
+                        
+                        if missing_fields:
+                            self.log(f"❌ Order {order.get('id')} missing fields: {missing_fields}", "ERROR")
+                            return {"success": False, "error": f"Missing required fields: {missing_fields}"}
+                        
+                        self.log(f"   - Order #{order.get('id')}: Status {order.get('status')}")
                 
-                return {
-                    "success": True, 
-                    "data": data, 
-                    "count": len(data),
-                    "task_types": task_types,
-                    "washing_count": len(washing_tasks),
-                    "restoration_count": len(restoration_tasks)
-                }
+                return {"success": True, "data": orders, "count": len(orders), "status_counts": status_counts}
             else:
-                self.log(f"❌ Failed to get all tasks: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get decor orders: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing all tasks GET: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing decor orders: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_complete_task_workflow(self) -> Dict[str, Any]:

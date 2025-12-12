@@ -85,11 +85,12 @@ function Header({order}){
   )
 }
 
-/******************** items table ********************/
+/******************** items table - responsive ********************/
 function ItemsTable({items, onToggleSerialOK, onSetCounts, onOpenFinding, onToggleFlags}){
   return (
-    <Card title="Перелік позицій">
-      <div className="overflow-hidden rounded-xl border">
+    <Card title={`Перелік позицій (${items.length})`}>
+      {/* Desktop table - hidden on mobile */}
+      <div className="hidden lg:block overflow-hidden rounded-xl border">
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-left text-corp-text-muted">
             <tr>
@@ -105,10 +106,7 @@ function ItemsTable({items, onToggleSerialOK, onSetCounts, onOpenFinding, onTogg
           </thead>
           <tbody>
             {items.map(it => {
-              // Фото товару
               const photoUrl = getImageUrl(it.image) || `https://picsum.photos/seed/${it.inventory_id}/60/40`
-              
-              // Клік на фото - відкрити каталог
               const handlePhotoClick = () => {
                 window.open(`/catalog?product=${it.inventory_id}`, '_blank')
               }
@@ -165,6 +163,93 @@ function ItemsTable({items, onToggleSerialOK, onSetCounts, onOpenFinding, onTogg
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards - visible only on mobile */}
+      <div className="lg:hidden space-y-3">
+        {items.map(it => {
+          const photoUrl = getImageUrl(it.image) || `https://picsum.photos/seed/${it.inventory_id}/60/40`
+          const handlePhotoClick = () => {
+            window.open(`/catalog?product=${it.inventory_id}`, '_blank')
+          }
+          const statusBadge = (it.returned_qty === it.rented_qty && it.findings.length===0) 
+            ? <Badge tone='green'>OK</Badge> 
+            : (it.findings.length>0) 
+              ? <Badge tone='red'>Пошкодження</Badge> 
+              : <Badge tone='amber'>Частково</Badge>
+
+          return (
+            <div key={it.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+              {/* Header row: photo, name, status */}
+              <div className="flex gap-3">
+                <img 
+                  src={photoUrl} 
+                  alt={it.name}
+                  className="h-16 w-20 rounded-lg object-cover cursor-pointer flex-shrink-0"
+                  onClick={handlePhotoClick}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-corp-text-dark truncate">{it.name}</div>
+                  <div className="text-xs text-corp-text-muted">SKU: {it.sku}</div>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {statusBadge}
+                    {it.findings.length>0 && <Badge tone='amber'>{it.findings.length} зауваж.</Badge>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Counts row */}
+              <div className="flex items-center justify-between bg-slate-50 rounded-lg p-2">
+                <div className="text-sm">
+                  <span className="text-corp-text-muted">Оренда:</span> <span className="font-semibold">{it.rented_qty}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-corp-text-muted">Повернуто:</span>
+                  <button 
+                    className="h-9 w-9 rounded-lg border bg-white text-lg font-bold active:bg-slate-100" 
+                    onClick={()=>onSetCounts(it.id, Math.max(0,it.returned_qty-1))}
+                  >−</button>
+                  <div className="w-10 text-center text-lg font-bold">{it.returned_qty}</div>
+                  <button 
+                    className="h-9 w-9 rounded-lg border bg-white text-lg font-bold active:bg-slate-100" 
+                    onClick={()=>onSetCounts(it.id, it.returned_qty+1)}
+                  >+</button>
+                </div>
+              </div>
+
+              {/* Serials row (if any) */}
+              {it.serials && it.serials.length > 0 && (
+                <div className="space-y-1">
+                  <div className="text-xs text-corp-text-muted">Серійні номери:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {it.serials.map(s => (
+                      <button 
+                        key={s} 
+                        onClick={()=>onToggleSerialOK(it.id, s)} 
+                        className={cls(
+                          'rounded-lg border px-3 py-1.5 text-sm font-medium',
+                          it.ok_serials.includes(s) 
+                            ? 'border-emerald-400 bg-emerald-100 text-emerald-700' 
+                            : 'border-slate-200 bg-white text-corp-text-dark active:bg-slate-50'
+                        )}
+                      >
+                        {s} {it.ok_serials.includes(s) && '✓'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action button - full width on mobile */}
+              <button 
+                onClick={()=>onOpenFinding(it.id)}
+                className="w-full py-2.5 rounded-lg bg-amber-500 text-white font-medium active:bg-amber-600"
+              >
+                📸 Зафіксувати пошкодження
+              </button>
+            </div>
+          )
+        })}
       </div>
     </Card>
   )

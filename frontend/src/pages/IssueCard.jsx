@@ -1240,7 +1240,7 @@ export default function IssueCard(){
   if(!order) return <div className="flex items-center justify-center h-screen"><div className="text-xl">Замовлення не знайдено</div></div>
 
   return (
-    <div className="mx-auto max-w-7xl p-6 space-y-6">
+    <div className="mx-auto max-w-7xl px-3 py-4 md:p-6 space-y-4 md:space-y-6 pb-32 md:pb-6">
       <Header order={order} issueCard={issueCard} onDateChange={handleDateChange} />
 
       {/* Top summary */}
@@ -1259,38 +1259,102 @@ export default function IssueCard(){
       
       <Notes notes={notes} setNotes={setNotes} />
 
-      {/* Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-        <div className="text-sm text-corp-text-main">
-          Статус: <b>{isIssued ? 'issued' : isReadyForIssue ? 'ready_for_issue' : 'processing'}</b> · 
-          <span className="ml-2">Позицій скомплектовано: {items.filter(it=>it.picked_qty>=it.qty).length}/{items.length}</span> ·
-          <span className="ml-2">Одиниць: {items.reduce((s,it)=>s+it.picked_qty,0)}/{items.reduce((s,it)=>s+it.qty,0)}</span> ·
-          <span className="ml-2">Серій відскановано: {items.reduce((s,it)=>s+(it.scanned?.length||0),0)}</span>
+      {/* Desktop Actions Panel */}
+      <div className="hidden md:block">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="text-sm text-corp-text-main">
+            Статус: <b>{isIssued ? 'issued' : isReadyForIssue ? 'ready_for_issue' : 'processing'}</b> · 
+            <span className="ml-2">Позицій скомплектовано: {items.filter(it=>it.picked_qty>=it.qty).length}/{items.length}</span> ·
+            <span className="ml-2">Одиниць: {items.reduce((s,it)=>s+it.picked_qty,0)}/{items.reduce((s,it)=>s+it.qty,0)}</span> ·
+            <span className="ml-2">Серій відскановано: {items.reduce((s,it)=>s+(it.scanned?.length||0),0)}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {/* Завжди показуємо "Зберегти прогрес" якщо не видано */}
+            {!isIssued && (
+              <PillButton tone='slate' onClick={saveProgress}>💾 Зберегти прогрес</PillButton>
+            )}
+            
+            {/* "Готово до видачі" - тільки під час комплектування */}
+            {(isProcessing) && (
+              <PillButton tone='yellow' onClick={markReady}>✅ Готово до видачі</PillButton>
+            )}
+            
+            {/* "Видати" - коли готове до видачі */}
+            {(isReadyForIssue) && (
+              <PillButton tone='green' onClick={markIssued}>🚚 Видати</PillButton>
+            )}
+            
+            {/* Badge якщо вже видано */}
+            {isIssued && (
+              <Badge tone='green'>✅ Видано клієнту</Badge>
+            )}
+            
+            <PillButton tone='blue' onClick={printWarehouseSlip}>🖨️ Друк накладної</PillButton>
+            <PillButton tone='purple' onClick={printQRCodes}>📱 Друк QR кодів</PillButton>
+            <PillButton tone='slate' onClick={()=>navigate('/')}>Назад</PillButton>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {/* Завжди показуємо "Зберегти прогрес" якщо не видано */}
+      </div>
+
+      {/* Mobile Fixed Bottom Panel */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 space-y-2 z-50 shadow-lg">
+        {/* Stats row */}
+        <div className="flex justify-between text-xs">
+          <div>
+            <span className="text-corp-text-muted">Позицій:</span>{' '}
+            <span className="font-bold">{items.filter(it=>it.picked_qty>=it.qty).length}/{items.length}</span>
+          </div>
+          <div>
+            <span className="text-corp-text-muted">Одиниць:</span>{' '}
+            <span className="font-bold">{items.reduce((s,it)=>s+it.picked_qty,0)}/{items.reduce((s,it)=>s+it.qty,0)}</span>
+          </div>
+          <div>
+            <span className="text-corp-text-muted">Серій:</span>{' '}
+            <span className="font-bold">{items.reduce((s,it)=>s+(it.scanned?.length||0),0)}</span>
+          </div>
+        </div>
+        
+        {/* Buttons row */}
+        <div className="flex gap-2">
+          <button 
+            onClick={()=>navigate('/')}
+            className="flex-none px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium"
+          >
+            ←
+          </button>
+          
           {!isIssued && (
-            <PillButton tone='slate' onClick={saveProgress}>💾 Зберегти прогрес</PillButton>
+            <button 
+              onClick={saveProgress}
+              className="flex-none px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm font-medium"
+            >
+              💾
+            </button>
           )}
           
-          {/* "Готово до видачі" - тільки під час комплектування */}
-          {(isProcessing) && (
-            <PillButton tone='yellow' onClick={markReady}>✅ Готово до видачі</PillButton>
+          {isProcessing && (
+            <button 
+              onClick={markReady}
+              className="flex-1 py-2.5 rounded-lg bg-amber-500 text-white font-medium text-sm active:bg-amber-600"
+            >
+              ✅ Готово до видачі
+            </button>
           )}
           
-          {/* "Видати" - коли готове до видачі */}
-          {(isReadyForIssue) && (
-            <PillButton tone='green' onClick={markIssued}>🚚 Видати</PillButton>
+          {isReadyForIssue && (
+            <button 
+              onClick={markIssued}
+              className="flex-1 py-2.5 rounded-lg bg-emerald-500 text-white font-medium text-sm active:bg-emerald-600"
+            >
+              🚚 Видати клієнту
+            </button>
           )}
           
-          {/* Badge якщо вже видано */}
           {isIssued && (
-            <Badge tone='green'>✅ Видано клієнту</Badge>
+            <div className="flex-1 py-2.5 rounded-lg bg-emerald-100 text-emerald-700 font-medium text-sm text-center">
+              ✅ Видано
+            </div>
           )}
-          
-          <PillButton tone='blue' onClick={printWarehouseSlip}>🖨️ Друк накладної</PillButton>
-          <PillButton tone='purple' onClick={printQRCodes}>📱 Друк QR кодів</PillButton>
-          <PillButton tone='slate' onClick={()=>navigate('/')}>Назад</PillButton>
         </div>
       </div>
 
@@ -1313,8 +1377,8 @@ export default function IssueCard(){
         }}
       />
 
-      {/* Helper hints */}
-      <div className="text-xs text-corp-text-muted text-center">
+      {/* Helper hints - hidden on mobile */}
+      <div className="hidden md:block text-xs text-corp-text-muted text-center">
         Підсвітка: рядки жовтого кольору — ще неукомплектовані; серійні номери клікабельні для скан/анскан.
       </div>
 

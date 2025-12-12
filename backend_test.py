@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Mobile OrderCard Component Testing
-Testing the mobile adaptation of OrderCard component on Manager Dashboard
+Backend Testing Script for NewOrderViewWorkspace Bug Fixes
+Testing the bug fixes for Ukrainian rental management system:
+1. Wrong Price Bug - rent_price vs price
+2. Quantity Bug - item identification
+3. 405 Error - check-availability endpoint method
 """
 
 import requests
@@ -19,7 +22,7 @@ TEST_CREDENTIALS = {
     "password": "test123"
 }
 
-class MobileOrderCardTester:
+class NewOrderWorkspaceTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

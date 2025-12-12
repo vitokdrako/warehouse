@@ -75,21 +75,26 @@ function Header({order, issueCard, onDateChange}){
   }
   
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <div className="text-2xl font-bold">Видача · #{issueCard?.order_id || order.order_id}</div>
-        <Badge tone={statusInfo.tone}>{statusInfo.text}</Badge>
+    <div className="space-y-2">
+      {/* Title row */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="text-xl md:text-2xl font-bold">Видача #{issueCard?.order_id || order.order_id}</div>
+          <Badge tone={statusInfo.tone}>{statusInfo.text}</Badge>
+        </div>
       </div>
-      <div className="flex flex-col items-end text-sm text-corp-text-main">
+      
+      {/* Dates row - mobile adaptive */}
+      <div className="text-sm text-corp-text-main">
         {editingDates ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <div className="flex flex-col">
               <label className="text-xs text-corp-text-muted">Дата видачі:</label>
               <input 
                 type="date" 
                 value={tempIssueDate}
                 onChange={(e) => setTempIssueDate(e.target.value)}
-                className="rounded border px-2 py-1 text-sm"
+                className="rounded border px-2 py-1.5 text-sm"
               />
             </div>
             <div className="flex flex-col">
@@ -98,37 +103,40 @@ function Header({order, issueCard, onDateChange}){
                 type="date" 
                 value={tempReturnDate}
                 onChange={(e) => setTempReturnDate(e.target.value)}
-                className="rounded border px-2 py-1 text-sm"
+                className="rounded border px-2 py-1.5 text-sm"
               />
             </div>
-            <button 
-              onClick={handleSaveDates}
-              className="rounded bg-green-600 px-2 py-1 text-white hover:bg-green-700"
-            >
-              ✓
-            </button>
-            <button 
-              onClick={() => setEditingDates(false)}
-              className="rounded bg-slate-200 px-2 py-1 hover:bg-slate-300"
-            >
-              ✕
-            </button>
+            <div className="flex gap-1 mt-1 sm:mt-4">
+              <button 
+                onClick={handleSaveDates}
+                className="rounded bg-green-600 px-3 py-1.5 text-white hover:bg-green-700"
+              >
+                ✓ Зберегти
+              </button>
+              <button 
+                onClick={() => setEditingDates(false)}
+                className="rounded bg-slate-200 px-3 py-1.5 hover:bg-slate-300"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <span>Дата видачі: <b>{order.rent_issue_date || todayISO()}</b></span>
-            <span className="mx-1">·</span>
-            <span>Повернення: <b>{order.rent_return_date || todayISO()}</b></span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+            <span>📅 Видача: <b>{order.rent_issue_date || todayISO()}</b></span>
+            <span>📆 Повернення: <b>{order.rent_return_date || todayISO()}</b></span>
             <button 
               onClick={() => setEditingDates(true)}
-              className="ml-2 text-blue-600 hover:text-blue-800"
+              className="text-blue-600 hover:text-blue-800 text-sm"
               title="Редагувати дати"
             >
-              ✏️
+              ✏️ Змінити дати
             </button>
           </div>
         )}
-        <div className="mt-1"><Badge tone='slate'>Замовлення від: {order.date_added?.slice(0,10) || '—'}</Badge></div>
+        <div className="mt-1">
+          <Badge tone='slate'>Замовлення від: {order.date_added?.slice(0,10) || '—'}</Badge>
+        </div>
       </div>
     </div>
   )

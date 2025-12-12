@@ -73,13 +73,18 @@ function Header({order}){
   const tone = status==='settled' ? 'green' : status==='inspecting' ? 'blue' : 'amber'
   
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <div className="text-2xl font-bold">Повернення · #{order.order_id}</div>
-        <Badge tone={tone}>{status}</Badge>
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="text-xl md:text-2xl font-bold">Повернення #{order.order_id}</div>
+          <Badge tone={tone}>{status}</Badge>
+        </div>
       </div>
-      <div className="text-sm text-corp-text-main">
-        Видали: <b>{order.rent_issue_date || '—'}</b> · Повернення за планом: <b>{order.rent_return_date || '—'}</b> · Факт: <b>{todayISO()}</b>
+      {/* Mobile: stack dates vertically */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-1 sm:gap-3 text-sm text-corp-text-main">
+        <span>📅 Видали: <b>{order.rent_issue_date || '—'}</b></span>
+        <span>📆 План: <b>{order.rent_return_date || '—'}</b></span>
+        <span>✅ Факт: <b>{todayISO()}</b></span>
       </div>
     </div>
   )

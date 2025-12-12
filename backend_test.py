@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Washing and Restoration Tasks in Damage Cabinet
-Testing the task management workflow: Create → Filter → Update → Assign
+Backend Testing Script for Mobile OrderCard Component Testing
+Testing the mobile adaptation of OrderCard component on Manager Dashboard
 """
 
 import requests
 import json
 import sys
+import subprocess
+import os
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 

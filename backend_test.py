@@ -11,7 +11,7 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://rental-manager-54.preview.emergentagent.com/api"
+BASE_URL = "https://damage-cabinet-ui.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
@@ -631,7 +631,7 @@ def main():
     print("   4. ➕ Створення нового завдання на мийку")
     print("      - POST /api/tasks з правильною структурою даних")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
-    print("URL: https://rental-manager-54.preview.emergentagent.com")
+    print("URL: https://damage-cabinet-ui.preview.emergentagent.com")
     print("=" * 80)
     
     tester = TaskManagementTester(BASE_URL)

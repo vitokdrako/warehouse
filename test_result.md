@@ -1435,7 +1435,7 @@ if (card.status === 'issued') {
 
 ### API Response (для перевірки):
 ```bash
-curl https://rental-manager-54.preview.emergentagent.com/api/issue-cards
+curl https://damage-cabinet-ui.preview.emergentagent.com/api/issue-cards
 ```
 
 **4 issued cards знайдено:**
@@ -2000,7 +2000,7 @@ except Exception as e:
 
 #### 1. Backend API Endpoints
 **Credentials:** vitokdrako@gmail.com / test123  
-**URL:** https://rental-manager-54.preview.emergentagent.com
+**URL:** https://damage-cabinet-ui.preview.emergentagent.com
 
 #### 2. Таб "Головна" - Damage Cases API
 ```bash
@@ -2060,7 +2060,7 @@ GET /api/health
 #### 🔍 Детальна перевірка API:
 ```bash
 # Тестування з curl командами
-API_URL=https://rental-manager-54.preview.emergentagent.com
+API_URL=https://damage-cabinet-ui.preview.emergentagent.com
 curl -s "$API_URL/api/laundry/batches" -H "Authorization: Bearer TOKEN"
 # ✅ SUCCESS: Retrieved 0 batches
 

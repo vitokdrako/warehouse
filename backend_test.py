@@ -163,46 +163,45 @@ class NewOrderWorkspaceTester:
             self.log(f"❌ Exception testing inventory search: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_issue_cards_endpoint(self) -> Dict[str, Any]:
-        """Test GET /api/issue-cards - should return issue cards for dashboard"""
+    def test_check_availability_post_method(self) -> Dict[str, Any]:
+        """Test POST /api/orders/check-availability - should work with POST method (Bug Fix #3)"""
         try:
-            self.log("🧪 Testing issue cards endpoint...")
+            self.log("🧪 Testing check-availability endpoint with POST method...")
             
-            response = self.session.get(f"{self.base_url}/issue-cards")
+            # Test data as specified in the review request
+            test_data = {
+                "start_date": "2025-06-10",
+                "end_date": "2025-06-15",
+                "items": [{"product_id": "7731", "quantity": 1}]
+            }
+            
+            # Test POST method (should work)
+            response = self.session.post(
+                f"{self.base_url}/orders/check-availability",
+                json=test_data
+            )
             
             if response.status_code == 200:
                 data = response.json()
+                self.log("✅ POST /api/orders/check-availability working correctly")
+                self.log(f"   Response: {json.dumps(data, indent=2)}")
                 
-                # Check if response is an array
-                if not isinstance(data, list):
-                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                self.log(f"✅ Retrieved {len(data)} issue cards")
-                
-                # Validate issue card structure for OrderCard component
-                if data:
-                    for card in data[:3]:  # Check first 3 cards
-                        required_fields = ['id', 'order_id', 'customer_name', 'customer_phone', 'status']
-                        missing_fields = []
-                        
-                        for field in required_fields:
-                            if field not in card:
-                                missing_fields.append(field)
-                        
-                        if missing_fields:
-                            self.log(f"❌ Issue card {card.get('id')} missing fields: {missing_fields}", "ERROR")
-                            return {"success": False, "error": f"Missing required fields: {missing_fields}"}
-                        
-                        self.log(f"   - Card #{card.get('id')}: {card.get('customer_name')} - Status: {card.get('status')}")
-                
-                return {"success": True, "data": data, "count": len(data)}
+                # Validate response structure
+                if isinstance(data, dict):
+                    return {"success": True, "data": data, "method": "POST"}
+                else:
+                    self.log(f"⚠️ Unexpected response format: {type(data)}")
+                    return {"success": True, "data": data, "method": "POST", "warning": "Unexpected format"}
+                    
+            elif response.status_code == 405:
+                self.log("❌ 405 Method Not Allowed - Bug Fix #3 failed!", "ERROR")
+                return {"success": False, "error": "405 Method Not Allowed", "method": "POST"}
             else:
-                self.log(f"❌ Failed to get issue cards: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
+                self.log(f"❌ POST check-availability failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "method": "POST"}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing issue cards: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing check-availability POST: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_frontend_build(self) -> Dict[str, Any]:

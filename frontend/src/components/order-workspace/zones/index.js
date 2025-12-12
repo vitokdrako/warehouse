@@ -1,5 +1,6 @@
 // Експорт всіх zones
 export { default as ZoneClientSetup } from './ZoneClientSetup'
+export { default as ZoneClientForm } from './ZoneClientForm'
 export { default as ZonePlanDates } from './ZonePlanDates'
 export { default as ZoneAvailabilityGate } from './ZoneAvailabilityGate'
 export { default as ZoneCommercialSummary } from './ZoneCommercialSummary'

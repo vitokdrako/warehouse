@@ -1,6 +1,9 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react'
 import ZoneCard from '../ZoneCard'
+import axios from 'axios'
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 /**
  * Zone: Client Form - Форма клієнта для нового замовлення
@@ -12,7 +15,8 @@ export default function ZoneClientForm({
   clientPhone = '',
   clientEmail = '',
   clientType = 'retail',
-  manager = 'Вікторія',
+  managerId = null,
+  managerName = '',
   discount = 0,
   onUpdate,
   readOnly = false,
@@ -21,8 +25,37 @@ export default function ZoneClientForm({
   const [localPhone, setLocalPhone] = useState(clientPhone)
   const [localEmail, setLocalEmail] = useState(clientEmail)
   const [localType, setLocalType] = useState(clientType)
-  const [localManager, setLocalManager] = useState(manager)
+  const [localManagerId, setLocalManagerId] = useState(managerId)
   const [localDiscount, setLocalDiscount] = useState(discount)
+  
+  // Список менеджерів з API
+  const [managers, setManagers] = useState([])
+  const [loadingManagers, setLoadingManagers] = useState(false)
+  
+  // Завантаження менеджерів
+  useEffect(() => {
+    loadManagers()
+  }, [])
+  
+  const loadManagers = async () => {
+    try {
+      setLoadingManagers(true)
+      const response = await axios.get(`${BACKEND_URL}/api/admin/staff`)
+      if (response.data.managers) {
+        setManagers(response.data.managers)
+        // Якщо менеджер не вибраний, вибираємо першого
+        if (!localManagerId && response.data.managers.length > 0) {
+          setLocalManagerId(response.data.managers[0].user_id)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading managers:', error)
+      // Fallback до порожнього списку
+      setManagers([])
+    } finally {
+      setLoadingManagers(false)
+    }
+  }
   
   // Оновлення локальних станів при зміні пропсів
   useEffect(() => {
@@ -30,23 +63,26 @@ export default function ZoneClientForm({
     setLocalPhone(clientPhone)
     setLocalEmail(clientEmail)
     setLocalType(clientType)
-    setLocalManager(manager)
+    setLocalManagerId(managerId)
     setLocalDiscount(discount)
-  }, [clientName, clientPhone, clientEmail, clientType, manager, discount])
+  }, [clientName, clientPhone, clientEmail, clientType, managerId, discount])
   
   // Автоматичне оновлення при зміні полів
   useEffect(() => {
+    const selectedManager = managers.find(m => m.user_id === localManagerId)
     onUpdate?.({
       name: localName,
       phone: localPhone,
       email: localEmail,
       type: localType,
-      manager: localManager,
+      managerId: localManagerId,
+      managerName: selectedManager?.full_name || '',
       discount: localDiscount,
     })
-  }, [localName, localPhone, localEmail, localType, localManager, localDiscount])
+  }, [localName, localPhone, localEmail, localType, localManagerId, localDiscount, managers])
   
-  const managerOptions = ['Вікторія', 'Богдан', 'Олена', 'Інший']
+  // Отримання імені вибраного менеджера
+  const selectedManagerName = managers.find(m => m.user_id === localManagerId)?.full_name || 'Не вибрано'
   
   return (
     <ZoneCard
@@ -148,14 +184,25 @@ export default function ZoneClientForm({
           <div>
             <label className="text-xs text-slate-500 block mb-1">Менеджер</label>
             {readOnly ? (
-              <div className="font-medium text-slate-800">{localManager}</div>
+              <div className="font-medium text-slate-800">{selectedManagerName}</div>
             ) : (
               <select
-                value={localManager}
-                onChange={(e) => setLocalManager(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none"
+                value={localManagerId || ''}
+                onChange={(e) => setLocalManagerId(parseInt(e.target.value) || null)}
+                disabled={loadingManagers}
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none disabled:bg-slate-100"
               >
-                {managerOptions.map(m => <option key={m} value={m}>{m}</option>)}
+                {loadingManagers ? (
+                  <option>Завантаження...</option>
+                ) : managers.length === 0 ? (
+                  <option value="">Немає менеджерів</option>
+                ) : (
+                  managers.map(m => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.full_name} ({m.role === 'admin' ? 'Адмін' : m.role === 'manager' ? 'Менеджер' : m.role === 'office_manager' ? 'Офіс' : m.role})
+                    </option>
+                  ))
+                )}
               </select>
             )}
           </div>

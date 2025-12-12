@@ -78,43 +78,51 @@ class MobileOrderCardTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_tasks_filter_by_type(self, task_type: str) -> Dict[str, Any]:
-        """Test GET /api/tasks?task_type={type} - should return filtered tasks"""
+    def test_orders_awaiting_customer(self) -> Dict[str, Any]:
+        """Test GET /api/orders?status=awaiting_customer - should return orders for OrderCard"""
         try:
-            self.log(f"🧪 Testing tasks filtering by type: {task_type}...")
+            self.log("🧪 Testing orders awaiting customer endpoint...")
             
-            response = self.session.get(f"{self.base_url}/tasks?task_type={task_type}")
+            response = self.session.get(f"{self.base_url}/orders?status=awaiting_customer")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response is an array
-                if not isinstance(data, list):
-                    self.log(f"❌ Expected array, got {type(data)}", "ERROR")
+                # Check if response has orders array
+                if not isinstance(data, dict) or 'orders' not in data:
+                    self.log(f"❌ Expected dict with 'orders' key, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Retrieved {len(data)} tasks with type '{task_type}'")
+                orders = data['orders']
+                if not isinstance(orders, list):
+                    self.log(f"❌ Expected orders array, got {type(orders)}", "ERROR")
+                    return {"success": False, "data": data}
                 
-                # Validate that all tasks have the correct type
-                if data:
-                    for task in data:
-                        if task.get('task_type') != task_type:
-                            self.log(f"❌ Task {task.get('id')} has wrong type: {task.get('task_type')}", "ERROR")
-                            return {"success": False, "error": "Wrong task type in results"}
-                    
-                    self.log(f"✅ All tasks have correct type '{task_type}'")
-                    
-                    # Log some examples
-                    for task in data[:3]:  # Show first 3
-                        self.log(f"   - Task {task.get('id')}: {task.get('title')} (Status: {task.get('status')})")
+                self.log(f"✅ Retrieved {len(orders)} awaiting customer orders")
                 
-                return {"success": True, "data": data, "count": len(data)}
+                # Validate order structure for OrderCard component
+                if orders:
+                    for order in orders[:3]:  # Check first 3 orders
+                        required_fields = ['id', 'order_number', 'client_name', 'client_phone', 'total_rental', 'total_deposit']
+                        missing_fields = []
+                        
+                        for field in required_fields:
+                            if field not in order:
+                                missing_fields.append(field)
+                        
+                        if missing_fields:
+                            self.log(f"❌ Order {order.get('id')} missing fields: {missing_fields}", "ERROR")
+                            return {"success": False, "error": f"Missing required fields: {missing_fields}"}
+                        
+                        self.log(f"   - Order #{order.get('order_number')}: {order.get('client_name')} - ₴{order.get('total_rental', 0)}")
+                
+                return {"success": True, "data": orders, "count": len(orders)}
             else:
-                self.log(f"❌ Failed to filter tasks by type: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get awaiting customer orders: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing task filtering: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing awaiting customer orders: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_task_creation(self, task_type: str) -> Dict[str, Any]:

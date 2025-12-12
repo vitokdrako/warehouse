@@ -81,51 +81,86 @@ class NewOrderWorkspaceTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_orders_awaiting_customer(self) -> Dict[str, Any]:
-        """Test GET /api/orders?status=awaiting_customer - should return orders for OrderCard"""
+    def test_inventory_search_rent_price(self) -> Dict[str, Any]:
+        """Test GET /api/orders/inventory/search - should return rent_price field (Bug Fix #1)"""
         try:
-            self.log("🧪 Testing orders awaiting customer endpoint...")
+            self.log("🧪 Testing inventory search for rent_price field...")
             
-            response = self.session.get(f"{self.base_url}/orders?status=awaiting_customer")
+            # Search for "ваза" as specified in the review request
+            response = self.session.get(f"{self.base_url}/orders/inventory/search?query=ваза&limit=3")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response has orders array
-                if not isinstance(data, dict) or 'orders' not in data:
-                    self.log(f"❌ Expected dict with 'orders' key, got {type(data)}", "ERROR")
+                # Check if response has products array
+                if not isinstance(data, dict) or 'products' not in data:
+                    self.log(f"❌ Expected dict with 'products' key, got {type(data)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                orders = data['orders']
-                if not isinstance(orders, list):
-                    self.log(f"❌ Expected orders array, got {type(orders)}", "ERROR")
+                products = data['products']
+                if not isinstance(products, list):
+                    self.log(f"❌ Expected products array, got {type(products)}", "ERROR")
                     return {"success": False, "data": data}
                 
-                self.log(f"✅ Retrieved {len(orders)} awaiting customer orders")
+                self.log(f"✅ Retrieved {len(products)} products for 'ваза' search")
                 
-                # Validate order structure for OrderCard component
-                if orders:
-                    for order in orders[:3]:  # Check first 3 orders
-                        required_fields = ['id', 'order_number', 'client_name', 'client_phone', 'total_rental', 'total_deposit']
-                        missing_fields = []
-                        
-                        for field in required_fields:
-                            if field not in order:
-                                missing_fields.append(field)
-                        
-                        if missing_fields:
-                            self.log(f"❌ Order {order.get('id')} missing fields: {missing_fields}", "ERROR")
-                            return {"success": False, "error": f"Missing required fields: {missing_fields}"}
-                        
-                        self.log(f"   - Order #{order.get('order_number')}: {order.get('client_name')} - ₴{order.get('total_rental', 0)}")
+                # Validate that rent_price field exists (Bug Fix #1)
+                rent_price_found = False
+                price_vs_rent_price = []
                 
-                return {"success": True, "data": orders, "count": len(orders)}
+                for product in products:
+                    required_fields = ['product_id', 'name', 'price', 'rent_price']
+                    missing_fields = []
+                    
+                    for field in required_fields:
+                        if field not in product:
+                            missing_fields.append(field)
+                    
+                    if missing_fields:
+                        self.log(f"❌ Product {product.get('product_id')} missing fields: {missing_fields}", "ERROR")
+                        return {"success": False, "error": f"Missing required fields: {missing_fields}"}
+                    
+                    # Check rent_price exists and is different from price
+                    rent_price = product.get('rent_price', 0)
+                    price = product.get('price', 0)
+                    
+                    if rent_price > 0:
+                        rent_price_found = True
+                    
+                    price_vs_rent_price.append({
+                        "name": product.get('name'),
+                        "price": price,  # Damage cost
+                        "rent_price": rent_price  # Rental price per day
+                    })
+                    
+                    self.log(f"   - {product.get('name')}: price=₴{price}, rent_price=₴{rent_price}")
+                
+                if not rent_price_found:
+                    self.log("❌ No products with rent_price > 0 found", "ERROR")
+                    return {"success": False, "error": "rent_price field missing or zero"}
+                
+                # Verify rent_price is typically much lower than price (damage cost)
+                valid_pricing = True
+                for item in price_vs_rent_price:
+                    if item['rent_price'] > 0 and item['price'] > 0:
+                        if item['rent_price'] >= item['price']:
+                            self.log(f"⚠️ Suspicious pricing for {item['name']}: rent_price (₴{item['rent_price']}) >= price (₴{item['price']})")
+                            valid_pricing = False
+                
+                return {
+                    "success": True, 
+                    "data": products, 
+                    "count": len(products),
+                    "rent_price_found": rent_price_found,
+                    "pricing_data": price_vs_rent_price,
+                    "valid_pricing": valid_pricing
+                }
             else:
-                self.log(f"❌ Failed to get awaiting customer orders: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to search inventory: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing awaiting customer orders: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing inventory search: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_issue_cards_endpoint(self) -> Dict[str, Any]:

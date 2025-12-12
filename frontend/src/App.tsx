@@ -19,6 +19,7 @@ import FinanceCabinet from './pages/FinanceCabinet';
 import NewOrderClean from './pages/NewOrderClean';
 import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderView from './pages/NewOrderView';
+import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';
 import IssueOrderClean from './pages/IssueOrderClean';
 import IssueCard from './pages/IssueCard';
 import ReturnOrderClean from './pages/ReturnOrderClean';

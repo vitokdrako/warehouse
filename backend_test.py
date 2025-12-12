@@ -167,48 +167,55 @@ class MobileOrderCardTester:
             self.log(f"❌ Exception testing issue cards: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
-    def test_task_status_update(self, task_id: str, new_status: str) -> Dict[str, Any]:
-        """Test PUT /api/tasks/{task_id} - should update task status"""
+    def test_frontend_build(self) -> Dict[str, Any]:
+        """Test that frontend builds successfully with yarn build"""
         try:
-            self.log(f"🧪 Testing task status update: {task_id} -> {new_status}...")
+            self.log("🧪 Testing frontend build process...")
             
-            update_data = {"status": new_status}
+            # Change to frontend directory
+            frontend_dir = "/app/frontend"
+            if not os.path.exists(frontend_dir):
+                self.log(f"❌ Frontend directory not found: {frontend_dir}", "ERROR")
+                return {"success": False, "error": "Frontend directory not found"}
             
-            response = self.session.put(
-                f"{self.base_url}/tasks/{task_id}",
-                json=update_data
+            # Run yarn build
+            result = subprocess.run(
+                ["yarn", "build"],
+                cwd=frontend_dir,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minutes timeout
             )
             
-            if response.status_code == 200:
-                data = response.json()
+            if result.returncode == 0:
+                self.log("✅ Frontend build successful")
+                self.log(f"   Build output: {len(result.stdout.splitlines())} lines")
                 
-                # Check if update message was successful
-                if data.get('message') != "Task updated successfully":
-                    self.log(f"❌ Status update failed: {data.get('message')}", "ERROR")
-                    return {"success": False, "data": data}
+                # Check if build directory exists
+                build_dir = os.path.join(frontend_dir, "build")
+                if os.path.exists(build_dir):
+                    self.log(f"   Build directory created: {build_dir}")
+                    
+                    # Check for key files
+                    key_files = ["index.html", "static"]
+                    for file in key_files:
+                        file_path = os.path.join(build_dir, file)
+                        if os.path.exists(file_path):
+                            self.log(f"   ✅ Found: {file}")
+                        else:
+                            self.log(f"   ⚠️ Missing: {file}")
                 
-                # Verify the update by fetching the task
-                verify_response = self.session.get(f"{self.base_url}/tasks/{task_id}")
-                if verify_response.status_code == 200:
-                    task_data = verify_response.json()
-                    if task_data.get('status') == new_status:
-                        self.log(f"✅ Task status updated successfully")
-                        self.log(f"   Task ID: {task_id}")
-                        self.log(f"   New Status: {task_data.get('status')}")
-                        return {"success": True, "data": task_data}
-                    else:
-                        self.log(f"❌ Status verification failed: expected {new_status}, got {task_data.get('status')}", "ERROR")
-                        return {"success": False, "data": task_data}
-                else:
-                    self.log(f"❌ Failed to verify task update: {verify_response.status_code}", "ERROR")
-                    return {"success": False, "status_code": verify_response.status_code}
-                
+                return {"success": True, "output": result.stdout}
             else:
-                self.log(f"❌ Failed to update task status: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
+                self.log(f"❌ Frontend build failed with exit code: {result.returncode}", "ERROR")
+                self.log(f"   Error output: {result.stderr}", "ERROR")
+                return {"success": False, "error": result.stderr, "exit_code": result.returncode}
                 
+        except subprocess.TimeoutExpired:
+            self.log("❌ Frontend build timed out after 5 minutes", "ERROR")
+            return {"success": False, "error": "Build timeout"}
         except Exception as e:
-            self.log(f"❌ Exception testing task status update: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing frontend build: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     
     def test_task_assignment(self, task_id: str, assignee: str) -> Dict[str, Any]:

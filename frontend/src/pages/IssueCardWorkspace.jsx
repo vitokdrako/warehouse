@@ -275,7 +275,8 @@ export default function IssueCardWorkspace() {
           location_state: it.location?.state
         })),
         checklist: checklistObj,
-        preparation_notes: notes
+        preparation_notes: notes,
+        requisitors: selectedRequisitors
       })
       
       toast({ title: '✅ Успіх', description: 'Прогрес збережено' })

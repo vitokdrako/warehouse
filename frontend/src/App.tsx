@@ -22,6 +22,7 @@ import NewOrderView from './pages/NewOrderView';
 import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';
 import IssueOrderClean from './pages/IssueOrderClean';
 import IssueCard from './pages/IssueCard';
+import IssueCardWorkspace from './pages/IssueCardWorkspace';
 import ReturnOrderClean from './pages/ReturnOrderClean';
 import InventoryRecount from './pages/InventoryRecount';
 import OrdersArchive from './pages/OrdersArchive';

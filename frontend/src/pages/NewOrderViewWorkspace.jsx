@@ -219,8 +219,8 @@ export default function NewOrderViewWorkspace() {
             
             if (conflictType) {
               return {
-                sku: item.article || item.inventory_id,
-                name: item.name,
+                sku: item.sku || item.article || item.product_id,
+                name: item.product_name || item.name,
                 type: conflictType,
                 level,
                 available: item.available_quantity,

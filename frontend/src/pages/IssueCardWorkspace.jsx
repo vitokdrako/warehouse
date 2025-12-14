@@ -135,6 +135,11 @@ export default function IssueCardWorkspace() {
         })))
       }
       
+      // Реквізитори (комплектувальники)
+      if (issueCardData.requisitors) {
+        setSelectedRequisitors(issueCardData.requisitors)
+      }
+      
       // Товари
       const itemsSource = (issueCardData.items?.length > 0) 
         ? issueCardData.items 

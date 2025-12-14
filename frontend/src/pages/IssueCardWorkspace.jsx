@@ -23,6 +23,7 @@ import {
   ZoneDocuments,
   ZoneNotes,
   ZoneCommercialSummary,
+  ZoneRequisitors,
 } from '../components/order-workspace/zones'
 
 import DamageModal from '../components/DamageModal'

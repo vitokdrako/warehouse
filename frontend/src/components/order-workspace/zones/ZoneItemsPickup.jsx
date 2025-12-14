@@ -210,7 +210,7 @@ function ItemPickupCard({
       
       {/* Пакування */}
       <div className="flex flex-wrap gap-2 mb-3">
-        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[100px]">
+        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[90px]">
           <input 
             type="checkbox" 
             checked={item.packaging?.cover || false} 
@@ -220,7 +220,7 @@ function ItemPickupCard({
           />
           <span className="text-sm">Чохол</span>
         </label>
-        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[100px]">
+        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[90px]">
           <input 
             type="checkbox" 
             checked={item.packaging?.box || false} 
@@ -230,7 +230,7 @@ function ItemPickupCard({
           />
           <span className="text-sm">Коробка</span>
         </label>
-        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[100px]">
+        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[90px]">
           <input 
             type="checkbox" 
             checked={item.packaging?.stretch || false} 
@@ -239,6 +239,16 @@ function ItemPickupCard({
             className="w-4 h-4 rounded" 
           />
           <span className="text-sm">Стретч</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[90px]">
+          <input 
+            type="checkbox" 
+            checked={item.packaging?.black_case || false} 
+            onChange={(e) => !readOnly && onPackagingChange?.(item.id, 'black_case', e.target.checked)} 
+            disabled={readOnly}
+            className="w-4 h-4 rounded" 
+          />
+          <span className="text-sm">Чорний кейс</span>
         </label>
       </div>
       

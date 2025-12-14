@@ -25,11 +25,12 @@ export default function ZoneRequisitors({
   
   const loadRequisitors = async () => {
     try {
-      // Завантажуємо реквізиторів та складських працівників
-      const response = await axios.get(`${BACKEND_URL}/api/staff`, {
-        params: { roles: 'requisitor,warehouse,admin,manager' }
-      })
-      setRequisitors(response.data || [])
+      // Завантажуємо всіх працівників
+      const response = await axios.get(`${BACKEND_URL}/api/admin/staff`)
+      // API повертає { managers, requisitors, all }
+      // Беремо всіх - реквізиторів та менеджерів для вибору
+      const allStaff = response.data?.all || response.data?.requisitors || []
+      setRequisitors(allStaff)
     } catch (err) {
       console.error('Error loading requisitors:', err)
       // Fallback список

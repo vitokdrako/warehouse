@@ -429,7 +429,9 @@ setTimeout(()=>window.print(),500);
         onPrimaryAction={isProcessing ? markReady : isReadyForIssue ? markIssued : undefined}
         primaryLabel={isProcessing ? '✅ Готово до видачі' : isReadyForIssue ? '🚚 Видати клієнту' : undefined}
         primaryDisabled={saving || (isProcessing && !canMarkReady)}
-        primaryDisabledReason={isProcessing && !canMarkReady ? 'Завершіть комплектування' : ''}
+        primaryDisabledReason={isProcessing && !canMarkReady 
+          ? (!hasRequisitors ? 'Оберіть комплектувальника' : 'Завершіть комплектування та чеклист') 
+          : ''}
         onSave={!isIssued ? saveProgress : undefined}
         saving={saving}
         showSave={!isIssued}

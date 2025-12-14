@@ -1427,7 +1427,7 @@ async def update_decor_order(
         'return_time': 'return_time',
         'rental_days': 'rental_days',
         'manager_comment': 'manager_comment',
-        'discount': 'discount',
+        'discount': 'discount_amount',  # Frontend: discount -> DB: discount_amount
         'manager_id': 'manager_id'
     }
     

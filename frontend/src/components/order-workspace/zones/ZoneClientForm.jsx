@@ -148,40 +148,6 @@ export default function ZoneClientForm({
         {/* Права колонка - налаштування */}
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-slate-500 block mb-1">Тип клієнта</label>
-            {readOnly ? (
-              <div className="font-medium text-slate-800">
-                {localType === 'wholesale' ? '🏢 Опт' : '👤 Роздріб'}
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLocalType('retail')}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                    localType === 'retail' 
-                      ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  👤 Роздріб
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLocalType('wholesale')}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                    localType === 'wholesale' 
-                      ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  🏢 Опт
-                </button>
-              </div>
-            )}
-          </div>
-          
-          <div>
             <label className="text-xs text-slate-500 block mb-1">Менеджер</label>
             {readOnly ? (
               <div className="font-medium text-slate-800">{selectedManagerName}</div>

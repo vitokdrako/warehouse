@@ -81,11 +81,6 @@ export default function IssueCardWorkspace() {
   const [damageModal, setDamageModal] = useState({ open: false, itemId: null })
 
   // === ЗАВАНТАЖЕННЯ ===
-  useEffect(() => {
-    if (!id) return
-    loadIssueCard()
-  }, [id])
-
   const loadIssueCard = async () => {
     try {
       setLoading(true)

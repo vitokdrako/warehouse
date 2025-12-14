@@ -1407,10 +1407,42 @@ async def update_decor_order(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Оновити замовлення (алиас для PUT /orders/{order_id})
+    Оновити замовлення (спрощена версія для decor orders)
     ✅ MIGRATED: Using RentalHub DB
     """
-    return await update_order(order_id=order_id, data=order_data, db=db)
+    # Перевірити чи існує замовлення
+    result = db.execute(text("SELECT order_id FROM orders WHERE order_id = :id"), {"id": order_id})
+    if not result.fetchone():
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Build update
+    set_clauses = []
+    params = {"order_id": order_id}
+    
+    # Mapping frontend field names to DB field names
+    field_mapping = {
+        'rental_start_date': 'rental_start_date',
+        'rental_end_date': 'rental_end_date',
+        'issue_time': 'issue_time',
+        'return_time': 'return_time',
+        'rental_days': 'rental_days',
+        'manager_comment': 'manager_comment',
+        'discount': 'discount',
+        'manager_id': 'manager_id'
+    }
+    
+    for frontend_field, db_field in field_mapping.items():
+        if frontend_field in order_data:
+            set_clauses.append(f"{db_field} = :{db_field}")
+            params[db_field] = order_data[frontend_field]
+    
+    if set_clauses:
+        set_clauses.append("updated_at = NOW()")
+        sql = f"UPDATE orders SET {', '.join(set_clauses)} WHERE order_id = :order_id"
+        db.execute(text(sql), params)
+        db.commit()
+    
+    return {"message": "Order updated", "order_id": order_id}
 
 
 @decor_router.put("/{order_id}/status")

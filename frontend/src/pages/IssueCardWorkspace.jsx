@@ -245,8 +245,9 @@ export default function IssueCardWorkspace() {
   const allPicked = useMemo(() => items.every(it => it.picked_qty >= it.qty), [items])
   const allSerialsOk = useMemo(() => items.every(it => it.serials.length === 0 || it.scanned.length >= it.qty), [items])
   const checklistOk = useMemo(() => checklist.filter(c => c.required).every(c => c.checked), [checklist])
+  const hasRequisitors = selectedRequisitors.length > 0
   
-  const canMarkReady = allPicked && allSerialsOk && checklistOk
+  const canMarkReady = allPicked && allSerialsOk && checklistOk && hasRequisitors
   
   const issueCardStatus = issueCard?.status || 'preparation'
   const isProcessing = issueCardStatus === 'preparation'

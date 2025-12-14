@@ -199,6 +199,11 @@ export default function IssueCardWorkspace() {
     }
   }
 
+  useEffect(() => {
+    if (!id) return
+    loadIssueCard()
+  }, [id])
+
   // === ОБРОБНИКИ ===
   const handlePick = (itemId, newPickedQty) => {
     setItems(items => items.map(it => 

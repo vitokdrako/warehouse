@@ -246,6 +246,15 @@ function App() {
           />
           
           <Route 
+            path="/issue-workspace/:id" 
+            element={
+              <ProtectedRoute>
+                <IssueCardWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
             path="/orders/return" 
             element={
               <ProtectedRoute>

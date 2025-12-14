@@ -71,6 +71,9 @@ export default function IssueCardWorkspace() {
   // Документи
   const [documents, setDocuments] = useState({ waybill: false, act: false })
   
+  // Реквізитори (комплектувальники)
+  const [selectedRequisitors, setSelectedRequisitors] = useState([])
+  
   // Таймлайн
   const [timeline, setTimeline] = useState([])
   

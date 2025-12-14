@@ -445,6 +445,13 @@ setTimeout(()=>window.print(),500);
       >
         {/* === WORKSPACE ZONES === */}
         
+        {/* Реквізитори (комплектувальники) */}
+        <ZoneRequisitors
+          selectedIds={selectedRequisitors}
+          onSelectionChange={setSelectedRequisitors}
+          readOnly={isIssued}
+        />
+        
         {/* Комплектування */}
         <ZoneItemsPickup
           items={items}

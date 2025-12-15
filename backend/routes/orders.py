@@ -786,14 +786,14 @@ async def create_order(
     for item in order.items:
         db.execute(text("""
             INSERT INTO order_items (
-                order_id, product_id, name, quantity, price_per_day, total_rental
+                order_id, product_id, product_name, quantity, price, total_rental
             ) VALUES (
-                :order_id, :product_id, :name, :quantity, :price, :total
+                :order_id, :product_id, :product_name, :quantity, :price, :total
             )
         """), {
             "order_id": order_id,
-            "product_id": item.get('product_id'),
-            "name": item.get('name'),
+            "product_id": item.get('product_id') or item.get('inventory_id'),
+            "product_name": item.get('name') or item.get('product_name'),
             "quantity": item.get('quantity', 1),
             "price": item.get('price_per_day', 0),
             "total": item.get('total_rental', 0)

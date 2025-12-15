@@ -200,12 +200,6 @@ function TopBar({ mode, setMode, query, setQuery, show, setShow }) {
 /************* ItemCard Component *************/
 function ItemCard({ item, onOpen, onMoveStart, isCompact, navigate }) {
   const laneInfo = laneMeta[item.lane] || laneMeta[LANE.ISSUE];
-  
-  const tone = item.tags?.includes('danger') ? 'danger'
-    : item.tags?.includes('warn') || item.tags?.includes('unpaid') || item.tags?.includes('urgent') ? 'warn'
-    : item.tags?.includes('info') ? 'info'
-    : item.tags?.includes('ok') || item.tags?.includes('paid') ? 'ok'
-    : 'neutral';
 
   const handleNavigate = (e) => {
     e.stopPropagation();
@@ -228,7 +222,7 @@ function ItemCard({ item, onOpen, onMoveStart, isCompact, navigate }) {
     <div
       className={cls(
         'group relative w-full overflow-hidden rounded border bg-white cursor-pointer transition-all',
-        isCompact ? 'p-2' : 'p-3',
+        'p-2',
         'hover:shadow-md hover:border-corp-primary/50',
         laneInfo.borderClass
       )}
@@ -237,42 +231,46 @@ function ItemCard({ item, onOpen, onMoveStart, isCompact, navigate }) {
       {/* Color rail */}
       <div className={cls('absolute left-0 top-0 h-full w-1', laneInfo.railColor)} />
       
-      <div className="flex items-start justify-between gap-2 pl-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="rounded border border-corp-border px-1.5 py-0.5 text-[10px] font-semibold text-corp-text-muted bg-corp-bg-light">
-              {laneInfo.chip}
-            </span>
-            <Badge tone={tone}>{item.status || tone}</Badge>
-            {item.time && <span className="text-xs text-corp-text-muted">{item.time}</span>}
-          </div>
-          <div className={cls('mt-1 font-semibold truncate text-corp-text-dark', isCompact ? 'text-sm' : 'text-base')}>
+      <div className="pl-2">
+        {/* Title + Order code on same line */}
+        <div className="flex items-center gap-2">
+          <span className={cls('font-semibold text-sm truncate', laneInfo.textClass)}>
             {item.title}
-          </div>
-          {!isCompact && item.meta && (
-            <div className="mt-0.5 text-sm text-corp-text-main truncate">{item.meta}</div>
-          )}
+          </span>
           {item.orderCode && (
-            <div className="mt-1 text-xs font-mono text-corp-text-muted">{item.orderCode}</div>
+            <span className="text-[10px] font-mono text-corp-text-muted shrink-0">{item.orderCode}</span>
           )}
         </div>
-
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-            <button
-              className="corp-btn corp-btn-secondary !px-2 !py-1 !text-xs"
-              onClick={(e) => { e.stopPropagation(); onOpen(item); }}
-            >
-              Деталі
-            </button>
-            <button
-              className="corp-btn corp-btn-secondary !px-2 !py-1 !text-xs"
-              onClick={(e) => { e.stopPropagation(); onMoveStart(item); }}
-              title="Перемістити"
-            >
-              Move
-            </button>
-          </div>
+        
+        {/* Status badge */}
+        {item.status && (
+          <span className={cls(
+            'inline-block mt-1 rounded px-1.5 py-0.5 text-[10px] font-medium',
+            laneInfo.bgClass, laneInfo.textClass
+          )}>
+            {item.status}
+          </span>
+        )}
+        
+        {/* Meta info - only in detailed mode */}
+        {!isCompact && item.meta && (
+          <p className="mt-1 text-xs text-corp-text-muted truncate">{item.meta}</p>
+        )}
+        
+        {/* Hover actions */}
+        <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition">
+          <button
+            className="rounded border border-corp-border bg-corp-bg-light px-1.5 py-0.5 text-[10px] text-corp-text-main hover:bg-white"
+            onClick={(e) => { e.stopPropagation(); onOpen(item); }}
+          >
+            Деталі
+          </button>
+          <button
+            className="rounded border border-corp-border bg-corp-bg-light px-1.5 py-0.5 text-[10px] text-corp-text-main hover:bg-white"
+            onClick={(e) => { e.stopPropagation(); onMoveStart(item); }}
+          >
+            Перенести
+          </button>
         </div>
       </div>
     </div>

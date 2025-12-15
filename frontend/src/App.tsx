@@ -13,7 +13,7 @@ import TasksCabinet from './pages/TasksCabinet';
 import PackingCabinet from './pages/PackingCabinet';
 import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
-import CalendarBoardNew from './pages/CalendarBoardNew';
+import UniversalOpsCalendar from './pages/UniversalOpsCalendar';
 import CatalogBoard from './pages/CatalogBoard';
 import FinanceCabinet from './pages/FinanceCabinet';
 // New unified workspace components

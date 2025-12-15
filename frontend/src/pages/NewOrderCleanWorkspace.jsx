@@ -119,12 +119,7 @@ export default function NewOrderClean() {
     }
   }, [items, rentalDays, discount])
   
-  // Оновлення застави при зміні розрахунків
-  useEffect(() => {
-    if (depositAmount === 0 && calculations.estimatedDeposit > 0) {
-      setDepositAmount(Math.round(calculations.estimatedDeposit))
-    }
-  }, [calculations.estimatedDeposit])
+  // Removed deposit amount auto-update
   
   // === ОБРОБНИКИ ===
   const handleAddItem = () => {

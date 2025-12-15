@@ -544,49 +544,6 @@ export default function ManagerDashboard() {
         </Column>
       </main>
 
-      {/* Bottom nav */}
-      <section className="mx-auto max-w-7xl px-6 pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <NavCard 
-            title="💰 Фінанси" 
-            description="Платежі, рахунки, застави"
-            onClick={() => navigate('/finance')}
-          />
-          <NavCard 
-            title="📅 Календар" 
-            description="Події, картки видачі/повернення"
-            onClick={() => navigate('/calendar')}
-          />
-          <NavCard 
-            title="📦 Каталог" 
-            description="Товари, керування наборами"
-            onClick={() => navigate('/catalog')}
-          />
-          <NavCard 
-            title="⚠️ Шкоди PRO" 
-            description="Кейси пошкоджень, реставрація"
-            onClick={() => navigate('/damages')}
-          />
-          <NavCard 
-            title="🧾 Завдання PRO" 
-            description="Kanban дошка, мийка, збір"
-            onClick={() => navigate('/tasks')}
-          />
-          <NavCard 
-            title="🔍 Переоблік PRO" 
-            description="Каталог декору, історія оренд"
-            onClick={() => navigate('/reaudit')}
-          />
-          {user?.role === 'admin' && (
-            <NavCard 
-              title="⚙️ Адмін-панель" 
-              description="Користувачі, категорії, налаштування"
-              onClick={() => navigate('/admin')}
-            />
-          )}
-        </div>
-      </section>
-
       <footer className="border-t border-corp-border-light py-8 text-center text-corp-text-muted text-sm">
         <p className="font-montserrat">© 2024 Rental Hub • Система управління орендою</p>
         <p className="text-xs mt-2 text-corp-text-muted">Powered by <span className="text-corp-primary font-semibold">FarforRent</span></p>

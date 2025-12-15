@@ -55,10 +55,12 @@ def parse_issue_card(row, db: Session = None):
     if db:
         for item in items:
             if 'sku' in item:
-                # Завантажуємо дані товару (image, price, quantity)
+                # Завантажуємо дані товару (image, price, quantity, location)
                 product_result = db.execute(text("""
-                    SELECT p.product_id, p.image_url, p.price, p.rental_price, p.quantity
+                    SELECT p.product_id, p.image_url, p.price, p.rental_price, p.quantity,
+                           i.zone, i.aisle, i.shelf
                     FROM products p
+                    LEFT JOIN inventory i ON p.product_id = i.product_id
                     WHERE p.sku = :sku LIMIT 1
                 """), {"sku": item['sku']})
                 product_row = product_result.fetchone()
@@ -76,6 +78,17 @@ def parse_issue_card(row, db: Session = None):
                         item['deposit'] = float(product_row[2]) if product_row[2] else 0
                     if not item.get('damage_cost'):
                         item['damage_cost'] = float(product_row[2]) if product_row[2] else 0
+                    
+                    # Додаємо локацію на складі
+                    zone = product_row[5]
+                    aisle = product_row[6]
+                    shelf = product_row[7]
+                    if zone or aisle or shelf:
+                        item['location'] = {
+                            'zone': zone,
+                            'aisle': aisle,
+                            'shelf': shelf
+                        }
                     
                     # ВАЖЛИВО: Рахуємо статуси з order_items (так само як availability_checker)
                     # Зарезервовано (заморожено) - статуси processing, ready_for_issue, issued, on_rent

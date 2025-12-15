@@ -59,12 +59,6 @@ export default function NewOrderClean() {
   const [deliveryAddress, setDeliveryAddress] = useState('')
   const [deliveryInstructions, setDeliveryInstructions] = useState('')
   
-  // Застава
-  const [depositAmount, setDepositAmount] = useState(0)
-  const [depositMethod, setDepositMethod] = useState('Картка (холд)')
-  const [depositRelease, setDepositRelease] = useState('Після приймання')
-  const [depositNote, setDepositNote] = useState('')
-  
   // Нотатки
   const [notes, setNotes] = useState('')
   

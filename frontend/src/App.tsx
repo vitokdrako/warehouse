@@ -190,28 +190,10 @@ function App() {
           />
           
           <Route 
-            path="/orders/new-old" 
-            element={
-              <ProtectedRoute>
-                <NewOrderClean />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
             path="/order/:id/view" 
             element={
               <ProtectedRoute>
                 <NewOrderViewWorkspace />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/order/:id/view-old" 
-            element={
-              <ProtectedRoute>
-                <NewOrderView />
               </ProtectedRoute>
             } 
           />
@@ -238,7 +220,7 @@ function App() {
             path="/orders/issue" 
             element={
               <ProtectedRoute>
-                <IssueOrderClean />
+                <IssueCardWorkspace />
               </ProtectedRoute>
             } 
           />

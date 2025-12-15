@@ -155,13 +155,6 @@ export default function NewOrderClean() {
     setDeliveryInstructions(delivery.instructions)
   }
   
-  const handleDepositUpdate = (deposit) => {
-    setDepositAmount(deposit.amount)
-    setDepositMethod(deposit.method)
-    setDepositRelease(deposit.releaseCondition)
-    setDepositNote(deposit.note)
-  }
-  
   // === СТВОРЕННЯ ЗАМОВЛЕННЯ ===
   const handleCreateOrder = async () => {
     // Валідація

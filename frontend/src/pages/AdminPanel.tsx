@@ -62,6 +62,12 @@ export default function AdminPanel() {
     description: '',
     sort_order: 0
   })
+  
+  // Password reset
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [passwordUserId, setPasswordUserId] = useState<number | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   useEffect(() => {
     if (activeTab === 'users') {

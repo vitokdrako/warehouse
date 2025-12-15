@@ -268,12 +268,59 @@ export default function ManagerDashboard() {
       {/* Quick Actions Bar */}
       <div className="bg-white border-b border-corp-border">
         <div className="mx-auto max-w-7xl px-6 py-3">
-          <button 
-            className="corp-btn corp-btn-primary"
-            onClick={() => navigate('/order/new')}
-          >
-            + Нове замовлення
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button 
+              className="corp-btn corp-btn-primary"
+              onClick={() => navigate('/order/new')}
+            >
+              + Нове замовлення
+            </button>
+            <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
+            <button 
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              onClick={() => navigate('/calendar')}
+            >
+              Календар
+            </button>
+            <button 
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              onClick={() => navigate('/finance')}
+            >
+              Фінанси
+            </button>
+            <button 
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              onClick={() => navigate('/catalog')}
+            >
+              Каталог
+            </button>
+            <button 
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              onClick={() => navigate('/damages')}
+            >
+              Шкоди
+            </button>
+            <button 
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              onClick={() => navigate('/tasks')}
+            >
+              Завдання
+            </button>
+            <button 
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              onClick={() => navigate('/reaudit')}
+            >
+              Переоблік
+            </button>
+            {user?.role === 'admin' && (
+              <button 
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                onClick={() => navigate('/admin')}
+              >
+                Адмін
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

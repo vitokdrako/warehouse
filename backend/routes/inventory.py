@@ -48,7 +48,7 @@ async def get_inventory(
     # ✅ Build SQL query
     sql_query = """
         SELECT 
-            p.product_id, p.sku, p.name, p.price, p.image_url, p.description,
+            p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url, p.description,
             i.quantity, i.zone, i.aisle, i.shelf
         FROM products p
         LEFT JOIN inventory i ON p.product_id = i.product_id
@@ -68,18 +68,19 @@ async def get_inventory(
     
     result = []
     for row in result_db:
-        product_id, sku, name, price, image_url, description, quantity, zone, aisle, shelf = row
+        product_id, sku, name, price, rental_price, image_url, description, quantity, zone, aisle, shelf = row
         
         result.append({
             "id": str(product_id),
             "article": sku or str(product_id),
             "name": name or f"Product {product_id}",
-            "category": None,  # TODO: add category from products table
-            "price_per_day": float(price) if price else 0.0,
+            "category": None,
+            "price_per_day": float(rental_price) if rental_price else 0.0,  # Ціна оренди за день
+            "damage_cost": float(price) if price else 0.0,  # Ціна купівлі (вартість збитків)
             "quantity": quantity or 0,
             "image_url": image_url,
             "description": description,
-            "replacement_price": None,  # TODO: add from extended data
+            "replacement_price": float(price) if price else None,
             "damage_category": None,
             "location": f"{zone}-{aisle}-{shelf}" if zone else None
         })

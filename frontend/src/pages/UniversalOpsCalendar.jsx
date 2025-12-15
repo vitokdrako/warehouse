@@ -652,6 +652,40 @@ export default function UniversalOpsCalendar() {
         console.error('[Calendar] Failed to load damages:', err);
       }
 
+      // 5. Load user-created tasks
+      try {
+        const tasksRes = await axios.get(`${BACKEND_URL}/api/tasks`);
+        const tasks = tasksRes.data || [];
+        
+        tasks.forEach((task) => {
+          const taskDate = task.due_date?.slice(0, 10) || task.created_at?.slice(0, 10) || isoDate(new Date());
+          
+          // Map task_type to lane
+          let lane = LANE.PACKING;
+          if (task.task_type === 'cleaning' || task.task_type === 'wash') lane = LANE.CLEANING;
+          if (task.task_type === 'repair' || task.task_type === 'restore') lane = LANE.RESTORE;
+          if (task.task_type === 'damage') lane = LANE.DAMAGE;
+          
+          calendarItems.push({
+            id: `task-${task.id}`,
+            lane: lane,
+            type: 'task',
+            date: taskDate,
+            title: task.title,
+            meta: task.description || task.task_type,
+            orderCode: task.order_number,
+            tags: task.priority === 'high' ? ['danger'] : task.priority === 'medium' ? ['warn'] : ['info'],
+            status: task.status === 'done' ? 'Виконано' : task.status === 'in_progress' ? 'В роботі' : 'Очікує',
+            linkTo: 'tasks',
+            taskId: task.id,
+            orderData: task,
+          });
+        });
+        console.log(`[Calendar] Loaded ${tasks.length} tasks`);
+      } catch (err) {
+        console.error('[Calendar] Failed to load tasks:', err);
+      }
+
       setItems(calendarItems);
       console.log(`[Calendar] Loaded ${calendarItems.length} items`);
     } catch (err) {

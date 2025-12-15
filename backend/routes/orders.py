@@ -765,7 +765,7 @@ async def create_order(
             notes, created_by_id, created_at
         ) VALUES (
             :order_id, :order_number, :customer_name, :customer_phone, :customer_email,
-            :rental_start_date, :rental_end_date, 'pending', :total_price, :deposit_amount,
+            :rental_start_date, :rental_end_date, 'awaiting_customer', :total_price, :deposit_amount,
             :notes, :created_by_id, NOW()
         )
     """), {

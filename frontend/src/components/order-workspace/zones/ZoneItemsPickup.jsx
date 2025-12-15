@@ -28,7 +28,7 @@ export default function ZoneItemsPickup({
   
   return (
     <ZoneCard
-      title={`📦 Комплектування (${pickedItems}/${totalItems})`}
+      title={`Комплектування (${pickedItems}/${totalItems})`}
       hint={`Зібрано ${pickedQty} з ${totalQty} одиниць`}
       tone={tone}
     >

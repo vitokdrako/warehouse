@@ -750,12 +750,12 @@ async def create_order(
     if rental_days < 1:
         raise HTTPException(status_code=400, detail="Minimum rental period is 1 day")
     
-    # Generate order number
-    order_number = f"ORD-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
-    
     # Get next order_id (since table doesn't have AUTO_INCREMENT)
     result = db.execute(text("SELECT COALESCE(MAX(order_id), 0) + 1 as next_id FROM orders"))
     order_id = result.scalar()
+    
+    # Generate sequential order number ORD-0001, ORD-0002, etc.
+    order_number = f"ORD-{order_id:04d}"
     
     # Insert order with user tracking
     db.execute(text("""

@@ -45,11 +45,11 @@ async def get_inventory(
     ✅ MIGRATED: Using products + inventory tables
     """
     
-    # ✅ Build SQL query
+    # ✅ Build SQL query - location from products table
     sql_query = """
         SELECT 
             p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url, p.description,
-            i.quantity, i.zone, i.aisle, i.shelf
+            i.quantity, p.zone, p.aisle, p.shelf
         FROM products p
         LEFT JOIN inventory i ON p.product_id = i.product_id
         WHERE p.status = 1

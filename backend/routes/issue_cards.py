@@ -114,7 +114,8 @@ def parse_issue_card(row, db: Session = None):
     if db and row[1]:  # order_id
         order_result = db.execute(text("""
             SELECT customer_name, customer_phone, customer_email,
-                   total_price, deposit_amount, total_loss_value, rental_days
+                   total_price, deposit_amount, total_loss_value, rental_days,
+                   rental_start_date, rental_end_date
             FROM orders WHERE order_id = :order_id
         """), {"order_id": row[1]})
         order_row = order_result.fetchone()
@@ -126,7 +127,9 @@ def parse_issue_card(row, db: Session = None):
                 "total_rental": float(order_row[3]) if order_row[3] else 0.0,
                 "deposit_amount": float(order_row[4]) if order_row[4] else 0.0,
                 "total_loss_value": float(order_row[5]) if order_row[5] else 0.0,
-                "rental_days": order_row[6] or 0
+                "rental_days": order_row[6] or 0,
+                "rental_start_date": order_row[7].strftime('%Y-%m-%d') if order_row[7] else None,
+                "rental_end_date": order_row[8].strftime('%Y-%m-%d') if order_row[8] else None
             }
     
     # Parse checklist JSON if exists

@@ -16,20 +16,23 @@ import ExtendedCatalog from './pages/ExtendedCatalog';
 import CalendarBoardNew from './pages/CalendarBoardNew';
 import CatalogBoard from './pages/CatalogBoard';
 import FinanceCabinet from './pages/FinanceCabinet';
+// Old components - kept for backward compatibility during transition
 import NewOrderClean from './pages/NewOrderClean';
-import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderView from './pages/NewOrderView';
-import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';
 import IssueOrderClean from './pages/IssueOrderClean';
 import IssueCard from './pages/IssueCard';
-import IssueCardWorkspace from './pages/IssueCardWorkspace';
 import ReturnOrderClean from './pages/ReturnOrderClean';
+// New unified workspace components
+import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
+import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';
+import IssueCardWorkspace from './pages/IssueCardWorkspace';
+import ReturnOrderWorkspace from './pages/ReturnOrderWorkspace';
+import ArchivedOrderWorkspace from './pages/ArchivedOrderWorkspace';
+import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
+// Other pages
 import InventoryRecount from './pages/InventoryRecount';
 import OrdersArchive from './pages/OrdersArchive';
-import ArchivedOrderWorkspace from './pages/ArchivedOrderWorkspace';
 import SyncPanel from './pages/SyncPanel';
-import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
-// LaundryCabinet removed - functionality moved to Damage Cabinet tabs
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

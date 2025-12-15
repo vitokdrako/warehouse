@@ -264,6 +264,43 @@ async def update_user(
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
+@router.post("/users/{user_id}/reset-password")
+async def reset_user_password(
+    user_id: int,
+    data: dict,
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    """Скинути пароль користувача (тільки для адмінів)"""
+    require_admin(authorization)
+    
+    new_password = data.get('password')
+    if not new_password or len(new_password) < 4:
+        raise HTTPException(status_code=400, detail="Пароль має бути мінімум 4 символи")
+    
+    try:
+        # Хешуємо новий пароль
+        password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
+        query = text("UPDATE users SET password_hash = :password_hash WHERE user_id = :user_id")
+        result = rh_db.execute(query, {'password_hash': password_hash, 'user_id': user_id})
+        rh_db.commit()
+        
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Користувача не знайдено")
+        
+        return {
+            'success': True,
+            'message': 'Пароль успішно змінено'
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        rh_db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: int,

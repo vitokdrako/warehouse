@@ -270,15 +270,6 @@ function App() {
             } 
           />
           
-          <Route 
-            path="/return-old/:id" 
-            element={
-              <ProtectedRoute>
-                <ReturnOrderClean />
-              </ProtectedRoute>
-            } 
-          />
-          
           {/* Admin Panel */}
           <Route 
             path="/admin" 

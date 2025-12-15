@@ -698,6 +698,66 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
+
+      {/* Password Reset Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <h3 className="text-xl font-semibold mb-4">🔑 Змінити пароль</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Новий пароль</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="Мінімум 4 символи"
+                  autoComplete="new-password"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Підтвердіть пароль</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="Повторіть пароль"
+                  autoComplete="new-password"
+                />
+              </div>
+              
+              {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                <p className="text-red-500 text-sm">❌ Паролі не співпадають</p>
+              )}
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={resetPassword}
+                disabled={!newPassword || newPassword !== confirmPassword || newPassword.length < 4}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Змінити пароль
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false)
+                  setPasswordUserId(null)
+                  setNewPassword('')
+                  setConfirmPassword('')
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+              >
+                Скасувати
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -335,7 +335,6 @@ export default function ManagerDashboard() {
             note="товари у відновленні" 
             tone={cleaningStats.repair > 0 ? "info" : undefined}
           />
-          <Kpi title="Проблеми" value={kpis.problems.toString()} note="є шкода/прострочка" tone={kpis.problems > 0 ? "warn" : undefined}/>
         </div>
       </section>
 

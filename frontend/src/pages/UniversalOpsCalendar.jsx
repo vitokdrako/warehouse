@@ -757,6 +757,36 @@ export default function UniversalOpsCalendar() {
       }
       
       setMove(null);
+    } else {
+      // Open create task dialog
+      setCreateDraft({ lane, date });
+      setCreateOpen(true);
+    }
+  };
+
+  // Create task handler
+  const handleCreateTask = async (taskData) => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/api/tasks`, {
+        title: taskData.title,
+        description: taskData.description,
+        task_type: taskData.taskType,
+        priority: taskData.priority,
+        due_date: taskData.date,
+        status: 'todo'
+      });
+      
+      console.log('[Calendar] Task created:', response.data);
+      
+      // Reload calendar data
+      loadCalendarData();
+      
+      // Close dialog
+      setCreateOpen(false);
+      setCreateDraft(null);
+    } catch (err) {
+      console.error('[Calendar] Failed to create task:', err);
+      alert('Помилка при створенні задачі');
     }
   };
 

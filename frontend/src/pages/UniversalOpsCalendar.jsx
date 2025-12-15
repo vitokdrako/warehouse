@@ -1128,7 +1128,7 @@ export default function UniversalOpsCalendar() {
           )}
 
           <div className="p-3 text-xs text-slate-500 border-t bg-slate-50">
-            💡 Клік по карточці → деталі • Клік по 👁️ → drawer • Клік по ✋ → перемістити (потім клікни на новий слот)
+            Клік по пустій клітинці → створити задачу • Клік по карточці → деталі • ✋ → перемістити
           </div>
         </div>
       </div>
@@ -1138,6 +1138,16 @@ export default function UniversalOpsCalendar() {
         item={activeItem}
         onClose={() => setDrawerOpen(false)}
         navigate={navigate}
+      />
+
+      <CreateTaskDialog
+        open={createOpen}
+        draft={createDraft}
+        onClose={() => {
+          setCreateOpen(false);
+          setCreateDraft(null);
+        }}
+        onCreate={handleCreateTask}
       />
     </div>
   );

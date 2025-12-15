@@ -269,6 +269,155 @@ function ItemCard({ item, onOpen, onMoveStart, isCompact, navigate }) {
   );
 }
 
+/************* Create Task Dialog *************/
+function CreateTaskDialog({ open, draft, onClose, onCreate }) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [taskType, setTaskType] = useState('general');
+  const [priority, setPriority] = useState('medium');
+
+  // Reset form when opened
+  useEffect(() => {
+    if (open) {
+      setTitle('');
+      setDescription('');
+      setTaskType(draft?.lane === LANE.CLEANING ? 'cleaning' : draft?.lane === LANE.RESTORE ? 'repair' : 'general');
+      setPriority('medium');
+    }
+  }, [open, draft]);
+
+  if (!open || !draft) return null;
+
+  const laneInfo = laneMeta[draft.lane] || laneMeta[LANE.PACKING];
+
+  const taskTypes = [
+    { id: 'general', label: 'Загальне' },
+    { id: 'packing', label: 'Комплектація' },
+    { id: 'cleaning', label: 'Мийка' },
+    { id: 'repair', label: 'Реставрація' },
+    { id: 'delivery', label: 'Доставка' },
+  ];
+
+  const priorities = [
+    { id: 'low', label: 'Низький', color: 'text-slate-600' },
+    { id: 'medium', label: 'Середній', color: 'text-amber-600' },
+    { id: 'high', label: 'Високий', color: 'text-rose-600' },
+  ];
+
+  const handleSubmit = () => {
+    if (!title.trim()) {
+      alert('Введіть назву задачі');
+      return;
+    }
+    onCreate({
+      title: title.trim(),
+      description: description.trim(),
+      taskType,
+      priority,
+      date: draft.date,
+      lane: draft.lane,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+      <div className="absolute left-1/2 top-16 w-full max-w-lg -translate-x-1/2 rounded-2xl border bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b p-4">
+          <div>
+            <div className="text-xs text-slate-500">Створити задачу</div>
+            <div className="text-lg font-semibold">{laneInfo.title} • {draft.date}</div>
+          </div>
+          <button className="rounded-lg border px-3 py-1.5 text-sm hover:bg-slate-50" onClick={onClose}>
+            Закрити
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Title */}
+          <div>
+            <label className="text-sm font-medium text-slate-700">Назва задачі *</label>
+            <input
+              className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+              placeholder="Наприклад: Помити вази після замовлення #7044"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="text-sm font-medium text-slate-700">Опис</label>
+            <textarea
+              className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-200 resize-none"
+              placeholder="Деталі задачі (опціонально)"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+
+          {/* Task Type */}
+          <div>
+            <label className="text-sm font-medium text-slate-700">Тип задачі</label>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {taskTypes.map((t) => (
+                <button
+                  key={t.id}
+                  className={cls(
+                    'rounded-lg border px-3 py-2 text-sm transition',
+                    taskType === t.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50'
+                  )}
+                  onClick={() => setTaskType(t.id)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Priority */}
+          <div>
+            <label className="text-sm font-medium text-slate-700">Пріоритет</label>
+            <div className="mt-2 flex gap-2">
+              {priorities.map((p) => (
+                <button
+                  key={p.id}
+                  className={cls(
+                    'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition',
+                    priority === p.id ? 'ring-2 ring-slate-400' : '',
+                    p.color
+                  )}
+                  onClick={() => setPriority(p.id)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button 
+              className="rounded-xl border px-4 py-2.5 text-sm hover:bg-slate-50" 
+              onClick={onClose}
+            >
+              Скасувати
+            </button>
+            <button
+              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm text-white hover:bg-slate-800"
+              onClick={handleSubmit}
+            >
+              Створити задачу
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /************* Drawer Component *************/
 function Drawer({ open, item, onClose, navigate }) {
   if (!open || !item) return null;

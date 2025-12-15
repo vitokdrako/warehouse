@@ -22,7 +22,6 @@ import {
   ZoneItemsEditor,
   ZoneCommercialSummary,
   ZoneDeliverySetup,
-  ZoneDepositSetup,
   ZoneNotes,
 } from '../components/order-workspace/zones'
 

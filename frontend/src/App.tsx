@@ -285,6 +285,15 @@ function App() {
             } 
           />
           
+          <Route 
+            path="/return-workspace/:id" 
+            element={
+              <ProtectedRoute>
+                <ReturnOrderWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
           {/* Admin Panel */}
           <Route 
             path="/admin" 

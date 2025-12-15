@@ -712,10 +712,15 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
           </div>
         </div>
       ) : (
-        order?.issue_date || order?.return_date ? (
+        // Відображення дат оренди - перевіряємо різні поля
+        (order?.rental_start_date || order?.rental_end_date || order?.issue_date || order?.return_date) ? (
           <div className="mb-3 text-sm text-corp-text-main bg-slate-50 p-2.5 rounded-lg space-y-1">
-            {order.issue_date && <div>📅 Видача: <span className="font-medium">{order.issue_date}</span></div>}
-            {order.return_date && <div>📆 Поверн.: <span className="font-medium">{order.return_date}</span></div>}
+            {(order.rental_start_date || order.issue_date) && (
+              <div>📅 Видача: <span className="font-medium">{order.rental_start_date || order.issue_date}</span></div>
+            )}
+            {(order.rental_end_date || order.return_date) && (
+              <div>📆 Поверн.: <span className="font-medium">{order.rental_end_date || order.return_date}</span></div>
+            )}
           </div>
         ) : null
       )}

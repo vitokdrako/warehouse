@@ -264,7 +264,7 @@ function ItemPickupCard({
           onClick={() => onOpenDamage(item.id)} 
           className="w-full py-2.5 rounded-lg bg-amber-500 text-white font-medium text-sm active:bg-amber-600"
         >
-          📷 Зафіксувати пошкодження
+          Зафіксувати пошкодження
         </button>
       )}
     </div>

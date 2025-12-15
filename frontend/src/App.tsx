@@ -16,12 +16,12 @@ import ExtendedCatalog from './pages/ExtendedCatalog';
 import CalendarBoardNew from './pages/CalendarBoardNew';
 import CatalogBoard from './pages/CatalogBoard';
 import FinanceCabinet from './pages/FinanceCabinet';
-// Old components - kept for backward compatibility during transition
-import NewOrderClean from './pages/NewOrderClean';
-import NewOrderView from './pages/NewOrderView';
-import IssueOrderClean from './pages/IssueOrderClean';
-import IssueCard from './pages/IssueCard';
-import ReturnOrderClean from './pages/ReturnOrderClean';
+// Deprecated - kept for backward compatibility, moved to _deprecated folder
+import NewOrderClean from './pages/_deprecated/NewOrderClean';
+import NewOrderView from './pages/_deprecated/NewOrderView';
+import IssueOrderClean from './pages/_deprecated/IssueOrderClean';
+import IssueCard from './pages/_deprecated/IssueCard';
+import ReturnOrderClean from './pages/_deprecated/ReturnOrderClean';
 // New unified workspace components
 import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';

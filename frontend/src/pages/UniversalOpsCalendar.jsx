@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import CorporateHeader from '../components/CorporateHeader';
@@ -43,76 +43,83 @@ const LANE = {
 
 const laneMeta = {
   [LANE.ISSUE]: { 
-    title: '📦 Видача', 
+    title: 'Видача', 
     hint: 'Готові до видачі клієнту', 
     chip: 'Issue',
-    color: 'emerald',
-    bgClass: 'bg-emerald-50 border-emerald-200',
-    textClass: 'text-emerald-700'
+    railColor: 'bg-corp-primary',
+    bgClass: 'bg-[#f4f8e6]',
+    borderClass: 'border-corp-primary/30',
+    textClass: 'text-corp-text-dark'
   },
   [LANE.RETURN]: { 
-    title: '🔄 Повернення', 
+    title: 'Повернення', 
     hint: 'Очікуємо повернення', 
     chip: 'Return',
-    color: 'indigo',
-    bgClass: 'bg-indigo-50 border-indigo-200',
-    textClass: 'text-indigo-700'
+    railColor: 'bg-corp-gold',
+    bgClass: 'bg-[#faf6ed]',
+    borderClass: 'border-corp-gold/30',
+    textClass: 'text-corp-text-dark'
   },
   [LANE.ON_RENT]: { 
-    title: '🧾 В оренді', 
+    title: 'В оренді', 
     hint: 'Діапазони між датами', 
     chip: 'Range',
-    color: 'slate',
-    bgClass: 'bg-slate-50 border-slate-200',
-    textClass: 'text-slate-700'
+    railColor: 'bg-corp-text-muted',
+    bgClass: 'bg-corp-bg-light',
+    borderClass: 'border-corp-border',
+    textClass: 'text-corp-text-main'
   },
   [LANE.PACKING]: { 
-    title: '📦 Комплектація', 
+    title: 'Комплектація', 
     hint: 'На збірці та пакуванні', 
     chip: 'Task',
-    color: 'amber',
-    bgClass: 'bg-amber-50 border-amber-200',
-    textClass: 'text-amber-700'
+    railColor: 'bg-amber-500',
+    bgClass: 'bg-amber-50',
+    borderClass: 'border-amber-200',
+    textClass: 'text-amber-800'
   },
   [LANE.CLEANING]: { 
-    title: '🧼 Мийка / Хімчистка', 
+    title: 'Мийка / Хімчистка', 
     hint: 'Партії та задачі', 
     chip: 'Task',
-    color: 'sky',
-    bgClass: 'bg-sky-50 border-sky-200',
-    textClass: 'text-sky-700'
+    railColor: 'bg-sky-500',
+    bgClass: 'bg-sky-50',
+    borderClass: 'border-sky-200',
+    textClass: 'text-sky-800'
   },
   [LANE.RESTORE]: { 
-    title: '🔧 Реставрація', 
+    title: 'Реставрація', 
     hint: 'Відновлення/ремонт', 
     chip: 'Task',
-    color: 'orange',
-    bgClass: 'bg-orange-50 border-orange-200',
-    textClass: 'text-orange-700'
+    railColor: 'bg-orange-500',
+    bgClass: 'bg-orange-50',
+    borderClass: 'border-orange-200',
+    textClass: 'text-orange-800'
   },
   [LANE.DAMAGE]: { 
-    title: '⚠️ Шкоди', 
+    title: 'Шкоди', 
     hint: 'Кейси пошкоджень', 
     chip: 'Case',
-    color: 'rose',
-    bgClass: 'bg-rose-50 border-rose-200',
-    textClass: 'text-rose-700'
+    railColor: 'bg-rose-500',
+    bgClass: 'bg-rose-50',
+    borderClass: 'border-rose-200',
+    textClass: 'text-rose-800'
   },
 };
 
 /************* Badge Component *************/
 function Badge({ children, tone = 'neutral' }) {
   const toneClasses = {
-    ok: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-    warn: 'bg-amber-50 text-amber-900 border-amber-200',
+    ok: 'bg-[#f4f8e6] text-corp-primary border-corp-primary/30',
+    warn: 'bg-amber-50 text-amber-800 border-amber-200',
     danger: 'bg-rose-50 text-rose-800 border-rose-200',
-    info: 'bg-blue-50 text-blue-800 border-blue-200',
-    neutral: 'bg-slate-50 text-slate-700 border-slate-200',
+    info: 'bg-[#faf6ed] text-corp-gold border-corp-gold/30',
+    neutral: 'bg-corp-bg-light text-corp-text-main border-corp-border',
   };
 
   return (
     <span className={cls(
-      'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+      'inline-flex items-center rounded px-2 py-0.5 text-xs font-medium border',
       toneClasses[tone] || toneClasses.neutral
     )}>
       {children}
@@ -123,25 +130,28 @@ function Badge({ children, tone = 'neutral' }) {
 /************* TopBar Component *************/
 function TopBar({ mode, setMode, query, setQuery, show, setShow }) {
   return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm">
+    <div className="corp-card">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="text-lg font-semibold">Універсальний операційний стіл</div>
-          <Badge tone="info">Week timeline</Badge>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold text-corp-text-dark">Операційний стіл</h2>
+          <Badge tone="info">Тижневий огляд</Badge>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded-xl border bg-white p-1">
+          {/* Mode switcher */}
+          <div className="flex items-center rounded border border-corp-border bg-corp-bg-light p-1">
             {[
               { id: 'overview', label: 'Огляд' },
-              { id: 'ops', label: 'Видача/Поверн.' },
+              { id: 'ops', label: 'Операції' },
               { id: 'tasks', label: 'Задачі' },
             ].map((m) => (
               <button
                 key={m.id}
                 className={cls(
-                  'rounded-lg px-3 py-1.5 text-sm transition',
-                  mode === m.id ? 'bg-slate-900 text-white' : 'hover:bg-slate-50'
+                  'rounded px-3 py-1.5 text-sm font-medium transition-all',
+                  mode === m.id 
+                    ? 'bg-corp-primary text-white shadow-sm' 
+                    : 'text-corp-text-main hover:text-corp-text-dark'
                 )}
                 onClick={() => setMode(m.id)}
               >
@@ -150,36 +160,37 @@ function TopBar({ mode, setMode, query, setQuery, show, setShow }) {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl border bg-white px-3 py-2">
-            <span className="text-sm text-slate-500">🔍</span>
+          {/* Search */}
+          <div className="flex items-center gap-2 rounded border border-corp-border bg-white px-3 py-2">
+            <svg className="w-4 h-4 text-corp-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
-              className="w-40 lg:w-56 bg-transparent text-sm outline-none"
-              placeholder="#7044, клієнт, SKU…"
+              className="w-40 lg:w-48 bg-transparent text-sm outline-none text-corp-text-dark placeholder:text-corp-text-muted"
+              placeholder="Пошук..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              className={cls(
-                'rounded-xl border px-3 py-2 text-sm transition',
-                show.onlyProblems ? 'bg-rose-50 border-rose-200' : 'bg-white hover:bg-slate-50'
-              )}
-              onClick={() => setShow((s) => ({ ...s, onlyProblems: !s.onlyProblems }))}
-            >
-              ⚠️ Проблеми
-            </button>
-            <button
-              className={cls(
-                'rounded-xl border px-3 py-2 text-sm transition',
-                show.compact ? 'bg-slate-100' : 'bg-white hover:bg-slate-50'
-              )}
-              onClick={() => setShow((s) => ({ ...s, compact: !s.compact }))}
-            >
-              {show.compact ? '📐 Щільно' : '📋 Детально'}
-            </button>
-          </div>
+          {/* Filters */}
+          <button
+            className={cls(
+              'corp-btn',
+              show.onlyProblems 
+                ? 'bg-rose-50 text-rose-700 border border-rose-200' 
+                : 'corp-btn-secondary'
+            )}
+            onClick={() => setShow((s) => ({ ...s, onlyProblems: !s.onlyProblems }))}
+          >
+            Проблеми
+          </button>
+          <button
+            className={cls('corp-btn corp-btn-secondary')}
+            onClick={() => setShow((s) => ({ ...s, compact: !s.compact }))}
+          >
+            {show.compact ? 'Щільно' : 'Детально'}
+          </button>
         </div>
       </div>
     </div>
@@ -198,7 +209,6 @@ function ItemCard({ item, onOpen, onMoveStart, isCompact, navigate }) {
 
   const handleNavigate = (e) => {
     e.stopPropagation();
-    // Навігація до відповідного кабінету
     if (item.linkTo === 'issue_card' && item.issueCardId) {
       navigate(`/issue/${item.issueCardId}`);
     } else if (item.linkTo === 'return_card' && item.orderId) {
@@ -207,7 +217,7 @@ function ItemCard({ item, onOpen, onMoveStart, isCompact, navigate }) {
       navigate(`/order/${item.orderId}/view`);
     } else if (item.linkTo === 'damage') {
       navigate('/damages');
-    } else if (item.linkTo === 'cleaning') {
+    } else if (item.linkTo === 'cleaning' || item.linkTo === 'tasks') {
       navigate('/tasks');
     } else {
       onOpen(item);
@@ -217,50 +227,50 @@ function ItemCard({ item, onOpen, onMoveStart, isCompact, navigate }) {
   return (
     <div
       className={cls(
-        'group relative w-full overflow-hidden rounded-xl border bg-white shadow-sm cursor-pointer',
+        'group relative w-full overflow-hidden rounded border bg-white cursor-pointer transition-all',
         isCompact ? 'p-2' : 'p-3',
-        'hover:shadow-md transition-shadow',
-        laneInfo.bgClass
+        'hover:shadow-md hover:border-corp-primary/50',
+        laneInfo.borderClass
       )}
       onClick={handleNavigate}
     >
       {/* Color rail */}
-      <div className={cls('absolute left-0 top-0 h-full w-1', `bg-${laneInfo.color}-500`)} />
+      <div className={cls('absolute left-0 top-0 h-full w-1', laneInfo.railColor)} />
       
       <div className="flex items-start justify-between gap-2 pl-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="rounded-full border px-2 py-0.5 text-[10px] font-semibold bg-white/80">
+            <span className="rounded border border-corp-border px-1.5 py-0.5 text-[10px] font-semibold text-corp-text-muted bg-corp-bg-light">
               {laneInfo.chip}
             </span>
             <Badge tone={tone}>{item.status || tone}</Badge>
-            {item.time && <span className="text-xs text-slate-500">{item.time}</span>}
+            {item.time && <span className="text-xs text-corp-text-muted">{item.time}</span>}
           </div>
-          <div className={cls('mt-1 font-semibold truncate', isCompact ? 'text-sm' : 'text-base', laneInfo.textClass)}>
+          <div className={cls('mt-1 font-semibold truncate text-corp-text-dark', isCompact ? 'text-sm' : 'text-base')}>
             {item.title}
           </div>
           {!isCompact && item.meta && (
-            <div className="mt-0.5 text-sm text-slate-600 truncate">{item.meta}</div>
+            <div className="mt-0.5 text-sm text-corp-text-main truncate">{item.meta}</div>
           )}
           {item.orderCode && (
-            <div className="mt-1 text-xs font-mono text-slate-500">{item.orderCode}</div>
+            <div className="mt-1 text-xs font-mono text-corp-text-muted">{item.orderCode}</div>
           )}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1">
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
             <button
-              className="rounded-lg border bg-white px-2 py-1 text-xs hover:bg-slate-50"
+              className="corp-btn corp-btn-secondary !px-2 !py-1 !text-xs"
               onClick={(e) => { e.stopPropagation(); onOpen(item); }}
             >
-              👁️
+              Деталі
             </button>
             <button
-              className="rounded-lg border bg-white px-2 py-1 text-xs hover:bg-slate-50"
+              className="corp-btn corp-btn-secondary !px-2 !py-1 !text-xs"
               onClick={(e) => { e.stopPropagation(); onMoveStart(item); }}
               title="Перемістити"
             >
-              ✋
+              Move
             </button>
           </div>
         </div>
@@ -276,7 +286,6 @@ function CreateTaskDialog({ open, draft, onClose, onCreate }) {
   const [taskType, setTaskType] = useState('general');
   const [priority, setPriority] = useState('medium');
 
-  // Reset form when opened
   useEffect(() => {
     if (open) {
       setTitle('');
@@ -299,9 +308,9 @@ function CreateTaskDialog({ open, draft, onClose, onCreate }) {
   ];
 
   const priorities = [
-    { id: 'low', label: 'Низький', color: 'text-slate-600' },
-    { id: 'medium', label: 'Середній', color: 'text-amber-600' },
-    { id: 'high', label: 'Високий', color: 'text-rose-600' },
+    { id: 'low', label: 'Низький', cls: 'text-corp-text-muted' },
+    { id: 'medium', label: 'Середній', cls: 'text-amber-600' },
+    { id: 'high', label: 'Високий', cls: 'text-rose-600' },
   ];
 
   const handleSubmit = () => {
@@ -322,23 +331,23 @@ function CreateTaskDialog({ open, draft, onClose, onCreate }) {
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/20" onClick={onClose} />
-      <div className="absolute left-1/2 top-16 w-full max-w-lg -translate-x-1/2 rounded-2xl border bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b p-4">
+      <div className="absolute left-1/2 top-16 w-full max-w-lg -translate-x-1/2 corp-card shadow-lg">
+        <div className="flex items-center justify-between border-b border-corp-border pb-4 mb-4">
           <div>
-            <div className="text-xs text-slate-500">Створити задачу</div>
-            <div className="text-lg font-semibold">{laneInfo.title} • {draft.date}</div>
+            <p className="text-xs text-corp-text-muted">Створити задачу</p>
+            <h3 className="text-lg font-semibold text-corp-text-dark">{laneInfo.title} • {draft.date}</h3>
           </div>
-          <button className="rounded-lg border px-3 py-1.5 text-sm hover:bg-slate-50" onClick={onClose}>
+          <button className="corp-btn corp-btn-secondary" onClick={onClose}>
             Закрити
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="space-y-4">
           {/* Title */}
           <div>
-            <label className="text-sm font-medium text-slate-700">Назва задачі *</label>
+            <label className="text-sm font-medium text-corp-text-dark">Назва задачі *</label>
             <input
-              className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+              className="mt-1 w-full rounded border border-corp-border px-3 py-2.5 text-sm outline-none focus:border-corp-primary focus:ring-1 focus:ring-corp-primary/20 text-corp-text-dark"
               placeholder="Наприклад: Помити вази після замовлення #7044"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -348,9 +357,9 @@ function CreateTaskDialog({ open, draft, onClose, onCreate }) {
 
           {/* Description */}
           <div>
-            <label className="text-sm font-medium text-slate-700">Опис</label>
+            <label className="text-sm font-medium text-corp-text-dark">Опис</label>
             <textarea
-              className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-slate-200 resize-none"
+              className="mt-1 w-full rounded border border-corp-border px-3 py-2.5 text-sm outline-none focus:border-corp-primary focus:ring-1 focus:ring-corp-primary/20 resize-none text-corp-text-dark"
               placeholder="Деталі задачі (опціонально)"
               rows={3}
               value={description}
@@ -360,14 +369,16 @@ function CreateTaskDialog({ open, draft, onClose, onCreate }) {
 
           {/* Task Type */}
           <div>
-            <label className="text-sm font-medium text-slate-700">Тип задачі</label>
+            <label className="text-sm font-medium text-corp-text-dark">Тип задачі</label>
             <div className="mt-2 flex flex-wrap gap-2">
               {taskTypes.map((t) => (
                 <button
                   key={t.id}
                   className={cls(
-                    'rounded-lg border px-3 py-2 text-sm transition',
-                    taskType === t.id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white hover:bg-slate-50'
+                    'corp-btn',
+                    taskType === t.id 
+                      ? 'corp-btn-primary' 
+                      : 'corp-btn-secondary'
                   )}
                   onClick={() => setTaskType(t.id)}
                 >
@@ -379,15 +390,17 @@ function CreateTaskDialog({ open, draft, onClose, onCreate }) {
 
           {/* Priority */}
           <div>
-            <label className="text-sm font-medium text-slate-700">Пріоритет</label>
+            <label className="text-sm font-medium text-corp-text-dark">Пріоритет</label>
             <div className="mt-2 flex gap-2">
               {priorities.map((p) => (
                 <button
                   key={p.id}
                   className={cls(
-                    'flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition',
-                    priority === p.id ? 'ring-2 ring-slate-400' : '',
-                    p.color
+                    'flex-1 rounded border px-3 py-2 text-sm font-medium transition-all',
+                    priority === p.id 
+                      ? 'border-corp-primary bg-corp-primary/10' 
+                      : 'border-corp-border bg-white hover:border-corp-primary/50',
+                    p.cls
                   )}
                   onClick={() => setPriority(p.id)}
                 >
@@ -398,17 +411,11 @@ function CreateTaskDialog({ open, draft, onClose, onCreate }) {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button 
-              className="rounded-xl border px-4 py-2.5 text-sm hover:bg-slate-50" 
-              onClick={onClose}
-            >
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-corp-border">
+            <button className="corp-btn corp-btn-secondary" onClick={onClose}>
               Скасувати
             </button>
-            <button
-              className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm text-white hover:bg-slate-800"
-              onClick={handleSubmit}
-            >
+            <button className="corp-btn corp-btn-primary" onClick={handleSubmit}>
               Створити задачу
             </button>
           </div>
@@ -433,7 +440,7 @@ function Drawer({ open, item, onClose, navigate }) {
       navigate(`/order/${item.orderId}/view`);
     } else if (item.linkTo === 'damage') {
       navigate('/damages');
-    } else if (item.linkTo === 'cleaning') {
+    } else if (item.linkTo === 'cleaning' || item.linkTo === 'tasks') {
       navigate('/tasks');
     }
     onClose();
@@ -442,109 +449,97 @@ function Drawer({ open, item, onClose, navigate }) {
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/20" onClick={onClose} />
-      <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-white shadow-2xl overflow-y-auto">
-        <div className="flex items-center justify-between border-b p-4 sticky top-0 bg-white z-10">
+      <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-white shadow-lg overflow-y-auto">
+        <div className="flex items-center justify-between border-b border-corp-border p-4 sticky top-0 bg-white z-10">
           <div className="min-w-0">
-            <div className="text-xs text-slate-500">Деталі події</div>
-            <div className="truncate text-lg font-semibold">{item.title}</div>
+            <p className="text-xs text-corp-text-muted">Деталі події</p>
+            <h3 className="truncate text-lg font-semibold text-corp-text-dark">{item.title}</h3>
           </div>
-          <button className="rounded-lg border px-3 py-1.5 text-sm hover:bg-slate-50" onClick={onClose}>
-            ✕ Закрити
+          <button className="corp-btn corp-btn-secondary" onClick={onClose}>
+            Закрити
           </button>
         </div>
 
         <div className="p-4 space-y-4">
           {/* Info card */}
-          <div className={cls('rounded-2xl border p-4', laneInfo.bgClass)}>
+          <div className={cls('corp-card', laneInfo.bgClass)}>
             <div className="flex items-center justify-between">
-              <div className="font-semibold">Тип</div>
-              <span className={cls('rounded-full border px-3 py-1 text-sm font-semibold', laneInfo.bgClass, laneInfo.textClass)}>
+              <span className="font-semibold text-corp-text-dark">Тип</span>
+              <span className={cls('rounded border px-3 py-1 text-sm font-semibold', laneInfo.borderClass, laneInfo.textClass)}>
                 {laneInfo.title}
               </span>
             </div>
             <div className="mt-3 space-y-2 text-sm">
-              {item.meta && <div className="text-slate-600">{item.meta}</div>}
-              <div>
-                <span className="text-slate-500">Дата:</span>{' '}
-                <span className="font-medium">{item.date || item.from}</span>
-                {item.to && <span className="text-slate-500"> → </span>}
-                {item.to && <span className="font-medium">{item.to}</span>}
-              </div>
+              {item.meta && <p className="text-corp-text-main">{item.meta}</p>}
+              <p>
+                <span className="text-corp-text-muted">Дата:</span>{' '}
+                <span className="font-medium text-corp-text-dark">{item.date || item.from}</span>
+                {item.to && <span className="text-corp-text-muted"> → </span>}
+                {item.to && <span className="font-medium text-corp-text-dark">{item.to}</span>}
+              </p>
               {item.orderCode && (
-                <div>
-                  <span className="text-slate-500">Замовлення:</span>{' '}
-                  <span className="font-mono font-medium">{item.orderCode}</span>
-                </div>
+                <p>
+                  <span className="text-corp-text-muted">Замовлення:</span>{' '}
+                  <span className="font-mono font-medium text-corp-text-dark">{item.orderCode}</span>
+                </p>
               )}
               {item.client && (
-                <div>
-                  <span className="text-slate-500">Клієнт:</span>{' '}
-                  <span className="font-medium">{item.client}</span>
-                </div>
+                <p>
+                  <span className="text-corp-text-muted">Клієнт:</span>{' '}
+                  <span className="font-medium text-corp-text-dark">{item.client}</span>
+                </p>
               )}
               {item.phone && (
-                <div>
-                  <span className="text-slate-500">Телефон:</span>{' '}
-                  <a href={`tel:${item.phone}`} className="font-medium text-blue-600">{item.phone}</a>
-                </div>
+                <p>
+                  <span className="text-corp-text-muted">Телефон:</span>{' '}
+                  <a href={`tel:${item.phone}`} className="font-medium text-corp-primary hover:underline">{item.phone}</a>
+                </p>
               )}
               {item.amount && (
-                <div>
-                  <span className="text-slate-500">Сума:</span>{' '}
-                  <span className="font-semibold text-emerald-600">₴ {item.amount}</span>
-                </div>
+                <p>
+                  <span className="text-corp-text-muted">Сума:</span>{' '}
+                  <span className="font-semibold text-corp-primary">₴ {item.amount}</span>
+                </p>
               )}
             </div>
           </div>
 
           {/* Quick actions */}
-          <div className="rounded-2xl border p-4">
-            <div className="font-semibold mb-3">Швидкі дії</div>
+          <div className="corp-card">
+            <h4 className="font-semibold text-corp-text-dark mb-3">Швидкі дії</h4>
             <div className="grid grid-cols-2 gap-2">
-              <button 
-                className="rounded-xl border px-3 py-3 text-sm hover:bg-slate-50 transition text-left"
-                onClick={handleOpenSource}
-              >
-                🔗 Відкрити кабінет
+              <button className="corp-btn corp-btn-primary" onClick={handleOpenSource}>
+                Відкрити кабінет
               </button>
               {item.phone && (
-                <a 
-                  href={`tel:${item.phone}`}
-                  className="rounded-xl border px-3 py-3 text-sm hover:bg-slate-50 transition text-left"
-                >
-                  📞 Зателефонувати
+                <a href={`tel:${item.phone}`} className="corp-btn corp-btn-gold text-center">
+                  Зателефонувати
                 </a>
               )}
-              <button 
-                className="rounded-xl border px-3 py-3 text-sm hover:bg-slate-50 transition text-left"
-                onClick={() => navigate('/finance')}
-              >
-                💰 Фінанси
+              <button className="corp-btn corp-btn-secondary" onClick={() => navigate('/finance')}>
+                Фінанси
               </button>
-              <button 
-                className="rounded-xl border px-3 py-3 text-sm hover:bg-slate-50 transition text-left"
-                onClick={() => alert('Нотатка додана (демо)')}
-              >
-                📝 + Нотатка
+              <button className="corp-btn corp-btn-secondary" onClick={() => alert('Нотатка додана (демо)')}>
+                + Нотатка
               </button>
             </div>
           </div>
 
           {/* Order items if available */}
           {item.orderData?.items && item.orderData.items.length > 0 && (
-            <div className="rounded-2xl border p-4">
-              <div className="font-semibold mb-3">Товари ({item.orderData.items.length})</div>
+            <div className="corp-card">
+              <h4 className="font-semibold text-corp-text-dark mb-3">Товари ({item.orderData.items.length})</h4>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {item.orderData.items.slice(0, 10).map((product, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg">
+                  <div key={idx} className="flex items-center gap-3 p-2 bg-corp-bg-light rounded border border-corp-border">
                     {product.image && (
                       <img src={product.image} alt="" className="w-10 h-10 object-cover rounded" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{product.name || product.product_name}</div>
-                      <div className="text-xs text-slate-500">
+                      <p className="text-sm font-medium text-corp-text-dark truncate">{product.name || product.product_name}</p>
+                      <p className="text-xs text-corp-text-muted">
                         {product.quantity || product.qty} шт × ₴{product.price_per_day || product.rental_price || 0}
-                      </div>
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -574,20 +569,17 @@ export default function UniversalOpsCalendar() {
 
   const [move, setMove] = useState(null);
   
-  // Create task dialog state
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState(null);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
 
-  // Lanes based on mode
   const lanes = useMemo(() => {
     if (mode === 'ops') return [LANE.ISSUE, LANE.RETURN, LANE.ON_RENT, LANE.PACKING];
     if (mode === 'tasks') return [LANE.PACKING, LANE.CLEANING, LANE.RESTORE, LANE.DAMAGE];
     return [LANE.ISSUE, LANE.RETURN, LANE.PACKING, LANE.CLEANING, LANE.RESTORE, LANE.DAMAGE];
   }, [mode]);
 
-  // Load calendar data
   useEffect(() => {
     loadCalendarData();
   }, [start]);
@@ -596,8 +588,6 @@ export default function UniversalOpsCalendar() {
     try {
       setLoading(true);
       const calendarItems = [];
-      const startDate = isoDate(addDays(start, -7));
-      const endDate = isoDate(addDays(start, 21));
 
       // 1. Load awaiting orders
       try {
@@ -629,7 +619,6 @@ export default function UniversalOpsCalendar() {
             });
           }
 
-          // Range for ON_RENT
           if (issueDate && returnDate) {
             calendarItems.push({
               id: `awaiting-${o.id}-range`,
@@ -663,7 +652,6 @@ export default function UniversalOpsCalendar() {
           const issueDate = card.rental_start_date;
           const returnDate = card.rental_end_date;
 
-          // Packing lane - preparation
           if (card.status === 'preparation' && issueDate) {
             calendarItems.push({
               id: `ic-${card.id}-packing`,
@@ -685,7 +673,6 @@ export default function UniversalOpsCalendar() {
             });
           }
 
-          // Issue lane - ready
           if ((card.status === 'ready' || card.status === 'ready_for_issue') && issueDate) {
             calendarItems.push({
               id: `ic-${card.id}-issue`,
@@ -707,7 +694,6 @@ export default function UniversalOpsCalendar() {
             });
           }
 
-          // Return lane - issued
           if (card.status === 'issued' && returnDate) {
             calendarItems.push({
               id: `ic-${card.id}-return`,
@@ -809,7 +795,6 @@ export default function UniversalOpsCalendar() {
         tasks.forEach((task) => {
           const taskDate = task.due_date?.slice(0, 10) || task.created_at?.slice(0, 10) || isoDate(new Date());
           
-          // Map task_type to lane
           let lane = LANE.PACKING;
           if (task.task_type === 'cleaning' || task.task_type === 'wash') lane = LANE.CLEANING;
           if (task.task_type === 'repair' || task.task_type === 'restore') lane = LANE.RESTORE;
@@ -830,13 +815,11 @@ export default function UniversalOpsCalendar() {
             orderData: task,
           });
         });
-        console.log(`[Calendar] Loaded ${tasks.length} tasks`);
       } catch (err) {
         console.error('[Calendar] Failed to load tasks:', err);
       }
 
       setItems(calendarItems);
-      console.log(`[Calendar] Loaded ${calendarItems.length} items`);
     } catch (err) {
       console.error('[Calendar] Failed to load calendar:', err);
     } finally {
@@ -844,7 +827,6 @@ export default function UniversalOpsCalendar() {
     }
   };
 
-  // Filtered items
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return items.filter((it) => {
@@ -858,7 +840,6 @@ export default function UniversalOpsCalendar() {
     });
   }, [items, query, show.onlyProblems, lanes]);
 
-  // Group by lane and day
   const byLaneDay = useMemo(() => {
     const map = new Map();
     for (const l of lanes) {
@@ -875,7 +856,6 @@ export default function UniversalOpsCalendar() {
     return map;
   }, [filtered, lanes, days]);
 
-  // Ranges for ON_RENT lane
   const ranges = useMemo(() => filtered.filter((it) => it.type === 'range'), [filtered]);
 
   const openItem = (it) => {
@@ -888,18 +868,15 @@ export default function UniversalOpsCalendar() {
   const clickCell = async (lane, d) => {
     const date = isoDate(d);
     if (move) {
-      // Move item to new cell
       setItems((prev) =>
         prev.map((x) => (x.id === move.id ? { ...x, lane, date } : x))
       );
       
-      // Update backend if it's an order
       if (move.orderId && (lane === LANE.ISSUE || lane === LANE.RETURN)) {
         try {
           await axios.put(`${BACKEND_URL}/api/orders/${move.orderId}`, {
             [lane === LANE.ISSUE ? 'rental_start_date' : 'rental_end_date']: date
           });
-          console.log('[Calendar] Date updated');
         } catch (err) {
           console.error('[Calendar] Failed to update date:', err);
         }
@@ -907,16 +884,14 @@ export default function UniversalOpsCalendar() {
       
       setMove(null);
     } else {
-      // Open create task dialog
       setCreateDraft({ lane, date });
       setCreateOpen(true);
     }
   };
 
-  // Create task handler
   const handleCreateTask = async (taskData) => {
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/tasks`, {
+      await axios.post(`${BACKEND_URL}/api/tasks`, {
         title: taskData.title,
         description: taskData.description,
         task_type: taskData.taskType,
@@ -925,12 +900,7 @@ export default function UniversalOpsCalendar() {
         status: 'todo'
       });
       
-      console.log('[Calendar] Task created:', response.data);
-      
-      // Reload calendar data
       loadCalendarData();
-      
-      // Close dialog
       setCreateOpen(false);
       setCreateDraft(null);
     } catch (err) {
@@ -939,7 +909,6 @@ export default function UniversalOpsCalendar() {
     }
   };
 
-  // Stats
   const stats = useMemo(() => ({
     total: filtered.length,
     issue: filtered.filter(i => i.lane === LANE.ISSUE).length,
@@ -958,94 +927,82 @@ export default function UniversalOpsCalendar() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          <div className="corp-stat-card">
-            <div className="corp-stat-label">Всього подій</div>
-            <div className="corp-stat-value">{stats.total}</div>
+          <div className="corp-card text-center">
+            <p className="text-xs text-corp-text-muted">Всього</p>
+            <p className="text-xl font-bold text-corp-text-dark">{stats.total}</p>
           </div>
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-            <div className="text-xs text-emerald-700">Видачі</div>
-            <div className="text-xl font-bold text-emerald-800">{stats.issue}</div>
+          <div className="corp-card text-center bg-[#f4f8e6]">
+            <p className="text-xs text-corp-primary">Видачі</p>
+            <p className="text-xl font-bold text-corp-primary">{stats.issue}</p>
           </div>
-          <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3">
-            <div className="text-xs text-indigo-700">Повернення</div>
-            <div className="text-xl font-bold text-indigo-800">{stats.return}</div>
+          <div className="corp-card text-center bg-[#faf6ed]">
+            <p className="text-xs text-corp-gold">Повернення</p>
+            <p className="text-xl font-bold text-corp-gold">{stats.return}</p>
           </div>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3">
-            <div className="text-xs text-amber-700">Комплектація</div>
-            <div className="text-xl font-bold text-amber-800">{stats.packing}</div>
+          <div className="corp-card text-center bg-amber-50">
+            <p className="text-xs text-amber-700">Комплектація</p>
+            <p className="text-xl font-bold text-amber-700">{stats.packing}</p>
           </div>
-          <div className="rounded-2xl border border-sky-200 bg-sky-50 p-3">
-            <div className="text-xs text-sky-700">Мийка/Рест.</div>
-            <div className="text-xl font-bold text-sky-800">{stats.cleaning}</div>
+          <div className="corp-card text-center bg-sky-50">
+            <p className="text-xs text-sky-700">Мийка/Рест.</p>
+            <p className="text-xl font-bold text-sky-700">{stats.cleaning}</p>
           </div>
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3">
-            <div className="text-xs text-rose-700">Шкоди</div>
-            <div className="text-xl font-bold text-rose-800">{stats.damage}</div>
+          <div className="corp-card text-center bg-rose-50">
+            <p className="text-xs text-rose-700">Шкоди</p>
+            <p className="text-xl font-bold text-rose-700">{stats.damage}</p>
           </div>
         </div>
 
         {/* Week navigation */}
-        <div className="rounded-2xl border bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b p-3">
+        <div className="corp-card !p-0 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-corp-border p-3">
             <div className="flex items-center gap-2">
-              <button
-                className="rounded-xl border px-3 py-2 text-sm hover:bg-slate-50"
-                onClick={() => setStart((s) => addDays(s, -7))}
-              >
+              <button className="corp-btn corp-btn-secondary" onClick={() => setStart((s) => addDays(s, -7))}>
                 ← Тиждень
               </button>
-              <button
-                className="rounded-xl border px-3 py-2 text-sm hover:bg-slate-50"
-                onClick={() => setStart(startOfWeek(new Date()))}
-              >
+              <button className="corp-btn corp-btn-primary" onClick={() => setStart(startOfWeek(new Date()))}>
                 Сьогодні
               </button>
-              <button
-                className="rounded-xl border px-3 py-2 text-sm hover:bg-slate-50"
-                onClick={() => setStart((s) => addDays(s, 7))}
-              >
+              <button className="corp-btn corp-btn-secondary" onClick={() => setStart((s) => addDays(s, 7))}>
                 Тиждень →
               </button>
             </div>
 
-            <div className="text-sm text-slate-600 font-medium">
+            <p className="text-sm font-medium text-corp-text-dark">
               {fmtDay(days[0])} — {fmtDay(days[6])}
-            </div>
+            </p>
 
             <div className="flex items-center gap-2">
               {move ? (
                 <>
-                  <Badge tone="warn">✋ Переміщення: {move.title}</Badge>
-                  <button
-                    className="rounded-xl border px-3 py-2 text-sm hover:bg-slate-50"
-                    onClick={() => setMove(null)}
-                  >
+                  <Badge tone="warn">Move: {move.title}</Badge>
+                  <button className="corp-btn corp-btn-secondary" onClick={() => setMove(null)}>
                     Скасувати
                   </button>
                 </>
               ) : (
-                <Badge tone="ok">✓ Готово</Badge>
+                <Badge tone="ok">Готово</Badge>
               )}
             </div>
           </div>
 
           {/* Grid */}
           {loading ? (
-            <div className="p-8 text-center text-slate-400">Завантаження...</div>
+            <div className="p-8 text-center text-corp-text-muted">Завантаження...</div>
           ) : (
             <div className="overflow-auto">
               <div className="min-w-[900px]">
                 {/* Header */}
-                <div className="grid grid-cols-8 border-b bg-slate-50">
-                  <div className="p-3 text-sm font-semibold text-slate-700">Лейни</div>
+                <div className="grid grid-cols-8 border-b border-corp-border bg-corp-bg-light">
+                  <div className="p-3 text-sm font-semibold text-corp-text-dark">Категорії</div>
                   {days.map((d) => {
                     const isToday = isoDate(d) === isoDate(new Date());
                     return (
-                      <div key={isoDate(d)} className={cls('p-3 text-sm font-semibold text-center', isToday && 'bg-blue-50')}>
-                        <div className={isToday ? 'text-blue-600' : 'text-slate-700'}>{fmtDay(d)}</div>
-                        <div className={cls('text-xs font-normal', isToday ? 'text-blue-500' : 'text-slate-500')}>
+                      <div key={isoDate(d)} className={cls('p-3 text-sm font-semibold text-center', isToday && 'bg-corp-primary/10')}>
+                        <p className={isToday ? 'text-corp-primary' : 'text-corp-text-dark'}>{fmtDay(d)}</p>
+                        <p className={cls('text-xs font-normal', isToday ? 'text-corp-primary' : 'text-corp-text-muted')}>
                           {isoDate(d)}
-                        </div>
+                        </p>
                       </div>
                     );
                   })}
@@ -1055,31 +1012,30 @@ export default function UniversalOpsCalendar() {
                 {lanes.map((lane) => {
                   const laneInfo = laneMeta[lane];
                   return (
-                    <div key={lane} className="grid grid-cols-8 border-b">
-                      <div className="p-3 border-r">
+                    <div key={lane} className="grid grid-cols-8 border-b border-corp-border">
+                      <div className="p-3 border-r border-corp-border bg-corp-bg-light">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <div className={cls('font-semibold text-sm', laneInfo.textClass)}>{laneInfo.title}</div>
-                            <div className="text-xs text-slate-500 truncate">{laneInfo.hint}</div>
+                            <p className={cls('font-semibold text-sm', laneInfo.textClass)}>{laneInfo.title}</p>
+                            <p className="text-xs text-corp-text-muted truncate">{laneInfo.hint}</p>
                           </div>
                           <Badge>{laneInfo.chip}</Badge>
                         </div>
 
-                        {/* Ranges sidebar for ON_RENT */}
                         {lane === LANE.ON_RENT && ranges.length > 0 && (
                           <div className="mt-3 space-y-2">
                             {ranges.slice(0, 3).map((r) => (
                               <div
                                 key={r.id}
-                                className="rounded-xl border bg-white p-2 shadow-sm cursor-pointer hover:shadow"
+                                className="rounded border border-corp-border bg-white p-2 cursor-pointer hover:shadow-sm transition"
                                 onClick={() => openItem(r)}
                               >
-                                <div className="font-semibold text-xs truncate">{r.title}</div>
-                                <div className="text-[10px] text-slate-600">{r.from} → {r.to}</div>
+                                <p className="font-semibold text-xs truncate text-corp-text-dark">{r.title}</p>
+                                <p className="text-[10px] text-corp-text-muted">{r.from} → {r.to}</p>
                               </div>
                             ))}
                             {ranges.length > 3 && (
-                              <div className="text-xs text-slate-400 text-center">+{ranges.length - 3} більше</div>
+                              <p className="text-xs text-corp-text-muted text-center">+{ranges.length - 3} більше</p>
                             )}
                           </div>
                         )}
@@ -1094,9 +1050,9 @@ export default function UniversalOpsCalendar() {
                           <div
                             key={key}
                             className={cls(
-                              'min-h-[100px] p-2 border-l',
-                              isToday ? 'bg-blue-50/30' : 'bg-white',
-                              move ? 'cursor-crosshair hover:bg-emerald-50' : 'hover:bg-slate-50'
+                              'min-h-[100px] p-2 border-l border-corp-border',
+                              isToday ? 'bg-corp-primary/5' : 'bg-white',
+                              move ? 'cursor-crosshair hover:bg-corp-primary/10' : 'hover:bg-corp-bg-light'
                             )}
                             onClick={() => clickCell(lane, d)}
                           >
@@ -1112,7 +1068,7 @@ export default function UniversalOpsCalendar() {
                                 />
                               ))}
                               {cellItems.length === 0 && (
-                                <div className="rounded-xl border border-dashed bg-white/70 p-2 text-xs text-slate-400 text-center hover:bg-slate-100 hover:border-slate-300 transition cursor-pointer">
+                                <div className="rounded border border-dashed border-corp-border bg-corp-bg-light/50 p-2 text-xs text-corp-text-muted text-center hover:bg-corp-primary/10 hover:border-corp-primary/50 transition cursor-pointer">
                                   + задача
                                 </div>
                               )}
@@ -1127,8 +1083,8 @@ export default function UniversalOpsCalendar() {
             </div>
           )}
 
-          <div className="p-3 text-xs text-slate-500 border-t bg-slate-50">
-            Клік по пустій клітинці → створити задачу • Клік по карточці → деталі • ✋ → перемістити
+          <div className="p-3 text-xs text-corp-text-muted border-t border-corp-border bg-corp-bg-light">
+            Клік по пустій клітинці → створити задачу • Клік по карточці → деталі • Move → перемістити
           </div>
         </div>
       </div>

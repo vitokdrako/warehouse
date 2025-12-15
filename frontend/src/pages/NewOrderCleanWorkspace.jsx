@@ -329,7 +329,7 @@ export default function NewOrderClean() {
       {/* Комерційна зведена */}
       <ZoneCommercialSummary
         rentAmount={calculations.totalRent}
-        depositAmount={depositAmount || calculations.estimatedDeposit}
+        depositAmount={calculations.estimatedDeposit}
         discountPercent={discount}
         rentalDays={rentalDays}
         itemsCount={calculations.itemsCount}

@@ -85,6 +85,15 @@ function App() {
           />
           
           <Route 
+            path="/archived-order/:id" 
+            element={
+              <ProtectedRoute>
+                <ArchivedOrderWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
             path="/reaudit" 
             element={
               <ProtectedRoute>

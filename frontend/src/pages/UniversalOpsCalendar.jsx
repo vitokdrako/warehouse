@@ -45,25 +45,22 @@ const laneMeta = {
   [LANE.ISSUE]: { 
     title: 'Видача', 
     hint: 'Готові до видачі клієнту', 
-    chip: 'Issue',
     railColor: 'bg-corp-primary',
     bgClass: 'bg-[#f4f8e6]',
     borderClass: 'border-corp-primary/30',
-    textClass: 'text-corp-text-dark'
+    textClass: 'text-corp-primary'
   },
   [LANE.RETURN]: { 
     title: 'Повернення', 
     hint: 'Очікуємо повернення', 
-    chip: 'Return',
     railColor: 'bg-corp-gold',
     bgClass: 'bg-[#faf6ed]',
     borderClass: 'border-corp-gold/30',
-    textClass: 'text-corp-text-dark'
+    textClass: 'text-corp-gold'
   },
   [LANE.ON_RENT]: { 
     title: 'В оренді', 
     hint: 'Діапазони між датами', 
-    chip: 'Range',
     railColor: 'bg-corp-text-muted',
     bgClass: 'bg-corp-bg-light',
     borderClass: 'border-corp-border',
@@ -72,38 +69,34 @@ const laneMeta = {
   [LANE.PACKING]: { 
     title: 'Комплектація', 
     hint: 'На збірці та пакуванні', 
-    chip: 'Task',
     railColor: 'bg-amber-500',
     bgClass: 'bg-amber-50',
     borderClass: 'border-amber-200',
-    textClass: 'text-amber-800'
+    textClass: 'text-amber-700'
   },
   [LANE.CLEANING]: { 
-    title: 'Мийка / Хімчистка', 
+    title: 'Мийка', 
     hint: 'Партії та задачі', 
-    chip: 'Task',
     railColor: 'bg-sky-500',
     bgClass: 'bg-sky-50',
     borderClass: 'border-sky-200',
-    textClass: 'text-sky-800'
+    textClass: 'text-sky-700'
   },
   [LANE.RESTORE]: { 
     title: 'Реставрація', 
     hint: 'Відновлення/ремонт', 
-    chip: 'Task',
     railColor: 'bg-orange-500',
     bgClass: 'bg-orange-50',
     borderClass: 'border-orange-200',
-    textClass: 'text-orange-800'
+    textClass: 'text-orange-700'
   },
   [LANE.DAMAGE]: { 
     title: 'Шкоди', 
     hint: 'Кейси пошкоджень', 
-    chip: 'Case',
     railColor: 'bg-rose-500',
     bgClass: 'bg-rose-50',
     borderClass: 'border-rose-200',
-    textClass: 'text-rose-800'
+    textClass: 'text-rose-700'
   },
 };
 

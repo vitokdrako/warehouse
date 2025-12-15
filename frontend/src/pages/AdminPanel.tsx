@@ -385,7 +385,14 @@ export default function AdminPanel() {
                         <td className="px-4 py-3 text-sm text-gray-500">
                           {user.last_login ? new Date(user.last_login).toLocaleDateString('uk-UA') : '-'}
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-right space-x-2">
+                          <button
+                            onClick={() => openPasswordModal(user.user_id)}
+                            className="text-amber-600 hover:text-amber-800"
+                            title="Змінити пароль"
+                          >
+                            🔑
+                          </button>
                           <button
                             onClick={() => {
                               setEditingUser(user)
@@ -399,7 +406,7 @@ export default function AdminPanel() {
                               })
                               setShowUserForm(true)
                             }}
-                            className="text-blue-600 hover:text-blue-800 mr-3"
+                            className="text-blue-600 hover:text-blue-800"
                           >
                             Редагувати
                           </button>

@@ -98,7 +98,7 @@ async def get_inventory_item(item_id: str, db: Session = Depends(get_rh_db)):  #
         # ✅ Query from RentalHub DB
         result_db = db.execute(text("""
             SELECT 
-                p.product_id, p.sku, p.name, p.price, p.image_url, p.description,
+                p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url, p.description,
                 i.quantity, i.zone, i.aisle, i.shelf, i.cleaning_status, i.product_state
             FROM products p
             LEFT JOIN inventory i ON p.product_id = i.product_id
@@ -113,7 +113,7 @@ async def get_inventory_item(item_id: str, db: Session = Depends(get_rh_db)):  #
         raise HTTPException(status_code=404, detail="Product not found")
     
     # ✅ Parse row data
-    (product_id, sku, name, price, image_url, description, 
+    (product_id, sku, name, price, rental_price, image_url, description, 
      quantity, zone, aisle, shelf, cleaning_status, product_state) = row
     
     return {
@@ -121,11 +121,12 @@ async def get_inventory_item(item_id: str, db: Session = Depends(get_rh_db)):  #
         "article": sku or str(product_id),
         "name": name or f"Product {product_id}",
         "category": None,
-        "price_per_day": float(price) if price else 0.0,
+        "price_per_day": float(rental_price) if rental_price else 0.0,  # Ціна оренди
+        "damage_cost": float(price) if price else 0.0,  # Ціна купівлі
         "quantity": quantity or 0,
         "image_url": image_url,
         "description": description,
-        "replacement_price": None,
+        "replacement_price": float(price) if price else None,
         "damage_category": None,
         "location": {
             "zone": zone,

@@ -95,11 +95,11 @@ async def get_inventory_item(item_id: str, db: Session = Depends(get_rh_db)):  #
     """
     
     try:
-        # ✅ Query from RentalHub DB
+        # ✅ Query from RentalHub DB - location from products table
         result_db = db.execute(text("""
             SELECT 
                 p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url, p.description,
-                i.quantity, i.zone, i.aisle, i.shelf, i.cleaning_status, i.product_state
+                i.quantity, p.zone, p.aisle, p.shelf, i.cleaning_status, i.product_state
             FROM products p
             LEFT JOIN inventory i ON p.product_id = i.product_id
             WHERE p.product_id = :product_id

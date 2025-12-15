@@ -85,7 +85,13 @@ export default function NewOrderClean() {
     try {
       setLoadingInventory(true)
       const response = await axios.get(`${BACKEND_URL}/api/inventory`)
-      setInventory(response.data)
+      // Трансформуємо дані: rent_price -> price_per_day
+      const transformedInventory = (response.data || []).map(item => ({
+        ...item,
+        price_per_day: item.rent_price || item.rental_price || item.price_per_day || 0,
+        damage_cost: item.price || item.damage_cost || 0  // Ціна купівлі = вартість збитків
+      }))
+      setInventory(transformedInventory)
     } catch (error) {
       console.error('Error loading inventory:', error)
     } finally {

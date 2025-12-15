@@ -44,6 +44,9 @@ export default function ZoneItemsEditor({
         // Використовуємо rent_price або price_per_day для ціни оренди
         const rentPrice = found.rent_price || found.rental_price || found.price_per_day || 0
         onUpdateItem?.(index, 'price', rentPrice)
+        // damage_cost - вартість товару для розрахунку застави
+        const damageCost = found.damage_cost || found.replacement_price || found.price || 0
+        onUpdateItem?.(index, 'damage_cost', damageCost)
         onUpdateItem?.(index, 'depositTier', found.deposit_tier || 'medium')
       }
     }

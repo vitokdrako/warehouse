@@ -110,8 +110,12 @@ export default function NewOrderClean() {
     const discountAmount = (totalRent * discount) / 100
     const rentAfterDiscount = totalRent - discountAmount
     
-    // Оціночна застава = 1.5x від оренди
-    const estimatedDeposit = totalRent * 1.5
+    // Застава = 50% від вартості товару (damage_cost/price) * кількість
+    // damage_cost береться з інвентарю, або якщо немає - price * 2
+    const estimatedDeposit = items.reduce((sum, item) => {
+      const damageCost = item.damage_cost || (item.price || 0) * 2
+      return sum + (damageCost * 0.5 * (item.qty || 1))
+    }, 0)
     
     return {
       totalRent,

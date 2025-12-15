@@ -530,11 +530,6 @@ export default function ManagerDashboard() {
             description="Каталог декору, історія оренд"
             onClick={() => navigate('/reaudit')}
           />
-          <NavCard 
-            title="📦 Комплектація" 
-            description="Збір товарів для видачі"
-            onClick={() => navigate('/packing')}
-          />
           {user?.role === 'admin' && (
             <NavCard 
               title="⚙️ Адмін-панель" 

@@ -6,14 +6,14 @@ import ZoneCard from '../ZoneCard'
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 /**
- * Zone: Requisitors - Вибір комплектувальників (реквізиторів)
+ * Zone: Requisitors - Вибір комплектувальників (тільки реквізитори)
  * Дозволяє обрати кількох працівників для комплектації
  */
 export default function ZoneRequisitors({
   selectedIds = [],
   onSelectionChange,
   readOnly = false,
-  title = "👷 Комплектувальники",
+  title = "Комплектувальники",
   hint = "Оберіть хто займається комплектацією"
 }) {
   const [requisitors, setRequisitors] = useState([])
@@ -25,19 +25,15 @@ export default function ZoneRequisitors({
   
   const loadRequisitors = async () => {
     try {
-      // Завантажуємо всіх працівників
+      // Завантажуємо працівників
       const response = await axios.get(`${BACKEND_URL}/api/admin/staff`)
-      // API повертає { managers, requisitors, all }
-      // Беремо всіх - реквізиторів та менеджерів для вибору
+      // Фільтруємо ТІЛЬКИ реквізиторів
       const allStaff = response.data?.all || response.data?.requisitors || []
-      setRequisitors(allStaff)
+      const onlyRequisitors = allStaff.filter(s => s.role === 'requisitor')
+      setRequisitors(onlyRequisitors)
     } catch (err) {
       console.error('Error loading requisitors:', err)
-      // Fallback список
-      setRequisitors([
-        { user_id: 1, full_name: 'Менеджер', role: 'manager' },
-        { user_id: 2, full_name: 'Складський працівник', role: 'warehouse' },
-      ])
+      setRequisitors([])
     } finally {
       setLoading(false)
     }
@@ -66,20 +62,13 @@ export default function ZoneRequisitors({
       tone={tone}
     >
       {loading ? (
-        <div className="text-center py-4 text-slate-400">Завантаження...</div>
+        <div className="text-center py-4 text-corp-text-muted">Завантаження...</div>
       ) : requisitors.length === 0 ? (
-        <div className="text-center py-4 text-slate-400">Немає доступних працівників</div>
+        <div className="text-center py-4 text-corp-text-muted">Немає доступних реквізиторів</div>
       ) : (
         <div className="flex flex-wrap gap-2">
           {requisitors.map((person) => {
             const isSelected = selectedIds.includes(person.user_id)
-            const roleLabel = {
-              'requisitor': '📦',
-              'warehouse': '🏭',
-              'manager': '👔',
-              'admin': '⚙️',
-              'office_manager': '🏢'
-            }[person.role] || '👤'
             
             return (
               <button
@@ -87,18 +76,17 @@ export default function ZoneRequisitors({
                 onClick={() => toggleRequisitor(person.user_id)}
                 disabled={readOnly}
                 className={`
-                  flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 font-medium text-sm
+                  flex items-center gap-2 px-4 py-2.5 rounded-lg border font-medium text-sm
                   transition-all duration-150
                   ${isSelected 
-                    ? 'bg-emerald-100 border-emerald-400 text-emerald-800 shadow-sm' 
-                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    ? 'bg-corp-primary/10 border-corp-primary text-corp-primary' 
+                    : 'bg-white border-corp-border text-corp-text-main hover:border-corp-primary/50 hover:bg-corp-bg-light'
                   }
                   ${readOnly ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
                 `}
               >
-                <span>{roleLabel}</span>
                 <span>{person.full_name}</span>
-                {isSelected && <span className="text-emerald-600">✓</span>}
+                {isSelected && <span className="text-corp-primary font-bold">✓</span>}
               </button>
             )
           })}
@@ -107,9 +95,9 @@ export default function ZoneRequisitors({
       
       {/* Показати обраних */}
       {selectedIds.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-slate-100">
-          <div className="text-xs text-slate-500 mb-1">Відповідальні за комплектацію:</div>
-          <div className="font-medium text-slate-800">
+        <div className="mt-3 pt-3 border-t border-corp-border">
+          <div className="text-xs text-corp-text-muted mb-1">Відповідальні за комплектацію:</div>
+          <div className="font-medium text-corp-text-dark">
             {selectedNames.join(', ')}
           </div>
         </div>

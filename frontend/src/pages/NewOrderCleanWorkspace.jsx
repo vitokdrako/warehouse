@@ -186,17 +186,25 @@ export default function NewOrderClean() {
     try {
       const days = rentalDays || 1
       
+      // Розрахунок сум
+      const totalRentAmount = validItems.reduce((sum, i) => 
+        sum + ((i.price || 0) * (i.qty || 1) * days), 0)
+      const totalDepositAmount = validItems.reduce((sum, i) => {
+        const damageCost = i.damage_cost || (i.price || 0) * 2
+        return sum + (damageCost * 0.5 * (i.qty || 1))
+      }, 0)
+      
       const orderData = {
-        client_name: clientName,
-        client_phone: clientPhone,
-        client_email: clientEmail || undefined,
-        issue_date: issueDate,
-        return_date: returnDate,
-        manager_comment: notes || undefined,
-        discount_percent: discount || 0,
+        customer_name: clientName,
+        customer_phone: clientPhone,
+        customer_email: clientEmail || undefined,
+        rental_start_date: issueDate,
+        rental_end_date: returnDate,
+        notes: notes || undefined,
+        total_amount: totalRentAmount,
+        deposit_amount: totalDepositAmount,
         items: validItems.map(i => {
           const totalRental = (i.price || 0) * (i.qty || 1) * days
-          // Застава = 50% від вартості товару (damage_cost) * кількість
           const damageCost = i.damage_cost || (i.price || 0) * 2
           const depositPerItem = damageCost * 0.5
           const totalDeposit = depositPerItem * (i.qty || 1)

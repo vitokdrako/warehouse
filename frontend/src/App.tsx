@@ -147,7 +147,7 @@ function App() {
             path="/calendar" 
             element={
               <ProtectedRoute>
-                <CalendarBoardNew />
+                <UniversalOpsCalendar />
               </ProtectedRoute>
             } 
           />

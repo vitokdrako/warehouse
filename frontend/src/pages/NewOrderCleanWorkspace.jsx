@@ -256,7 +256,7 @@ export default function NewOrderClean() {
           />
           <LeftRailFinance
             rentAmount={calculations.rentAfterDiscount}
-            depositAmount={depositAmount || calculations.estimatedDeposit}
+            depositAmount={calculations.estimatedDeposit}
             discount={discount}
             isPaid={false}
           />

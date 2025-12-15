@@ -20,24 +20,38 @@ ALGORITHM = "HS256"
 def get_current_user(authorization: str = Header(None)):
     """Extract user info from JWT token"""
     if not authorization or not authorization.startswith('Bearer '):
+        print("[Admin] No authorization header")
         return None
     
     try:
         token = authorization.split(' ')[1]
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return {
+        user = {
             'email': payload.get('email'),
             'username': payload.get('username') or payload.get('sub'),
             'user_id': payload.get('user_id'),
             'role': payload.get('role')
         }
+        print(f"[Admin] User from token: {user.get('email')}, role: {user.get('role')}")
+        return user
+    except jwt.ExpiredSignatureError:
+        print("[Admin] Token expired")
+        return None
+    except jwt.InvalidTokenError as e:
+        print(f"[Admin] Invalid token: {e}")
+        return None
     except Exception as e:
+        print(f"[Admin] Token decode error: {e}")
         return None
 
 def require_admin(authorization: str = Header(None)):
     """Require admin role"""
     user = get_current_user(authorization)
-    if not user or user.get('role') != 'admin':
+    if not user:
+        print("[Admin] No user found from token")
+        raise HTTPException(status_code=403, detail="Доступ тільки для адміністраторів")
+    if user.get('role') != 'admin':
+        print(f"[Admin] User {user.get('email')} has role {user.get('role')}, not admin")
         raise HTTPException(status_code=403, detail="Доступ тільки для адміністраторів")
     return user
 

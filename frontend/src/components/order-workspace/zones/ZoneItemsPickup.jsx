@@ -114,7 +114,7 @@ function ItemPickupCard({
             )}
             {hasPreDamage && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-medium">
-                ⚠️ {item.pre_damage.length} пошкодж.
+                {item.pre_damage.length} пошкодж.
               </span>
             )}
             {missing > 0 && (

@@ -196,7 +196,9 @@ export default function NewOrderClean() {
         discount_percent: discount || 0,
         items: validItems.map(i => {
           const totalRental = (i.price || 0) * (i.qty || 1) * days
-          const depositPerItem = (i.price || 0) * 2
+          // Застава = 50% від вартості товару (damage_cost) * кількість
+          const damageCost = i.damage_cost || (i.price || 0) * 2
+          const depositPerItem = damageCost * 0.5
           const totalDeposit = depositPerItem * (i.qty || 1)
           
           return {

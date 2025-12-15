@@ -271,7 +271,7 @@ function App() {
             path="/orders/return" 
             element={
               <ProtectedRoute>
-                <ReturnOrderClean />
+                <ReturnOrderWorkspace />
               </ProtectedRoute>
             } 
           />
@@ -280,7 +280,7 @@ function App() {
             path="/return/:id" 
             element={
               <ProtectedRoute>
-                <ReturnOrderClean />
+                <ReturnOrderWorkspace />
               </ProtectedRoute>
             } 
           />
@@ -290,6 +290,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <ReturnOrderWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/return-old/:id" 
+            element={
+              <ProtectedRoute>
+                <ReturnOrderClean />
               </ProtectedRoute>
             } 
           />

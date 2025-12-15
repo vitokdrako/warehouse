@@ -78,14 +78,22 @@ export default function AdminPanel() {
   const loadUsers = async () => {
     try {
       setLoading(true)
+      const token = getToken()
+      if (!token) {
+        console.error('No token found!')
+        return
+      }
       const response = await fetch(`${API_URL}/api/admin/users`, {
         headers: {
-          'Authorization': `Bearer ${getToken()}`
+          'Authorization': `Bearer ${token}`
         }
       })
       if (response.ok) {
         const data = await response.json()
         setUsers(data)
+      } else {
+        const errData = await response.json()
+        console.error('Error loading users:', errData)
       }
     } catch (error) {
       console.error('Error loading users:', error)
@@ -97,14 +105,22 @@ export default function AdminPanel() {
   const loadCategories = async () => {
     try {
       setLoading(true)
+      const token = getToken()
+      if (!token) {
+        console.error('No token found!')
+        return
+      }
       const response = await fetch(`${API_URL}/api/admin/categories`, {
         headers: {
-          'Authorization': `Bearer ${getToken()}`
+          'Authorization': `Bearer ${token}`
         }
       })
       if (response.ok) {
         const data = await response.json()
         setCategories(data)
+      } else {
+        const errData = await response.json()
+        console.error('Error loading categories:', errData)
       }
     } catch (error) {
       console.error('Error loading categories:', error)

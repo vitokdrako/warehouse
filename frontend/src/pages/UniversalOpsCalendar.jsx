@@ -1005,12 +1005,9 @@ export default function UniversalOpsCalendar() {
                   return (
                     <div key={lane} className="grid grid-cols-8 border-b border-corp-border">
                       <div className="p-3 border-r border-corp-border bg-corp-bg-light">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className={cls('font-semibold text-sm', laneInfo.textClass)}>{laneInfo.title}</p>
-                            <p className="text-xs text-corp-text-muted truncate">{laneInfo.hint}</p>
-                          </div>
-                          <Badge>{laneInfo.chip}</Badge>
+                        <div>
+                          <p className={cls('font-semibold text-sm', laneInfo.textClass)}>{laneInfo.title}</p>
+                          <p className="text-xs text-corp-text-muted truncate">{laneInfo.hint}</p>
                         </div>
 
                         {lane === LANE.ON_RENT && ranges.length > 0 && (

@@ -78,17 +78,23 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
         {/* Інформація */}
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-slate-800 mb-1 line-clamp-2">{item.name}</div>
-          <div className="text-xs text-slate-500 mb-2">SKU: {item.sku || '—'}</div>
+          <div className="text-xs text-slate-500">SKU: {item.sku || '—'}</div>
+          {/* Локація на складі */}
+          {(item.location?.zone || item.location?.aisle || item.location?.shelf) && (
+            <div className="text-xs text-corp-primary font-medium mt-0.5">
+              Полиця: {[item.location.zone, item.location.aisle, item.location.shelf].filter(Boolean).join('-')}
+            </div>
+          )}
           
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 mt-2">
             {isComplete && !hasDamage && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
-                ✓ OK
+                OK
               </span>
             )}
             {hasDamage && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-medium">
-                ⚠️ {findings.length} пошкодж.
+                {findings.length} пошкодж.
               </span>
             )}
             {!isComplete && !hasDamage && (

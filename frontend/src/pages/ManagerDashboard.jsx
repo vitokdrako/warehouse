@@ -377,7 +377,7 @@ export default function ManagerDashboard() {
           <Kpi title="Виручка" value={`₴ ${kpis.revenue.toFixed(0)}`} note="з фін. кабінету"/>
           <Kpi title="Застави в холді" value={`₴ ${kpis.deposits.toFixed(0)}`} note="з фін. кабінету"/>
           <Kpi 
-            title="🔧 На реставрації" 
+            title="На реставрації" 
             value={cleaningStats.repair.toString()} 
             note="товари у відновленні" 
             tone={cleaningStats.repair > 0 ? "info" : undefined}

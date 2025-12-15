@@ -54,12 +54,12 @@ export default function ZoneItemsEditor({
   
   return (
     <ZoneCard
-      title={`📦 Позиції замовлення (${items.length})`}
+      title={`Позиції замовлення (${items.length})`}
       hint={`Всього ${totals.items} од. • Оренда за ${rentalDays} дн.: ₴${fmtUA(totals.rent)}`}
       tone="neutral"
       actions={[
         { label: '+ Додати позицію', onClick: onAddItem },
-        ...(onOpenCatalog ? [{ label: '📚 Каталог', onClick: onOpenCatalog }] : [])
+        ...(onOpenCatalog ? [{ label: 'Каталог', onClick: onOpenCatalog }] : [])
       ]}
     >
       {items.length === 0 ? (

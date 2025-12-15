@@ -424,6 +424,10 @@ export default function UniversalOpsCalendar() {
   const [activeItem, setActiveItem] = useState(null);
 
   const [move, setMove] = useState(null);
+  
+  // Create task dialog state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDraft, setCreateDraft] = useState(null);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(start, i)), [start]);
 

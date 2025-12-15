@@ -356,7 +356,7 @@ export default function OrdersArchive() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/order/${order.id}/view`);
+                              navigate(`/archived-order/${order.order_id || order.id}`);
                             }}
                             className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
                           >

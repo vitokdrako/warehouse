@@ -235,7 +235,7 @@ function App() {
             path="/order/:id" 
             element={
               <ProtectedRoute>
-                <NewOrderClean />
+                <NewOrderCleanWorkspace />
               </ProtectedRoute>
             } 
           />
@@ -253,7 +253,7 @@ function App() {
             path="/issue/:id" 
             element={
               <ProtectedRoute>
-                <IssueCard />
+                <IssueCardWorkspace />
               </ProtectedRoute>
             } 
           />

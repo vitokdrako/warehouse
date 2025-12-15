@@ -1112,8 +1112,8 @@ export default function UniversalOpsCalendar() {
                                 />
                               ))}
                               {cellItems.length === 0 && (
-                                <div className="rounded-xl border border-dashed bg-white/70 p-2 text-xs text-slate-400 text-center">
-                                  —
+                                <div className="rounded-xl border border-dashed bg-white/70 p-2 text-xs text-slate-400 text-center hover:bg-slate-100 hover:border-slate-300 transition cursor-pointer">
+                                  + задача
                                 </div>
                               )}
                             </div>

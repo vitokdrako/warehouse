@@ -188,6 +188,51 @@ export default function AdminPanel() {
     }
   }
 
+  const openPasswordModal = (userId: number) => {
+    setPasswordUserId(userId)
+    setNewPassword('')
+    setConfirmPassword('')
+    setShowPasswordModal(true)
+  }
+
+  const resetPassword = async () => {
+    if (!passwordUserId) return
+    
+    if (newPassword.length < 4) {
+      alert('❌ Пароль має бути мінімум 4 символи')
+      return
+    }
+    
+    if (newPassword !== confirmPassword) {
+      alert('❌ Паролі не співпадають')
+      return
+    }
+    
+    try {
+      const response = await fetch(`${API_URL}/api/admin/users/${passwordUserId}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ password: newPassword })
+      })
+
+      if (response.ok) {
+        alert('✅ Пароль успішно змінено!')
+        setShowPasswordModal(false)
+        setPasswordUserId(null)
+        setNewPassword('')
+        setConfirmPassword('')
+      } else {
+        const error = await response.json()
+        alert(`❌ ${error.detail}`)
+      }
+    } catch (error) {
+      alert('❌ Помилка зміни пароля')
+    }
+  }
+
   const saveCategory = async () => {
     try {
       const url = editingCategory

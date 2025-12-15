@@ -58,9 +58,8 @@ def parse_issue_card(row, db: Session = None):
                 # Завантажуємо дані товару (image, price, quantity, location)
                 product_result = db.execute(text("""
                     SELECT p.product_id, p.image_url, p.price, p.rental_price, p.quantity,
-                           i.zone, i.aisle, i.shelf
+                           p.zone, p.aisle, p.shelf
                     FROM products p
-                    LEFT JOIN inventory i ON p.product_id = i.product_id
                     WHERE p.sku = :sku LIMIT 1
                 """), {"sku": item['sku']})
                 product_row = product_result.fetchone()

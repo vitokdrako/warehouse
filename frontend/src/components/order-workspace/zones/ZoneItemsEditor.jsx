@@ -35,12 +35,15 @@ export default function ZoneItemsEditor({
     if (sku.length >= 3 && inventory.length > 0) {
       const found = inventory.find(item => 
         item.article?.toLowerCase() === sku.toLowerCase() ||
+        item.sku?.toLowerCase() === sku.toLowerCase() ||
         item.id?.toLowerCase() === sku.toLowerCase()
       )
       
       if (found) {
         onUpdateItem?.(index, 'name', found.name)
-        onUpdateItem?.(index, 'price', found.price_per_day)
+        // Використовуємо rent_price або price_per_day для ціни оренди
+        const rentPrice = found.rent_price || found.rental_price || found.price_per_day || 0
+        onUpdateItem?.(index, 'price', rentPrice)
         onUpdateItem?.(index, 'depositTier', found.deposit_tier || 'medium')
       }
     }

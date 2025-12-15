@@ -32,7 +32,7 @@ const ROLES = [
   { value: 'admin', label: '👑 Адміністратор' },
   { value: 'manager', label: '📊 Менеджер' },
   { value: 'office_manager', label: '🏢 Офіс-менеджер' },
-  { value: 'requisitor', label: '📦 Реквізитор' },
+  { value: 'requisitor', label: 'Реквізитор' },
 ]
 
 export default function AdminPanel() {

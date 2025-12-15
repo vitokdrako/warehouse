@@ -274,16 +274,6 @@ export default function NewOrderClean() {
             instructions={deliveryInstructions}
             onUpdate={handleDeliveryUpdate}
           />
-          
-          {/* Додаткова панель: Застава */}
-          <ZoneDepositSetup
-            amount={depositAmount}
-            method={depositMethod}
-            releaseCondition={depositRelease}
-            note={depositNote}
-            estimatedAmount={Math.round(calculations.estimatedDeposit)}
-            onUpdate={handleDepositUpdate}
-          />
         </>
       }
       

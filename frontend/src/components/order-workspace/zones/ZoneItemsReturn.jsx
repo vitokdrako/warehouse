@@ -23,7 +23,7 @@ export default function ZoneItemsReturn({
 
   return (
     <ZoneCard
-      title={`📦 Приймання (${totalReturned}/${totalRented})`}
+      title={`Приймання (${totalReturned}/${totalRented})`}
       hint={totalFindings > 0 ? `${totalFindings} зауважень` : 'Перевірте стан товарів'}
       tone={tone}
     >

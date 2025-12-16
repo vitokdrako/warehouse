@@ -110,8 +110,14 @@
         </div>
     </div>
 
+    <div class="info-block" style="font-size: 8pt; color: #666; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;">
+        <p><strong>Інформація про заставу:</strong> Застава повертається протягом 14 робочих днів після перевірки стану майна.</p>
+        <p>Претензії щодо прихованих недоліків приймаються протягом {{ company.inspection_period if company.inspection_period else '14' }} днів.</p>
+    </div>
+
     <div class="footer">
-        <p>Сгенеровано: {{ generated_at }} | © FarforDecorOrenda 2025</p>
+        <p>{{ company.legal_name }} | {{ company.email }} | {{ company.phone }}</p>
+        <p>© FarforDecorOrenda 2025 | Сгенеровано: {{ generated_at }}</p>
     </div>
 </body>
 </html>

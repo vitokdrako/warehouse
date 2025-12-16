@@ -446,86 +446,121 @@ class FinanceCabinetTester:
             return {"success": False, "error": str(e)}
 
     def verify_finance_integration_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior according to bug fix review request"""
+        """Verify expected behavior for Finance Cabinet integration"""
         try:
-            self.log("🔍 Verifying expected behavior for NewOrderViewWorkspace bug fixes...")
+            self.log("🔍 Verifying Finance Cabinet integration behavior...")
             
             results = {
-                "wrong_price_bug_fixed": False,
-                "quantity_bug_context_verified": False,
-                "method_405_error_fixed": False,
+                "manager_finance_working": False,
+                "finance_dashboard_working": False,
+                "vendors_api_working": False,
+                "employees_api_working": False,
+                "payroll_api_working": False,
+                "expense_categories_working": False,
+                "create_vendor_working": False,
+                "create_employee_working": False,
                 "all_endpoints_accessible": False
             }
             
-            # Test 1: Wrong Price Bug - inventory search should return rent_price
-            self.log("   Testing Bug Fix #1: Wrong Price (rent_price vs price)...")
-            inventory_result = self.test_inventory_search_rent_price()
+            # Test 1: Manager Finance Summary
+            self.log("   Testing Manager Finance Summary API...")
+            manager_result = self.test_manager_finance_summary()
             
-            if inventory_result.get("success") and inventory_result.get("rent_price_found"):
-                results["wrong_price_bug_fixed"] = True
-                self.log("   ✅ Wrong Price Bug: rent_price field available")
-                
-                # Check if pricing makes sense (rent_price should be much lower than price)
-                pricing_data = inventory_result.get("pricing_data", [])
-                for item in pricing_data:
-                    if item['rent_price'] > 0 and item['price'] > 0:
-                        ratio = item['price'] / item['rent_price']
-                        self.log(f"     {item['name']}: price/rent_price ratio = {ratio:.1f}")
+            if manager_result.get("success"):
+                results["manager_finance_working"] = True
+                self.log("   ✅ Manager Finance Summary: Working")
             else:
-                self.log("   ❌ Wrong Price Bug: rent_price field missing or failed", "ERROR")
+                self.log("   ❌ Manager Finance Summary: Failed", "ERROR")
             
-            # Test 2: 405 Error Bug - check-availability should work with POST
-            self.log("   Testing Bug Fix #3: 405 Error (POST method)...")
-            availability_result = self.test_check_availability_post_method()
+            # Test 2: Finance Dashboard
+            self.log("   Testing Finance Dashboard API...")
+            dashboard_result = self.test_finance_dashboard()
             
-            if availability_result.get("success"):
-                results["method_405_error_fixed"] = True
-                self.log("   ✅ 405 Error Bug: POST method working")
+            if dashboard_result.get("success"):
+                results["finance_dashboard_working"] = True
+                self.log("   ✅ Finance Dashboard: Working")
             else:
-                error = availability_result.get("error", "")
-                if "405" in str(error):
-                    self.log("   ❌ 405 Error Bug: Still getting 405 Method Not Allowed", "ERROR")
-                else:
-                    self.log(f"   ❌ 405 Error Bug: Other error - {error}", "ERROR")
+                self.log("   ❌ Finance Dashboard: Failed", "ERROR")
             
-            # Test 3: Order details for quantity bug context
-            self.log("   Testing context for Bug Fix #2: Quantity Bug...")
-            order_result = self.test_order_details_endpoint()
+            # Test 3: Vendors API
+            self.log("   Testing Vendors API...")
+            vendors_result = self.test_finance_vendors()
             
-            if order_result.get("success"):
-                results["quantity_bug_context_verified"] = True
-                self.log("   ✅ Quantity Bug Context: Order details accessible")
-                
-                # Check if order has items with inventory_id (needed for quantity bug fix)
-                order_data = order_result.get("data", {})
-                items = order_data.get("items", [])
-                if items:
-                    for item in items[:2]:
-                        inventory_id = item.get("inventory_id")
-                        if inventory_id:
-                            self.log(f"     Item has inventory_id: {inventory_id}")
-                        else:
-                            self.log(f"     ⚠️ Item missing inventory_id: {item.get('name')}")
+            if vendors_result.get("success"):
+                results["vendors_api_working"] = True
+                self.log("   ✅ Vendors API: Working")
             else:
-                self.log("   ❌ Quantity Bug Context: Order details not accessible", "ERROR")
+                self.log("   ❌ Vendors API: Failed", "ERROR")
+            
+            # Test 4: Employees API
+            self.log("   Testing Employees API...")
+            employees_result = self.test_finance_employees()
+            
+            if employees_result.get("success"):
+                results["employees_api_working"] = True
+                self.log("   ✅ Employees API: Working")
+            else:
+                self.log("   ❌ Employees API: Failed", "ERROR")
+            
+            # Test 5: Payroll API
+            self.log("   Testing Payroll API...")
+            payroll_result = self.test_finance_payroll()
+            
+            if payroll_result.get("success"):
+                results["payroll_api_working"] = True
+                self.log("   ✅ Payroll API: Working")
+            else:
+                self.log("   ❌ Payroll API: Failed", "ERROR")
+            
+            # Test 6: Expense Categories API
+            self.log("   Testing Expense Categories API...")
+            categories_result = self.test_admin_expense_categories()
+            
+            if categories_result.get("success"):
+                results["expense_categories_working"] = True
+                self.log("   ✅ Expense Categories API: Working")
+            else:
+                self.log("   ❌ Expense Categories API: Failed", "ERROR")
+            
+            # Test 7: Create Vendor
+            self.log("   Testing Create Vendor API...")
+            create_vendor_result = self.test_create_vendor()
+            
+            if create_vendor_result.get("success"):
+                results["create_vendor_working"] = True
+                self.log("   ✅ Create Vendor API: Working")
+            else:
+                self.log("   ❌ Create Vendor API: Failed", "ERROR")
+            
+            # Test 8: Create Employee
+            self.log("   Testing Create Employee API...")
+            create_employee_result = self.test_create_employee()
+            
+            if create_employee_result.get("success"):
+                results["create_employee_working"] = True
+                self.log("   ✅ Create Employee API: Working")
+            else:
+                self.log("   ❌ Create Employee API: Failed", "ERROR")
             
             # Overall endpoint accessibility
-            endpoints_working = (
-                inventory_result.get("success", False) and
-                availability_result.get("success", False) and
-                order_result.get("success", False)
-            )
+            critical_endpoints = [
+                manager_result.get("success", False),
+                dashboard_result.get("success", False),
+                vendors_result.get("success", False),
+                employees_result.get("success", False),
+                categories_result.get("success", False)
+            ]
             
-            if endpoints_working:
+            if all(critical_endpoints):
                 results["all_endpoints_accessible"] = True
-                self.log("   ✅ All required endpoints accessible")
+                self.log("   ✅ All critical Finance Cabinet endpoints accessible")
             else:
-                self.log("   ❌ Some endpoints not accessible", "ERROR")
+                self.log("   ❌ Some critical Finance Cabinet endpoints not accessible", "ERROR")
             
             return results
             
         except Exception as e:
-            self.log(f"❌ Exception verifying bug fixes behavior: {str(e)}", "ERROR")
+            self.log(f"❌ Exception verifying Finance Cabinet integration: {str(e)}", "ERROR")
             return {"error": str(e)}
 
     def run_comprehensive_bug_fix_test(self):

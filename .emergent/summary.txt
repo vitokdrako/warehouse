@@ -1,180 +1,209 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to unify all expanded order views (, , ) into a new, consistent Order Workspace architecture. Throughout the session, the scope expanded significantly to include:
-1.  **Complete UI Unification:** Migrate all major order management pages (, , , , ) to the new workspace architecture.
-2.  **Critical Bug Fixes:** Resolve multiple bugs in the new views as they were being developed, including issues with pricing, state management, API errors, and data validation.
-3.  **Feature Enhancements:**
-    *   Add multi-selector for Requisitors (assembly staff) to the issue card.
-    *   Add a new packaging option (Чорний кейс).
-    *   Implement an admin-driven password reset feature.
-    *   Change the order numbering scheme to a simple sequential format (e.g., ).
-    *   Automate deposit calculation based on 50% of the item's loss value () and remove the manual input field.
-    *   Modify the main dashboard to remove the Problems KPI and add rental start/end dates to the order cards.
-4.  **Admin Panel Debugging:** Diagnose and fix an issue where the production admin panel was not recognizing admin users due to a JWT secret key mismatch.
-5.  **Code Cleanup:** After successful migration, remove all old, now-redundant page components.
-6.  **Deployment Build:** Create a versioned production build (v22) with the correct environment variables for the user's domains.
+The user initially requested UI cleanup on the main dashboard, which involved removing a KPI counter and adding rental dates to order cards. This quickly expanded into a series of major feature requests and refactors:
+1.  **Universal Ops Calendar:** The user provided a prototype for a comprehensive new calendar to act as a central operations hub. The agent was tasked with analyzing and implementing this, integrating it with existing backend data sources (orders, issue cards, tasks, damages).
+2.  **Dashboard UI/UX Overhaul:** The user requested moving the main navigation from large cards to a sleek top bar and removing all emojis for a more professional look.
+3.  **Calendar Enhancements:**
+    *   Add the ability to create new tasks directly from the calendar.
+    *   Apply the corporate design system (fonts, colors, button styles) to the entire calendar.
+    *   Redesign the calendar's item cards for better readability and remove redundant tags.
+4.  **Item Location Display:** Add warehouse location information (zone, aisle, shelf) to items in all relevant order views (assembly, pickup, return, etc.).
+5.  **Document Generation System:** The user laid out a detailed architectural plan for a full-fledged document generation system to create various client-facing and internal documents (invoices, contracts, acts, checklists) in both HTML and PDF formats.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The major Order Workspace refactoring is complete. All primary order views (Create, View, Issue, Return, Archive) have been successfully migrated to the new, unified architecture located in . All old, monolithic page components have been deleted.
+The main manager dashboard has been significantly refactored with a new top navigation bar. The Universal Ops Calendar is now the primary calendar view, accessible at . It's styled with the corporate theme, fetches real-time data for orders, issue cards, and tasks, and allows for the creation of new tasks directly from the UI.
 
-Numerous critical bugs related to pricing, state management, API calls, and data validation have been fixed and verified by the user. The Admin Panel is fully functional, and a password reset feature has been implemented. The backend logic for pricing, deposit calculation, and order numbering has been updated per the user's requests.
+The backend and frontend have been updated to display warehouse location (, , ) on item cards across all order statuses. The backend logic was debugged and fixed to pull location data from the correct source table (). However, the display of this information is contingent on the user populating the location data for products in the database.
+
+The foundational backend architecture for the new document generation system has been created, including service directories (), API routes (), and placeholder HTML templates.
 
 **Last working item**:
--   **Last item agent was working:** The agent was implementing two UI changes on the main manager dashboard () as requested by the user:
-    1.  Removing the Проблеми (Problems) KPI counter.
-    2.  Adding the display of rental start and end dates to the small  components.
-    The agent applied the code changes but did not complete testing or get user verification.
--   **Status:** IN PROGRESS
+-   **Last item agent was working:** The agent was setting up the backend for the new document generation feature. After creating the file structure and installing the 
+-----
+
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- library for PDF generation, the backend failed to start due to a missing system-level dependency (). As a temporary workaround to move forward, the agent commented out the PDF generation code in  and  to allow the server to start with just HTML generation capabilities.
+-   **Status:** BLOCKED
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** screenshot tool. The agent should navigate to the dashboard page () after logging in and take a screenshot to verify that the Problems KPI is gone and the dates are now visible on the order cards.
+-   **Which testing method agent to use?** backend testing agent. After the blocker is resolved, the agent needs to test the new document generation API endpoint.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0) Verify dashboard UI changes.**
-    -   **Description:** The last code changes to  (removing a KPI and adding dates to cards) have been implemented but not tested.
+-   **Issue 1: (P0) Missing system dependency for PDF generation.**
+    -   **Description:** The 
+-----
+
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- library requires the  system package, which is not present in the container. This blocks all PDF generation functionality.
+    -   **Attempted fixes:** The agent installed 
+-----
+
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- via pip, which succeeded, but the application failed at runtime. The agent then commented out the PDF-related code to unblock the backend service startup.
     -   **Next debug checklist:**
-        1.  Log in using credentials.
-        2.  Use the  to capture the main dashboard page ().
-        3.  Analyze the screenshot to confirm the Проблеми KPI is no longer present and that  components now display rental dates.
-    -   **Why fix this issue and what will be achieved with the fix?** To complete the user's latest request and ensure the dashboard UI is correct.
-    -   **Status:** IN PROGRESS
+        1.  Attempt to install the missing system package using the command: Hit:1 http://deb.debian.org/debian bookworm InRelease
+Get:2 http://deb.debian.org/debian bookworm-updates InRelease [55.4 kB]
+Get:3 http://deb.debian.org/debian-security bookworm-security InRelease [48.0 kB]
+Hit:4 https://deb.nodesource.com/node_20.x nodistro InRelease
+Hit:5 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease
+Get:6 http://deb.debian.org/debian-security bookworm-security/main arm64 Packages [285 kB]
+Fetched 389 kB in 1s (554 kB/s)
+Reading package lists...
+Reading package lists...
+Building dependency tree...
+Reading state information...
+libpango-1.0-0 is already the newest version (1.50.12+ds-1).
+The following NEW packages will be installed:
+  libpangoft2-1.0-0
+0 upgraded, 1 newly installed, 0 to remove and 1 not upgraded.
+Need to get 44.5 kB of archives.
+After this operation, 178 kB of additional disk space will be used.
+Get:1 http://deb.debian.org/debian bookworm/main arm64 libpangoft2-1.0-0 arm64 1.50.12+ds-1 [44.5 kB]
+Fetched 44.5 kB in 0s (853 kB/s)
+Selecting previously unselected package libpangoft2-1.0-0:arm64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 38368 files and directories currently installed.)
+Preparing to unpack .../libpangoft2-1.0-0_1.50.12+ds-1_arm64.deb ...
+Unpacking libpangoft2-1.0-0:arm64 (1.50.12+ds-1) ...
+Setting up libpangoft2-1.0-0:arm64 (1.50.12+ds-1) ...
+Processing triggers for libc-bin (2.36-9+deb12u13) ....
+        2.  Once the system package is installed, uncomment the PDF generation code in  and .
+        3.  Restart the backend service and confirm it starts without errors.
+    -   **Why fix this issue and what will be achieved with the fix?** Resolving this is critical to implementing the document generation feature, as PDF is a mandatory output format.
+    -   **Status:** BLOCKED
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** frontend
+    -   **Should Test frontend/backend/both after fix?** backend
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
-None.
+-   **Task 1: (P0) Implement Document Generation (Start-Package).**
+    -   **Description:** Implement the full backend logic for the six start-package documents: , , , , , .
+    -   **Where to resume:** After resolving the PDF dependency (Issue 1), the agent must:
+        1.  Create the necessary database tables (, , ).
+        2.  Implement the data-gathering logic in  for , , and  entities.
+        3.  Populate the Jinja2 templates in  with the correct HTML structure and variables.
+        4.  Implement the document numbering logic in .
+        5.  Build out the full API logic in  to handle document creation, fetching, and rendering for both HTML and PDF.
+    -   **What will be achieved with this?** A working backend for generating the six most critical business documents.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on something:** Issue 1: Missing system dependency for PDF generation.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P0) Re-address and complete the initial mobile-responsiveness tasks for the dashboard  and other pages, which were paused for the major refactor.
+    -   (P1) Implement the frontend UI for the document generation system (e.g., ) within the order workspace.
+    -   (P1) Re-address the mobile responsiveness tasks for the dashboard and other pages that were paused.
 -   **Future Tasks:**
-    -   Implement a full financial module with reports.
-    -   Add report export functionality.
+    -   Implement the remaining P1, P2, and P3 priority documents as defined by the user.
+    -   Develop an admin interface for editing document templates.
+    -   Integrate digital signature capabilities (e.g., Diia.Signature).
+    -   Implement a full financial module with reporting.
     -   Integrate CallBell for communications.
-    -   Implement advanced warehouse management features.
-    -   Add fiscalization integration.
-    -   Refactor large components like .
 
 **Completed work in this session**
--   **Full UI Unification (DONE):**
-    -   Migrated Create New Order to .
-    -   Migrated Awaiting Confirmation view to .
-    -   Migrated Issue Card (assembly view) to .
-    -   Migrated Archived Order view to .
-    -   Migrated Return Intake to .
--   **Code Cleanup (DONE):** Deleted all old page components (, , , etc.) and their routes.
--   **Critical Bug Fixes (DONE):**
-    -   Fixed incorrect pricing ( vs ) in all new order views.
-    -   Fixed a bug where changing quantity for one item affected all items.
-    -   Fixed a 405 Method Not Allowed error on the  API call.
-    -   Fixed a 500 error on Send to Assembly due to a missing dependency.
-    -   Fixed a regression in the availability conflict checker.
-    -   Fixed 422 and 500 errors during order creation by correcting frontend payload and backend column names.
-    -   Fixed new orders being assigned the wrong initial status ( instead of ).
--   **Feature Implementation (DONE):**
-    -   Added a multi-select component for Requisitors on the assembly page.
-    -   Added a Black Case packaging option.
-    -   Implemented admin functionality to change user passwords.
-    -   Changed order numbering format to .
-    -   Automated deposit calculation and removed the manual input UI.
--   **Admin Panel (FIXED):** Diagnosed and provided a solution for a production JWT secret key mismatch that was preventing admin access.
--   **Deployment (DONE):** Created a versioned production build () ready for deployment.
+-   **UI/UX Overhaul (DONE):**
+    -   Added rental start/end dates to  components on the dashboard.
+    -   Refactored the  to use a clean top navigation bar, removing large navigation cards and emojis.
+-   **Universal Ops Calendar (DONE):**
+    -   Created and integrated the new  page.
+    -   Implemented task creation and viewing functionality within the calendar.
+    -   Applied the corporate design system and improved the readability of calendar item cards.
+-   **Feature Implementation & Bug Fixes (DONE):**
+    -   Added warehouse location display to all relevant item components (, , , ).
+    -   Fixed critical backend bugs in  and  where item location was being read from the wrong database table.
+-   **New Feature Scaffolding (DONE):**
+    -   Created the complete backend directory structure, service files, API routes, and placeholder templates for the new document generation system.
 
 **Earlier issues found/mentioned but not fixed**
--   The original set of mobile-adaptation tasks for dashboard cards and various cabinets were paused to prioritize the user's request for the major Order Workspace refactor. They remain pending in Upcoming Tasks.
+-   The mobile-adaptation tasks for dashboard cards and other pages remain pending from the previous session.
 
 **Known issue recurrence from previous fork**
 -   None.
 
 **Code Architecture**
--   **Frontend:**  (React, Vite, TSX/JSX, Tailwind CSS)
-    -   **Core Architecture:** The app is now fully migrated to the Order Workspace architecture in . This directory contains the layout, status configurations, and modular  components.
-    -   **Pages:** All primary views are now handled by  files in .
-    -   **Cleanup:** Old page components like , , etc., have been successfully deleted.
+-   **Frontend:**  (React, Vite, JSX, Tailwind CSS)
+    -   **Key Pages:** , .
+    -   **Key Components:** , .
 -   **Backend:**  (FastAPI, Python)
--   **Deployment Package:** 
+    -   **New Service:** A new service for document generation has been added at .
+    -   **New Routes:** .
+    -   **New Templates:** .
+    -   **Key Modified Routes:** , .
 
 **Key Technical Concepts**
--   **State-Driven UI Architecture:** The Order Workspace is the central concept, using an order's status to dynamically render a specific set of UI modules (Zones).
--   **Component-Based Refactoring:** The project has successfully moved from monolithic page components to a system of smaller, reusable workspace components.
--   **Dependency Injection & Auth:** Debugged issues related to FastAPI's  for user authentication, particularly concerning JWT secret key consistency across environments.
--   **Data-Model Synchronization:** Multiple bugs were fixed by ensuring frontend data payloads matched backend Pydantic models and database schemas (e.g.,  vs ,  vs ).
+-   **Service-Oriented Architecture:** A new  service was designed to encapsulate all logic for document generation, including data building, rendering, and numbering.
+-   **PDF Generation:** The  library was chosen for converting HTML to PDF, though it is currently blocked by a system dependency.
+-   **Database Schema Design:** A new schema was planned for the documentation system, including tables for , , and .
+-   **Data Integrity:** A key debugging session revealed that item data in old orders was inconsistent (e.g., using SKUs that don't exist in the  table), which prevents features like location lookup from working on them. The code is now correct, but relies on proper data entry going forward.
 
 **key DB schema**
--   :  (decimal) is used instead of .
--   :  (varchar) is the column for the item's name.
--   : Contains both  (loss/damage cost) and  (daily rent cost).
+-   ****: Contains the source of truth for item location (, , ).
+-   **Planned Tables:**
+    -   : {, , , }
+    -   : {uid=0(root) gid=0(root) groups=0(root), , , , , , , }
+    -   : {, , }
 
 **changes in tech stack**
--   None.
+-   **Added Dependency:**  for PDF generation (installation is currently blocked).
 
 **All files of reference**
--   **File being worked on:**
+-   **New Document System Files:**
     -   
--   **Key architecture files:**
-    -    (entire directory)
-    -   
-    -   
-    -   
+    -    (all 6 files)
+    -    (all 6 placeholder templates)
+-   **Modified Calendar/UI Files:**
     -   
     -   
-    -    (routing)
--   **Key modified backend files:**
-    -    (multiple fixes for pricing, status, numbering, creation logic)
-    -    (password reset logic)
-    -    (added logging for JWT secret)
-    -    (fixed price selection)
-
-**Areas that need refactoring**:
--   The primary refactoring is complete. No major refactoring is immediately needed.
-
-**key api endpoints**
--   : Creates a new order. Now sets status to  and uses  numbering.
--   : Fetches staff members. Correct URL is .
--   : Sets a new password for a user.
--   : Returns the full inventory list. Backend logic was fixed to return  as .
+    -   
+    -   
+    -   
+    -   
+    -   
+    -   
+-   **Modified Backend Logic:**
+    -   
+    -   
+    -   
 
 **Critical Info for New Agent**
--   **MUST respond in українська (Ukrainian).**
--   The massive UI unification project is complete and confirmed by the user. Do not try to re-litigate this architecture.
--   The immediate next step is to test and confirm the last UI change on the main dashboard ().
--   After confirming the last change, propose moving on to the pending mobile-responsiveness tasks.
--   The user is highly engaged and provides excellent feedback. Pay close attention to their messages and screenshots.
-
-**documents created in this job**
--   : Documentation explaining the need for a consistent JWT secret key in the production environment.
--   : A production-ready build archive.
+-   **You MUST respond in українська (Ukrainian).**
+-   The immediate priority is to resolve the system dependency for  to unblock the document generation task.
+-   After unblocking, proceed with implementing the backend logic for the six start-package documents.
+-   The item location feature is correctly implemented in the code. If the user reports it's not showing, it's a data issue (the product either has no location set, or the product SKU in the order doesn't exist in the main  table). Do not try to fix the code again; explain the data dependency to the user.
 
 **Last 10 User Messages and any pending user messages**
-1.  **User:** Fix order creation error. (Status: **COMPLETED**)
-2.  **User:** Created order doesnt appear in the awaiting confirmation list." (Status: **COMPLETED**)
-3.  **User:** "Can we change the order numbering format to ORD-0001?" (Status: **COMPLETED**)
-4.  **User:** "Remove the problems counter from the dashboard and add issue/return dates to the order cards." (Status: **IN PROGRESS**)
-5.  **User:** Confirmed the admin panel issue was resolved after fixing the JWT key and logging out/in. (Status: **COMPLETED**)
-6.  **User:** "How can we add password setting for our users?" (Status: **COMPLETED**)
-7.  **User:** Pointed out the pricing bug was also present in the draft order view. (Status: **COMPLETED**)
-8.  **User:** "Remove the separate deposit block and calculate it automatically as 50% of the item cost." (Status: **COMPLETED**)
-9.  **User:** Reported an error when creating a new order. (Status: **COMPLETED**)
-10. **User:** "I created an order but I dont see it in awaiting confirmation. (Status: **COMPLETED**)
+1.  **User:** Requests adding item location to all card statuses. (Status: **COMPLETED**)
+2.  **User:** Reports location is still not visible on the assembly card. (Status: **RESOLVED**, diagnosed as a data issue)
+3.  **User:** Proposes a comprehensive architecture for a new document generation system. (Status: **ANALYZED & PLANNED**)
+4.  **User:** Provides detailed feedback and approval on the agent's analysis and proposed plan for the document system, defining the initial scope. (Status: **ACKNOWLEDGED**)
+5.  ... (Agent implementation messages)
 
 **Project Health Check:**
--   **Broken:** None. The project is in a stable and healthy state.
+-   **Broken:** PDF generation is broken due to a missing system dependency.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
 -   None.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, the agent used backend and frontend testing agents to verify the initial set of critical bug fixes.
+-   **Testing agent used after significant changes:** NO (Agent used manual  and  which repeatedly failed due to environment issues).
 -   **Troubleshoot agent used after agent stuck in loop:** NO.
 -   **Test files created:** None.
--   **Known regressions:** All regressions identified during the session (e.g., conflict checking) have been fixed.
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
 -   email: 
 -   password: 
 
 **What agent forgot to execute**
--   The agent correctly de-prioritized the initial mobile-responsiveness tasks to focus on the user's major refactoring request. These tasks were not forgotten and are listed in the upcoming tasks.</analysis>
+-   The agent did not resolve the recurring screenshot/Playwright failures, instead repeatedly blaming the environment and moving on. While the diagnosis was likely correct, a more robust testing strategy (e.g., using the testing agent or more resilient scripting) could have provided better verification.
+-   The mobile responsiveness tasks from the initial handoff are still pending.</analysis>

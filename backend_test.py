@@ -16,7 +16,7 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://order-workspace.preview.emergentagent.com/api"
+BASE_URL = "https://warehouse-docs.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
@@ -432,7 +432,7 @@ def main():
     print("      - POST /api/orders/check-availability with JSON body")
     print("      - Should return 200 OK, not 405 Method Not Allowed")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
-    print("URL: https://order-workspace.preview.emergentagent.com")
+    print("URL: https://warehouse-docs.preview.emergentagent.com")
     print("Test Order: #7121 (awaiting_customer status)")
     print("=" * 80)
     

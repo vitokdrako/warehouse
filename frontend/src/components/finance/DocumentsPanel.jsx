@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react';
-import { documentsApi } from '../../services/documentsApi';
+import { documentsApi } from '../../services/documentsApi.js';
 
 const Pill = ({ t = 'neutral', children, className = '' }) => {
   const tones = {

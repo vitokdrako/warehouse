@@ -1,5 +1,33 @@
 # Test Results
 
+## Test Session: Frontend Documents UI Testing
+
+### Frontend Component Added:
+- ZoneDocuments.jsx - компонент для генерації та перегляду документів
+
+### Pages Updated:
+1. `/order-view-workspace/{orderId}` - NewOrderViewWorkspace.jsx - order documents
+2. `/issue-card/{id}` - IssueCardWorkspace.jsx - issue card documents  
+3. `/return-order/{id}` - ReturnOrderWorkspace.jsx - return documents
+4. `/archived-order/{id}` - ArchivedOrderWorkspace.jsx - archived documents (read-only)
+
+### Test Credentials:
+- email: vitokdrako@gmail.com
+- password: test123
+
+### Test Order:
+- Order ID: 7121
+- Issue Card ID: IC-7121-20251214125855
+
+### Expected Behavior:
+1. ZoneDocuments shows "Документи" section
+2. User can click buttons to generate documents (Рахунок-оферта, Договір оренди, etc.)
+3. After generation - document appears in list with Preview and Download PDF buttons
+4. Preview opens modal with HTML preview in iframe
+5. PDF download opens new tab with PDF file
+
+---
+
 ## Test Session: Document Generation System
 
 ### Testing Documents API (Backend):

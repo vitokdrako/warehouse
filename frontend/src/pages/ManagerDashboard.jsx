@@ -52,10 +52,8 @@ export default function ManagerDashboard() {
     }
     
     try {
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/cancel-by-client`, {
+      const response = await authFetch(`${BACKEND_URL}/api/decor-orders/${orderId}/cancel-by-client`, {
         method: 'POST',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reason: reason || 'Клієнт відмовився без пояснень'
         })

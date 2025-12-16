@@ -874,29 +874,30 @@ async def create_deposit_with_currency(data: DepositCreate, db: Session = Depend
 async def get_manager_finance_summary(db: Session = Depends(get_rh_db)):
     """
     Фінансовий підсумок для ManagerDashboard KPI.
-    Агрегує дані з реальних замовлень та фінансових записів.
+    Агрегує дані з реальних фінансових записів (ledger).
     """
     try:
-        # 1. Отримати суму виручки з оплачених замовлень (total_price з orders)
+        # 1. Отримати виручку з ledger (RENT_REV account)
         try:
-            orders_revenue = db.execute(text("""
-                SELECT COALESCE(SUM(total_price), 0) 
-                FROM orders 
-                WHERE status NOT IN ('cancelled', 'archived')
-                AND payment_status = 'paid'
+            rent_revenue = db.execute(text("""
+                SELECT COALESCE(SUM(e.amount), 0) FROM fin_ledger_entries e
+                JOIN fin_accounts a ON a.id = e.account_id 
+                JOIN fin_transactions t ON t.id = e.tx_id
+                WHERE a.code = 'RENT_REV' AND e.direction = 'C' AND t.status = 'posted'
             """)).fetchone()[0]
         except:
-            orders_revenue = 0
+            rent_revenue = 0
         
-        # 2. Отримати суму виручки з fin_payments (rent type, completed)
+        # 2. Отримати компенсації за шкоду
         try:
-            fin_revenue = db.execute(text("""
-                SELECT COALESCE(SUM(amount), 0) 
-                FROM fin_payments 
-                WHERE payment_type = 'rent' AND status = 'completed'
+            damage_revenue = db.execute(text("""
+                SELECT COALESCE(SUM(e.amount), 0) FROM fin_ledger_entries e
+                JOIN fin_accounts a ON a.id = e.account_id 
+                JOIN fin_transactions t ON t.id = e.tx_id
+                WHERE a.code = 'DMG_COMP' AND e.direction = 'C' AND t.status = 'posted'
             """)).fetchone()[0]
         except:
-            fin_revenue = 0
+            damage_revenue = 0
         
         # 3. Підрахувати застави в холді
         try:
@@ -916,6 +917,9 @@ async def get_manager_finance_summary(db: Session = Depends(get_rh_db)):
             """)).fetchone()[0]
         except:
             deposits_count = 0
+        
+        # Загальна виручка = оренда + шкода
+        total_revenue = float(rent_revenue or 0) + float(damage_revenue or 0)
         
         # 5. Альтернативно: дані з orders таблиці якщо fin_* пусті
         if float(deposits_held or 0) == 0:

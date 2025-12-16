@@ -623,7 +623,10 @@ export default function FinanceCabinet() {
   const [categories, setCategories] = useState([]);
   const [orders, setOrders] = useState([]);
   const [deposits, setDeposits] = useState([]);
-  const [loading, setLoading] = useState({ dashboard: true, ledger: true, expenses: true, orders: true });
+  const [vendors, setVendors] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [payroll, setPayroll] = useState([]);
+  const [loading, setLoading] = useState({ dashboard: true, ledger: true, expenses: true, orders: true, vendors: true, employees: true, payroll: true });
   const [isMock, setIsMock] = useState(false);
 
   useEffect(() => { 

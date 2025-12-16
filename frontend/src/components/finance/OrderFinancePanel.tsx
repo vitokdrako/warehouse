@@ -121,7 +121,7 @@ export default function OrderFinancePanel({ order, onUpdate }: OrderFinancePanel
         order_id: order.id,
       });
       
-      if (result.data?.success) {
+      if ((result.data as any)?.success) {
         onUpdate?.();
       }
     } catch (err) {

@@ -159,7 +159,7 @@ async def get_document(document_id: str, db: Session = Depends(get_rh_db)):
 async def list_entity_documents(
     entity_type: str, 
     entity_id: str, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_rh_db)
 ):
     """Список документів для конкретної сутності"""
     

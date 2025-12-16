@@ -40,7 +40,7 @@ async def generate_document(
     doc_type: str,
     entity_id: str,
     options: dict = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Генерує новий документ.

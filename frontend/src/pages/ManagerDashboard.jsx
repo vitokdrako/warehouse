@@ -164,7 +164,7 @@ export default function ManagerDashboard() {
     })
     .catch(err => console.error('[Dashboard] Error loading issue cards:', err));
     
-    // Завантажити фінанси (виручка і застави)
+    // Завантажити фінанси (виручка і застави) з нового API
     fetch(`${BACKEND_URL}/api/manager/finance/summary`, {
       method: 'GET',
       mode: 'cors',
@@ -174,11 +174,28 @@ export default function ManagerDashboard() {
     .then(data => {
       console.log('[Dashboard] Finance summary:', data);
       setFinanceData({
-        revenue: data.total_revenue || 0,  // ОПЛАЧЕНІ (payment completed)
-        deposits: data.deposits_count || 0  // КІЛЬКІСТЬ замовлень з заставами
+        revenue: data.total_revenue || data.rent_paid || 0,  // ОПЛАЧЕНІ (payment completed)
+        deposits: data.deposits_held || 0  // Сума застав у холді
       });
     })
-    .catch(err => console.error('[Dashboard] Error loading finance:', err));
+    .catch(err => {
+      console.error('[Dashboard] Error loading finance:', err);
+      // Fallback - спробувати новий finance API
+      fetch(`${BACKEND_URL}/api/finance/dashboard?period=month`, {
+        method: 'GET',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log('[Dashboard] Finance dashboard fallback:', data);
+        setFinanceData({
+          revenue: data.metrics?.rent_revenue || 0,
+          deposits: data.deposits?.held || 0
+        });
+      })
+      .catch(err2 => console.error('[Dashboard] Finance fallback error:', err2));
+    });
   };
 
   useEffect(() => {

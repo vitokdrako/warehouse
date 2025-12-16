@@ -12,6 +12,19 @@ import OrderFinancePanel from '../components/finance/OrderFinancePanel.jsx';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
+// Auth fetch helper
+const authFetch = (url, options = {}) => {
+  const token = localStorage.getItem('token');
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+};
+
 // Helpers
 const cls = (...a) => a.filter(Boolean).join(' ');
 const money = (v, cur = '₴') => `${cur} ${(v || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}`;

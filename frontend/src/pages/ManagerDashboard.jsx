@@ -176,11 +176,7 @@ export default function ManagerDashboard() {
     .catch(err => {
       console.error('[Dashboard] Error loading finance:', err);
       // Fallback - спробувати новий finance API
-      fetch(`${BACKEND_URL}/api/finance/dashboard?period=month`, {
-        method: 'GET',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      authFetch(`${BACKEND_URL}/api/finance/dashboard?period=month`)
       .then(res => res.json())
       .then(data => {
         console.log('[Dashboard] Finance dashboard fallback:', data);
@@ -197,11 +193,7 @@ export default function ManagerDashboard() {
     fetchAllData();
     
     // Завантажити статистику товарів на реставрації
-    fetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Cleaning stats:', data);
@@ -220,11 +212,7 @@ export default function ManagerDashboard() {
     const today = new Date().toISOString().split('T')[0];
     const queryParams = `?limit=100&from_date=${today}&to_date=${today}`;
     
-    fetch(`${BACKEND_URL}/api/orders${queryParams}`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/orders${queryParams}`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Manual reload:', data.orders?.length || 0, 'orders');

@@ -15,6 +15,9 @@ from database_rentalhub import get_rh_db
 
 router = APIRouter(prefix="/api/finance", tags=["finance"])
 
+# Додатковий роутер для сумісності з ManagerDashboard
+manager_router = APIRouter(prefix="/api/manager/finance", tags=["finance-manager"])
+
 
 # ============================================================
 # PYDANTIC MODELS
@@ -861,3 +864,213 @@ async def create_deposit_with_currency(data: DepositCreate, db: Session = Depend
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+# ============================================================
+# MANAGER DASHBOARD ENDPOINTS (для сумісності з ManagerDashboard)
+# ============================================================
+
+@manager_router.get("/summary")
+async def get_manager_finance_summary(db: Session = Depends(get_rh_db)):
+    """
+    Фінансовий підсумок для ManagerDashboard KPI.
+    Агрегує дані з реальних фінансових записів (ledger).
+    """
+    try:
+        # 1. Отримати виручку з ledger (RENT_REV account)
+        try:
+            rent_revenue = db.execute(text("""
+                SELECT COALESCE(SUM(e.amount), 0) FROM fin_ledger_entries e
+                JOIN fin_accounts a ON a.id = e.account_id 
+                JOIN fin_transactions t ON t.id = e.tx_id
+                WHERE a.code = 'RENT_REV' AND e.direction = 'C' AND t.status = 'posted'
+            """)).fetchone()[0]
+        except:
+            rent_revenue = 0
+        
+        # 2. Отримати компенсації за шкоду
+        try:
+            damage_revenue = db.execute(text("""
+                SELECT COALESCE(SUM(e.amount), 0) FROM fin_ledger_entries e
+                JOIN fin_accounts a ON a.id = e.account_id 
+                JOIN fin_transactions t ON t.id = e.tx_id
+                WHERE a.code = 'DMG_COMP' AND e.direction = 'C' AND t.status = 'posted'
+            """)).fetchone()[0]
+        except:
+            damage_revenue = 0
+        
+        # 3. Підрахувати застави в холді
+        try:
+            deposits_held = db.execute(text("""
+                SELECT COALESCE(SUM(held_amount - used_amount - refunded_amount), 0)
+                FROM fin_deposit_holds 
+                WHERE status IN ('holding', 'partially_used')
+            """)).fetchone()[0]
+        except:
+            deposits_held = 0
+        
+        # 4. Підрахувати кількість замовлень з активними заставами
+        try:
+            deposits_count = db.execute(text("""
+                SELECT COUNT(*) FROM fin_deposit_holds 
+                WHERE status IN ('holding', 'partially_used')
+            """)).fetchone()[0]
+        except:
+            deposits_count = 0
+        
+        # Загальна виручка = оренда + шкода
+        total_revenue = float(rent_revenue or 0) + float(damage_revenue or 0)
+        
+        # 5. Альтернативно: дані з orders таблиці якщо fin_* пусті
+        if float(deposits_held or 0) == 0:
+            try:
+                # Застави з issue_cards (видані замовлення)
+                deposits_held = db.execute(text("""
+                    SELECT COALESCE(SUM(deposit_amount), 0) 
+                    FROM issue_cards 
+                    WHERE status = 'issued'
+                """)).fetchone()[0]
+                
+                deposits_count = db.execute(text("""
+                    SELECT COUNT(*) FROM issue_cards WHERE status = 'issued' AND deposit_amount > 0
+                """)).fetchone()[0]
+            except:
+                pass
+        
+        return {
+            "total_revenue": total_revenue,
+            "deposits_held": float(deposits_held or 0),
+            "deposits_count": int(deposits_count or 0),
+            "rent_paid": total_revenue,
+            "unpaid_balance": 0,
+            "rent_revenue": float(rent_revenue or 0),
+            "damage_revenue": float(damage_revenue or 0)
+        }
+        
+    except Exception as e:
+        # Повертаємо нулі у випадку помилки
+        return {
+            "total_revenue": 0,
+            "deposits_held": 0,
+            "deposits_count": 0,
+            "rent_paid": 0,
+            "unpaid_balance": 0,
+            "error": str(e)
+        }
+
+
+@manager_router.get("/orders-with-finance")
+async def get_orders_with_finance(
+    status: Optional[str] = None,
+    limit: int = 100,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати замовлення з фінансовою інформацією для Finance Cabinet.
+    """
+    try:
+        # Запит до orders з фінансовими даними
+        query = """
+            SELECT 
+                o.order_id, o.order_number, o.customer_name, o.customer_phone,
+                o.status, o.total_price, o.deposit_amount,
+                o.rental_start_date, o.rental_end_date, o.payment_status,
+                COALESCE(d.held_amount, 0) as deposit_held,
+                COALESCE(d.used_amount, 0) as deposit_used,
+                COALESCE(d.refunded_amount, 0) as deposit_refunded,
+                COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = o.order_id AND payment_type = 'rent'), 0) as rent_paid
+            FROM orders o
+            LEFT JOIN fin_deposit_holds d ON d.order_id = o.order_id
+            WHERE o.is_archived = FALSE
+        """
+        
+        if status:
+            query += f" AND o.status = '{status}'"
+        
+        query += " ORDER BY o.created_at DESC LIMIT :limit"
+        
+        result = db.execute(text(query), {"limit": limit})
+        
+        orders = []
+        for row in result:
+            orders.append({
+                "order_id": row[0],
+                "order_number": row[1],
+                "client_name": row[2],
+                "customer_name": row[2],
+                "customer_phone": row[3],
+                "status": row[4],
+                "total_rental": float(row[5] or 0),
+                "total_deposit": float(row[6] or 0),
+                "rental_start_date": str(row[7]) if row[7] else None,
+                "rental_end_date": str(row[8]) if row[8] else None,
+                "payment_status": row[9],
+                "deposit_held": float(row[10] or 0),
+                "deposit_used": float(row[11] or 0),
+                "deposit_refunded": float(row[12] or 0),
+                "rent_paid": float(row[13] or 0)
+            })
+        
+        return {"orders": orders, "total": len(orders)}
+        
+    except Exception as e:
+        return {"orders": [], "total": 0, "error": str(e)}
+
+
+# ============================================================
+# ADMIN FINANCE MANAGEMENT ENDPOINTS
+# ============================================================
+
+@router.get("/admin/expense-categories")
+async def list_expense_categories(db: Session = Depends(get_rh_db)):
+    """Отримати всі категорії витрат для адмін панелі"""
+    try:
+        result = db.execute(text("""
+            SELECT id, type, code, name, is_active 
+            FROM fin_categories 
+            ORDER BY type, name
+        """))
+        return [{"id": r[0], "type": r[1], "code": r[2], "name": r[3], "is_active": bool(r[4])} for r in result]
+    except:
+        return []
+
+
+@router.post("/admin/expense-categories")
+async def create_expense_category(data: dict, db: Session = Depends(get_rh_db)):
+    """Створити нову категорію витрат"""
+    try:
+        db.execute(text("""
+            INSERT INTO fin_categories (type, code, name, is_active)
+            VALUES (:type, :code, :name, TRUE)
+        """), {"type": data.get("type", "expense"), "code": data.get("code"), "name": data.get("name")})
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/admin/expense-categories/{category_id}")
+async def update_expense_category(category_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """Оновити категорію витрат"""
+    try:
+        db.execute(text("""
+            UPDATE fin_categories SET name = :name, code = :code, is_active = :is_active WHERE id = :id
+        """), {"id": category_id, "name": data.get("name"), "code": data.get("code"), "is_active": data.get("is_active", True)})
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/admin/expense-categories/{category_id}")
+async def delete_expense_category(category_id: int, db: Session = Depends(get_rh_db)):
+    """Видалити категорію витрат"""
+    try:
+        db.execute(text("UPDATE fin_categories SET is_active = FALSE WHERE id = :id"), {"id": category_id})
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -40,7 +40,7 @@ async def generate_document(
     doc_type: str,
     entity_id: str,
     options: dict = None,
-    db: Session = Depends(get_rh_db)
+    db: Session = Depends(get_db)
 ):
     """
     Генерує новий документ.
@@ -97,7 +97,7 @@ async def generate_document(
 
 
 @router.get("/{document_id}/preview", response_class=HTMLResponse)
-async def preview_document(document_id: str, db: Session = Depends(get_rh_db)):
+async def preview_document(document_id: str, db: Session = Depends(get_db)):
     """Повертає HTML-превʼю документа"""
     
     doc = get_document_by_id(db, document_id)
@@ -108,7 +108,7 @@ async def preview_document(document_id: str, db: Session = Depends(get_rh_db)):
 
 
 @router.get("/{document_id}/pdf")
-async def download_pdf(document_id: str, db: Session = Depends(get_rh_db)):
+async def download_pdf(document_id: str, db: Session = Depends(get_db)):
     """Повертає PDF документа"""
     
     doc = get_document_by_id(db, document_id)
@@ -130,7 +130,7 @@ async def download_pdf(document_id: str, db: Session = Depends(get_rh_db)):
 
 
 @router.get("/{document_id}")
-async def get_document(document_id: str, db: Session = Depends(get_rh_db)):
+async def get_document(document_id: str, db: Session = Depends(get_db)):
     """Отримує інформацію про документ"""
     
     doc = get_document_by_id(db, document_id)
@@ -159,7 +159,7 @@ async def get_document(document_id: str, db: Session = Depends(get_rh_db)):
 async def list_entity_documents(
     entity_type: str, 
     entity_id: str, 
-    db: Session = Depends(get_rh_db)
+    db: Session = Depends(get_db)
 ):
     """Список документів для конкретної сутності"""
     
@@ -201,7 +201,7 @@ async def list_entity_documents(
 async def sign_document(
     document_id: str,
     signature_data: dict = None,
-    db: Session = Depends(get_rh_db)
+    db: Session = Depends(get_db)
 ):
     """
     Позначає документ як підписаний.
@@ -234,7 +234,7 @@ async def sign_document(
 async def regenerate_document(
     document_id: str,
     options: dict = None,
-    db: Session = Depends(get_rh_db)
+    db: Session = Depends(get_db)
 ):
     """
     Перегенеровує документ (створює нову версію).

@@ -5,7 +5,7 @@
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { financeApi } from '../services/financeApi';
+import { financeApi } from '../services/financeApi.js';
 import DocumentsPanel from '../components/finance/DocumentsPanel.jsx';
 import OrderFinancePanel from '../components/finance/OrderFinancePanel.jsx';
 

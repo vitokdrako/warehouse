@@ -77,6 +77,41 @@ export const financeApi = {
     if (params.toString()) url += `?${params}`;
     return fetchWithFallback(url, { transactions: [] });
   },
+
+  // Vendors
+  getVendors: async (params = {}) => {
+    return fetchWithFallback('/api/finance/vendors', { vendors: [] });
+  },
+  createVendor: async (data) => {
+    return fetchWithFallback('/api/finance/vendors', null, { method: 'POST', body: JSON.stringify(data) });
+  },
+  updateVendor: async (vendorId, data) => {
+    return fetchWithFallback(`/api/finance/vendors/${vendorId}`, null, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  // Employees
+  getEmployees: async (params = {}) => {
+    return fetchWithFallback('/api/finance/employees', { employees: [] });
+  },
+  createEmployee: async (data) => {
+    return fetchWithFallback('/api/finance/employees', null, { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  // Payroll
+  getPayroll: async (params = {}) => {
+    return fetchWithFallback('/api/finance/payroll', { payroll: [] });
+  },
+  createPayroll: async (data) => {
+    return fetchWithFallback('/api/finance/payroll', null, { method: 'POST', body: JSON.stringify(data) });
+  },
+  payPayroll: async (payrollId) => {
+    return fetchWithFallback(`/api/finance/payroll/${payrollId}/pay`, null, { method: 'POST', body: JSON.stringify({}) });
+  },
+
+  // Deposits with currency
+  createDepositWithCurrency: async (data) => {
+    return fetchWithFallback('/api/finance/deposits/create', null, { method: 'POST', body: JSON.stringify(data) });
+  },
 };
 
 export default financeApi;

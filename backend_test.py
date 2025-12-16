@@ -231,7 +231,221 @@ class FinanceCabinetTester:
             self.log(f"❌ Exception testing vendors: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def verify_bug_fixes_behavior(self) -> Dict[str, Any]:
+    def test_finance_employees(self) -> Dict[str, Any]:
+        """Test GET /api/finance/employees - should return list of employees"""
+        try:
+            self.log("🧪 Testing finance employees endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/finance/employees")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if response has employees array
+                if not isinstance(data, dict) or 'employees' not in data:
+                    self.log(f"❌ Expected dict with 'employees' key, got {type(data)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                employees = data['employees']
+                if not isinstance(employees, list):
+                    self.log(f"❌ Expected employees array, got {type(employees)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                self.log(f"✅ Retrieved {len(employees)} employees")
+                
+                # Check employee structure if any exist
+                if employees:
+                    employee = employees[0]
+                    required_fields = ['id', 'name', 'role']
+                    for field in required_fields:
+                        if field not in employee:
+                            self.log(f"⚠️ Employee missing field: {field}")
+                    
+                    self.log(f"   Sample employee: {employee.get('name')} ({employee.get('role')})")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "count": len(employees)
+                }
+            else:
+                self.log(f"❌ Failed to get employees: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing employees: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_finance_payroll(self) -> Dict[str, Any]:
+        """Test GET /api/finance/payroll - should return payroll records"""
+        try:
+            self.log("🧪 Testing finance payroll endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/finance/payroll")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check if response has payroll array
+                if not isinstance(data, dict) or 'payroll' not in data:
+                    self.log(f"❌ Expected dict with 'payroll' key, got {type(data)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                payroll = data['payroll']
+                if not isinstance(payroll, list):
+                    self.log(f"❌ Expected payroll array, got {type(payroll)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                self.log(f"✅ Retrieved {len(payroll)} payroll records")
+                
+                # Check payroll structure if any exist
+                if payroll:
+                    record = payroll[0]
+                    required_fields = ['id', 'employee_id', 'base_amount', 'status']
+                    for field in required_fields:
+                        if field not in record:
+                            self.log(f"⚠️ Payroll record missing field: {field}")
+                    
+                    self.log(f"   Sample payroll: Employee {record.get('employee_id')}, Amount: ₴{record.get('base_amount', 0)}")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "count": len(payroll)
+                }
+            else:
+                self.log(f"❌ Failed to get payroll: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing payroll: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_admin_expense_categories(self) -> Dict[str, Any]:
+        """Test GET /api/finance/admin/expense-categories - should return expense categories"""
+        try:
+            self.log("🧪 Testing admin expense categories endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/finance/admin/expense-categories")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Should be a list of categories
+                if not isinstance(data, list):
+                    self.log(f"❌ Expected list of categories, got {type(data)}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                self.log(f"✅ Retrieved {len(data)} expense categories")
+                
+                # Check category structure if any exist
+                if data:
+                    category = data[0]
+                    required_fields = ['id', 'type', 'code', 'name']
+                    for field in required_fields:
+                        if field not in category:
+                            self.log(f"⚠️ Category missing field: {field}")
+                    
+                    self.log(f"   Sample category: {category.get('name')} ({category.get('code')})")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "count": len(data)
+                }
+            else:
+                self.log(f"❌ Failed to get expense categories: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing expense categories: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_create_vendor(self) -> Dict[str, Any]:
+        """Test POST /api/finance/vendors - create a new vendor"""
+        try:
+            self.log("🧪 Testing create vendor endpoint...")
+            
+            # Test vendor data
+            vendor_data = {
+                "name": "Test Vendor Company",
+                "vendor_type": "service",
+                "contact_name": "Іван Петренко",
+                "phone": "+380501234567",
+                "email": "test@vendor.com",
+                "address": "вул. Тестова, 123, Київ",
+                "note": "Тестовий постачальник для перевірки API"
+            }
+            
+            response = self.session.post(f"{self.base_url}/finance/vendors", json=vendor_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check success response
+                if not data.get('success'):
+                    self.log(f"❌ Vendor creation failed: {data}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                vendor_id = data.get('vendor_id')
+                self.log(f"✅ Created vendor with ID: {vendor_id}")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "vendor_id": vendor_id
+                }
+            else:
+                self.log(f"❌ Failed to create vendor: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing create vendor: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_create_employee(self) -> Dict[str, Any]:
+        """Test POST /api/finance/employees - create a new employee"""
+        try:
+            self.log("🧪 Testing create employee endpoint...")
+            
+            # Test employee data
+            employee_data = {
+                "name": "Марія Коваленко",
+                "role": "manager",
+                "phone": "+380671234567",
+                "email": "maria@company.com",
+                "base_salary": 25000.0,
+                "hire_date": "2024-01-15",
+                "note": "Тестовий співробітник для перевірки API"
+            }
+            
+            response = self.session.post(f"{self.base_url}/finance/employees", json=employee_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check success response
+                if not data.get('success'):
+                    self.log(f"❌ Employee creation failed: {data}", "ERROR")
+                    return {"success": False, "data": data}
+                
+                employee_id = data.get('employee_id')
+                self.log(f"✅ Created employee with ID: {employee_id}")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "employee_id": employee_id
+                }
+            else:
+                self.log(f"❌ Failed to create employee: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing create employee: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def verify_finance_integration_behavior(self) -> Dict[str, Any]:
         """Verify expected behavior according to bug fix review request"""
         try:
             self.log("🔍 Verifying expected behavior for NewOrderViewWorkspace bug fixes...")

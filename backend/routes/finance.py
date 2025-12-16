@@ -720,10 +720,10 @@ async def list_payroll(employee_id: Optional[int] = None, status: Optional[str] 
     
     try:
         result = db.execute(text("""
-            SELECT p.id, p.employee_id, e.name, p.period_start, p.period_end, p.base_amount, p.bonus, p.deduction, 
+            SELECT p.id, p.employee_id, e.emp_name, p.period_start, p.period_end, p.base_amount, p.bonus, p.deduction, 
                    (p.base_amount + COALESCE(p.bonus, 0) - COALESCE(p.deduction, 0)) as total_amount, 
                    p.status, p.method, p.paid_at, p.note, p.created_at
-            FROM hr_payroll p LEFT JOIN hr_employees e ON e.id = p.employee_id 
+            FROM hr_payroll p LEFT JOIN rh_employees e ON e.id = p.employee_id 
             ORDER BY p.period_start DESC
         """))
         payroll = [{"id": r[0], "employee_id": r[1], "employee_name": r[2],

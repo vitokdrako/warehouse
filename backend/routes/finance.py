@@ -937,15 +937,14 @@ async def get_manager_finance_summary(db: Session = Depends(get_rh_db)):
             except:
                 pass
         
-        # Обираємо більшу суму виручки
-        total_revenue = max(float(orders_revenue or 0), float(fin_revenue or 0))
-        
         return {
             "total_revenue": total_revenue,
             "deposits_held": float(deposits_held or 0),
             "deposits_count": int(deposits_count or 0),
             "rent_paid": total_revenue,
-            "unpaid_balance": 0
+            "unpaid_balance": 0,
+            "rent_revenue": float(rent_revenue or 0),
+            "damage_revenue": float(damage_revenue or 0)
         }
         
     except Exception as e:

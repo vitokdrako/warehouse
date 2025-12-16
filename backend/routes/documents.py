@@ -108,7 +108,7 @@ async def preview_document(document_id: str, db: Session = Depends(get_rh_db)):
 
 
 @router.get("/{document_id}/pdf")
-async def download_pdf(document_id: str, db: Session = Depends(get_db)):
+async def download_pdf(document_id: str, db: Session = Depends(get_rh_db)):
     """Повертає PDF документа"""
     
     doc = get_document_by_id(db, document_id)

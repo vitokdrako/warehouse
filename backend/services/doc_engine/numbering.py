@@ -11,29 +11,34 @@ def generate_doc_number(db: Session, series: str) -> str:
     """
     Генерує унікальний номер документа.
     Використовує таблицю doc_number_sequences для атомарної генерації.
+    MySQL compatible version.
     """
     year = datetime.now().year
     
-    # Спробуємо оновити існуючу серію
+    # Спочатку перевіряємо чи існує запис
     result = db.execute(text("""
-        UPDATE doc_number_sequences 
-        SET current_seq = current_seq + 1,
-            updated_at = NOW()
+        SELECT current_seq FROM doc_number_sequences 
         WHERE series = :series AND year = :year
-        RETURNING current_seq
+        FOR UPDATE
     """), {"series": series, "year": year})
     
     row = result.fetchone()
     
     if row:
-        seq = row[0]
+        # Оновлюємо існуючий запис
+        new_seq = row[0] + 1
+        db.execute(text("""
+            UPDATE doc_number_sequences 
+            SET current_seq = :new_seq, updated_at = NOW()
+            WHERE series = :series AND year = :year
+        """), {"new_seq": new_seq, "series": series, "year": year})
+        seq = new_seq
     else:
-        # Створюємо нову серію
+        # Створюємо новий запис (MySQL syntax with ON DUPLICATE KEY)
         db.execute(text("""
             INSERT INTO doc_number_sequences (series, year, current_seq, created_at, updated_at)
             VALUES (:series, :year, 1, NOW(), NOW())
-            ON CONFLICT (series, year) DO UPDATE SET current_seq = doc_number_sequences.current_seq + 1
-            RETURNING current_seq
+            ON DUPLICATE KEY UPDATE current_seq = current_seq + 1
         """), {"series": series, "year": year})
         seq = 1
     

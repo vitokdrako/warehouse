@@ -137,16 +137,35 @@ export default function OrderFinancePanel({ order, onUpdate }) {
         <Card>
           <CardHd title="Прийом застави" subtitle="CASH/BANK → DEP_HOLD" right={<Pill t="info">hold</Pill>} />
           <CardBd>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <label className="text-sm"><div className="text-xs text-slate-500 mb-1">Метод</div>
                 <select className="w-full rounded-xl border px-3 py-2 text-sm" value={depositMethod} onChange={(e) => setDepositMethod(e.target.value)}>
-                  <option value="cash">Готівка</option><option value="card">Карта</option>
+                  <option value="cash">Готівка</option><option value="card">Карта</option><option value="bank">Банк</option>
                 </select>
               </label>
-              <label className="text-sm"><div className="text-xs text-slate-500 mb-1">Сума</div>
-                <input type="number" className="w-full rounded-xl border px-3 py-2 text-sm" value={depositAmount} onChange={(e) => setDepositAmount(Number(e.target.value))} />
+              <label className="text-sm"><div className="text-xs text-slate-500 mb-1">Валюта</div>
+                <select className="w-full rounded-xl border px-3 py-2 text-sm" value={depositCurrency} onChange={(e) => handleCurrencyChange(e.target.value)}>
+                  <option value="UAH">🇺🇦 UAH (₴)</option>
+                  <option value="USD">🇺🇸 USD ($)</option>
+                  <option value="EUR">🇪🇺 EUR (€)</option>
+                </select>
               </label>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm"><div className="text-xs text-slate-500 mb-1">Сума ({currencySymbols[depositCurrency]})</div>
+                <input type="number" className="w-full rounded-xl border px-3 py-2 text-sm" value={depositAmount} onChange={(e) => setDepositAmount(Number(e.target.value))} />
+              </label>
+              {depositCurrency !== 'UAH' && (
+                <label className="text-sm"><div className="text-xs text-slate-500 mb-1">Курс</div>
+                  <input type="number" step="0.01" className="w-full rounded-xl border px-3 py-2 text-sm" value={exchangeRate} onChange={(e) => setExchangeRate(Number(e.target.value))} />
+                </label>
+              )}
+            </div>
+            {depositCurrency !== 'UAH' && (
+              <div className="mt-2 rounded-lg bg-sky-50 border border-sky-200 p-2 text-sm text-sky-800">
+                💱 Еквівалент: <b>{money(uahEquivalent)}</b> ({depositAmount} {depositCurrency} × {exchangeRate})
+              </div>
+            )}
             <div className="mt-3"><Btn variant="primary" onClick={() => handlePayment('deposit')} disabled={loading === 'deposit' || depositAmount <= 0}>{loading === 'deposit' ? '...' : 'Прийняти'}</Btn></div>
           </CardBd>
         </Card>

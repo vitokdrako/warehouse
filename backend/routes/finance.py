@@ -476,11 +476,19 @@ async def migrate_tables(db: Session = Depends(get_rh_db)):
     results = []
     
     try:
-        db.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
-        
-        # Drop and recreate hr_employees
-        db.execute(text("DROP TABLE IF EXISTS hr_payroll"))
-        db.execute(text("DROP TABLE IF EXISTS hr_employees"))
+        # Rename old tables instead of dropping (to avoid FK issues)
+        try:
+            db.execute(text("RENAME TABLE hr_employees TO hr_employees_old_backup"))
+        except:
+            pass
+        try:
+            db.execute(text("RENAME TABLE hr_payroll TO hr_payroll_old_backup"))
+        except:
+            pass
+        try:
+            db.execute(text("RENAME TABLE fin_vendors TO fin_vendors_old_backup"))
+        except:
+            pass
         db.execute(text("""
             CREATE TABLE hr_employees (
                 id INT AUTO_INCREMENT PRIMARY KEY,

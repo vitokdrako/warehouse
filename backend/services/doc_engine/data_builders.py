@@ -175,7 +175,7 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
             loc_query = "SELECT zone, aisle, shelf, sku FROM products WHERE "
             params = {}
             if product_id:
-                loc_query += "id = :product_id"
+                loc_query += "product_id = :product_id"
                 params["product_id"] = product_id
             else:
                 loc_query += "sku = :sku"

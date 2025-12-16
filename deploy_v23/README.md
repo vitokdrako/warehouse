@@ -1,5 +1,7 @@
 # RentalHub Deploy v23 - Finance Cabinet
 
+## © FarforDecorOrenda 2025
+
 ## 🗓️ Дата релізу: 2025-12-16
 
 ## 📦 Структура:

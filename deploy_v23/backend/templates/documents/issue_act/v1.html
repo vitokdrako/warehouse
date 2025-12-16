@@ -107,8 +107,14 @@
         </div>
     </div>
 
+    <div class="info-block" style="font-size: 8pt; color: #666; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;">
+        <p><strong>Важливо:</strong> Перевірте кількість і комплектацію при отриманні. Декор повертається запакованим так само, як при отриманні.</p>
+        <p>Прайс збитків: <a href="{{ company.damage_url }}">{{ company.damage_url }}</a></p>
+    </div>
+
     <div class="footer">
-        <p>Сгенеровано: {{ generated_at }} | © FarforDecorOrenda 2025</p>
+        <p>{{ company.legal_name }} | {{ company.email }} | {{ company.phone }}</p>
+        <p>© FarforDecorOrenda 2025 | Сгенеровано: {{ generated_at }}</p>
     </div>
 </body>
 </html>

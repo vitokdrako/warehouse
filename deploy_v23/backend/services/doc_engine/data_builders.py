@@ -118,16 +118,34 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
     
     # Компанія - FarforDecorOrenda
     # © FarforDecorOrenda 2025
+    # Реальні дані з офіційних документів farforrent.com.ua
     company = {
         "name": "FarforDecorOrenda",
         "legal_name": "ФОП Арсалані Олександра Ігорівна",
-        "address": "61082, Харківська обл., місто Харків, ПРОСПЕКТ МОСКОВСЬКИЙ, будинок 216/3А, квартира 46",
-        "warehouse": "Військовий провулок 1",
-        "phone": "+380 XX XXX XX XX",
+        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
+        "warehouse": "м. Харків, Військовий провулок, 1",
+        "phone": "+380 XX XXX XX XX",  # TODO: додати реальний номер
         "email": "rfarfordecor@gmail.com.ua",
         "website": "https://www.farforrent.com.ua",
         "tax_id": "3234423422",
-        "iban": "UA00 0000 0000 0000 0000 0000 00000",
+        "edrpou": "3234423422",  # ІПН для ФОП
+        "iban": "UA00 0000 0000 0000 0000 0000 00000",  # TODO: додати реальний IBAN
+        # Правові документи
+        "terms_url": "https://www.farforrent.com.ua/terms",
+        "privacy_url": "https://www.farforrent.com.ua/privacy",
+        "offer_url": "https://www.farforrent.com.ua/oferta",
+        "damage_url": "https://www.farforrent.com.ua/opis-zbitk%D1%96v",
+        # Умови оренди
+        "min_order": 2000,
+        "discount_threshold": 30000,
+        "discount_percent": 10,
+        "deposit_rule": "50% від повної вартості можливого збитку",
+        "prepayment_percent": 50,
+        "cancellation_days": 2,
+        "penalty_daily_percent": 0.5,
+        # Робочі години
+        "working_hours": "пн-пт 10:00-18:00",
+        "issue_hours": "пн-сб 10:00-17:00",
     }
     
     return {

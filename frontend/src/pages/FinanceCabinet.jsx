@@ -402,17 +402,134 @@ function ExpensesTab({ expenses, categories, loading, onAdd }) {
   );
 }
 
-function PayrollTab() {
+function PayrollTab({ employees, payroll, loading, onRefresh }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEmployee, setShowEmployee] = useState(false);
+  const [form, setForm] = useState({ employee_id: '', period_start: '', period_end: '', base_amount: '', bonus: '0', deduction: '0', method: 'cash', note: '' });
+  const [empForm, setEmpForm] = useState({ name: '', role: 'manager', phone: '', base_salary: '' });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.employee_id || !form.base_amount) return;
+    await financeApi.createPayroll({ ...form, base_amount: Number(form.base_amount), bonus: Number(form.bonus), deduction: Number(form.deduction) });
+    setShowAdd(false);
+    setForm({ employee_id: '', period_start: '', period_end: '', base_amount: '', bonus: '0', deduction: '0', method: 'cash', note: '' });
+    onRefresh?.();
+  };
+
+  const handleAddEmployee = async (e) => {
+    e.preventDefault();
+    if (!empForm.name) return;
+    await financeApi.createEmployee({ ...empForm, base_salary: Number(empForm.base_salary || 0) });
+    setShowEmployee(false);
+    setEmpForm({ name: '', role: 'manager', phone: '', base_salary: '' });
+    onRefresh?.();
+  };
+
+  const handlePay = async (id) => {
+    if (confirm('Підтвердити виплату зарплати?')) {
+      await financeApi.payPayroll(id);
+      onRefresh?.();
+    }
+  };
+
+  const roleLabels = { manager: 'Менеджер', courier: 'Кур\'єр', cleaner: 'Прибиральник', assistant: 'Помічник', other: 'Інше' };
+  const statusLabels = { pending: 'Очікує', approved: 'Затверджено', paid: 'Виплачено' };
+  const statusTone = { pending: 'warn', approved: 'info', paid: 'ok' };
+
   return (
-    <div className="mx-auto max-w-7xl px-6 py-6">
+    <div className="mx-auto max-w-7xl px-6 py-6 space-y-4">
+      {/* Employees Card */}
       <Card>
-        <CardHd title="Зарплата" subtitle="Нарахування → виплата" right={<Btn variant="dark">Нарахувати</Btn>} />
+        <CardHd title="👥 Співробітники" subtitle={`${employees.length} осіб`} right={<Btn variant="dark" onClick={() => setShowEmployee(true)}>+ Додати</Btn>} />
         <CardBd>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-            🚧 Модуль в розробці. Тут буде управління зарплатами співробітників.
-          </div>
+          {loading ? <div className="p-4 text-center text-slate-500">Завантаження...</div> : employees.length ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {employees.map(e => (
+                <div key={e.id} className="border rounded-xl p-3">
+                  <div className="font-medium">{e.name}</div>
+                  <div className="text-sm text-slate-500">{roleLabels[e.role] || e.role}</div>
+                  <div className="text-sm text-slate-600">Ставка: {money(e.base_salary)}</div>
+                  {e.phone && <div className="text-xs text-slate-400">{e.phone}</div>}
+                </div>
+              ))}
+            </div>
+          ) : <div className="p-4 text-center text-slate-400">Немає співробітників</div>}
         </CardBd>
       </Card>
+
+      {/* Payroll Card */}
+      <Card>
+        <CardHd title="💰 Нарахування зарплат" subtitle="Історія виплат" right={<Btn variant="dark" onClick={() => setShowAdd(true)}>+ Нарахувати</Btn>} />
+        <CardBd>
+          {loading ? <div className="p-4 text-center text-slate-500">Завантаження...</div> : payroll.length ? (
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-500">
+                <tr><th className="px-3 py-2 text-left">Співробітник</th><th className="px-3 py-2 text-left">Період</th><th className="px-3 py-2 text-right">Сума</th><th className="px-3 py-2 text-left">Статус</th><th className="px-3 py-2"></th></tr>
+              </thead>
+              <tbody>
+                {payroll.map(p => (
+                  <tr key={p.id} className="border-t">
+                    <td className="px-3 py-2 font-medium">{p.employee_name || `ID: ${p.employee_id}`}</td>
+                    <td className="px-3 py-2 text-slate-600">{p.period_start?.slice(0, 10)} — {p.period_end?.slice(0, 10)}</td>
+                    <td className="px-3 py-2 text-right">{money(p.total_amount)}</td>
+                    <td className="px-3 py-2"><Pill t={statusTone[p.status]}>{statusLabels[p.status]}</Pill></td>
+                    <td className="px-3 py-2">{p.status !== 'paid' && <Btn onClick={() => handlePay(p.id)}>Виплатити</Btn>}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : <div className="p-4 text-center text-slate-400">Немає нарахувань</div>}
+        </CardBd>
+      </Card>
+
+      {/* Add Payroll Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="border-b px-6 py-4 flex justify-between"><h3 className="font-semibold">Нарахувати зарплату</h3><button onClick={() => setShowAdd(false)}>✕</button></div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <select className="w-full rounded-xl border px-3 py-2" value={form.employee_id} onChange={e => setForm({...form, employee_id: e.target.value})} required>
+                <option value="">Оберіть співробітника</option>
+                {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="date" className="rounded-xl border px-3 py-2" placeholder="Початок" value={form.period_start} onChange={e => setForm({...form, period_start: e.target.value})} required />
+                <input type="date" className="rounded-xl border px-3 py-2" placeholder="Кінець" value={form.period_end} onChange={e => setForm({...form, period_end: e.target.value})} required />
+              </div>
+              <input type="number" placeholder="Базова сума" className="w-full rounded-xl border px-3 py-2" value={form.base_amount} onChange={e => setForm({...form, base_amount: e.target.value})} required />
+              <div className="grid grid-cols-2 gap-3">
+                <input type="number" placeholder="Бонус" className="rounded-xl border px-3 py-2" value={form.bonus} onChange={e => setForm({...form, bonus: e.target.value})} />
+                <input type="number" placeholder="Утримання" className="rounded-xl border px-3 py-2" value={form.deduction} onChange={e => setForm({...form, deduction: e.target.value})} />
+              </div>
+              <input placeholder="Примітка" className="w-full rounded-xl border px-3 py-2" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
+              <div className="flex gap-2"><Btn type="button" onClick={() => setShowAdd(false)} className="flex-1">Скасувати</Btn><Btn type="submit" variant="primary" className="flex-1">Зберегти</Btn></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Employee Modal */}
+      {showEmployee && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowEmployee(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="border-b px-6 py-4 flex justify-between"><h3 className="font-semibold">Додати співробітника</h3><button onClick={() => setShowEmployee(false)}>✕</button></div>
+            <form onSubmit={handleAddEmployee} className="p-6 space-y-4">
+              <input placeholder="Ім'я" className="w-full rounded-xl border px-3 py-2" value={empForm.name} onChange={e => setEmpForm({...empForm, name: e.target.value})} required />
+              <select className="w-full rounded-xl border px-3 py-2" value={empForm.role} onChange={e => setEmpForm({...empForm, role: e.target.value})}>
+                <option value="manager">Менеджер</option>
+                <option value="courier">Кур'єр</option>
+                <option value="cleaner">Прибиральник</option>
+                <option value="assistant">Помічник</option>
+                <option value="other">Інше</option>
+              </select>
+              <input placeholder="Телефон" className="w-full rounded-xl border px-3 py-2" value={empForm.phone} onChange={e => setEmpForm({...empForm, phone: e.target.value})} />
+              <input type="number" placeholder="Базова ставка" className="w-full rounded-xl border px-3 py-2" value={empForm.base_salary} onChange={e => setEmpForm({...empForm, base_salary: e.target.value})} />
+              <div className="flex gap-2"><Btn type="button" onClick={() => setShowEmployee(false)} className="flex-1">Скасувати</Btn><Btn type="submit" variant="primary" className="flex-1">Зберегти</Btn></div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -186,55 +186,49 @@ class FinanceCabinetTester:
             self.log(f"❌ Exception testing finance dashboard: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_order_details_endpoint(self) -> Dict[str, Any]:
-        """Test GET /api/orders/{order_id} - should return order details for order #7121"""
+    def test_finance_vendors(self) -> Dict[str, Any]:
+        """Test GET /api/finance/vendors - should return list of vendors"""
         try:
-            self.log("🧪 Testing order details endpoint for order #7121...")
+            self.log("🧪 Testing finance vendors endpoint...")
             
-            # Test order #7121 as specified in the review request
-            order_id = 7121
-            response = self.session.get(f"{self.base_url}/orders/{order_id}")
+            response = self.session.get(f"{self.base_url}/finance/vendors")
             
             if response.status_code == 200:
                 data = response.json()
-                self.log(f"✅ Retrieved order details for #{order_id}")
                 
-                # Validate order structure
-                required_fields = ['id', 'order_number', 'client_name', 'status', 'items']
-                missing_fields = []
+                # Check if response has vendors array
+                if not isinstance(data, dict) or 'vendors' not in data:
+                    self.log(f"❌ Expected dict with 'vendors' key, got {type(data)}", "ERROR")
+                    return {"success": False, "data": data}
                 
-                for field in required_fields:
-                    if field not in data:
-                        missing_fields.append(field)
+                vendors = data['vendors']
+                if not isinstance(vendors, list):
+                    self.log(f"❌ Expected vendors array, got {type(vendors)}", "ERROR")
+                    return {"success": False, "data": data}
                 
-                if missing_fields:
-                    self.log(f"❌ Order missing fields: {missing_fields}", "ERROR")
-                    return {"success": False, "error": f"Missing required fields: {missing_fields}"}
+                self.log(f"✅ Retrieved {len(vendors)} vendors")
                 
-                # Check if order has awaiting_customer status
-                status = data.get('status')
-                self.log(f"   Order #{data.get('order_number')}: {data.get('client_name')} - Status: {status}")
+                # Check vendor structure if any exist
+                if vendors:
+                    vendor = vendors[0]
+                    required_fields = ['id', 'name', 'vendor_type']
+                    for field in required_fields:
+                        if field not in vendor:
+                            self.log(f"⚠️ Vendor missing field: {field}")
+                    
+                    self.log(f"   Sample vendor: {vendor.get('name')} ({vendor.get('vendor_type')})")
                 
-                # Check items structure
-                items = data.get('items', [])
-                self.log(f"   Items count: {len(items)}")
-                
-                if items:
-                    for item in items[:2]:  # Check first 2 items
-                        item_fields = ['inventory_id', 'name', 'quantity', 'price_per_day']
-                        for field in item_fields:
-                            if field not in item:
-                                self.log(f"⚠️ Item missing field: {field}")
-                        
-                        self.log(f"   - {item.get('name')}: qty={item.get('quantity')}, price_per_day=₴{item.get('price_per_day', 0)}")
-                
-                return {"success": True, "data": data, "order_id": order_id, "status": status}
+                return {
+                    "success": True, 
+                    "data": data,
+                    "count": len(vendors)
+                }
             else:
-                self.log(f"❌ Failed to get order details: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get vendors: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing order details: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing vendors: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def verify_bug_fixes_behavior(self) -> Dict[str, Any]:

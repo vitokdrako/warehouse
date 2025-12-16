@@ -748,6 +748,14 @@ export default function NewOrderViewWorkspace() {
         onRemoveItem={handleRemoveItem}
       />
       
+      {/* Документи */}
+      <ZoneDocuments
+        orderId={orderId}
+        entityType="order"
+        title="Документи"
+        hint="Генерація рахунків, договорів та актів"
+      />
+      
       {/* Комерційна зведена */}
       <ZoneCommercialSummary
         rentAmount={calculations.totalRent}

@@ -673,6 +673,130 @@ export default function AdminPanel() {
             )}
           </div>
         )}
+
+        {/* Vendors Tab */}
+        {activeTab === 'vendors' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Підрядники / Постачальники</h2>
+              <button
+                onClick={() => setShowVendorForm(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                + Додати підрядника
+              </button>
+            </div>
+            {loading ? (
+              <p className="text-center py-8 text-gray-500">Завантаження...</p>
+            ) : vendors.length === 0 ? (
+              <p className="text-center py-8 text-gray-400">Немає підрядників</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Назва</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Тип</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Контакт</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Телефон</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">IBAN</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {vendors.map(v => (
+                      <tr key={v.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{v.name}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">{v.vendor_type}</span></td>
+                        <td className="px-4 py-3">{v.contact_name || '—'}</td>
+                        <td className="px-4 py-3">{v.phone || '—'}</td>
+                        <td className="px-4 py-3 font-mono text-xs">{v.iban || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Expense Categories Tab */}
+        {activeTab === 'expense-categories' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Категорії витрат</h2>
+              <button
+                onClick={() => setShowExpenseCatForm(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                + Додати категорію
+              </button>
+            </div>
+            {loading ? (
+              <p className="text-center py-8 text-gray-500">Завантаження...</p>
+            ) : expenseCategories.length === 0 ? (
+              <p className="text-center py-8 text-gray-400">Немає категорій витрат</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {expenseCategories.map(c => (
+                  <div key={c.id} className={cls('p-4 rounded-xl border', c.type === 'expense' ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200')}>
+                    <div className="flex items-center justify-between">
+                      <span className={cls('px-2 py-1 text-xs rounded-full', c.type === 'expense' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800')}>
+                        {c.type === 'expense' ? '💸 Витрата' : '💰 Дохід'}
+                      </span>
+                      <span className="text-xs text-gray-500">{c.code}</span>
+                    </div>
+                    <div className="mt-2 font-medium">{c.name}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Employees Tab */}
+        {activeTab === 'employees' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">Працівники</h2>
+              <button
+                onClick={() => setShowEmployeeForm(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                + Додати працівника
+              </button>
+            </div>
+            {loading ? (
+              <p className="text-center py-8 text-gray-500">Завантаження...</p>
+            ) : employees.length === 0 ? (
+              <p className="text-center py-8 text-gray-400">Немає працівників</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ім'я</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Роль</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Телефон</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ставка</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {employees.map(e => (
+                      <tr key={e.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{e.name}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">{e.role}</span></td>
+                        <td className="px-4 py-3">{e.phone || '—'}</td>
+                        <td className="px-4 py-3">{e.email || '—'}</td>
+                        <td className="px-4 py-3 text-right font-medium">₴ {e.base_salary?.toLocaleString() || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* User Form Modal */}

@@ -90,6 +90,7 @@ app.include_router(product_images.router)
 app.include_router(event_tool_integration.router)
 app.include_router(user_tracking.router)
 app.include_router(laundry.router)
+app.include_router(documents.router)
 
 # Configure logging
 logging.basicConfig(

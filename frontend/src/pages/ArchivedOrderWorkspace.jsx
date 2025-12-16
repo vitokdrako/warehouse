@@ -265,6 +265,15 @@ export default function ArchivedOrderWorkspace() {
         hint="Усі платежі та транзакції"
       />
       
+      {/* Документи (архів) */}
+      <ZoneDocuments
+        orderId={order?.order_id}
+        entityType="order"
+        title="Документи"
+        hint="Історія документів замовлення"
+        readOnly={true}
+      />
+      
       {/* Комерційна зведена */}
       <ZoneCommercialSummary
         rentAmount={totalRent}

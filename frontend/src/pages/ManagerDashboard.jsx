@@ -134,11 +134,7 @@ export default function ManagerDashboard() {
     console.log('[Dashboard] 📊 Loading orders for today...');
     
     // Завантажити ВСІ замовлення що очікують підтвердження (вони одразу синхронізуються з OpenCart)
-    fetch(`${BACKEND_URL}/api/orders?status=awaiting_customer`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/orders?status=awaiting_customer`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Orders awaiting confirmation:', data.orders?.length || 0);
@@ -147,11 +143,7 @@ export default function ManagerDashboard() {
     .catch(err => console.error('[Dashboard] Error loading orders:', err));
     
     // Завантажити ВСІ замовлення на комплектації та поверненні
-    fetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`)
     .then(res => res.json())
     .then(data => {
       setDecorOrders(data.orders || []);
@@ -163,11 +155,7 @@ export default function ManagerDashboard() {
     });
     
     // Завантажити Issue Cards (картки видачі)
-    fetch(`${BACKEND_URL}/api/issue-cards`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/issue-cards`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Issue cards:', data.length);
@@ -176,11 +164,7 @@ export default function ManagerDashboard() {
     .catch(err => console.error('[Dashboard] Error loading issue cards:', err));
     
     // Завантажити фінанси (виручка і застави) з нового API
-    fetch(`${BACKEND_URL}/api/manager/finance/summary`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/manager/finance/summary`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Finance summary:', data);

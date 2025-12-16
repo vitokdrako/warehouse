@@ -74,39 +74,48 @@ backend:
 frontend:
   - task: "Finance Cabinet UI Integration"
     implemented: true
-    working: "NA"
-    file: "/app/frontend/src/components/FinanceCabinet.js"
-    stuck_count: 0
+    working: false
+    file: "/app/frontend/src/pages/FinanceCabinet.jsx"
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
         comment: "Frontend testing not performed as per system limitations. Backend APIs are fully functional and ready for frontend integration."
+      - working: false
+        agent: "testing"
+        comment: "❌ Finance Cabinet UI loads but API integration failing. Frontend shows login page and basic structure, but Finance Cabinet tabs (Огляд, Замовлення, Журнал, Витрати, ЗП, Підрядники) are not visible. Backend APIs working correctly (tested via curl). Issue: Frontend API calls failing with 'net::ERR_ABORTED' - likely authentication/CORS issue preventing data loading."
 
   - task: "Manager Dashboard KPIs"
     implemented: true
-    working: "NA"
-    file: "/app/frontend/src/components/ManagerDashboard.js"
-    stuck_count: 0
+    working: false
+    file: "/app/frontend/src/pages/ManagerDashboard.jsx"
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
         comment: "Frontend testing not performed as per system limitations. Backend Manager Finance Summary API provides all required KPI data."
+      - working: false
+        agent: "testing"
+        comment: "❌ Manager Dashboard UI structure loads correctly with KPI cards (ЗАМОВЛЕННЯ, ВИРУЧКА, ЗАСТАВИ В ХОЛДІ, НА РЕСТАВРАЦІЇ) but shows 0 values instead of expected ₴9300 revenue and ₴1700 deposits. Backend API returns correct data when tested directly. Issue: Frontend API calls to /api/manager/finance/summary failing with 'net::ERR_ABORTED' errors - authentication headers not being sent properly."
 
   - task: "Admin Panel Finance Tabs"
     implemented: true
-    working: "NA"
-    file: "/app/frontend/src/components/AdminPanel.js"
-    stuck_count: 0
+    working: false
+    file: "/app/frontend/src/pages/AdminPanel.tsx"
+    stuck_count: 1
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
         comment: "Frontend testing not performed as per system limitations. Backend APIs for vendors, employees, and expense categories are fully functional."
+      - working: false
+        agent: "testing"
+        comment: "❌ Admin Panel navigation accessible but tabs not loading properly. Expected 5 tabs (Користувачі, Категорії, Підрядники, Категорії витрат, Працівники) not visible in UI. Backend APIs for vendors and employees working correctly when tested directly. Issue: Same authentication/API integration problem as other components."
 
 metadata:
   created_by: "testing_agent"

@@ -6,8 +6,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { financeApi } from '../services/financeApi';
-import DocumentsPanel from '../components/finance/DocumentsPanel';
-import OrderFinancePanel from '../components/finance/OrderFinancePanel';
+import DocumentsPanel from '../components/finance/DocumentsPanel.jsx';
+import OrderFinancePanel from '../components/finance/OrderFinancePanel.jsx';
 
 // Helpers
 const cls = (...a) => a.filter(Boolean).join(' ');

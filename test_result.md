@@ -112,7 +112,7 @@ frontend:
     implemented: true
     working: false
     file: "/app/frontend/src/pages/AdminPanel.tsx"
-    stuck_count: 1
+    stuck_count: 2
     priority: "medium"
     needs_retesting: false
     status_history:
@@ -122,6 +122,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ Admin Panel navigation accessible but tabs not loading properly. Expected 5 tabs (Користувачі, Категорії, Підрядники, Категорії витрат, Працівники) not visible in UI. Backend APIs for vendors and employees working correctly when tested directly. Issue: Same authentication/API integration problem as other components."
+      - working: false
+        agent: "testing"
+        comment: "❌ Admin Panel has SAME AUTHENTICATION ISSUE: Direct access to /admin redirects to login page. After re-login, can access admin panel but authentication is not persistent. AdminPanel.tsx manually adds Authorization headers (lines 210-240) but this approach is inconsistent across the app. Need centralized authentication solution."
 
 metadata:
   created_by: "testing_agent"

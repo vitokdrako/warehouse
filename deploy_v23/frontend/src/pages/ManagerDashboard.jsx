@@ -5,6 +5,19 @@ import CorporateHeader from '../components/CorporateHeader';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
+// Utility function for authenticated fetch
+const authFetch = (url, options = {}) => {
+  const token = localStorage.getItem('token');
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+};
+
 export default function ManagerDashboard() {
   const [orders, setOrders] = useState([]);
   const [decorOrders, setDecorOrders] = useState([]);  // Наші замовлення
@@ -39,10 +52,8 @@ export default function ManagerDashboard() {
     }
     
     try {
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/cancel-by-client`, {
+      const response = await authFetch(`${BACKEND_URL}/api/decor-orders/${orderId}/cancel-by-client`, {
         method: 'POST',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reason: reason || 'Клієнт відмовився без пояснень'
         })
@@ -68,9 +79,8 @@ export default function ManagerDashboard() {
     }
     
     try {
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/archive`, {
-        method: 'POST',
-        mode: 'cors'
+      const response = await authFetch(`${BACKEND_URL}/api/decor-orders/${orderId}/archive`, {
+        method: 'POST'
       });
       
       if (response.ok) {
@@ -89,10 +99,8 @@ export default function ManagerDashboard() {
   // Функція для оновлення дат замовлення
   const handleDateUpdate = async (orderId, issueDate, returnDate) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/orders/${orderId}`, {
+      const response = await authFetch(`${BACKEND_URL}/api/orders/${orderId}`, {
         method: 'PUT',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           issue_date: issueDate,
           return_date: returnDate
@@ -123,11 +131,7 @@ export default function ManagerDashboard() {
     console.log('[Dashboard] 📊 Loading orders for today...');
     
     // Завантажити ВСІ замовлення що очікують підтвердження (вони одразу синхронізуються з OpenCart)
-    fetch(`${BACKEND_URL}/api/orders?status=awaiting_customer`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/orders?status=awaiting_customer`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Orders awaiting confirmation:', data.orders?.length || 0);
@@ -136,11 +140,7 @@ export default function ManagerDashboard() {
     .catch(err => console.error('[Dashboard] Error loading orders:', err));
     
     // Завантажити ВСІ замовлення на комплектації та поверненні
-    fetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`)
     .then(res => res.json())
     .then(data => {
       setDecorOrders(data.orders || []);
@@ -152,11 +152,7 @@ export default function ManagerDashboard() {
     });
     
     // Завантажити Issue Cards (картки видачі)
-    fetch(`${BACKEND_URL}/api/issue-cards`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/issue-cards`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Issue cards:', data.length);
@@ -165,11 +161,7 @@ export default function ManagerDashboard() {
     .catch(err => console.error('[Dashboard] Error loading issue cards:', err));
     
     // Завантажити фінанси (виручка і застави) з нового API
-    fetch(`${BACKEND_URL}/api/manager/finance/summary`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/manager/finance/summary`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Finance summary:', data);
@@ -181,11 +173,7 @@ export default function ManagerDashboard() {
     .catch(err => {
       console.error('[Dashboard] Error loading finance:', err);
       // Fallback - спробувати новий finance API
-      fetch(`${BACKEND_URL}/api/finance/dashboard?period=month`, {
-        method: 'GET',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      authFetch(`${BACKEND_URL}/api/finance/dashboard?period=month`)
       .then(res => res.json())
       .then(data => {
         console.log('[Dashboard] Finance dashboard fallback:', data);
@@ -202,11 +190,7 @@ export default function ManagerDashboard() {
     fetchAllData();
     
     // Завантажити статистику товарів на реставрації
-    fetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Cleaning stats:', data);
@@ -225,11 +209,7 @@ export default function ManagerDashboard() {
     const today = new Date().toISOString().split('T')[0];
     const queryParams = `?limit=100&from_date=${today}&to_date=${today}`;
     
-    fetch(`${BACKEND_URL}/api/orders${queryParams}`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/json' },
-    })
+    authFetch(`${BACKEND_URL}/api/orders${queryParams}`)
     .then(res => res.json())
     .then(data => {
       console.log('[Dashboard] Manual reload:', data.orders?.length || 0, 'orders');

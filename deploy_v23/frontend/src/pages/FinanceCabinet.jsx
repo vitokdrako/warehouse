@@ -12,6 +12,19 @@ import OrderFinancePanel from '../components/finance/OrderFinancePanel.jsx';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
+// Auth fetch helper
+const authFetch = (url, options = {}) => {
+  const token = localStorage.getItem('token');
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+};
+
 // Helpers
 const cls = (...a) => a.filter(Boolean).join(' ');
 const money = (v, cur = '₴') => `${cur} ${(v || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}`;
@@ -655,7 +668,7 @@ export default function FinanceCabinet() {
     setLoading(p => ({ ...p, orders: true }));
     try {
       // Спочатку спробувати отримати замовлення з фінансовою інформацією
-      const finResponse = await fetch(`${BACKEND_URL}/api/manager/finance/orders-with-finance?limit=100`);
+      const finResponse = await authFetch(`${BACKEND_URL}/api/manager/finance/orders-with-finance?limit=100`);
       if (finResponse.ok) {
         const data = await finResponse.json();
         if (data.orders && data.orders.length > 0) {
@@ -666,7 +679,7 @@ export default function FinanceCabinet() {
       }
       
       // Fallback до стандартного orders API
-      const response = await fetch(`${BACKEND_URL}/api/orders?limit=100`);
+      const response = await authFetch(`${BACKEND_URL}/api/orders?limit=100`);
       if (response.ok) {
         const data = await response.json();
         setOrders(data.orders || data || []);

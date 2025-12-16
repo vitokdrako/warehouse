@@ -426,7 +426,13 @@ export default function FinanceCabinet() {
   return (
     <div className="min-h-screen bg-slate-50">
       <TopBar tab={tab} setTab={setTab} onBack={() => navigate('/manager')} />
-      {tab === 'overview' && dashboard && <OverviewTab dashboard={dashboard} isMock={isMock} />}
+      {tab === 'overview' && (loading.dashboard ? (
+        <div className="mx-auto max-w-6xl px-4 py-6"><div className="p-8 text-center text-slate-500">Завантаження...</div></div>
+      ) : dashboard ? (
+        <OverviewTab dashboard={dashboard} isMock={isMock} />
+      ) : (
+        <div className="mx-auto max-w-6xl px-4 py-6"><div className="p-8 text-center text-slate-400">Дані не знайдено</div></div>
+      ))}
       {tab === 'orders' && <OrdersTab orders={orders} expandedId={expandedId} setExpandedId={setExpandedId} onUpdate={refresh} filter={orderFilter} setFilter={setOrderFilter} />}
       {tab === 'ledger' && <LedgerTab ledger={ledger} loading={loading.ledger} />}
       {tab === 'expenses' && <ExpensesTab expenses={expenses} categories={categories} loading={loading.expenses} onAdd={() => { loadExpenses(); loadDashboard(); }} />}

@@ -1033,6 +1033,137 @@ export default function AdminPanel() {
           </div>
         </div>
       )}
+
+      {/* Vendor Form Modal */}
+      {showVendorForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-semibold mb-4">🏢 Новий підрядник</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Назва *</label>
+                <input type="text" value={vendorForm.name} onChange={e => setVendorForm({...vendorForm, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Тип</label>
+                <select value={vendorForm.vendor_type} onChange={e => setVendorForm({...vendorForm, vendor_type: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+                  <option value="service">Сервіс</option>
+                  <option value="cleaning">Прання/Чистка</option>
+                  <option value="repair">Ремонт</option>
+                  <option value="delivery">Доставка</option>
+                  <option value="supplier">Постачальник</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Контактна особа</label>
+                  <input type="text" value={vendorForm.contact_name} onChange={e => setVendorForm({...vendorForm, contact_name: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
+                  <input type="tel" value={vendorForm.phone} onChange={e => setVendorForm({...vendorForm, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={vendorForm.email} onChange={e => setVendorForm({...vendorForm, email: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Адреса</label>
+                <input type="text" value={vendorForm.address} onChange={e => setVendorForm({...vendorForm, address: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">IBAN</label>
+                <input type="text" value={vendorForm.iban} onChange={e => setVendorForm({...vendorForm, iban: e.target.value})} className="w-full px-3 py-2 border rounded-lg font-mono" placeholder="UA..." />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Примітка</label>
+                <textarea value={vendorForm.note} onChange={e => setVendorForm({...vendorForm, note: e.target.value})} className="w-full px-3 py-2 border rounded-lg" rows={2} />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={saveVendor} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Зберегти</button>
+              <button onClick={() => setShowVendorForm(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Скасувати</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Category Form Modal */}
+      {showExpenseCatForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold mb-4">💸 Нова категорія витрат</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Тип</label>
+                <select value={expenseCatForm.type} onChange={e => setExpenseCatForm({...expenseCatForm, type: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+                  <option value="expense">Витрата</option>
+                  <option value="income">Дохід</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Код *</label>
+                <input type="text" value={expenseCatForm.code} onChange={e => setExpenseCatForm({...expenseCatForm, code: e.target.value.toUpperCase()})} className="w-full px-3 py-2 border rounded-lg font-mono" placeholder="RENT, SALARY, FUEL..." required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Назва *</label>
+                <input type="text" value={expenseCatForm.name} onChange={e => setExpenseCatForm({...expenseCatForm, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg" placeholder="Оренда офісу" required />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={saveExpenseCategory} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Зберегти</button>
+              <button onClick={() => setShowExpenseCatForm(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Скасувати</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Employee Form Modal */}
+      {showEmployeeForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold mb-4">👷 Новий працівник</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ПІБ *</label>
+                <input type="text" value={employeeForm.name} onChange={e => setEmployeeForm({...employeeForm, name: e.target.value})} className="w-full px-3 py-2 border rounded-lg" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Роль</label>
+                <select value={employeeForm.role} onChange={e => setEmployeeForm({...employeeForm, role: e.target.value})} className="w-full px-3 py-2 border rounded-lg">
+                  <option value="manager">Менеджер</option>
+                  <option value="courier">Кур'єр</option>
+                  <option value="cleaner">Комірник/Прибиральник</option>
+                  <option value="assistant">Асистент</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
+                  <input type="tel" value={employeeForm.phone} onChange={e => setEmployeeForm({...employeeForm, phone: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ставка (₴)</label>
+                  <input type="number" value={employeeForm.base_salary} onChange={e => setEmployeeForm({...employeeForm, base_salary: Number(e.target.value)})} className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" value={employeeForm.email} onChange={e => setEmployeeForm({...employeeForm, email: e.target.value})} className="w-full px-3 py-2 border rounded-lg" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Примітка</label>
+                <textarea value={employeeForm.note} onChange={e => setEmployeeForm({...employeeForm, note: e.target.value})} className="w-full px-3 py-2 border rounded-lg" rows={2} />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={saveEmployee} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Зберегти</button>
+              <button onClick={() => setShowEmployeeForm(false)} className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">Скасувати</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

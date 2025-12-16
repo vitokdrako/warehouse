@@ -316,6 +316,14 @@ export default function ReturnOrderWorkspace() {
           readOnly={false}
         />
         
+        {/* Документи */}
+        <ZoneDocuments
+          orderId={orderId}
+          entityType="return"
+          title="Документи повернення"
+          hint="Акти повернення та чеклисти"
+        />
+        
         {/* Комерційна зведена */}
         <ZoneCommercialSummary
           rentAmount={totalRent}

@@ -3,9 +3,16 @@ Document Render - генерація HTML та PDF
 """
 import os
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from weasyprint import HTML, CSS
-from weasyprint.text.fonts import FontConfiguration
 from datetime import datetime
+
+# WeasyPrint is optional - will be imported when needed
+WEASYPRINT_AVAILABLE = False
+try:
+    from weasyprint import HTML, CSS
+    from weasyprint.text.fonts import FontConfiguration
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError):
+    pass
 
 # Шлях до шаблонів
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'templates', 'documents')

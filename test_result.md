@@ -1,5 +1,46 @@
 # Test Results
 
+## Test Session: Finance Engine API Testing
+
+### New Finance Tables Created:
+- fin_accounts (11 accounts/buckets)
+- fin_categories (22 expense/income categories)
+- fin_transactions (ledger header)
+- fin_ledger_entries (double-entry bookkeeping)
+- fin_payments (incoming payments)
+- fin_deposit_holds (deposit management)
+- fin_deposit_events (deposit history)
+- fin_expenses (expenses tracking)
+- fin_vendors, fin_vendor_bills
+- hr_employees, payroll_runs, payroll_lines
+- fin_daily_balances (for fast dashboards)
+
+### API Endpoints to Test:
+
+1. **GET /api/finance/accounts** - List all buckets with balances
+2. **GET /api/finance/categories** - List expense/income categories
+3. **GET /api/finance/dashboard?period=month** - Financial overview
+4. **GET /api/finance/payments** - List payments
+5. **POST /api/finance/payments** - Create payment (rent/deposit/damage/refund)
+6. **GET /api/finance/expenses** - List expenses
+7. **POST /api/finance/expenses** - Create expense
+8. **GET /api/finance/deposits** - List deposits
+9. **POST /api/finance/deposits/{id}/use** - Use deposit for damage
+10. **POST /api/finance/deposits/{id}/refund** - Refund deposit
+11. **GET /api/finance/ledger** - List all ledger transactions
+
+### Test Data Already Created:
+- Rent payment: 5000 UAH (order 7121)
+- Deposit payment: 2000 UAH (order 7121)
+- Expense: 800 UAH (FUEL category)
+- Deposit used for damage: 500 UAH
+
+### Test Credentials:
+- email: vitokdrako@gmail.com
+- password: test123
+
+---
+
 ## Test Session: Frontend Documents UI Testing
 
 ### Frontend Component Added:

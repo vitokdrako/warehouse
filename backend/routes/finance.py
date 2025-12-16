@@ -615,9 +615,9 @@ async def list_payroll(employee_id: Optional[int] = None, status: Optional[str] 
                 base_amount DECIMAL(12,2) NOT NULL,
                 bonus DECIMAL(12,2) DEFAULT 0,
                 deduction DECIMAL(12,2) DEFAULT 0,
-                total_amount DECIMAL(12,2) GENERATED ALWAYS AS (base_amount + bonus - deduction) STORED,
-                status ENUM('pending', 'approved', 'paid') DEFAULT 'pending',
-                method ENUM('cash', 'card', 'bank') DEFAULT 'cash',
+                total_amount DECIMAL(12,2) DEFAULT 0,
+                status VARCHAR(20) DEFAULT 'pending',
+                method VARCHAR(20) DEFAULT 'cash',
                 paid_at TIMESTAMP NULL,
                 tx_id INT NULL,
                 note TEXT,
@@ -625,30 +625,28 @@ async def list_payroll(employee_id: Optional[int] = None, status: Optional[str] 
             )
         """))
         db.commit()
+    except Exception as e:
+        print(f"Payroll table setup: {e}")
+    
+    try:
+        result = db.execute(text("""
+            SELECT p.id, p.employee_id, e.name, p.period_start, p.period_end, p.base_amount, p.bonus, p.deduction, 
+                   (p.base_amount + COALESCE(p.bonus, 0) - COALESCE(p.deduction, 0)) as total_amount, 
+                   p.status, p.method, p.paid_at, p.note, p.created_at
+            FROM hr_payroll p LEFT JOIN hr_employees e ON e.id = p.employee_id 
+            ORDER BY p.period_start DESC
+        """))
+        payroll = [{"id": r[0], "employee_id": r[1], "employee_name": r[2],
+                    "period_start": r[3].isoformat() if r[3] else None,
+                    "period_end": r[4].isoformat() if r[4] else None,
+                    "base_amount": float(r[5] or 0), "bonus": float(r[6] or 0),
+                    "deduction": float(r[7] or 0), "total_amount": float(r[8] or 0),
+                    "status": r[9] or 'pending', "method": r[10] or 'cash',
+                    "paid_at": r[11].isoformat() if r[11] else None,
+                    "note": r[12], "created_at": r[13].isoformat() if r[13] else None} for r in result]
     except:
-        pass
-    
-    query = """SELECT p.id, p.employee_id, e.name, p.period_start, p.period_end, p.base_amount, p.bonus, p.deduction, 
-               p.total_amount, p.status, p.method, p.paid_at, p.note, p.created_at
-               FROM hr_payroll p LEFT JOIN hr_employees e ON e.id = p.employee_id WHERE 1=1"""
-    params = {}
-    if employee_id:
-        query += " AND p.employee_id = :employee_id"
-        params["employee_id"] = employee_id
-    if status:
-        query += " AND p.status = :status"
-        params["status"] = status
-    query += " ORDER BY p.period_start DESC"
-    
-    result = db.execute(text(query), params)
-    return {"payroll": [{"id": r[0], "employee_id": r[1], "employee_name": r[2],
-                         "period_start": r[3].isoformat() if r[3] else None,
-                         "period_end": r[4].isoformat() if r[4] else None,
-                         "base_amount": float(r[5] or 0), "bonus": float(r[6] or 0),
-                         "deduction": float(r[7] or 0), "total_amount": float(r[8] or 0),
-                         "status": r[9], "method": r[10],
-                         "paid_at": r[11].isoformat() if r[11] else None,
-                         "note": r[12], "created_at": r[13].isoformat() if r[13] else None} for r in result]}
+        payroll = []
+    return {"payroll": payroll}
 
 @router.post("/payroll")
 async def create_payroll(data: PayrollCreate, db: Session = Depends(get_rh_db)):

@@ -79,9 +79,8 @@ export default function ManagerDashboard() {
     }
     
     try {
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/archive`, {
-        method: 'POST',
-        mode: 'cors'
+      const response = await authFetch(`${BACKEND_URL}/api/decor-orders/${orderId}/archive`, {
+        method: 'POST'
       });
       
       if (response.ok) {
@@ -100,10 +99,8 @@ export default function ManagerDashboard() {
   // Функція для оновлення дат замовлення
   const handleDateUpdate = async (orderId, issueDate, returnDate) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/orders/${orderId}`, {
+      const response = await authFetch(`${BACKEND_URL}/api/orders/${orderId}`, {
         method: 'PUT',
-        mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           issue_date: issueDate,
           return_date: returnDate

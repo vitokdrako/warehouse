@@ -690,12 +690,35 @@ export default function FinanceCabinet() {
     setCategories(r.data || []);
   };
 
+  const loadVendors = async () => {
+    setLoading(p => ({ ...p, vendors: true }));
+    const r = await financeApi.getVendors();
+    setVendors(r.data?.vendors || []);
+    setLoading(p => ({ ...p, vendors: false }));
+  };
+
+  const loadEmployees = async () => {
+    setLoading(p => ({ ...p, employees: true }));
+    const r = await financeApi.getEmployees();
+    setEmployees(r.data?.employees || []);
+    setLoading(p => ({ ...p, employees: false }));
+  };
+
+  const loadPayroll = async () => {
+    setLoading(p => ({ ...p, payroll: true }));
+    const r = await financeApi.getPayroll();
+    setPayroll(r.data?.payroll || []);
+    setLoading(p => ({ ...p, payroll: false }));
+  };
+
   const refresh = () => { 
     loadDashboard(); 
     loadOrders();
     loadDeposits();
     if (tab === 'ledger') loadLedger(); 
-    if (tab === 'expenses') loadExpenses(); 
+    if (tab === 'expenses') loadExpenses();
+    if (tab === 'payroll') { loadEmployees(); loadPayroll(); }
+    if (tab === 'vendors') loadVendors();
   };
 
   return (

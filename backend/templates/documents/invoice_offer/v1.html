@@ -120,9 +120,20 @@
     </div>
     {% endif %}
 
+    <div class="info-block" style="font-size: 9pt; color: #666;">
+        <h4>Умови оренди</h4>
+        <ul style="margin: 5px 0; padding-left: 15px;">
+            <li>Передоплата {{ company.prepayment_percent }}%, решта — при поверненні</li>
+            <li>Застава: {{ company.deposit_rule }}</li>
+            <li>Скасування за {{ company.cancellation_days }} доби — повернення авансу</li>
+            <li>Повні умови: <a href="{{ company.terms_url }}">{{ company.terms_url }}</a></li>
+        </ul>
+    </div>
+
     <div class="footer">
-        <p>Цей рахунок є офертою. Оплата означає прийняття умов оренди.</p>
-        <p>Сгенеровано: {{ generated_at }} | © FarforDecorOrenda 2025</p>
+        <p>Цей рахунок є офертою. Оплата означає прийняття умов оренди згідно з публічною офертою.</p>
+        <p>{{ company.legal_name }} | ІПН: {{ company.tax_id }} | {{ company.email }}</p>
+        <p>© FarforDecorOrenda 2025 | Сгенеровано: {{ generated_at }}</p>
     </div>
 </body>
 </html>

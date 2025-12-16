@@ -490,20 +490,20 @@ async def migrate_tables(db: Session = Depends(get_rh_db)):
         except:
             pass
         db.execute(text("""
-            CREATE TABLE hr_employees (
+            CREATE TABLE rh_employees (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(200) NOT NULL,
-                role VARCHAR(50) DEFAULT 'other',
-                phone VARCHAR(50),
-                email VARCHAR(100),
-                base_salary DECIMAL(12,2) DEFAULT 0,
-                hire_date DATE,
-                note TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                emp_name VARCHAR(200) NOT NULL,
+                emp_role VARCHAR(50) DEFAULT 'other',
+                emp_phone VARCHAR(50),
+                emp_email VARCHAR(100),
+                emp_salary DECIMAL(12,2) DEFAULT 0,
+                emp_hire_date DATE,
+                emp_note TEXT,
+                emp_active BOOLEAN DEFAULT TRUE,
+                emp_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
         """))
-        results.append("hr_employees: OK")
+        results.append("rh_employees: OK")
         
         # Recreate hr_payroll
         db.execute(text("""

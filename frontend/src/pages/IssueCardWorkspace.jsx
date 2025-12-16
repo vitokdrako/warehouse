@@ -477,10 +477,10 @@ setTimeout(()=>window.print(),500);
         {/* Документи */}
         <ZoneDocuments
           orderId={order?.order_id || issueCard?.order_id}
-          onDownloadPicklist={printWarehouseSlip}
-          onPrintQRCodes={printQRCodes}
-          picklistReady={documents.waybill}
-          invoiceReady={documents.act}
+          issueCardId={issueCard?.id}
+          entityType="issue"
+          title="Документи"
+          hint="Генерація та завантаження документів"
         />
         
         {/* Комерційна зведена */}

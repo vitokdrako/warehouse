@@ -126,45 +126,64 @@ class FinanceCabinetTester:
             self.log(f"❌ Exception testing manager finance summary: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_check_availability_post_method(self) -> Dict[str, Any]:
-        """Test POST /api/orders/check-availability - should work with POST method (Bug Fix #3)"""
+    def test_finance_dashboard(self) -> Dict[str, Any]:
+        """Test GET /api/finance/dashboard?period=month - should return metrics and deposits"""
         try:
-            self.log("🧪 Testing check-availability endpoint with POST method...")
+            self.log("🧪 Testing finance dashboard endpoint...")
             
-            # Test data as specified in the review request
-            test_data = {
-                "start_date": "2025-06-10",
-                "end_date": "2025-06-15",
-                "items": [{"product_id": "7731", "quantity": 1}]
-            }
-            
-            # Test POST method (should work)
-            response = self.session.post(
-                f"{self.base_url}/orders/check-availability",
-                json=test_data
-            )
+            response = self.session.get(f"{self.base_url}/finance/dashboard?period=month")
             
             if response.status_code == 200:
                 data = response.json()
-                self.log("✅ POST /api/orders/check-availability working correctly")
-                self.log(f"   Response: {json.dumps(data, indent=2)}")
                 
-                # Validate response structure
-                if isinstance(data, dict):
-                    return {"success": True, "data": data, "method": "POST"}
-                else:
-                    self.log(f"⚠️ Unexpected response format: {type(data)}")
-                    return {"success": True, "data": data, "method": "POST", "warning": "Unexpected format"}
-                    
-            elif response.status_code == 405:
-                self.log("❌ 405 Method Not Allowed - Bug Fix #3 failed!", "ERROR")
-                return {"success": False, "error": "405 Method Not Allowed", "method": "POST"}
+                # Check required structure
+                required_sections = ['period', 'metrics', 'deposits']
+                missing_sections = []
+                
+                for section in required_sections:
+                    if section not in data:
+                        missing_sections.append(section)
+                
+                if missing_sections:
+                    self.log(f"❌ Finance dashboard missing sections: {missing_sections}", "ERROR")
+                    return {"success": False, "error": f"Missing required sections: {missing_sections}"}
+                
+                # Check metrics structure
+                metrics = data.get('metrics', {})
+                required_metrics = ['net_profit', 'rent_revenue', 'operating_expenses', 'cash_balance']
+                
+                for metric in required_metrics:
+                    if metric not in metrics:
+                        self.log(f"⚠️ Missing metric: {metric}")
+                
+                # Check deposits structure
+                deposits = data.get('deposits', {})
+                required_deposit_fields = ['held', 'used', 'refunded', 'available_to_refund']
+                
+                for field in required_deposit_fields:
+                    if field not in deposits:
+                        self.log(f"⚠️ Missing deposit field: {field}")
+                
+                self.log(f"✅ Finance Dashboard (period: {data.get('period')}):")
+                self.log(f"   - Net Profit: ₴{metrics.get('net_profit', 0)}")
+                self.log(f"   - Rent Revenue: ₴{metrics.get('rent_revenue', 0)}")
+                self.log(f"   - Operating Expenses: ₴{metrics.get('operating_expenses', 0)}")
+                self.log(f"   - Cash Balance: ₴{metrics.get('cash_balance', 0)}")
+                self.log(f"   - Deposits Held: ₴{deposits.get('held', 0)}")
+                self.log(f"   - Deposits Available: ₴{deposits.get('available_to_refund', 0)}")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "has_metrics": len(metrics) > 0,
+                    "has_deposits": len(deposits) > 0
+                }
             else:
-                self.log(f"❌ POST check-availability failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "method": "POST"}
+                self.log(f"❌ Failed to get finance dashboard: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing check-availability POST: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing finance dashboard: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_order_details_endpoint(self) -> Dict[str, Any]:

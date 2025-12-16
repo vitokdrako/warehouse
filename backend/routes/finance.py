@@ -15,6 +15,9 @@ from database_rentalhub import get_rh_db
 
 router = APIRouter(prefix="/api/finance", tags=["finance"])
 
+# Додатковий роутер для сумісності з ManagerDashboard
+manager_router = APIRouter(prefix="/api/manager/finance", tags=["finance-manager"])
+
 
 # ============================================================
 # PYDANTIC MODELS

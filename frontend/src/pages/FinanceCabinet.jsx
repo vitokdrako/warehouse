@@ -5,13 +5,16 @@
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CorporateHeader from '../components/CorporateHeader';
 import { financeApi } from '../services/financeApi.js';
 import DocumentsPanel from '../components/finance/DocumentsPanel.jsx';
 import OrderFinancePanel from '../components/finance/OrderFinancePanel.jsx';
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+
 // Helpers
 const cls = (...a) => a.filter(Boolean).join(' ');
-const money = (v, cur = '₴') => `${cur} ${(v || 0).toLocaleString('uk-UA', { maximumFractionDigits: 2 })}`;
+const money = (v, cur = '₴') => `${cur} ${(v || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}`;
 
 // Design tokens
 const tone = {
@@ -39,7 +42,7 @@ const Pill = ({ t = 'neutral', children, className, onClick }) => (
 const Btn = ({ variant = 'outline', className, children, ...props }) => {
   const base = 'inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm transition disabled:opacity-50';
   const v = variant === 'primary'
-    ? 'bg-lime-600 text-white hover:bg-lime-700'
+    ? 'bg-corp-primary text-white hover:bg-corp-primary-dark'
     : variant === 'dark'
     ? 'bg-slate-900 text-white hover:bg-slate-800'
     : variant === 'danger'
@@ -73,72 +76,38 @@ const StatCard = ({ title, value, sub, toneKey = 'neutral' }) => (
           <div className="mt-1 text-2xl font-semibold">{value}</div>
           {sub && <div className="mt-1 text-xs text-slate-500">{sub}</div>}
         </div>
-        <Pill t={toneKey}>{toneKey}</Pill>
       </div>
     </CardBd>
   </Card>
 );
 
-// Mock orders
-const mockOrders = [
-  {
-    id: 7121, order_number: 'OC-7121', client: 'Віта Филимонихина', status: 'active',
-    rent: { accrued: 1750, paid: 0, due: 1750 },
-    deposit: { expected: 2537.5, held: 2000, used_for_damage: 500, refunded: 0 },
-    damage: { assessed: 500, paid: 500, due: 0 },
-    timeline: [
-      { at: '2025-12-16 10:39', type: 'deposit_received', label: 'Прийнято заставу', debit: 2000, credit: 2000 },
-    ],
-  },
-  {
-    id: 7120, order_number: 'OC-7120', client: 'Володимир Перетятко', status: 'active',
-    rent: { accrued: 7100, paid: 5000, due: 2100 },
-    deposit: { expected: 25550, held: 0, used_for_damage: 0, refunded: 0 },
-    damage: { assessed: 0, paid: 0, due: 0 },
-    timeline: [],
-  },
-  {
-    id: 7108, order_number: 'OC-7108', client: 'Алла Mazyr', status: 'closed',
-    rent: { accrued: 2580, paid: 2580, due: 0 },
-    deposit: { expected: 0, held: 0, used_for_damage: 0, refunded: 0 },
-    damage: { assessed: 0, paid: 0, due: 0 },
-    timeline: [],
-  },
-];
-
-function TopBar({ tab, setTab, onBack }) {
+// Tabs component
+function TabBar({ tab, setTab }) {
   const tabs = [
-    { id: 'overview', label: 'Огляд' },
-    { id: 'orders', label: 'Замовлення' },
-    { id: 'ledger', label: 'Журнал' },
-    { id: 'expenses', label: 'Витрати' },
-    { id: 'payroll', label: 'ЗП' },
-    { id: 'vendors', label: 'Підрядники' },
+    { id: 'overview', label: 'Огляд', icon: '📊' },
+    { id: 'orders', label: 'Замовлення', icon: '📦' },
+    { id: 'ledger', label: 'Журнал', icon: '📒' },
+    { id: 'expenses', label: 'Витрати', icon: '💸' },
+    { id: 'payroll', label: 'ЗП', icon: '👥' },
+    { id: 'vendors', label: 'Підрядники', icon: '🏢' },
   ];
 
   return (
-    <div className="sticky top-0 z-20 border-b bg-white/90 backdrop-blur">
-      <div className="mx-auto max-w-6xl px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-xl bg-lime-600 text-white grid place-items-center font-bold">RH</div>
-            <div className="leading-tight">
-              <div className="text-sm font-semibold">Rental Hub</div>
-              <div className="text-xs text-slate-500">Фінансовий кабінет</div>
-            </div>
-          </div>
-          <Btn onClick={onBack}>← Назад</Btn>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
+    <div className="bg-white border-b border-corp-border">
+      <div className="mx-auto max-w-7xl px-6 py-3">
+        <div className="flex flex-wrap gap-2">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={cls(
-                'rounded-xl px-3 py-2 text-sm',
-                tab === t.id ? 'bg-lime-600 text-white' : 'border bg-white hover:bg-slate-50'
+                'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                tab === t.id 
+                  ? 'bg-corp-primary text-white' 
+                  : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
               )}
             >
+              <span className="mr-1">{t.icon}</span>
               {t.label}
             </button>
           ))}
@@ -148,85 +117,177 @@ function TopBar({ tab, setTab, onBack }) {
   );
 }
 
+// Order row for list
 function OrderRow({ order, isOpen, onToggle }) {
-  const badges = [];
-  if (order.rent.due > 0) badges.push(<Pill key="rent" t="warn">Борг {money(order.rent.due)}</Pill>);
-  if (order.damage.due > 0) badges.push(<Pill key="damage" t="danger">Шкода {money(order.damage.due)}</Pill>);
-  const holdAvail = order.deposit.held - order.deposit.used_for_damage - order.deposit.refunded;
-  if (holdAvail > 0) badges.push(<Pill key="hold" t="info">Застава {money(holdAvail)}</Pill>);
+  const rentDue = (order.total_rental || 0) - (order.rent_paid || 0);
+  const depositExpected = order.total_deposit || 0;
+  const depositHeld = order.deposit_held || 0;
+  const depositDue = Math.max(0, depositExpected - depositHeld);
   
-  const statusBadge = order.status === 'closed' ? <Pill t="ok">Закрито</Pill> : <Pill t="info">Активне</Pill>;
+  const badges = [];
+  if (rentDue > 0) badges.push(<Pill key="rent" t="warn">Борг оренди {money(rentDue)}</Pill>);
+  if (depositDue > 0) badges.push(<Pill key="dep" t="info">Застава очік. {money(depositDue)}</Pill>);
+  if (depositHeld > 0) badges.push(<Pill key="held" t="ok">Застава {money(depositHeld)}</Pill>);
+  
+  const statusMap = {
+    'awaiting_customer': { label: 'Очікує', t: 'warn' },
+    'processing': { label: 'Обробка', t: 'info' },
+    'ready_for_issue': { label: 'Готово', t: 'ok' },
+    'issued': { label: 'Видано', t: 'info' },
+    'on_rent': { label: 'В оренді', t: 'info' },
+    'returned': { label: 'Повернуто', t: 'ok' },
+    'closed': { label: 'Закрито', t: 'neutral' },
+    'cancelled': { label: 'Скасовано', t: 'danger' },
+  };
+  const st = statusMap[order.status] || { label: order.status, t: 'neutral' };
 
   return (
-    <button className={cls('w-full text-left rounded-2xl border bg-white p-4 shadow-sm hover:bg-slate-50/50', isOpen && 'ring-2 ring-lime-100')} onClick={onToggle}>
+    <button 
+      className={cls(
+        'w-full text-left rounded-2xl border bg-white p-4 shadow-sm hover:bg-slate-50/50', 
+        isOpen && 'ring-2 ring-corp-primary/20'
+      )} 
+      onClick={onToggle}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-semibold">#{order.id}</div>
-          <div className="text-sm text-slate-600 truncate">{order.client}</div>
-          <div className="text-xs text-slate-500">Оренда: {money(order.rent.paid)} / {money(order.rent.accrued)}</div>
+          <div className="font-semibold text-slate-900">#{order.order_number || order.order_id}</div>
+          <div className="text-sm text-slate-600 truncate">{order.client_name || order.customer_name}</div>
+          <div className="text-xs text-slate-500">
+            Оренда: {money(order.rent_paid || 0)} / {money(order.total_rental || 0)}
+          </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {badges}
-          {statusBadge}
-          <span className={cls('h-8 w-8 flex items-center justify-center rounded-lg border', isOpen && 'rotate-90')}>▸</span>
+          <Pill t={st.t}>{st.label}</Pill>
+          <span className={cls('h-8 w-8 flex items-center justify-center rounded-lg border text-slate-400', isOpen && 'rotate-90')}>▸</span>
         </div>
       </div>
     </button>
   );
 }
 
-function OverviewTab({ dashboard, isMock }) {
+// Transform order data for OrderFinancePanel
+function transformOrderForPanel(order, payments = [], deposit = null) {
+  const rentPayments = payments.filter(p => p.payment_type === 'rent');
+  const depositPayments = payments.filter(p => p.payment_type === 'deposit');
+  const damagePayments = payments.filter(p => p.payment_type === 'damage');
+  
+  const rentPaid = rentPayments.reduce((s, p) => s + p.amount, 0);
+  const damagePaid = damagePayments.reduce((s, p) => s + p.amount, 0);
+  
+  return {
+    id: order.order_id || order.id,
+    order_number: order.order_number,
+    client: order.client_name || order.customer_name,
+    status: order.status,
+    rent: {
+      accrued: order.total_rental || 0,
+      paid: rentPaid,
+      due: Math.max(0, (order.total_rental || 0) - rentPaid),
+    },
+    deposit: {
+      expected: order.total_deposit || 0,
+      held: deposit?.held_amount || order.deposit_held || 0,
+      used_for_damage: deposit?.used_amount || 0,
+      refunded: deposit?.refunded_amount || 0,
+    },
+    damage: {
+      assessed: 0,
+      paid: damagePaid,
+      due: 0,
+    },
+    timeline: payments.map(p => ({
+      at: p.occurred_at?.slice(0, 16).replace('T', ' '),
+      type: p.payment_type,
+      label: p.note || p.payment_type,
+      debit: p.amount,
+      credit: p.amount,
+    })),
+  };
+}
+
+function OverviewTab({ dashboard, isMock, depositsCount }) {
   const { metrics, deposits } = dashboard;
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
-      {isMock && <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800">⚠️ Offline mode</div>}
+    <div className="mx-auto max-w-7xl px-6 py-6 space-y-4">
+      {isMock && <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800">⚠️ Offline mode - показані тестові дані</div>}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <StatCard title="Net Profit" value={money(metrics.net_profit)} sub="Rent + Damage − Expenses" toneKey={metrics.net_profit >= 0 ? 'ok' : 'danger'} />
-        <StatCard title="Rent Revenue" value={money(metrics.rent_revenue)} sub="Дохід з оренди" toneKey="info" />
-        <StatCard title="Damage Comp" value={money(metrics.damage_compensation)} sub="Компенсації" toneKey="warn" />
+        <StatCard title="Чистий прибуток" value={money(metrics.net_profit)} sub="Оренда + Шкода − Витрати" toneKey={metrics.net_profit >= 0 ? 'ok' : 'danger'} />
+        <StatCard title="Дохід з оренди" value={money(metrics.rent_revenue)} sub="RENT_REV" toneKey="info" />
+        <StatCard title="Компенсації шкод" value={money(metrics.damage_compensation)} sub="DMG_COMP" toneKey="warn" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <StatCard title="Deposits Hold" value={money(deposits.available_to_refund)} sub="не дохід" toneKey="neutral" />
-        <StatCard title="Expenses" value={money(metrics.operating_expenses)} sub="OPEX" toneKey="danger" />
-        <StatCard title="Cash" value={money(metrics.cash_balance)} sub="Готівка+банк" toneKey="ok" />
-        <StatCard title="To Refund" value={money(deposits.available_to_refund)} sub="застави" toneKey="info" />
+        <StatCard title="Застави (холд)" value={money(deposits.held)} sub={`${depositsCount} шт. активних`} toneKey="neutral" />
+        <StatCard title="Витрати" value={money(metrics.operating_expenses)} sub="OPEX" toneKey="danger" />
+        <StatCard title="Каса + Банк" value={money(metrics.cash_balance)} sub="Готівка" toneKey="ok" />
+        <StatCard title="До повернення" value={money(deposits.available_to_refund)} sub="застави клієнтам" toneKey="info" />
       </div>
     </div>
   );
 }
 
-function OrdersTab({ orders, expandedId, setExpandedId, onUpdate, filter, setFilter }) {
+function OrdersTab({ orders, deposits, expandedId, setExpandedId, onUpdate, filter, setFilter, loading }) {
+  const [orderPayments, setOrderPayments] = useState({});
+  
+  // Fetch payments when order is expanded
+  useEffect(() => {
+    if (expandedId && !orderPayments[expandedId]) {
+      financeApi.getPayments({ order_id: expandedId }).then(r => {
+        setOrderPayments(prev => ({ ...prev, [expandedId]: r.data?.payments || [] }));
+      });
+    }
+  }, [expandedId]);
+  
   const filtered = useMemo(() => {
     if (!filter) return orders;
     return orders.filter((o) => {
-      if (filter === 'rent') return o.rent.due > 0;
-      if (filter === 'damage') return o.damage.due > 0;
-      if (filter === 'deposit') return (o.deposit.held - o.deposit.used_for_damage - o.deposit.refunded) > 0;
+      const rentDue = (o.total_rental || 0) - (o.rent_paid || 0);
+      const depositDue = (o.total_deposit || 0) - (o.deposit_held || 0);
+      if (filter === 'rent') return rentDue > 0;
+      if (filter === 'deposit') return depositDue > 0 || (o.deposit_held || 0) > 0;
       return true;
     });
   }, [orders, filter]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-6 py-6">
       <Card>
-        <CardHd title="Замовлення" subtitle={`${filtered.length} записів`}
+        <CardHd title="Замовлення з фінансами" subtitle={loading ? 'Завантаження...' : `${filtered.length} записів`}
           right={
             <div className="flex gap-2">
               <Pill t={filter === 'rent' ? 'warn' : 'neutral'} onClick={() => setFilter(filter === 'rent' ? null : 'rent')}>Борг оренда</Pill>
-              <Pill t={filter === 'damage' ? 'danger' : 'neutral'} onClick={() => setFilter(filter === 'damage' ? null : 'damage')}>Борг шкода</Pill>
-              <Pill t={filter === 'deposit' ? 'info' : 'neutral'} onClick={() => setFilter(filter === 'deposit' ? null : 'deposit')}>Застава</Pill>
+              <Pill t={filter === 'deposit' ? 'info' : 'neutral'} onClick={() => setFilter(filter === 'deposit' ? null : 'deposit')}>Із заставою</Pill>
             </div>
           }
         />
         <CardBd>
-          <div className="space-y-2">
-            {filtered.map((o) => (
-              <div key={o.id}>
-                <OrderRow order={o} isOpen={expandedId === o.id} onToggle={() => setExpandedId(expandedId === o.id ? null : o.id)} />
-                {expandedId === o.id && <OrderFinancePanel order={o} onUpdate={onUpdate} />}
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="p-8 text-center text-slate-500">Завантаження замовлень...</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-slate-400">Немає замовлень</div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((o) => {
+                const deposit = deposits.find(d => d.order_id === (o.order_id || o.id));
+                const payments = orderPayments[o.order_id || o.id] || [];
+                const panelOrder = transformOrderForPanel(o, payments, deposit);
+                
+                return (
+                  <div key={o.order_id || o.id}>
+                    <OrderRow 
+                      order={o} 
+                      isOpen={expandedId === (o.order_id || o.id)} 
+                      onToggle={() => setExpandedId(expandedId === (o.order_id || o.id) ? null : (o.order_id || o.id))} 
+                    />
+                    {expandedId === (o.order_id || o.id) && (
+                      <OrderFinancePanel order={panelOrder} onUpdate={onUpdate} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardBd>
       </Card>
     </div>
@@ -235,7 +296,7 @@ function OrdersTab({ orders, expandedId, setExpandedId, onUpdate, filter, setFil
 
 function LedgerTab({ ledger, loading }) {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-6 py-6">
       <Card>
         <CardHd title="Журнал (Ledger)" subtitle="Подвійний запис" right={<Btn>Експорт</Btn>} />
         <CardBd className="p-0">
@@ -279,6 +340,7 @@ function ExpensesTab({ expenses, categories, loading, onAdd }) {
     if (!form.amount) return;
     await financeApi.createExpense({ expense_type: 'expense', ...form, amount: Number(form.amount) });
     setShow(false);
+    setForm({ category_code: 'CONSUMABLES', amount: '', method: 'cash', note: '' });
     onAdd?.();
   };
 
@@ -289,7 +351,7 @@ function ExpensesTab({ expenses, categories, loading, onAdd }) {
   }, [expenses]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-6 py-6">
       <Card>
         <CardHd title="Витрати" subtitle="OPEX / закупки" right={<Btn variant="dark" onClick={() => setShow(true)}>+ Додати</Btn>} />
         <CardBd>
@@ -342,17 +404,13 @@ function ExpensesTab({ expenses, categories, loading, onAdd }) {
 
 function PayrollTab() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-6 py-6">
       <Card>
         <CardHd title="Зарплата" subtitle="Нарахування → виплата" right={<Btn variant="dark">Нарахувати</Btn>} />
         <CardBd>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div className="rounded-xl border bg-slate-50 p-3"><div className="text-xs text-slate-500">Payroll</div><div className="text-xl font-semibold">{money(12000)}</div></div>
-            <div className="rounded-xl border bg-slate-50 p-3"><div className="text-xs text-slate-500">Employees</div><div className="text-xl font-semibold">6</div></div>
-            <div className="rounded-xl border bg-slate-50 p-3"><div className="text-xs text-slate-500">Overtime</div><div className="text-xl font-semibold">12 год</div></div>
-            <div className="rounded-xl border bg-slate-50 p-3"><div className="text-xs text-slate-500">Bonuses</div><div className="text-xl font-semibold">{money(1500)}</div></div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+            🚧 Модуль в розробці. Тут буде управління зарплатами співробітників.
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">🚧 Модуль в розробці</div>
         </CardBd>
       </Card>
     </div>
@@ -361,16 +419,13 @@ function PayrollTab() {
 
 function VendorsTab() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-7xl px-6 py-6">
       <Card>
         <CardHd title="Підрядники" subtitle="Хімчистка, реставрація" right={<Btn variant="dark">+ Додати</Btn>} />
         <CardBd>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-            <div className="rounded-xl border bg-slate-50 p-3"><div className="font-semibold">Хімчистка "Чистота"</div><div className="text-xs text-slate-500">Баланс: {money(0)}</div></div>
-            <div className="rounded-xl border bg-slate-50 p-3"><div className="font-semibold">Реставрація "Майстер"</div><div className="text-xs text-slate-500">Баланс: {money(-2500)}</div></div>
-            <div className="rounded-xl border bg-slate-50 p-3"><div className="font-semibold">Доставка "Швидко"</div><div className="text-xs text-slate-500">Баланс: {money(0)}</div></div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+            🚧 Модуль в розробці. Тут буде управління підрядниками та їх рахунками.
           </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">🚧 Модуль в розробці</div>
         </CardBd>
       </Card>
     </div>
@@ -380,19 +435,29 @@ function VendorsTab() {
 export default function FinanceCabinet() {
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
-  const [expandedId, setExpandedId] = useState(7121);
+  const [expandedId, setExpandedId] = useState(null);
   const [orderFilter, setOrderFilter] = useState(null);
 
   const [dashboard, setDashboard] = useState(null);
   const [ledger, setLedger] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [orders] = useState(mockOrders);
-  const [loading, setLoading] = useState({ dashboard: true, ledger: true, expenses: true });
+  const [orders, setOrders] = useState([]);
+  const [deposits, setDeposits] = useState([]);
+  const [loading, setLoading] = useState({ dashboard: true, ledger: true, expenses: true, orders: true });
   const [isMock, setIsMock] = useState(false);
 
-  useEffect(() => { loadDashboard(); loadCategories(); }, []);
-  useEffect(() => { if (tab === 'ledger') loadLedger(); if (tab === 'expenses') loadExpenses(); }, [tab]);
+  useEffect(() => { 
+    loadDashboard(); 
+    loadCategories(); 
+    loadOrders();
+    loadDeposits();
+  }, []);
+  
+  useEffect(() => { 
+    if (tab === 'ledger') loadLedger(); 
+    if (tab === 'expenses') loadExpenses(); 
+  }, [tab]);
 
   const loadDashboard = async () => {
     setLoading(p => ({ ...p, dashboard: true }));
@@ -400,6 +465,26 @@ export default function FinanceCabinet() {
     setDashboard(r.data);
     setIsMock(r.isMock);
     setLoading(p => ({ ...p, dashboard: false }));
+  };
+
+  const loadOrders = async () => {
+    setLoading(p => ({ ...p, orders: true }));
+    try {
+      // Fetch orders that are not archived and not cancelled
+      const response = await fetch(`${BACKEND_URL}/api/orders?limit=100`);
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(data.orders || data || []);
+      }
+    } catch (err) {
+      console.error('Error loading orders:', err);
+    }
+    setLoading(p => ({ ...p, orders: false }));
+  };
+
+  const loadDeposits = async () => {
+    const r = await financeApi.getDeposits();
+    setDeposits(r.data || []);
   };
 
   const loadLedger = async () => {
@@ -421,24 +506,45 @@ export default function FinanceCabinet() {
     setCategories(r.data || []);
   };
 
-  const refresh = () => { loadDashboard(); if (tab === 'ledger') loadLedger(); if (tab === 'expenses') loadExpenses(); };
+  const refresh = () => { 
+    loadDashboard(); 
+    loadOrders();
+    loadDeposits();
+    if (tab === 'ledger') loadLedger(); 
+    if (tab === 'expenses') loadExpenses(); 
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <TopBar tab={tab} setTab={setTab} onBack={() => navigate('/manager')} />
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
+      <CorporateHeader cabinetName="Фінансовий кабінет" showBackButton onBackClick={() => navigate('/manager')} />
+      <TabBar tab={tab} setTab={setTab} />
+      
       {tab === 'overview' && (loading.dashboard ? (
-        <div className="mx-auto max-w-6xl px-4 py-6"><div className="p-8 text-center text-slate-500">Завантаження...</div></div>
+        <div className="mx-auto max-w-7xl px-6 py-6"><div className="p-8 text-center text-slate-500">Завантаження...</div></div>
       ) : dashboard ? (
-        <OverviewTab dashboard={dashboard} isMock={isMock} />
+        <OverviewTab dashboard={dashboard} isMock={isMock} depositsCount={deposits.length} />
       ) : (
-        <div className="mx-auto max-w-6xl px-4 py-6"><div className="p-8 text-center text-slate-400">Дані не знайдено</div></div>
+        <div className="mx-auto max-w-7xl px-6 py-6"><div className="p-8 text-center text-slate-400">Дані не знайдено</div></div>
       ))}
-      {tab === 'orders' && <OrdersTab orders={orders} expandedId={expandedId} setExpandedId={setExpandedId} onUpdate={refresh} filter={orderFilter} setFilter={setOrderFilter} />}
+      
+      {tab === 'orders' && (
+        <OrdersTab 
+          orders={orders} 
+          deposits={deposits}
+          expandedId={expandedId} 
+          setExpandedId={setExpandedId} 
+          onUpdate={refresh} 
+          filter={orderFilter} 
+          setFilter={setOrderFilter}
+          loading={loading.orders}
+        />
+      )}
       {tab === 'ledger' && <LedgerTab ledger={ledger} loading={loading.ledger} />}
       {tab === 'expenses' && <ExpensesTab expenses={expenses} categories={categories} loading={loading.expenses} onAdd={() => { loadExpenses(); loadDashboard(); }} />}
       {tab === 'payroll' && <PayrollTab />}
       {tab === 'vendors' && <VendorsTab />}
-      <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 text-xs text-slate-400">Rental Finance Engine</div>
+      
+      <div className="mx-auto max-w-7xl px-6 pb-10 pt-6 text-xs text-slate-400">Rental Finance Engine v1.0</div>
     </div>
   );
 }

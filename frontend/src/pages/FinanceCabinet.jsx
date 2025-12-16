@@ -1,831 +1,438 @@
 /* eslint-disable */
-import React, { useMemo, useState, useEffect } from "react";
-import axios from 'axios';
-import BarcodeScanner from '../components/BarcodeScanner';
-import CorporateHeader from '../components/CorporateHeader';
+/**
+ * FinanceCabinet - Фінансовий кабінет RentalHub
+ * Центр управління грошима: rent/damage/deposit/expenses/payroll
+ */
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { financeApi } from '../services/financeApi';
+import DocumentsPanel from '../components/finance/DocumentsPanel';
+import OrderFinancePanel from '../components/finance/OrderFinancePanel';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+// Helpers
+const cls = (...a) => a.filter(Boolean).join(' ');
+const money = (v, cur = '₴') => `${cur} ${(v || 0).toLocaleString('uk-UA', { maximumFractionDigits: 2 })}`;
 
-/*********** utils ***********/
-const cls = (...a)=> a.filter(Boolean).join(' ')
-const fmtUA = (n)=> (Number(n)||0).toLocaleString('uk-UA', {maximumFractionDigits:2})
-const todayISO = ()=> new Date().toISOString().slice(0,10)
+// Design tokens
+const tone = {
+  ok: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  warn: 'bg-amber-50 text-amber-800 border-amber-200',
+  danger: 'bg-rose-50 text-rose-800 border-rose-200',
+  info: 'bg-sky-50 text-sky-800 border-sky-200',
+  neutral: 'bg-slate-50 text-slate-800 border-slate-200',
+};
 
-/*********** ui ***********/
-function Badge({tone='slate', children}){
-  const tones={
-    slate:'corp-badge corp-badge-neutral',
-    green:'corp-badge corp-badge-success',
-    amber:'corp-badge corp-badge-warning',
-    red:'corp-badge corp-badge-error',
-    blue:'corp-badge corp-badge-info',
-    violet:'corp-badge corp-badge-primary'
-  }
-  return <span className={tones[tone]}>{children}</span>
-}
-function PillButton({tone='slate', onClick, children, disabled=false}){
-  const tones={
-    slate:'corp-btn corp-btn-secondary',
-    green:'corp-btn corp-btn-primary',
-    red:'corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white',
-    blue:'corp-btn corp-btn-primary',
-    yellow:'corp-btn corp-btn-gold'
-  }
-  return <button disabled={disabled} onClick={onClick} className={cls(tones[tone], 'disabled:opacity-50')}>{children}</button>
-}
-function Card({title, right=null, children}){
-  return (
-    <div className="corp-card">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-corp-text-dark">{title}</h3>{right}
-      </div>
-      {children}
+const Pill = ({ t = 'neutral', children, className, onClick }) => (
+  <span
+    onClick={onClick}
+    className={cls(
+      'inline-flex items-center rounded-full border px-2 py-0.5 text-xs',
+      tone[t],
+      onClick && 'cursor-pointer hover:opacity-80',
+      className
+    )}
+  >
+    {children}
+  </span>
+);
+
+const Btn = ({ variant = 'outline', className, children, ...props }) => {
+  const base = 'inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm transition disabled:opacity-50';
+  const v = variant === 'primary'
+    ? 'bg-lime-600 text-white hover:bg-lime-700'
+    : variant === 'dark'
+    ? 'bg-slate-900 text-white hover:bg-slate-800'
+    : variant === 'danger'
+    ? 'bg-rose-600 text-white hover:bg-rose-700'
+    : 'border bg-white hover:bg-slate-50';
+  return <button className={cls(base, v, className)} {...props}>{children}</button>;
+};
+
+const Card = ({ className, children }) => (
+  <div className={cls('rounded-2xl border bg-white shadow-sm', className)}>{children}</div>
+);
+
+const CardHd = ({ title, subtitle, right }) => (
+  <div className="flex items-start justify-between gap-3 border-b p-4">
+    <div className="min-w-0">
+      <div className="text-sm font-semibold">{title}</div>
+      {subtitle && <div className="mt-0.5 text-xs text-slate-500">{subtitle}</div>}
     </div>
-  )
-}
+    {right && <div className="shrink-0">{right}</div>}
+  </div>
+);
 
-/*********** helpers for calculations ***********/
-const isPayment = (r)=> ['prepayment','payment'].includes(r.type)
-const isRentOrCharge = (r)=> ['rent','balance_due','damage','rent_accrual'].includes(r.type)
-const isHold = (r)=> r.type==='deposit_hold'
-const isHoldRelease = (r)=> r.type==='deposit_release'
-const isHoldWriteoff = (r)=> r.type==='deposit_writeoff'
+const CardBd = ({ className, children }) => <div className={cls('p-4', className)}>{children}</div>;
 
-function heldAmount(rows){
-  const hold = rows.filter(isHold).reduce((s,r)=>s+(r.credit||0),0)
-  const release = rows.filter(isHoldRelease).reduce((s,r)=>s+(r.amount||0),0)
-  const writeoff = rows.filter(isHoldWriteoff).reduce((s,r)=>s+(r.amount||0),0)
-  return Math.max(0, hold - release - writeoff)
-}
+const StatCard = ({ title, value, sub, toneKey = 'neutral' }) => (
+  <Card>
+    <CardBd>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-xs text-slate-500">{title}</div>
+          <div className="mt-1 text-2xl font-semibold">{value}</div>
+          {sub && <div className="mt-1 text-xs text-slate-500">{sub}</div>}
+        </div>
+        <Pill t={toneKey}>{toneKey}</Pill>
+      </div>
+    </CardBd>
+  </Card>
+);
 
-function heldAmountByCurrency(rows){
-  // Рахуємо кожну валюту окремо
-  const byCurrency = {}
-  
-  rows.forEach(r => {
-    const curr = r.currency || 'UAH'
-    
-    // Додаємо холд
-    if (r.type === 'deposit_hold') {
-      byCurrency[curr] = (byCurrency[curr] || 0) + (r.credit || 0)
-    }
-    
-    // Віднімаємо release та writeoff (у тій же валюті)
-    if (r.type === 'deposit_release' || r.type === 'deposit_writeoff') {
-      byCurrency[curr] = (byCurrency[curr] || 0) - (r.amount || 0)
-    }
-  })
-  
-  // Видалити валюти з нульовим або від'ємним балансом
-  Object.keys(byCurrency).forEach(curr => {
-    if (byCurrency[curr] <= 0) {
-      delete byCurrency[curr]
-    }
-  })
-  
-  return byCurrency
-}
+// Mock orders
+const mockOrders = [
+  {
+    id: 7121, order_number: 'OC-7121', client: 'Віта Филимонихина', status: 'active',
+    rent: { accrued: 1750, paid: 0, due: 1750 },
+    deposit: { expected: 2537.5, held: 2000, used_for_damage: 500, refunded: 0 },
+    damage: { assessed: 500, paid: 500, due: 0 },
+    timeline: [
+      { at: '2025-12-16 10:39', type: 'deposit_received', label: 'Прийнято заставу', debit: 2000, credit: 2000 },
+    ],
+  },
+  {
+    id: 7120, order_number: 'OC-7120', client: 'Володимир Перетятко', status: 'active',
+    rent: { accrued: 7100, paid: 5000, due: 2100 },
+    deposit: { expected: 25550, held: 0, used_for_damage: 0, refunded: 0 },
+    damage: { assessed: 0, paid: 0, due: 0 },
+    timeline: [],
+  },
+  {
+    id: 7108, order_number: 'OC-7108', client: 'Алла Mazyr', status: 'closed',
+    rent: { accrued: 2580, paid: 2580, due: 0 },
+    deposit: { expected: 0, held: 0, used_for_damage: 0, refunded: 0 },
+    damage: { assessed: 0, paid: 0, due: 0 },
+    timeline: [],
+  },
+];
 
-function balanceDue(rows){
-  const deb = rows.filter(isRentOrCharge).reduce((s,r)=>s+(r.debit||0),0)
-  const cred = rows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0)
-  return Math.max(0, deb - cred)
-}
-
-/*********** Order Finance Card ***********/
-function OrderFinanceCard({orderId, rows, onAddPayment, onAddDeposit, onWriteoff, onReleaseDeposit, onAddDamage, onCollapse, onDelete, onRefund}){
-  const orderRows = rows.filter(r=>r.order_id===orderId)
-  const held = heldAmount(orderRows)
-  const heldByCurrency = heldAmountByCurrency(orderRows)
-  const due  = balanceDue(orderRows)
-  const [emailInput, setEmailInput] = useState('')
-  const [showEmailDialog, setShowEmailDialog] = useState(false)
-  
-  // Очікуваний депозит (з orders.deposit_amount)
-  const expectedDeposit = orderRows.length > 0 ? (orderRows[0].expected_deposit || 0) : 0
-  
-  // Статус замовлення
-  const orderStatus = orderRows[0]?.order_status || null
-  const isCancelled = orderStatus === 'cancelled'
-  
-  // Скільки оплачено
-  const paid = orderRows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0)
-  
-  // Чи були повернуті гроші
-  const refunded = orderRows.filter(r => r.type === 'refund').reduce((s,r)=>s+(r.debit||0),0)
-  const isRefunded = refunded > 0
-  
-  // Чи були повернуті застави
-  const depositReleased = orderRows.filter(r => r.type === 'deposit_release').reduce((s,r)=>s+(r.amount||0),0)
-  const isDepositReturned = depositReleased > 0 && held === 0
-  
-  // Дані про пошкодження з замовлення (з orders таблиці)
-  const orderDamageInfo = useMemo(() => {
-    if (orderRows.length === 0) return { damage_fee: 0, manager_notes: '' }
-    
-    // Беремо з першого рядка (всі рядки одного замовлення мають однакові дані з orders)
-    const firstRow = orderRows[0]
-    
-    return {
-      damage_fee: firstRow.damage_fee || 0,
-      manager_notes: firstRow.manager_comment || ''
-    }
-  }, [orderRows])
-
-  // forms
-  const [pay, setPay] = useState({amount:due>0?due:500, method:'cash', note:''})
-  const [dep, setDep] = useState({code:'UAH', amount:3000})
-  const [dmg, setDmg] = useState({amount:0, note:''})
-  
-  // Оновлювати dmg коли завантажуються дані про пошкодження
-  useEffect(() => {
-    if (orderDamageInfo.damage_fee > 0) {
-      setDmg({
-        amount: orderDamageInfo.damage_fee,
-        note: orderDamageInfo.manager_notes
-      })
-    }
-  }, [orderDamageInfo.damage_fee, orderDamageInfo.manager_notes])
-
-  useEffect(()=>{
-    if(due>0) setPay(prev=>({...prev, amount:due}))
-  },[due])
-
-  const handlePrint = async () => {
-    try {
-      window.open(`${BACKEND_URL}/api/manager/finance/report/${orderId}/pdf`, '_blank')
-    } catch(e){
-      alert('Помилка відкриття PDF')
-    }
-  }
-
-  const handleEmail = async () => {
-    if(!emailInput){
-      alert('Введіть email для відправки')
-      return
-    }
-    try {
-      const res = await axios.post(`${BACKEND_URL}/api/manager/finance/report/${orderId}/email`, {
-        email: emailInput
-      })
-      alert(res.data.message + (res.data.note ? '\n\n' + res.data.note : ''))
-      setShowEmailDialog(false)
-    } catch(e){
-      alert('Помилка відправки email')
-    }
-  }
+function TopBar({ tab, setTab, onBack }) {
+  const tabs = [
+    { id: 'overview', label: 'Огляд' },
+    { id: 'orders', label: 'Замовлення' },
+    { id: 'ledger', label: 'Журнал' },
+    { id: 'expenses', label: 'Витрати' },
+    { id: 'payroll', label: 'ЗП' },
+    { id: 'vendors', label: 'Підрядники' },
+  ];
 
   return (
-    <Card title={`Замовлення #${orderId}`} right={
-      <div className="flex items-center gap-2">
-        <PillButton tone='slate' onClick={handlePrint}>🖨️ Роздрукувати</PillButton>
-        <PillButton tone='blue' onClick={()=>setShowEmailDialog(true)}>📧 Email</PillButton>
-        <PillButton tone='red' onClick={()=>onDelete(orderId)}>🗑️ Видалити</PillButton>
-        <Badge tone={due>0? 'amber':'green'}>{due>0? `Борг ₴ ${fmtUA(due)}` : 'Боргів немає'}</Badge>
-        <button onClick={onCollapse} className="text-slate-400 hover:text-corp-text-main">✕</button>
-      </div>
-    }>
-      <div className="grid gap-4 md:grid-cols-5">
-        <div className="corp-stat-card">
-          <div className="corp-stat-label">Нараховано</div>
-          <div className="corp-stat-value text-corp-text-dark">₴ {fmtUA(orderRows.filter(isRentOrCharge).reduce((s,r)=>s+(r.debit||0),0))}</div>
-        </div>
-        <div className="corp-stat-card">
-          <div className="corp-stat-label">Оплачено</div>
-          <div className="corp-stat-value text-corp-success">₴ {fmtUA(orderRows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0))}</div>
-        </div>
-        <div className="corp-stat-card border-corp-primary bg-blue-50">
-          <div className="corp-stat-label text-corp-primary">Очікувана застава</div>
-          <div className="text-lg font-semibold text-corp-primary">₴ {fmtUA(expectedDeposit)}</div>
-          <div className="text-[10px] text-corp-primary opacity-70 mt-0.5">розрахункова</div>
-        </div>
-        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3">
-          <div className="text-xs text-emerald-600 font-medium">Фактична застава</div>
-          {Object.keys(heldByCurrency).length > 0 ? (
-            <div className="space-y-1">
-              {Object.entries(heldByCurrency).map(([curr, amt]) => (
-                amt > 0 && (
-                  <div key={curr} className="text-base font-semibold text-emerald-800">
-                    {curr === 'UAH' ? '₴' : curr === 'USD' ? '$' : '€'} {fmtUA(amt)} {curr !== 'UAH' && <span className="text-xs text-emerald-600">{curr}</span>}
-                  </div>
-                )
-              ))}
+    <div className="sticky top-0 z-20 border-b bg-white/90 backdrop-blur">
+      <div className="mx-auto max-w-6xl px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-lime-600 text-white grid place-items-center font-bold">RH</div>
+            <div className="leading-tight">
+              <div className="text-sm font-semibold">Rental Hub</div>
+              <div className="text-xs text-slate-500">Фінансовий кабінет</div>
             </div>
-          ) : (
-            <div className="text-lg font-semibold text-slate-400">₴ 0</div>
+          </div>
+          <Btn onClick={onBack}>← Назад</Btn>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={cls(
+                'rounded-xl px-3 py-2 text-sm',
+                tab === t.id ? 'bg-lime-600 text-white' : 'border bg-white hover:bg-slate-50'
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrderRow({ order, isOpen, onToggle }) {
+  const badges = [];
+  if (order.rent.due > 0) badges.push(<Pill key="rent" t="warn">Борг {money(order.rent.due)}</Pill>);
+  if (order.damage.due > 0) badges.push(<Pill key="damage" t="danger">Шкода {money(order.damage.due)}</Pill>);
+  const holdAvail = order.deposit.held - order.deposit.used_for_damage - order.deposit.refunded;
+  if (holdAvail > 0) badges.push(<Pill key="hold" t="info">Застава {money(holdAvail)}</Pill>);
+  
+  const statusBadge = order.status === 'closed' ? <Pill t="ok">Закрито</Pill> : <Pill t="info">Активне</Pill>;
+
+  return (
+    <button className={cls('w-full text-left rounded-2xl border bg-white p-4 shadow-sm hover:bg-slate-50/50', isOpen && 'ring-2 ring-lime-100')} onClick={onToggle}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-semibold">#{order.id}</div>
+          <div className="text-sm text-slate-600 truncate">{order.client}</div>
+          <div className="text-xs text-slate-500">Оренда: {money(order.rent.paid)} / {money(order.rent.accrued)}</div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          {badges}
+          {statusBadge}
+          <span className={cls('h-8 w-8 flex items-center justify-center rounded-lg border', isOpen && 'rotate-90')}>▸</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function OverviewTab({ dashboard, isMock }) {
+  const { metrics, deposits } = dashboard;
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6 space-y-4">
+      {isMock && <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-2 text-sm text-amber-800">⚠️ Offline mode</div>}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <StatCard title="Net Profit" value={money(metrics.net_profit)} sub="Rent + Damage − Expenses" toneKey={metrics.net_profit >= 0 ? 'ok' : 'danger'} />
+        <StatCard title="Rent Revenue" value={money(metrics.rent_revenue)} sub="Дохід з оренди" toneKey="info" />
+        <StatCard title="Damage Comp" value={money(metrics.damage_compensation)} sub="Компенсації" toneKey="warn" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <StatCard title="Deposits Hold" value={money(deposits.available_to_refund)} sub="не дохід" toneKey="neutral" />
+        <StatCard title="Expenses" value={money(metrics.operating_expenses)} sub="OPEX" toneKey="danger" />
+        <StatCard title="Cash" value={money(metrics.cash_balance)} sub="Готівка+банк" toneKey="ok" />
+        <StatCard title="To Refund" value={money(deposits.available_to_refund)} sub="застави" toneKey="info" />
+      </div>
+    </div>
+  );
+}
+
+function OrdersTab({ orders, expandedId, setExpandedId, onUpdate, filter, setFilter }) {
+  const filtered = useMemo(() => {
+    if (!filter) return orders;
+    return orders.filter((o) => {
+      if (filter === 'rent') return o.rent.due > 0;
+      if (filter === 'damage') return o.damage.due > 0;
+      if (filter === 'deposit') return (o.deposit.held - o.deposit.used_for_damage - o.deposit.refunded) > 0;
+      return true;
+    });
+  }, [orders, filter]);
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <Card>
+        <CardHd title="Замовлення" subtitle={`${filtered.length} записів`}
+          right={
+            <div className="flex gap-2">
+              <Pill t={filter === 'rent' ? 'warn' : 'neutral'} onClick={() => setFilter(filter === 'rent' ? null : 'rent')}>Борг оренда</Pill>
+              <Pill t={filter === 'damage' ? 'danger' : 'neutral'} onClick={() => setFilter(filter === 'damage' ? null : 'damage')}>Борг шкода</Pill>
+              <Pill t={filter === 'deposit' ? 'info' : 'neutral'} onClick={() => setFilter(filter === 'deposit' ? null : 'deposit')}>Застава</Pill>
+            </div>
+          }
+        />
+        <CardBd>
+          <div className="space-y-2">
+            {filtered.map((o) => (
+              <div key={o.id}>
+                <OrderRow order={o} isOpen={expandedId === o.id} onToggle={() => setExpandedId(expandedId === o.id ? null : o.id)} />
+                {expandedId === o.id && <OrderFinancePanel order={o} onUpdate={onUpdate} />}
+              </div>
+            ))}
+          </div>
+        </CardBd>
+      </Card>
+    </div>
+  );
+}
+
+function LedgerTab({ ledger, loading }) {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <Card>
+        <CardHd title="Журнал (Ledger)" subtitle="Подвійний запис" right={<Btn>Експорт</Btn>} />
+        <CardBd className="p-0">
+          {loading ? <div className="p-8 text-center text-slate-500">Завантаження...</div> : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-50 text-xs text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Дата</th>
+                    <th className="px-4 py-3 text-left">Тип</th>
+                    <th className="px-4 py-3 text-right">Сума</th>
+                    <th className="px-4 py-3 text-left">Проводки</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledger.map((tx) => (
+                    <tr key={tx.id} className="border-t">
+                      <td className="px-4 py-3">{tx.occurred_at?.slice(0, 16).replace('T', ' ')}</td>
+                      <td className="px-4 py-3"><Pill t={tx.tx_type?.includes('damage') ? 'warn' : 'info'}>{tx.tx_type}</Pill></td>
+                      <td className="px-4 py-3 text-right font-medium">{money(tx.amount)}</td>
+                      <td className="px-4 py-3 text-xs">{tx.entries?.map((e, i) => <span key={i} className="mr-2">{e.direction}:{e.account_code}</span>)}</td>
+                    </tr>
+                  ))}
+                  {!ledger.length && <tr><td colSpan={4} className="p-8 text-center text-slate-500">Немає записів</td></tr>}
+                </tbody>
+              </table>
+            </div>
           )}
-          <div className="text-[10px] text-emerald-500 mt-0.5">прийнято від клієнта</div>
-        </div>
-        <div className="rounded-xl border border-slate-200 p-3">
-          <div className="text-xs text-corp-text-muted">До сплати</div>
-          <div className={cls('text-xl font-semibold', due>0 && 'text-rose-600')}>₴ {fmtUA(due)}</div>
-        </div>
-      </div>
+        </CardBd>
+      </Card>
+    </div>
+  );
+}
 
-      {/* payments */}
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <Card title="Прийом оплати (готівка / WayForPay / ФОП)" right={<Badge tone='green'>в касу</Badge>}>
-          <div className="grid gap-2 md:grid-cols-5">
-            <select className="rounded-xl border px-3 py-2" value={pay.method} onChange={e=>setPay({...pay, method:e.target.value})}>
-              <option value="cash">Готівка</option>
-              <option value="wayforpay">WayForPay</option>
-              <option value="bank_transfer">Переказ на ФОП</option>
-              <option value="card">Карта</option>
-            </select>
-            <input className="rounded-xl border px-3 py-2" type="number" value={pay.amount} onChange={e=>setPay({...pay, amount:Number(e.target.value)})} placeholder="Сума"/>
-            <input className="md:col-span-3 rounded-xl border px-3 py-2" value={pay.note} onChange={e=>setPay({...pay, note:e.target.value})} placeholder="Примітка"/>
-          </div>
-          <div className="mt-3"><PillButton tone='green' onClick={()=>onAddPayment(orderId, pay)}>Зарахувати оплату</PillButton></div>
-        </Card>
+function ExpensesTab({ expenses, categories, loading, onAdd }) {
+  const [show, setShow] = useState(false);
+  const [form, setForm] = useState({ category_code: 'CONSUMABLES', amount: '', method: 'cash', note: '' });
 
-        <Card title="Прийом застави" right={<Badge tone='blue'>холд</Badge>}>
-          <div className="grid gap-2 md:grid-cols-3">
-            <select className="rounded-xl border px-3 py-2" value={dep.code} onChange={e=>setDep({...dep, code:e.target.value})}>
-              <option value="UAH">UAH</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-            <input className="md:col-span-2 rounded-xl border px-3 py-2" type="number" value={dep.amount} onChange={e=>setDep({...dep, amount:Number(e.target.value)})} placeholder="Сума"/>
-          </div>
-          <div className="mt-3"><PillButton tone='blue' onClick={()=>onAddDeposit(orderId, dep)}>Прийняти заставу</PillButton></div>
-        </Card>
-      </div>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.amount) return;
+    await financeApi.createExpense({ expense_type: 'expense', ...form, amount: Number(form.amount) });
+    setShow(false);
+    onAdd?.();
+  };
 
-      {/* damage / settlement */}
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <Card title="Шкода від складу/повернення" right={<Badge tone='amber'>з комірника</Badge>}>
-          <div className="grid gap-2 md:grid-cols-5">
-            <input className="rounded-xl border px-3 py-2" type="number" value={dmg.amount} onChange={e=>setDmg({...dmg, amount:Number(e.target.value)})} placeholder="Сума збитків"/>
-            <input className="md:col-span-3 rounded-xl border px-3 py-2" value={dmg.note} onChange={e=>setDmg({...dmg, note:e.target.value})} placeholder="Коментар / кейс"/>
-            <PillButton tone='amber' onClick={()=>onAddDamage(orderId, dmg)}>Нарахувати збитки</PillButton>
-          </div>
-          <div className="mt-2 text-xs text-corp-text-muted">Після нарахування можна або списати частково/повністю із застави, або чекати доплату.</div>
-        </Card>
+  const byCategory = useMemo(() => {
+    const g = {};
+    expenses.forEach((e) => { const c = e.category_name; if (!g[c]) g[c] = 0; g[c] += e.amount; });
+    return g;
+  }, [expenses]);
 
-        <Card title="Операції із заставою">
-          <div className="flex flex-wrap gap-2">
-            {!isCancelled && (
-              <PillButton tone='red' onClick={()=>{
-                const amt = Math.min(held, due)
-                if(amt<=0) return alert('Немає що списувати');
-                onWriteoff(orderId, heldByCurrency, due)
-              }}>Списати з застави (до суми боргу)</PillButton>
-            )}
-            {isDepositReturned ? (
-              <PillButton tone='green' disabled={true}>✓ Застава повернута</PillButton>
-            ) : (
-              <PillButton tone='yellow' onClick={()=>{
-                if(held<=0) return alert('Немає активного холду');
-                onReleaseDeposit(orderId, heldByCurrency)
-              }}>Повернути заставу</PillButton>
-            )}
-            {isCancelled && paid > 0 && (
-              isRefunded ? (
-                <PillButton tone='green' disabled={true}>✓ Гроші повернуті</PillButton>
-              ) : (
-                <PillButton tone='red' onClick={()=>{
-                  if(!confirm(`Повернути ₴${fmtUA(paid)} клієнту?`)) return;
-                  onRefund(orderId, paid)
-                }}>💰 Повернути ₴{fmtUA(paid)} клієнту</PillButton>
-              )
-            )}
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <Card>
+        <CardHd title="Витрати" subtitle="OPEX / закупки" right={<Btn variant="dark" onClick={() => setShow(true)}>+ Додати</Btn>} />
+        <CardBd>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            {Object.entries(byCategory).slice(0, 4).map(([c, v]) => (
+              <div key={c} className="rounded-xl border bg-slate-50 p-3">
+                <div className="text-xs text-slate-500">{c}</div>
+                <div className="text-xl font-semibold">{money(v)}</div>
+              </div>
+            ))}
           </div>
-          <div className="mt-2 text-xs text-corp-text-muted">
-            {isCancelled && paid > 0 ? (
-              isRefunded ? (
-                <span className="text-emerald-600 font-medium">✓ Гроші повернуті клієнту (₴{fmtUA(refunded)}). Не забудьте повернути всі застави.</span>
-              ) : (
-                <span className="text-rose-600 font-medium">⚠️ Замовлення скасовано! Необхідно повернути ₴{fmtUA(paid)} клієнту та всі застави.</span>
-              )
-            ) : (
-              'Повернення повертає залишок холду. Списання створює кредитну проводку «deposit_writeoff» і зменшує холд.'
-            )}
-          </div>
-        </Card>
-      </div>
-
-      {/* journal for order */}
-      <div className="mt-6">
-        <Card title="Журнал по замовленню">
-          <div className="overflow-hidden rounded-xl border">
+          {loading ? <div className="p-4 text-center text-slate-500">Завантаження...</div> : expenses.length ? (
             <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-left text-corp-text-muted">
-                <tr>
-                  <th className="px-3 py-2">Дата</th>
-                  <th className="px-3 py-2">Тип</th>
-                  <th className="px-3 py-2">Назва</th>
-                  <th className="px-3 py-2">Метод</th>
-                  <th className="px-3 py-2">Дебет</th>
-                  <th className="px-3 py-2">Кредит</th>
-                  <th className="px-3 py-2">Статус</th>
-                </tr>
+              <thead className="bg-slate-50 text-xs text-slate-500">
+                <tr><th className="px-3 py-2 text-left">Дата</th><th className="px-3 py-2 text-left">Категорія</th><th className="px-3 py-2 text-right">Сума</th><th className="px-3 py-2 text-left">Примітка</th></tr>
               </thead>
               <tbody>
-                {orderRows.map(r=> (
-                  <tr key={r.id} className="border-t">
-                    <td className="px-3 py-2 whitespace-nowrap">{r.date}</td>
-                    <td className="px-3 py-2">{r.type}</td>
-                    <td className="px-3 py-2">{r.title}</td>
-                    <td className="px-3 py-2">{r.method||'—'}</td>
-                    <td className="px-3 py-2 text-rose-600">{r.debit? `₴ ${fmtUA(r.debit)}` : '—'}</td>
-                    <td className="px-3 py-2 text-emerald-700">{r.credit? `₴ ${fmtUA(r.credit)}` : (r.amount? `₴ ${fmtUA(r.amount)}` : '—')}</td>
-                    <td className="px-3 py-2">{r.status}</td>
+                {expenses.map((e) => (
+                  <tr key={e.id} className="border-t">
+                    <td className="px-3 py-2">{e.occurred_at?.slice(0, 10)}</td>
+                    <td className="px-3 py-2">{e.category_name}</td>
+                    <td className="px-3 py-2 text-right font-medium">{money(e.amount)}</td>
+                    <td className="px-3 py-2 text-slate-600">{e.note || '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        </Card>
-      </div>
+          ) : <div className="p-4 text-center text-slate-500">Немає витрат</div>}
+        </CardBd>
+      </Card>
 
-      {/* Email dialog */}
-      {showEmailDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Відправити фінансовий звіт на email</h3>
-            <input 
-              type="email" 
-              value={emailInput} 
-              onChange={e=>setEmailInput(e.target.value)}
-              placeholder="example@email.com"
-              className="w-full rounded-xl border px-3 py-2 mb-4"
-            />
-            <div className="flex gap-2 justify-end">
-              <PillButton tone='slate' onClick={()=>setShowEmailDialog(false)}>Скасувати</PillButton>
-              <PillButton tone='blue' onClick={handleEmail}>Відправити</PillButton>
-            </div>
+      {show && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShow(false)}>
+          <div className="bg-white rounded-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b px-6 py-4 flex justify-between"><h3 className="font-semibold">Додати витрату</h3><button onClick={() => setShow(false)}>✕</button></div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <select className="w-full rounded-xl border px-3 py-2" value={form.category_code} onChange={(e) => setForm({ ...form, category_code: e.target.value })}>
+                {categories.filter(c => c.type === 'expense').map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+              <input type="number" placeholder="Сума" className="w-full rounded-xl border px-3 py-2" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} required />
+              <input placeholder="Примітка" className="w-full rounded-xl border px-3 py-2" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+              <div className="flex gap-2"><Btn type="button" onClick={() => setShow(false)} className="flex-1">Скасувати</Btn><Btn type="submit" variant="primary" className="flex-1">Зберегти</Btn></div>
+            </form>
           </div>
         </div>
       )}
-    </Card>
-  )
+    </div>
+  );
 }
 
-/*********** Order List Item (compact) ***********/
-function OrderListItem({orderId, rows, onClick, isExpanded}){
-  const orderRows = rows.filter(r=>r.order_id===orderId)
-  const held = heldAmount(orderRows)
-  const heldByCurrency = heldAmountByCurrency(orderRows)
-  const due  = balanceDue(orderRows)
-  const accrued = orderRows.filter(isRentOrCharge).reduce((s,r)=>s+(r.debit||0),0)
-  const paid = orderRows.filter(isPayment).reduce((s,r)=>s+(r.credit||0),0)
-  
-  // Get client name, expected deposit and order status from first transaction
-  const clientName = orderRows[0]?.client_name || ''
-  const expectedDeposit = orderRows.length > 0 ? (orderRows[0].expected_deposit || 0) : 0
-  const orderStatus = orderRows[0]?.order_status || null
-  const isCancelled = orderStatus === 'cancelled'
-  
-  // Format held amounts by currency for badge
-  const heldDisplay = Object.entries(heldByCurrency)
-    .filter(([, amt]) => amt > 0)
-    .map(([curr, amt]) => {
-      const symbol = curr === 'UAH' ? '₴' : curr === 'USD' ? '$' : '€'
-      return `${symbol}${fmtUA(amt)}`
-    })
-    .join(' + ')
-
+function PayrollTab() {
   return (
-    <div 
-      onClick={onClick}
-      className={cls(
-        'rounded-xl border p-4 cursor-pointer transition',
-        isExpanded ? 'border-slate-400 bg-slate-50' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="font-semibold text-lg">
-            Замовлення #{orderId}
-            {clientName && <span className="text-corp-text-main font-normal ml-2">· {clientName}</span>}
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <Card>
+        <CardHd title="Зарплата" subtitle="Нарахування → виплата" right={<Btn variant="dark">Нарахувати</Btn>} />
+        <CardBd>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="rounded-xl border bg-slate-50 p-3"><div className="text-xs text-slate-500">Payroll</div><div className="text-xl font-semibold">{money(12000)}</div></div>
+            <div className="rounded-xl border bg-slate-50 p-3"><div className="text-xs text-slate-500">Employees</div><div className="text-xl font-semibold">6</div></div>
+            <div className="rounded-xl border bg-slate-50 p-3"><div className="text-xs text-slate-500">Overtime</div><div className="text-xl font-semibold">12 год</div></div>
+            <div className="rounded-xl border bg-slate-50 p-3"><div className="text-xs text-slate-500">Bonuses</div><div className="text-xl font-semibold">{money(1500)}</div></div>
           </div>
-          <div className="text-xs text-corp-text-muted mt-1">
-            {orderRows.length} транзакцій · Нараховано: ₴{fmtUA(accrued)} · Оплачено: ₴{fmtUA(paid)}
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {held > 0 && (
-            <div className="flex flex-col items-end">
-              <Badge tone='blue'>Застава: {heldDisplay || `₴${fmtUA(held)}`}</Badge>
-              {expectedDeposit > 0 && (
-                <span className="text-[10px] text-slate-400 mt-0.5">очікувалось ₴{fmtUA(expectedDeposit)}</span>
-              )}
-            </div>
-          )}
-          {isCancelled ? (
-            <Badge tone='red'>❌ Скасовано - перевір фінанси</Badge>
-          ) : due > 0 ? (
-            <Badge tone='amber'>Борг ₴{fmtUA(due)}</Badge>
-          ) : (
-            <Badge tone='green'>✓ Закрито</Badge>
-          )}
-          <span className="text-slate-400">{isExpanded ? '▼' : '▶'}</span>
-        </div>
-      </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">🚧 Модуль в розробці</div>
+        </CardBd>
+      </Card>
     </div>
-  )
+  );
 }
 
-/*********** Ledger (tab 2) ***********/
-function LedgerTable({rows}){
+function VendorsTab() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200">
-      <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-left text-corp-text-muted">
-          <tr><th className="px-3 py-2">Дата</th><th className="px-3 py-2">Замовлення</th><th className="px-3 py-2">Тип</th><th className="px-3 py-2">Назва</th><th className="px-3 py-2">Метод</th><th className="px-3 py-2">Дебет</th><th className="px-3 py-2">Кредит</th></tr>
-        </thead>
-        <tbody>
-          {rows.map(r=> (
-            <tr key={r.id} className="border-t hover:bg-slate-50">
-              <td className="px-3 py-2">{r.date}</td>
-              <td className="px-3 py-2">#{r.order_id}</td>
-              <td className="px-3 py-2">{r.type}</td>
-              <td className="px-3 py-2">{r.title}</td>
-              <td className="px-3 py-2">{r.method||'—'}</td>
-              <td className="px-3 py-2 text-rose-600">{r.debit? `₴ ${fmtUA(r.debit)}` : '—'}</td>
-              <td className="px-3 py-2 text-emerald-700">{r.credit? `₴ ${fmtUA(r.credit)}` : (r.amount? `₴ ${fmtUA(r.amount)}` : '—')}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      <Card>
+        <CardHd title="Підрядники" subtitle="Хімчистка, реставрація" right={<Btn variant="dark">+ Додати</Btn>} />
+        <CardBd>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div className="rounded-xl border bg-slate-50 p-3"><div className="font-semibold">Хімчистка "Чистота"</div><div className="text-xs text-slate-500">Баланс: {money(0)}</div></div>
+            <div className="rounded-xl border bg-slate-50 p-3"><div className="font-semibold">Реставрація "Майстер"</div><div className="text-xs text-slate-500">Баланс: {money(-2500)}</div></div>
+            <div className="rounded-xl border bg-slate-50 p-3"><div className="font-semibold">Доставка "Швидко"</div><div className="text-xs text-slate-500">Баланс: {money(0)}</div></div>
+          </div>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">🚧 Модуль в розробці</div>
+        </CardBd>
+      </Card>
     </div>
-  )
+  );
 }
 
-/*********** Monthly (tab 3) ***********/
-function MonthlyArchive({rows}){
-  const groups = useMemo(()=>{
-    const m = new Map()
-    rows.forEach(r=>{
-      const key = (r.date||todayISO()).slice(0,7)
-      const g = m.get(key) || {month:key, debit:0, credit:0, count:0}
-      g.debit += (r.debit||0); g.credit += (r.credit||0); g.count += 1
-      m.set(key,g)
-    })
-    return Array.from(m.values()).sort((a,b)=> a.month<b.month?1:-1)
-  },[rows])
-  return (
-    <div className="space-y-3">
-      {groups.map(g=> (
-        <div key={g.month} className="rounded-xl border p-3 flex items-center justify-between">
-          <div>
-            <div className="font-semibold">{g.month}</div>
-            <div className="text-xs text-corp-text-muted">записів: {g.count}</div>
-          </div>
-          <div className="text-sm">
-            <span className="mr-4">Дебет: ₴ {fmtUA(g.debit)}</span>
-            <span>Кредит: ₴ {fmtUA(g.credit)}</span>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
+export default function FinanceCabinet() {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState('overview');
+  const [expandedId, setExpandedId] = useState(7121);
+  const [orderFilter, setOrderFilter] = useState(null);
 
-/*********** main ***********/
-export default function FinanceCabinet(){
-  const [rows, setRows] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('orders')
-  const [expandedOrderId, setExpandedOrderId] = useState(null)
-  const [scannerOpen, setScannerOpen] = useState(false)
+  const [dashboard, setDashboard] = useState(null);
+  const [ledger, setLedger] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [orders] = useState(mockOrders);
+  const [loading, setLoading] = useState({ dashboard: true, ledger: true, expenses: true });
+  const [isMock, setIsMock] = useState(false);
 
-  // Load all transactions
-  useEffect(()=>{
-    loadTransactions()
-  },[])
+  useEffect(() => { loadDashboard(); loadCategories(); }, []);
+  useEffect(() => { if (tab === 'ledger') loadLedger(); if (tab === 'expenses') loadExpenses(); }, [tab]);
 
-  const loadTransactions = async ()=>{
-    try {
-      setLoading(true)
-      const res = await axios.get(`${BACKEND_URL}/api/manager/finance/ledger`)
-      setRows(res.data.map(r=>({
-        id: r.id,
-        date: r.date,
-        order_id: r.order_id,
-        type: r.type,
-        title: r.title,
-        method: r.payment_method,
-        debit: r.debit || 0,
-        credit: r.credit || 0,
-        amount: r.amount || 0,
-        currency: r.currency || 'UAH',
-        status: r.status,
-        counterparty: r.counterparty,
-        client_name: r.client_name,
-        expected_deposit: r.expected_deposit || 0,
-        manager_comment: r.manager_comment || '',
-        damage_fee: r.damage_fee || 0,
-        order_status: r.order_status || null
-      })))
-    } catch(e){
-      console.error('Error loading transactions:', e)
-      alert('Помилка завантаження фінансових даних')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loadDashboard = async () => {
+    setLoading(p => ({ ...p, dashboard: true }));
+    const r = await financeApi.getDashboard('month');
+    setDashboard(r.data);
+    setIsMock(r.isMock);
+    setLoading(p => ({ ...p, dashboard: false }));
+  };
 
-  const addPayment = async (orderId, p)=>{
-    try {
-      const payload = {
-        order_id: orderId,
-        transaction_type: 'payment',
-        payment_method: p.method,
-        amount: Number(p.amount||0),
-        currency: 'UAH',
-        status: 'completed',
-        description: `Оплата (${p.method})`,
-        notes: p.note||''
-      }
-      await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, payload)
-      await loadTransactions()
-      alert('Оплату зараховано!')
-    } catch(e){
-      console.error('Error adding payment:', e)
-      alert('Помилка при зарахуванні оплати')
-    }
-  }
+  const loadLedger = async () => {
+    setLoading(p => ({ ...p, ledger: true }));
+    const r = await financeApi.getLedger();
+    setLedger(r.data?.transactions || []);
+    setLoading(p => ({ ...p, ledger: false }));
+  };
 
-  const addDeposit = async (orderId, dep)=>{
-    try {
-      const payload = {
-        order_id: orderId,
-        transaction_type: 'deposit_hold',
-        payment_method: 'cash',
-        amount: Number(dep.amount||0),
-        currency: dep.code,
-        status: 'held',
-        description: `Застава (${dep.code})`,
-        notes: ''
-      }
-      await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, payload)
-      await loadTransactions()
-      alert('Заставу прийнято!')
-    } catch(e){
-      console.error('Error adding deposit:', e)
-      alert('Помилка при прийманні застави')
-    }
-  }
+  const loadExpenses = async () => {
+    setLoading(p => ({ ...p, expenses: true }));
+    const r = await financeApi.getExpenses();
+    setExpenses(r.data?.expenses || []);
+    setLoading(p => ({ ...p, expenses: false }));
+  };
 
-  const writeoff = async (orderId, heldByCurrency, dueAmount)=>{
-    try {
-      // Списуємо застави по валютах до покриття боргу
-      let remaining = dueAmount
-      const currencies = Object.entries(heldByCurrency).filter(([_, amt]) => amt > 0)
-      
-      if (currencies.length === 0) {
-        alert('Немає активного холду')
-        return
-      }
-      
-      // Пріоритет: UAH, потім інші валюти
-      const sorted = currencies.sort((a, b) => {
-        if (a[0] === 'UAH') return -1
-        if (b[0] === 'UAH') return 1
-        return 0
-      })
-      
-      const writeoffs = []
-      
-      for (const [currency, amount] of sorted) {
-        if (remaining <= 0) break
-        
-        const toWrite = Math.min(amount, remaining)
-        const symbol = currency === 'UAH' ? '₴' : currency === 'USD' ? '$' : '€'
-        
-        // Writeoff record
-        await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
-          order_id: orderId,
-          transaction_type: 'deposit_writeoff',
-          amount: toWrite,
-          currency: currency,
-          status: 'completed',
-          description: 'Списання із застави',
-          notes: `Списано ${symbol}${toWrite}`
-        })
-        
-        // Payment from deposit
-        await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
-          order_id: orderId,
-          transaction_type: 'payment',
-          payment_method: 'deposit',
-          amount: toWrite,
-          currency: currency,
-          status: 'completed',
-          description: 'Оплата за рахунок застави'
-        })
-        
-        writeoffs.push(`${symbol}${toWrite} ${currency}`)
-        remaining -= toWrite
-      }
-      
-      await loadTransactions()
-      alert(`Списано з застави:\n${writeoffs.join('\n')}`)
-    } catch(e){
-      console.error('Error writeoff:', e)
-      alert('Помилка при списанні')
-    }
-  }
+  const loadCategories = async () => {
+    const r = await financeApi.getCategories();
+    setCategories(r.data || []);
+  };
 
-  const releaseDeposit = async (orderId, heldByCurrency)=>{
-    try {
-      // Повертаємо кожну валюту окремо
-      const currencies = Object.entries(heldByCurrency).filter(([_, amt]) => amt > 0)
-      
-      if (currencies.length === 0) {
-        alert('Немає активного холду')
-        return
-      }
-      
-      for (const [currency, amount] of currencies) {
-        const symbol = currency === 'UAH' ? '₴' : currency === 'USD' ? '$' : '€'
-        await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
-          order_id: orderId,
-          transaction_type: 'deposit_release',
-          amount: amount,
-          currency: currency,
-          status: 'completed',
-          description: 'Повернення застави',
-          notes: `Повернено ${symbol}${amount}`
-        })
-      }
-      
-      await loadTransactions()
-      alert(`Заставу повернено!\n${currencies.map(([c, a]) => `${c === 'UAH' ? '₴' : c === 'USD' ? '$' : '€'}${a}`).join(' + ')}`)
-    } catch(e){
-      console.error('Error release:', e)
-      alert('Помилка при поверненні')
-    }
-  }
-
-  const refund = async (orderId, amount)=>{
-    try {
-      await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
-        order_id: orderId,
-        transaction_type: 'refund',
-        amount: Number(amount),
-        currency: 'UAH',
-        status: 'completed',
-        description: 'Повернення коштів (скасоване замовлення)',
-        notes: `Повернено ₴${amount} через скасування замовлення`
-      })
-      
-      await loadTransactions()
-      alert(`✅ Повернено ₴${amount} клієнту!`)
-    } catch(e){
-      console.error('Error refund:', e)
-      alert('Помилка при поверненні коштів')
-    }
-  }
-
-
-  const addDamage = async (orderId, dmg)=>{
-    try {
-      await axios.post(`${BACKEND_URL}/api/manager/finance/transactions`, {
-        order_id: orderId,
-        transaction_type: 'damage',
-        amount: Number(dmg.amount||0),
-        currency: 'UAH',
-        status: 'unpaid',
-        description: `Шкода: ${dmg.note||''}`
-      })
-      await loadTransactions()
-      alert('Збитки нараховано!')
-    } catch(e){
-      console.error('Error adding damage:', e)
-      alert('Помилка при нарахуванні збитків')
-    }
-  }
-
-  const deleteOrder = async (orderId)=>{
-    if(!window.confirm(`Видалити замовлення #${orderId}? Це також видалить всі пов'язані картки (Issue/Return).`)) return
-    
-    try {
-      await axios.delete(`${BACKEND_URL}/api/orders/${orderId}`)
-      await loadTransactions()
-      setExpandedOrderId(null)
-      alert('Замовлення видалено!')
-    } catch(e){
-      console.error('Error deleting order:', e)
-      alert('Помилка при видаленні замовлення')
-    }
-  }
-
-  const rowsFiltered = useMemo(()=> rows.sort((a,b)=> (b.date||'').localeCompare(a.date||'')),[rows])
-  
-  // Get unique order IDs
-  const orderIds = useMemo(()=>{
-    const ids = new Set(rows.map(r=>r.order_id))
-    return Array.from(ids).sort((a,b)=>b-a)
-  },[rows])
-
-  if(loading) return <div className="flex items-center justify-center h-screen"><div className="text-xl">Завантаження...</div></div>
+  const refresh = () => { loadDashboard(); if (tab === 'ledger') loadLedger(); if (tab === 'expenses') loadExpenses(); };
 
   return (
-    <div className="min-h-screen bg-corp-bg-main">
-      <CorporateHeader cabinetName="Фінансовий кабінет" showBackButton={true} />
-      
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-corp-text-dark">Фінансові операції</h2>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setScannerOpen(true)}
-              className="corp-btn corp-btn-primary flex items-center gap-1"
-            >
-              📷 Сканувати
-            </button>
-            {['orders','ledger','monthly'].map(t => (
-              <button key={t} onClick={()=>{setTab(t); setExpandedOrderId(null)}} className={cls('corp-btn', tab===t? 'corp-btn-primary':'corp-btn-secondary')}>
-                {t==='orders'?'Замовлення':t==='ledger'?'Журнал':'Архів'}
-              </button>
-            ))}
-          </div>
-        </div>
-      
-      {/* Barcode Scanner */}
-      <BarcodeScanner
-        isOpen={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onScan={(code) => {
-          console.log('[FinanceCabinet] Scanned:', code)
-          // Extract order ID from code (assuming format like "OC-6996" or just "6996")
-          const orderId = parseInt(code.replace(/[^0-9]/g, ''))
-          if (orderId && !isNaN(orderId)) {
-            // Find and expand order
-            if (orderIds.includes(orderId)) {
-              setExpandedOrderId(orderId)
-              // Scroll to order
-              setTimeout(() => {
-                const element = document.querySelector(`[data-order-id="${orderId}"]`)
-                if (element) {
-                  element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                }
-              }, 100)
-            } else {
-              alert(`Замовлення #${orderId} не знайдено у фінансовому кабінеті`)
-            }
-          } else {
-            alert(`Не вдалося розпізнати номер замовлення з коду: ${code}`)
-          }
-        }}
-        title="Сканування замовлення"
-      />
-
-      {tab==='orders' && (
-        <div className="space-y-4">
-          <Card title={`Список замовлень (${orderIds.length})`} right={<Badge tone='slate'>Клікни на замовлення для деталей</Badge>}>
-            <div className="text-xs text-corp-text-muted mb-3">Показано всі замовлення з фінансовими транзакціями</div>
-          </Card>
-
-          {orderIds.map(orderId=> (
-            <div key={orderId} data-order-id={orderId}>
-              <OrderListItem 
-                orderId={orderId} 
-                rows={rowsFiltered} 
-                onClick={()=>setExpandedOrderId(expandedOrderId===orderId? null : orderId)}
-                isExpanded={expandedOrderId===orderId}
-              />
-              
-              {expandedOrderId===orderId && (
-                <div className="mt-4">
-                  <OrderFinanceCard
-                    orderId={orderId}
-                    rows={rowsFiltered}
-                    onAddPayment={addPayment}
-                    onAddDeposit={addDeposit}
-                    onWriteoff={writeoff}
-                    onReleaseDeposit={releaseDeposit}
-                    onAddDamage={addDamage}
-                    onRefund={refund}
-                    onCollapse={()=>setExpandedOrderId(null)}
-                    onDelete={deleteOrder}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-
-          {orderIds.length === 0 && (
-            <div className="text-center py-12 text-corp-text-muted">
-              <div className="text-lg">Немає фінансових транзакцій</div>
-              <div className="text-sm mt-2">Транзакції з'являться після прийняття замовлень</div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab==='ledger' && (
-        <Card title="Повний журнал транзакцій">
-          <LedgerTable rows={rowsFiltered} />
-        </Card>
-      )}
-
-      {tab==='monthly' && (
-        <Card title="Місячні підсумки та архів"><MonthlyArchive rows={rowsFiltered} /></Card>
-      )}
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <TopBar tab={tab} setTab={setTab} onBack={() => navigate('/manager')} />
+      {tab === 'overview' && dashboard && <OverviewTab dashboard={dashboard} isMock={isMock} />}
+      {tab === 'orders' && <OrdersTab orders={orders} expandedId={expandedId} setExpandedId={setExpandedId} onUpdate={refresh} filter={orderFilter} setFilter={setOrderFilter} />}
+      {tab === 'ledger' && <LedgerTab ledger={ledger} loading={loading.ledger} />}
+      {tab === 'expenses' && <ExpensesTab expenses={expenses} categories={categories} loading={loading.expenses} onAdd={() => { loadExpenses(); loadDashboard(); }} />}
+      {tab === 'payroll' && <PayrollTab />}
+      {tab === 'vendors' && <VendorsTab />}
+      <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 text-xs text-slate-400">Rental Finance Engine</div>
     </div>
-  )
+  );
 }

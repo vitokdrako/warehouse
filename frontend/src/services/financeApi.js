@@ -15,11 +15,20 @@ const mockAccounts = [
   { id: 3, code: 'RENT_REV', name: 'Дохід оренди', kind: 'income', balance: 5000 },
 ];
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 async function fetchWithFallback(endpoint, mockData, options) {
   try {
     const response = await fetch(`${BACKEND_URL}${endpoint}`, {
       ...options,
-      headers: { 'Content-Type': 'application/json', ...options?.headers },
+      headers: { 
+        'Content-Type': 'application/json', 
+        ...getAuthHeaders(),
+        ...options?.headers 
+      },
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();

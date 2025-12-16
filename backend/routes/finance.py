@@ -470,6 +470,83 @@ async def list_transactions(tx_type: Optional[str] = None, account_code: Optiona
     return {"transactions": transactions}
 
 
+@router.post("/migrate-tables")
+async def migrate_tables(db: Session = Depends(get_rh_db)):
+    """Migrate tables to correct structure"""
+    results = []
+    
+    try:
+        db.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+        
+        # Drop and recreate hr_employees
+        db.execute(text("DROP TABLE IF EXISTS hr_payroll"))
+        db.execute(text("DROP TABLE IF EXISTS hr_employees"))
+        db.execute(text("""
+            CREATE TABLE hr_employees (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                role VARCHAR(50) DEFAULT 'other',
+                phone VARCHAR(50),
+                email VARCHAR(100),
+                base_salary DECIMAL(12,2) DEFAULT 0,
+                hire_date DATE,
+                note TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        results.append("hr_employees: OK")
+        
+        # Recreate hr_payroll
+        db.execute(text("""
+            CREATE TABLE hr_payroll (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                employee_id INT NOT NULL,
+                period_start DATE NOT NULL,
+                period_end DATE NOT NULL,
+                base_amount DECIMAL(12,2) NOT NULL,
+                bonus DECIMAL(12,2) DEFAULT 0,
+                deduction DECIMAL(12,2) DEFAULT 0,
+                total_amount DECIMAL(12,2) DEFAULT 0,
+                status VARCHAR(20) DEFAULT 'pending',
+                method VARCHAR(20) DEFAULT 'cash',
+                paid_at TIMESTAMP NULL,
+                tx_id INT NULL,
+                note TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        results.append("hr_payroll: OK")
+        
+        # Drop and recreate fin_vendors
+        db.execute(text("DROP TABLE IF EXISTS fin_vendors"))
+        db.execute(text("""
+            CREATE TABLE fin_vendors (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                vendor_type VARCHAR(50) DEFAULT 'service',
+                contact_name VARCHAR(100),
+                phone VARCHAR(50),
+                email VARCHAR(100),
+                address TEXT,
+                iban VARCHAR(50),
+                balance DECIMAL(12,2) DEFAULT 0,
+                note TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        results.append("fin_vendors: OK")
+        
+        db.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+        db.commit()
+        return {"success": True, "results": results}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e)}
+
+
+
 # ============================================================
 # VENDORS
 # ============================================================

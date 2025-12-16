@@ -67,6 +67,25 @@ def render_pdf(html_content: str, base_url: str = None) -> bytes:
     Returns:
         PDF як bytes
     """
+    if not WEASYPRINT_AVAILABLE:
+        # Fallback: return HTML as bytes with print styles
+        print_html = f'''<!DOCTYPE html>
+<html>
+<head>
+<style>
+@media print {{
+    @page {{ size: A4; margin: 15mm; }}
+    body {{ font-family: Arial, sans-serif; font-size: 10pt; }}
+}}
+</style>
+</head>
+<body>
+{html_content}
+<script>window.print();</script>
+</body>
+</html>'''
+        return print_html.encode('utf-8')
+    
     font_config = FontConfiguration()
     
     # CSS для друку

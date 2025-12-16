@@ -665,30 +665,12 @@ async def update_vendor(vendor_id: int, data: VendorCreate, db: Session = Depend
 async def list_employees(role: Optional[str] = None, db: Session = Depends(get_rh_db)):
     """List all employees"""
     try:
-        db.execute(text("""
-            CREATE TABLE IF NOT EXISTS hr_employees (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(200) NOT NULL,
-                role VARCHAR(50) DEFAULT 'other',
-                phone VARCHAR(50),
-                email VARCHAR(100),
-                base_salary DECIMAL(12,2) DEFAULT 0,
-                hire_date DATE,
-                note TEXT,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
-        db.commit()
-    except Exception as e:
-        print(f"Employees table setup: {e}")
-    
-    try:
-        result = db.execute(text("SELECT id, name, role, phone, email, base_salary, hire_date, note, is_active, created_at FROM hr_employees WHERE is_active = TRUE ORDER BY name"))
+        result = db.execute(text("SELECT id, emp_name, emp_role, emp_phone, emp_email, emp_salary, emp_hire_date, emp_note, emp_active, emp_created FROM rh_employees WHERE emp_active = TRUE ORDER BY emp_name"))
         employees = [{"id": r[0], "name": r[1], "role": r[2] or 'other', "phone": r[3], "email": r[4],
                       "base_salary": float(r[5] or 0), "hire_date": r[6].isoformat() if r[6] else None,
                       "note": r[7], "is_active": r[8], "created_at": r[9].isoformat() if r[9] else None} for r in result]
-    except:
+    except Exception as e:
+        print(f"List employees error: {e}")
         employees = []
     return {"employees": employees}
 

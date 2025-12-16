@@ -22,6 +22,7 @@ import {
   ZoneFinanceHistory,
   ZoneCommercialSummary,
   ZoneNotes,
+  ZoneDocuments,
 } from '../components/order-workspace/zones'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''

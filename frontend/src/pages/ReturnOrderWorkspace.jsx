@@ -21,6 +21,7 @@ import {
   ZoneReturnFees,
   ZoneNotes,
   ZoneCommercialSummary,
+  ZoneDocuments,
 } from '../components/order-workspace/zones'
 
 import DamageModal from '../components/DamageModal'

@@ -8,7 +8,7 @@ from sqlalchemy import text
 from datetime import datetime
 import json
 
-from database import get_db
+from database_rentalhub import get_rh_db
 from services.doc_engine.registry import DOC_REGISTRY, get_doc_config, get_docs_for_entity
 from services.doc_engine.data_builders import build_document_data
 from services.doc_engine.render import render_html, render_pdf, get_template_path

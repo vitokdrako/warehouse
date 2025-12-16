@@ -561,7 +561,7 @@ async def list_employees(role: Optional[str] = None, db: Session = Depends(get_r
             CREATE TABLE IF NOT EXISTS hr_employees (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(200) NOT NULL,
-                role ENUM('manager', 'courier', 'cleaner', 'assistant', 'other') DEFAULT 'other',
+                role VARCHAR(50) DEFAULT 'other',
                 phone VARCHAR(50),
                 email VARCHAR(100),
                 base_salary DECIMAL(12,2) DEFAULT 0,
@@ -572,20 +572,17 @@ async def list_employees(role: Optional[str] = None, db: Session = Depends(get_r
             )
         """))
         db.commit()
+    except Exception as e:
+        print(f"Employees table setup: {e}")
+    
+    try:
+        result = db.execute(text("SELECT id, name, role, phone, email, base_salary, hire_date, note, is_active, created_at FROM hr_employees WHERE is_active = TRUE ORDER BY name"))
+        employees = [{"id": r[0], "name": r[1], "role": r[2] or 'other', "phone": r[3], "email": r[4],
+                      "base_salary": float(r[5] or 0), "hire_date": r[6].isoformat() if r[6] else None,
+                      "note": r[7], "is_active": r[8], "created_at": r[9].isoformat() if r[9] else None} for r in result]
     except:
-        pass
-    
-    query = "SELECT id, name, role, phone, email, base_salary, hire_date, note, is_active, created_at FROM hr_employees WHERE is_active = TRUE"
-    params = {}
-    if role:
-        query += " AND role = :role"
-        params["role"] = role
-    query += " ORDER BY name"
-    
-    result = db.execute(text(query), params)
-    return {"employees": [{"id": r[0], "name": r[1], "role": r[2], "phone": r[3], "email": r[4],
-                           "base_salary": float(r[5] or 0), "hire_date": r[6].isoformat() if r[6] else None,
-                           "note": r[7], "is_active": r[8], "created_at": r[9].isoformat() if r[9] else None} for r in result]}
+        employees = []
+    return {"employees": employees}
 
 @router.post("/employees")
 async def create_employee(data: EmployeeCreate, db: Session = Depends(get_rh_db)):

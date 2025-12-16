@@ -70,9 +70,9 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         SELECT 
             oi.product_name, oi.product_id, oi.quantity, 
             oi.price, oi.total_rental, oi.image_url,
-            p.sku, p.zone, p.aisle, p.shelf, p.deposit_price
+            p.sku, p.zone, p.aisle, p.shelf, p.price as damage_price
         FROM order_items oi
-        LEFT JOIN products p ON p.id = oi.product_id
+        LEFT JOIN products p ON p.product_id = oi.product_id
         WHERE oi.order_id = :order_id
     """), {"order_id": order["id"]})
     

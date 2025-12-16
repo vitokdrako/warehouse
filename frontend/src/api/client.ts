@@ -11,6 +11,18 @@ const apiClient = axios.create({
   timeout: 0, // Без обмежень
 });
 
+// Interceptor для автоматичного додавання токена авторизації
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Warehouse API
 export const warehouseAPI = {
   // Dashboard

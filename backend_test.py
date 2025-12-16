@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for NewOrderViewWorkspace Bug Fixes
-Testing the bug fixes for Ukrainian rental management system:
-1. Wrong Price Bug - rent_price vs price
-2. Quantity Bug - item identification
-3. 405 Error - check-availability endpoint method
+Backend Testing Script for Finance Cabinet Integration
+Testing the Finance Cabinet full integration with real data:
+1. Manager Finance Summary API
+2. Finance Dashboard Integration  
+3. Admin Panel Finance Management
+4. Vendors, Employees, Payroll APIs
 """
 
 import requests

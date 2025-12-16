@@ -31,9 +31,16 @@ export default function OrderFinancePanel({ order, onUpdate }) {
   const [rentMethod, setRentMethod] = useState('cash');
   const [depositAmount, setDepositAmount] = useState(Math.max(0, order.deposit.expected - order.deposit.held));
   const [depositMethod, setDepositMethod] = useState('cash');
+  const [depositCurrency, setDepositCurrency] = useState('UAH');
+  const [exchangeRate, setExchangeRate] = useState(1);
   const [loading, setLoading] = useState(null);
 
+  // Exchange rates (can be fetched from API)
+  const RATES = { UAH: 1, USD: 41.5, EUR: 45.2 };
+  const currencySymbols = { UAH: '₴', USD: '$', EUR: '€' };
+
   const holdAvailable = Math.max(0, order.deposit.held - order.deposit.used_for_damage - order.deposit.refunded);
+  const uahEquivalent = depositCurrency === 'UAH' ? depositAmount : depositAmount * exchangeRate;
 
   const handlePayment = async (type) => {
     let amount = type === 'rent' ? rentAmount : type === 'deposit' ? depositAmount : order.damage.due;
@@ -41,11 +48,30 @@ export default function OrderFinancePanel({ order, onUpdate }) {
     if (amount <= 0) return;
     setLoading(type);
     try {
-      const result = await financeApi.createPayment({ payment_type: type, method, amount, order_id: order.id });
-      if (result.data && result.data.success) onUpdate?.();
+      if (type === 'deposit') {
+        // Use currency-aware deposit creation
+        const result = await financeApi.createDepositWithCurrency({
+          order_id: order.id,
+          expected_amount: order.deposit.expected,
+          actual_amount: depositAmount,
+          currency: depositCurrency,
+          exchange_rate: depositCurrency === 'UAH' ? null : exchangeRate,
+          method: depositMethod,
+          note: depositCurrency !== 'UAH' ? `${depositAmount} ${depositCurrency} @ ${exchangeRate}` : null
+        });
+        if (result.data && result.data.success) onUpdate?.();
+      } else {
+        const result = await financeApi.createPayment({ payment_type: type, method, amount, order_id: order.id });
+        if (result.data && result.data.success) onUpdate?.();
+      }
     } finally {
       setLoading(null);
     }
+  };
+
+  const handleCurrencyChange = (cur) => {
+    setDepositCurrency(cur);
+    setExchangeRate(RATES[cur] || 1);
   };
 
   return (

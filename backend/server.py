@@ -61,6 +61,7 @@ app.include_router(auth.router)
 app.include_router(tasks.router)
 app.include_router(damages.router)
 app.include_router(finance.router)
+app.include_router(finance.manager_router)  # /api/manager/finance/* для ManagerDashboard
 app.include_router(settings.router)
 app.include_router(pdf.router)
 app.include_router(users.router)

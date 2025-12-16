@@ -521,6 +521,29 @@ async def list_vendors(vendor_type: Optional[str] = None, db: Session = Depends(
 async def create_vendor(data: VendorCreate, db: Session = Depends(get_rh_db)):
     """Create a new vendor"""
     try:
+        # Ensure table has correct structure
+        db.execute(text("DROP TABLE IF EXISTS fin_vendors"))
+        db.execute(text("""
+            CREATE TABLE fin_vendors (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                vendor_type VARCHAR(50) DEFAULT 'service',
+                contact_name VARCHAR(100),
+                phone VARCHAR(50),
+                email VARCHAR(100),
+                address TEXT,
+                iban VARCHAR(50),
+                balance DECIMAL(12,2) DEFAULT 0,
+                note TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    except Exception as e:
+        print(f"Create vendors table: {e}")
+    
+    try:
         db.execute(text("""
             INSERT INTO fin_vendors (name, vendor_type, contact_name, phone, email, address, iban, note)
             VALUES (:name, :vendor_type, :contact_name, :phone, :email, :address, :iban, :note)

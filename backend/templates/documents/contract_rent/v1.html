@@ -161,7 +161,9 @@
     </div>
 
     <div class="footer">
-        <p>Сгенеровано: {{ generated_at }} | © FarforDecorOrenda 2025</p>
+        <p>{{ company.legal_name }} | ІПН: {{ company.tax_id }} | {{ company.email }}</p>
+        <p>Умови оренди: {{ company.terms_url }} | Оферта: {{ company.offer_url }}</p>
+        <p>© FarforDecorOrenda 2025 | Сгенеровано: {{ generated_at }}</p>
     </div>
 </body>
 </html>

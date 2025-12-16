@@ -201,7 +201,7 @@ async def list_entity_documents(
 async def sign_document(
     document_id: str,
     signature_data: dict = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Позначає документ як підписаний.

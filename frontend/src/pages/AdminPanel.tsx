@@ -39,6 +39,9 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<Tab>('users')
   const [users, setUsers] = useState<User[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [vendors, setVendors] = useState<any[]>([])
+  const [expenseCategories, setExpenseCategories] = useState<any[]>([])
+  const [employees, setEmployees] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   
   // User form
@@ -63,6 +66,22 @@ export default function AdminPanel() {
     sort_order: 0
   })
   
+  // Vendor form
+  const [showVendorForm, setShowVendorForm] = useState(false)
+  const [vendorForm, setVendorForm] = useState({
+    name: '', vendor_type: 'service', contact_name: '', phone: '', email: '', address: '', iban: '', note: ''
+  })
+  
+  // Expense category form
+  const [showExpenseCatForm, setShowExpenseCatForm] = useState(false)
+  const [expenseCatForm, setExpenseCatForm] = useState({ type: 'expense', code: '', name: '' })
+  
+  // Employee form
+  const [showEmployeeForm, setShowEmployeeForm] = useState(false)
+  const [employeeForm, setEmployeeForm] = useState({
+    name: '', role: 'assistant', phone: '', email: '', base_salary: 0, note: ''
+  })
+  
   // Password reset
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [passwordUserId, setPasswordUserId] = useState<number | null>(null)
@@ -70,12 +89,111 @@ export default function AdminPanel() {
   const [confirmPassword, setConfirmPassword] = useState('')
 
   useEffect(() => {
-    if (activeTab === 'users') {
-      loadUsers()
-    } else {
-      loadCategories()
-    }
+    if (activeTab === 'users') loadUsers()
+    else if (activeTab === 'categories') loadCategories()
+    else if (activeTab === 'vendors') loadVendors()
+    else if (activeTab === 'expense-categories') loadExpenseCategories()
+    else if (activeTab === 'employees') loadEmployees()
   }, [activeTab])
+  
+  const loadVendors = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/api/finance/vendors`)
+      if (response.ok) {
+        const data = await response.json()
+        setVendors(data.vendors || [])
+      }
+    } catch (error) {
+      console.error('Error loading vendors:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const loadExpenseCategories = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/api/finance/admin/expense-categories`)
+      if (response.ok) {
+        const data = await response.json()
+        setExpenseCategories(data || [])
+      }
+    } catch (error) {
+      console.error('Error loading expense categories:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const loadEmployees = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/api/finance/employees`)
+      if (response.ok) {
+        const data = await response.json()
+        setEmployees(data.employees || [])
+      }
+    } catch (error) {
+      console.error('Error loading employees:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const saveVendor = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/finance/vendors`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendorForm)
+      })
+      if (response.ok) {
+        alert('✅ Підрядника додано!')
+        setShowVendorForm(false)
+        setVendorForm({ name: '', vendor_type: 'service', contact_name: '', phone: '', email: '', address: '', iban: '', note: '' })
+        loadVendors()
+      }
+    } catch (error) {
+      alert('❌ Помилка збереження')
+    }
+  }
+  
+  const saveExpenseCategory = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/finance/admin/expense-categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expenseCatForm)
+      })
+      if (response.ok) {
+        alert('✅ Категорію витрат додано!')
+        setShowExpenseCatForm(false)
+        setExpenseCatForm({ type: 'expense', code: '', name: '' })
+        loadExpenseCategories()
+      }
+    } catch (error) {
+      alert('❌ Помилка збереження')
+    }
+  }
+  
+  const saveEmployee = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/finance/employees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(employeeForm)
+      })
+      if (response.ok) {
+        alert('✅ Працівника додано!')
+        setShowEmployeeForm(false)
+        setEmployeeForm({ name: '', role: 'assistant', phone: '', email: '', base_salary: 0, note: '' })
+        loadEmployees()
+      }
+    } catch (error) {
+      alert('❌ Помилка збереження')
+    }
+  }
 
   const getToken = () => {
     return localStorage.getItem('token')

@@ -588,6 +588,27 @@ async def list_employees(role: Optional[str] = None, db: Session = Depends(get_r
 async def create_employee(data: EmployeeCreate, db: Session = Depends(get_rh_db)):
     """Create a new employee"""
     try:
+        # Ensure table has correct structure
+        db.execute(text("DROP TABLE IF EXISTS hr_employees"))
+        db.execute(text("""
+            CREATE TABLE hr_employees (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                role VARCHAR(50) DEFAULT 'other',
+                phone VARCHAR(50),
+                email VARCHAR(100),
+                base_salary DECIMAL(12,2) DEFAULT 0,
+                hire_date DATE,
+                note TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    except Exception as e:
+        print(f"Create employees table: {e}")
+    
+    try:
         hire_date = datetime.fromisoformat(data.hire_date).date() if data.hire_date else date.today()
         db.execute(text("""
             INSERT INTO hr_employees (name, role, phone, email, base_salary, hire_date, note)

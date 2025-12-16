@@ -104,7 +104,7 @@ export const LEGAL_LINKS = {
   terms: 'https://www.farforrent.com.ua/terms',
   privacy: 'https://www.farforrent.com.ua/privacy',
   offer: 'https://www.farforrent.com.ua/oferta',
-  damageRules: 'https://www.farforrent.com.ua/opis-zbitkiv',
+  damageRules: 'https://www.farforrent.com.ua/opis-zbitk%D1%96v',
 };
 
 export default {

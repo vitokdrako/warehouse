@@ -468,3 +468,306 @@ async def list_transactions(tx_type: Optional[str] = None, account_code: Optiona
             "entries": [{"account_code": e[0], "account_name": e[1], "direction": e[2], "amount": float(e[3])} for e in entries]
         })
     return {"transactions": transactions}
+
+
+# ============================================================
+# VENDORS
+# ============================================================
+
+@router.get("/vendors")
+async def list_vendors(vendor_type: Optional[str] = None, db: Session = Depends(get_rh_db)):
+    """List all vendors"""
+    try:
+        # Check if table exists, if not create it
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS fin_vendors (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                vendor_type ENUM('service', 'cleaning', 'repair', 'delivery', 'other') DEFAULT 'service',
+                contact_name VARCHAR(100),
+                phone VARCHAR(50),
+                email VARCHAR(100),
+                address TEXT,
+                iban VARCHAR(50),
+                balance DECIMAL(12,2) DEFAULT 0,
+                note TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    except:
+        pass
+    
+    query = "SELECT id, name, vendor_type, contact_name, phone, email, address, iban, balance, note, is_active, created_at FROM fin_vendors WHERE is_active = TRUE"
+    params = {}
+    if vendor_type:
+        query += " AND vendor_type = :vendor_type"
+        params["vendor_type"] = vendor_type
+    query += " ORDER BY name"
+    
+    result = db.execute(text(query), params)
+    return {"vendors": [{"id": r[0], "name": r[1], "vendor_type": r[2], "contact_name": r[3],
+                         "phone": r[4], "email": r[5], "address": r[6], "iban": r[7],
+                         "balance": float(r[8] or 0), "note": r[9], "is_active": r[10],
+                         "created_at": r[11].isoformat() if r[11] else None} for r in result]}
+
+@router.post("/vendors")
+async def create_vendor(data: VendorCreate, db: Session = Depends(get_rh_db)):
+    """Create a new vendor"""
+    try:
+        db.execute(text("""
+            INSERT INTO fin_vendors (name, vendor_type, contact_name, phone, email, address, iban, note)
+            VALUES (:name, :vendor_type, :contact_name, :phone, :email, :address, :iban, :note)
+        """), {"name": data.name, "vendor_type": data.vendor_type, "contact_name": data.contact_name,
+               "phone": data.phone, "email": data.email, "address": data.address,
+               "iban": data.iban, "note": data.note})
+        vendor_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        db.commit()
+        return {"success": True, "vendor_id": vendor_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/vendors/{vendor_id}")
+async def update_vendor(vendor_id: int, data: VendorCreate, db: Session = Depends(get_rh_db)):
+    """Update vendor"""
+    try:
+        db.execute(text("""
+            UPDATE fin_vendors SET name = :name, vendor_type = :vendor_type, contact_name = :contact_name,
+            phone = :phone, email = :email, address = :address, iban = :iban, note = :note WHERE id = :id
+        """), {"id": vendor_id, **data.dict()})
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# EMPLOYEES & PAYROLL
+# ============================================================
+
+@router.get("/employees")
+async def list_employees(role: Optional[str] = None, db: Session = Depends(get_rh_db)):
+    """List all employees"""
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS hr_employees (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(200) NOT NULL,
+                role ENUM('manager', 'courier', 'cleaner', 'assistant', 'other') DEFAULT 'other',
+                phone VARCHAR(50),
+                email VARCHAR(100),
+                base_salary DECIMAL(12,2) DEFAULT 0,
+                hire_date DATE,
+                note TEXT,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    except:
+        pass
+    
+    query = "SELECT id, name, role, phone, email, base_salary, hire_date, note, is_active, created_at FROM hr_employees WHERE is_active = TRUE"
+    params = {}
+    if role:
+        query += " AND role = :role"
+        params["role"] = role
+    query += " ORDER BY name"
+    
+    result = db.execute(text(query), params)
+    return {"employees": [{"id": r[0], "name": r[1], "role": r[2], "phone": r[3], "email": r[4],
+                           "base_salary": float(r[5] or 0), "hire_date": r[6].isoformat() if r[6] else None,
+                           "note": r[7], "is_active": r[8], "created_at": r[9].isoformat() if r[9] else None} for r in result]}
+
+@router.post("/employees")
+async def create_employee(data: EmployeeCreate, db: Session = Depends(get_rh_db)):
+    """Create a new employee"""
+    try:
+        hire_date = datetime.fromisoformat(data.hire_date).date() if data.hire_date else date.today()
+        db.execute(text("""
+            INSERT INTO hr_employees (name, role, phone, email, base_salary, hire_date, note)
+            VALUES (:name, :role, :phone, :email, :base_salary, :hire_date, :note)
+        """), {"name": data.name, "role": data.role, "phone": data.phone, "email": data.email,
+               "base_salary": data.base_salary, "hire_date": hire_date, "note": data.note})
+        employee_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        db.commit()
+        return {"success": True, "employee_id": employee_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/payroll")
+async def list_payroll(employee_id: Optional[int] = None, status: Optional[str] = None,
+                       period: Optional[str] = None, db: Session = Depends(get_rh_db)):
+    """List payroll records"""
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS hr_payroll (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                employee_id INT NOT NULL,
+                period_start DATE NOT NULL,
+                period_end DATE NOT NULL,
+                base_amount DECIMAL(12,2) NOT NULL,
+                bonus DECIMAL(12,2) DEFAULT 0,
+                deduction DECIMAL(12,2) DEFAULT 0,
+                total_amount DECIMAL(12,2) GENERATED ALWAYS AS (base_amount + bonus - deduction) STORED,
+                status ENUM('pending', 'approved', 'paid') DEFAULT 'pending',
+                method ENUM('cash', 'card', 'bank') DEFAULT 'cash',
+                paid_at TIMESTAMP NULL,
+                tx_id INT NULL,
+                note TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        db.commit()
+    except:
+        pass
+    
+    query = """SELECT p.id, p.employee_id, e.name, p.period_start, p.period_end, p.base_amount, p.bonus, p.deduction, 
+               p.total_amount, p.status, p.method, p.paid_at, p.note, p.created_at
+               FROM hr_payroll p LEFT JOIN hr_employees e ON e.id = p.employee_id WHERE 1=1"""
+    params = {}
+    if employee_id:
+        query += " AND p.employee_id = :employee_id"
+        params["employee_id"] = employee_id
+    if status:
+        query += " AND p.status = :status"
+        params["status"] = status
+    query += " ORDER BY p.period_start DESC"
+    
+    result = db.execute(text(query), params)
+    return {"payroll": [{"id": r[0], "employee_id": r[1], "employee_name": r[2],
+                         "period_start": r[3].isoformat() if r[3] else None,
+                         "period_end": r[4].isoformat() if r[4] else None,
+                         "base_amount": float(r[5] or 0), "bonus": float(r[6] or 0),
+                         "deduction": float(r[7] or 0), "total_amount": float(r[8] or 0),
+                         "status": r[9], "method": r[10],
+                         "paid_at": r[11].isoformat() if r[11] else None,
+                         "note": r[12], "created_at": r[13].isoformat() if r[13] else None} for r in result]}
+
+@router.post("/payroll")
+async def create_payroll(data: PayrollCreate, db: Session = Depends(get_rh_db)):
+    """Create payroll record"""
+    try:
+        period_start = datetime.fromisoformat(data.period_start).date()
+        period_end = datetime.fromisoformat(data.period_end).date()
+        db.execute(text("""
+            INSERT INTO hr_payroll (employee_id, period_start, period_end, base_amount, bonus, deduction, method, note)
+            VALUES (:employee_id, :period_start, :period_end, :base_amount, :bonus, :deduction, :method, :note)
+        """), {"employee_id": data.employee_id, "period_start": period_start, "period_end": period_end,
+               "base_amount": data.base_amount, "bonus": data.bonus, "deduction": data.deduction,
+               "method": data.method, "note": data.note})
+        payroll_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        db.commit()
+        return {"success": True, "payroll_id": payroll_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/payroll/{payroll_id}/pay")
+async def pay_payroll(payroll_id: int, db: Session = Depends(get_rh_db)):
+    """Process payroll payment with ledger entry"""
+    rec = db.execute(text("SELECT employee_id, total_amount, method, status FROM hr_payroll WHERE id = :id"), {"id": payroll_id}).fetchone()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Payroll record not found")
+    if rec[3] == "paid":
+        raise HTTPException(status_code=400, detail="Already paid")
+    
+    try:
+        credit_acc = "CASH" if rec[2] == "cash" else "BANK"
+        tx_id = post_transaction(db, "payroll_payment", float(rec[1]), "PAYROLL_EXP", credit_acc,
+                                 "employee", rec[0], employee_id=rec[0], note=f"Зарплата #{payroll_id}")
+        
+        db.execute(text("UPDATE hr_payroll SET status = 'paid', paid_at = NOW(), tx_id = :tx_id WHERE id = :id"),
+                  {"tx_id": tx_id, "id": payroll_id})
+        db.commit()
+        return {"success": True, "tx_id": tx_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# DEPOSIT WITH CURRENCY
+# ============================================================
+
+@router.post("/deposits/create")
+async def create_deposit_with_currency(data: DepositCreate, db: Session = Depends(get_rh_db)):
+    """Create deposit with multi-currency support"""
+    occurred_at = datetime.now()
+    
+    # Convert foreign currency to UAH equivalent
+    uah_amount = data.actual_amount
+    if data.currency != "UAH" and data.exchange_rate:
+        uah_amount = data.actual_amount * data.exchange_rate
+    
+    try:
+        # Check if PAYROLL_EXP account exists, create if not
+        acc = db.execute(text("SELECT id FROM fin_accounts WHERE code = 'PAYROLL_EXP'")).fetchone()
+        if not acc:
+            db.execute(text("INSERT INTO fin_accounts (code, name, kind) VALUES ('PAYROLL_EXP', 'Payroll Expenses', 'expense')"))
+            db.commit()
+        
+        # Determine credit account
+        credit_acc = "CASH" if data.method == "cash" else "BANK"
+        
+        # Post ledger transaction
+        tx_id = post_transaction(db, "deposit_payment", uah_amount, credit_acc, "DEP_HOLD",
+                                 "order", data.order_id, order_id=data.order_id,
+                                 note=data.note or f"Застава {data.currency}")
+        
+        # Add currency info to deposit_holds table
+        try:
+            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'UAH'"))
+            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS actual_amount DECIMAL(12,2)"))
+            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(10,4)"))
+            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS expected_amount DECIMAL(12,2)"))
+        except:
+            pass
+        
+        # Check existing deposit for order
+        existing = db.execute(text("SELECT id FROM fin_deposit_holds WHERE order_id = :order_id"), {"order_id": data.order_id}).fetchone()
+        if existing:
+            db.execute(text("""
+                UPDATE fin_deposit_holds 
+                SET held_amount = held_amount + :uah_amount, 
+                    actual_amount = :actual_amount,
+                    currency = :currency,
+                    exchange_rate = :exchange_rate,
+                    expected_amount = :expected_amount
+                WHERE order_id = :order_id
+            """), {"uah_amount": uah_amount, "actual_amount": data.actual_amount, "currency": data.currency,
+                   "exchange_rate": data.exchange_rate, "expected_amount": data.expected_amount, "order_id": data.order_id})
+            deposit_id = existing[0]
+        else:
+            db.execute(text("""
+                INSERT INTO fin_deposit_holds (order_id, held_amount, actual_amount, currency, exchange_rate, expected_amount, opened_at, note)
+                VALUES (:order_id, :uah_amount, :actual_amount, :currency, :exchange_rate, :expected_amount, :occurred_at, :note)
+            """), {"order_id": data.order_id, "uah_amount": uah_amount, "actual_amount": data.actual_amount,
+                   "currency": data.currency, "exchange_rate": data.exchange_rate,
+                   "expected_amount": data.expected_amount, "occurred_at": occurred_at, "note": data.note})
+            deposit_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        
+        # Record deposit event
+        db.execute(text("""
+            INSERT INTO fin_deposit_events (deposit_id, event_type, amount, occurred_at, tx_id, note) 
+            VALUES (:deposit_id, 'received', :amount, :occurred_at, :tx_id, :note)
+        """), {"deposit_id": deposit_id, "amount": uah_amount, "occurred_at": occurred_at, "tx_id": tx_id,
+               "note": f"{data.actual_amount} {data.currency}" if data.currency != "UAH" else None})
+        
+        # Create payment record
+        db.execute(text("""
+            INSERT INTO fin_payments (payment_type, method, amount, currency, order_id, occurred_at, note, tx_id)
+            VALUES ('deposit', :method, :amount, :currency, :order_id, :occurred_at, :note, :tx_id)
+        """), {"method": data.method, "amount": uah_amount, "currency": data.currency,
+               "order_id": data.order_id, "occurred_at": occurred_at, "note": data.note, "tx_id": tx_id})
+        
+        db.commit()
+        return {"success": True, "deposit_id": deposit_id, "tx_id": tx_id, "uah_amount": uah_amount}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+

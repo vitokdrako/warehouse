@@ -1,5 +1,33 @@
 # Test Results
 
+## Test Session: Document Generation System
+
+### Testing Documents API (Backend):
+1. **Invoice Offer (invoice_offer)** - генерація рахунку-оферти для замовлення
+2. **Rental Contract (contract_rent)** - генерація договору оренди
+3. **Issue Act (issue_act)** - акт передачі для картки видачі
+4. **Return Act (return_act)** - акт повернення
+5. **Picking List (picking_list)** - лист комплектації для картки видачі  
+6. **Return Intake Checklist (return_intake_checklist)** - чеклист приймання
+
+### API Endpoints:
+- GET /api/documents/types - список всіх типів документів
+- GET /api/documents/types/{entity_type} - документи для типу сутності (order/issue/return)
+- POST /api/documents/generate?doc_type=X&entity_id=Y - генерація документа
+- GET /api/documents/{doc_id}/preview - HTML превʼю
+- GET /api/documents/{doc_id}/pdf - завантаження PDF
+- GET /api/documents/entity/{entity_type}/{entity_id} - список документів сутності
+
+### Test Data:
+- Order ID: 7121 (для order-based документів)
+- Issue Card ID: IC-7121-20251214125855 (для issue-based документів)
+
+### Test Credentials:
+- email: vitokdrako@gmail.com
+- password: test123
+
+---
+
 ## Test Session: Bug Fix for NewOrderViewWorkspace.jsx
 
 ### Fixed Bugs:

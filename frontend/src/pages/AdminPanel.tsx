@@ -4,7 +4,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL
 
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 
-type Tab = 'users' | 'categories'
+type Tab = 'users' | 'categories' | 'vendors' | 'expense-categories' | 'employees'
 
 interface User {
   user_id: number

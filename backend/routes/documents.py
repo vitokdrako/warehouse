@@ -234,7 +234,7 @@ async def sign_document(
 async def regenerate_document(
     document_id: str,
     options: dict = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
     Перегенеровує документ (створює нову версію).

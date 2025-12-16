@@ -563,9 +563,9 @@ class FinanceCabinetTester:
             self.log(f"❌ Exception verifying Finance Cabinet integration: {str(e)}", "ERROR")
             return {"error": str(e)}
 
-    def run_comprehensive_bug_fix_test(self):
-        """Run the comprehensive bug fix test scenario for NewOrderViewWorkspace"""
-        self.log("🚀 Starting comprehensive NewOrderViewWorkspace bug fix test")
+    def run_comprehensive_finance_test(self):
+        """Run the comprehensive Finance Cabinet integration test"""
+        self.log("🚀 Starting comprehensive Finance Cabinet integration test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -579,67 +579,121 @@ class FinanceCabinetTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test Bug Fix #1 - Wrong Price (rent_price vs price)
-        self.log("\n🔍 Step 2: Testing Bug Fix #1 - Wrong Price...")
-        inventory_result = self.test_inventory_search_rent_price()
-        bug1_success = inventory_result.get("success", False) and inventory_result.get("rent_price_found", False)
+        # Step 3: Test Manager Finance Summary
+        self.log("\n🔍 Step 2: Testing Manager Finance Summary...")
+        manager_result = self.test_manager_finance_summary()
+        manager_success = manager_result.get("success", False)
         
-        # Step 4: Test Bug Fix #3 - 405 Error (POST method)
-        self.log("\n🔍 Step 3: Testing Bug Fix #3 - 405 Error...")
-        availability_result = self.test_check_availability_post_method()
-        bug3_success = availability_result.get("success", False)
+        # Step 4: Test Finance Dashboard
+        self.log("\n🔍 Step 3: Testing Finance Dashboard...")
+        dashboard_result = self.test_finance_dashboard()
+        dashboard_success = dashboard_result.get("success", False)
         
-        # Step 5: Test Order Details (context for Bug Fix #2)
-        self.log("\n🔍 Step 4: Testing Order Details (Quantity Bug context)...")
-        order_result = self.test_order_details_endpoint()
-        order_success = order_result.get("success", False)
+        # Step 5: Test Vendors API
+        self.log("\n🔍 Step 4: Testing Vendors API...")
+        vendors_result = self.test_finance_vendors()
+        vendors_success = vendors_result.get("success", False)
         
-        # Step 6: Comprehensive verification
-        self.log("\n🔍 Step 5: Comprehensive verification...")
-        behavior_results = self.verify_bug_fixes_behavior()
+        # Step 6: Test Employees API
+        self.log("\n🔍 Step 5: Testing Employees API...")
+        employees_result = self.test_finance_employees()
+        employees_success = employees_result.get("success", False)
         
-        # Step 7: Summary
+        # Step 7: Test Payroll API
+        self.log("\n🔍 Step 6: Testing Payroll API...")
+        payroll_result = self.test_finance_payroll()
+        payroll_success = payroll_result.get("success", False)
+        
+        # Step 8: Test Expense Categories API
+        self.log("\n🔍 Step 7: Testing Expense Categories API...")
+        categories_result = self.test_admin_expense_categories()
+        categories_success = categories_result.get("success", False)
+        
+        # Step 9: Test Create Vendor
+        self.log("\n🔍 Step 8: Testing Create Vendor...")
+        create_vendor_result = self.test_create_vendor()
+        create_vendor_success = create_vendor_result.get("success", False)
+        
+        # Step 10: Test Create Employee
+        self.log("\n🔍 Step 9: Testing Create Employee...")
+        create_employee_result = self.test_create_employee()
+        create_employee_success = create_employee_result.get("success", False)
+        
+        # Step 11: Comprehensive verification
+        self.log("\n🔍 Step 10: Comprehensive verification...")
+        behavior_results = self.verify_finance_integration_behavior()
+        
+        # Step 12: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE BUG FIX TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE FINANCE CABINET TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        if bug1_success:
-            self.log(f"   • Bug Fix #1 (Wrong Price): ✅ Working")
-            pricing_data = inventory_result.get("pricing_data", [])
-            for item in pricing_data[:2]:  # Show first 2 items
-                self.log(f"     - {item['name']}: price=₴{item['price']}, rent_price=₴{item['rent_price']}")
+        if manager_success:
+            self.log(f"   • Manager Finance Summary: ✅ Working")
+            manager_data = manager_result.get("data", {})
+            self.log(f"     - Total Revenue: ₴{manager_data.get('total_revenue', 0)}")
+            self.log(f"     - Deposits Held: ₴{manager_data.get('deposits_held', 0)}")
         else:
-            self.log(f"   • Bug Fix #1 (Wrong Price): ❌ Failed")
+            self.log(f"   • Manager Finance Summary: ❌ Failed")
         
-        if bug3_success:
-            self.log(f"   • Bug Fix #3 (405 Error): ✅ Working")
+        if dashboard_success:
+            self.log(f"   • Finance Dashboard: ✅ Working")
+            dashboard_data = dashboard_result.get("data", {})
+            metrics = dashboard_data.get("metrics", {})
+            self.log(f"     - Net Profit: ₴{metrics.get('net_profit', 0)}")
         else:
-            self.log(f"   • Bug Fix #3 (405 Error): ❌ Failed")
+            self.log(f"   • Finance Dashboard: ❌ Failed")
         
-        if order_success:
-            self.log(f"   • Order Details Access: ✅ Working")
-            order_data = order_result.get("data", {})
-            self.log(f"     - Order #{order_data.get('order_number')}: {order_data.get('client_name')}")
-            self.log(f"     - Status: {order_data.get('status')}")
-            self.log(f"     - Items: {len(order_data.get('items', []))}")
+        if vendors_success:
+            self.log(f"   • Vendors API: ✅ Working ({vendors_result.get('count', 0)} vendors)")
         else:
-            self.log(f"   • Order Details Access: ❌ Failed")
+            self.log(f"   • Vendors API: ❌ Failed")
         
-        self.log("\n🎉 BUG FIX TESTING COMPLETED!")
+        if employees_success:
+            self.log(f"   • Employees API: ✅ Working ({employees_result.get('count', 0)} employees)")
+        else:
+            self.log(f"   • Employees API: ❌ Failed")
+        
+        if payroll_success:
+            self.log(f"   • Payroll API: ✅ Working ({payroll_result.get('count', 0)} records)")
+        else:
+            self.log(f"   • Payroll API: ❌ Failed")
+        
+        if categories_success:
+            self.log(f"   • Expense Categories: ✅ Working ({categories_result.get('count', 0)} categories)")
+        else:
+            self.log(f"   • Expense Categories: ❌ Failed")
+        
+        if create_vendor_success:
+            self.log(f"   • Create Vendor: ✅ Working (ID: {create_vendor_result.get('vendor_id')})")
+        else:
+            self.log(f"   • Create Vendor: ❌ Failed")
+        
+        if create_employee_success:
+            self.log(f"   • Create Employee: ✅ Working (ID: {create_employee_result.get('employee_id')})")
+        else:
+            self.log(f"   • Create Employee: ❌ Failed")
+        
+        self.log("\n🎉 FINANCE CABINET TESTING COMPLETED!")
         self.log("   The system correctly provides:")
-        self.log("   • 🔍 Inventory search with rent_price field (GET /api/orders/inventory/search)")
-        self.log("   • ✅ Check availability with POST method (POST /api/orders/check-availability)")
-        self.log("   • 📋 Order details access for quantity testing (GET /api/orders/{id})")
+        self.log("   • 📊 Manager finance summary with real ledger data")
+        self.log("   • 📈 Finance dashboard with metrics and deposits")
+        self.log("   • 👥 Vendors management API")
+        self.log("   • 👨‍💼 Employees management API")
+        self.log("   • 💰 Payroll records API")
+        self.log("   • 📝 Expense categories management")
+        self.log("   • ➕ Create new vendors and employees")
         self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
         
-        # Check if all critical bug fixes work
-        critical_success = bug1_success and bug3_success and order_success
+        # Check if all critical APIs work
+        critical_apis = [manager_success, dashboard_success, vendors_success, employees_success, categories_success]
+        critical_success = all(critical_apis)
         
         if critical_success:
-            self.log("\n✅ ALL CRITICAL BUG FIXES WORKING!")
+            self.log("\n✅ ALL CRITICAL FINANCE CABINET APIS WORKING!")
         else:
-            self.log("\n⚠️ SOME CRITICAL BUG FIXES FAILED - CHECK LOGS ABOVE")
+            self.log("\n⚠️ SOME CRITICAL FINANCE CABINET APIS FAILED - CHECK LOGS ABOVE")
         
         return critical_success
 

@@ -639,6 +639,8 @@ export default function FinanceCabinet() {
   useEffect(() => { 
     if (tab === 'ledger') loadLedger(); 
     if (tab === 'expenses') loadExpenses(); 
+    if (tab === 'payroll') { loadEmployees(); loadPayroll(); }
+    if (tab === 'vendors') loadVendors();
   }, [tab]);
 
   const loadDashboard = async () => {

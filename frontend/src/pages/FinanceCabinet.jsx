@@ -748,8 +748,8 @@ export default function FinanceCabinet() {
       )}
       {tab === 'ledger' && <LedgerTab ledger={ledger} loading={loading.ledger} />}
       {tab === 'expenses' && <ExpensesTab expenses={expenses} categories={categories} loading={loading.expenses} onAdd={() => { loadExpenses(); loadDashboard(); }} />}
-      {tab === 'payroll' && <PayrollTab />}
-      {tab === 'vendors' && <VendorsTab />}
+      {tab === 'payroll' && <PayrollTab employees={employees} payroll={payroll} loading={loading.employees || loading.payroll} onRefresh={refresh} />}
+      {tab === 'vendors' && <VendorsTab vendors={vendors} loading={loading.vendors} onRefresh={refresh} />}
       
       <div className="mx-auto max-w-7xl px-6 pb-10 pt-6 text-xs text-slate-400">Rental Finance Engine v1.0</div>
     </div>

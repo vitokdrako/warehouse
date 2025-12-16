@@ -116,15 +116,18 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
     if not total_deposit:
         total_deposit = order["deposit_amount"]
     
-    # Компанія (з налаштувань або дефолт)
+    # Компанія - FarforDecorOrenda
+    # © FarforDecorOrenda 2025
     company = {
-        "name": "FarforRent",
-        "legal_name": "ФОП Прізвище І.Б.",
-        "address": "м. Київ, вул. Прикладна, 1",
+        "name": "FarforDecorOrenda",
+        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "address": "61082, Харківська обл., місто Харків, ПРОСПЕКТ МОСКОВСЬКИЙ, будинок 216/3А, квартира 46",
+        "warehouse": "Військовий провулок 1",
         "phone": "+380 XX XXX XX XX",
-        "email": "info@farforrent.com",
+        "email": "rfarfordecor@gmail.com.ua",
+        "website": "https://www.farforrent.com.ua",
+        "tax_id": "3234423422",
         "iban": "UA00 0000 0000 0000 0000 0000 00000",
-        "edrpou": "00000000"
     }
     
     return {

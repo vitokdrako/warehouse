@@ -327,7 +327,7 @@
 
 ### ZoneDocuments Component Testing - ✅ COMPLETE SUCCESS
 - **Test Date**: 2025-12-16 09:02:00
-- **Test URL**: https://warehouse-docs.preview.emergentagent.com/order/7121/view
+- **Test URL**: https://finance-hub-360.preview.emergentagent.com/order/7121/view
 - **Test Credentials**: vitokdrako@gmail.com / test123
 - **Order Tested**: Order #OC-7121 (Status: ready_for_issue)
 
@@ -423,7 +423,7 @@
 - **Test Date**: 2025-01-28 10:42:54
 - **Test File**: /app/backend/tests/test_finance.py
 - **Test Credentials**: vitokdrako@gmail.com / test123
-- **API Base URL**: https://warehouse-docs.preview.emergentagent.com/api
+- **API Base URL**: https://finance-hub-360.preview.emergentagent.com/api
 
 ### Core API Functionality - ✅ ALL WORKING (9/9 Tests Passed)
 

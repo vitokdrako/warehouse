@@ -76,7 +76,7 @@ frontend:
     implemented: true
     working: false
     file: "/app/frontend/src/pages/FinanceCabinet.jsx"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: false
     status_history:
@@ -86,6 +86,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ Finance Cabinet UI loads but API integration failing. Frontend shows login page and basic structure, but Finance Cabinet tabs (Огляд, Замовлення, Журнал, Витрати, ЗП, Підрядники) are not visible. Backend APIs working correctly (tested via curl). Issue: Frontend API calls failing with 'net::ERR_ABORTED' - likely authentication/CORS issue preventing data loading."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL AUTHENTICATION ISSUE CONFIRMED: Login works initially and redirects to Manager Dashboard correctly, but accessing Finance Cabinet (/finance) redirects back to login page. Root cause: Frontend API client (/app/frontend/src/api/client.ts) and financeApi service (/app/frontend/src/services/financeApi.js) do NOT include Authorization headers. Backend APIs work perfectly when tested with proper Bearer tokens via curl. SOLUTION NEEDED: Add authentication interceptor to axios client or modify all API calls to include 'Authorization: Bearer {token}' headers."
 
   - task: "Manager Dashboard KPIs"
     implemented: true

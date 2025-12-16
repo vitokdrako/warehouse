@@ -534,17 +534,79 @@ function PayrollTab({ employees, payroll, loading, onRefresh }) {
   );
 }
 
-function VendorsTab() {
+function VendorsTab({ vendors, loading, onRefresh }) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ name: '', vendor_type: 'service', contact_name: '', phone: '', email: '', address: '', iban: '', note: '' });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name) return;
+    await financeApi.createVendor(form);
+    setShowAdd(false);
+    setForm({ name: '', vendor_type: 'service', contact_name: '', phone: '', email: '', address: '', iban: '', note: '' });
+    onRefresh?.();
+  };
+
+  const typeLabels = { service: '🔧 Сервіс', cleaning: '🧹 Хімчистка', repair: '🛠 Ремонт', delivery: '🚚 Доставка', other: '📦 Інше' };
+
   return (
     <div className="mx-auto max-w-7xl px-6 py-6">
       <Card>
-        <CardHd title="Підрядники" subtitle="Хімчистка, реставрація" right={<Btn variant="dark">+ Додати</Btn>} />
+        <CardHd title="🏢 Підрядники" subtitle={`${vendors.length} компаній`} right={<Btn variant="dark" onClick={() => setShowAdd(true)}>+ Додати</Btn>} />
         <CardBd>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-            🚧 Модуль в розробці. Тут буде управління підрядниками та їх рахунками.
-          </div>
+          {loading ? <div className="p-4 text-center text-slate-500">Завантаження...</div> : vendors.length ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {vendors.map(v => (
+                <div key={v.id} className="border rounded-xl p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-semibold">{v.name}</div>
+                      <Pill t="info" className="mt-1">{typeLabels[v.vendor_type] || v.vendor_type}</Pill>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-slate-500">Баланс</div>
+                      <div className={cls('font-semibold', v.balance > 0 ? 'text-rose-600' : 'text-slate-800')}>{money(v.balance)}</div>
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-1 text-sm text-slate-600">
+                    {v.contact_name && <div>👤 {v.contact_name}</div>}
+                    {v.phone && <div>📞 {v.phone}</div>}
+                    {v.email && <div>✉️ {v.email}</div>}
+                    {v.iban && <div className="text-xs font-mono text-slate-400">IBAN: {v.iban}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <div className="p-4 text-center text-slate-400">Немає підрядників</div>}
         </CardBd>
       </Card>
+
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAdd(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full" onClick={e => e.stopPropagation()}>
+            <div className="border-b px-6 py-4 flex justify-between"><h3 className="font-semibold">Додати підрядника</h3><button onClick={() => setShowAdd(false)}>✕</button></div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <input placeholder="Назва компанії" className="w-full rounded-xl border px-3 py-2" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
+              <select className="w-full rounded-xl border px-3 py-2" value={form.vendor_type} onChange={e => setForm({...form, vendor_type: e.target.value})}>
+                <option value="service">🔧 Сервіс</option>
+                <option value="cleaning">🧹 Хімчистка</option>
+                <option value="repair">🛠 Ремонт</option>
+                <option value="delivery">🚚 Доставка</option>
+                <option value="other">📦 Інше</option>
+              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <input placeholder="Контактна особа" className="rounded-xl border px-3 py-2" value={form.contact_name} onChange={e => setForm({...form, contact_name: e.target.value})} />
+                <input placeholder="Телефон" className="rounded-xl border px-3 py-2" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+              </div>
+              <input placeholder="Email" className="w-full rounded-xl border px-3 py-2" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+              <input placeholder="Адреса" className="w-full rounded-xl border px-3 py-2" value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
+              <input placeholder="IBAN" className="w-full rounded-xl border px-3 py-2 font-mono text-sm" value={form.iban} onChange={e => setForm({...form, iban: e.target.value})} />
+              <textarea placeholder="Примітка" className="w-full rounded-xl border px-3 py-2 h-20" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
+              <div className="flex gap-2"><Btn type="button" onClick={() => setShowAdd(false)} className="flex-1">Скасувати</Btn><Btn type="submit" variant="primary" className="flex-1">Зберегти</Btn></div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

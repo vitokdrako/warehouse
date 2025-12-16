@@ -97,7 +97,7 @@ async def generate_document(
 
 
 @router.get("/{document_id}/preview", response_class=HTMLResponse)
-async def preview_document(document_id: str, db: Session = Depends(get_db)):
+async def preview_document(document_id: str, db: Session = Depends(get_rh_db)):
     """Повертає HTML-превʼю документа"""
     
     doc = get_document_by_id(db, document_id)

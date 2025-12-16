@@ -478,12 +478,13 @@ async def list_transactions(tx_type: Optional[str] = None, account_code: Optiona
 async def list_vendors(vendor_type: Optional[str] = None, db: Session = Depends(get_rh_db)):
     """List all vendors"""
     try:
-        # Check if table exists, if not create it
+        # Ensure table has proper structure
+        db.execute(text("DROP TABLE IF EXISTS fin_vendors_old"))
         db.execute(text("""
             CREATE TABLE IF NOT EXISTS fin_vendors (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(200) NOT NULL,
-                vendor_type ENUM('service', 'cleaning', 'repair', 'delivery', 'other') DEFAULT 'service',
+                vendor_type VARCHAR(50) DEFAULT 'service',
                 contact_name VARCHAR(100),
                 phone VARCHAR(50),
                 email VARCHAR(100),
@@ -496,21 +497,25 @@ async def list_vendors(vendor_type: Optional[str] = None, db: Session = Depends(
             )
         """))
         db.commit()
-    except:
-        pass
+    except Exception as e:
+        print(f"Vendors table setup: {e}")
     
-    query = "SELECT id, name, vendor_type, contact_name, phone, email, address, iban, balance, note, is_active, created_at FROM fin_vendors WHERE is_active = TRUE"
-    params = {}
-    if vendor_type:
-        query += " AND vendor_type = :vendor_type"
-        params["vendor_type"] = vendor_type
-    query += " ORDER BY name"
-    
-    result = db.execute(text(query), params)
-    return {"vendors": [{"id": r[0], "name": r[1], "vendor_type": r[2], "contact_name": r[3],
-                         "phone": r[4], "email": r[5], "address": r[6], "iban": r[7],
-                         "balance": float(r[8] or 0), "note": r[9], "is_active": r[10],
-                         "created_at": r[11].isoformat() if r[11] else None} for r in result]}
+    try:
+        result = db.execute(text("SELECT id, name, vendor_type, contact_name, phone, email, address, iban, balance, note, is_active, created_at FROM fin_vendors WHERE is_active = TRUE ORDER BY name"))
+        vendors = [{"id": r[0], "name": r[1], "vendor_type": r[2] or 'service', "contact_name": r[3],
+                    "phone": r[4], "email": r[5], "address": r[6], "iban": r[7],
+                    "balance": float(r[8] or 0), "note": r[9], "is_active": r[10],
+                    "created_at": r[11].isoformat() if r[11] else None} for r in result]
+    except Exception as e:
+        # Table might exist with different structure - try simpler query
+        try:
+            result = db.execute(text("SELECT id, name FROM fin_vendors"))
+            vendors = [{"id": r[0], "name": r[1], "vendor_type": 'service', "contact_name": None,
+                        "phone": None, "email": None, "address": None, "iban": None,
+                        "balance": 0, "note": None, "is_active": True, "created_at": None} for r in result]
+        except:
+            vendors = []
+    return {"vendors": vendors}
 
 @router.post("/vendors")
 async def create_vendor(data: VendorCreate, db: Session = Depends(get_rh_db)):

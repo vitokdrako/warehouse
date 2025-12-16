@@ -82,86 +82,48 @@ class FinanceCabinetTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_inventory_search_rent_price(self) -> Dict[str, Any]:
-        """Test GET /api/orders/inventory/search - should return rent_price field (Bug Fix #1)"""
+    def test_manager_finance_summary(self) -> Dict[str, Any]:
+        """Test GET /api/manager/finance/summary - should return revenue, deposits data from ledger"""
         try:
-            self.log("🧪 Testing inventory search for rent_price field...")
+            self.log("🧪 Testing manager finance summary endpoint...")
             
-            # Search for "ваза" as specified in the review request
-            response = self.session.get(f"{self.base_url}/orders/inventory/search?query=ваза&limit=3")
+            response = self.session.get(f"{self.base_url}/manager/finance/summary")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check if response has products array
-                if not isinstance(data, dict) or 'products' not in data:
-                    self.log(f"❌ Expected dict with 'products' key, got {type(data)}", "ERROR")
-                    return {"success": False, "data": data}
+                # Check required fields
+                required_fields = ['total_revenue', 'deposits_held', 'deposits_count']
+                missing_fields = []
                 
-                products = data['products']
-                if not isinstance(products, list):
-                    self.log(f"❌ Expected products array, got {type(products)}", "ERROR")
-                    return {"success": False, "data": data}
+                for field in required_fields:
+                    if field not in data:
+                        missing_fields.append(field)
                 
-                self.log(f"✅ Retrieved {len(products)} products for 'ваза' search")
+                if missing_fields:
+                    self.log(f"❌ Manager finance summary missing fields: {missing_fields}", "ERROR")
+                    return {"success": False, "error": f"Missing required fields: {missing_fields}"}
                 
-                # Validate that rent_price field exists (Bug Fix #1)
-                rent_price_found = False
-                price_vs_rent_price = []
-                
-                for product in products:
-                    required_fields = ['product_id', 'name', 'price', 'rent_price']
-                    missing_fields = []
-                    
-                    for field in required_fields:
-                        if field not in product:
-                            missing_fields.append(field)
-                    
-                    if missing_fields:
-                        self.log(f"❌ Product {product.get('product_id')} missing fields: {missing_fields}", "ERROR")
-                        return {"success": False, "error": f"Missing required fields: {missing_fields}"}
-                    
-                    # Check rent_price exists and is different from price
-                    rent_price = product.get('rent_price', 0)
-                    price = product.get('price', 0)
-                    
-                    if rent_price > 0:
-                        rent_price_found = True
-                    
-                    price_vs_rent_price.append({
-                        "name": product.get('name'),
-                        "price": price,  # Damage cost
-                        "rent_price": rent_price  # Rental price per day
-                    })
-                    
-                    self.log(f"   - {product.get('name')}: price=₴{price}, rent_price=₴{rent_price}")
-                
-                if not rent_price_found:
-                    self.log("❌ No products with rent_price > 0 found", "ERROR")
-                    return {"success": False, "error": "rent_price field missing or zero"}
-                
-                # Verify rent_price is typically much lower than price (damage cost)
-                valid_pricing = True
-                for item in price_vs_rent_price:
-                    if item['rent_price'] > 0 and item['price'] > 0:
-                        if item['rent_price'] >= item['price']:
-                            self.log(f"⚠️ Suspicious pricing for {item['name']}: rent_price (₴{item['rent_price']}) >= price (₴{item['price']})")
-                            valid_pricing = False
+                # Log the values
+                self.log(f"✅ Manager Finance Summary:")
+                self.log(f"   - Total Revenue: ₴{data.get('total_revenue', 0)}")
+                self.log(f"   - Deposits Held: ₴{data.get('deposits_held', 0)}")
+                self.log(f"   - Deposits Count: {data.get('deposits_count', 0)}")
+                self.log(f"   - Rent Revenue: ₴{data.get('rent_revenue', 0)}")
+                self.log(f"   - Damage Revenue: ₴{data.get('damage_revenue', 0)}")
                 
                 return {
                     "success": True, 
-                    "data": products, 
-                    "count": len(products),
-                    "rent_price_found": rent_price_found,
-                    "pricing_data": price_vs_rent_price,
-                    "valid_pricing": valid_pricing
+                    "data": data,
+                    "has_revenue": data.get('total_revenue', 0) > 0,
+                    "has_deposits": data.get('deposits_held', 0) > 0
                 }
             else:
-                self.log(f"❌ Failed to search inventory: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get manager finance summary: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing inventory search: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing manager finance summary: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_check_availability_post_method(self) -> Dict[str, Any]:

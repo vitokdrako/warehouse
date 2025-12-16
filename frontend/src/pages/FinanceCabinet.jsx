@@ -654,7 +654,18 @@ export default function FinanceCabinet() {
   const loadOrders = async () => {
     setLoading(p => ({ ...p, orders: true }));
     try {
-      // Fetch orders that are not archived and not cancelled
+      // Спочатку спробувати отримати замовлення з фінансовою інформацією
+      const finResponse = await fetch(`${BACKEND_URL}/api/manager/finance/orders-with-finance?limit=100`);
+      if (finResponse.ok) {
+        const data = await finResponse.json();
+        if (data.orders && data.orders.length > 0) {
+          setOrders(data.orders);
+          setLoading(p => ({ ...p, orders: false }));
+          return;
+        }
+      }
+      
+      // Fallback до стандартного orders API
       const response = await fetch(`${BACKEND_URL}/api/orders?limit=100`);
       if (response.ok) {
         const data = await response.json();

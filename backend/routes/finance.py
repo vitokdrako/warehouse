@@ -493,7 +493,7 @@ async def migrate_tables(db: Session = Depends(get_rh_db)):
                 note TEXT,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """))
         results.append("hr_employees: OK")
         

@@ -43,6 +43,44 @@ class ExpenseCreate(BaseModel):
     note: Optional[str] = None
     receipt_file_key: Optional[str] = None
 
+class DepositCreate(BaseModel):
+    order_id: int
+    expected_amount: float
+    actual_amount: float
+    currency: str = "UAH"  # UAH | USD | EUR
+    exchange_rate: Optional[float] = None
+    method: str = "cash"  # cash | card | bank
+    note: Optional[str] = None
+
+class VendorCreate(BaseModel):
+    name: str
+    vendor_type: str = "service"  # service | cleaning | repair | delivery
+    contact_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    iban: Optional[str] = None
+    note: Optional[str] = None
+
+class EmployeeCreate(BaseModel):
+    name: str
+    role: str  # manager | courier | cleaner | assistant
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    base_salary: float = 0
+    hire_date: Optional[str] = None
+    note: Optional[str] = None
+
+class PayrollCreate(BaseModel):
+    employee_id: int
+    period_start: str
+    period_end: str
+    base_amount: float
+    bonus: float = 0
+    deduction: float = 0
+    method: str = "cash"
+    note: Optional[str] = None
+
 
 # ============================================================
 # HELPER: LEDGER POSTING

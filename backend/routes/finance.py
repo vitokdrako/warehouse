@@ -801,27 +801,24 @@ async def pay_payroll(payroll_id: int, db: Session = Depends(get_rh_db)):
 # ============================================================
 
 @router.post("/deposits/create")
-async def create_deposit_with_currency(data: DepositCreate, db: Session = Depends(get_rh_db)):
+async def create_deposit_with_currency(data: DepositCreate):
     """Create deposit with multi-currency support"""
-    occurred_at = datetime.now()
+    from database_rentalhub import RHSessionLocal
     
-    # Convert foreign currency to UAH equivalent
-    uah_amount = data.actual_amount
-    if data.currency != "UAH" and data.exchange_rate:
-        uah_amount = data.actual_amount * data.exchange_rate
-    
+    db = RHSessionLocal()
     try:
-        # Check if PAYROLL_EXP account exists, create if not
-        acc = db.execute(text("SELECT id FROM fin_accounts WHERE code = 'PAYROLL_EXP'")).fetchone()
-        if not acc:
-            db.execute(text("INSERT INTO fin_accounts (code, name, kind) VALUES ('PAYROLL_EXP', 'Payroll Expenses', 'expense')"))
-            db.commit()
+        occurred_at = datetime.now()
         
-        # Determine credit account
-        credit_acc = "CASH" if data.method == "cash" else "BANK"
+        # Convert foreign currency to UAH equivalent
+        uah_amount = data.actual_amount
+        if data.currency != "UAH" and data.exchange_rate:
+            uah_amount = data.actual_amount * data.exchange_rate
         
-        # Post ledger transaction
-        tx_id = post_transaction(db, "deposit_payment", uah_amount, credit_acc, "DEP_HOLD",
+        # Determine debit account (money coming in)
+        debit_acc = "CASH" if data.method == "cash" else "BANK"
+        
+        # Post ledger transaction: Debit Cash/Bank, Credit Deposit Liability
+        tx_id = post_transaction(db, "deposit_payment", uah_amount, debit_acc, "DEP_LIAB",
                                  "order", data.order_id, order_id=data.order_id,
                                  note=data.note or f"Застава {data.currency}")
         

@@ -324,13 +324,11 @@ export default function ReturnOrderWorkspace() {
           hint="Акти повернення та чеклисти"
         />
         
-        {/* Комерційна зведена */}
-        <ZoneCommercialSummary
-          rentAmount={totalRent}
-          depositAmount={totalDeposit}
-          discountPercent={0}
-          rentalDays={1}
-          itemsCount={items.length}
+        {/* Фінансовий статус */}
+        <FinanceStatusCard 
+          orderId={order?.order_id} 
+          expectedDeposit={totalDeposit}
+          expectedRent={totalRent}
         />
         
         {/* Нотатки */}

@@ -572,9 +572,9 @@ class OrderLifecycleTester:
             self.log(f"❌ Exception verifying Order Lifecycle behavior: {str(e)}", "ERROR")
             return {"error": str(e)}
 
-    def run_comprehensive_finance_test(self):
-        """Run the comprehensive Finance Cabinet integration test"""
-        self.log("🚀 Starting comprehensive Finance Cabinet integration test")
+    def run_comprehensive_lifecycle_test(self):
+        """Run the comprehensive Order Lifecycle User Tracking test"""
+        self.log("🚀 Starting comprehensive Order Lifecycle User Tracking test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -588,121 +588,87 @@ class OrderLifecycleTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test Manager Finance Summary
-        self.log("\n🔍 Step 2: Testing Manager Finance Summary...")
-        manager_result = self.test_manager_finance_summary()
-        manager_success = manager_result.get("success", False)
+        # Step 3: Test Order Lifecycle Endpoint
+        self.log(f"\n🔍 Step 2: Testing Order Lifecycle Endpoint (Order {TEST_ORDER_ID})...")
+        lifecycle_result = self.test_order_lifecycle_endpoint()
+        lifecycle_success = lifecycle_result.get("success", False)
         
-        # Step 4: Test Finance Dashboard
-        self.log("\n🔍 Step 3: Testing Finance Dashboard...")
-        dashboard_result = self.test_finance_dashboard()
-        dashboard_success = dashboard_result.get("success", False)
+        # Step 4: Test Order Accept Endpoint
+        self.log(f"\n🔍 Step 3: Testing Order Accept Endpoint (Order {TEST_ORDER_ID})...")
+        accept_result = self.test_order_accept_endpoint()
+        accept_success = accept_result.get("success", False)
         
-        # Step 5: Test Vendors API
-        self.log("\n🔍 Step 4: Testing Vendors API...")
-        vendors_result = self.test_finance_vendors()
-        vendors_success = vendors_result.get("success", False)
+        # Step 5: Test Status Update Endpoint
+        self.log(f"\n🔍 Step 4: Testing Status Update Endpoint (Order {TEST_ORDER_ID})...")
+        status_result = self.test_order_status_update_endpoint()
+        status_success = status_result.get("success", False)
         
-        # Step 6: Test Employees API
-        self.log("\n🔍 Step 5: Testing Employees API...")
-        employees_result = self.test_finance_employees()
-        employees_success = employees_result.get("success", False)
+        # Step 6: Test Move to Preparation Endpoint
+        self.log(f"\n🔍 Step 5: Testing Move to Preparation Endpoint (Order {TEST_ORDER_ID})...")
+        prep_result = self.test_move_to_preparation_endpoint()
+        prep_success = prep_result.get("success", False)
         
-        # Step 7: Test Payroll API
-        self.log("\n🔍 Step 6: Testing Payroll API...")
-        payroll_result = self.test_finance_payroll()
-        payroll_success = payroll_result.get("success", False)
+        # Step 7: Comprehensive verification
+        self.log("\n🔍 Step 6: Comprehensive verification...")
+        behavior_results = self.verify_order_lifecycle_behavior()
         
-        # Step 8: Test Expense Categories API
-        self.log("\n🔍 Step 7: Testing Expense Categories API...")
-        categories_result = self.test_admin_expense_categories()
-        categories_success = categories_result.get("success", False)
-        
-        # Step 9: Test Create Vendor
-        self.log("\n🔍 Step 8: Testing Create Vendor...")
-        create_vendor_result = self.test_create_vendor()
-        create_vendor_success = create_vendor_result.get("success", False)
-        
-        # Step 10: Test Create Employee
-        self.log("\n🔍 Step 9: Testing Create Employee...")
-        create_employee_result = self.test_create_employee()
-        create_employee_success = create_employee_result.get("success", False)
-        
-        # Step 11: Comprehensive verification
-        self.log("\n🔍 Step 10: Comprehensive verification...")
-        behavior_results = self.verify_finance_integration_behavior()
-        
-        # Step 12: Summary
+        # Step 8: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE FINANCE CABINET TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE ORDER LIFECYCLE USER TRACKING TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        if manager_success:
-            self.log(f"   • Manager Finance Summary: ✅ Working")
-            manager_data = manager_result.get("data", {})
-            self.log(f"     - Total Revenue: ₴{manager_data.get('total_revenue', 0)}")
-            self.log(f"     - Deposits Held: ₴{manager_data.get('deposits_held', 0)}")
+        if lifecycle_success:
+            self.log(f"   • Order Lifecycle Endpoint: ✅ Working")
+            lifecycle_data = lifecycle_result.get("data", [])
+            user_tracked = lifecycle_result.get("user_tracked_events", 0)
+            old_events = lifecycle_result.get("old_events", 0)
+            self.log(f"     - Total Events: {len(lifecycle_data)}")
+            self.log(f"     - Events with User Info: {user_tracked}")
+            self.log(f"     - Old Events (no user info): {old_events}")
         else:
-            self.log(f"   • Manager Finance Summary: ❌ Failed")
+            self.log(f"   • Order Lifecycle Endpoint: ❌ Failed")
         
-        if dashboard_success:
-            self.log(f"   • Finance Dashboard: ✅ Working")
-            dashboard_data = dashboard_result.get("data", {})
-            metrics = dashboard_data.get("metrics", {})
-            self.log(f"     - Net Profit: ₴{metrics.get('net_profit', 0)}")
+        if accept_success:
+            if accept_result.get("skipped"):
+                self.log(f"   • Order Accept Endpoint: ⚠️ Skipped ({accept_result.get('reason')})")
+            else:
+                self.log(f"   • Order Accept Endpoint: ✅ Working")
         else:
-            self.log(f"   • Finance Dashboard: ❌ Failed")
+            self.log(f"   • Order Accept Endpoint: ❌ Failed")
         
-        if vendors_success:
-            self.log(f"   • Vendors API: ✅ Working ({vendors_result.get('count', 0)} vendors)")
+        if status_success:
+            self.log(f"   • Status Update Endpoint: ✅ Working")
+            if status_result.get("old_status") and status_result.get("new_status"):
+                self.log(f"     - Status changed: {status_result.get('old_status')} → {status_result.get('new_status')}")
         else:
-            self.log(f"   • Vendors API: ❌ Failed")
+            self.log(f"   • Status Update Endpoint: ❌ Failed")
         
-        if employees_success:
-            self.log(f"   • Employees API: ✅ Working ({employees_result.get('count', 0)} employees)")
+        if prep_success:
+            if prep_result.get("skipped"):
+                self.log(f"   • Move to Preparation Endpoint: ⚠️ Skipped ({prep_result.get('reason')})")
+            else:
+                self.log(f"   • Move to Preparation Endpoint: ✅ Working")
         else:
-            self.log(f"   • Employees API: ❌ Failed")
+            self.log(f"   • Move to Preparation Endpoint: ❌ Failed")
         
-        if payroll_success:
-            self.log(f"   • Payroll API: ✅ Working ({payroll_result.get('count', 0)} records)")
-        else:
-            self.log(f"   • Payroll API: ❌ Failed")
-        
-        if categories_success:
-            self.log(f"   • Expense Categories: ✅ Working ({categories_result.get('count', 0)} categories)")
-        else:
-            self.log(f"   • Expense Categories: ❌ Failed")
-        
-        if create_vendor_success:
-            self.log(f"   • Create Vendor: ✅ Working (ID: {create_vendor_result.get('vendor_id')})")
-        else:
-            self.log(f"   • Create Vendor: ❌ Failed")
-        
-        if create_employee_success:
-            self.log(f"   • Create Employee: ✅ Working (ID: {create_employee_result.get('employee_id')})")
-        else:
-            self.log(f"   • Create Employee: ❌ Failed")
-        
-        self.log("\n🎉 FINANCE CABINET TESTING COMPLETED!")
+        self.log("\n🎉 ORDER LIFECYCLE USER TRACKING TESTING COMPLETED!")
         self.log("   The system correctly provides:")
-        self.log("   • 📊 Manager finance summary with real ledger data")
-        self.log("   • 📈 Finance dashboard with metrics and deposits")
-        self.log("   • 👥 Vendors management API")
-        self.log("   • 👨‍💼 Employees management API")
-        self.log("   • 💰 Payroll records API")
-        self.log("   • 📝 Expense categories management")
-        self.log("   • ➕ Create new vendors and employees")
+        self.log("   • 📋 Order lifecycle events with user tracking")
+        self.log("   • 👤 User information (created_by_id, created_by_name) in new events")
+        self.log("   • 🔄 Status transitions with user tracking")
+        self.log("   • ✅ Order acceptance with user tracking")
+        self.log("   • 🔧 Move to preparation with user tracking")
         self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
         
-        # Check if all critical APIs work
-        critical_apis = [manager_success, dashboard_success, vendors_success, employees_success, categories_success]
+        # Check if critical functionality works
+        critical_apis = [lifecycle_success, (accept_success or accept_result.get("skipped")), status_success]
         critical_success = all(critical_apis)
         
         if critical_success:
-            self.log("\n✅ ALL CRITICAL FINANCE CABINET APIS WORKING!")
+            self.log("\n✅ ALL CRITICAL ORDER LIFECYCLE APIS WORKING!")
         else:
-            self.log("\n⚠️ SOME CRITICAL FINANCE CABINET APIS FAILED - CHECK LOGS ABOVE")
+            self.log("\n⚠️ SOME CRITICAL ORDER LIFECYCLE APIS FAILED - CHECK LOGS ABOVE")
         
         return critical_success
 

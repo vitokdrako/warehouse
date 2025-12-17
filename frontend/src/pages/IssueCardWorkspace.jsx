@@ -483,13 +483,6 @@ setTimeout(()=>window.print(),500);
           hint="Генерація та завантаження документів"
         />
         
-        {/* Фінансовий статус */}
-        <FinanceStatusCard 
-          orderId={order?.order_id} 
-          expectedDeposit={totalDeposit}
-          expectedRent={totalRent}
-        />
-        
         {/* Нотатки */}
         <ZoneNotes
           notes={notes}

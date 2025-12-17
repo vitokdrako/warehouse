@@ -323,7 +323,8 @@ function OrdersTab({ orders, deposits, expandedId, setExpandedId, onUpdate, filt
                 return (
                   <div key={o.order_id || o.id}>
                     <OrderRow 
-                      order={o} 
+                      order={o}
+                      deposit={deposit}
                       isOpen={expandedId === (o.order_id || o.id)} 
                       onToggle={() => setExpandedId(expandedId === (o.order_id || o.id) ? null : (o.order_id || o.id))} 
                     />

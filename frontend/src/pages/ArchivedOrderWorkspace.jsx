@@ -211,13 +211,9 @@ export default function ArchivedOrderWorkspace() {
             tier="regular"
           />
           <LeftRailFinance
+            orderId={order?.order_id}
             rentAmount={totalRent}
             depositAmount={totalDeposit}
-            discount={discount}
-            isPaid={true}
-            showGate={true}
-            gateMessage={statusLabel}
-            gateTone="neutral"
           />
           <LeftRailTimeline events={timelineEvents} />
         </>

@@ -255,6 +255,7 @@ function transformOrderForPanel(order, payments = [], deposit = null) {
       label: p.note || p.payment_type,
       debit: p.amount,
       credit: p.amount,
+      accepted_by: p.accepted_by_name || null,  // Хто прийняв оплату
     })),
   };
 }

@@ -324,13 +324,6 @@ export default function ReturnOrderWorkspace() {
           hint="Акти повернення та чеклисти"
         />
         
-        {/* Фінансовий статус */}
-        <FinanceStatusCard 
-          orderId={order?.order_id} 
-          expectedDeposit={totalDeposit}
-          expectedRent={totalRent}
-        />
-        
         {/* Нотатки */}
         <ZoneNotes
           notes={notes}

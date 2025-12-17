@@ -20,10 +20,10 @@ import {
   ZoneClientForm,
   ZonePlanDates,
   ZoneItemsEditor,
-  ZoneCommercialSummary,
   ZoneDeliverySetup,
   ZoneNotes,
 } from '../components/order-workspace/zones'
+import FinanceStatusCard from '../components/FinanceStatusCard'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

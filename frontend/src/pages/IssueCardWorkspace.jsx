@@ -24,7 +24,7 @@ import {
   ZoneNotes,
   ZoneRequisitors,
 } from '../components/order-workspace/zones'
-import FinanceStatusCard from '../components/FinanceStatusCard'
+// FinanceStatusCard тепер тільки в LeftRailFinance
 
 import DamageModal from '../components/DamageModal'
 

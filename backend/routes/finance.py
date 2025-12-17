@@ -881,11 +881,12 @@ async def create_deposit_with_currency(data: DepositCreate):
         cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", ("DEP_LIAB",))
         credit_acc_id = cursor.fetchone()['id']
         
-        # Create transaction
+        # Create transaction with user info
         cursor.execute("""
-            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, ("deposit_payment", uah_amount, occurred_at, "order", data.order_id, data.note or f"Застава {data.currency}"))
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note, accepted_by_id, accepted_by_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, ("deposit_payment", uah_amount, occurred_at, "order", data.order_id, data.note or f"Застава {data.currency}",
+              data.accepted_by_id, data.accepted_by_name))
         tx_id = cursor.lastrowid
         
         # Create ledger entries

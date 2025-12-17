@@ -919,11 +919,12 @@ async def create_deposit_with_currency(data: DepositCreate):
             VALUES (%s, 'received', %s, %s, %s, %s)
         """, (deposit_id, uah_amount, occurred_at, tx_id, f"{data.actual_amount} {data.currency}" if data.currency != "UAH" else None))
         
-        # Create payment record
+        # Create payment record with user info
         cursor.execute("""
-            INSERT INTO fin_payments (payment_type, method, amount, currency, order_id, occurred_at, note, tx_id)
-            VALUES ('deposit', %s, %s, %s, %s, %s, %s, %s)
-        """, (data.method, uah_amount, data.currency, data.order_id, occurred_at, data.note, tx_id))
+            INSERT INTO fin_payments (payment_type, method, amount, currency, order_id, occurred_at, note, tx_id, accepted_by_id, accepted_by_name)
+            VALUES ('deposit', %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (data.method, uah_amount, data.currency, data.order_id, occurred_at, data.note, tx_id, 
+              data.accepted_by_id, data.accepted_by_name))
         
         conn.commit()
         return {"success": True, "deposit_id": deposit_id, "tx_id": tx_id, "uah_amount": uah_amount}

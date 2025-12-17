@@ -212,7 +212,13 @@ export default function OrderFinancePanel({ order, onUpdate }) {
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-xs text-slate-500">
-                  <tr><th className="px-4 py-3 text-left">Дата</th><th className="px-4 py-3 text-left">Тип</th><th className="px-4 py-3 text-left">Назва</th><th className="px-4 py-3 text-right">Сума</th></tr>
+                  <tr>
+                    <th className="px-4 py-3 text-left">Дата</th>
+                    <th className="px-4 py-3 text-left">Тип</th>
+                    <th className="px-4 py-3 text-left">Назва</th>
+                    <th className="px-4 py-3 text-right">Сума</th>
+                    <th className="px-4 py-3 text-left">Прийняв</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {order.timeline.map((r, idx) => (
@@ -221,9 +227,10 @@ export default function OrderFinancePanel({ order, onUpdate }) {
                       <td className="px-4 py-3"><Pill t="neutral">{r.type}</Pill></td>
                       <td className="px-4 py-3">{r.label}</td>
                       <td className="px-4 py-3 text-right">{money(r.debit || r.credit)}</td>
+                      <td className="px-4 py-3 text-slate-600">{r.accepted_by || '—'}</td>
                     </tr>
                   ))}
-                  {!order.timeline.length && <tr><td colSpan={4} className="px-4 py-6 text-center text-slate-500">Немає записів</td></tr>}
+                  {!order.timeline.length && <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-500">Немає записів</td></tr>}
                 </tbody>
               </table>
             </div>

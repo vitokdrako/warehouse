@@ -1010,11 +1010,16 @@ async def delete_order(
         WHERE order_id = :id
     """), {"id": order_id, "updated_by_id": current_user["id"]})
     
-    # Log
+    # Log з інформацією про користувача
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'deleted', 'Order deleted', :created_by, NOW())
-    """), {"order_id": order_id, "created_by": current_user["name"]})
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, 'deleted', 'Order deleted', :created_by, :created_by_id, :created_by_name, NOW())
+    """), {
+        "order_id": order_id,
+        "created_by": current_user.get("name", "System"),
+        "created_by_id": current_user.get("id"),
+        "created_by_name": current_user.get("name")
+    })
     
     db.commit()
     
@@ -1024,6 +1029,7 @@ async def delete_order(
 async def decline_order(
     order_id: int,
     data: dict,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -1043,13 +1049,16 @@ async def decline_order(
         "reason": reason
     })
     
-    # Log lifecycle
+    # Log lifecycle з інформацією про користувача
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'declined', :notes, NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, 'declined', :notes, :created_by, :created_by_id, :created_by_name, NOW())
     """), {
         "order_id": order_id,
-        "notes": f"Order declined: {reason}"
+        "notes": f"Order declined: {reason}",
+        "created_by": current_user.get("name", "System"),
+        "created_by_id": current_user.get("id"),
+        "created_by_name": current_user.get("name")
     })
     
     db.commit()
@@ -1277,11 +1286,11 @@ async def archive_all_cancelled_orders(
         WHERE status = 'cancelled' AND is_archived = 0
     """))
     
-    # Залогувати для кожного
+    # Залогувати для кожного (системна дія, тому created_by = 'System')
     for order_id, order_number in cancelled_orders:
         db.execute(text("""
-            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-            VALUES (:order_id, 'auto_archived', 'Автоматично архівовано (cancelled)', 'System', NOW())
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+            VALUES (:order_id, 'auto_archived', 'Автоматично архівовано (cancelled)', 'System', NULL, 'System', NOW())
         """), {"order_id": order_id})
     
     db.commit()

@@ -900,13 +900,13 @@ async def create_deposit_with_currency(data: DepositCreate):
             VALUES ('deposit', %s, %s, %s, %s, %s, %s, %s)
         """, (data.method, uah_amount, data.currency, data.order_id, occurred_at, data.note, tx_id))
         
-        db.commit()
+        conn.commit()
         return {"success": True, "deposit_id": deposit_id, "tx_id": tx_id, "uah_amount": uah_amount}
     except Exception as e:
-        db.rollback()
+        conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        db.close()
+        conn.close()
 
 
 

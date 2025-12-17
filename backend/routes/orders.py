@@ -679,6 +679,7 @@ async def update_order_from_calendar(
 async def update_order_status(
     order_id: int,
     data: dict,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -716,14 +717,17 @@ async def update_order_status(
         WHERE order_id = :order_id
     """), {"status": new_status, "order_id": order_id})
     
-    # Log to lifecycle
+    # Log to lifecycle з інформацією про користувача
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, :stage, :notes, NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, :stage, :notes, :created_by, :created_by_id, :created_by_name, NOW())
     """), {
         "order_id": order_id,
         "stage": new_status,
-        "notes": f"Status changed from {current_status} to {new_status}"
+        "notes": f"Status changed from {current_status} to {new_status}",
+        "created_by": current_user.get("name", "System"),
+        "created_by_id": current_user.get("id"),
+        "created_by_name": current_user.get("name")
     })
     
     db.commit()
@@ -805,11 +809,16 @@ async def create_order(
             "total": item.get('total_rental', 0)
         })
     
-    # Log lifecycle
+    # Log lifecycle з інформацією про користувача
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_at)
-        VALUES (:order_id, 'created', 'Order created', NOW())
-    """), {"order_id": order_id})
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, 'created', 'Order created', :created_by, :created_by_id, :created_by_name, NOW())
+    """), {
+        "order_id": order_id,
+        "created_by": current_user.get("name", "System"),
+        "created_by_id": current_user.get("id"),
+        "created_by_name": current_user.get("name")
+    })
     
     db.commit()
     
@@ -888,14 +897,16 @@ async def accept_order(
         "created_by_id": current_user["id"]
     })
     
-    # Log lifecycle
+    # Log lifecycle з інформацією про користувача
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'accepted', :notes, :created_by, NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, 'accepted', :notes, :created_by, :created_by_id, :created_by_name, NOW())
     """), {
         "order_id": order_id,
         "notes": f"Замовлення прийнято",
-        "created_by": current_user["name"]
+        "created_by": current_user.get("name", "System"),
+        "created_by_id": current_user.get("id"),
+        "created_by_name": current_user.get("name")
     })
     
     # Створити фінансові транзакції автоматично

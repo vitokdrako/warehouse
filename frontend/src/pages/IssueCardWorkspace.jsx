@@ -417,7 +417,7 @@ setTimeout(()=>window.print(),500);
               rentAmount={totalRent}
               depositAmount={totalDeposit}
             />
-            <LeftRailTimeline events={timeline} />
+            <LeftRailTimeline orderId={order?.order_id} events={timeline} />
           </>
         }
         

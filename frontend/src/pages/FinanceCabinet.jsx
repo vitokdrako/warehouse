@@ -276,10 +276,30 @@ function OverviewTab({ dashboard, isMock, depositsCount }) {
 
 function OrdersTab({ orders, deposits, expandedId, setExpandedId, onUpdate, filter, setFilter, loading }) {
   const [orderPayments, setOrderPayments] = useState({});
+  const [allPaymentsLoaded, setAllPaymentsLoaded] = useState(false);
   
-  // Fetch payments when order is expanded
+  // Завантажити ВСІ платежі для коректного відображення флажків
   useEffect(() => {
-    if (expandedId && !orderPayments[expandedId]) {
+    if (orders.length > 0 && !allPaymentsLoaded) {
+      financeApi.getPayments({ limit: 500 }).then(r => {
+        const payments = r.data?.payments || [];
+        // Групуємо платежі по order_id
+        const grouped = {};
+        payments.forEach(p => {
+          if (p.order_id) {
+            if (!grouped[p.order_id]) grouped[p.order_id] = [];
+            grouped[p.order_id].push(p);
+          }
+        });
+        setOrderPayments(grouped);
+        setAllPaymentsLoaded(true);
+      });
+    }
+  }, [orders, allPaymentsLoaded]);
+  
+  // Fetch payments when order is expanded (для оновлення)
+  useEffect(() => {
+    if (expandedId) {
       financeApi.getPayments({ order_id: expandedId }).then(r => {
         setOrderPayments(prev => ({ ...prev, [expandedId]: r.data?.payments || [] }));
       });

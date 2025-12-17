@@ -285,10 +285,9 @@ async def create_payment(data: PaymentCreate):
         }
         if data.payment_type not in mapping:
             raise HTTPException(status_code=400, detail=f"Invalid payment_type: {data.payment_type}")
-    
-    debit_acc, credit_acc = mapping[data.payment_type]
-    
-    try:
+        
+        debit_acc, credit_acc = mapping[data.payment_type]
+        
         tx_id = post_transaction(db, f"{data.payment_type}_payment", data.amount, debit_acc, credit_acc,
                                  "order" if data.order_id else None, data.order_id or data.damage_case_id,
                                  order_id=data.order_id, damage_case_id=data.damage_case_id, note=data.note, occurred_at=occurred_at)

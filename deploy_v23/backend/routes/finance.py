@@ -33,6 +33,8 @@ class PaymentCreate(BaseModel):
     payer_contact: Optional[str] = None
     occurred_at: Optional[str] = None
     note: Optional[str] = None
+    accepted_by_id: Optional[int] = None  # ID користувача який прийняв
+    accepted_by_name: Optional[str] = None  # Ім'я користувача
 
 class ExpenseCreate(BaseModel):
     expense_type: str = "expense"  # expense | investment
@@ -54,6 +56,8 @@ class DepositCreate(BaseModel):
     exchange_rate: Optional[float] = None
     method: str = "cash"  # cash | card | bank
     note: Optional[str] = None
+    accepted_by_id: Optional[int] = None
+    accepted_by_name: Optional[str] = None
 
 class VendorCreate(BaseModel):
     name: str
@@ -258,7 +262,9 @@ async def get_dashboard(period: str = "month", db: Session = Depends(get_rh_db))
 @router.get("/payments")
 async def list_payments(payment_type: Optional[str] = None, order_id: Optional[int] = None,
                         limit: int = 50, offset: int = 0, db: Session = Depends(get_rh_db)):
-    query = "SELECT id, payment_type, method, amount, currency, payer_name, occurred_at, order_id, damage_case_id, status, note FROM fin_payments WHERE 1=1"
+    query = """SELECT id, payment_type, method, amount, currency, payer_name, occurred_at, 
+               order_id, damage_case_id, status, note, accepted_by_id, accepted_by_name 
+               FROM fin_payments WHERE 1=1"""
     params = {"limit": limit, "offset": offset}
     if payment_type: query += " AND payment_type = :payment_type"; params["payment_type"] = payment_type
     if order_id: query += " AND order_id = :order_id"; params["order_id"] = order_id
@@ -266,7 +272,8 @@ async def list_payments(payment_type: Optional[str] = None, order_id: Optional[i
     result = db.execute(text(query), params)
     return {"payments": [{"id": r[0], "payment_type": r[1], "method": r[2], "amount": float(r[3]),
                           "currency": r[4], "payer_name": r[5], "occurred_at": r[6].isoformat() if r[6] else None,
-                          "order_id": r[7], "damage_case_id": r[8], "status": r[9], "note": r[10]} for r in result]}
+                          "order_id": r[7], "damage_case_id": r[8], "status": r[9], "note": r[10],
+                          "accepted_by_id": r[11], "accepted_by_name": r[12]} for r in result]}
 
 @router.post("/payments")
 async def create_payment(data: PaymentCreate):
@@ -308,12 +315,13 @@ async def create_payment(data: PaymentCreate):
         cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (credit_acc,))
         credit_acc_id = cursor.fetchone()['id']
         
-        # Create transaction
+        # Create transaction with user info
         cursor.execute("""
-            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note, accepted_by_id, accepted_by_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (f"{data.payment_type}_payment", data.amount, occurred_at, 
-              "order" if data.order_id else None, data.order_id or data.damage_case_id, data.note))
+              "order" if data.order_id else None, data.order_id or data.damage_case_id, data.note,
+              data.accepted_by_id, data.accepted_by_name))
         tx_id = cursor.lastrowid
         
         # Create ledger entries (double-entry)
@@ -327,12 +335,12 @@ async def create_payment(data: PaymentCreate):
             VALUES (%s, %s, 'C', %s, %s)
         """, (tx_id, credit_acc_id, data.amount, data.order_id))
         
-        # Create payment record
+        # Create payment record with user info
         cursor.execute("""
-            INSERT INTO fin_payments (payment_type, method, amount, payer_name, occurred_at, order_id, damage_case_id, tx_id, note)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO fin_payments (payment_type, method, amount, payer_name, occurred_at, order_id, damage_case_id, tx_id, note, accepted_by_id, accepted_by_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (data.payment_type, data.method, data.amount, data.payer_name, occurred_at,
-              data.order_id, data.damage_case_id, tx_id, data.note))
+              data.order_id, data.damage_case_id, tx_id, data.note, data.accepted_by_id, data.accepted_by_name))
         payment_id = cursor.lastrowid
         
         conn.commit()
@@ -873,11 +881,12 @@ async def create_deposit_with_currency(data: DepositCreate):
         cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", ("DEP_LIAB",))
         credit_acc_id = cursor.fetchone()['id']
         
-        # Create transaction
+        # Create transaction with user info
         cursor.execute("""
-            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, ("deposit_payment", uah_amount, occurred_at, "order", data.order_id, data.note or f"Застава {data.currency}"))
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note, accepted_by_id, accepted_by_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        """, ("deposit_payment", uah_amount, occurred_at, "order", data.order_id, data.note or f"Застава {data.currency}",
+              data.accepted_by_id, data.accepted_by_name))
         tx_id = cursor.lastrowid
         
         # Create ledger entries
@@ -910,11 +919,12 @@ async def create_deposit_with_currency(data: DepositCreate):
             VALUES (%s, 'received', %s, %s, %s, %s)
         """, (deposit_id, uah_amount, occurred_at, tx_id, f"{data.actual_amount} {data.currency}" if data.currency != "UAH" else None))
         
-        # Create payment record
+        # Create payment record with user info
         cursor.execute("""
-            INSERT INTO fin_payments (payment_type, method, amount, currency, order_id, occurred_at, note, tx_id)
-            VALUES ('deposit', %s, %s, %s, %s, %s, %s, %s)
-        """, (data.method, uah_amount, data.currency, data.order_id, occurred_at, data.note, tx_id))
+            INSERT INTO fin_payments (payment_type, method, amount, currency, order_id, occurred_at, note, tx_id, accepted_by_id, accepted_by_name)
+            VALUES ('deposit', %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (data.method, uah_amount, data.currency, data.order_id, occurred_at, data.note, tx_id, 
+              data.accepted_by_id, data.accepted_by_name))
         
         conn.commit()
         return {"success": True, "deposit_id": deposit_id, "tx_id": tx_id, "uah_amount": uah_amount}

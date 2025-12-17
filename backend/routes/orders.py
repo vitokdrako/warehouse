@@ -1787,13 +1787,17 @@ async def move_to_preparation(
                 })
         
         # Log lifecycle з інформацією про менеджера
+        user_name = data.user_name if data and data.user_name else "Менеджер"
+        user_id = data.user_id if data and data.user_id else None
         db.execute(text("""
-            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-            VALUES (:order_id, 'preparation', :notes, :created_by, NOW())
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+            VALUES (:order_id, 'preparation', :notes, :created_by, :created_by_id, :created_by_name, NOW())
         """), {
             "order_id": order_id,
             "notes": "Відправлено на збір (комплектація)",
-            "created_by": "Manager"  # TODO: передавати з frontend
+            "created_by": user_name,
+            "created_by_id": user_id,
+            "created_by_name": user_name
         })
         
         db.commit()

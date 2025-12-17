@@ -56,6 +56,8 @@ class DepositCreate(BaseModel):
     exchange_rate: Optional[float] = None
     method: str = "cash"  # cash | card | bank
     note: Optional[str] = None
+    accepted_by_id: Optional[int] = None
+    accepted_by_name: Optional[str] = None
 
 class VendorCreate(BaseModel):
     name: str

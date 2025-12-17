@@ -364,7 +364,7 @@ async def get_order_lifecycle(
     ✅ Для відображення таймлайну з інформацією про менеджерів
     """
     lifecycle_result = db.execute(text("""
-        SELECT stage, notes, created_at, created_by
+        SELECT stage, notes, created_at, created_by, created_by_id, created_by_name
         FROM order_lifecycle 
         WHERE order_id = :order_id 
         ORDER BY created_at ASC
@@ -372,11 +372,15 @@ async def get_order_lifecycle(
     
     lifecycle = []
     for l_row in lifecycle_result:
+        # Пріоритет: created_by_name > created_by
+        user_name = l_row[5] if len(l_row) > 5 and l_row[5] else (l_row[3] if len(l_row) > 3 else None)
         lifecycle.append({
             "stage": l_row[0],
             "notes": l_row[1],
             "created_at": l_row[2].isoformat() if l_row[2] else None,
-            "created_by": l_row[3] if len(l_row) > 3 else None
+            "created_by": user_name,
+            "created_by_id": l_row[4] if len(l_row) > 4 else None,
+            "created_by_name": l_row[5] if len(l_row) > 5 else None
         })
     
     return lifecycle

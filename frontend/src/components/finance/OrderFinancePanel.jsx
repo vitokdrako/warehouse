@@ -51,8 +51,12 @@ export default function OrderFinancePanel({ order, onUpdate }) {
     // Отримуємо інформацію про поточного користувача
     const userStr = localStorage.getItem('user');
     const user = userStr ? JSON.parse(userStr) : null;
-    const acceptedById = user?.id || user?.user_id || null;
-    const acceptedByName = user?.username || user?.firstname || user?.name || 'Невідомий';
+    const acceptedById = user?.user_id || null;
+    // Формуємо ім'я: firstname + lastname або username
+    const acceptedByName = user ? 
+      (user.firstname && user.lastname ? `${user.firstname} ${user.lastname}` : 
+       user.firstname || user.username || 'Невідомий') 
+      : null;
     
     try {
       if (type === 'deposit') {

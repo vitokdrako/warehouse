@@ -1602,9 +1602,14 @@ async def confirm_order_by_client(
         )
 
 
+class MoveToPreparationRequest(BaseModel):
+    user_id: Optional[int] = None
+    user_name: Optional[str] = None
+
 @decor_router.post("/{order_id}/move-to-preparation")
 async def move_to_preparation(
     order_id: int,
+    data: Optional[MoveToPreparationRequest] = None,
     db: Session = Depends(get_rh_db)
 ):
     """

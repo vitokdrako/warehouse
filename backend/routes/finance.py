@@ -89,13 +89,21 @@ class PayrollCreate(BaseModel):
 # HELPER: LEDGER POSTING
 # ============================================================
 
-def get_account_id(db: Session, code: str) -> int:
-    """Get account ID by code"""
-    result = db.execute(text("SELECT id FROM fin_accounts WHERE code = :code"), {"code": code})
-    row = result.fetchone()
-    if not row:
-        raise ValueError(f"Account not found: {code}")
-    return row[0]
+def get_account_id(db: Session, code: str, retry: int = 3) -> int:
+    """Get account ID by code with retry for connection issues"""
+    for attempt in range(retry):
+        try:
+            result = db.execute(text("SELECT id FROM fin_accounts WHERE code = :code"), {"code": code})
+            row = result.fetchone()
+            if not row:
+                raise ValueError(f"Account not found: {code}")
+            return row[0]
+        except Exception as e:
+            if attempt < retry - 1 and "Lost connection" in str(e):
+                import time
+                time.sleep(0.5)
+                continue
+            raise
 
 def post_transaction(
     db: Session,

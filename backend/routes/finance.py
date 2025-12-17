@@ -310,12 +310,13 @@ async def create_payment(data: PaymentCreate):
         cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (credit_acc,))
         credit_acc_id = cursor.fetchone()['id']
         
-        # Create transaction
+        # Create transaction with user info
         cursor.execute("""
-            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note, accepted_by_id, accepted_by_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (f"{data.payment_type}_payment", data.amount, occurred_at, 
-              "order" if data.order_id else None, data.order_id or data.damage_case_id, data.note))
+              "order" if data.order_id else None, data.order_id or data.damage_case_id, data.note,
+              data.accepted_by_id, data.accepted_by_name))
         tx_id = cursor.lastrowid
         
         # Create ledger entries (double-entry)
@@ -329,12 +330,12 @@ async def create_payment(data: PaymentCreate):
             VALUES (%s, %s, 'C', %s, %s)
         """, (tx_id, credit_acc_id, data.amount, data.order_id))
         
-        # Create payment record
+        # Create payment record with user info
         cursor.execute("""
-            INSERT INTO fin_payments (payment_type, method, amount, payer_name, occurred_at, order_id, damage_case_id, tx_id, note)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO fin_payments (payment_type, method, amount, payer_name, occurred_at, order_id, damage_case_id, tx_id, note, accepted_by_id, accepted_by_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (data.payment_type, data.method, data.amount, data.payer_name, occurred_at,
-              data.order_id, data.damage_case_id, tx_id, data.note))
+              data.order_id, data.damage_case_id, tx_id, data.note, data.accepted_by_id, data.accepted_by_name))
         payment_id = cursor.lastrowid
         
         conn.commit()

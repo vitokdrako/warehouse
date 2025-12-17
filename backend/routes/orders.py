@@ -1852,13 +1852,14 @@ async def move_to_preparation(
 @decor_router.post("/{order_id}/send-to-assembly")
 async def send_to_assembly(
     order_id: int,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
     Alias для move-to-preparation
     Відправити замовлення на збір - заморозити декор та передати реквізиторам
     """
-    return await move_to_preparation(order_id, db)
+    return await move_to_preparation(order_id, None, current_user, db)
 
 
 @decor_router.post("/{order_id}/complete-return")

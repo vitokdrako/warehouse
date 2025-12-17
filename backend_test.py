@@ -271,49 +271,63 @@ class OrderLifecycleTester:
             self.log(f"❌ Exception testing status update: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_finance_employees(self) -> Dict[str, Any]:
-        """Test GET /api/finance/employees - should return list of employees"""
+    def test_move_to_preparation_endpoint(self) -> Dict[str, Any]:
+        """Test POST /api/decor-orders/{order_id}/move-to-preparation - should create lifecycle entry with user info"""
         try:
-            self.log("🧪 Testing finance employees endpoint...")
+            self.log(f"🧪 Testing move to preparation endpoint for order {TEST_ORDER_ID}...")
             
-            response = self.session.get(f"{self.base_url}/finance/employees")
+            # Get current status first
+            order_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}")
+            if order_response.status_code != 200:
+                self.log(f"❌ Cannot get order details: {order_response.status_code}", "ERROR")
+                return {"success": False, "error": "Cannot get order details"}
+            
+            order_data = order_response.json()
+            current_status = order_data.get('status')
+            self.log(f"   Current order status: {current_status}")
+            
+            # Only test if order is in awaiting_customer status
+            if current_status != 'awaiting_customer':
+                self.log(f"   ⚠️ Order status '{current_status}' not suitable for move-to-preparation test, skipping")
+                return {"success": True, "skipped": True, "reason": f"Order status is '{current_status}'"}
+            
+            # Test move to preparation endpoint
+            response = self.session.post(f"{self.base_url}/decor-orders/{TEST_ORDER_ID}/move-to-preparation", json={})
             
             if response.status_code == 200:
                 data = response.json()
+                self.log(f"✅ Move to preparation successful: {data.get('message')}")
                 
-                # Check if response has employees array
-                if not isinstance(data, dict) or 'employees' not in data:
-                    self.log(f"❌ Expected dict with 'employees' key, got {type(data)}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                employees = data['employees']
-                if not isinstance(employees, list):
-                    self.log(f"❌ Expected employees array, got {type(employees)}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                self.log(f"✅ Retrieved {len(employees)} employees")
-                
-                # Check employee structure if any exist
-                if employees:
-                    employee = employees[0]
-                    required_fields = ['id', 'name', 'role']
-                    for field in required_fields:
-                        if field not in employee:
-                            self.log(f"⚠️ Employee missing field: {field}")
+                # Check if lifecycle entry was created with user info
+                lifecycle_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}/lifecycle")
+                if lifecycle_response.status_code == 200:
+                    lifecycle_data = lifecycle_response.json()
                     
-                    self.log(f"   Sample employee: {employee.get('name')} ({employee.get('role')})")
+                    # Look for recent processing event (move-to-preparation changes status to processing)
+                    recent_processing_event = None
+                    for event in lifecycle_data:
+                        if event.get('stage') == 'processing':
+                            recent_processing_event = event
+                            break
+                    
+                    if recent_processing_event:
+                        has_user_info = (
+                            recent_processing_event.get('created_by_id') is not None or
+                            recent_processing_event.get('created_by_name') is not None
+                        )
+                        if has_user_info:
+                            self.log(f"   ✅ Processing event has user info: {recent_processing_event.get('created_by_name')}")
+                        else:
+                            self.log(f"   ❌ Processing event missing user info", "ERROR")
+                            return {"success": False, "error": "Processing event missing user info"}
                 
-                return {
-                    "success": True, 
-                    "data": data,
-                    "count": len(employees)
-                }
+                return {"success": True, "data": data}
             else:
-                self.log(f"❌ Failed to get employees: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to move to preparation: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing employees: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing move to preparation: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_finance_payroll(self) -> Dict[str, Any]:

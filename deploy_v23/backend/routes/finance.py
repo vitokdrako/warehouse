@@ -89,13 +89,21 @@ class PayrollCreate(BaseModel):
 # HELPER: LEDGER POSTING
 # ============================================================
 
-def get_account_id(db: Session, code: str) -> int:
-    """Get account ID by code"""
-    result = db.execute(text("SELECT id FROM fin_accounts WHERE code = :code"), {"code": code})
-    row = result.fetchone()
-    if not row:
-        raise ValueError(f"Account not found: {code}")
-    return row[0]
+def get_account_id(db: Session, code: str, retry: int = 3) -> int:
+    """Get account ID by code with retry for connection issues"""
+    for attempt in range(retry):
+        try:
+            result = db.execute(text("SELECT id FROM fin_accounts WHERE code = :code"), {"code": code})
+            row = result.fetchone()
+            if not row:
+                raise ValueError(f"Account not found: {code}")
+            return row[0]
+        except Exception as e:
+            if attempt < retry - 1 and "Lost connection" in str(e):
+                import time
+                time.sleep(0.5)
+                continue
+            raise
 
 def post_transaction(
     db: Session,
@@ -261,53 +269,79 @@ async def list_payments(payment_type: Optional[str] = None, order_id: Optional[i
                           "order_id": r[7], "damage_case_id": r[8], "status": r[9], "note": r[10]} for r in result]}
 
 @router.post("/payments")
-async def create_payment(data: PaymentCreate, db: Session = Depends(get_rh_db)):
-    """Record a new payment with ledger entries."""
-    occurred_at = datetime.fromisoformat(data.occurred_at) if data.occurred_at else datetime.now()
+async def create_payment(data: PaymentCreate):
+    """Record a new payment with ledger entries using direct connection."""
+    import pymysql
+    from datetime import datetime
+    import os
     
-    mapping = {
-        "rent": ("CASH" if data.method == "cash" else "BANK", "RENT_REV"),
-        "deposit": ("CASH" if data.method == "cash" else "BANK", "DEP_HOLD"),
-        "damage": ("CASH" if data.method == "cash" else "BANK", "DMG_COMP"),
-        "refund": ("DEP_HOLD", "CASH" if data.method == "cash" else "BANK"),
-    }
-    if data.payment_type not in mapping:
-        raise HTTPException(status_code=400, detail=f"Invalid payment_type: {data.payment_type}")
-    
-    debit_acc, credit_acc = mapping[data.payment_type]
+    # Direct MySQL connection
+    conn = pymysql.connect(
+        host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
+        port=int(os.environ.get('RH_DB_PORT', 3306)),
+        user=os.environ.get('RH_DB_USERNAME', 'farforre_rentalhub'),
+        password=os.environ.get('RH_DB_PASSWORD', '-nu+3Gp54L'),
+        database=os.environ.get('RH_DB_DATABASE', 'farforre_rentalhub'),
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False
+    )
     
     try:
-        tx_id = post_transaction(db, f"{data.payment_type}_payment", data.amount, debit_acc, credit_acc,
-                                 "order" if data.order_id else None, data.order_id or data.damage_case_id,
-                                 order_id=data.order_id, damage_case_id=data.damage_case_id, note=data.note, occurred_at=occurred_at)
+        cursor = conn.cursor()
+        occurred_at = datetime.fromisoformat(data.occurred_at) if data.occurred_at else datetime.now()
         
-        db.execute(text("""
-            INSERT INTO fin_payments (payment_type, method, amount, payer_name, payer_contact, occurred_at, order_id, damage_case_id, tx_id, note)
-            VALUES (:payment_type, :method, :amount, :payer_name, :payer_contact, :occurred_at, :order_id, :damage_case_id, :tx_id, :note)
-        """), {"payment_type": data.payment_type, "method": data.method, "amount": data.amount,
-               "payer_name": data.payer_name, "payer_contact": data.payer_contact, "occurred_at": occurred_at,
-               "order_id": data.order_id, "damage_case_id": data.damage_case_id, "tx_id": tx_id, "note": data.note})
-        payment_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        mapping = {
+            "rent": ("CASH" if data.method == "cash" else "BANK", "RENT_REV"),
+            "deposit": ("CASH" if data.method == "cash" else "BANK", "DEP_LIAB"),
+            "damage": ("CASH" if data.method == "cash" else "BANK", "DMG_COMP"),
+            "refund": ("DEP_LIAB", "CASH" if data.method == "cash" else "BANK"),
+        }
+        if data.payment_type not in mapping:
+            raise HTTPException(status_code=400, detail=f"Invalid payment_type: {data.payment_type}")
         
-        # Handle deposit creation/update
-        if data.payment_type == "deposit" and data.order_id:
-            existing = db.execute(text("SELECT id FROM fin_deposit_holds WHERE order_id = :order_id"), {"order_id": data.order_id}).fetchone()
-            if existing:
-                db.execute(text("UPDATE fin_deposit_holds SET held_amount = held_amount + :amount WHERE order_id = :order_id"),
-                          {"amount": data.amount, "order_id": data.order_id})
-                deposit_id = existing[0]
-            else:
-                db.execute(text("INSERT INTO fin_deposit_holds (order_id, held_amount, opened_at, note) VALUES (:order_id, :amount, :occurred_at, :note)"),
-                          {"order_id": data.order_id, "amount": data.amount, "occurred_at": occurred_at, "note": data.note})
-                deposit_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
-            db.execute(text("INSERT INTO fin_deposit_events (deposit_id, event_type, amount, occurred_at, tx_id) VALUES (:deposit_id, 'received', :amount, :occurred_at, :tx_id)"),
-                      {"deposit_id": deposit_id, "amount": data.amount, "occurred_at": occurred_at, "tx_id": tx_id})
+        debit_acc, credit_acc = mapping[data.payment_type]
         
-        db.commit()
+        # Get account IDs
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (debit_acc,))
+        debit_acc_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (credit_acc,))
+        credit_acc_id = cursor.fetchone()['id']
+        
+        # Create transaction
+        cursor.execute("""
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (f"{data.payment_type}_payment", data.amount, occurred_at, 
+              "order" if data.order_id else None, data.order_id or data.damage_case_id, data.note))
+        tx_id = cursor.lastrowid
+        
+        # Create ledger entries (double-entry)
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id)
+            VALUES (%s, %s, 'D', %s, %s)
+        """, (tx_id, debit_acc_id, data.amount, data.order_id))
+        
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id)
+            VALUES (%s, %s, 'C', %s, %s)
+        """, (tx_id, credit_acc_id, data.amount, data.order_id))
+        
+        # Create payment record
+        cursor.execute("""
+            INSERT INTO fin_payments (payment_type, method, amount, payer_name, occurred_at, order_id, damage_case_id, tx_id, note)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (data.payment_type, data.method, data.amount, data.payer_name, occurred_at,
+              data.order_id, data.damage_case_id, tx_id, data.note))
+        payment_id = cursor.lastrowid
+        
+        conn.commit()
         return {"success": True, "payment_id": payment_id, "tx_id": tx_id}
     except Exception as e:
-        db.rollback()
+        conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 
 # ============================================================
@@ -788,81 +822,91 @@ async def pay_payroll(payroll_id: int, db: Session = Depends(get_rh_db)):
 # ============================================================
 
 @router.post("/deposits/create")
-async def create_deposit_with_currency(data: DepositCreate, db: Session = Depends(get_rh_db)):
-    """Create deposit with multi-currency support"""
-    occurred_at = datetime.now()
+async def create_deposit_with_currency(data: DepositCreate):
+    """Create deposit with multi-currency support using direct connection."""
+    import pymysql
+    from datetime import datetime
+    import os
     
-    # Convert foreign currency to UAH equivalent
-    uah_amount = data.actual_amount
-    if data.currency != "UAH" and data.exchange_rate:
-        uah_amount = data.actual_amount * data.exchange_rate
+    conn = pymysql.connect(
+        host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
+        port=int(os.environ.get('RH_DB_PORT', 3306)),
+        user=os.environ.get('RH_DB_USERNAME', 'farforre_rentalhub'),
+        password=os.environ.get('RH_DB_PASSWORD', '-nu+3Gp54L'),
+        database=os.environ.get('RH_DB_DATABASE', 'farforre_rentalhub'),
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False
+    )
     
     try:
-        # Check if PAYROLL_EXP account exists, create if not
-        acc = db.execute(text("SELECT id FROM fin_accounts WHERE code = 'PAYROLL_EXP'")).fetchone()
-        if not acc:
-            db.execute(text("INSERT INTO fin_accounts (code, name, kind) VALUES ('PAYROLL_EXP', 'Payroll Expenses', 'expense')"))
-            db.commit()
+        cursor = conn.cursor()
+        occurred_at = datetime.now()
         
-        # Determine credit account
-        credit_acc = "CASH" if data.method == "cash" else "BANK"
+        # Convert foreign currency to UAH equivalent
+        uah_amount = data.actual_amount
+        if data.currency != "UAH" and data.exchange_rate:
+            uah_amount = data.actual_amount * data.exchange_rate
         
-        # Post ledger transaction
-        tx_id = post_transaction(db, "deposit_payment", uah_amount, credit_acc, "DEP_HOLD",
-                                 "order", data.order_id, order_id=data.order_id,
-                                 note=data.note or f"Застава {data.currency}")
+        # Determine accounts
+        debit_acc = "CASH" if data.method == "cash" else "BANK"
         
-        # Add currency info to deposit_holds table
-        try:
-            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'UAH'"))
-            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS actual_amount DECIMAL(12,2)"))
-            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(10,4)"))
-            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS expected_amount DECIMAL(12,2)"))
-        except:
-            pass
+        # Get account IDs
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (debit_acc,))
+        debit_acc_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", ("DEP_LIAB",))
+        credit_acc_id = cursor.fetchone()['id']
         
-        # Check existing deposit for order
-        existing = db.execute(text("SELECT id FROM fin_deposit_holds WHERE order_id = :order_id"), {"order_id": data.order_id}).fetchone()
+        # Create transaction
+        cursor.execute("""
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, ("deposit_payment", uah_amount, occurred_at, "order", data.order_id, data.note or f"Застава {data.currency}"))
+        tx_id = cursor.lastrowid
+        
+        # Create ledger entries
+        cursor.execute("INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id) VALUES (%s, %s, 'D', %s, %s)",
+                      (tx_id, debit_acc_id, uah_amount, data.order_id))
+        cursor.execute("INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id) VALUES (%s, %s, 'C', %s, %s)",
+                      (tx_id, credit_acc_id, uah_amount, data.order_id))
+        
+        # Check existing deposit
+        cursor.execute("SELECT id FROM fin_deposit_holds WHERE order_id = %s", (data.order_id,))
+        existing = cursor.fetchone()
+        
         if existing:
-            db.execute(text("""
-                UPDATE fin_deposit_holds 
-                SET held_amount = held_amount + :uah_amount, 
-                    actual_amount = :actual_amount,
-                    currency = :currency,
-                    exchange_rate = :exchange_rate,
-                    expected_amount = :expected_amount
-                WHERE order_id = :order_id
-            """), {"uah_amount": uah_amount, "actual_amount": data.actual_amount, "currency": data.currency,
-                   "exchange_rate": data.exchange_rate, "expected_amount": data.expected_amount, "order_id": data.order_id})
-            deposit_id = existing[0]
+            cursor.execute("""
+                UPDATE fin_deposit_holds SET held_amount = held_amount + %s, 
+                    actual_amount = %s, currency = %s, exchange_rate = %s, expected_amount = %s
+                WHERE order_id = %s
+            """, (uah_amount, data.actual_amount, data.currency, data.exchange_rate, data.expected_amount, data.order_id))
+            deposit_id = existing['id']
         else:
-            db.execute(text("""
+            cursor.execute("""
                 INSERT INTO fin_deposit_holds (order_id, held_amount, actual_amount, currency, exchange_rate, expected_amount, opened_at, note)
-                VALUES (:order_id, :uah_amount, :actual_amount, :currency, :exchange_rate, :expected_amount, :occurred_at, :note)
-            """), {"order_id": data.order_id, "uah_amount": uah_amount, "actual_amount": data.actual_amount,
-                   "currency": data.currency, "exchange_rate": data.exchange_rate,
-                   "expected_amount": data.expected_amount, "occurred_at": occurred_at, "note": data.note})
-            deposit_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (data.order_id, uah_amount, data.actual_amount, data.currency, data.exchange_rate, data.expected_amount, occurred_at, data.note))
+            deposit_id = cursor.lastrowid
         
         # Record deposit event
-        db.execute(text("""
+        cursor.execute("""
             INSERT INTO fin_deposit_events (deposit_id, event_type, amount, occurred_at, tx_id, note) 
-            VALUES (:deposit_id, 'received', :amount, :occurred_at, :tx_id, :note)
-        """), {"deposit_id": deposit_id, "amount": uah_amount, "occurred_at": occurred_at, "tx_id": tx_id,
-               "note": f"{data.actual_amount} {data.currency}" if data.currency != "UAH" else None})
+            VALUES (%s, 'received', %s, %s, %s, %s)
+        """, (deposit_id, uah_amount, occurred_at, tx_id, f"{data.actual_amount} {data.currency}" if data.currency != "UAH" else None))
         
         # Create payment record
-        db.execute(text("""
+        cursor.execute("""
             INSERT INTO fin_payments (payment_type, method, amount, currency, order_id, occurred_at, note, tx_id)
-            VALUES ('deposit', :method, :amount, :currency, :order_id, :occurred_at, :note, :tx_id)
-        """), {"method": data.method, "amount": uah_amount, "currency": data.currency,
-               "order_id": data.order_id, "occurred_at": occurred_at, "note": data.note, "tx_id": tx_id})
+            VALUES ('deposit', %s, %s, %s, %s, %s, %s, %s)
+        """, (data.method, uah_amount, data.currency, data.order_id, occurred_at, data.note, tx_id))
         
-        db.commit()
+        conn.commit()
         return {"success": True, "deposit_id": deposit_id, "tx_id": tx_id, "uah_amount": uah_amount}
     except Exception as e:
-        db.rollback()
+        conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 
 

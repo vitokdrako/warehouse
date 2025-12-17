@@ -1,11 +1,21 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 const cls = (...a) => a.filter(Boolean).join(' ')
 const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 2 })
+
+// Auth fetch helper
+const authFetch = (url) => {
+  const token = localStorage.getItem('token');
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+  });
+};
 
 /******************** Badge ********************/
 function Badge({ tone = 'slate', children }) {
@@ -20,162 +30,146 @@ function Badge({ tone = 'slate', children }) {
 }
 
 /******************** FinanceStatusCard ********************/
-export default function FinanceStatusCard({ orderId }) {
-  const [transactions, setTransactions] = useState([])
+export default function FinanceStatusCard({ orderId, expectedDeposit = 0, expectedRent = 0 }) {
+  const [payments, setPayments] = useState([])
+  const [deposit, setDeposit] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!orderId) return
 
-    // Завантажити транзакції для замовлення
-    axios
-      .get(`${BACKEND_URL}/api/finance/transactions?order_id=${orderId}`)
-      .then((res) => {
-        const data = Array.isArray(res.data) ? res.data : []
-        setTransactions(data)
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Failed to load transactions:', err)
-        setLoading(false)
-      })
+    // Завантажити реальні дані з фінансової системи
+    Promise.all([
+      authFetch(`${BACKEND_URL}/api/finance/payments?order_id=${orderId}`).then(r => r.json()),
+      authFetch(`${BACKEND_URL}/api/finance/deposits?status=holding,partially_used`).then(r => r.json())
+    ])
+    .then(([paymentsData, depositsData]) => {
+      setPayments(paymentsData.payments || [])
+      // Знайти депозит для цього замовлення
+      const orderDeposit = (depositsData || []).find(d => d.order_id === orderId)
+      setDeposit(orderDeposit || null)
+      setLoading(false)
+    })
+    .catch(err => {
+      console.error('Failed to load finance data:', err)
+      setLoading(false)
+    })
   }, [orderId])
 
   if (loading) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="text-sm text-slate-500">⏳ Завантаження фінансової інформації...</div>
+        <div className="text-sm text-slate-500">⏳ Завантаження...</div>
       </div>
     )
   }
 
-  // Розрахунок фінансового статусу
-  const depositTransactions = transactions.filter((t) => t.type?.includes('deposit'))
-  const rentTransactions = transactions.filter((t) => t.type?.includes('rent') || t.type === 'payment')
-
-  // Застава - СУМУЄМО ВСІ deposit_hold транзакції (фактично отримані)
-  const depositHoldTransactions = depositTransactions.filter((t) => t.type === 'deposit_hold')
-  const depositReceivedAmount = depositHoldTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
-  const depositExpected = depositTransactions.find((t) => t.type === 'deposit_expected')
-  const depositStatus = depositReceivedAmount > 0 ? 'received' : depositExpected ? 'pending' : 'not_required'
-
-  // Оплата оренди - СУМУЄМО ВСІ payment транзакції
-  const paymentTransactions = rentTransactions.filter((t) => t.type === 'payment')
-  const rentPaidAmount = paymentTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
-  const rentAccrual = rentTransactions.find((t) => t.type === 'rent_accrual')
-  const rentStatus = rentPaidAmount > 0 ? 'paid' : rentAccrual ? 'pending' : 'not_required'
-
-  // Суми - ФАКТИЧНО отримані суми (сумування всіх транзакцій)
-  const depositAmount = depositReceivedAmount || depositExpected?.amount || 0
-  const rentAmount = rentPaidAmount || rentAccrual?.amount || 0
-  const totalPaid = transactions
-    .filter((t) => t.status === 'completed' && (t.type === 'payment' || t.type === 'deposit_hold'))
-    .reduce((sum, t) => sum + (t.amount || 0), 0)
+  // Розрахунок реального статусу з payments та deposit
+  const rentPayments = payments.filter(p => p.payment_type === 'rent')
+  const depositPayments = payments.filter(p => p.payment_type === 'deposit')
+  
+  const rentPaid = rentPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
+  const depositReceived = deposit?.held_amount || 0
+  
+  // Статуси
+  const rentStatus = rentPaid > 0 ? 'paid' : expectedRent > 0 ? 'pending' : 'not_required'
+  const depositStatus = depositReceived > 0 ? 'received' : expectedDeposit > 0 ? 'pending' : 'not_required'
+  
+  // Валюта застави
+  const depositCurrency = deposit?.currency || 'UAH'
+  const depositActual = deposit?.actual_amount || depositReceived
+  const depositDisplay = depositCurrency === 'UAH' 
+    ? `₴ ${fmtUA(depositActual)}` 
+    : `${depositActual} ${depositCurrency}`
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-base font-semibold text-slate-800">💰 Фінансовий статус</h3>
-        {totalPaid > 0 && <Badge tone="green">Оплачено ₴ {fmtUA(totalPaid)}</Badge>}
       </div>
 
       <div className="space-y-3">
-        {/* Застава */}
-        <div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3">
-          <div>
-            <div className="text-sm font-medium text-slate-700">Застава</div>
-            <div className="text-xs text-slate-500">
-              {depositStatus === 'received' && '✅ Залишено в касі'}
-              {depositStatus === 'pending' && '⏳ Очікується'}
-              {depositStatus === 'not_required' && '—'}
-            </div>
-          </div>
-          <div className="text-right">
-            <div className="text-lg font-bold text-slate-900">₴ {fmtUA(depositAmount)}</div>
-            {depositStatus === 'received' && <Badge tone="green">Залишено</Badge>}
-            {depositStatus === 'pending' && <Badge tone="amber">Очікується</Badge>}
-          </div>
-        </div>
-
         {/* Оплата оренди */}
         <div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3">
           <div>
-            <div className="text-sm font-medium text-slate-700">Рахунок за оренду</div>
+            <div className="text-sm font-medium text-slate-700">Оренда</div>
             <div className="text-xs text-slate-500">
               {rentStatus === 'paid' && '✅ Оплачено'}
-              {rentStatus === 'pending' && '⏳ Очікується оплата'}
+              {rentStatus === 'pending' && '⏳ Очікується'}
               {rentStatus === 'not_required' && '—'}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-lg font-bold text-slate-900">₴ {fmtUA(rentAmount)}</div>
+            <div className="text-lg font-bold text-slate-900">₴ {fmtUA(rentPaid || expectedRent)}</div>
             {rentStatus === 'paid' && <Badge tone="green">Оплачено</Badge>}
             {rentStatus === 'pending' && <Badge tone="red">Не оплачено</Badge>}
           </div>
         </div>
 
-        {/* Історія транзакцій */}
-        {transactions.length > 0 && (
-          <details className="mt-3">
+        {/* Застава */}
+        <div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 p-3">
+          <div>
+            <div className="text-sm font-medium text-slate-700">Застава</div>
+            <div className="text-xs text-slate-500">
+              {depositStatus === 'received' && '✅ Прийнято'}
+              {depositStatus === 'pending' && '⏳ Очікується'}
+              {depositStatus === 'not_required' && '—'}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-lg font-bold text-slate-900">
+              {depositStatus === 'received' ? depositDisplay : `₴ ${fmtUA(expectedDeposit)}`}
+            </div>
+            {depositStatus === 'received' && <Badge tone="green">Прийнято</Badge>}
+            {depositStatus === 'pending' && <Badge tone="amber">Очікується</Badge>}
+          </div>
+        </div>
+
+        {/* Хто прийняв */}
+        {(rentPayments.length > 0 || depositPayments.length > 0) && (
+          <details className="mt-2">
             <summary className="cursor-pointer text-xs font-medium text-slate-600 hover:text-slate-800">
-              📋 Історія транзакцій ({transactions.length})
+              📋 Деталі оплат ({payments.length})
             </summary>
-            <div className="mt-2 space-y-1">
-              {transactions.map((t, idx) => {
-                // deposit_hold та payment завжди завершені (якщо є запис - гроші отримано)
-                const isCompleted = t.type === 'deposit_hold' || t.type === 'payment' || t.status === 'completed'
-                
-                return (
-                  <div key={idx} className="flex items-center justify-between border-l-2 border-slate-200 pl-2 py-1 text-xs">
-                    <div>
-                      <span className="font-medium text-slate-700">{getTransactionLabel(t.type)}</span>
-                      <span className={cls('ml-2 rounded px-1.5 py-0.5', isCompleted ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700')}>
-                        {isCompleted ? '✓' : '⏳'}
-                      </span>
-                    </div>
-                    <div className="font-mono text-slate-600">
-                      ₴ {fmtUA(t.amount)}
-                    </div>
+            <div className="mt-2 space-y-1 text-xs">
+              {payments.map((p, idx) => (
+                <div key={idx} className="flex items-center justify-between border-l-2 border-slate-200 pl-2 py-1">
+                  <div>
+                    <span className="font-medium">{p.payment_type === 'rent' ? 'Оренда' : 'Застава'}</span>
+                    {p.accepted_by_name && <span className="text-slate-500 ml-1">• {p.accepted_by_name}</span>}
                   </div>
-                )
-              })}
+                  <div className="font-mono">₴ {fmtUA(p.amount)}</div>
+                </div>
+              ))}
             </div>
           </details>
         )}
 
         {/* Загальний статус */}
-        <div className="mt-4 border-t border-slate-200 pt-3">
+        <div className="mt-3 border-t border-slate-200 pt-3">
           {depositStatus === 'received' && rentStatus === 'paid' ? (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-2xl">✅</span>
-              <span className="font-medium text-green-700">Всі фінансові питання вирішені</span>
+              <span className="text-xl">✅</span>
+              <span className="font-medium text-green-700">Всі оплати отримано</span>
             </div>
-          ) : (
+          ) : depositStatus === 'received' && rentStatus === 'pending' ? (
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-2xl">⚠️</span>
-              <span className="font-medium text-amber-700">
-                {depositStatus === 'pending' && rentStatus === 'pending' && 'Очікується застава та оплата'}
-                {depositStatus === 'received' && rentStatus === 'pending' && 'Очікується оплата рахунку'}
-                {depositStatus === 'pending' && rentStatus === 'paid' && 'Очікується застава'}
-              </span>
+              <span className="text-xl">⚠️</span>
+              <span className="font-medium text-amber-700">Очікується оплата оренди</span>
             </div>
-          )}
+          ) : depositStatus === 'pending' && rentStatus === 'paid' ? (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-xl">⚠️</span>
+              <span className="font-medium text-amber-700">Очікується застава</span>
+            </div>
+          ) : depositStatus === 'pending' && rentStatus === 'pending' ? (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-xl">⚠️</span>
+              <span className="font-medium text-amber-700">Очікується оплата та застава</span>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
   )
-}
-
-// Helper для перекладу типів транзакцій
-function getTransactionLabel(type) {
-  const labels = {
-    deposit_expected: 'Застава очікується',
-    deposit_hold: 'Застава отримана',
-    deposit_release: 'Застава повернута',
-    deposit_writeoff: 'Списано з застави',
-    rent_accrual: 'Оренда нараховано',
-    payment: 'Оплата рахунку',
-    refund: 'Повернення коштів',
-  }
-  return labels[type] || type
 }

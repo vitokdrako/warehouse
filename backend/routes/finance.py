@@ -269,18 +269,22 @@ async def list_payments(payment_type: Optional[str] = None, order_id: Optional[i
                           "order_id": r[7], "damage_case_id": r[8], "status": r[9], "note": r[10]} for r in result]}
 
 @router.post("/payments")
-async def create_payment(data: PaymentCreate, db: Session = Depends(get_rh_db)):
+async def create_payment(data: PaymentCreate):
     """Record a new payment with ledger entries."""
-    occurred_at = datetime.fromisoformat(data.occurred_at) if data.occurred_at else datetime.now()
+    from database_rentalhub import RHSessionLocal
     
-    mapping = {
-        "rent": ("CASH" if data.method == "cash" else "BANK", "RENT_REV"),
-        "deposit": ("CASH" if data.method == "cash" else "BANK", "DEP_HOLD"),
-        "damage": ("CASH" if data.method == "cash" else "BANK", "DMG_COMP"),
-        "refund": ("DEP_HOLD", "CASH" if data.method == "cash" else "BANK"),
-    }
-    if data.payment_type not in mapping:
-        raise HTTPException(status_code=400, detail=f"Invalid payment_type: {data.payment_type}")
+    db = RHSessionLocal()
+    try:
+        occurred_at = datetime.fromisoformat(data.occurred_at) if data.occurred_at else datetime.now()
+        
+        mapping = {
+            "rent": ("CASH" if data.method == "cash" else "BANK", "RENT_REV"),
+            "deposit": ("CASH" if data.method == "cash" else "BANK", "DEP_LIAB"),
+            "damage": ("CASH" if data.method == "cash" else "BANK", "DMG_COMP"),
+            "refund": ("DEP_LIAB", "CASH" if data.method == "cash" else "BANK"),
+        }
+        if data.payment_type not in mapping:
+            raise HTTPException(status_code=400, detail=f"Invalid payment_type: {data.payment_type}")
     
     debit_acc, credit_acc = mapping[data.payment_type]
     

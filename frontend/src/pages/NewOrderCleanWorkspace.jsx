@@ -336,13 +336,11 @@ export default function NewOrderClean() {
         loadingInventory={loadingInventory}
       />
       
-      {/* Комерційна зведена */}
-      <ZoneCommercialSummary
-        rentAmount={calculations.totalRent}
-        depositAmount={calculations.estimatedDeposit}
-        discountPercent={discount}
-        rentalDays={rentalDays}
-        itemsCount={calculations.itemsCount}
+      {/* Фінансовий статус */}
+      <FinanceStatusCard 
+        orderId={orderId} 
+        expectedDeposit={calculations.estimatedDeposit}
+        expectedRent={calculations.totalRent}
       />
       
       {/* Нотатки */}

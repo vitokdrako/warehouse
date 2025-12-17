@@ -756,13 +756,6 @@ export default function NewOrderViewWorkspace() {
         hint="Генерація рахунків, договорів та актів"
       />
       
-      {/* Фінансовий статус */}
-      <FinanceStatusCard 
-        orderId={orderId} 
-        expectedDeposit={calculations.totalDeposit}
-        expectedRent={calculations.totalRent}
-      />
-      
       {/* Коментар клієнта (read-only) */}
       {clientComment && (
         <ZoneNotes

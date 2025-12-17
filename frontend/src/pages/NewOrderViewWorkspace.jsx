@@ -650,13 +650,9 @@ export default function NewOrderViewWorkspace() {
             orderCount={customerStats?.total_orders}
           />
           <LeftRailFinance
+            orderId={orderId}
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.totalDeposit}
-            discount={discount}
-            isPaid={false}
-            showGate={true}
-            gateMessage={canAccept ? 'Готово до прийняття' : 'Заповніть всі поля'}
-            gateTone={canAccept ? 'ok' : 'warn'}
           />
           <LeftRailTimeline events={timeline} />
         </>

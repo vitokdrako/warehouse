@@ -107,7 +107,6 @@ export default function OrderFinancePanel({ order, onUpdate }) {
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <Btn variant="primary" onClick={() => handlePayment('rent')} disabled={loading === 'rent' || rentAmount <= 0}>{loading === 'rent' ? '...' : 'Зарахувати'}</Btn>
-              <DocumentQuickActions orderId={order.id} onGenerated={onUpdate} />
             </div>
           </CardBd>
         </Card>

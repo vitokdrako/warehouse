@@ -131,10 +131,15 @@ function TabBar({ tab, setTab }) {
 }
 
 // Order row for list
-function OrderRow({ order, deposit, isOpen, onToggle }) {
+function OrderRow({ order, deposit, payments = [], isOpen, onToggle }) {
   // Використовуємо реальні дані з фінансової системи
   const rentAccrued = order.total_rental || order.total_price || 0;
-  const rentPaid = order.rent_paid || 0;
+  
+  // Рахуємо фактично сплачену оренду з платежів
+  const rentPayments = payments.filter(p => p.payment_type === 'rent');
+  const rentPaidFromPayments = rentPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const rentPaid = rentPaidFromPayments > 0 ? rentPaidFromPayments : (order.rent_paid || 0);
+  
   const rentDue = Math.max(0, rentAccrued - rentPaid);
   
   const depositExpected = order.total_deposit || 0;

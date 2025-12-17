@@ -23,10 +23,10 @@ import {
   ZoneAvailabilityGate,
   ZoneItemSearch,
   ZoneItemsList,
-  ZoneCommercialSummary,
   ZoneNotes,
   ZoneDocuments,
 } from '../components/order-workspace/zones'
+import FinanceStatusCard from '../components/FinanceStatusCard'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

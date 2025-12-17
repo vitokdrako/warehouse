@@ -574,14 +574,16 @@ async def update_order(
         sql = f"UPDATE orders SET {', '.join(set_clauses)} WHERE order_id = :order_id"
         db.execute(text(sql), params)
         
-        # Log to lifecycle
+        # Log to lifecycle with user info
         db.execute(text("""
-            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-            VALUES (:order_id, 'updated', :notes, :created_by, NOW())
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+            VALUES (:order_id, 'updated', :notes, :created_by, :created_by_id, :created_by_name, NOW())
         """), {
             "order_id": order_id,
             "notes": f"Updated fields: {', '.join(data.keys())}",
-            "created_by": current_user["name"]
+            "created_by": current_user.get("name", "System"),
+            "created_by_id": current_user.get("id"),
+            "created_by_name": current_user.get("name")
         })
         
         db.commit()

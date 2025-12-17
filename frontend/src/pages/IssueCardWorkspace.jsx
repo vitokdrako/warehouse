@@ -22,9 +22,9 @@ import {
   ZoneChecklist,
   ZoneDocuments,
   ZoneNotes,
-  ZoneCommercialSummary,
   ZoneRequisitors,
 } from '../components/order-workspace/zones'
+import FinanceStatusCard from '../components/FinanceStatusCard'
 
 import DamageModal from '../components/DamageModal'
 

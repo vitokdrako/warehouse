@@ -23,7 +23,7 @@ import {
   ZoneDeliverySetup,
   ZoneNotes,
 } from '../components/order-workspace/zones'
-import FinanceStatusCard from '../components/FinanceStatusCard'
+// FinanceStatusCard тепер тільки в LeftRailFinance
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

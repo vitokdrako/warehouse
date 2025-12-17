@@ -756,13 +756,11 @@ export default function NewOrderViewWorkspace() {
         hint="Генерація рахунків, договорів та актів"
       />
       
-      {/* Комерційна зведена */}
-      <ZoneCommercialSummary
-        rentAmount={calculations.totalRent}
-        depositAmount={calculations.totalDeposit}
-        discountPercent={discount}
-        rentalDays={rentalDays}
-        itemsCount={calculations.itemsCount}
+      {/* Фінансовий статус */}
+      <FinanceStatusCard 
+        orderId={orderId} 
+        expectedDeposit={calculations.totalDeposit}
+        expectedRent={calculations.totalRent}
       />
       
       {/* Коментар клієнта (read-only) */}

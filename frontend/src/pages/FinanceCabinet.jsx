@@ -189,6 +189,10 @@ function transformOrderForPanel(order, payments = [], deposit = null) {
   const rentPaid = rentPayments.reduce((s, p) => s + p.amount, 0);
   const damagePaid = damagePayments.reduce((s, p) => s + p.amount, 0);
   
+  // Отримуємо інформацію про валюту застави
+  const depositCurrency = deposit?.currency || 'UAH';
+  const depositActual = deposit?.actual_amount || deposit?.held_amount || order.deposit_held || 0;
+  
   return {
     id: order.order_id || order.id,
     order_number: order.order_number,
@@ -201,7 +205,10 @@ function transformOrderForPanel(order, payments = [], deposit = null) {
     },
     deposit: {
       expected: order.total_deposit || 0,
-      held: deposit?.held_amount || order.deposit_held || 0,
+      held: deposit?.held_amount || order.deposit_held || 0,  // UAH еквівалент
+      actual_amount: depositActual,  // Фактична сума у валюті
+      currency: depositCurrency,
+      display: deposit?.display_amount || (depositCurrency === 'UAH' ? `₴${depositActual}` : `${depositActual} ${depositCurrency}`),
       used_for_damage: deposit?.used_amount || 0,
       refunded: deposit?.refunded_amount || 0,
     },

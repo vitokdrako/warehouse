@@ -34,11 +34,14 @@ export default function LeftRailTimeline({
 
     setLoading(true)
     
-    // Завантажити реальні дані з фінансової системи
-    authFetch(`${BACKEND_URL}/api/finance/payments?order_id=${orderId}`)
-      .then(r => r.json())
-      .then(data => {
-        const payments = data.payments || []
+    // Завантажити реальні дані з фінансової системи та lifecycle
+    Promise.all([
+      authFetch(`${BACKEND_URL}/api/finance/payments?order_id=${orderId}`).then(r => r.json()),
+      authFetch(`${BACKEND_URL}/api/orders/${orderId}/lifecycle`).then(r => r.json())
+    ])
+      .then(([paymentsData, lifecycleData]) => {
+        const payments = paymentsData.payments || []
+        const lifecycle = Array.isArray(lifecycleData) ? lifecycleData : []
         
         // Перетворити платежі в події
         const paymentEvents = payments.map(p => {
@@ -64,16 +67,58 @@ export default function LeftRailTimeline({
               hour: '2-digit', 
               minute: '2-digit' 
             }) : '',
+            timestamp: p.occurred_at ? new Date(p.occurred_at).getTime() : 0,
             tone: typeInfo.tone,
             user: p.accepted_by_name || null,
           }
         })
         
-        setFinanceEvents(paymentEvents)
+        // Перетворити lifecycle в події
+        const lifecycleStages = {
+          'created': { text: 'Замовлення створено', tone: 'slate', icon: '📝' },
+          'updated': { text: 'Замовлення оновлено', tone: 'slate', icon: '✏️' },
+          'accepted': { text: 'Замовлення прийнято', tone: 'blue', icon: '✅' },
+          'preparation': { text: 'Відправлено на збір', tone: 'amber', icon: '📦' },
+          'ready_for_issue': { text: 'Готово до видачі', tone: 'green', icon: '✨' },
+          'issued': { text: 'Видано клієнту', tone: 'green', icon: '🚀' },
+          'on_rent': { text: 'На прокаті', tone: 'blue', icon: '🏠' },
+          'returned': { text: 'Повернено', tone: 'green', icon: '↩️' },
+          'completed': { text: 'Завершено', tone: 'green', icon: '🎉' },
+          'cancelled': { text: 'Скасовано', tone: 'red', icon: '❌' },
+          'cancelled_by_client': { text: 'Скасовано клієнтом', tone: 'red', icon: '❌' },
+          'declined': { text: 'Відхилено', tone: 'red', icon: '⛔' },
+          'archived': { text: 'Архівовано', tone: 'slate', icon: '📁' },
+          'unarchived': { text: 'Розархівовано', tone: 'slate', icon: '📂' },
+          'calendar_update': { text: 'Оновлено з календаря', tone: 'slate', icon: '📅' },
+        }
+        
+        const lifecycleEvents = lifecycle.map(l => {
+          const stageInfo = lifecycleStages[l.stage] || { text: l.stage, tone: 'slate', icon: '📌' }
+          
+          return {
+            text: `${stageInfo.icon} ${stageInfo.text}`,
+            at: l.created_at ? new Date(l.created_at).toLocaleString('uk-UA', { 
+              day: '2-digit', 
+              month: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }) : '',
+            timestamp: l.created_at ? new Date(l.created_at).getTime() : 0,
+            tone: stageInfo.tone,
+            user: l.created_by_name || l.created_by || null,
+            notes: l.notes || null,
+          }
+        })
+        
+        // Об'єднати та відсортувати за часом (найновіші зверху)
+        const allFinanceEvents = [...paymentEvents, ...lifecycleEvents]
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        
+        setFinanceEvents(allFinanceEvents)
         setLoading(false)
       })
       .catch(err => {
-        console.error('Failed to load finance events:', err)
+        console.error('Failed to load events:', err)
         setLoading(false)
       })
   }, [orderId])

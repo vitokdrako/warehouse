@@ -499,122 +499,77 @@ class OrderLifecycleTester:
             self.log(f"❌ Exception testing create employee: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def verify_finance_integration_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior for Finance Cabinet integration"""
+    def verify_order_lifecycle_behavior(self) -> Dict[str, Any]:
+        """Verify expected behavior for Order Lifecycle User Tracking"""
         try:
-            self.log("🔍 Verifying Finance Cabinet integration behavior...")
+            self.log("🔍 Verifying Order Lifecycle User Tracking behavior...")
             
             results = {
-                "manager_finance_working": False,
-                "finance_dashboard_working": False,
-                "vendors_api_working": False,
-                "employees_api_working": False,
-                "payroll_api_working": False,
-                "expense_categories_working": False,
-                "create_vendor_working": False,
-                "create_employee_working": False,
-                "all_endpoints_accessible": False
+                "lifecycle_endpoint_working": False,
+                "accept_endpoint_working": False,
+                "status_update_working": False,
+                "move_to_preparation_working": False,
+                "user_tracking_implemented": False
             }
             
-            # Test 1: Manager Finance Summary
-            self.log("   Testing Manager Finance Summary API...")
-            manager_result = self.test_manager_finance_summary()
+            # Test 1: Order Lifecycle Endpoint
+            self.log("   Testing Order Lifecycle Endpoint...")
+            lifecycle_result = self.test_order_lifecycle_endpoint()
             
-            if manager_result.get("success"):
-                results["manager_finance_working"] = True
-                self.log("   ✅ Manager Finance Summary: Working")
+            if lifecycle_result.get("success"):
+                results["lifecycle_endpoint_working"] = True
+                self.log("   ✅ Order Lifecycle Endpoint: Working")
+                
+                # Check if user tracking is implemented
+                user_tracked = lifecycle_result.get("user_tracked_events", 0)
+                if user_tracked > 0:
+                    results["user_tracking_implemented"] = True
+                    self.log(f"   ✅ User tracking: {user_tracked} events have user info")
+                else:
+                    self.log("   ⚠️ No events with user tracking found")
             else:
-                self.log("   ❌ Manager Finance Summary: Failed", "ERROR")
+                self.log("   ❌ Order Lifecycle Endpoint: Failed", "ERROR")
             
-            # Test 2: Finance Dashboard
-            self.log("   Testing Finance Dashboard API...")
-            dashboard_result = self.test_finance_dashboard()
+            # Test 2: Order Accept Endpoint
+            self.log("   Testing Order Accept Endpoint...")
+            accept_result = self.test_order_accept_endpoint()
             
-            if dashboard_result.get("success"):
-                results["finance_dashboard_working"] = True
-                self.log("   ✅ Finance Dashboard: Working")
+            if accept_result.get("success"):
+                results["accept_endpoint_working"] = True
+                if accept_result.get("skipped"):
+                    self.log(f"   ⚠️ Order Accept: Skipped ({accept_result.get('reason')})")
+                else:
+                    self.log("   ✅ Order Accept Endpoint: Working")
             else:
-                self.log("   ❌ Finance Dashboard: Failed", "ERROR")
+                self.log("   ❌ Order Accept Endpoint: Failed", "ERROR")
             
-            # Test 3: Vendors API
-            self.log("   Testing Vendors API...")
-            vendors_result = self.test_finance_vendors()
+            # Test 3: Status Update Endpoint
+            self.log("   Testing Status Update Endpoint...")
+            status_result = self.test_order_status_update_endpoint()
             
-            if vendors_result.get("success"):
-                results["vendors_api_working"] = True
-                self.log("   ✅ Vendors API: Working")
+            if status_result.get("success"):
+                results["status_update_working"] = True
+                self.log("   ✅ Status Update Endpoint: Working")
             else:
-                self.log("   ❌ Vendors API: Failed", "ERROR")
+                self.log("   ❌ Status Update Endpoint: Failed", "ERROR")
             
-            # Test 4: Employees API
-            self.log("   Testing Employees API...")
-            employees_result = self.test_finance_employees()
+            # Test 4: Move to Preparation Endpoint
+            self.log("   Testing Move to Preparation Endpoint...")
+            prep_result = self.test_move_to_preparation_endpoint()
             
-            if employees_result.get("success"):
-                results["employees_api_working"] = True
-                self.log("   ✅ Employees API: Working")
+            if prep_result.get("success"):
+                results["move_to_preparation_working"] = True
+                if prep_result.get("skipped"):
+                    self.log(f"   ⚠️ Move to Preparation: Skipped ({prep_result.get('reason')})")
+                else:
+                    self.log("   ✅ Move to Preparation Endpoint: Working")
             else:
-                self.log("   ❌ Employees API: Failed", "ERROR")
-            
-            # Test 5: Payroll API
-            self.log("   Testing Payroll API...")
-            payroll_result = self.test_finance_payroll()
-            
-            if payroll_result.get("success"):
-                results["payroll_api_working"] = True
-                self.log("   ✅ Payroll API: Working")
-            else:
-                self.log("   ❌ Payroll API: Failed", "ERROR")
-            
-            # Test 6: Expense Categories API
-            self.log("   Testing Expense Categories API...")
-            categories_result = self.test_admin_expense_categories()
-            
-            if categories_result.get("success"):
-                results["expense_categories_working"] = True
-                self.log("   ✅ Expense Categories API: Working")
-            else:
-                self.log("   ❌ Expense Categories API: Failed", "ERROR")
-            
-            # Test 7: Create Vendor
-            self.log("   Testing Create Vendor API...")
-            create_vendor_result = self.test_create_vendor()
-            
-            if create_vendor_result.get("success"):
-                results["create_vendor_working"] = True
-                self.log("   ✅ Create Vendor API: Working")
-            else:
-                self.log("   ❌ Create Vendor API: Failed", "ERROR")
-            
-            # Test 8: Create Employee
-            self.log("   Testing Create Employee API...")
-            create_employee_result = self.test_create_employee()
-            
-            if create_employee_result.get("success"):
-                results["create_employee_working"] = True
-                self.log("   ✅ Create Employee API: Working")
-            else:
-                self.log("   ❌ Create Employee API: Failed", "ERROR")
-            
-            # Overall endpoint accessibility
-            critical_endpoints = [
-                manager_result.get("success", False),
-                dashboard_result.get("success", False),
-                vendors_result.get("success", False),
-                employees_result.get("success", False),
-                categories_result.get("success", False)
-            ]
-            
-            if all(critical_endpoints):
-                results["all_endpoints_accessible"] = True
-                self.log("   ✅ All critical Finance Cabinet endpoints accessible")
-            else:
-                self.log("   ❌ Some critical Finance Cabinet endpoints not accessible", "ERROR")
+                self.log("   ❌ Move to Preparation Endpoint: Failed", "ERROR")
             
             return results
             
         except Exception as e:
-            self.log(f"❌ Exception verifying Finance Cabinet integration: {str(e)}", "ERROR")
+            self.log(f"❌ Exception verifying Order Lifecycle behavior: {str(e)}", "ERROR")
             return {"error": str(e)}
 
     def run_comprehensive_finance_test(self):

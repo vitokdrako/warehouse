@@ -82,48 +82,59 @@ class OrderLifecycleTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_manager_finance_summary(self) -> Dict[str, Any]:
-        """Test GET /api/manager/finance/summary - should return revenue, deposits data from ledger"""
+    def test_order_lifecycle_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/orders/{order_id}/lifecycle - should return lifecycle events with user info"""
         try:
-            self.log("🧪 Testing manager finance summary endpoint...")
+            self.log(f"🧪 Testing order lifecycle endpoint for order {TEST_ORDER_ID}...")
             
-            response = self.session.get(f"{self.base_url}/manager/finance/summary")
+            response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}/lifecycle")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check required fields
-                required_fields = ['total_revenue', 'deposits_held', 'deposits_count']
-                missing_fields = []
+                if not isinstance(data, list):
+                    self.log(f"❌ Expected list of lifecycle events, got {type(data)}", "ERROR")
+                    return {"success": False, "error": f"Expected list, got {type(data)}"}
                 
-                for field in required_fields:
-                    if field not in data:
-                        missing_fields.append(field)
+                self.log(f"✅ Retrieved {len(data)} lifecycle events")
                 
-                if missing_fields:
-                    self.log(f"❌ Manager finance summary missing fields: {missing_fields}", "ERROR")
-                    return {"success": False, "error": f"Missing required fields: {missing_fields}"}
+                # Check lifecycle event structure
+                user_tracked_events = 0
+                old_events = 0
                 
-                # Log the values
-                self.log(f"✅ Manager Finance Summary:")
-                self.log(f"   - Total Revenue: ₴{data.get('total_revenue', 0)}")
-                self.log(f"   - Deposits Held: ₴{data.get('deposits_held', 0)}")
-                self.log(f"   - Deposits Count: {data.get('deposits_count', 0)}")
-                self.log(f"   - Rent Revenue: ₴{data.get('rent_revenue', 0)}")
-                self.log(f"   - Damage Revenue: ₴{data.get('damage_revenue', 0)}")
+                for event in data:
+                    required_fields = ['stage', 'created_at']
+                    for field in required_fields:
+                        if field not in event:
+                            self.log(f"⚠️ Lifecycle event missing field: {field}")
+                    
+                    # Check user tracking fields
+                    has_user_info = (
+                        event.get('created_by_id') is not None or 
+                        event.get('created_by_name') is not None or
+                        event.get('created_by') is not None
+                    )
+                    
+                    if has_user_info:
+                        user_tracked_events += 1
+                        self.log(f"   ✅ Event '{event.get('stage')}' has user info: {event.get('created_by_name') or event.get('created_by')}")
+                    else:
+                        old_events += 1
+                        self.log(f"   ⚠️ Event '{event.get('stage')}' has no user info (expected for old records)")
                 
                 return {
                     "success": True, 
                     "data": data,
-                    "has_revenue": data.get('total_revenue', 0) > 0,
-                    "has_deposits": data.get('deposits_held', 0) > 0
+                    "total_events": len(data),
+                    "user_tracked_events": user_tracked_events,
+                    "old_events": old_events
                 }
             else:
-                self.log(f"❌ Failed to get manager finance summary: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get order lifecycle: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing manager finance summary: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing order lifecycle: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_finance_dashboard(self) -> Dict[str, Any]:

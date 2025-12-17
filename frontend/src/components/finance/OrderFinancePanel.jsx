@@ -47,6 +47,13 @@ export default function OrderFinancePanel({ order, onUpdate }) {
     let method = type === 'rent' ? rentMethod : depositMethod;
     if (amount <= 0) return;
     setLoading(type);
+    
+    // Отримуємо інформацію про поточного користувача
+    const userStr = localStorage.getItem('user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const acceptedById = user?.id || user?.user_id || null;
+    const acceptedByName = user?.username || user?.firstname || user?.name || 'Невідомий';
+    
     try {
       if (type === 'deposit') {
         // Use currency-aware deposit creation
@@ -57,11 +64,20 @@ export default function OrderFinancePanel({ order, onUpdate }) {
           currency: depositCurrency,
           exchange_rate: depositCurrency === 'UAH' ? null : exchangeRate,
           method: depositMethod,
-          note: depositCurrency !== 'UAH' ? `${depositAmount} ${depositCurrency} @ ${exchangeRate}` : null
+          note: depositCurrency !== 'UAH' ? `${depositAmount} ${depositCurrency} @ ${exchangeRate}` : null,
+          accepted_by_id: acceptedById,
+          accepted_by_name: acceptedByName
         });
         if (result.data && result.data.success) onUpdate?.();
       } else {
-        const result = await financeApi.createPayment({ payment_type: type, method, amount, order_id: order.id });
+        const result = await financeApi.createPayment({ 
+          payment_type: type, 
+          method, 
+          amount, 
+          order_id: order.id,
+          accepted_by_id: acceptedById,
+          accepted_by_name: acceptedByName
+        });
         if (result.data && result.data.success) onUpdate?.();
       }
     } finally {

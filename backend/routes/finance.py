@@ -33,6 +33,8 @@ class PaymentCreate(BaseModel):
     payer_contact: Optional[str] = None
     occurred_at: Optional[str] = None
     note: Optional[str] = None
+    accepted_by_id: Optional[int] = None  # ID користувача який прийняв
+    accepted_by_name: Optional[str] = None  # Ім'я користувача
 
 class ExpenseCreate(BaseModel):
     expense_type: str = "expense"  # expense | investment

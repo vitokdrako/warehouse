@@ -202,8 +202,23 @@ export default function OrderFinancePanel({ order, onUpdate }) {
           <CardHd title="Операції із заставою" />
           <CardBd>
             <div className="rounded-2xl border bg-slate-50 p-3 mb-3">
-              <div className="flex items-center justify-between"><div className="text-sm font-medium">Баланс холду</div><div className="text-sm font-semibold">{money(holdAvailable)}</div></div>
-              <div className="mt-1 text-xs text-slate-500">Використано: {money(order.deposit.used_for_damage)} • Повернуто: {money(order.deposit.refunded)}</div>
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Баланс холду</div>
+                <div className="text-sm font-semibold">
+                  {order.deposit.held > 0 ? (
+                    order.deposit.currency !== 'UAH' 
+                      ? `${order.deposit.actual_amount} ${order.deposit.currency}` 
+                      : money(holdAvailable)
+                  ) : '₴0'}
+                </div>
+              </div>
+              {order.deposit.held > 0 ? (
+                <div className="mt-1 text-xs text-slate-500">
+                  Використано: {money(order.deposit.used_for_damage)} • Повернуто: {money(order.deposit.refunded)}
+                </div>
+              ) : (
+                <div className="mt-1 text-xs text-amber-600">Застава ще не прийнята</div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Btn disabled={holdAvailable <= 0 || order.damage.due <= 0}>На шкоду</Btn>

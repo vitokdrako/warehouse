@@ -53,5 +53,45 @@
 - **API authentication working**: vitokdrako@gmail.com credentials work correctly
 - **Order lifecycle endpoint working**: Returns proper data structure with user fields
 
+## Frontend Test Results (Order ID: 7130)
+
+### ✅ PASSED Tests:
+1. **Login and Navigation** - Successfully logged in and navigated to manager dashboard
+   - Login with vitokdrako@gmail.com / test123 works correctly
+   - Manager dashboard loads with order cards displayed
+   - Order cards are clickable and navigate to order workspace
+
+2. **LeftRailTimeline Component** - Timeline component is present and functional
+   - Found timeline section with title "📋 Журнал операцій" in left rail
+   - Timeline component loads and displays events correctly
+   - Component handles loading states appropriately
+
+3. **Timeline Events Display** - Events are being loaded and displayed
+   - Timeline shows lifecycle events (e.g., "Замовлення прийнято")
+   - Events display with proper timestamps (e.g., "15 груд. 2025 р., 00:30")
+   - Events show user information when available (e.g., "• Система")
+
+4. **User Name Tracking** - User names are being displayed in timeline
+   - Events include user information in the format "• Username"
+   - User tracking is working for new events
+   - System events show "Система" as the user
+
+5. **API Integration** - Timeline loads data from backend APIs
+   - Component makes calls to /api/finance/payments and /api/orders/{id}/lifecycle
+   - API responses are properly processed and displayed
+   - Timeline updates when new events are created
+
+### 🎯 Key Frontend Findings:
+- **Timeline component is fully functional**: LeftRailTimeline displays both financial and lifecycle events
+- **User tracking UI working**: User names are displayed in timeline events with proper formatting
+- **Event categorization working**: Events show appropriate icons and formatting
+- **API integration successful**: Timeline loads real data from backend endpoints
+- **Order workspace integration**: Timeline appears correctly in the left rail of order workspace
+
+### ℹ️ Notes:
+- Some orders may have empty timelines (showing "Немає записів") which is expected for new orders
+- Old events may not have user names (expected - created before user tracking implementation)
+- Timeline loads with a brief loading state ("⏳ Завантаження...") which is normal
+
 ## Incorporate User Feedback
 None yet.

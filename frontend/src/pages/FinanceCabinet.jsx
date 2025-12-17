@@ -131,16 +131,43 @@ function TabBar({ tab, setTab }) {
 }
 
 // Order row for list
-function OrderRow({ order, isOpen, onToggle }) {
-  const rentDue = (order.total_rental || 0) - (order.rent_paid || 0);
+function OrderRow({ order, deposit, isOpen, onToggle }) {
+  // Використовуємо реальні дані з фінансової системи
+  const rentAccrued = order.total_rental || order.total_price || 0;
+  const rentPaid = order.rent_paid || 0;
+  const rentDue = Math.max(0, rentAccrued - rentPaid);
+  
   const depositExpected = order.total_deposit || 0;
-  const depositHeld = order.deposit_held || 0;
+  // Перевіряємо deposit з фін. системи
+  const depositHeld = deposit?.held_amount || order.deposit_held || 0;
+  const depositRefunded = deposit?.refunded_amount || 0;
+  const depositUsed = deposit?.used_amount || 0;
   const depositDue = Math.max(0, depositExpected - depositHeld);
   
+  // Формуємо флажки на основі реального статусу
   const badges = [];
-  if (rentDue > 0) badges.push(<Pill key="rent" t="warn">Борг оренди {money(rentDue)}</Pill>);
-  if (depositDue > 0) badges.push(<Pill key="dep" t="info">Застава очік. {money(depositDue)}</Pill>);
-  if (depositHeld > 0) badges.push(<Pill key="held" t="ok">Застава {money(depositHeld)}</Pill>);
+  
+  // Оренда
+  if (rentDue > 0) {
+    badges.push(<Pill key="rent-due" t="warn">Борг оренди {money(rentDue)}</Pill>);
+  } else if (rentPaid > 0 && rentDue <= 0) {
+    badges.push(<Pill key="rent-paid" t="ok">✓ Оренду сплачено</Pill>);
+  }
+  
+  // Застава
+  if (depositHeld > 0) {
+    if (depositRefunded > 0 && depositRefunded >= depositHeld) {
+      badges.push(<Pill key="dep-returned" t="neutral">✓ Заставу повернуто</Pill>);
+    } else if (depositUsed > 0) {
+      badges.push(<Pill key="dep-used" t="info">Застава використана {money(depositUsed)}</Pill>);
+    } else {
+      // Показуємо валюту якщо є
+      const dispAmount = deposit?.display_amount || money(depositHeld);
+      badges.push(<Pill key="dep-held" t="ok">✓ Застава {dispAmount}</Pill>);
+    }
+  } else if (depositDue > 0) {
+    badges.push(<Pill key="dep-due" t="info">Застава очік. {money(depositDue)}</Pill>);
+  }
   
   const statusMap = {
     'awaiting_customer': { label: 'Очікує', t: 'warn' },

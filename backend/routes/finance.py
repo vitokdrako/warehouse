@@ -320,6 +320,8 @@ async def create_payment(data: PaymentCreate):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
 
 
 # ============================================================

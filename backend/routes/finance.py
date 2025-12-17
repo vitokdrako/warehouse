@@ -823,11 +823,24 @@ async def pay_payroll(payroll_id: int, db: Session = Depends(get_rh_db)):
 
 @router.post("/deposits/create")
 async def create_deposit_with_currency(data: DepositCreate):
-    """Create deposit with multi-currency support"""
-    from database_rentalhub import RHSessionLocal
+    """Create deposit with multi-currency support using direct connection."""
+    import pymysql
+    from datetime import datetime
+    import os
     
-    db = RHSessionLocal()
+    conn = pymysql.connect(
+        host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
+        port=int(os.environ.get('RH_DB_PORT', 3306)),
+        user=os.environ.get('RH_DB_USERNAME', 'farforre_rentalhub'),
+        password=os.environ.get('RH_DB_PASSWORD', '-nu+3Gp54L'),
+        database=os.environ.get('RH_DB_DATABASE', 'farforre_rentalhub'),
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False
+    )
+    
     try:
+        cursor = conn.cursor()
         occurred_at = datetime.now()
         
         # Convert foreign currency to UAH equivalent
@@ -835,59 +848,57 @@ async def create_deposit_with_currency(data: DepositCreate):
         if data.currency != "UAH" and data.exchange_rate:
             uah_amount = data.actual_amount * data.exchange_rate
         
-        # Determine debit account (money coming in)
+        # Determine accounts
         debit_acc = "CASH" if data.method == "cash" else "BANK"
         
-        # Post ledger transaction: Debit Cash/Bank, Credit Deposit Liability
-        tx_id = post_transaction(db, "deposit_payment", uah_amount, debit_acc, "DEP_LIAB",
-                                 "order", data.order_id, order_id=data.order_id,
-                                 note=data.note or f"Застава {data.currency}")
+        # Get account IDs
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (debit_acc,))
+        debit_acc_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", ("DEP_LIAB",))
+        credit_acc_id = cursor.fetchone()['id']
         
-        # Add currency info to deposit_holds table
-        try:
-            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'UAH'"))
-            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS actual_amount DECIMAL(12,2)"))
-            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(10,4)"))
-            db.execute(text("ALTER TABLE fin_deposit_holds ADD COLUMN IF NOT EXISTS expected_amount DECIMAL(12,2)"))
-        except:
-            pass
+        # Create transaction
+        cursor.execute("""
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, ("deposit_payment", uah_amount, occurred_at, "order", data.order_id, data.note or f"Застава {data.currency}"))
+        tx_id = cursor.lastrowid
         
-        # Check existing deposit for order
-        existing = db.execute(text("SELECT id FROM fin_deposit_holds WHERE order_id = :order_id"), {"order_id": data.order_id}).fetchone()
+        # Create ledger entries
+        cursor.execute("INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id) VALUES (%s, %s, 'D', %s, %s)",
+                      (tx_id, debit_acc_id, uah_amount, data.order_id))
+        cursor.execute("INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id) VALUES (%s, %s, 'C', %s, %s)",
+                      (tx_id, credit_acc_id, uah_amount, data.order_id))
+        
+        # Check existing deposit
+        cursor.execute("SELECT id FROM fin_deposit_holds WHERE order_id = %s", (data.order_id,))
+        existing = cursor.fetchone()
+        
         if existing:
-            db.execute(text("""
-                UPDATE fin_deposit_holds 
-                SET held_amount = held_amount + :uah_amount, 
-                    actual_amount = :actual_amount,
-                    currency = :currency,
-                    exchange_rate = :exchange_rate,
-                    expected_amount = :expected_amount
-                WHERE order_id = :order_id
-            """), {"uah_amount": uah_amount, "actual_amount": data.actual_amount, "currency": data.currency,
-                   "exchange_rate": data.exchange_rate, "expected_amount": data.expected_amount, "order_id": data.order_id})
-            deposit_id = existing[0]
+            cursor.execute("""
+                UPDATE fin_deposit_holds SET held_amount = held_amount + %s, 
+                    actual_amount = %s, currency = %s, exchange_rate = %s, expected_amount = %s
+                WHERE order_id = %s
+            """, (uah_amount, data.actual_amount, data.currency, data.exchange_rate, data.expected_amount, data.order_id))
+            deposit_id = existing['id']
         else:
-            db.execute(text("""
+            cursor.execute("""
                 INSERT INTO fin_deposit_holds (order_id, held_amount, actual_amount, currency, exchange_rate, expected_amount, opened_at, note)
-                VALUES (:order_id, :uah_amount, :actual_amount, :currency, :exchange_rate, :expected_amount, :occurred_at, :note)
-            """), {"order_id": data.order_id, "uah_amount": uah_amount, "actual_amount": data.actual_amount,
-                   "currency": data.currency, "exchange_rate": data.exchange_rate,
-                   "expected_amount": data.expected_amount, "occurred_at": occurred_at, "note": data.note})
-            deposit_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (data.order_id, uah_amount, data.actual_amount, data.currency, data.exchange_rate, data.expected_amount, occurred_at, data.note))
+            deposit_id = cursor.lastrowid
         
         # Record deposit event
-        db.execute(text("""
+        cursor.execute("""
             INSERT INTO fin_deposit_events (deposit_id, event_type, amount, occurred_at, tx_id, note) 
-            VALUES (:deposit_id, 'received', :amount, :occurred_at, :tx_id, :note)
-        """), {"deposit_id": deposit_id, "amount": uah_amount, "occurred_at": occurred_at, "tx_id": tx_id,
-               "note": f"{data.actual_amount} {data.currency}" if data.currency != "UAH" else None})
+            VALUES (%s, 'received', %s, %s, %s, %s)
+        """, (deposit_id, uah_amount, occurred_at, tx_id, f"{data.actual_amount} {data.currency}" if data.currency != "UAH" else None))
         
         # Create payment record
-        db.execute(text("""
+        cursor.execute("""
             INSERT INTO fin_payments (payment_type, method, amount, currency, order_id, occurred_at, note, tx_id)
-            VALUES ('deposit', :method, :amount, :currency, :order_id, :occurred_at, :note, :tx_id)
-        """), {"method": data.method, "amount": uah_amount, "currency": data.currency,
-               "order_id": data.order_id, "occurred_at": occurred_at, "note": data.note, "tx_id": tx_id})
+            VALUES ('deposit', %s, %s, %s, %s, %s, %s, %s)
+        """, (data.method, uah_amount, data.currency, data.order_id, occurred_at, data.note, tx_id))
         
         db.commit()
         return {"success": True, "deposit_id": deposit_id, "tx_id": tx_id, "uah_amount": uah_amount}

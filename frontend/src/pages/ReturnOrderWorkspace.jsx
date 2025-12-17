@@ -265,13 +265,9 @@ export default function ReturnOrderWorkspace() {
               tier="regular"
             />
             <LeftRailFinance
+              orderId={order?.order_id}
               rentAmount={totalRent}
               depositAmount={totalDeposit}
-              discount={0}
-              isPaid={true}
-              showGate={true}
-              gateMessage={canComplete ? 'Можна завершити' : 'Перевірте позиції'}
-              gateTone={canComplete ? 'ok' : 'warn'}
             />
             <LeftRailTimeline events={timeline} />
           </>

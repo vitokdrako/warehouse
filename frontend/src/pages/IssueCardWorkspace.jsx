@@ -413,13 +413,9 @@ setTimeout(()=>window.print(),500);
               tier="regular"
             />
             <LeftRailFinance
+              orderId={order?.order_id}
               rentAmount={totalRent}
               depositAmount={totalDeposit}
-              discount={0}
-              isPaid={prepayment >= totalRent}
-              showGate={true}
-              gateMessage={isIssued ? 'Видано' : isReadyForIssue ? 'Готово до видачі' : canMarkReady ? 'Можна видавати' : 'В процесі комплектації'}
-              gateTone={isIssued ? 'ok' : isReadyForIssue ? 'ok' : canMarkReady ? 'ok' : 'warn'}
             />
             <LeftRailTimeline events={timeline} />
           </>

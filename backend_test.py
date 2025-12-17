@@ -137,64 +137,67 @@ class OrderLifecycleTester:
             self.log(f"❌ Exception testing order lifecycle: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_finance_dashboard(self) -> Dict[str, Any]:
-        """Test GET /api/finance/dashboard?period=month - should return metrics and deposits"""
+    def test_order_accept_endpoint(self) -> Dict[str, Any]:
+        """Test POST /api/orders/{order_id}/accept - should create lifecycle entry with user info"""
         try:
-            self.log("🧪 Testing finance dashboard endpoint...")
+            self.log(f"🧪 Testing order accept endpoint for order {TEST_ORDER_ID}...")
             
-            response = self.session.get(f"{self.base_url}/finance/dashboard?period=month")
+            # First check current order status
+            order_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}")
+            if order_response.status_code != 200:
+                self.log(f"❌ Cannot get order details: {order_response.status_code}", "ERROR")
+                return {"success": False, "error": "Cannot get order details"}
+            
+            order_data = order_response.json()
+            current_status = order_data.get('status')
+            self.log(f"   Current order status: {current_status}")
+            
+            # Only test accept if order is in acceptable status
+            if current_status not in ['pending', 'awaiting_customer']:
+                self.log(f"   ⚠️ Order status '{current_status}' not suitable for accept test, skipping")
+                return {"success": True, "skipped": True, "reason": f"Order status is '{current_status}'"}
+            
+            # Test accept endpoint
+            accept_data = {
+                "items": order_data.get('items', [])
+            }
+            
+            response = self.session.post(f"{self.base_url}/orders/{TEST_ORDER_ID}/accept", json=accept_data)
             
             if response.status_code == 200:
                 data = response.json()
+                self.log(f"✅ Order accept successful: {data.get('message')}")
                 
-                # Check required structure
-                required_sections = ['period', 'metrics', 'deposits']
-                missing_sections = []
+                # Check if lifecycle entry was created with user info
+                lifecycle_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}/lifecycle")
+                if lifecycle_response.status_code == 200:
+                    lifecycle_data = lifecycle_response.json()
+                    
+                    # Look for recent 'accepted' event
+                    recent_accept_event = None
+                    for event in lifecycle_data:
+                        if event.get('stage') == 'accepted':
+                            recent_accept_event = event
+                            break
+                    
+                    if recent_accept_event:
+                        has_user_info = (
+                            recent_accept_event.get('created_by_id') is not None or
+                            recent_accept_event.get('created_by_name') is not None
+                        )
+                        if has_user_info:
+                            self.log(f"   ✅ Accept event has user info: {recent_accept_event.get('created_by_name')}")
+                        else:
+                            self.log(f"   ❌ Accept event missing user info", "ERROR")
+                            return {"success": False, "error": "Accept event missing user info"}
                 
-                for section in required_sections:
-                    if section not in data:
-                        missing_sections.append(section)
-                
-                if missing_sections:
-                    self.log(f"❌ Finance dashboard missing sections: {missing_sections}", "ERROR")
-                    return {"success": False, "error": f"Missing required sections: {missing_sections}"}
-                
-                # Check metrics structure
-                metrics = data.get('metrics', {})
-                required_metrics = ['net_profit', 'rent_revenue', 'operating_expenses', 'cash_balance']
-                
-                for metric in required_metrics:
-                    if metric not in metrics:
-                        self.log(f"⚠️ Missing metric: {metric}")
-                
-                # Check deposits structure
-                deposits = data.get('deposits', {})
-                required_deposit_fields = ['held', 'used', 'refunded', 'available_to_refund']
-                
-                for field in required_deposit_fields:
-                    if field not in deposits:
-                        self.log(f"⚠️ Missing deposit field: {field}")
-                
-                self.log(f"✅ Finance Dashboard (period: {data.get('period')}):")
-                self.log(f"   - Net Profit: ₴{metrics.get('net_profit', 0)}")
-                self.log(f"   - Rent Revenue: ₴{metrics.get('rent_revenue', 0)}")
-                self.log(f"   - Operating Expenses: ₴{metrics.get('operating_expenses', 0)}")
-                self.log(f"   - Cash Balance: ₴{metrics.get('cash_balance', 0)}")
-                self.log(f"   - Deposits Held: ₴{deposits.get('held', 0)}")
-                self.log(f"   - Deposits Available: ₴{deposits.get('available_to_refund', 0)}")
-                
-                return {
-                    "success": True, 
-                    "data": data,
-                    "has_metrics": len(metrics) > 0,
-                    "has_deposits": len(deposits) > 0
-                }
+                return {"success": True, "data": data}
             else:
-                self.log(f"❌ Failed to get finance dashboard: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to accept order: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing finance dashboard: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing order accept: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_finance_vendors(self) -> Dict[str, Any]:

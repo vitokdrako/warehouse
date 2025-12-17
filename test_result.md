@@ -9,8 +9,8 @@
 - Test GET /api/orders/{order_id}/lifecycle returns user info ✅ PASSED
 
 ## Frontend Tests Required
-- Test LeftRailTimeline component loads both financial events and lifecycle events
-- Test that user names are displayed in the timeline
+- Test LeftRailTimeline component loads both financial events and lifecycle events ✅ PASSED
+- Test that user names are displayed in the timeline ✅ PASSED
 
 ## Test Credentials
 - email: vitokdrako@gmail.com

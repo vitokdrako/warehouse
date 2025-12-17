@@ -142,12 +142,13 @@ function OrderRow({ order, deposit, payments = [], isOpen, onToggle }) {
   
   const rentDue = Math.max(0, rentAccrued - rentPaid);
   
-  const depositExpected = order.total_deposit || 0;
-  // Перевіряємо deposit з фін. системи
-  const depositHeld = deposit?.held_amount || order.deposit_held || 0;
-  const depositRefunded = deposit?.refunded_amount || 0;
-  const depositUsed = deposit?.used_amount || 0;
-  const depositDue = Math.max(0, depositExpected - depositHeld);
+  const depositExpected = order.total_deposit || order.deposit_amount || 0;
+  
+  // ФАКТИЧНА застава - ТІЛЬКИ якщо є запис у fin_deposit_holds
+  const hasDeposit = deposit !== null && deposit !== undefined;
+  const depositHeld = hasDeposit ? (deposit.held_amount || 0) : 0;  // 0 якщо не прийнято
+  const depositRefunded = hasDeposit ? (deposit.refunded_amount || 0) : 0;
+  const depositUsed = hasDeposit ? (deposit.used_amount || 0) : 0;
   
   // Формуємо флажки на основі реального статусу
   const badges = [];
@@ -159,8 +160,8 @@ function OrderRow({ order, deposit, payments = [], isOpen, onToggle }) {
     badges.push(<Pill key="rent-paid" t="ok">✓ Оренду сплачено</Pill>);
   }
   
-  // Застава
-  if (depositHeld > 0) {
+  // Застава - ТІЛЬКИ якщо реально прийнята (є запис в deposit)
+  if (hasDeposit && depositHeld > 0) {
     if (depositRefunded > 0 && depositRefunded >= depositHeld) {
       badges.push(<Pill key="dep-returned" t="neutral">✓ Заставу повернуто</Pill>);
     } else if (depositUsed > 0) {
@@ -170,8 +171,9 @@ function OrderRow({ order, deposit, payments = [], isOpen, onToggle }) {
       const dispAmount = deposit?.display_amount || money(depositHeld);
       badges.push(<Pill key="dep-held" t="ok">✓ Застава {dispAmount}</Pill>);
     }
-  } else if (depositDue > 0) {
-    badges.push(<Pill key="dep-due" t="info">Застава очік. {money(depositDue)}</Pill>);
+  } else if (depositExpected > 0) {
+    // Застава очікується, але ще НЕ прийнята
+    badges.push(<Pill key="dep-due" t="info">Застава очік. {money(depositExpected)}</Pill>);
   }
   
   const statusMap = {

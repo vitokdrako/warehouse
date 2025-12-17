@@ -221,9 +221,12 @@ function transformOrderForPanel(order, payments = [], deposit = null) {
   const rentPaid = rentPayments.reduce((s, p) => s + p.amount, 0);
   const damagePaid = damagePayments.reduce((s, p) => s + p.amount, 0);
   
-  // Отримуємо інформацію про валюту застави
-  const depositCurrency = deposit?.currency || 'UAH';
-  const depositActual = deposit?.actual_amount || deposit?.held_amount || order.deposit_held || 0;
+  // ФАКТИЧНА застава - ТІЛЬКИ з fin_deposit_holds (якщо є запис)
+  // Якщо deposit = null, значить застава ще НЕ прийнята → показуємо 0
+  const hasDeposit = deposit !== null && deposit !== undefined;
+  const depositHeld = hasDeposit ? (deposit.held_amount || 0) : 0;  // 0 якщо застава не прийнята
+  const depositActual = hasDeposit ? (deposit.actual_amount || depositHeld) : 0;
+  const depositCurrency = hasDeposit ? (deposit.currency || 'UAH') : 'UAH';
   
   return {
     id: order.order_id || order.id,
@@ -231,18 +234,18 @@ function transformOrderForPanel(order, payments = [], deposit = null) {
     client: order.client_name || order.customer_name,
     status: order.status,
     rent: {
-      accrued: order.total_rental || 0,
+      accrued: order.total_rental || order.total_price || 0,
       paid: rentPaid,
-      due: Math.max(0, (order.total_rental || 0) - rentPaid),
+      due: Math.max(0, (order.total_rental || order.total_price || 0) - rentPaid),
     },
     deposit: {
-      expected: order.total_deposit || 0,
-      held: deposit?.held_amount || order.deposit_held || 0,  // UAH еквівалент
-      actual_amount: depositActual,  // Фактична сума у валюті
+      expected: order.total_deposit || order.deposit_amount || 0,  // Очікувана сума з замовлення
+      held: depositHeld,  // Фактично прийнята сума (UAH еквівалент) - 0 якщо не прийнято
+      actual_amount: depositActual,  // Фактична сума у валюті - 0 якщо не прийнято
       currency: depositCurrency,
-      display: deposit?.display_amount || (depositCurrency === 'UAH' ? `₴${depositActual}` : `${depositActual} ${depositCurrency}`),
-      used_for_damage: deposit?.used_amount || 0,
-      refunded: deposit?.refunded_amount || 0,
+      display: hasDeposit ? (deposit.display_amount || (depositCurrency === 'UAH' ? `₴${depositActual}` : `${depositActual} ${depositCurrency}`)) : '—',
+      used_for_damage: hasDeposit ? (deposit.used_amount || 0) : 0,
+      refunded: hasDeposit ? (deposit.refunded_amount || 0) : 0,
     },
     damage: {
       assessed: 0,

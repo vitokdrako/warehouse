@@ -269,7 +269,7 @@ export default function ReturnOrderWorkspace() {
               rentAmount={totalRent}
               depositAmount={totalDeposit}
             />
-            <LeftRailTimeline events={timeline} />
+            <LeftRailTimeline orderId={order?.order_id} events={timeline} />
           </>
         }
         

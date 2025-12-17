@@ -183,10 +183,9 @@ export default function OrderFinancePanel({ order, onUpdate }) {
           </CardBd>
         </Card>
 
-        <DocumentsPanel orderId={order.id} compact />
       </div>
 
-      {/* Full documents */}
+      {/* Документи - один великий блок */}
       <div className="col-span-12"><DocumentsPanel orderId={order.id} /></div>
 
       {/* Journal */}

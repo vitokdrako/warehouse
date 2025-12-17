@@ -350,6 +350,7 @@ function OrdersTab({ orders, deposits, expandedId, setExpandedId, onUpdate, filt
                     <OrderRow 
                       order={o}
                       deposit={deposit}
+                      payments={payments}
                       isOpen={expandedId === (o.order_id || o.id)} 
                       onToggle={() => setExpandedId(expandedId === (o.order_id || o.id) ? null : (o.order_id || o.id))} 
                     />

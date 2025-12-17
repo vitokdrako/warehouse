@@ -167,19 +167,20 @@ export default function ManagerDashboard() {
       console.log('[Dashboard] Finance summary:', data);
       setFinanceData({
         revenue: data.total_revenue || data.rent_paid || 0,  // ОПЛАЧЕНІ (payment completed)
-        deposits: data.deposits_held || 0  // Сума застав у холді
+        deposits: data.deposits_count || 0  // КІЛЬКІСТЬ застав у холді (не сума!)
       });
     })
     .catch(err => {
       console.error('[Dashboard] Error loading finance:', err);
       // Fallback - спробувати новий finance API
-      authFetch(`${BACKEND_URL}/api/finance/dashboard?period=month`)
+      authFetch(`${BACKEND_URL}/api/finance/deposits`)
       .then(res => res.json())
       .then(data => {
-        console.log('[Dashboard] Finance dashboard fallback:', data);
+        console.log('[Dashboard] Deposits fallback:', data);
+        const activeDeposits = data.filter(d => d.status === 'holding' || d.status === 'partially_used');
         setFinanceData({
-          revenue: data.metrics?.rent_revenue || 0,
-          deposits: data.deposits?.held || 0
+          revenue: 0,
+          deposits: activeDeposits.length  // Кількість активних застав
         });
       })
       .catch(err2 => console.error('[Dashboard] Finance fallback error:', err2));

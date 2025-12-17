@@ -873,6 +873,8 @@ async def create_deposit_with_currency(data: DepositCreate):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
 
 
 

@@ -20,9 +20,9 @@ import {
   ZoneItemsReturn,
   ZoneReturnFees,
   ZoneNotes,
-  ZoneCommercialSummary,
   ZoneDocuments,
 } from '../components/order-workspace/zones'
+import FinanceStatusCard from '../components/FinanceStatusCard'
 
 import DamageModal from '../components/DamageModal'
 

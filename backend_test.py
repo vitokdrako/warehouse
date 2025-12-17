@@ -17,7 +17,7 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://rental-finance-2.preview.emergentagent.com/api"
+BASE_URL = "https://finflow-581.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
@@ -719,7 +719,7 @@ def main():
     print("   8. ➕ Create Employee - POST /api/finance/employees")
     print("      - Should create a new employee")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
-    print("URL: https://rental-finance-2.preview.emergentagent.com")
+    print("URL: https://finflow-581.preview.emergentagent.com")
     print("=" * 80)
     
     tester = FinanceCabinetTester(BASE_URL)

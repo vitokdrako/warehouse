@@ -1636,6 +1636,7 @@ class MoveToPreparationRequest(BaseModel):
 async def move_to_preparation(
     order_id: int,
     data: Optional[MoveToPreparationRequest] = None,
+    current_user: dict = Depends(get_current_user_dependency),
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -1812,9 +1813,9 @@ async def move_to_preparation(
                     "notes": f"Розраховано як 50% від вартості втрати: ₴{total_loss_value}. Автоматично при відправці на збір"
                 })
         
-        # Log lifecycle з інформацією про менеджера
-        user_name = data.user_name if data and data.user_name else "Менеджер"
-        user_id = data.user_id if data and data.user_id else None
+        # Log lifecycle з інформацією про менеджера (пріоритет: JWT токен > тіло запиту)
+        user_name = current_user.get("name") if current_user.get("name") else (data.user_name if data and data.user_name else "Менеджер")
+        user_id = current_user.get("id") if current_user.get("id") else (data.user_id if data and data.user_id else None)
         db.execute(text("""
             INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
             VALUES (:order_id, 'preparation', :notes, :created_by, :created_by_id, :created_by_name, NOW())

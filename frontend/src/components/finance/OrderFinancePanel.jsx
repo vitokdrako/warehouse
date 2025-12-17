@@ -100,9 +100,18 @@ export default function OrderFinancePanel({ order, onUpdate }) {
       <div className="col-span-12">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card><CardBd><div className="text-xs text-slate-500">Нараховано</div><div className="mt-1 text-xl font-semibold">{money(order.rent.accrued)}</div></CardBd></Card>
-          <Card><CardBd><div className="text-xs text-slate-500">Оплачено</div><div className="mt-1 text-xl font-semibold">{money(order.rent.paid)}</div></CardBd></Card>
+          <Card><CardBd><div className="text-xs text-slate-500">Оплачено</div><div className="mt-1 text-xl font-semibold text-emerald-600">{money(order.rent.paid)}</div></CardBd></Card>
           <Card><CardBd><div className="text-xs text-slate-500">Очікувана застава</div><div className="mt-1 text-xl font-semibold">{money(order.deposit.expected)}</div><div className="mt-1 text-xs text-slate-500">(не дохід)</div></CardBd></Card>
-          <Card><CardBd><div className="text-xs text-slate-500">Фактична застава</div><div className="mt-1 text-xl font-semibold">{order.deposit.display || money(order.deposit.held)}</div>{order.deposit.currency && order.deposit.currency !== 'UAH' && <div className="text-xs text-slate-400">≈ {money(order.deposit.held)}</div>}</CardBd></Card>
+          <Card><CardBd>
+            <div className="text-xs text-slate-500">Фактична застава</div>
+            <div className="mt-1 text-xl font-semibold">
+              {order.deposit.held > 0 ? (order.deposit.display || money(order.deposit.held)) : '—'}
+            </div>
+            {order.deposit.held > 0 && order.deposit.currency !== 'UAH' && (
+              <div className="text-xs text-slate-400">≈ {money(order.deposit.held)}</div>
+            )}
+            {order.deposit.held === 0 && <div className="text-xs text-amber-600">Не прийнято</div>}
+          </CardBd></Card>
           <Card><CardBd><div className="text-xs text-slate-500">До сплати</div><div className="mt-1 text-xl font-semibold text-rose-700">{money(order.rent.due + order.damage.due)}</div></CardBd></Card>
         </div>
       </div>

@@ -269,7 +269,7 @@ export default function NewOrderClean() {
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.estimatedDeposit}
           />
-          <LeftRailTimeline events={events} />
+          <LeftRailTimeline orderId={orderId} events={events} />
           
           {/* Додаткова панель: Доставка */}
           <ZoneDeliverySetup

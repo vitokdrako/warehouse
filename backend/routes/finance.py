@@ -260,7 +260,9 @@ async def get_dashboard(period: str = "month", db: Session = Depends(get_rh_db))
 @router.get("/payments")
 async def list_payments(payment_type: Optional[str] = None, order_id: Optional[int] = None,
                         limit: int = 50, offset: int = 0, db: Session = Depends(get_rh_db)):
-    query = "SELECT id, payment_type, method, amount, currency, payer_name, occurred_at, order_id, damage_case_id, status, note FROM fin_payments WHERE 1=1"
+    query = """SELECT id, payment_type, method, amount, currency, payer_name, occurred_at, 
+               order_id, damage_case_id, status, note, accepted_by_id, accepted_by_name 
+               FROM fin_payments WHERE 1=1"""
     params = {"limit": limit, "offset": offset}
     if payment_type: query += " AND payment_type = :payment_type"; params["payment_type"] = payment_type
     if order_id: query += " AND order_id = :order_id"; params["order_id"] = order_id
@@ -268,7 +270,8 @@ async def list_payments(payment_type: Optional[str] = None, order_id: Optional[i
     result = db.execute(text(query), params)
     return {"payments": [{"id": r[0], "payment_type": r[1], "method": r[2], "amount": float(r[3]),
                           "currency": r[4], "payer_name": r[5], "occurred_at": r[6].isoformat() if r[6] else None,
-                          "order_id": r[7], "damage_case_id": r[8], "status": r[9], "note": r[10]} for r in result]}
+                          "order_id": r[7], "damage_case_id": r[8], "status": r[9], "note": r[10],
+                          "accepted_by_id": r[11], "accepted_by_name": r[12]} for r in result]}
 
 @router.post("/payments")
 async def create_payment(data: PaymentCreate):

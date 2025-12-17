@@ -274,13 +274,6 @@ export default function ArchivedOrderWorkspace() {
         readOnly={true}
       />
       
-      {/* Фінансовий статус */}
-      <FinanceStatusCard 
-        orderId={order?.order_id} 
-        expectedDeposit={totalDeposit}
-        expectedRent={totalRent}
-      />
-      
       {/* Нотатки (read-only) */}
       {notes && (
         <ZoneNotes

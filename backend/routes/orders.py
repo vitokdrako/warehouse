@@ -654,14 +654,16 @@ async def update_order_from_calendar(
     
     db.execute(sql, params)
     
-    # Log to lifecycle
+    # Log to lifecycle з інформацією про користувача
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'calendar_update', :notes, :created_by, NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, 'calendar_update', :notes, :created_by, :created_by_id, :created_by_name, NOW())
     """), {
         "order_id": order_id,
         "notes": f"Calendar: {lane} updated to {new_date} {actual_time}",
-        "created_by": current_user["name"]
+        "created_by": current_user.get("name", "System"),
+        "created_by_id": current_user.get("id"),
+        "created_by_name": current_user.get("name")
     })
     
     db.commit()
@@ -1105,15 +1107,18 @@ async def cancel_order_by_client(
         "reason": reason
     })
     
-    # Залогувати в lifecycle
-    created_by = data.get('created_by', 'System')
+    # Залогувати в lifecycle з інформацією про користувача
+    created_by_name = data.get('created_by', 'System')
+    created_by_id = data.get('created_by_id')
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'cancelled_by_client', :notes, :created_by, NOW())
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, 'cancelled_by_client', :notes, :created_by, :created_by_id, :created_by_name, NOW())
     """), {
         "order_id": order_id,
         "notes": f"Клієнт відмовився від замовлення: {reason}",
-        "created_by": created_by
+        "created_by": created_by_name,
+        "created_by_id": created_by_id,
+        "created_by_name": created_by_name
     })
     
     db.commit()
@@ -1162,11 +1167,16 @@ async def archive_order(
         WHERE order_id = :order_id
     """), {"order_id": order_id, "updated_by_id": current_user["id"]})
     
-    # Залогувати
+    # Залогувати з інформацією про користувача
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', :created_by, NOW())
-    """), {"order_id": order_id, "created_by": current_user["name"]})
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, 'archived', 'Замовлення переміщено в архів', :created_by, :created_by_id, :created_by_name, NOW())
+    """), {
+        "order_id": order_id,
+        "created_by": current_user.get("name", "System"),
+        "created_by_id": current_user.get("id"),
+        "created_by_name": current_user.get("name")
+    })
     
     db.commit()
     
@@ -1213,11 +1223,16 @@ async def unarchive_order(
         WHERE order_id = :order_id
     """), {"order_id": order_id, "updated_by_id": current_user["id"]})
     
-    # Залогувати
+    # Залогувати з інформацією про користувача
     db.execute(text("""
-        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-        VALUES (:order_id, 'unarchived', 'Замовлення відновлено з архіву', :created_by, NOW())
-    """), {"order_id": order_id, "created_by": current_user["name"]})
+        INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+        VALUES (:order_id, 'unarchived', 'Замовлення відновлено з архіву', :created_by, :created_by_id, :created_by_name, NOW())
+    """), {
+        "order_id": order_id,
+        "created_by": current_user.get("name", "System"),
+        "created_by_id": current_user.get("id"),
+        "created_by_name": current_user.get("name")
+    })
     
     db.commit()
     

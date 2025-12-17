@@ -265,10 +265,9 @@ export default function NewOrderClean() {
             tier="new"
           />
           <LeftRailFinance
+            orderId={orderId}
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.estimatedDeposit}
-            discount={discount}
-            isPaid={false}
           />
           <LeftRailTimeline events={events} />
           

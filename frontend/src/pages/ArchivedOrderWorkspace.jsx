@@ -274,13 +274,11 @@ export default function ArchivedOrderWorkspace() {
         readOnly={true}
       />
       
-      {/* Комерційна зведена */}
-      <ZoneCommercialSummary
-        rentAmount={totalRent}
-        depositAmount={totalDeposit}
-        discountPercent={discount}
-        rentalDays={rentalDays}
-        itemsCount={items.length}
+      {/* Фінансовий статус */}
+      <FinanceStatusCard 
+        orderId={order?.order_id} 
+        expectedDeposit={totalDeposit}
+        expectedRent={totalRent}
       />
       
       {/* Нотатки (read-only) */}

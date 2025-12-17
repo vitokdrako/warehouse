@@ -215,7 +215,7 @@ export default function ArchivedOrderWorkspace() {
             rentAmount={totalRent}
             depositAmount={totalDeposit}
           />
-          <LeftRailTimeline events={timelineEvents} />
+          <LeftRailTimeline orderId={order?.order_id} events={timelineEvents} />
         </>
       }
       

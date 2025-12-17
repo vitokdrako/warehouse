@@ -654,7 +654,7 @@ export default function NewOrderViewWorkspace() {
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.totalDeposit}
           />
-          <LeftRailTimeline events={timeline} />
+          <LeftRailTimeline orderId={orderId} events={timeline} />
         </>
       }
       

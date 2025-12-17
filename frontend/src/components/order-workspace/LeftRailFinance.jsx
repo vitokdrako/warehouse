@@ -1,114 +1,161 @@
 /* eslint-disable */
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import TonePill from './TonePill'
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
+
+// Auth fetch helper
+const authFetch = (url) => {
+  const token = localStorage.getItem('token');
+  return fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    },
+  });
+};
+
+const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 
 /**
  * LeftRailFinance - Фінансовий блок в лівій панелі
+ * Читає РЕАЛЬНІ дані з фінансової системи
  */
 export default function LeftRailFinance({
-  rentAmount = 0,      // Сума оренди
-  depositAmount = 0,   // Сума застави
-  prepayment = 0,      // Передплата
-  discount = 0,        // Знижка %
-  lateFee = 0,         // Пеня за прострочення
-  damageFee = 0,       // Збитки
-  cleaningFee = 0,     // Чистка
-  isPaid = false,      // Чи повністю оплачено
-  showGate = false,    // Показувати UI gate
-  gateMessage,         // Повідомлення gate
-  gateTone = 'warn',   // Тон gate: ok | warn | danger
+  orderId,             // ID замовлення для завантаження реальних даних
+  rentAmount = 0,      // Очікувана сума оренди (fallback)
+  depositAmount = 0,   // Очікувана сума застави (fallback)
 }) {
-  const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
+  const [loading, setLoading] = useState(true)
+  const [payments, setPayments] = useState([])
+  const [deposit, setDeposit] = useState(null)
+
+  useEffect(() => {
+    if (!orderId) {
+      setLoading(false)
+      return
+    }
+
+    // Завантажити реальні дані з фінансової системи
+    Promise.all([
+      authFetch(`${BACKEND_URL}/api/finance/payments?order_id=${orderId}`).then(r => r.json()),
+      authFetch(`${BACKEND_URL}/api/finance/deposits`).then(r => r.json())
+    ])
+    .then(([paymentsData, depositsData]) => {
+      setPayments(paymentsData.payments || [])
+      // Знайти депозит для цього замовлення
+      const orderDeposit = (depositsData || []).find(d => d.order_id === orderId)
+      setDeposit(orderDeposit || null)
+      setLoading(false)
+    })
+    .catch(err => {
+      console.error('Failed to load finance data:', err)
+      setLoading(false)
+    })
+  }, [orderId])
+
+  // Розрахунок реального статусу
+  const rentPayments = payments.filter(p => p.payment_type === 'rent')
+  const rentPaid = rentPayments.reduce((sum, p) => sum + (p.amount || 0), 0)
   
-  const discountAmount = (rentAmount * discount) / 100
-  const rentAfterDiscount = rentAmount - discountAmount
-  const totalDue = rentAfterDiscount - prepayment + lateFee + damageFee + cleaningFee
-  const remaining = Math.max(0, totalDue)
+  // Фактична застава - ТІЛЬКИ якщо є запис у fin_deposit_holds
+  const hasDeposit = deposit !== null && deposit !== undefined
+  const depositHeld = hasDeposit ? (deposit.held_amount || 0) : 0
+  const depositCurrency = hasDeposit ? (deposit.currency || 'UAH') : 'UAH'
+  const depositActual = hasDeposit ? (deposit.actual_amount || depositHeld) : 0
   
-  const isFullyPaid = isPaid || remaining <= 0
+  // Статуси
+  const rentStatus = rentPaid >= rentAmount ? 'paid' : rentPaid > 0 ? 'partial' : 'pending'
+  const depositStatus = hasDeposit && depositHeld > 0 ? 'received' : 'pending'
   
+  // Загальний статус
+  const isFullyPaid = rentStatus === 'paid' && depositStatus === 'received'
+  const rentDue = Math.max(0, rentAmount - rentPaid)
+  
+  // Форматування застави у валюті
+  const depositDisplay = depositCurrency === 'UAH' 
+    ? `₴ ${fmtUA(depositActual)}` 
+    : `${depositActual} ${depositCurrency}`
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="text-sm text-slate-500">⏳ Завантаження...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-slate-800">Фінансовий статус</h3>
+        <h3 className="font-semibold text-slate-800">💰 Фінансовий статус</h3>
         <TonePill tone={isFullyPaid ? 'ok' : 'warn'}>
-          {isFullyPaid ? 'Оплачено' : `До сплати ₴${fmtUA(remaining)}`}
+          {isFullyPaid ? '✅ Все оплачено' : rentDue > 0 ? `До сплати ₴${fmtUA(rentDue)}` : 'Очікується застава'}
         </TonePill>
       </div>
       
-      <div className="space-y-2 text-sm">
-        {/* Основні суми */}
-        <div className="flex items-center justify-between">
-          <span className="text-slate-600">Оренда</span>
-          <span className="font-medium text-slate-800">₴ {fmtUA(rentAmount)}</span>
-        </div>
-        
-        {discount > 0 && (
-          <div className="flex items-center justify-between text-emerald-600">
-            <span>Знижка ({discount}%)</span>
-            <span className="font-medium">−₴ {fmtUA(discountAmount)}</span>
-          </div>
-        )}
-        
-        <div className="flex items-center justify-between">
-          <span className="text-slate-600">Застава</span>
-          <span className="font-medium text-slate-800">₴ {fmtUA(depositAmount)}</span>
-        </div>
-        
-        {prepayment > 0 && (
-          <div className="flex items-center justify-between text-emerald-600">
-            <span>Передплата</span>
-            <span className="font-medium">−₴ {fmtUA(prepayment)}</span>
-          </div>
-        )}
-        
-        {/* Додаткові нарахування */}
-        {(lateFee > 0 || damageFee > 0 || cleaningFee > 0) && (
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            {lateFee > 0 && (
-              <div className="flex items-center justify-between text-rose-600">
-                <span>Пеня за прострочення</span>
-                <span className="font-medium">+₴ {fmtUA(lateFee)}</span>
-              </div>
-            )}
-            {damageFee > 0 && (
-              <div className="flex items-center justify-between text-rose-600">
-                <span>Збитки</span>
-                <span className="font-medium">+₴ {fmtUA(damageFee)}</span>
-              </div>
-            )}
-            {cleaningFee > 0 && (
-              <div className="flex items-center justify-between text-amber-600">
-                <span>Чистка</span>
-                <span className="font-medium">+₴ {fmtUA(cleaningFee)}</span>
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Підсумок */}
-        <div className="pt-2 border-t border-slate-200">
+      <div className="space-y-3 text-sm">
+        {/* Оренда */}
+        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
           <div className="flex items-center justify-between">
-            <span className="font-semibold text-slate-800">До сплати</span>
-            <span className={`font-bold text-lg ${isFullyPaid ? 'text-emerald-600' : 'text-slate-900'}`}>
-              ₴ {fmtUA(remaining)}
+            <span className="text-slate-600">Оренда</span>
+            <span className="font-semibold text-slate-800">₴ {fmtUA(rentAmount)}</span>
+          </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-xs text-slate-500">
+              {rentStatus === 'paid' && '✅ Оплачено'}
+              {rentStatus === 'partial' && `⚠️ Сплачено ₴${fmtUA(rentPaid)}`}
+              {rentStatus === 'pending' && '⏳ Не оплачено'}
+            </span>
+            {rentStatus === 'paid' && <TonePill tone="ok" size="sm">Оплачено</TonePill>}
+            {rentStatus === 'partial' && <TonePill tone="warn" size="sm">Частково</TonePill>}
+            {rentStatus === 'pending' && <TonePill tone="danger" size="sm">Не оплачено</TonePill>}
+          </div>
+        </div>
+        
+        {/* Застава */}
+        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+          <div className="flex items-center justify-between">
+            <span className="text-slate-600">Застава</span>
+            <span className="font-semibold text-slate-800">
+              {depositStatus === 'received' ? depositDisplay : `₴ ${fmtUA(depositAmount)}`}
             </span>
           </div>
+          <div className="mt-1 flex items-center justify-between">
+            <span className="text-xs text-slate-500">
+              {depositStatus === 'received' && '✅ Прийнято'}
+              {depositStatus === 'pending' && depositAmount > 0 ? '⏳ Очікується' : '—'}
+            </span>
+            {depositStatus === 'received' && <TonePill tone="ok" size="sm">Прийнято</TonePill>}
+            {depositStatus === 'pending' && depositAmount > 0 && <TonePill tone="warn" size="sm">Очікується</TonePill>}
+          </div>
+          {depositStatus === 'received' && depositCurrency !== 'UAH' && (
+            <div className="mt-1 text-xs text-slate-400">≈ ₴ {fmtUA(depositHeld)}</div>
+          )}
         </div>
+
+        {/* Деталі оплат */}
+        {payments.length > 0 && (
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-medium text-slate-600 hover:text-slate-800">
+              📋 Деталі оплат ({payments.length})
+            </summary>
+            <div className="mt-2 space-y-1 text-xs border-l-2 border-slate-200 pl-2">
+              {payments.map((p, idx) => (
+                <div key={idx} className="flex items-center justify-between py-1">
+                  <div>
+                    <span className="font-medium">{p.payment_type === 'rent' ? 'Оренда' : 'Застава'}</span>
+                    {p.accepted_by_name && <span className="text-slate-400 ml-1">• {p.accepted_by_name}</span>}
+                  </div>
+                  <div className="font-mono text-slate-700">
+                    {p.currency && p.currency !== 'UAH' ? `${p.amount} ${p.currency}` : `₴ ${fmtUA(p.amount)}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
-      
-      {/* UI Gate */}
-      {showGate && gateMessage && (
-        <div className={`
-          mt-3 rounded-xl border p-3 text-sm
-          ${gateTone === 'danger' ? 'bg-rose-50 border-rose-200' : 
-            gateTone === 'ok' ? 'bg-emerald-50 border-emerald-200' : 
-            'bg-amber-50 border-amber-200'}
-        `}>
-          <div className="font-medium">UI Gate</div>
-          <div className="mt-1 text-slate-700">{gateMessage}</div>
-        </div>
-      )}
     </div>
   )
 }

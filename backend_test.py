@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Finance Cabinet Integration
-Testing the Finance Cabinet full integration with real data:
-1. Manager Finance Summary API
-2. Finance Dashboard Integration  
-3. Admin Panel Finance Management
-4. Vendors, Employees, Payroll APIs
+Backend Testing Script for Order Lifecycle User Tracking
+Testing the order lifecycle user tracking feature that was just implemented:
+1. GET /api/orders/{order_id}/lifecycle endpoint
+2. POST endpoints that create lifecycle entries (accept, status update, move-to-preparation)
+3. Authentication and user info tracking
 """
 
 import requests
@@ -22,8 +21,9 @@ TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
 }
+TEST_ORDER_ID = 7143
 
-class FinanceCabinetTester:
+class OrderLifecycleTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

@@ -336,13 +336,6 @@ export default function NewOrderClean() {
         loadingInventory={loadingInventory}
       />
       
-      {/* Фінансовий статус */}
-      <FinanceStatusCard 
-        orderId={orderId} 
-        expectedDeposit={calculations.estimatedDeposit}
-        expectedRent={calculations.totalRent}
-      />
-      
       {/* Нотатки */}
       <ZoneNotes
         notes={notes}

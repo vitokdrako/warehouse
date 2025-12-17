@@ -1,7 +1,7 @@
 /* eslint-disable */
 import React, { useState } from 'react';
 import { financeApi } from '../../services/financeApi.js';
-import DocumentsPanel, { DocumentQuickActions } from './DocumentsPanel';
+import DocumentsPanel from './DocumentsPanel';
 
 const cls = (...a) => a.filter(Boolean).join(' ');
 const money = (v, cur = '₴') => `${cur} ${(v || 0).toLocaleString('uk-UA', { maximumFractionDigits: 2 })}`;

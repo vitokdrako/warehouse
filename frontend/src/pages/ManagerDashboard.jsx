@@ -373,7 +373,7 @@ export default function ManagerDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Kpi title="Замовлення" value={kpis.today.toString()} note={`${newOrders.length} нові / ${preparationCards.length} комплектації / ${readyCards.length} видач / ${returnOrders.length} повернення`}/>
           <Kpi title="Виручка" value={`₴ ${kpis.revenue.toFixed(0)}`} note="з фін. кабінету"/>
-          <Kpi title="Застави в холді" value={`₴ ${kpis.deposits.toFixed(0)}`} note="з фін. кабінету"/>
+          <Kpi title="Застави в холді" value={kpis.deposits} note="кількість активних"/>
           <Kpi 
             title="На реставрації" 
             value={cleaningStats.repair.toString()} 

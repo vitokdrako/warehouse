@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { financeApi } from '../../services/financeApi.js';
 import DocumentsPanel from './DocumentsPanel';
+import eventBus, { EVENTS } from '../../utils/eventBus';
 
 const cls = (...a) => a.filter(Boolean).join(' ');
 const money = (v, cur = '₴') => `${cur} ${(v || 0).toLocaleString('uk-UA', { maximumFractionDigits: 2 })}`;

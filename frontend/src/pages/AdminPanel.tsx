@@ -116,7 +116,44 @@ export default function AdminPanel() {
     else if (activeTab === 'vendors') loadVendors()
     else if (activeTab === 'expense-categories') loadExpenseCategories()
     else if (activeTab === 'employees') loadEmployees()
+    else if (activeTab === 'payroll') loadPayroll()
+    else if (activeTab === 'logs') loadSystemLogs()
   }, [activeTab])
+  
+  const loadPayroll = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/api/finance/payroll`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setPayroll(data.payroll || [])
+      }
+    } catch (error) {
+      console.error('Error loading payroll:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const loadSystemLogs = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/api/orders?limit=50`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        // Use order lifecycle as basic system logs
+        setSystemLogs(data.orders?.slice(0, 20) || [])
+      }
+    } catch (error) {
+      console.error('Error loading logs:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
   
   const loadVendors = async () => {
     try {

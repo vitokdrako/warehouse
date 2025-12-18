@@ -30,8 +30,8 @@
     <tbody>
         {% for item in items or damage_case.items or [] %}
         <tr>
-            <td>{{ item.name }}</td>
-            <td>{{ item.sku }}</td>
+            <td>{{ item.get('name', '') }}</td>
+            <td>{{ item.get('sku', '') }}</td>
             <td>{{ item.damage_description or '' }}</td>
             <td class="text-right">{{ item.damage_cost|money if item.damage_cost else '0.00' }} ₴</td>
         </tr>

@@ -25,7 +25,7 @@
         <tr>
             <td class="text-center">{{ loop.index }}</td>
             <td>{{ item.work_description }}</td>
-            <td>{{ item.sku }}</td>
+            <td>{{ item.get('sku', '') }}</td>
             <td class="text-right">{{ item.cost|money }} ₴</td>
         </tr>
         {% else %}

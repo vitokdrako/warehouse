@@ -32,9 +32,9 @@
 {% for item in items %}
 <div class="checklist-item">
     <div class="check-box"></div>
-    <strong>{{ item.name }}</strong> ({{ item.sku or item.article }})
+    <strong>{{ item.get('name', '') }}</strong> ({{ item.get('sku') or item.get('article', '') }})
     <span style="float:right">
-        К-сть: <strong>{{ item.quantity or item.qty }}</strong> | 
+        К-сть: <strong>{{ item.get('quantity') or item.get('qty', 1) }}</strong> | 
         Локація: <strong>{{ item.location or 'N/A' }}</strong>
     </span>
     <div style="margin-left:28px; font-size:8pt; color:#666;">

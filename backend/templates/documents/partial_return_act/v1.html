@@ -28,8 +28,8 @@
         {% for item in options.return_items or items %}
         <tr>
             <td class="text-center">{{ loop.index }}</td>
-            <td>{{ item.name }}</td>
-            <td>{{ item.sku }}</td>
+            <td>{{ item.get('name', '') }}</td>
+            <td>{{ item.get('sku', '') }}</td>
             <td class="text-center">{{ item.return_qty or item.quantity }}</td>
             <td>
                 <span class="checkbox"></span> OK
@@ -44,7 +44,7 @@
     <h2>Залишок у клієнта</h2>
     <p class="text-sm">Перелік товарів, які залишаються у клієнта до повного повернення:</p>
     {% for item in options.remaining_items or [] %}
-    <p>• {{ item.name }} ({{ item.sku }}) — {{ item.quantity }} шт.</p>
+    <p>• {{ item.get('name', '') }} ({{ item.get('sku', '') }}) — {{ item.get('quantity') or item.get('qty', 1) }} шт.</p>
     {% else %}
     <p class="text-sm" style="color:#666;">Всі товари повернуто</p>
     {% endfor %}

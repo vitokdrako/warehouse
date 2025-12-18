@@ -39,9 +39,9 @@
         {% for item in items %}
         <tr>
             <td class="text-center">{{ loop.index }}</td>
-            <td>{{ item.name }}</td>
-            <td>{{ item.sku }}</td>
-            <td class="text-center">{{ item.quantity }}</td>
+            <td>{{ item.get('name', '') }}</td>
+            <td>{{ item.get('sku', '') }}</td>
+            <td class="text-center">{{ item.get('quantity') or item.get('qty', 1) }}</td>
             <td>
                 <span class="status-box">OK</span>
                 <span class="status-box">Бруд</span>

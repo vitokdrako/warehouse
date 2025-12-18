@@ -29,10 +29,19 @@ export const documentsApi = {
 
   generate: async (docType, entityId, options = {}) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/documents/generate?doc_type=${docType}&entity_id=${entityId}`, {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${BACKEND_URL}/api/documents/generate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(options),
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          doc_type: docType,
+          entity_id: String(entityId),
+          format: 'html',
+          options: options,
+        }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();

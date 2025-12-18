@@ -13,7 +13,7 @@ import {
   OrderWorkspaceLayout,
   LeftRailClient,
   LeftRailFinance,
-  // LeftRailDocuments, // Temporarily commented out for debugging
+  LeftRailDocuments,
   LeftRailTimeline,
   getStatusKey,
 } from '../components/order-workspace'
@@ -423,7 +423,13 @@ setTimeout(()=>window.print(),500);
               rentAmount={totalRent}
               depositAmount={totalDeposit}
             />
-            {/* LeftRailDocuments temporarily disabled for debugging */}
+            <LeftRailDocuments
+              orderId={order?.order_id}
+              orderNumber={order?.order_number}
+              orderStatus={isIssued ? 'issued' : isReadyForIssue ? 'ready_for_issue' : 'processing'}
+              issueCardId={issueCard?.id}
+              customerEmail={clientEmail}
+            />
             <LeftRailTimeline orderId={order?.order_id} events={timeline} />
           </>
         }

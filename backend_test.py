@@ -339,77 +339,72 @@ class DocumentEngineTester:
             self.log(f"❌ Exception testing document PDF: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def verify_order_lifecycle_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior for Order Lifecycle User Tracking"""
+    def verify_document_engine_behavior(self) -> Dict[str, Any]:
+        """Verify expected behavior for Document Engine v2.0"""
         try:
-            self.log("🔍 Verifying Order Lifecycle User Tracking behavior...")
+            self.log("🔍 Verifying Document Engine v2.0 behavior...")
             
             results = {
-                "lifecycle_endpoint_working": False,
-                "accept_endpoint_working": False,
-                "status_update_working": False,
-                "move_to_preparation_working": False,
-                "user_tracking_implemented": False
+                "document_types_working": False,
+                "invoice_offer_working": False,
+                "contract_rent_working": False,
+                "return_act_working": False,
+                "delivery_note_working": False,
+                "damage_report_working": False,
+                "order_data_available": False,
+                "generated_documents": []
             }
             
-            # Test 1: Order Lifecycle Endpoint
-            self.log("   Testing Order Lifecycle Endpoint...")
-            lifecycle_result = self.test_order_lifecycle_endpoint()
+            # Test 1: Document Types Endpoint
+            self.log("   Testing Document Types Endpoint...")
+            types_result = self.test_document_types_endpoint()
             
-            if lifecycle_result.get("success"):
-                results["lifecycle_endpoint_working"] = True
-                self.log("   ✅ Order Lifecycle Endpoint: Working")
+            if types_result.get("success"):
+                results["document_types_working"] = True
+                self.log(f"   ✅ Document Types: {types_result.get('total_types')} types available")
+            else:
+                self.log("   ❌ Document Types Endpoint: Failed", "ERROR")
+            
+            # Test 2: Order Data Availability
+            self.log("   Testing Order Data Availability...")
+            order_result = self.test_get_order_data()
+            
+            if order_result.get("success"):
+                results["order_data_available"] = True
+                self.log(f"   ✅ Order Data: Available for {order_result.get('customer_name')}")
+            else:
+                self.log("   ❌ Order Data: Not available", "ERROR")
+                return results  # Can't test documents without order data
+            
+            # Test 3: Document Generation Tests
+            document_tests = [
+                ("invoice_offer", self.test_invoice_offer_generation),
+                ("contract_rent", self.test_contract_rent_generation),
+                ("return_act", self.test_return_act_generation),
+                ("delivery_note", self.test_delivery_note_generation),
+                ("damage_report", self.test_damage_report_generation)
+            ]
+            
+            for doc_type, test_method in document_tests:
+                self.log(f"   Testing {doc_type} generation...")
+                doc_result = test_method()
                 
-                # Check if user tracking is implemented
-                user_tracked = lifecycle_result.get("user_tracked_events", 0)
-                if user_tracked > 0:
-                    results["user_tracking_implemented"] = True
-                    self.log(f"   ✅ User tracking: {user_tracked} events have user info")
+                if doc_result.get("success"):
+                    results[f"{doc_type}_working"] = True
+                    doc_number = doc_result.get("doc_number")
+                    results["generated_documents"].append({
+                        "doc_type": doc_type,
+                        "doc_number": doc_number,
+                        "document_id": doc_result.get("data", {}).get("document_id")
+                    })
+                    self.log(f"   ✅ {doc_type}: Generated {doc_number}")
                 else:
-                    self.log("   ⚠️ No events with user tracking found")
-            else:
-                self.log("   ❌ Order Lifecycle Endpoint: Failed", "ERROR")
-            
-            # Test 2: Order Accept Endpoint
-            self.log("   Testing Order Accept Endpoint...")
-            accept_result = self.test_order_accept_endpoint()
-            
-            if accept_result.get("success"):
-                results["accept_endpoint_working"] = True
-                if accept_result.get("skipped"):
-                    self.log(f"   ⚠️ Order Accept: Skipped ({accept_result.get('reason')})")
-                else:
-                    self.log("   ✅ Order Accept Endpoint: Working")
-            else:
-                self.log("   ❌ Order Accept Endpoint: Failed", "ERROR")
-            
-            # Test 3: Status Update Endpoint
-            self.log("   Testing Status Update Endpoint...")
-            status_result = self.test_order_status_update_endpoint()
-            
-            if status_result.get("success"):
-                results["status_update_working"] = True
-                self.log("   ✅ Status Update Endpoint: Working")
-            else:
-                self.log("   ❌ Status Update Endpoint: Failed", "ERROR")
-            
-            # Test 4: Move to Preparation Endpoint
-            self.log("   Testing Move to Preparation Endpoint...")
-            prep_result = self.test_move_to_preparation_endpoint()
-            
-            if prep_result.get("success"):
-                results["move_to_preparation_working"] = True
-                if prep_result.get("skipped"):
-                    self.log(f"   ⚠️ Move to Preparation: Skipped ({prep_result.get('reason')})")
-                else:
-                    self.log("   ✅ Move to Preparation Endpoint: Working")
-            else:
-                self.log("   ❌ Move to Preparation Endpoint: Failed", "ERROR")
+                    self.log(f"   ❌ {doc_type}: Failed", "ERROR")
             
             return results
             
         except Exception as e:
-            self.log(f"❌ Exception verifying Order Lifecycle behavior: {str(e)}", "ERROR")
+            self.log(f"❌ Exception verifying Document Engine behavior: {str(e)}", "ERROR")
             return {"error": str(e)}
 
     def run_comprehensive_lifecycle_test(self):

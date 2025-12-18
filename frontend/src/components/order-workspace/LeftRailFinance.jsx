@@ -1,6 +1,7 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import TonePill from './TonePill'
+import eventBus, { EVENTS } from '../../utils/eventBus'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
@@ -20,6 +21,7 @@ const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionD
 /**
  * LeftRailFinance - Фінансовий блок в лівій панелі
  * Читає РЕАЛЬНІ дані з фінансової системи
+ * Автоматично оновлюється при змінах через EventBus
  */
 export default function LeftRailFinance({
   orderId,             // ID замовлення для завантаження реальних даних
@@ -29,13 +31,17 @@ export default function LeftRailFinance({
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])
   const [deposit, setDeposit] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  useEffect(() => {
+  // Функція завантаження даних
+  const fetchData = useCallback(() => {
     if (!orderId) {
       setLoading(false)
       return
     }
 
+    setLoading(true)
+    
     // Завантажити реальні дані з фінансової системи
     Promise.all([
       authFetch(`${BACKEND_URL}/api/finance/payments?order_id=${orderId}`).then(r => r.json()),
@@ -52,6 +58,35 @@ export default function LeftRailFinance({
       console.error('Failed to load finance data:', err)
       setLoading(false)
     })
+  }, [orderId])
+
+  // Початкове завантаження
+  useEffect(() => {
+    fetchData()
+  }, [fetchData, refreshKey])
+
+  // Підписка на події оновлення
+  useEffect(() => {
+    const handleFinanceUpdate = (data) => {
+      // Оновлюємо тільки якщо це наше замовлення або глобальне оновлення
+      if (!data || !data.orderId || data.orderId === orderId) {
+        setRefreshKey(k => k + 1)
+      }
+    }
+
+    const unsubFinance = eventBus.on(EVENTS.FINANCE_UPDATED, handleFinanceUpdate)
+    const unsubPayment = eventBus.on(EVENTS.PAYMENT_CREATED, handleFinanceUpdate)
+    const unsubDeposit = eventBus.on(EVENTS.DEPOSIT_CREATED, handleFinanceUpdate)
+    const unsubRefund = eventBus.on(EVENTS.DEPOSIT_REFUNDED, handleFinanceUpdate)
+    const unsubGlobal = eventBus.on(EVENTS.REFETCH_ALL, handleFinanceUpdate)
+
+    return () => {
+      unsubFinance()
+      unsubPayment()
+      unsubDeposit()
+      unsubRefund()
+      unsubGlobal()
+    }
   }, [orderId])
 
   // Розрахунок реального статусу

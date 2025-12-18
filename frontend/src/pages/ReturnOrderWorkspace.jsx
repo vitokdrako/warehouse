@@ -273,7 +273,7 @@ export default function ReturnOrderWorkspace() {
             <LeftRailDocuments
               orderId={order?.order_id}
               orderNumber={order?.order_number}
-              orderStatus={returnStatus === 'completed' ? 'completed' : 'returning'}
+              orderStatus={order?.status === 'completed' ? 'completed' : 'returning'}
               customerEmail={clientEmail}
             />
             <LeftRailTimeline orderId={order?.order_id} events={timeline} />

@@ -418,6 +418,16 @@ setTimeout(()=>window.print(),500);
               rentAmount={totalRent}
               depositAmount={totalDeposit}
             />
+            <LeftRailDocuments
+              orderId={order?.order_id}
+              orderNumber={order?.order_number}
+              orderStatus={isIssued ? 'issued' : isReadyForIssue ? 'ready_for_issue' : 'processing'}
+              issueCardId={issueCard?.id}
+              customerEmail={clientEmail}
+              onDocumentGenerated={(docType, data) => {
+                console.log('Document generated:', docType, data)
+              }}
+            />
             <LeftRailTimeline orderId={order?.order_id} events={timeline} />
           </>
         }

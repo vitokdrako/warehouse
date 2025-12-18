@@ -477,65 +477,24 @@ export default function AdminPanel() {
           <p className="text-gray-600 mt-1">Управління системою</p>
         </div>
 
-        {/* Tabs */}
+        {/* Dynamic Tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px flex-wrap">
-              <button
-                onClick={() => setActiveTab('users')}
-                className={cls(
-                  'px-6 py-3 border-b-2 font-medium text-sm transition',
-                  activeTab === 'users'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                )}
-              >
-                👥 Користувачі
-              </button>
-              <button
-                onClick={() => setActiveTab('categories')}
-                className={cls(
-                  'px-6 py-3 border-b-2 font-medium text-sm transition',
-                  activeTab === 'categories'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                )}
-              >
-                📁 Категорії
-              </button>
-              <button
-                onClick={() => setActiveTab('vendors')}
-                className={cls(
-                  'px-6 py-3 border-b-2 font-medium text-sm transition',
-                  activeTab === 'vendors'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                )}
-              >
-                🏢 Підрядники
-              </button>
-              <button
-                onClick={() => setActiveTab('expense-categories')}
-                className={cls(
-                  'px-6 py-3 border-b-2 font-medium text-sm transition',
-                  activeTab === 'expense-categories'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                )}
-              >
-                💸 Категорії витрат
-              </button>
-              <button
-                onClick={() => setActiveTab('employees')}
-                className={cls(
-                  'px-6 py-3 border-b-2 font-medium text-sm transition',
-                  activeTab === 'employees'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                )}
-              >
-                👷 Працівники
-              </button>
+              {ADMIN_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cls(
+                    'px-4 py-3 border-b-2 font-medium text-sm transition whitespace-nowrap',
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  )}
+                >
+                  {tab.icon} {tab.label}
+                </button>
+              ))}
             </nav>
           </div>
         </div>

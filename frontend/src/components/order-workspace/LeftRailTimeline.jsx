@@ -125,6 +125,31 @@ export default function LeftRailTimeline({
         console.error('Failed to load events:', err)
         setLoading(false)
       })
+  }, [orderId, refreshKey])
+
+  // Підписка на події оновлення
+  useEffect(() => {
+    const handleUpdate = (data) => {
+      if (!data || !data.orderId || data.orderId === orderId) {
+        setRefreshKey(k => k + 1)
+      }
+    }
+
+    const unsubFinance = eventBus.on(EVENTS.FINANCE_UPDATED, handleUpdate)
+    const unsubPayment = eventBus.on(EVENTS.PAYMENT_CREATED, handleUpdate)
+    const unsubDeposit = eventBus.on(EVENTS.DEPOSIT_CREATED, handleUpdate)
+    const unsubOrder = eventBus.on(EVENTS.ORDER_UPDATED, handleUpdate)
+    const unsubStatus = eventBus.on(EVENTS.ORDER_STATUS_CHANGED, handleUpdate)
+    const unsubGlobal = eventBus.on(EVENTS.REFETCH_ALL, handleUpdate)
+
+    return () => {
+      unsubFinance()
+      unsubPayment()
+      unsubDeposit()
+      unsubOrder()
+      unsubStatus()
+      unsubGlobal()
+    }
   }, [orderId])
 
   // Об'єднати фінансові події з зовнішніми

@@ -815,6 +815,199 @@ export default function AdminPanel() {
             )}
           </div>
         )}
+
+        {/* Payroll Tab */}
+        {activeTab === 'payroll' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">💰 Зарплати</h2>
+              <div className="flex gap-2">
+                <select className="px-3 py-2 border rounded-lg text-sm">
+                  <option value="">Всі працівники</option>
+                  {employees.map(e => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </select>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm">
+                  + Нова виплата
+                </button>
+              </div>
+            </div>
+            {loading ? (
+              <p className="text-center py-8 text-gray-500">Завантаження...</p>
+            ) : payroll.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-400 mb-4">Немає записів про зарплати</p>
+                <p className="text-sm text-gray-500">Додайте першу виплату через кнопку вище</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Працівник</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Період</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ставка</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Бонус</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Утримання</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Всього</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Статус</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Дія</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {payroll.map(p => (
+                      <tr key={p.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium">{p.employee_name || `ID: ${p.employee_id}`}</td>
+                        <td className="px-4 py-3 text-sm">{p.period_start} — {p.period_end}</td>
+                        <td className="px-4 py-3 text-right">₴ {p.base_amount?.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right text-green-600">+₴ {p.bonus?.toLocaleString() || 0}</td>
+                        <td className="px-4 py-3 text-right text-red-600">-₴ {p.deduction?.toLocaleString() || 0}</td>
+                        <td className="px-4 py-3 text-right font-bold">₴ {p.total_amount?.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={cls(
+                            'px-2 py-1 text-xs rounded-full',
+                            p.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          )}>
+                            {p.status === 'paid' ? '✅ Сплачено' : '⏳ Очікує'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {p.status !== 'paid' && (
+                            <button 
+                              onClick={async () => {
+                                if (window.confirm('Сплатити зарплату?')) {
+                                  const resp = await fetch(`${API_URL}/api/finance/payroll/${p.id}/pay`, {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                                  })
+                                  if (resp.ok) {
+                                    alert('✅ Сплачено!')
+                                    loadPayroll()
+                                  }
+                                }
+                              }}
+                              className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                            >
+                              Сплатити
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-xl font-semibold mb-6">⚙️ Налаштування системи</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Company Settings */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-4">🏢 Дані компанії</h3>
+                <div className="space-y-3 text-sm">
+                  <div><span className="text-gray-500">Назва:</span> FarforDecorOrenda</div>
+                  <div><span className="text-gray-500">Юр. особа:</span> ФОП Арсалані Олександра Ігорівна</div>
+                  <div><span className="text-gray-500">ЄДРПОУ:</span> 3234423422</div>
+                  <div><span className="text-gray-500">Адреса:</span> м. Харків, просп. Московський, 216/3А</div>
+                </div>
+              </div>
+              
+              {/* Finance Settings */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-4">💰 Фінансові налаштування</h3>
+                <div className="space-y-3 text-sm">
+                  <div><span className="text-gray-500">Передоплата:</span> 50%</div>
+                  <div><span className="text-gray-500">Пеня за прострочення:</span> 3% / день</div>
+                  <div><span className="text-gray-500">Валюта застави:</span> UAH, USD, EUR</div>
+                </div>
+              </div>
+              
+              {/* Document Settings */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-4">📄 Шаблони документів</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span>Рахунок-оферта</span>
+                    <span className="text-green-600 text-xs">✓ Активний</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span>Договір оренди</span>
+                    <span className="text-green-600 text-xs">✓ Активний</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span>Акт передачі</span>
+                    <span className="text-green-600 text-xs">✓ Активний</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-3">14 шаблонів документів активовано</p>
+              </div>
+              
+              {/* Integration Settings */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-medium mb-4">🔗 Інтеграції</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">OpenCart</span>
+                    <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Підключено</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Telegram бот</span>
+                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">Не налаштовано</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Logs Tab */}
+        {activeTab === 'logs' && (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">📋 Логи системи</h2>
+              <div className="flex gap-2">
+                <select className="px-3 py-2 border rounded-lg text-sm">
+                  <option value="all">Всі події</option>
+                  <option value="orders">Замовлення</option>
+                  <option value="finance">Фінанси</option>
+                  <option value="auth">Авторизація</option>
+                </select>
+                <button 
+                  onClick={loadSystemLogs}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm"
+                >
+                  🔄 Оновити
+                </button>
+              </div>
+            </div>
+            {loading ? (
+              <p className="text-center py-8 text-gray-500">Завантаження...</p>
+            ) : (
+              <div className="space-y-2">
+                {systemLogs.map((log: any, idx: number) => (
+                  <div key={idx} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg text-sm">
+                    <span className="text-gray-400 whitespace-nowrap">{log.created_at || log.order_date}</span>
+                    <span className="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-800">{log.status || 'ORDER'}</span>
+                    <span className="flex-1">
+                      Замовлення <strong>{log.order_number}</strong> — {log.client_name || 'Клієнт'}
+                    </span>
+                    <span className="text-gray-500">{log.total_rental ? `₴${log.total_rental}` : ''}</span>
+                  </div>
+                ))}
+                {systemLogs.length === 0 && (
+                  <p className="text-center py-8 text-gray-400">Немає записів</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* User Form Modal */}

@@ -83,59 +83,56 @@ class DocumentEngineTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_order_lifecycle_endpoint(self) -> Dict[str, Any]:
-        """Test GET /api/orders/{order_id}/lifecycle - should return lifecycle events with user info"""
+    def test_document_types_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/documents/types - should return all document types"""
         try:
-            self.log(f"🧪 Testing order lifecycle endpoint for order {TEST_ORDER_ID}...")
+            self.log("🧪 Testing document types endpoint...")
             
-            response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}/lifecycle")
+            response = self.session.get(f"{self.base_url}/documents/types")
             
             if response.status_code == 200:
                 data = response.json()
                 
                 if not isinstance(data, list):
-                    self.log(f"❌ Expected list of lifecycle events, got {type(data)}", "ERROR")
+                    self.log(f"❌ Expected list of document types, got {type(data)}", "ERROR")
                     return {"success": False, "error": f"Expected list, got {type(data)}"}
                 
-                self.log(f"✅ Retrieved {len(data)} lifecycle events")
+                self.log(f"✅ Retrieved {len(data)} document types")
                 
-                # Check lifecycle event structure
-                user_tracked_events = 0
-                old_events = 0
+                # Check for expected document types
+                expected_types = [
+                    "invoice_offer", "contract_rent", "issue_act", "picking_list",
+                    "return_act", "delivery_note", "damage_report"
+                ]
                 
-                for event in data:
-                    required_fields = ['stage', 'created_at']
+                found_types = [doc.get("doc_type") for doc in data]
+                missing_types = [t for t in expected_types if t not in found_types]
+                
+                if missing_types:
+                    self.log(f"⚠️ Missing document types: {missing_types}")
+                
+                # Check document structure
+                for doc in data[:3]:  # Check first 3 documents
+                    required_fields = ['doc_type', 'name', 'entity_type', 'series']
                     for field in required_fields:
-                        if field not in event:
-                            self.log(f"⚠️ Lifecycle event missing field: {field}")
+                        if field not in doc:
+                            self.log(f"⚠️ Document type missing field: {field}")
                     
-                    # Check user tracking fields
-                    has_user_info = (
-                        event.get('created_by_id') is not None or 
-                        event.get('created_by_name') is not None or
-                        event.get('created_by') is not None
-                    )
-                    
-                    if has_user_info:
-                        user_tracked_events += 1
-                        self.log(f"   ✅ Event '{event.get('stage')}' has user info: {event.get('created_by_name') or event.get('created_by')}")
-                    else:
-                        old_events += 1
-                        self.log(f"   ⚠️ Event '{event.get('stage')}' has no user info (expected for old records)")
+                    self.log(f"   ✅ Document type: {doc.get('doc_type')} - {doc.get('name')}")
                 
                 return {
                     "success": True, 
                     "data": data,
-                    "total_events": len(data),
-                    "user_tracked_events": user_tracked_events,
-                    "old_events": old_events
+                    "total_types": len(data),
+                    "found_types": found_types,
+                    "missing_types": missing_types
                 }
             else:
-                self.log(f"❌ Failed to get order lifecycle: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get document types: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing order lifecycle: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing document types: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_order_accept_endpoint(self) -> Dict[str, Any]:

@@ -248,7 +248,10 @@ export default function IssueCardWorkspace() {
   const checklistOk = useMemo(() => checklist.filter(c => c.required).every(c => c.checked), [checklist])
   const hasRequisitors = selectedRequisitors.length > 0
   
-  const canMarkReady = allPicked && allSerialsOk && checklistOk && hasRequisitors
+  // Логіка "Готово до видачі" - документи та платежі НЕ блокують
+  // Критично: allPicked (комплектація) та hasRequisitors (комплектувальник)
+  // checklistOk та allSerialsOk - рекомендовано, але не блокує
+  const canMarkReady = allPicked && hasRequisitors
   
   const issueCardStatus = issueCard?.status || 'preparation'
   const isProcessing = issueCardStatus === 'preparation'

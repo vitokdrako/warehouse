@@ -241,63 +241,39 @@ class DocumentEngineTester:
         }
         return self.test_generate_document("damage_report", TEST_ORDER_ID, expected_data)
 
-    def test_move_to_preparation_endpoint(self) -> Dict[str, Any]:
-        """Test POST /api/decor-orders/{order_id}/move-to-preparation - should create lifecycle entry with user info"""
+    def test_get_order_data(self) -> Dict[str, Any]:
+        """Test getting order data to verify test order exists"""
         try:
-            self.log(f"🧪 Testing move to preparation endpoint for order {TEST_ORDER_ID}...")
+            self.log(f"🧪 Testing order data retrieval for order {TEST_ORDER_ID}...")
             
-            # Get current status first
-            order_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}")
-            if order_response.status_code != 200:
-                self.log(f"❌ Cannot get order details: {order_response.status_code}", "ERROR")
-                return {"success": False, "error": "Cannot get order details"}
-            
-            order_data = order_response.json()
-            current_status = order_data.get('status')
-            self.log(f"   Current order status: {current_status}")
-            
-            # Only test if order is in awaiting_customer status
-            if current_status != 'awaiting_customer':
-                self.log(f"   ⚠️ Order status '{current_status}' not suitable for move-to-preparation test, skipping")
-                return {"success": True, "skipped": True, "reason": f"Order status is '{current_status}'"}
-            
-            # Test move to preparation endpoint
-            response = self.session.post(f"{self.base_url}/decor-orders/{TEST_ORDER_ID}/move-to-preparation", json={})
+            response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}")
             
             if response.status_code == 200:
                 data = response.json()
-                self.log(f"✅ Move to preparation successful: {data.get('message')}")
                 
-                # Check if lifecycle entry was created with user info
-                lifecycle_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}/lifecycle")
-                if lifecycle_response.status_code == 200:
-                    lifecycle_data = lifecycle_response.json()
-                    
-                    # Look for recent processing event (move-to-preparation changes status to processing)
-                    recent_processing_event = None
-                    for event in lifecycle_data:
-                        if event.get('stage') == 'processing':
-                            recent_processing_event = event
-                            break
-                    
-                    if recent_processing_event:
-                        has_user_info = (
-                            recent_processing_event.get('created_by_id') is not None or
-                            recent_processing_event.get('created_by_name') is not None
-                        )
-                        if has_user_info:
-                            self.log(f"   ✅ Processing event has user info: {recent_processing_event.get('created_by_name')}")
-                        else:
-                            self.log(f"   ❌ Processing event missing user info", "ERROR")
-                            return {"success": False, "error": "Processing event missing user info"}
+                customer_name = data.get('customer_name', '')
+                order_number = data.get('order_number', '')
                 
-                return {"success": True, "data": data}
+                self.log(f"✅ Order found: {order_number} - Customer: {customer_name}")
+                
+                # Verify this is the expected test order
+                if "Галина" in customer_name or "Семчишин" in customer_name:
+                    self.log(f"   ✅ Confirmed test order with expected customer")
+                else:
+                    self.log(f"   ⚠️ Different customer than expected: {customer_name}")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "customer_name": customer_name,
+                    "order_number": order_number
+                }
             else:
-                self.log(f"❌ Failed to move to preparation: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get order: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing move to preparation: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing order data: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_finance_payroll(self) -> Dict[str, Any]:

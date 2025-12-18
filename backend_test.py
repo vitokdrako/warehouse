@@ -316,72 +316,64 @@ class IssueCardWorkspaceTester:
             self.log(f"❌ Exception testing document PDF: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def verify_document_engine_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior for Document Engine v2.0"""
+    def verify_issue_workspace_behavior(self) -> Dict[str, Any]:
+        """Verify expected behavior for Issue Card Workspace"""
         try:
-            self.log("🔍 Verifying Document Engine v2.0 behavior...")
+            self.log("🔍 Verifying Issue Card Workspace behavior...")
             
             results = {
-                "document_types_working": False,
-                "invoice_offer_working": False,
-                "contract_rent_working": False,
-                "return_act_working": False,
-                "delivery_note_working": False,
-                "damage_report_working": False,
-                "order_data_available": False,
-                "generated_documents": []
+                "issue_card_api_working": False,
+                "order_api_working": False,
+                "frontend_routing_working": False,
+                "console_errors_detected": False,
+                "redirect_issue_confirmed": False
             }
             
-            # Test 1: Document Types Endpoint
-            self.log("   Testing Document Types Endpoint...")
-            types_result = self.test_document_types_endpoint()
+            # Test 1: Issue Card API
+            self.log("   Testing Issue Card API...")
+            issue_result = self.test_issue_card_endpoint()
             
-            if types_result.get("success"):
-                results["document_types_working"] = True
-                self.log(f"   ✅ Document Types: {types_result.get('total_types')} types available")
+            if issue_result.get("success"):
+                results["issue_card_api_working"] = True
+                self.log(f"   ✅ Issue Card API: Working")
             else:
-                self.log("   ❌ Document Types Endpoint: Failed", "ERROR")
+                self.log("   ❌ Issue Card API: Failed", "ERROR")
             
-            # Test 2: Order Data Availability
-            self.log("   Testing Order Data Availability...")
-            order_result = self.test_get_order_data()
+            # Test 2: Order API
+            self.log("   Testing Order API...")
+            order_result = self.test_decor_order_endpoint()
             
             if order_result.get("success"):
-                results["order_data_available"] = True
-                self.log(f"   ✅ Order Data: Available for {order_result.get('customer_name')}")
+                results["order_api_working"] = True
+                self.log(f"   ✅ Order API: Working")
             else:
-                self.log("   ❌ Order Data: Not available", "ERROR")
-                return results  # Can't test documents without order data
+                self.log("   ❌ Order API: Failed", "ERROR")
             
-            # Test 3: Document Generation Tests
-            document_tests = [
-                ("invoice_offer", self.test_invoice_offer_generation),
-                ("contract_rent", self.test_contract_rent_generation),
-                ("return_act", self.test_return_act_generation),
-                ("delivery_note", self.test_delivery_note_generation),
-                ("damage_report", self.test_damage_report_generation)
-            ]
+            # Test 3: Frontend Routing
+            self.log("   Testing Frontend Routing...")
+            routing_result = self.test_frontend_routing()
             
-            for doc_type, test_method in document_tests:
-                self.log(f"   Testing {doc_type} generation...")
-                doc_result = test_method()
-                
-                if doc_result.get("success"):
-                    results[f"{doc_type}_working"] = True
-                    doc_number = doc_result.get("doc_number")
-                    results["generated_documents"].append({
-                        "doc_type": doc_type,
-                        "doc_number": doc_number,
-                        "document_id": doc_result.get("data", {}).get("document_id")
-                    })
-                    self.log(f"   ✅ {doc_type}: Generated {doc_number}")
-                else:
-                    self.log(f"   ❌ {doc_type}: Failed", "ERROR")
+            if routing_result.get("success"):
+                results["frontend_routing_working"] = True
+                self.log(f"   ✅ Frontend Routing: Working")
+            else:
+                results["redirect_issue_confirmed"] = routing_result.get("issue_confirmed", False)
+                self.log("   ❌ Frontend Routing: Failed", "ERROR")
+            
+            # Test 4: Console Error Detection
+            self.log("   Checking for Console Errors...")
+            console_result = self.test_browser_console_simulation()
+            
+            if not console_result.get("success"):
+                results["console_errors_detected"] = True
+                self.log("   ❌ Potential Console Errors: Detected", "ERROR")
+            else:
+                self.log(f"   ✅ Console Errors: None detected")
             
             return results
             
         except Exception as e:
-            self.log(f"❌ Exception verifying Document Engine behavior: {str(e)}", "ERROR")
+            self.log(f"❌ Exception verifying Issue Workspace behavior: {str(e)}", "ERROR")
             return {"error": str(e)}
 
     def run_comprehensive_document_test(self):

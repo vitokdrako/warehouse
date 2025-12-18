@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Order Lifecycle User Tracking
-Testing the order lifecycle user tracking feature that was just implemented:
-1. GET /api/orders/{order_id}/lifecycle endpoint
-2. POST endpoints that create lifecycle entries (accept, status update, move-to-preparation)
-3. Authentication and user info tracking
+Backend Testing Script for Document Engine v2.0
+Testing the document generation system that was just implemented:
+1. GET /api/documents/types endpoint - List all document types
+2. POST /api/documents/generate endpoint - Generate various document types
+3. Document templates rendering with real order data
+4. Authentication and document generation workflow
 """
 
 import requests
@@ -21,7 +22,7 @@ TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
 }
-TEST_ORDER_ID = 7143
+TEST_ORDER_ID = "7136"  # Order with real data (Галина Семчишин)
 
 class OrderLifecycleTester:
     def __init__(self, base_url: str):

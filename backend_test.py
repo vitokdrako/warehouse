@@ -26,7 +26,7 @@ TEST_CREDENTIALS = {
 TEST_ISSUE_CARD_ID = "IC-7121-20251218133354"  # Issue card from review request
 TEST_ORDER_ID = "7121"  # Order ID from review request
 
-class DocumentEngineTester:
+class IssueCardWorkspaceTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

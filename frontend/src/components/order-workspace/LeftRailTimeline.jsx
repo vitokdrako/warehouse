@@ -1,5 +1,6 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import eventBus, { EVENTS } from '../../utils/eventBus'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
@@ -19,6 +20,7 @@ const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionD
 /**
  * LeftRailTimeline - Таймлайн подій в лівій панелі
  * Завантажує реальні дані з фінансової системи
+ * Автоматично оновлюється при змінах через EventBus
  */
 export default function LeftRailTimeline({
   orderId,            // ID замовлення для завантаження реальних даних
@@ -28,8 +30,10 @@ export default function LeftRailTimeline({
   const [showAll, setShowAll] = useState(false)
   const [financeEvents, setFinanceEvents] = useState([])
   const [loading, setLoading] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  useEffect(() => {
+  // Функція завантаження даних
+  const fetchData = useCallback(() => {
     if (!orderId) return
 
     setLoading(true)

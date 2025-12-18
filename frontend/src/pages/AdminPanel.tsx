@@ -4,7 +4,27 @@ const API_URL = process.env.REACT_APP_BACKEND_URL
 
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
 
-type Tab = 'users' | 'categories' | 'vendors' | 'expense-categories' | 'employees'
+type Tab = 'users' | 'categories' | 'vendors' | 'expense-categories' | 'employees' | 'payroll' | 'settings' | 'logs'
+
+// Dynamic tab configuration
+interface TabConfig {
+  id: Tab
+  label: string
+  icon: string
+  component: string
+  permissions?: string[]
+}
+
+const ADMIN_TABS: TabConfig[] = [
+  { id: 'users', label: 'Користувачі', icon: '👥', component: 'UsersTab' },
+  { id: 'employees', label: 'Працівники', icon: '👷', component: 'EmployeesTab' },
+  { id: 'payroll', label: 'Зарплати', icon: '💰', component: 'PayrollTab' },
+  { id: 'vendors', label: 'Підрядники', icon: '🏢', component: 'VendorsTab' },
+  { id: 'categories', label: 'Категорії товарів', icon: '📁', component: 'CategoriesTab' },
+  { id: 'expense-categories', label: 'Категорії витрат', icon: '💸', component: 'ExpenseCategoriesTab' },
+  { id: 'settings', label: 'Налаштування', icon: '⚙️', component: 'SettingsTab' },
+  { id: 'logs', label: 'Логи системи', icon: '📋', component: 'LogsTab' },
+]
 
 interface User {
   user_id: number

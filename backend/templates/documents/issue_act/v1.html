@@ -38,10 +38,10 @@
         {% for item in items %}
         <tr>
             <td class="text-center">{{ loop.index }}</td>
-            <td>{{ item.name }}</td>
-            <td>{{ item.sku or item.article }}</td>
-            <td class="text-center">{{ item.quantity or item.qty }}</td>
-            <td>{{ item.location or '-' }}</td>
+            <td>{{ item.get('name', '') }}</td>
+            <td>{{ item.get('sku') or item.get('article', '') }}</td>
+            <td class="text-center">{{ item.get('quantity') or item.get('qty', 1) }}</td>
+            <td>{{ item.get('location', '-') }}</td>
             <td><span class="checkbox"></span> Без дефектів</td>
         </tr>
         {% endfor %}
@@ -50,7 +50,7 @@
 
 <div class="mt-4">
     <p><strong>Всього позицій:</strong> {{ items|length }}</p>
-    <p><strong>Всього одиниць:</strong> {{ items|sum(attribute='quantity') or items|sum(attribute='qty') }}</p>
+    <p><strong>Всього одиниць:</strong> {% set total = namespace(value=0) %}{% for item in items %}{% set total.value = total.value + (item.get('quantity') or item.get('qty', 1)) %}{% endfor %}{{ total.value }}</p>
 </div>
 
 <div class="highlight" style="padding:10px; margin-top:20px;">

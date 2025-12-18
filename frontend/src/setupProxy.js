@@ -7,11 +7,10 @@ module.exports = function(app) {
     createProxyMiddleware({
       target: 'http://localhost:8001',
       changeOrigin: true,
-      logLevel: 'debug'
     })
   );
   
-  // Proxy uploads and static backend files
+  // Proxy uploads (backend serves uploaded files)
   app.use(
     '/uploads',
     createProxyMiddleware({
@@ -20,11 +19,5 @@ module.exports = function(app) {
     })
   );
   
-  app.use(
-    '/static',
-    createProxyMiddleware({
-      target: 'http://localhost:8001',
-      changeOrigin: true
-    })
-  );
+  // NOTE: Do NOT proxy /static - this is served by webpack dev server
 };

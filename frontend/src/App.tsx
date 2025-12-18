@@ -43,7 +43,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  const navigate = useNavigate;
+  // Note: navigate is not used here - remove if unneeded
+  // const navigate = useNavigate();
   
   const handleBackToDashboard = () => {
     window.location.href = '/dashboard';

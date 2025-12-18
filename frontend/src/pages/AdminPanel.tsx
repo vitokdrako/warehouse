@@ -62,6 +62,8 @@ export default function AdminPanel() {
   const [vendors, setVendors] = useState<any[]>([])
   const [expenseCategories, setExpenseCategories] = useState<any[]>([])
   const [employees, setEmployees] = useState<any[]>([])
+  const [payroll, setPayroll] = useState<any[]>([])
+  const [systemLogs, setSystemLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   
   // User form

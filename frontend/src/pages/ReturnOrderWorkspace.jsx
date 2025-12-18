@@ -13,6 +13,7 @@ import {
   OrderWorkspaceLayout,
   LeftRailClient,
   LeftRailFinance,
+  LeftRailDocuments,
   LeftRailTimeline,
 } from '../components/order-workspace'
 
@@ -268,6 +269,12 @@ export default function ReturnOrderWorkspace() {
               orderId={order?.order_id}
               rentAmount={totalRent}
               depositAmount={totalDeposit}
+            />
+            <LeftRailDocuments
+              orderId={order?.order_id}
+              orderNumber={order?.order_number}
+              orderStatus={returnStatus === 'completed' ? 'completed' : 'returning'}
+              customerEmail={clientEmail}
             />
             <LeftRailTimeline orderId={order?.order_id} events={timeline} />
           </>

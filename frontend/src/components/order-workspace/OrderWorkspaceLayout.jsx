@@ -105,6 +105,17 @@ export default function OrderWorkspaceLayout({
             <div className="space-y-4">
               {children}
             </div>
+            
+            {/* Documents Footer - в кінці центральної зони */}
+            {showDocuments && orderId && (
+              <DocumentsFooter
+                orderId={orderId}
+                orderNumber={orderNumber}
+                orderStatus={status}
+                issueCardId={issueCardId}
+                deliveryType={deliveryType}
+              />
+            )}
           </main>
         </div>
       </div>

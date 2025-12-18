@@ -50,6 +50,11 @@ export default function OrderWorkspaceLayout({
   footerActions,
   footerChildren,
   
+  // Documents props
+  issueCardId,
+  deliveryType,
+  showDocuments = true,
+  
   // Loading state
   loading,
 }) {

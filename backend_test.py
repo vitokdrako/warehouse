@@ -163,45 +163,54 @@ class IssueCardWorkspaceTester:
             self.log(f"❌ Exception testing order: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_invoice_offer_generation(self) -> Dict[str, Any]:
-        """Test invoice_offer document generation with real order data"""
-        expected_data = {
-            "customer_name": "Галина Семчишин",
-            "order_number": "OC-7136"
-        }
-        return self.test_generate_document("invoice_offer", TEST_ORDER_ID, expected_data)
-    
-    def test_contract_rent_generation(self) -> Dict[str, Any]:
-        """Test contract_rent document generation with real order data"""
-        expected_data = {
-            "customer_name": "Галина Семчишин",
-            "order_number": "OC-7136"
-        }
-        return self.test_generate_document("contract_rent", TEST_ORDER_ID, expected_data)
-    
-    def test_return_act_generation(self) -> Dict[str, Any]:
-        """Test return_act document generation with real order data"""
-        expected_data = {
-            "customer_name": "Галина Семчишин",
-            "order_number": "OC-7136"
-        }
-        return self.test_generate_document("return_act", TEST_ORDER_ID, expected_data)
-    
-    def test_delivery_note_generation(self) -> Dict[str, Any]:
-        """Test delivery_note document generation with real order data"""
-        expected_data = {
-            "customer_name": "Галина Семчишин",
-            "order_number": "OC-7136"
-        }
-        return self.test_generate_document("delivery_note", TEST_ORDER_ID, expected_data)
-    
-    def test_damage_report_generation(self) -> Dict[str, Any]:
-        """Test damage_report document generation with real order data"""
-        expected_data = {
-            "customer_name": "Галина Семчишин",
-            "order_number": "OC-7136"
-        }
-        return self.test_generate_document("damage_report", TEST_ORDER_ID, expected_data)
+    def test_frontend_routing(self) -> Dict[str, Any]:
+        """Test frontend routing to issue workspace"""
+        try:
+            self.log(f"🧪 Testing frontend routing to issue workspace...")
+            
+            # Test the specific URL from the review request
+            frontend_url = f"{FRONTEND_URL}/issue-workspace/{TEST_ISSUE_CARD_ID}"
+            
+            # Make a request to the frontend URL (without authentication headers)
+            frontend_session = requests.Session()
+            response = frontend_session.get(frontend_url, allow_redirects=False)
+            
+            self.log(f"   Frontend URL: {frontend_url}")
+            self.log(f"   Response status: {response.status_code}")
+            
+            if response.status_code == 200:
+                self.log(f"✅ Frontend page loads successfully")
+                
+                # Check if it contains React app content
+                content = response.text
+                if 'react' in content.lower() or 'app' in content.lower():
+                    self.log(f"   ✅ Contains React app content")
+                else:
+                    self.log(f"   ⚠️ May not contain React app content")
+                
+                return {"success": True, "status_code": response.status_code}
+                
+            elif response.status_code in [301, 302, 307, 308]:
+                # Check for redirects
+                redirect_location = response.headers.get('Location', '')
+                self.log(f"❌ Frontend redirects to: {redirect_location}")
+                
+                if '/manager' in redirect_location:
+                    self.log(f"   ❌ CONFIRMED: Redirecting to /manager (this is the reported issue)")
+                
+                return {
+                    "success": False, 
+                    "status_code": response.status_code,
+                    "redirect_location": redirect_location,
+                    "issue_confirmed": '/manager' in redirect_location
+                }
+            else:
+                self.log(f"❌ Frontend returns status: {response.status_code}")
+                return {"success": False, "status_code": response.status_code}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing frontend routing: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
 
     def test_get_order_data(self) -> Dict[str, Any]:
         """Test getting order data to verify test order exists"""

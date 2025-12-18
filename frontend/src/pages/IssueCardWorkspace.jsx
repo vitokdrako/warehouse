@@ -39,6 +39,8 @@ export default function IssueCardWorkspace() {
   const navigate = useNavigate()
   const { toast } = useToast()
   
+  console.log('[IssueCardWorkspace] Rendering with id:', id)
+  
   // === СТАН ===
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

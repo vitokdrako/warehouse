@@ -1,71 +1,66 @@
 <analysis>**original_problem_statement:**
-The user's initial request was to build a Rental Finance Engine. This evolved into a series of tasks focused on fully integrating this new engine into the existing application, ensuring data consistency, and refining the UI/UX based on detailed feedback.
+The user's initial request was to build a Rental Finance Engine. This has since evolved into a full-scale application with a sophisticated order management and document generation system.
 
 **PRODUCT REQUIREMENTS (current phase):**
-1.  **Data Consistency:** Ensure all parts of the UI (Dashboard KPIs, Finance Cabinet, Order Workspaces) display real-time, accurate financial data from the backend ledger. Eliminate discrepancies and the need for manual refreshes.
-2.  **UI/UX Refinement:**
-    *   Fix status flags on order cards to reflect actual payment and deposit status.
-    *   De-duplicate UI elements, such as removing the Commercial Summary and extra Documents panels.
-    *   Ensure the timeline of events for an order accurately shows which user performed each action.
-    *   Correctly display deposit amounts in their original currency (e.g., 300 USD) instead of a UAH equivalent.
-    *   Change dashboard KPIs to show the *count* of deposits, not the sum.
-3.  **User Action Tracking:** Log the specific user who accepts a payment or deposit and display this information in the UI.
-4.  **Bug Fixes:** Resolve critical backend errors, specifically a  error occurring during payment creation due to MySQL connection issues.
+1.  **Document Engine V2:** Implement a complete document generation system based on a highly detailed, 14-point specification provided by the user. This includes:
+    *   A dedicated UI panel for documents on the left side of the order workspace.
+    *   Dynamic availability of documents based on the order's current status (e.g., Invoice/Offer is available at Confirm status, Issue Act at Issue status).
+    *   An option to email each generated document to the client.
+    *   Document generation and payment actions must *not* block the user from advancing the order's status.
+2.  **Bug Fix: Ready for Issue Button:** The Готово до видачі (Ready for Issue) button is currently inactive, blocking the order lifecycle. This needs to be diagnosed and fixed.
+3.  **UI/UX Refinements:**
+    *   The document generation UI should be moved from the main body/footer of the order card to a dedicated panel on the left rail, just above the Operations Log ().
+    *   Ensure the UI updates in real-time after actions are performed, without requiring a manual page refresh.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The Rental Finance Engine is largely complete and integrated. A major refactoring effort fixed widespread authentication issues by implementing a global  helper and Axios interceptor to pass JWT tokens with API requests. The backend payment/deposit creation endpoints have been stabilized after fixing a critical MySQL connection bug. The database was recently wiped of transactional data and re-initialized.
+The application is a full-stack React/FastAPI/MySQL rental management system. Key features include a finance engine, order lifecycle management, and an admin panel.
 
-The UI has undergone significant changes based on user feedback:
-- The Finance Cabinet and Admin Panel have been updated.
-- The main order workspaces (, , etc.) have been refactored to remove duplicated financial summaries and now use a single  component.
-- The  now fetches its own live data.
-- Deposit displays and dashboard KPIs have been corrected as per user requirements.
+In this session, the agent has:
+-   Successfully fixed user tracking in the order timeline by enriching the JWT token with the user's full name.
+-   Expanded the Admin Panel into a dynamic, tab-based interface, adding placeholders for Payroll, Settings, and Logs.
+-   Added backend test coverage for the existing Payroll and Vendor APIs.
+-   Integrated the  component into the main application layout.
+-   Implemented a basic frontend event bus () to provide real-time UI updates for financial transactions.
+-   Scaffolded the backend for the new Document Engine V2: created 14 new HTML templates, updated the document registry (), and fixed the generation API () to work correctly with JSON payloads.
+-   Fixed the corresponding frontend API call in  to send a JSON payload.
+-   Created a new, empty component  intended to house the new document UI.
 
 **Last working item**:
--   **Last item agent was working:** Fixing the order lifecycle timeline to display the actual user's name who performed an action (e.g., Sent to assembly by John Doe) instead of a generic role like Manager.
+-   **Last item agent was working:** Implementing the user's detailed specification for the Document Engine V2 and fixing associated bugs. The agent had just fixed the backend API and frontend service for document generation and created the new  component. The next step was to integrate this new component into the layout and fix the blocked Ready for Issue button.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. After the backend fix, the agent needs to verify that the timeline on the order card UI ( and other workspaces) correctly displays the user's name for lifecycle events.
+-   **Which testing method agent to use?** Frontend testing agent. After the UI is built, the agent needs to verify that the correct documents appear at each order status, that generation works, and that the Ready for Issue button is now active and functional.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0) Incomplete User Tracking in Order Timeline**
-    -   **Description:** The user reported that the order timeline shows a generic role (менеджер) instead of the specific user's name for lifecycle events like Sent to assembly.
-    -   **Attempted fixes:** The agent correctly identified the root cause: the  table was missing user identifiers.
-        1.  Added  and  columns to the  table.
-        2.  Updated the  endpoint to join with the  table and return .
-        3.  Started refactoring backend code that writes to  but only partially completed the task. The agent got stuck on the  endpoint because it lacked access to user data.
+-   **Issue 1: (P0) Implement Document Engine V2 UI and Fix Related Bugs**
+    -   **Description:** The user has provided a detailed specification for a new document engine but reported that document generation is not working from the UI and the Ready for Issue button is inactive, blocking the workflow.
+    -   **Attempted fixes:**
+        -   The backend API for document generation was fixed and tested.
+        -   The frontend  service was fixed to match the new API contract.
+        -   A new component, , was created as a placeholder for the new UI.
+        -   The agent identified the logic for the Ready for Issue button in  as the likely source of the block.
     -   **Next debug checklist:**
-        1.  Modify the  endpoint in  to depend on the current user: .
-        2.  Update the  statement within that endpoint to save  and  into the new columns.
-        3.  Search for all other instances of  in the codebase and apply the same fix to ensure all lifecycle events capture the user's identity.
-    -   **Why fix this issue and what will be achieved with the fix?** To provide accountability and clarity on who performed key actions on an order.
+        1.  Add the new  component to  above .
+        2.  Implement the logic inside  to fetch available document types for the current order status from  and render a button for each.
+        3.  For each document button, add a Generate/Preview action and a (placeholder) Email to client action.
+        4.  In , modify the  condition to remove any dependency on document generation, as requested by the user.
+        5.  Verify that payment actions and document generation do not block status change buttons.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical workflow for the user. Fixing it will unblock the entire order fulfillment process and implement a core business requirement.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on other issue:** None.
--   **Issue 2: (P1) Lack of Real-Time UI Updates**
-    -   **Description:** The user mentioned that data does not update instantly after an action (e.g., making a payment) and requires a manual page refresh. This was explicitly mentioned in user message 270.
-    -   **Attempted fixes:** The agent fixed specific instances but has not implemented a global solution.
-    -   **Next debug checklist:**
-        1.  Review key components like  and .
-        2.  Implement a mechanism to automatically refetch data after a mutation (e.g., payment creation). This could involve a shared state invalidation pattern or a simple callback system.
-        3.  Consider introducing a lightweight state management library (like Zustand) or a data-fetching library (like SWR or React Query) to handle this more robustly.
-    -   **Why fix this issue and what will be achieved with the fix?** To significantly improve user experience by providing immediate visual feedback for actions.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend.
-    -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   None apart from the pending issues.
+-   None apart from the pending issue.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P1) **Integrate Legal Footer:** The  component, created in a previous session, needs to be added to the main application layout () to be visible.
-    -   (P1) **Enhance Admin Panel:** The user requested the ability for the Admin Panel to create additional tabs and logic for remote system management. The tabs were added, but the underlying dynamic logic is not implemented.
+    -   (P1) **Email Document Integration:** Implement the Email to client functionality for generated documents. This will require choosing an email provider (like Resend or SendGrid), using , and creating a backend endpoint to handle sending.
+    -   (P1) **Telegram Bot Integration:** The user mentioned a Telegram bot for client communication, which could be a future integration task.
 -   **Future Tasks:**
     -   (P2) Develop detailed financial reports (e.g., Cost per Order, Inventory ROI).
     -   (P2) Re-address mobile responsiveness for the entire application.
@@ -73,23 +68,15 @@ The UI has undergone significant changes based on user feedback:
     -   (P3) Integrate digital signature capabilities.
 
 **Completed work in this session**
--   **Full Finance Cabinet Integration (DONE):** Connected all dashboards, KPIs, and tabs to live backend data, replacing all mock data.
--   **Critical Bug Fix - Payment Creation (DONE):** Resolved a  on payment creation by implementing a direct  within the endpoint handler in  to bypass stale SQLAlchemy connections.
--   **Authentication System Refactor (DONE):** Implemented a global Axios interceptor and  helper to ensure the JWT  header is sent with all necessary API requests, fixing numerous data loading issues.
--   **UI/UX Overhaul (DONE):**
-    -   Refactored all order workspaces (, , etc.) to use a single, consistent  component for financial status, removing duplicated UI.
-    -   Corrected deposit displays to show original currency (e.g., 300 USD) and updated dashboard KPIs to show deposit *count*.
-    -   Fixed financial status flags/pills on order cards to reflect real payment data from the backend.
-    -   Implemented the Accepted By feature, which tracks and displays the name of the user who processed a payment or deposit.
--   **Database Cleanup & Initialization (DONE):** Wiped all transactional data from the database upon user request and re-initialized the core financial accounts and categories.
+-   **Timeline User Tracking (DONE):** Fixed  inserts and enriched the JWT token to log and display the user's full name () for all actions.
+-   **Admin Panel Expansion (DONE):** Refactored  to be dynamic and added new tabs for Payroll, Settings, and System Logs.
+-   **Backend Test Coverage (DONE):** Created  and  to ensure API stability.
+-   **LegalFooter Integration (DONE):** The  component is now live across the application.
+-   **Real-Time UI Updates (Initial Phase DONE):** A simple  was created and implemented for financial components (, ) to refresh data after payments.
+-   **Document Engine V2 Backend (DONE):** Created 14 new HTML templates and updated the backend registry and data builders. The generation API endpoint is fixed and functional.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Missing Backend Tests for New Modules**
-    -   **Description:** The agent from the previous job created backend APIs for Payroll and Vendors but did not create corresponding test files in . This was not addressed in the current session.
-    -   **Debug checklist:** Create  and  and write Pytest cases for the CRUD operations.
-    -   **Why to solve this issue and what will be achieved with this?** To improve code quality and prevent future regressions.
-    -   **Should Test frontend/backend/both after fix:** backend
-    -   **Is recurring issue?** Y
+-   None.
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -98,54 +85,55 @@ The UI has undergone significant changes based on user feedback:
 
 
 **Key Technical Concepts**
--   **MySQL Connection Stability:** The most critical technical challenge was a recurring  error. The solution was to bypass the default FastAPI dependency-injected DB session for critical write operations and create a fresh, direct connection using  inside the endpoint handlers in .
--   **Frontend Authentication:** The app was plagued by missing authentication headers. This was solved by creating an Axios interceptor in  and a helper function () to automatically attach the  token to outgoing requests.
--   **Component-Driven Data Fetching:** Components like  and  were refactored to be self-sufficient, fetching their own data via  hooks based on an  prop. This reduces prop drilling but highlights the need for a more robust data-fetching strategy.
+-   **Specification-Driven Development:** The agent is working off a very detailed, multi-page specification from the user for the document engine, dictating UI, logic, and triggers.
+-   **Frontend Event Bus:** A simple custom event emitter () was introduced to trigger UI refreshes and solve the stale data problem in a lightweight manner.
+-   **Dynamic UI Configuration:** The  was refactored to use a configuration array for its tabs, making it much more extensible.
+-   **JWT Payload Enrichment:** The JWT token was updated in  to include the user's full name, allowing for more precise user tracking throughout the application.
 
 **key DB schema**
--   : Added  (INT),  (VARCHAR).
--   : Added  (DECIMAL),  (VARCHAR),  (INT),  (VARCHAR).
--   : Added  (INT),  (VARCHAR).
+-   No database schema changes were made in this session.
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
--   **Backend:** , .
--   **Frontend (Key Components):** , , .
--   **Frontend (Key Pages):** ,  (and all other workspace pages), .
--   **Frontend (Core):** .
+-   **Backend (Document Engine):** , 
+-   **Backend (Tests):** , 
+-   **Frontend (New UI):**  (to be built),  (refactored)
+-   **Frontend (Bug Fix):** , 
+-   **Frontend (Real-time):** 
 
 **Areas that need refactoring**:
--   The use of direct  in  is a functional but temporary fix. The application would benefit from a properly configured SQLAlchemy connection pool (, ) applied globally.
--   The frontend's data fetching logic is scattered across many components using . This leads to challenges with state synchronization and caching. Introducing a dedicated data-fetching library like React Query or SWR would centralize this logic and solve the manual refresh problem.
+-   The  solution is a good first step for real-time updates. However, for a more scalable and robust solution, the application would benefit from a dedicated data-fetching library like React Query or SWR. This would centralize caching, refetching, and state synchronization logic.
 
 **key api endpoints**
--   : Creates a payment. Now stable.
--   : Creates a deposit. Now stable.
--   : Retrieves order history. Now returns user names.
--   : **Needs to be fixed** to accept user context and log the correct user name.
+-   : **Modified** to accept a JSON body. This is the core endpoint for the new document engine.
+-    and  endpoints now have Pytest coverage.
 
 **Critical Info for New Agent**
 -   **You MUST respond in українська (Ukrainian).**
--   The user's primary concern is **data consistency and real-time updates**. Any new feature or fix should prioritize ensuring the UI instantly reflects backend changes without requiring a manual refresh.
--   The last task is **unfinished**. Your immediate priority is to complete the user tracking feature in the order timeline by fixing the  endpoint and any other endpoints that write to the  table.
--   Be mindful of the **MySQL connection issue**. The pattern of using a direct  in  was a successful fix for critical write endpoints. If you encounter similar  errors, consider applying the same pattern.
+-   Your immediate and highest priority is to fully implement the **Document Engine V2** as specified by the user. Refer to their detailed scenario-based messages.
+-   The implementation involves two main parts:
+    1.  **Building the UI:** Populate the new  component. It must dynamically show document buttons based on the order's status.
+    2.  **Fixing the Bug:** The Готово до видачі (Ready for Issue) button in  is blocked. You must fix its logic and ensure document status does not prevent order progression.
+-   The user has explicitly requested an email to client feature for documents, which will be the next major task and will require a new integration (e.g., Resend).
 
 **Last 10 User Messages and any pending user messages**
-1.  **User:** The timeline shows manager but not who. (Status: **IN PROGRESS**)
-2.  **User:** Fixed status flags on order cards to show real payment status. (Status: **RESOLVED**)
-3.  **User:** Asked to remove duplicate document blocks. (Status: **RESOLVED**)
-4.  **User:** Requested to see who accepted a payment in the payment journal. (Status: **RESOLVED**)
-5.  **User:** Pointed out that the user's name wasn't being captured correctly. (Status: **RESOLVED**)
-6.  **User:** Stated that deposit balances should be zero until a deposit is actually taken. (Status: **RESOLVED**)
-7.  **User:** Asked to remove the Commercial Summary block and fix the main Financial Status block to show live data. (Status: **RESOLVED**)
-8.  **User:** Pointed out that the left-side financial status block and the center block showed conflicting information. (Status: **RESOLVED**)
-9.  **User:** Asked to fix the timeline in the order card to also read real data. (Status: **RESOLVED**)
-10. **PENDING:** The fix for showing the user's name in the timeline is incomplete.
+1.  **User:** Provided a complete, final list of 14 document types, their generation triggers, and printing requirements. (Status: **IN PROGRESS**)
+2.  **User:** Confirmed to generate all 14 templates and move the document UI out of the card body/footer. (Status: **IN PROGRESS**)
+3.  **User:** Confirmed the next tasks are real-time UI updates and integrating the . (Status: **RESOLVED**)
+4.  **User:** Confirmed the next tasks are creating tests for Payroll/Vendors and expanding the Admin Panel. (Status: **RESOLVED**)
+5.  **User:** Reported that document generation has stopped working and the Ready for issue button is inactive. (Status: **IN PROGRESS**)
+6.  **User:** Asked to define where documents should be displayed. (Status: **AWAITING IMPLEMENTATION**)
+7.  **User:** Provided an extremely detailed, step-by-step scenario of the entire order lifecycle, specifying exactly which document should be available at which stage. This is the primary specification to follow. (Status: **IN PROGRESS**)
+8.  **User (pending):** Needs the agent to implement the document UI on the left rail, ensure it doesn't block other buttons, and add an email option. (Status: **PENDING**)
+9.  **User (pending):** Needs the Ready for Issue button to be unblocked. (Status: **PENDING**)
+10. **Agent:** Asked for clarification on where to place the document UI. (Status: **ANSWERED by user**)
 
 **Project Health Check:**
--   **Broken:** The order lifecycle user tracking is partially broken.
+-   **Broken:**
+    -   The UI for document generation is non-existent/broken.
+    -   The Ready for Issue button is inactive, blocking a critical user workflow.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
@@ -157,19 +145,17 @@ https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
 https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
 
 ----- (for PDF generation)
+-   **Emergent LLM Key Applicability:** None currently. An email integration (e.g., , ) is required for a future task, which will need an API key from the user.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, used initially for backend and frontend, which helped discover the authentication flaw.
+-   **Testing agent used after significant changes:** YES, for backend API changes and initial eventBus implementation.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None in this session.
--   **Known regressions:** None.
+-   **Test files created:** , 
+-   **Known regressions:** The document generation UI, which previously existed in some form, is now broken pending the implementation of the new  component.
 
 **Credentials to test flow:**
 -   email: 
 -   password: 
 
 **What agent forgot to execute**
--   **Integrate :** This component was created in a prior job but has still not been added to the main application layout.
--   **Create Backend Tests:** The initial handoff noted missing tests for the  and  APIs. These were not created.
--   **Implement Global Real-Time Updates:** The user repeatedly mentioned that the UI does not update automatically. The agent made localized fixes but did not implement a comprehensive solution.
--   **Complete the Timeline User-Tracking Fix:** The agent only fixed some of the backend code paths for logging user actions in the timeline and was blocked on others.</analysis>
+-   The agent was actively implementing the user's request for the Document Engine V2. The main pending task is to complete the frontend UI for it () and fix the related Ready for Issue button bug in .</analysis>

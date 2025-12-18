@@ -2,7 +2,6 @@
 import React from 'react'
 import WorkspaceHeader from './WorkspaceHeader'
 import FooterActions from './FooterActions'
-import DocumentsFooter from './DocumentsFooter'
 import { getStatusConfig } from './statusConfig'
 
 /**

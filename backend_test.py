@@ -85,56 +85,43 @@ class IssueCardWorkspaceTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_document_types_endpoint(self) -> Dict[str, Any]:
-        """Test GET /api/documents/types - should return all document types"""
+    def test_issue_card_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/issue-cards/{id} - should return issue card data"""
         try:
-            self.log("🧪 Testing document types endpoint...")
+            self.log(f"🧪 Testing issue card endpoint for {TEST_ISSUE_CARD_ID}...")
             
-            response = self.session.get(f"{self.base_url}/documents/types")
+            response = self.session.get(f"{self.base_url}/issue-cards/{TEST_ISSUE_CARD_ID}")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                if not isinstance(data, list):
-                    self.log(f"❌ Expected list of document types, got {type(data)}", "ERROR")
-                    return {"success": False, "error": f"Expected list, got {type(data)}"}
+                self.log(f"✅ Retrieved issue card data")
                 
-                self.log(f"✅ Retrieved {len(data)} document types")
+                # Check for expected fields
+                expected_fields = ['id', 'order_id', 'order_number', 'status', 'items']
+                missing_fields = [field for field in expected_fields if field not in data]
                 
-                # Check for expected document types
-                expected_types = [
-                    "invoice_offer", "contract_rent", "issue_act", "picking_list",
-                    "return_act", "delivery_note", "damage_report"
-                ]
+                if missing_fields:
+                    self.log(f"⚠️ Missing issue card fields: {missing_fields}")
                 
-                found_types = [doc.get("doc_type") for doc in data]
-                missing_types = [t for t in expected_types if t not in found_types]
-                
-                if missing_types:
-                    self.log(f"⚠️ Missing document types: {missing_types}")
-                
-                # Check document structure
-                for doc in data[:3]:  # Check first 3 documents
-                    required_fields = ['doc_type', 'name', 'entity_type', 'series']
-                    for field in required_fields:
-                        if field not in doc:
-                            self.log(f"⚠️ Document type missing field: {field}")
-                    
-                    self.log(f"   ✅ Document type: {doc.get('doc_type')} - {doc.get('name')}")
+                # Log key information
+                self.log(f"   ✅ Issue Card ID: {data.get('id')}")
+                self.log(f"   ✅ Order ID: {data.get('order_id')}")
+                self.log(f"   ✅ Order Number: {data.get('order_number')}")
+                self.log(f"   ✅ Status: {data.get('status')}")
+                self.log(f"   ✅ Items count: {len(data.get('items', []))}")
                 
                 return {
                     "success": True, 
                     "data": data,
-                    "total_types": len(data),
-                    "found_types": found_types,
-                    "missing_types": missing_types
+                    "missing_fields": missing_fields
                 }
             else:
-                self.log(f"❌ Failed to get document types: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
+                self.log(f"❌ Failed to get issue card: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing document types: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing issue card: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_generate_document(self, doc_type: str, entity_id: str, expected_data: dict = None) -> Dict[str, Any]:

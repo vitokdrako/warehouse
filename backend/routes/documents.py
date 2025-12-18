@@ -35,11 +35,18 @@ async def list_documents_for_entity(entity_type: str):
 
 # ============ Генерація документів ============
 
+from pydantic import BaseModel
+from typing import Optional
+
+class GenerateDocumentRequest(BaseModel):
+    doc_type: str
+    entity_id: str
+    format: Optional[str] = "html"
+    options: Optional[dict] = None
+
 @router.post("/generate")
 async def generate_document(
-    doc_type: str,
-    entity_id: str,
-    options: dict = None,
+    request: GenerateDocumentRequest,
     db: Session = Depends(get_rh_db)
 ):
     """
@@ -48,11 +55,15 @@ async def generate_document(
     Args:
         doc_type: Тип документа (invoice_offer, contract_rent, etc.)
         entity_id: ID сутності (order_id, issue_card_id, etc.)
+        format: Формат виводу (html, pdf)
         options: Додаткові опції (lang, notes, etc.)
     
     Returns:
         Інформація про згенерований документ
     """
+    doc_type = request.doc_type
+    entity_id = request.entity_id
+    options = request.options
     try:
         # Отримуємо конфігурацію
         config = get_doc_config(doc_type)

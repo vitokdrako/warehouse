@@ -73,7 +73,12 @@ export default function OrderFinancePanel({ order, onUpdate }) {
           accepted_by_id: acceptedById,
           accepted_by_name: acceptedByName
         });
-        if (result.data && result.data.success) onUpdate?.();
+        if (result.data && result.data.success) {
+          // Emit event for real-time updates
+          eventBus.emit(EVENTS.DEPOSIT_CREATED, { orderId: order.id });
+          eventBus.emit(EVENTS.FINANCE_UPDATED, { orderId: order.id });
+          onUpdate?.();
+        }
       } else {
         const result = await financeApi.createPayment({ 
           payment_type: type, 
@@ -83,7 +88,12 @@ export default function OrderFinancePanel({ order, onUpdate }) {
           accepted_by_id: acceptedById,
           accepted_by_name: acceptedByName
         });
-        if (result.data && result.data.success) onUpdate?.();
+        if (result.data && result.data.success) {
+          // Emit event for real-time updates
+          eventBus.emit(EVENTS.PAYMENT_CREATED, { orderId: order.id, paymentType: type });
+          eventBus.emit(EVENTS.FINANCE_UPDATED, { orderId: order.id });
+          onUpdate?.();
+        }
       }
     } finally {
       setLoading(null);

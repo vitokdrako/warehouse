@@ -440,7 +440,7 @@ setTimeout(()=>window.print(),500);
         primaryLabel={isProcessing ? '✅ Готово до видачі' : isReadyForIssue ? '🚚 Видати клієнту' : undefined}
         primaryDisabled={saving || (isProcessing && !canMarkReady)}
         primaryDisabledReason={isProcessing && !canMarkReady 
-          ? (!hasRequisitors ? 'Оберіть комплектувальника' : 'Завершіть комплектування та чеклист') 
+          ? (!hasRequisitors ? 'Оберіть комплектувальника' : 'Скомплектуйте всі позиції') 
           : ''}
         onSave={!isIssued ? saveProgress : undefined}
         saving={saving}
@@ -484,14 +484,7 @@ setTimeout(()=>window.print(),500);
           readOnly={isIssued}
         />
         
-        {/* Документи */}
-        <ZoneDocuments
-          orderId={order?.order_id || issueCard?.order_id}
-          issueCardId={issueCard?.id}
-          entityType="issue"
-          title="Документи"
-          hint="Генерація та завантаження документів"
-        />
+        {/* Документи переміщено в LeftRailDocuments */}
         
         {/* Нотатки */}
         <ZoneNotes

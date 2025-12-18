@@ -201,76 +201,45 @@ class DocumentEngineTester:
             self.log(f"❌ Exception testing document generation: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_order_status_update_endpoint(self) -> Dict[str, Any]:
-        """Test PUT /api/orders/{order_id}/status - should create lifecycle entry with user info"""
-        try:
-            self.log(f"🧪 Testing order status update endpoint for order {TEST_ORDER_ID}...")
-            
-            # Get current status first
-            order_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}")
-            if order_response.status_code != 200:
-                self.log(f"❌ Cannot get order details: {order_response.status_code}", "ERROR")
-                return {"success": False, "error": "Cannot get order details"}
-            
-            order_data = order_response.json()
-            current_status = order_data.get('status')
-            self.log(f"   Current order status: {current_status}")
-            
-            # Choose a valid status transition
-            status_transitions = {
-                'pending': 'awaiting_customer',
-                'awaiting_customer': 'processing',
-                'processing': 'ready_for_issue',
-                'ready_for_issue': 'issued',
-                'issued': 'on_rent',
-                'on_rent': 'returned',
-                'returned': 'completed'
-            }
-            
-            new_status = status_transitions.get(current_status)
-            if not new_status:
-                # If no valid transition, try a safe one
-                new_status = 'processing'
-            
-            # Test status update
-            status_data = {"status": new_status}
-            response = self.session.put(f"{self.base_url}/orders/{TEST_ORDER_ID}/status", json=status_data)
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.log(f"✅ Status update successful: {current_status} → {new_status}")
-                
-                # Check if lifecycle entry was created with user info
-                lifecycle_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}/lifecycle")
-                if lifecycle_response.status_code == 200:
-                    lifecycle_data = lifecycle_response.json()
-                    
-                    # Look for recent status change event
-                    recent_status_event = None
-                    for event in lifecycle_data:
-                        if event.get('stage') == new_status:
-                            recent_status_event = event
-                            break
-                    
-                    if recent_status_event:
-                        has_user_info = (
-                            recent_status_event.get('created_by_id') is not None or
-                            recent_status_event.get('created_by_name') is not None
-                        )
-                        if has_user_info:
-                            self.log(f"   ✅ Status event has user info: {recent_status_event.get('created_by_name')}")
-                        else:
-                            self.log(f"   ❌ Status event missing user info", "ERROR")
-                            return {"success": False, "error": "Status event missing user info"}
-                
-                return {"success": True, "data": data, "old_status": current_status, "new_status": new_status}
-            else:
-                self.log(f"❌ Failed to update status: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing status update: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
+    def test_invoice_offer_generation(self) -> Dict[str, Any]:
+        """Test invoice_offer document generation with real order data"""
+        expected_data = {
+            "customer_name": "Галина Семчишин",
+            "order_number": "OC-7136"
+        }
+        return self.test_generate_document("invoice_offer", TEST_ORDER_ID, expected_data)
+    
+    def test_contract_rent_generation(self) -> Dict[str, Any]:
+        """Test contract_rent document generation with real order data"""
+        expected_data = {
+            "customer_name": "Галина Семчишин",
+            "order_number": "OC-7136"
+        }
+        return self.test_generate_document("contract_rent", TEST_ORDER_ID, expected_data)
+    
+    def test_return_act_generation(self) -> Dict[str, Any]:
+        """Test return_act document generation with real order data"""
+        expected_data = {
+            "customer_name": "Галина Семчишин",
+            "order_number": "OC-7136"
+        }
+        return self.test_generate_document("return_act", TEST_ORDER_ID, expected_data)
+    
+    def test_delivery_note_generation(self) -> Dict[str, Any]:
+        """Test delivery_note document generation with real order data"""
+        expected_data = {
+            "customer_name": "Галина Семчишин",
+            "order_number": "OC-7136"
+        }
+        return self.test_generate_document("delivery_note", TEST_ORDER_ID, expected_data)
+    
+    def test_damage_report_generation(self) -> Dict[str, Any]:
+        """Test damage_report document generation with real order data"""
+        expected_data = {
+            "customer_name": "Галина Семчишин",
+            "order_number": "OC-7136"
+        }
+        return self.test_generate_document("damage_report", TEST_ORDER_ID, expected_data)
 
     def test_move_to_preparation_endpoint(self) -> Dict[str, Any]:
         """Test POST /api/decor-orders/{order_id}/move-to-preparation - should create lifecycle entry with user info"""

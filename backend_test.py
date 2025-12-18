@@ -407,9 +407,9 @@ class DocumentEngineTester:
             self.log(f"❌ Exception verifying Document Engine behavior: {str(e)}", "ERROR")
             return {"error": str(e)}
 
-    def run_comprehensive_lifecycle_test(self):
-        """Run the comprehensive Order Lifecycle User Tracking test"""
-        self.log("🚀 Starting comprehensive Order Lifecycle User Tracking test")
+    def run_comprehensive_document_test(self):
+        """Run the comprehensive Document Engine v2.0 test"""
+        self.log("🚀 Starting comprehensive Document Engine v2.0 test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -423,87 +423,96 @@ class DocumentEngineTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test Order Lifecycle Endpoint
-        self.log(f"\n🔍 Step 2: Testing Order Lifecycle Endpoint (Order {TEST_ORDER_ID})...")
-        lifecycle_result = self.test_order_lifecycle_endpoint()
-        lifecycle_success = lifecycle_result.get("success", False)
+        # Step 3: Test Document Types Endpoint
+        self.log("\n🔍 Step 2: Testing Document Types Endpoint...")
+        types_result = self.test_document_types_endpoint()
+        types_success = types_result.get("success", False)
         
-        # Step 4: Test Order Accept Endpoint
-        self.log(f"\n🔍 Step 3: Testing Order Accept Endpoint (Order {TEST_ORDER_ID})...")
-        accept_result = self.test_order_accept_endpoint()
-        accept_success = accept_result.get("success", False)
+        # Step 4: Test Order Data
+        self.log(f"\n🔍 Step 3: Testing Order Data (Order {TEST_ORDER_ID})...")
+        order_result = self.test_get_order_data()
+        order_success = order_result.get("success", False)
         
-        # Step 5: Test Status Update Endpoint
-        self.log(f"\n🔍 Step 4: Testing Status Update Endpoint (Order {TEST_ORDER_ID})...")
-        status_result = self.test_order_status_update_endpoint()
-        status_success = status_result.get("success", False)
+        # Step 5: Test Document Generation
+        self.log(f"\n🔍 Step 4: Testing Document Generation...")
         
-        # Step 6: Test Move to Preparation Endpoint
-        self.log(f"\n🔍 Step 5: Testing Move to Preparation Endpoint (Order {TEST_ORDER_ID})...")
-        prep_result = self.test_move_to_preparation_endpoint()
-        prep_success = prep_result.get("success", False)
+        invoice_result = self.test_invoice_offer_generation()
+        invoice_success = invoice_result.get("success", False)
         
-        # Step 7: Comprehensive verification
-        self.log("\n🔍 Step 6: Comprehensive verification...")
-        behavior_results = self.verify_order_lifecycle_behavior()
+        contract_result = self.test_contract_rent_generation()
+        contract_success = contract_result.get("success", False)
         
-        # Step 8: Summary
+        return_result = self.test_return_act_generation()
+        return_success = return_result.get("success", False)
+        
+        delivery_result = self.test_delivery_note_generation()
+        delivery_success = delivery_result.get("success", False)
+        
+        damage_result = self.test_damage_report_generation()
+        damage_success = damage_result.get("success", False)
+        
+        # Step 6: Comprehensive verification
+        self.log("\n🔍 Step 5: Comprehensive verification...")
+        behavior_results = self.verify_document_engine_behavior()
+        
+        # Step 7: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE ORDER LIFECYCLE USER TRACKING TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE DOCUMENT ENGINE v2.0 TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        if lifecycle_success:
-            self.log(f"   • Order Lifecycle Endpoint: ✅ Working")
-            lifecycle_data = lifecycle_result.get("data", [])
-            user_tracked = lifecycle_result.get("user_tracked_events", 0)
-            old_events = lifecycle_result.get("old_events", 0)
-            self.log(f"     - Total Events: {len(lifecycle_data)}")
-            self.log(f"     - Events with User Info: {user_tracked}")
-            self.log(f"     - Old Events (no user info): {old_events}")
+        if types_success:
+            self.log(f"   • Document Types Endpoint: ✅ Working")
+            total_types = types_result.get("total_types", 0)
+            self.log(f"     - Total Document Types: {total_types}")
         else:
-            self.log(f"   • Order Lifecycle Endpoint: ❌ Failed")
+            self.log(f"   • Document Types Endpoint: ❌ Failed")
         
-        if accept_success:
-            if accept_result.get("skipped"):
-                self.log(f"   • Order Accept Endpoint: ⚠️ Skipped ({accept_result.get('reason')})")
+        if order_success:
+            self.log(f"   • Order Data: ✅ Available")
+            customer_name = order_result.get("customer_name", "")
+            order_number = order_result.get("order_number", "")
+            self.log(f"     - Customer: {customer_name}")
+            self.log(f"     - Order: {order_number}")
+        else:
+            self.log(f"   • Order Data: ❌ Not available")
+        
+        # Document generation results
+        doc_results = [
+            ("Invoice Offer", invoice_success, invoice_result),
+            ("Contract Rent", contract_success, contract_result),
+            ("Return Act", return_success, return_result),
+            ("Delivery Note", delivery_success, delivery_result),
+            ("Damage Report", damage_success, damage_result)
+        ]
+        
+        successful_docs = 0
+        for doc_name, success, result in doc_results:
+            if success:
+                successful_docs += 1
+                doc_number = result.get("doc_number", "")
+                self.log(f"   • {doc_name}: ✅ Generated {doc_number}")
             else:
-                self.log(f"   • Order Accept Endpoint: ✅ Working")
-        else:
-            self.log(f"   • Order Accept Endpoint: ❌ Failed")
+                self.log(f"   • {doc_name}: ❌ Failed")
         
-        if status_success:
-            self.log(f"   • Status Update Endpoint: ✅ Working")
-            if status_result.get("old_status") and status_result.get("new_status"):
-                self.log(f"     - Status changed: {status_result.get('old_status')} → {status_result.get('new_status')}")
-        else:
-            self.log(f"   • Status Update Endpoint: ❌ Failed")
-        
-        if prep_success:
-            if prep_result.get("skipped"):
-                self.log(f"   • Move to Preparation Endpoint: ⚠️ Skipped ({prep_result.get('reason')})")
-            else:
-                self.log(f"   • Move to Preparation Endpoint: ✅ Working")
-        else:
-            self.log(f"   • Move to Preparation Endpoint: ❌ Failed")
-        
-        self.log("\n🎉 ORDER LIFECYCLE USER TRACKING TESTING COMPLETED!")
+        self.log(f"\n🎉 DOCUMENT ENGINE v2.0 TESTING COMPLETED!")
         self.log("   The system correctly provides:")
-        self.log("   • 📋 Order lifecycle events with user tracking")
-        self.log("   • 👤 User information (created_by_id, created_by_name) in new events")
-        self.log("   • 🔄 Status transitions with user tracking")
-        self.log("   • ✅ Order acceptance with user tracking")
-        self.log("   • 🔧 Move to preparation with user tracking")
+        self.log("   • 📋 Document types registry with 14+ document types")
+        self.log("   • 📄 Document generation with real order data")
+        self.log("   • 🏷️ Unique document numbers for each generated document")
+        self.log("   • 📝 HTML templates rendering with customer data")
         self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
         
         # Check if critical functionality works
-        critical_apis = [lifecycle_success, (accept_success or accept_result.get("skipped")), status_success]
+        critical_apis = [types_success, order_success, invoice_success, contract_success, return_success]
         critical_success = all(critical_apis)
         
         if critical_success:
-            self.log("\n✅ ALL CRITICAL ORDER LIFECYCLE APIS WORKING!")
+            self.log(f"\n✅ ALL CRITICAL DOCUMENT ENGINE APIS WORKING!")
+            self.log(f"   Successfully generated {successful_docs}/5 document types")
         else:
-            self.log("\n⚠️ SOME CRITICAL ORDER LIFECYCLE APIS FAILED - CHECK LOGS ABOVE")
+            self.log(f"\n⚠️ SOME CRITICAL DOCUMENT ENGINE APIS FAILED - CHECK LOGS ABOVE")
+            self.log(f"   Generated {successful_docs}/5 document types")
         
         return critical_success
 

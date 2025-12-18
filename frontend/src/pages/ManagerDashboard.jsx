@@ -541,11 +541,7 @@ export default function ManagerDashboard() {
           )}
         </Column>
       </main>
-
-      <footer className="border-t border-corp-border-light py-8 text-center text-corp-text-muted text-sm">
-        <p className="font-montserrat">© 2024 Rental Hub • Система управління орендою</p>
-        <p className="text-xs mt-2 text-corp-text-muted">Powered by <span className="text-corp-primary font-semibold">FarforRent</span></p>
-      </footer>
+      {/* Footer moved to global LegalFooter in App.tsx */}
     </div>
   );
 }

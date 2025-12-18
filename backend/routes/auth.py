@@ -111,7 +111,7 @@ async def login(
                 rh_db.execute(update_query, {"user_id": user_rh[0]})
                 rh_db.commit()
                 
-                # Створюємо токен
+                # Створюємо токен з повним ім'ям користувача
                 access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
                 access_token = create_access_token(
                     data={
@@ -119,6 +119,8 @@ async def login(
                         "email": user_rh[2],
                         "username": user_rh[1],
                         "user_id": user_rh[0],
+                        "firstname": user_rh[4] or "",
+                        "lastname": user_rh[5] or "",
                         "role": user_rh[6]
                     },
                     expires_delta=access_token_expires

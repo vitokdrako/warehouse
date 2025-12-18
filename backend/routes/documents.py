@@ -91,15 +91,19 @@ async def generate_document(
             options=options
         )
         
-        return {
+        # Повертаємо результат з HTML контентом
+        result = {
             "success": True,
             "document_id": doc_id,
             "doc_number": doc_number,
             "doc_type": doc_type,
             "entity_id": entity_id,
             "preview_url": f"/api/documents/{doc_id}/preview",
-            "pdf_url": f"/api/documents/{doc_id}/pdf"
+            "download_url": f"/api/documents/{doc_id}/pdf",
+            "html_content": html_content  # Додаємо HTML для прямого рендерингу
         }
+        
+        return result
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

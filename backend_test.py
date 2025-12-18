@@ -135,67 +135,70 @@ class DocumentEngineTester:
             self.log(f"❌ Exception testing document types: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_order_accept_endpoint(self) -> Dict[str, Any]:
-        """Test POST /api/orders/{order_id}/accept - should create lifecycle entry with user info"""
+    def test_generate_document(self, doc_type: str, entity_id: str, expected_data: dict = None) -> Dict[str, Any]:
+        """Test POST /api/documents/generate - should generate document with real data"""
         try:
-            self.log(f"🧪 Testing order accept endpoint for order {TEST_ORDER_ID}...")
+            self.log(f"🧪 Testing document generation for {doc_type} with entity {entity_id}...")
             
-            # First check current order status
-            order_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}")
-            if order_response.status_code != 200:
-                self.log(f"❌ Cannot get order details: {order_response.status_code}", "ERROR")
-                return {"success": False, "error": "Cannot get order details"}
-            
-            order_data = order_response.json()
-            current_status = order_data.get('status')
-            self.log(f"   Current order status: {current_status}")
-            
-            # Only test accept if order is in acceptable status
-            if current_status not in ['pending', 'awaiting_customer']:
-                self.log(f"   ⚠️ Order status '{current_status}' not suitable for accept test, skipping")
-                return {"success": True, "skipped": True, "reason": f"Order status is '{current_status}'"}
-            
-            # Test accept endpoint
-            accept_data = {
-                "items": order_data.get('items', [])
+            # Prepare request data
+            request_data = {
+                "doc_type": doc_type,
+                "entity_id": entity_id,
+                "format": "html"
             }
             
-            response = self.session.post(f"{self.base_url}/orders/{TEST_ORDER_ID}/accept", json=accept_data)
+            response = self.session.post(f"{self.base_url}/documents/generate", json=request_data)
             
             if response.status_code == 200:
                 data = response.json()
-                self.log(f"✅ Order accept successful: {data.get('message')}")
                 
-                # Check if lifecycle entry was created with user info
-                lifecycle_response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}/lifecycle")
-                if lifecycle_response.status_code == 200:
-                    lifecycle_data = lifecycle_response.json()
-                    
-                    # Look for recent 'accepted' event
-                    recent_accept_event = None
-                    for event in lifecycle_data:
-                        if event.get('stage') == 'accepted':
-                            recent_accept_event = event
-                            break
-                    
-                    if recent_accept_event:
-                        has_user_info = (
-                            recent_accept_event.get('created_by_id') is not None or
-                            recent_accept_event.get('created_by_name') is not None
-                        )
-                        if has_user_info:
-                            self.log(f"   ✅ Accept event has user info: {recent_accept_event.get('created_by_name')}")
+                # Check response structure
+                required_fields = ['success', 'document_id', 'doc_number', 'doc_type', 'html_content']
+                for field in required_fields:
+                    if field not in data:
+                        self.log(f"❌ Response missing field: {field}", "ERROR")
+                        return {"success": False, "error": f"Missing field: {field}"}
+                
+                if not data.get('success'):
+                    self.log(f"❌ Document generation failed: {data}", "ERROR")
+                    return {"success": False, "error": "Generation failed"}
+                
+                doc_number = data.get('doc_number')
+                html_content = data.get('html_content', '')
+                
+                self.log(f"✅ Generated document {doc_number} for {doc_type}")
+                
+                # Validate HTML content contains expected data
+                validation_results = {}
+                if expected_data:
+                    for key, expected_value in expected_data.items():
+                        if str(expected_value).lower() in html_content.lower():
+                            validation_results[key] = True
+                            self.log(f"   ✅ Found expected data: {key} = {expected_value}")
                         else:
-                            self.log(f"   ❌ Accept event missing user info", "ERROR")
-                            return {"success": False, "error": "Accept event missing user info"}
+                            validation_results[key] = False
+                            self.log(f"   ⚠️ Missing expected data: {key} = {expected_value}")
                 
-                return {"success": True, "data": data}
+                # Check HTML content is not empty and contains basic structure
+                if len(html_content) < 100:
+                    self.log(f"⚠️ HTML content seems too short: {len(html_content)} chars")
+                
+                if '<html' not in html_content.lower():
+                    self.log(f"⚠️ HTML content doesn't contain proper HTML structure")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "doc_number": doc_number,
+                    "html_length": len(html_content),
+                    "validation_results": validation_results
+                }
             else:
-                self.log(f"❌ Failed to accept order: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
+                self.log(f"❌ Failed to generate document: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing order accept: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing document generation: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_order_status_update_endpoint(self) -> Dict[str, Any]:

@@ -263,11 +263,61 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
 
 def build_damage_data(db: Session, damage_case_id: str, options: dict) -> dict:
     """Збирає дані кейсу пошкодження для документа"""
-    # TODO: Implement when damage_cases table is ready
+    # Company data
+    company = {
+        "name": "FarforDecorOrenda",
+        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
+        "warehouse": "м. Харків, Військовий провулок, 1",
+        "phone": "+380 XX XXX XX XX",
+        "email": "rfarfordecor@gmail.com.ua",
+        "iban": "UA00 0000 0000 0000 0000 0000 00000",
+        "edrpou": "3234423422",
+    }
+    
+    # If damage_case_id is actually an order_id, get order data
+    if damage_case_id:
+        order_data = build_order_data(db, damage_case_id, options)
+        return {
+            "damage_case": options.get("damage_case", {}),
+            "order": order_data.get("order", {}),
+            "items": options.get("damage_items", order_data.get("items", [])),
+            "totals": order_data.get("totals", {}),
+            "company": company,
+            "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+            "options": options
+        }
+    
     return {
-        "damage_case": {},
-        "items": [],
-        "company": {"name": "FarforRent"},
+        "damage_case": options.get("damage_case", {}),
+        "items": options.get("damage_items", []),
+        "totals": {},
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "options": options
+    }
+
+
+def build_vendor_task_data(db: Session, vendor_task_id: str, options: dict) -> dict:
+    """Збирає дані завдання підрядника для документа"""
+    company = {
+        "name": "FarforDecorOrenda",
+        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
+    }
+    
+    # Try to get vendor task from database
+    vendor_task = options.get("vendor_task", {
+        "vendor_name": options.get("vendor_name", ""),
+        "work_type": options.get("work_type", "Хімчистка"),
+        "items_description": options.get("items_description", ""),
+        "total_cost": options.get("total_cost", 0),
+        "items": options.get("items", [])
+    })
+    
+    return {
+        "vendor_task": vendor_task,
+        "company": company,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options
     }

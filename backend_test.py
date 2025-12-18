@@ -212,39 +212,45 @@ class IssueCardWorkspaceTester:
             self.log(f"❌ Exception testing frontend routing: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_get_order_data(self) -> Dict[str, Any]:
-        """Test getting order data to verify test order exists"""
+    def test_browser_console_simulation(self) -> Dict[str, Any]:
+        """Simulate browser console errors that might occur"""
         try:
-            self.log(f"🧪 Testing order data retrieval for order {TEST_ORDER_ID}...")
+            self.log(f"🧪 Checking for potential JavaScript/console errors...")
             
-            response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}")
+            # Check if the issue card exists and has proper data structure
+            issue_result = self.test_issue_card_endpoint()
+            order_result = self.test_decor_order_endpoint()
             
-            if response.status_code == 200:
-                data = response.json()
+            potential_issues = []
+            
+            if not issue_result.get("success"):
+                potential_issues.append("Issue card API fails - would cause frontend error")
+            
+            if not order_result.get("success"):
+                potential_issues.append("Order API fails - would cause frontend error")
+            
+            # Check for data consistency
+            if issue_result.get("success") and order_result.get("success"):
+                issue_data = issue_result.get("data", {})
+                order_data = order_result.get("data", {})
                 
-                customer_name = data.get('customer_name', '')
-                order_number = data.get('order_number', '')
+                issue_order_id = issue_data.get("order_id")
+                order_id = order_data.get("order_id")
                 
-                self.log(f"✅ Order found: {order_number} - Customer: {customer_name}")
-                
-                # Verify this is the expected test order
-                if "Галина" in customer_name or "Семчишин" in customer_name:
-                    self.log(f"   ✅ Confirmed test order with expected customer")
-                else:
-                    self.log(f"   ⚠️ Different customer than expected: {customer_name}")
-                
-                return {
-                    "success": True, 
-                    "data": data,
-                    "customer_name": customer_name,
-                    "order_number": order_number
-                }
+                if str(issue_order_id) != str(order_id):
+                    potential_issues.append(f"Order ID mismatch: issue_card.order_id={issue_order_id}, order.order_id={order_id}")
+            
+            if potential_issues:
+                self.log(f"❌ Found potential console errors:")
+                for issue in potential_issues:
+                    self.log(f"   - {issue}")
+                return {"success": False, "potential_issues": potential_issues}
             else:
-                self.log(f"❌ Failed to get order: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
+                self.log(f"✅ No obvious console error sources detected")
+                return {"success": True, "potential_issues": []}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing order data: {str(e)}", "ERROR")
+            self.log(f"❌ Exception checking console errors: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_document_preview(self, document_id: str) -> Dict[str, Any]:

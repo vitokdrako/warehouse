@@ -265,11 +265,11 @@ export default function NewOrderClean() {
             tier="new"
           />
           <LeftRailFinance
-            orderId={orderId}
+            orderId={null}
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.estimatedDeposit}
           />
-          <LeftRailTimeline orderId={orderId} events={events} />
+          <LeftRailTimeline orderId={null} events={events} />
           
           {/* Додаткова панель: Доставка */}
           <ZoneDeliverySetup

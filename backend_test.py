@@ -376,9 +376,9 @@ class IssueCardWorkspaceTester:
             self.log(f"❌ Exception verifying Issue Workspace behavior: {str(e)}", "ERROR")
             return {"error": str(e)}
 
-    def run_comprehensive_document_test(self):
-        """Run the comprehensive Document Engine v2.0 test"""
-        self.log("🚀 Starting comprehensive Document Engine v2.0 test")
+    def run_comprehensive_issue_workspace_test(self):
+        """Run the comprehensive Issue Card Workspace test"""
+        self.log("🚀 Starting comprehensive Issue Card Workspace test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -392,98 +392,92 @@ class IssueCardWorkspaceTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test Document Types Endpoint
-        self.log("\n🔍 Step 2: Testing Document Types Endpoint...")
-        types_result = self.test_document_types_endpoint()
-        types_success = types_result.get("success", False)
+        # Step 3: Test Issue Card API
+        self.log(f"\n🔍 Step 2: Testing Issue Card API ({TEST_ISSUE_CARD_ID})...")
+        issue_result = self.test_issue_card_endpoint()
+        issue_success = issue_result.get("success", False)
         
-        # Step 4: Test Order Data
-        self.log(f"\n🔍 Step 3: Testing Order Data (Order {TEST_ORDER_ID})...")
-        order_result = self.test_get_order_data()
+        # Step 4: Test Order API
+        self.log(f"\n🔍 Step 3: Testing Order API ({TEST_ORDER_ID})...")
+        order_result = self.test_decor_order_endpoint()
         order_success = order_result.get("success", False)
         
-        # Step 5: Test Document Generation
-        self.log(f"\n🔍 Step 4: Testing Document Generation...")
+        # Step 5: Test Frontend Routing
+        self.log(f"\n🔍 Step 4: Testing Frontend Routing...")
+        routing_result = self.test_frontend_routing()
+        routing_success = routing_result.get("success", False)
         
-        invoice_result = self.test_invoice_offer_generation()
-        invoice_success = invoice_result.get("success", False)
+        # Step 6: Test Console Errors
+        self.log(f"\n🔍 Step 5: Testing Console Error Detection...")
+        console_result = self.test_browser_console_simulation()
+        console_success = console_result.get("success", False)
         
-        contract_result = self.test_contract_rent_generation()
-        contract_success = contract_result.get("success", False)
+        # Step 7: Comprehensive verification
+        self.log("\n🔍 Step 6: Comprehensive verification...")
+        behavior_results = self.verify_issue_workspace_behavior()
         
-        return_result = self.test_return_act_generation()
-        return_success = return_result.get("success", False)
-        
-        delivery_result = self.test_delivery_note_generation()
-        delivery_success = delivery_result.get("success", False)
-        
-        damage_result = self.test_damage_report_generation()
-        damage_success = damage_result.get("success", False)
-        
-        # Step 6: Comprehensive verification
-        self.log("\n🔍 Step 5: Comprehensive verification...")
-        behavior_results = self.verify_document_engine_behavior()
-        
-        # Step 7: Summary
+        # Step 8: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE DOCUMENT ENGINE v2.0 TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE ISSUE CARD WORKSPACE TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        if types_success:
-            self.log(f"   • Document Types Endpoint: ✅ Working")
-            total_types = types_result.get("total_types", 0)
-            self.log(f"     - Total Document Types: {total_types}")
+        if issue_success:
+            self.log(f"   • Issue Card API: ✅ Working")
+            issue_data = issue_result.get("data", {})
+            self.log(f"     - Issue Card ID: {issue_data.get('id')}")
+            self.log(f"     - Order ID: {issue_data.get('order_id')}")
+            self.log(f"     - Status: {issue_data.get('status')}")
         else:
-            self.log(f"   • Document Types Endpoint: ❌ Failed")
+            self.log(f"   • Issue Card API: ❌ Failed")
+            self.log(f"     - Error: {issue_result.get('response_text', 'Unknown error')}")
         
         if order_success:
-            self.log(f"   • Order Data: ✅ Available")
-            customer_name = order_result.get("customer_name", "")
-            order_number = order_result.get("order_number", "")
-            self.log(f"     - Customer: {customer_name}")
-            self.log(f"     - Order: {order_number}")
+            self.log(f"   • Order API: ✅ Working")
+            order_data = order_result.get("data", {})
+            self.log(f"     - Customer: {order_data.get('customer_name')}")
+            self.log(f"     - Order Number: {order_data.get('order_number')}")
         else:
-            self.log(f"   • Order Data: ❌ Not available")
+            self.log(f"   • Order API: ❌ Failed")
+            self.log(f"     - Error: {order_result.get('response_text', 'Unknown error')}")
         
-        # Document generation results
-        doc_results = [
-            ("Invoice Offer", invoice_success, invoice_result),
-            ("Contract Rent", contract_success, contract_result),
-            ("Return Act", return_success, return_result),
-            ("Delivery Note", delivery_success, delivery_result),
-            ("Damage Report", damage_success, damage_result)
-        ]
+        if routing_success:
+            self.log(f"   • Frontend Routing: ✅ Working")
+        else:
+            self.log(f"   • Frontend Routing: ❌ Failed")
+            if routing_result.get("issue_confirmed"):
+                self.log(f"     - ❌ CONFIRMED: Page redirects to /manager (reported issue)")
+            redirect_location = routing_result.get("redirect_location", "")
+            if redirect_location:
+                self.log(f"     - Redirect Location: {redirect_location}")
         
-        successful_docs = 0
-        for doc_name, success, result in doc_results:
-            if success:
-                successful_docs += 1
-                doc_number = result.get("doc_number", "")
-                self.log(f"   • {doc_name}: ✅ Generated {doc_number}")
-            else:
-                self.log(f"   • {doc_name}: ❌ Failed")
+        if console_success:
+            self.log(f"   • Console Errors: ✅ None detected")
+        else:
+            self.log(f"   • Console Errors: ❌ Potential issues detected")
+            potential_issues = console_result.get("potential_issues", [])
+            for issue in potential_issues:
+                self.log(f"     - {issue}")
         
-        self.log(f"\n🎉 DOCUMENT ENGINE v2.0 TESTING COMPLETED!")
-        self.log("   The system correctly provides:")
-        self.log("   • 📋 Document types registry with 14+ document types")
-        self.log("   • 📄 Document generation with real order data")
-        self.log("   • 🏷️ Unique document numbers for each generated document")
-        self.log("   • 📝 HTML templates rendering with customer data")
-        self.log("   • 🔐 Authentication for vitokdrako@gmail.com")
+        self.log(f"\n🎉 ISSUE CARD WORKSPACE TESTING COMPLETED!")
         
         # Check if critical functionality works
-        critical_apis = [types_success, order_success, invoice_success, contract_success, return_success]
+        critical_apis = [issue_success, order_success]
         critical_success = all(critical_apis)
         
-        if critical_success:
-            self.log(f"\n✅ ALL CRITICAL DOCUMENT ENGINE APIS WORKING!")
-            self.log(f"   Successfully generated {successful_docs}/5 document types")
+        if critical_success and routing_success:
+            self.log(f"\n✅ ALL ISSUE CARD WORKSPACE COMPONENTS WORKING!")
+            self.log(f"   The workspace should load correctly")
         else:
-            self.log(f"\n⚠️ SOME CRITICAL DOCUMENT ENGINE APIS FAILED - CHECK LOGS ABOVE")
-            self.log(f"   Generated {successful_docs}/5 document types")
+            self.log(f"\n⚠️ ISSUE CARD WORKSPACE HAS PROBLEMS:")
+            if not critical_success:
+                self.log(f"   - Backend APIs failing")
+            if not routing_success:
+                self.log(f"   - Frontend routing issues (redirects to /manager)")
+                if routing_result.get("issue_confirmed"):
+                    self.log(f"   - ❌ CONFIRMED: This matches the reported issue")
         
-        return critical_success
+        return critical_success and routing_success
 
 def main():
     """Main test execution"""

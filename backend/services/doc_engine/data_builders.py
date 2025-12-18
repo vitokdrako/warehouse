@@ -14,12 +14,31 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
     """
     options = options or {}
     
-    if doc_type in ["invoice_offer", "contract_rent", "return_act", "deposit_settlement_act", "invoice_additional", "return_intake_checklist"]:
+    # Order-based documents
+    order_docs = [
+        "invoice_offer", "contract_rent", "return_act", "deposit_settlement_act", 
+        "invoice_additional", "return_intake_checklist", "delivery_note", 
+        "rental_extension", "partial_return_act", "damage_settlement_act",
+        "deposit_refund_act"
+    ]
+    
+    # Issue card based documents
+    issue_docs = ["issue_act", "picking_list", "issue_checklist"]
+    
+    # Damage case based documents
+    damage_docs = ["damage_report", "damage_report_client", "damage_invoice"]
+    
+    # Vendor task based documents
+    vendor_docs = ["vendor_work_act"]
+    
+    if doc_type in order_docs:
         return build_order_data(db, entity_id, options)
-    elif doc_type in ["issue_act", "picking_list"]:
+    elif doc_type in issue_docs:
         return build_issue_card_data(db, entity_id, options)
-    elif doc_type == "damage_report_client":
+    elif doc_type in damage_docs:
         return build_damage_data(db, entity_id, options)
+    elif doc_type in vendor_docs:
+        return build_vendor_task_data(db, entity_id, options)
     else:
         raise ValueError(f"No data builder for doc_type: {doc_type}")
 

@@ -24,7 +24,7 @@ TEST_CREDENTIALS = {
 }
 TEST_ORDER_ID = "7136"  # Order with real data (Галина Семчишин)
 
-class OrderLifecycleTester:
+class DocumentEngineTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

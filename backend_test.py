@@ -124,70 +124,43 @@ class IssueCardWorkspaceTester:
             self.log(f"❌ Exception testing issue card: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_generate_document(self, doc_type: str, entity_id: str, expected_data: dict = None) -> Dict[str, Any]:
-        """Test POST /api/documents/generate - should generate document with real data"""
+    def test_decor_order_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/decor-orders/{id} - should return order data"""
         try:
-            self.log(f"🧪 Testing document generation for {doc_type} with entity {entity_id}...")
+            self.log(f"🧪 Testing decor order endpoint for order {TEST_ORDER_ID}...")
             
-            # Prepare request data
-            request_data = {
-                "doc_type": doc_type,
-                "entity_id": entity_id,
-                "format": "html"
-            }
-            
-            response = self.session.post(f"{self.base_url}/documents/generate", json=request_data)
+            response = self.session.get(f"{self.base_url}/decor-orders/{TEST_ORDER_ID}")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                # Check response structure
-                required_fields = ['success', 'document_id', 'doc_number', 'doc_type', 'html_content']
-                for field in required_fields:
-                    if field not in data:
-                        self.log(f"❌ Response missing field: {field}", "ERROR")
-                        return {"success": False, "error": f"Missing field: {field}"}
+                self.log(f"✅ Retrieved order data")
                 
-                if not data.get('success'):
-                    self.log(f"❌ Document generation failed: {data}", "ERROR")
-                    return {"success": False, "error": "Generation failed"}
+                # Check for expected fields
+                expected_fields = ['order_id', 'order_number', 'customer_name', 'status', 'items']
+                missing_fields = [field for field in expected_fields if field not in data]
                 
-                doc_number = data.get('doc_number')
-                html_content = data.get('html_content', '')
+                if missing_fields:
+                    self.log(f"⚠️ Missing order fields: {missing_fields}")
                 
-                self.log(f"✅ Generated document {doc_number} for {doc_type}")
-                
-                # Validate HTML content contains expected data
-                validation_results = {}
-                if expected_data:
-                    for key, expected_value in expected_data.items():
-                        if str(expected_value).lower() in html_content.lower():
-                            validation_results[key] = True
-                            self.log(f"   ✅ Found expected data: {key} = {expected_value}")
-                        else:
-                            validation_results[key] = False
-                            self.log(f"   ⚠️ Missing expected data: {key} = {expected_value}")
-                
-                # Check HTML content is not empty and contains basic structure
-                if len(html_content) < 100:
-                    self.log(f"⚠️ HTML content seems too short: {len(html_content)} chars")
-                
-                if '<html' not in html_content.lower():
-                    self.log(f"⚠️ HTML content doesn't contain proper HTML structure")
+                # Log key information
+                self.log(f"   ✅ Order ID: {data.get('order_id')}")
+                self.log(f"   ✅ Order Number: {data.get('order_number')}")
+                self.log(f"   ✅ Customer: {data.get('customer_name')}")
+                self.log(f"   ✅ Status: {data.get('status')}")
+                self.log(f"   ✅ Items count: {len(data.get('items', []))}")
                 
                 return {
                     "success": True, 
                     "data": data,
-                    "doc_number": doc_number,
-                    "html_length": len(html_content),
-                    "validation_results": validation_results
+                    "missing_fields": missing_fields
                 }
             else:
-                self.log(f"❌ Failed to generate document: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get order: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing document generation: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing order: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def test_invoice_offer_generation(self) -> Dict[str, Any]:

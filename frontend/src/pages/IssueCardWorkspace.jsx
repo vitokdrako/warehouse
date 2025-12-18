@@ -13,7 +13,7 @@ import {
   OrderWorkspaceLayout,
   LeftRailClient,
   LeftRailFinance,
-  LeftRailDocuments,
+  // LeftRailDocuments, // Temporarily commented out for debugging
   LeftRailTimeline,
   getStatusKey,
 } from '../components/order-workspace'
@@ -421,16 +421,7 @@ setTimeout(()=>window.print(),500);
               rentAmount={totalRent}
               depositAmount={totalDeposit}
             />
-            <LeftRailDocuments
-              orderId={order?.order_id}
-              orderNumber={order?.order_number}
-              orderStatus={isIssued ? 'issued' : isReadyForIssue ? 'ready_for_issue' : 'processing'}
-              issueCardId={issueCard?.id}
-              customerEmail={clientEmail}
-              onDocumentGenerated={(docType, data) => {
-                console.log('Document generated:', docType, data)
-              }}
-            />
+            {/* LeftRailDocuments temporarily disabled for debugging */}
             <LeftRailTimeline orderId={order?.order_id} events={timeline} />
           </>
         }

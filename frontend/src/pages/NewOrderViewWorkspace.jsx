@@ -13,7 +13,6 @@ import {
   OrderWorkspaceLayout,
   LeftRailClient,
   LeftRailFinance,
-  LeftRailDocuments,
   LeftRailTimeline,
   getStatusKey,
 } from '../components/order-workspace'
@@ -654,12 +653,6 @@ export default function NewOrderViewWorkspace() {
             orderId={orderId}
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.totalDeposit}
-          />
-          <LeftRailDocuments
-            orderId={orderId}
-            orderNumber={order?.order_number}
-            orderStatus={decorOrderStatus ? 'confirmed' : 'awaiting_customer'}
-            customerEmail={clientEmail}
           />
           <LeftRailTimeline orderId={orderId} events={timeline} />
         </>

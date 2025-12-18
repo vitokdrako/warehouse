@@ -1,0 +1,65 @@
+{% extends '_base.html' %}
+{% block title %}Чеклист видачі {{ issue_card.order_number }}{% endblock %}
+{% block extra_styles %}
+<style>
+    .checklist-item { padding: 8px; border-bottom: 1px solid #eee; }
+    .checklist-item:nth-child(odd) { background: #fafafa; }
+    .check-box { width: 18px; height: 18px; border: 2px solid #333; display: inline-block; margin-right: 10px; vertical-align: middle; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="header">
+    <div>
+        <div class="logo">FarforRent</div>
+        <div class="logo-sub">ВНУТРІШНІЙ ДОКУМЕНТ</div>
+    </div>
+    <div class="doc-info">
+        <div class="doc-number">{{ doc_number }}</div>
+        <div class="doc-date">{{ generated_at }}</div>
+    </div>
+</div>
+
+<h1>📋 ЧЕКЛИСТ ВИДАЧІ</h1>
+
+<table class="mb-4">
+    <tr><td style="width:150px">Замовлення:</td><td class="font-bold">{{ issue_card.order_number }}</td></tr>
+    <tr><td>Клієнт:</td><td>{{ issue_card.customer_name }}</td></tr>
+    <tr><td>Дата видачі:</td><td class="font-bold">{{ issue_card.rental_start_date }}</td></tr>
+    <tr><td>Комплектувальник:</td><td>_______________________</td></tr>
+</table>
+
+<h2>Товари для комплектації</h2>
+{% for item in items %}
+<div class="checklist-item">
+    <div class="check-box"></div>
+    <strong>{{ item.name }}</strong> ({{ item.sku or item.article }})
+    <span style="float:right">
+        К-сть: <strong>{{ item.quantity or item.qty }}</strong> | 
+        Локація: <strong>{{ item.location or 'N/A' }}</strong>
+    </span>
+    <div style="margin-left:28px; font-size:8pt; color:#666;">
+        <span class="check-box" style="width:12px;height:12px;"></span> Візуальний огляд
+        <span class="check-box" style="width:12px;height:12px;margin-left:15px;"></span> Упаковано
+        <span class="check-box" style="width:12px;height:12px;margin-left:15px;"></span> QR/маркування
+    </div>
+</div>
+{% endfor %}
+
+<h2 class="mt-4">Фінальна перевірка</h2>
+<div class="checklist-item"><div class="check-box"></div> Всі позиції укомплектовано</div>
+<div class="checklist-item"><div class="check-box"></div> Товар упаковано належним чином</div>
+<div class="checklist-item"><div class="check-box"></div> QR-коди/маркування на місці</div>
+<div class="checklist-item"><div class="check-box"></div> Фото комплекту зроблено</div>
+<div class="checklist-item"><div class="check-box"></div> Акт передачі роздруковано</div>
+
+<div class="signatures">
+    <div class="signature-block">
+        <p>Комплектувальник:</p>
+        <div class="signature-line"></div>
+    </div>
+    <div class="signature-block">
+        <p>Перевірив:</p>
+        <div class="signature-line"></div>
+    </div>
+</div>
+{% endblock %}

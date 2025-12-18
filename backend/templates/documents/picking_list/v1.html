@@ -1,115 +1,72 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <title>Лист комплектації {{ doc_number }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b1cb29; padding-bottom: 10px; margin-bottom: 15px; }
-        .logo { font-size: 20pt; font-weight: bold; color: #b1cb29; }
-        .order-info { text-align: right; }
-        .order-number { font-size: 18pt; font-weight: bold; }
-        .doc-title { font-size: 14pt; font-weight: bold; margin: 15px 0; text-align: center; background: #f4f8e6; padding: 10px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 10px; padding: 10px; background: #f8f9fa; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { border: 1px solid #333; padding: 8px 10px; }
-        th { background: #f0f0f0; font-weight: bold; }
-        .checkbox { width: 25px; height: 25px; border: 2px solid #333; display: inline-block; margin-right: 10px; }
-        .location { font-weight: bold; color: #b1cb29; font-size: 12pt; }
-        .qty { font-size: 14pt; font-weight: bold; text-align: center; }
-        .notes { background: #fff9e6; padding: 10px; border-left: 4px solid #ffc107; margin: 15px 0; }
-        .signature-section { margin-top: 30px; display: flex; justify-content: space-between; }
-        .signature-block { width: 45%; }
-        .signature-line { border-bottom: 1px solid #000; height: 25px; margin-top: 20px; }
-        .text-center { text-align: center; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="logo">FarforDecorOrenda</div>
-        <div class="order-info">
-            <div class="order-number">{{ issue_card.order_number }}</div>
-            <div>{{ issue_card.rental_start_date }}</div>
-        </div>
+{% extends '_base.html' %}
+{% block title %}Лист комплектації {{ issue_card.order_number }}{% endblock %}
+{% block extra_styles %}
+<style>
+    .location-badge { background: #e3f2fd; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+    .qty-box { background: #fff3e0; padding: 4px 12px; font-size: 14pt; font-weight: bold; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="header">
+    <div>
+        <div class="logo">FarforRent</div>
+        <div class="logo-sub">СКЛАД</div>
     </div>
-
-    <div class="doc-title">ЛИСТ КОМПЛЕКТАЦІЇ #{{ doc_number }}</div>
-
-    <div class="info-row">
-        <div>
-            <strong>Клієнт:</strong> {{ issue_card.customer_name }}<br>
-            <strong>Тел:</strong> {{ issue_card.customer_phone }}
-        </div>
-        <div>
-            <strong>Видача:</strong> {{ issue_card.rental_start_date }}<br>
-            <strong>Повернення:</strong> {{ issue_card.rental_end_date }}
-        </div>
-        <div>
-            {% if issue_card.delivery_type == 'delivery' %}
-            <strong>Доставка:</strong> {{ issue_card.delivery_address }}
-            {% else %}
-            <strong>Самовивіз</strong>
-            {% endif %}
-        </div>
+    <div class="doc-info">
+        <div class="doc-number">{{ doc_number }}</div>
+        <div class="doc-date">{{ generated_at }}</div>
     </div>
+</div>
 
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 5%;">✓</th>
-                <th style="width: 15%;">Локація</th>
-                <th style="width: 12%;">SKU</th>
-                <th style="width: 38%;">Назва</th>
-                <th style="width: 10%;" class="text-center">К-сть</th>
-                <th style="width: 20%;">Примітка</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td><div class="checkbox"></div></td>
-                <td class="location">{{ item.location or '—' }}</td>
-                <td>{{ item.sku }}</td>
-                <td>{{ item.name }}</td>
-                <td class="qty">{{ item.qty or item.quantity }}</td>
-                <td>
-                    {% if item.pre_damage %}
-                    ⚠️ {{ item.pre_damage|length }} пошк.
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<h1>📦 ЛИСТ КОМПЛЕКТАЦІЇ</h1>
 
-    <div style="font-size: 12pt; margin: 15px 0;">
-        <strong>Всього позицій:</strong> {{ items|length }} | 
-        <strong>Всього одиниць:</strong> {{ items|sum(attribute='qty') or items|sum(attribute='quantity') }}
+<table class="mb-4">
+    <tr>
+        <td style="width:50%"><strong>Замовлення:</strong> {{ issue_card.order_number }}</td>
+        <td><strong>Клієнт:</strong> {{ issue_card.customer_name }}</td>
+    </tr>
+    <tr>
+        <td><strong>Видача:</strong> {{ issue_card.rental_start_date }}</td>
+        <td><strong>Повернення:</strong> {{ issue_card.rental_end_date }}</td>
+    </tr>
+</table>
+
+<table>
+    <thead>
+        <tr>
+            <th style="width:80px">ЛОКАЦІЯ</th>
+            <th>ТОВАР</th>
+            <th style="width:70px">SKU</th>
+            <th style="width:60px">К-СТЬ</th>
+            <th style="width:50px">✓</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items|sort(attribute='location') %}
+        <tr>
+            <td><span class="location-badge">{{ item.location or 'N/A' }}</span></td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.sku or item.article }}</td>
+            <td class="text-center"><span class="qty-box">{{ item.quantity or item.qty }}</span></td>
+            <td class="text-center"><div class="checkbox" style="width:20px;height:20px;"></div></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="mt-4" style="display:flex; justify-content:space-between;">
+    <div><strong>Всього позицій:</strong> {{ items|length }}</div>
+    <div><strong>Всього одиниць:</strong> {{ items|sum(attribute='quantity') or items|sum(attribute='qty') }}</div>
+</div>
+
+<div class="signatures">
+    <div class="signature-block">
+        <p>Зібрав: _______________</p>
+        <p class="text-sm">Час: _______________</p>
     </div>
-
-    {% if issue_card.notes %}
-    <div class="notes">
-        <strong>Примітки до замовлення:</strong><br>
-        {{ issue_card.notes }}
+    <div class="signature-block">
+        <p>Перевірив: _______________</p>
+        <p class="text-sm">Час: _______________</p>
     </div>
-    {% endif %}
-
-    <div class="signature-section">
-        <div class="signature-block">
-            <strong>Зібрав:</strong>
-            <div class="signature-line"></div>
-            <small>(підпис / дата / час)</small>
-        </div>
-        <div class="signature-block">
-            <strong>Перевірив:</strong>
-            <div class="signature-line"></div>
-            <small>(підпис / дата / час)</small>
-        </div>
-    </div>
-
-    <div style="margin-top: 20px; font-size: 9pt; color: #666; border-top: 1px solid #ddd; padding-top: 10px;">
-        <p>Склад: {{ company.warehouse }}</p>
-        <p>© FarforDecorOrenda 2025 | Сгенеровано: {{ generated_at }}</p>
-    </div>
-</body>
-</html>
+</div>
+{% endblock %}

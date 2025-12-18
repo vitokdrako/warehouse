@@ -1,120 +1,74 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <title>Акт передачі {{ doc_number }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.5; }
-        .header { border-bottom: 2px solid #b1cb29; padding-bottom: 15px; margin-bottom: 20px; }
-        .logo { font-size: 24pt; font-weight: bold; color: #b1cb29; }
-        .doc-title { font-size: 16pt; font-weight: bold; margin: 20px 0; text-align: center; }
-        .doc-number { font-size: 12pt; color: #666; text-align: center; margin-bottom: 20px; }
-        .parties { display: flex; justify-content: space-between; margin: 20px 0; }
-        .party { width: 48%; padding: 15px; background: #f8f9fa; border-radius: 5px; }
-        .party h4 { margin: 0 0 10px 0; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px 10px; }
-        th { background: #f8f9fa; font-weight: bold; text-align: left; }
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
-        .totals { margin: 20px 0; padding: 15px; background: #f4f8e6; border-radius: 5px; }
-        .signature-section { margin-top: 40px; }
-        .signature-row { display: flex; justify-content: space-between; margin-top: 30px; }
-        .signature-block { width: 45%; }
-        .signature-line { border-bottom: 1px solid #000; height: 30px; margin-top: 30px; }
-        .footer { margin-top: 30px; font-size: 9pt; color: #666; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="logo">FarforDecorOrenda</div>
-        <div>{{ company.legal_name }}</div>
+{% extends '_base.html' %}
+{% block title %}Акт передачі {{ issue_card.order_number }}{% endblock %}
+{% block content %}
+<div class="header">
+    <div>
+        <div class="logo">FarforRent</div>
+        <div class="logo-sub">Оренда святкового декору</div>
     </div>
-
-    <div class="doc-title">АКТ ПЕРЕДАЧІ-ПРИЙМАННЯ</div>
-    <div class="doc-number">№ {{ doc_number }} від {{ generated_at }}</div>
-
-    <div class="parties">
-        <div class="party">
-            <h4>Орендодавець:</h4>
-            <div>{{ company.legal_name }}</div>
-            <div>{{ company.phone }}</div>
-        </div>
-        <div class="party">
-            <h4>Орендар:</h4>
-            <div><strong>{{ issue_card.customer_name }}</strong></div>
-            <div>{{ issue_card.customer_phone }}</div>
-        </div>
+    <div class="doc-info">
+        <div class="doc-number">{{ doc_number }}</div>
+        <div class="doc-date">{{ generated_at }}</div>
     </div>
+</div>
 
-    <p>
-        Згідно з замовленням <strong>{{ issue_card.order_number }}</strong>, 
-        Орендодавець передає, а Орендар приймає у тимчасове платне користування 
-        наступне майно:
-    </p>
+<h1>АКТ ПРИЙМАННЯ-ПЕРЕДАЧІ</h1>
 
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 5%;">№</th>
-                <th style="width: 12%;">SKU</th>
-                <th style="width: 43%;">Назва</th>
-                <th class="text-center" style="width: 10%;">К-сть</th>
-                <th style="width: 30%;">Стан</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ item.sku }}</td>
-                <td>{{ item.name }}</td>
-                <td class="text-center">{{ item.qty or item.quantity }}</td>
-                <td>
-                    {% if item.pre_damage %}
-                    З пошкодженнями: {{ item.pre_damage|length }}
-                    {% else %}
-                    Без пошкоджень
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<table class="mb-4">
+    <tr><td style="width:150px">Замовлення:</td><td class="font-bold">{{ issue_card.order_number }}</td></tr>
+    <tr><td>Клієнт:</td><td class="font-bold">{{ issue_card.customer_name }}</td></tr>
+    <tr><td>Телефон:</td><td>{{ issue_card.customer_phone }}</td></tr>
+    <tr><td>Період оренди:</td><td>{{ issue_card.rental_start_date }} — {{ issue_card.rental_end_date }}</td></tr>
+    <tr><td>Видача:</td><td>{{ issue_card.issued_at or generated_at }}</td></tr>
+</table>
 
-    <div class="totals">
-        <strong>Всього позицій:</strong> {{ items|length }} | 
-        <strong>Період оренди:</strong> {{ issue_card.rental_start_date }} — {{ issue_card.rental_end_date }} ({{ issue_card.rental_days }} днів)
+<h2>Передані товари</h2>
+<table>
+    <thead>
+        <tr>
+            <th style="width:30px">№</th>
+            <th>Найменування</th>
+            <th style="width:70px">SKU</th>
+            <th style="width:50px">К-сть</th>
+            <th style="width:80px">Локація</th>
+            <th style="width:100px">Стан</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td class="text-center">{{ loop.index }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.sku or item.article }}</td>
+            <td class="text-center">{{ item.quantity or item.qty }}</td>
+            <td>{{ item.location or '-' }}</td>
+            <td><span class="checkbox"></span> Без дефектів</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="mt-4">
+    <p><strong>Всього позицій:</strong> {{ items|length }}</p>
+    <p><strong>Всього одиниць:</strong> {{ items|sum(attribute='quantity') or items|sum(attribute='qty') }}</p>
+</div>
+
+<div class="highlight" style="padding:10px; margin-top:20px;">
+    <p class="font-bold">⚠️ Увага!</p>
+    <p class="text-sm">Підписуючи цей акт, Орендар підтверджує отримання товарів у належному стані та бере на себе відповідальність за їх збереження.</p>
+</div>
+
+<div class="signatures">
+    <div class="signature-block">
+        <p class="font-bold">ПЕРЕДАВ (Орендодавець):</p>
+        <div class="signature-line"></div>
+        <div class="signature-label">підпис / ПІБ</div>
     </div>
-
-    <p style="margin-top: 20px;">
-        Орендар підтверджує, що отримав майно в належному стані та зобов'язується 
-        повернути його у встановлений термін.
-    </p>
-
-    <div class="signature-section">
-        <div class="signature-row">
-            <div class="signature-block">
-                <strong>Орендодавець:</strong>
-                <div class="signature-line"></div>
-                <small>(підпис / П.І.Б.)</small>
-            </div>
-            <div class="signature-block">
-                <strong>Орендар:</strong>
-                <div class="signature-line"></div>
-                <small>(підпис / {{ issue_card.customer_name }})</small>
-            </div>
-        </div>
+    <div class="signature-block">
+        <p class="font-bold">ОТРИМАВ (Орендар):</p>
+        <p class="text-sm">{{ issue_card.customer_name }}</p>
+        <div class="signature-line"></div>
+        <div class="signature-label">підпис</div>
     </div>
-
-    <div class="info-block" style="font-size: 8pt; color: #666; margin-top: 20px; border-top: 1px solid #ddd; padding-top: 10px;">
-        <p><strong>Важливо:</strong> Перевірте кількість і комплектацію при отриманні. Декор повертається запакованим так само, як при отриманні.</p>
-        <p>Прайс збитків: <a href="{{ company.damage_url }}">{{ company.damage_url }}</a></p>
-    </div>
-
-    <div class="footer">
-        <p>{{ company.legal_name }} | {{ company.email }} | {{ company.phone }}</p>
-        <p>© FarforDecorOrenda 2025 | Сгенеровано: {{ generated_at }}</p>
-    </div>
-</body>
-</html>
+</div>
+{% endblock %}

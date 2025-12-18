@@ -1,121 +1,67 @@
-<!DOCTYPE html>
-<html lang="uk">
-<head>
-    <meta charset="UTF-8">
-    <title>Чеклист приймання {{ doc_number }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #b1cb29; padding-bottom: 10px; margin-bottom: 15px; }
-        .logo { font-size: 20pt; font-weight: bold; color: #b1cb29; }
-        .order-info { text-align: right; }
-        .order-number { font-size: 18pt; font-weight: bold; }
-        .doc-title { font-size: 14pt; font-weight: bold; margin: 15px 0; text-align: center; background: #e6f4f8; padding: 10px; }
-        .info-row { margin-bottom: 15px; padding: 10px; background: #f8f9fa; }
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th, td { border: 1px solid #333; padding: 10px; }
-        th { background: #f0f0f0; font-weight: bold; }
-        .checkbox { width: 20px; height: 20px; border: 2px solid #333; display: inline-block; }
-        .status-cell { width: 120px; }
-        .status-options { display: flex; gap: 10px; }
-        .status-option { display: flex; align-items: center; gap: 5px; }
-        .notes-cell { min-height: 40px; }
-        .summary-section { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
-        .summary-row { display: flex; gap: 30px; margin-bottom: 10px; }
-        .summary-item { display: flex; align-items: center; gap: 10px; }
-        .signature-section { margin-top: 30px; }
-        .signature-line { border-bottom: 1px solid #000; width: 200px; height: 25px; display: inline-block; margin: 0 10px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="logo">FarforDecorOrenda</div>
-        <div class="order-info">
-            <div class="order-number">{{ order.order_number }}</div>
-            <div>Повернення: {{ order.rental_end_date }}</div>
-        </div>
+{% extends '_base.html' %}
+{% block title %}Чеклист приймання {{ order.order_number }}{% endblock %}
+{% block extra_styles %}
+<style>
+    .status-box { display: inline-block; width: 60px; height: 25px; border: 1px solid #333; text-align: center; line-height: 25px; margin: 0 3px; font-size: 8pt; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="header">
+    <div>
+        <div class="logo">FarforRent</div>
+        <div class="logo-sub">ВНУТРІШНІЙ</div>
     </div>
-
-    <div class="doc-title">ЧЕКЛИСТ ПРИЙМАННЯ #{{ doc_number }}</div>
-
-    <div class="info-row">
-        <strong>Клієнт:</strong> {{ order.customer_name }} | 
-        <strong>Тел:</strong> {{ order.customer_phone }} | 
-        <strong>Оренда:</strong> {{ order.rental_start_date }} — {{ order.rental_end_date }}
+    <div class="doc-info">
+        <div class="doc-number">{{ doc_number }}</div>
+        <div class="doc-date">{{ generated_at }}</div>
     </div>
+</div>
 
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 5%;">№</th>
-                <th style="width: 12%;">SKU</th>
-                <th style="width: 30%;">Назва</th>
-                <th style="width: 8%;">К-сть</th>
-                <th class="status-cell">Стан</th>
-                <th style="width: 25%;">Примітки / Шкода</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ item.sku }}</td>
-                <td>{{ item.name }}</td>
-                <td style="text-align: center;">{{ item.quantity }}</td>
-                <td>
-                    <div class="status-options">
-                        <div class="status-option">
-                            <div class="checkbox"></div>
-                            <span>ОК</span>
-                        </div>
-                        <div class="status-option">
-                            <div class="checkbox"></div>
-                            <span>Шкода</span>
-                        </div>
-                        <div class="status-option">
-                            <div class="checkbox"></div>
-                            <span>Немає</span>
-                        </div>
-                    </div>
-                </td>
-                <td class="notes-cell"></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<h1>📋 ЧЕКЛИСТ ПРИЙМАННЯ</h1>
 
-    <div class="summary-section">
-        <h4>Підсумок приймання</h4>
-        <div class="summary-row">
-            <div class="summary-item">
-                <div class="checkbox"></div>
-                <span>Все ОК, без зауважень</span>
-            </div>
-            <div class="summary-item">
-                <div class="checkbox"></div>
-                <span>Є пошкодження (скласти акт)</span>
-            </div>
-            <div class="summary-item">
-                <div class="checkbox"></div>
-                <span>Не вистачає позицій</span>
-            </div>
-        </div>
-        <div style="margin-top: 15px;">
-            <strong>Коментар:</strong>
-            <div style="border: 1px solid #ccc; min-height: 50px; padding: 10px; margin-top: 5px;"></div>
-        </div>
+<table class="mb-4">
+    <tr><td style="width:150px">Замовлення:</td><td class="font-bold">{{ order.order_number }}</td></tr>
+    <tr><td>Клієнт:</td><td>{{ order.customer_name }}</td></tr>
+    <tr><td>Прийняв:</td><td>_______________________</td></tr>
+</table>
+
+<table>
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Товар</th>
+            <th>SKU</th>
+            <th>К-сть</th>
+            <th style="width:250px">Стан (відмітити)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td class="text-center">{{ loop.index }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.sku }}</td>
+            <td class="text-center">{{ item.quantity }}</td>
+            <td>
+                <span class="status-box">OK</span>
+                <span class="status-box">Бруд</span>
+                <span class="status-box">Пошк.</span>
+                <span class="status-box">Немає</span>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2 class="mt-4">Коментарі</h2>
+<div style="border:1px solid #ddd; min-height:60px; padding:10px;"></div>
+
+<div class="signatures">
+    <div class="signature-block">
+        <p>Прийняв: _______________</p>
     </div>
-
-    <div class="signature-section">
-        <p>
-            <strong>Прийняв:</strong> 
-            <span class="signature-line"></span>
-            <strong>Дата/час:</strong> 
-            <span class="signature-line"></span>
-        </p>
+    <div class="signature-block">
+        <p>Дата/Час: _______________</p>
     </div>
-
-    <div style="margin-top: 20px; font-size: 9pt; color: #666;">
-        Сгенеровано: {{ generated_at }}
-    </div>
-</body>
-</html>
+</div>
+{% endblock %}

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
 
+// Legal Footer
+import LegalFooter from './components/LegalFooter';
+
 // Import pages
 import Login from './pages/Login';
 import DashboardHome from './pages/DashboardHome';

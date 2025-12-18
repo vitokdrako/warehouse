@@ -276,173 +276,67 @@ class DocumentEngineTester:
             self.log(f"❌ Exception testing order data: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_finance_payroll(self) -> Dict[str, Any]:
-        """Test GET /api/finance/payroll - should return payroll records"""
+    def test_document_preview(self, document_id: str) -> Dict[str, Any]:
+        """Test GET /api/documents/{document_id}/preview - should return HTML preview"""
         try:
-            self.log("🧪 Testing finance payroll endpoint...")
+            self.log(f"🧪 Testing document preview for document {document_id}...")
             
-            response = self.session.get(f"{self.base_url}/finance/payroll")
+            response = self.session.get(f"{self.base_url}/documents/{document_id}/preview")
             
             if response.status_code == 200:
-                data = response.json()
+                html_content = response.text
                 
-                # Check if response has payroll array
-                if not isinstance(data, dict) or 'payroll' not in data:
-                    self.log(f"❌ Expected dict with 'payroll' key, got {type(data)}", "ERROR")
-                    return {"success": False, "data": data}
+                self.log(f"✅ Retrieved document preview ({len(html_content)} chars)")
                 
-                payroll = data['payroll']
-                if not isinstance(payroll, list):
-                    self.log(f"❌ Expected payroll array, got {type(payroll)}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                self.log(f"✅ Retrieved {len(payroll)} payroll records")
-                
-                # Check payroll structure if any exist
-                if payroll:
-                    record = payroll[0]
-                    required_fields = ['id', 'employee_id', 'base_amount', 'status']
-                    for field in required_fields:
-                        if field not in record:
-                            self.log(f"⚠️ Payroll record missing field: {field}")
-                    
-                    self.log(f"   Sample payroll: Employee {record.get('employee_id')}, Amount: ₴{record.get('base_amount', 0)}")
+                # Check HTML structure
+                if '<html' not in html_content.lower():
+                    self.log(f"⚠️ Preview doesn't contain proper HTML structure")
                 
                 return {
                     "success": True, 
-                    "data": data,
-                    "count": len(payroll)
+                    "html_content": html_content,
+                    "html_length": len(html_content)
                 }
             else:
-                self.log(f"❌ Failed to get payroll: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get document preview: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing payroll: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing document preview: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
-
-    def test_admin_expense_categories(self) -> Dict[str, Any]:
-        """Test GET /api/finance/admin/expense-categories - should return expense categories"""
+    
+    def test_document_pdf(self, document_id: str) -> Dict[str, Any]:
+        """Test GET /api/documents/{document_id}/pdf - should return PDF file"""
         try:
-            self.log("🧪 Testing admin expense categories endpoint...")
+            self.log(f"🧪 Testing document PDF generation for document {document_id}...")
             
-            response = self.session.get(f"{self.base_url}/finance/admin/expense-categories")
+            response = self.session.get(f"{self.base_url}/documents/{document_id}/pdf")
             
             if response.status_code == 200:
-                data = response.json()
+                content_type = response.headers.get('content-type', '')
+                content_length = len(response.content)
                 
-                # Should be a list of categories
-                if not isinstance(data, list):
-                    self.log(f"❌ Expected list of categories, got {type(data)}", "ERROR")
-                    return {"success": False, "data": data}
+                self.log(f"✅ Retrieved PDF document ({content_length} bytes)")
                 
-                self.log(f"✅ Retrieved {len(data)} expense categories")
+                # Check PDF content type
+                if 'application/pdf' not in content_type:
+                    self.log(f"⚠️ Unexpected content type: {content_type}")
                 
-                # Check category structure if any exist
-                if data:
-                    category = data[0]
-                    required_fields = ['id', 'type', 'code', 'name']
-                    for field in required_fields:
-                        if field not in category:
-                            self.log(f"⚠️ Category missing field: {field}")
-                    
-                    self.log(f"   Sample category: {category.get('name')} ({category.get('code')})")
+                # Check PDF magic bytes
+                if not response.content.startswith(b'%PDF'):
+                    self.log(f"⚠️ Content doesn't start with PDF magic bytes")
                 
                 return {
                     "success": True, 
-                    "data": data,
-                    "count": len(data)
+                    "content_type": content_type,
+                    "content_length": content_length
                 }
             else:
-                self.log(f"❌ Failed to get expense categories: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get document PDF: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing expense categories: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_create_vendor(self) -> Dict[str, Any]:
-        """Test POST /api/finance/vendors - create a new vendor"""
-        try:
-            self.log("🧪 Testing create vendor endpoint...")
-            
-            # Test vendor data
-            vendor_data = {
-                "name": "Test Vendor Company",
-                "vendor_type": "service",
-                "contact_name": "Іван Петренко",
-                "phone": "+380501234567",
-                "email": "test@vendor.com",
-                "address": "вул. Тестова, 123, Київ",
-                "note": "Тестовий постачальник для перевірки API"
-            }
-            
-            response = self.session.post(f"{self.base_url}/finance/vendors", json=vendor_data)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Check success response
-                if not data.get('success'):
-                    self.log(f"❌ Vendor creation failed: {data}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                vendor_id = data.get('vendor_id')
-                self.log(f"✅ Created vendor with ID: {vendor_id}")
-                
-                return {
-                    "success": True, 
-                    "data": data,
-                    "vendor_id": vendor_id
-                }
-            else:
-                self.log(f"❌ Failed to create vendor: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing create vendor: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_create_employee(self) -> Dict[str, Any]:
-        """Test POST /api/finance/employees - create a new employee"""
-        try:
-            self.log("🧪 Testing create employee endpoint...")
-            
-            # Test employee data
-            employee_data = {
-                "name": "Марія Коваленко",
-                "role": "manager",
-                "phone": "+380671234567",
-                "email": "maria@company.com",
-                "base_salary": 25000.0,
-                "hire_date": "2024-01-15",
-                "note": "Тестовий співробітник для перевірки API"
-            }
-            
-            response = self.session.post(f"{self.base_url}/finance/employees", json=employee_data)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Check success response
-                if not data.get('success'):
-                    self.log(f"❌ Employee creation failed: {data}", "ERROR")
-                    return {"success": False, "data": data}
-                
-                employee_id = data.get('employee_id')
-                self.log(f"✅ Created employee with ID: {employee_id}")
-                
-                return {
-                    "success": True, 
-                    "data": data,
-                    "employee_id": employee_id
-                }
-            else:
-                self.log(f"❌ Failed to create employee: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing create employee: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing document PDF: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def verify_order_lifecycle_behavior(self) -> Dict[str, Any]:

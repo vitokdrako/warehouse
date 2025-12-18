@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Document Engine v2.0
-Testing the document generation system that was just implemented:
-1. GET /api/documents/types endpoint - List all document types
-2. POST /api/documents/generate endpoint - Generate various document types
-3. Document templates rendering with real order data
-4. Authentication and document generation workflow
+Backend Testing Script for Issue Card Workspace
+Testing the specific issue reported:
+1. GET /api/issue-cards/IC-7121-20251218133354 - Issue card data
+2. GET /api/decor-orders/7121 - Order data
+3. Frontend routing to /issue-workspace/IC-7121-20251218133354
+4. Authentication and workspace loading workflow
 """
 
 import requests
@@ -18,11 +18,13 @@ from typing import Dict, List, Any
 
 # Configuration
 BASE_URL = "https://docflow-134.preview.emergentagent.com/api"
+FRONTEND_URL = "https://docflow-134.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
 }
-TEST_ORDER_ID = "7136"  # Order with real data (Галина Семчишин)
+TEST_ISSUE_CARD_ID = "IC-7121-20251218133354"  # Issue card from review request
+TEST_ORDER_ID = "7121"  # Order ID from review request
 
 class DocumentEngineTester:
     def __init__(self, base_url: str):

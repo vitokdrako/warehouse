@@ -457,7 +457,7 @@ function ProductsPanel({ period }) {
                 </tr>
               </thead>
               <tbody>
-                {data.idle_products.slice(0, 10).map((p, i) => (
+                {(data.idle_products || []).slice(0, 10).map((p, i) => (
                   <tr key={i} className="border-t hover:bg-slate-50">
                     <td className="p-3">
                       <div className="font-medium">{p.name}</div>

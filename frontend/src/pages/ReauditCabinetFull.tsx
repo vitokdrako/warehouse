@@ -1608,6 +1608,19 @@ export default function ReauditCabinetFull({
         </div>
       )}
       </div>
+      
+      {/* Панель журналу стану декору */}
+      <ProductConditionPanel
+        product={selected}
+        isOpen={showConditionPanel}
+        onClose={() => setShowConditionPanel(false)}
+        onRecordAdded={() => {
+          // Перезавантажити дані товару
+          if (selected) {
+            loadDamages(selected.id)
+          }
+        }}
+      />
     </div>
   )
 }

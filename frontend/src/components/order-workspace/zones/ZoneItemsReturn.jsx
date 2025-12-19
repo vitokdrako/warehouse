@@ -134,6 +134,16 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
           >
             +
           </button>
+          
+          {/* Кнопка швидкого "Прийнято" */}
+          {!isComplete && !readOnly && (
+            <button 
+              onClick={() => onSetReturnedQty?.(item.id, rentedQty)}
+              className="ml-2 px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors"
+            >
+              Прийнято ✓
+            </button>
+          )}
         </div>
       </div>
       

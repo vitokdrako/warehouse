@@ -400,9 +400,9 @@ function ProductsPanel({ period }) {
 
       {/* Summary */}
       <div className="grid gap-4 md:grid-cols-3">
-        <StatCard icon="💰" title="Загальна виручка" value={money(data.summary.total_rent_revenue)} />
-        <StatCard icon="⚠️" title="Збитки (damage)" value={money(data.summary.total_damage_cost)} />
-        <StatCard icon="📈" title="Середній ROI" value={`${data.summary.avg_roi}%`} />
+        <StatCard icon="💰" title="Загальна виручка" value={money(data.summary?.total_rent_revenue || 0)} />
+        <StatCard icon="⚠️" title="Збитки (damage)" value={money(data.summary?.total_damage_cost || 0)} />
+        <StatCard icon="📈" title="Середній ROI" value={`${data.summary?.avg_roi || 0}%`} />
       </div>
 
       {/* Top products */}

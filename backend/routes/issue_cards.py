@@ -301,6 +301,9 @@ async def update_issue_card(
     if updates.manager_notes is not None:
         set_clauses.append("manager_notes = :manager_notes")
         params['manager_notes'] = updates.manager_notes
+    if updates.requisitors is not None:
+        set_clauses.append("requisitors = :requisitors")
+        params['requisitors'] = json.dumps(updates.requisitors)
     
     if set_clauses:
         set_clauses.append("updated_at = NOW()")

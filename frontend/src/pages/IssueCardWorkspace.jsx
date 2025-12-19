@@ -502,14 +502,37 @@ setTimeout(()=>window.print(),500);
         item={items.find(i => i.id === damageModal.itemId)}
         order={order}
         stage="pre_issue"
-        onSave={(damageRecord) => {
-          setItems(items => items.map(it => 
+        onSave={async (damageRecord) => {
+          // Оновлюємо items з новим пошкодженням
+          const updatedItems = items.map(it => 
             it.id === damageModal.itemId ? {
               ...it,
               pre_damage: [...(it.pre_damage || []), damageRecord]
             } : it
-          ))
+          )
+          setItems(updatedItems)
           setDamageModal({ open: false, itemId: null })
+          
+          // Автоматично зберігаємо картку
+          try {
+            await api.put(`/api/issue-cards/${issueCard.id}`, {
+              items: updatedItems.map(it => ({
+                id: it.id,
+                sku: it.sku,
+                name: it.name,
+                qty: it.qty,
+                picked_qty: it.picked_qty,
+                scanned: it.scanned,
+                serials: it.serials,
+                packaging: it.packaging,
+                pre_damage: it.pre_damage || []
+              }))
+            })
+            toast({ title: '✅ Пошкодження зафіксовано та збережено', variant: 'default' })
+          } catch (err) {
+            console.error('Error saving damage:', err)
+            toast({ title: 'Пошкодження додано, натисніть "Зберегти"', variant: 'warning' })
+          }
         }}
       />
     </>

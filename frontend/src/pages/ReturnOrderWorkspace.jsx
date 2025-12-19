@@ -303,6 +303,15 @@ export default function ReturnOrderWorkspace() {
       >
         {/* === WORKSPACE ZONES === */}
         
+        {/* Приймальники (хто приймає повернення) */}
+        <ZoneRequisitors
+          title="Приймальники"
+          hint="Оберіть хто приймає повернення"
+          selectedIds={selectedReceivers}
+          onSelectionChange={setSelectedReceivers}
+          readOnly={false}
+        />
+        
         {/* Приймання товарів */}
         <ZoneItemsReturn
           items={items}

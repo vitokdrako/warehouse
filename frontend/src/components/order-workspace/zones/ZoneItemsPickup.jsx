@@ -162,6 +162,16 @@ function ItemPickupCard({
             +
           </button>
           <span className="text-sm text-slate-500 ml-1">/ {qty}</span>
+          
+          {/* Кнопка швидкого "Зібрано" */}
+          {!isComplete && !readOnly && (
+            <button 
+              onClick={() => onPick?.(item.id, qty)}
+              className="ml-2 px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors"
+            >
+              Зібрано ✓
+            </button>
+          )}
         </div>
       </div>
       

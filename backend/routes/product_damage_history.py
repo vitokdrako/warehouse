@@ -35,6 +35,8 @@ async def migrate_table(db: Session = Depends(get_rh_db)):
                 damage_code VARCHAR(100),
                 severity VARCHAR(20) DEFAULT 'low',
                 fee DECIMAL(10,2) DEFAULT 0.00,
+                fee_per_item DECIMAL(10,2) DEFAULT 0.00,
+                qty INT DEFAULT 1,
                 
                 photo_url VARCHAR(500),
                 note TEXT,
@@ -53,6 +55,32 @@ async def migrate_table(db: Session = Depends(get_rh_db)):
         return {"success": True, "message": "Таблиця створена успішно"}
     except Exception as e:
         db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/migrate-add-qty-fields")
+async def migrate_add_qty_fields(db: Session = Depends(get_rh_db)):
+    """Додати поля qty та fee_per_item до існуючої таблиці"""
+    try:
+        # Додати колонку qty якщо не існує
+        db.execute(text("""
+            ALTER TABLE product_damage_history 
+            ADD COLUMN IF NOT EXISTS qty INT DEFAULT 1
+        """))
+        
+        # Додати колонку fee_per_item якщо не існує
+        db.execute(text("""
+            ALTER TABLE product_damage_history 
+            ADD COLUMN IF NOT EXISTS fee_per_item DECIMAL(10,2) DEFAULT 0.00
+        """))
+        
+        db.commit()
+        return {"success": True, "message": "Поля qty та fee_per_item додано успішно"}
+    except Exception as e:
+        db.rollback()
+        # Ігноруємо помилку якщо колонки вже існують
+        if "Duplicate column" in str(e):
+            return {"success": True, "message": "Поля вже існують"}
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -59,10 +59,10 @@
 </div>
 
 <table class="totals">
-    <tr><td style="width:70%"></td><td>Оренда:</td><td class="text-right">{{ totals.rent|money }} ₴</td></tr>
-    <tr><td></td><td>Застава:</td><td class="text-right">{{ totals.deposit|money }} ₴</td></tr>
-    {% if totals.discount > 0 %}<tr><td></td><td>Знижка:</td><td class="text-right">-{{ totals.discount|money }} ₴</td></tr>{% endif %}
-    <tr class="total-row"><td></td><td>РАЗОМ ДО СПЛАТИ:</td><td class="text-right">{{ totals.grand_total|money }} ₴</td></tr>
+    <tr><td style="width:60%"></td><td>Оренда:</td><td class="text-right" style="white-space:nowrap">{{ "%.2f"|format(totals.rent) }}&nbsp;₴</td></tr>
+    <tr><td></td><td>Застава:</td><td class="text-right" style="white-space:nowrap">{{ "%.2f"|format(totals.deposit) }}&nbsp;₴</td></tr>
+    {% if totals.discount > 0 %}<tr><td></td><td>Знижка:</td><td class="text-right" style="white-space:nowrap">-{{ "%.2f"|format(totals.discount) }}&nbsp;₴</td></tr>{% endif %}
+    <tr class="total-row"><td></td><td>РАЗОМ:</td><td class="text-right" style="white-space:nowrap">{{ "%.2f"|format(totals.grand_total) }}&nbsp;₴</td></tr>
 </table>
 
 <h2>Умови оплати</h2>

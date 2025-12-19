@@ -40,6 +40,7 @@ class IssueCardUpdate(BaseModel):
     issued_by: Optional[str] = None
     checklist: Optional[dict] = None
     manager_notes: Optional[str] = None
+    requisitors: Optional[List[str]] = None  # ID комплектувальників
 
 # Helper function to parse issue card row
 def parse_issue_card(row, db: Session = None):

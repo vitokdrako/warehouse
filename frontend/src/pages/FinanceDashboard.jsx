@@ -444,7 +444,7 @@ function ProductsPanel({ period }) {
       </Card>
 
       {/* Idle products */}
-      {data.idle_products.length > 0 && (
+      {(data.idle_products?.length || 0) > 0 && (
         <Card>
           <div className="p-4 border-b font-semibold">😴 Простоюючі товари</div>
           <div className="overflow-x-auto">

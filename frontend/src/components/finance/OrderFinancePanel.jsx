@@ -175,20 +175,70 @@ export default function OrderFinancePanel({ order, onUpdate }) {
         </Card>
 
         <Card>
-          <CardHd title="Пошкодження" subtitle="CASH/BANK → DMG_COMP" right={<Pill t={order.damage.due > 0 ? 'warn' : 'neutral'}>damage</Pill>} />
+          <CardHd 
+            title="Пошкодження" 
+            subtitle={damageData?.damage_count > 0 ? `${damageData.damage_count} позицій` : 'Немає'} 
+            right={
+              damageData?.needs_payment ? (
+                <Pill t="warn">⚠️ Потребує доплати</Pill>
+              ) : (
+                <Pill t="neutral">damage</Pill>
+              )
+            } 
+          />
           <CardBd>
+            {/* Alert if needs payment */}
+            {damageData?.needs_payment && (
+              <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-amber-800 font-medium">
+                    💰 Потребує доплати за пошкодження
+                  </div>
+                  <div className="text-lg font-bold text-amber-900">
+                    {money(damageData.due_amount)}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Damage items list */}
+            {damageData?.damage_items?.length > 0 && (
+              <div className="mb-3 space-y-2 max-h-40 overflow-y-auto">
+                {damageData.damage_items.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-slate-50">
+                    <div>
+                      <span className="font-medium">{item.product_name}</span>
+                      <span className="text-slate-500 ml-2">• {item.damage_type}</span>
+                      {item.qty > 1 && <span className="text-slate-400 ml-1">×{item.qty}</span>}
+                    </div>
+                    <span className="font-medium text-rose-600">{money(item.fee)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <label className="text-sm"><div className="text-xs text-slate-500 mb-1">Оцінка збитків</div>
-                <input type="number" className="w-full rounded-xl border px-3 py-2 text-sm" defaultValue={order.damage.assessed} />
+                <input 
+                  type="number" 
+                  className="w-full rounded-xl border px-3 py-2 text-sm" 
+                  value={damageAmount} 
+                  onChange={(e) => setDamageAmount(Number(e.target.value))}
+                />
               </label>
               <div className="rounded-2xl border bg-slate-50 p-3">
-                <div className="text-xs text-slate-500">До сплати (шкода)</div>
-                <div className="mt-1 text-lg font-semibold">{money(order.damage.due)}</div>
+                <div className="text-xs text-slate-500">Загалом шкод</div>
+                <div className="mt-1 text-lg font-semibold">{money(damageData?.total_damage_fee || 0)}</div>
+              </div>
+              <div className="rounded-2xl border bg-slate-50 p-3">
+                <div className="text-xs text-slate-500">Оплачено</div>
+                <div className="mt-1 text-lg font-semibold text-emerald-600">{money(damageData?.paid_damage || 0)}</div>
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Btn>Нарахувати</Btn>
-              <Btn variant="primary" onClick={() => handlePayment('damage')} disabled={loading === 'damage' || order.damage.due <= 0}>{loading === 'damage' ? '...' : 'Прийняти оплату'}</Btn>
+              <Btn variant="primary" onClick={() => handlePayment('damage')} disabled={loading === 'damage' || damageAmount <= 0}>
+                {loading === 'damage' ? '...' : 'Прийняти оплату'}
+              </Btn>
             </div>
           </CardBd>
         </Card>

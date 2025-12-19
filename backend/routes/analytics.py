@@ -62,7 +62,7 @@ async def get_overview(
         revenue_result = db.execute(text("""
             SELECT 
                 COALESCE(SUM(CASE WHEN status IN ('issued', 'on_rent', 'returned', 'closed') 
-                    THEN total_rental ELSE 0 END), 0) as rent_revenue,
+                    THEN total_price ELSE 0 END), 0) as rent_revenue,
                 COUNT(CASE WHEN status IN ('issued', 'on_rent', 'returned', 'closed') THEN 1 END) as completed_orders,
                 COUNT(*) as total_orders
             FROM orders 

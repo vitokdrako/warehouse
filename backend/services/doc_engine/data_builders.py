@@ -270,6 +270,7 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
     return {
         "issue_card": issue_card,
         "items": items,
+        "requisitors": requisitors,
         "company": company,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options

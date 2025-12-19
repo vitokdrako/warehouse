@@ -92,7 +92,7 @@ async def get_overview(
         # 4. Average check
         avg_result = db.execute(text("""
             SELECT 
-                COALESCE(AVG(total_rental), 0) as avg_rent,
+                COALESCE(AVG(total_price), 0) as avg_rent,
                 COUNT(*) as orders_count
             FROM orders 
             WHERE status IN ('issued', 'on_rent', 'returned', 'closed')
@@ -115,7 +115,7 @@ async def get_overview(
         daily_result = db.execute(text("""
             SELECT 
                 DATE(created_at) as day,
-                COALESCE(SUM(total_rental), 0) as rent
+                COALESCE(SUM(total_price), 0) as rent
             FROM orders
             WHERE DATE(created_at) BETWEEN :start AND :end
             AND status IN ('issued', 'on_rent', 'returned', 'closed')
@@ -191,9 +191,9 @@ async def get_orders_report(
                 DATE_FORMAT(created_at, :fmt) as period,
                 COUNT(*) as orders_count,
                 COALESCE(SUM(CASE WHEN status IN ('issued','on_rent','returned','closed') 
-                    THEN total_rental ELSE 0 END), 0) as rent_revenue,
+                    THEN total_price ELSE 0 END), 0) as rent_revenue,
                 COALESCE(AVG(CASE WHEN status IN ('issued','on_rent','returned','closed') 
-                    THEN total_rental END), 0) as avg_check
+                    THEN total_price END), 0) as avg_check
             FROM orders
             WHERE DATE(created_at) BETWEEN :start AND :end
             GROUP BY DATE_FORMAT(created_at, :fmt)
@@ -214,9 +214,9 @@ async def get_orders_report(
             SELECT 
                 COUNT(*) as total_orders,
                 COALESCE(SUM(CASE WHEN status IN ('issued','on_rent','returned','closed') 
-                    THEN total_rental ELSE 0 END), 0) as total_rent,
+                    THEN total_price ELSE 0 END), 0) as total_rent,
                 COALESCE(AVG(CASE WHEN status IN ('issued','on_rent','returned','closed') 
-                    THEN total_rental END), 0) as avg_check,
+                    THEN total_price END), 0) as avg_check,
                 COUNT(CASE WHEN status = 'issued' THEN 1 END) as issued,
                 COUNT(CASE WHEN status = 'on_rent' THEN 1 END) as on_rent,
                 COUNT(CASE WHEN status = 'returned' THEN 1 END) as returned,
@@ -381,7 +381,7 @@ async def get_clients_report(
                 c.name as client_name,
                 c.phone,
                 COUNT(o.order_id) as orders_count,
-                COALESCE(SUM(o.total_rental), 0) as rent_spent,
+                COALESCE(SUM(o.total_price), 0) as rent_spent,
                 COALESCE(
                     (SELECT SUM(fee) FROM product_damage_history pdh
                      JOIN orders o2 ON pdh.order_id = o2.order_id
@@ -421,7 +421,7 @@ async def get_clients_report(
                     ELSE 'returning' 
                 END as client_type,
                 COUNT(DISTINCT o.customer_id) as client_count,
-                COALESCE(AVG(o.total_rental), 0) as avg_check
+                COALESCE(AVG(o.total_price), 0) as avg_check
             FROM orders o
             WHERE DATE(o.created_at) BETWEEN :start AND :end
             GROUP BY client_type
@@ -486,7 +486,7 @@ async def get_damage_report(
         
         # Rent revenue for comparison
         rent_result = db.execute(text("""
-            SELECT COALESCE(SUM(total_rental), 0) as rent_revenue
+            SELECT COALESCE(SUM(total_price), 0) as rent_revenue
             FROM orders
             WHERE DATE(created_at) BETWEEN :start AND :end
             AND status IN ('issued', 'on_rent', 'returned', 'closed')
@@ -608,7 +608,7 @@ async def export_report(
                     o.order_number,
                     o.customer_name,
                     o.status,
-                    o.total_rental,
+                    o.total_price,
                     o.created_at
                 FROM orders o
                 WHERE DATE(o.created_at) BETWEEN :start AND :end
@@ -642,7 +642,7 @@ async def export_report(
                     c.phone,
                     c.email,
                     COUNT(o.order_id) as orders,
-                    SUM(o.total_rental) as total_spent
+                    SUM(o.total_price) as total_spent
                 FROM clients c
                 LEFT JOIN orders o ON c.client_id = o.customer_id AND DATE(o.created_at) BETWEEN :start AND :end
                 GROUP BY c.client_id, c.name, c.phone, c.email

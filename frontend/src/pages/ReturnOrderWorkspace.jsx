@@ -320,7 +320,9 @@ export default function ReturnOrderWorkspace() {
         primaryLabel="✅ Завершити приймання"
         primaryDisabled={saving || !canComplete}
         primaryDisabledReason={!canComplete ? 'Перевірте всі позиції' : ''}
-        showSave={false}
+        showSave={true}
+        onSave={saveProgress}
+        saving={saving}
         footerActions={[
           { label: '🖨️ Друк акта', onClick: () => window.print() },
         ]}

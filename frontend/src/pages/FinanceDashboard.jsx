@@ -542,7 +542,7 @@ function ClientsPanel({ period }) {
               </tr>
             </thead>
             <tbody>
-              {data.top_clients.map((c, i) => (
+              {(data.top_clients || []).map((c, i) => (
                 <tr key={i} className="border-t hover:bg-slate-50">
                   <td className="p-3">
                     <div className="font-medium">{c.name}</div>

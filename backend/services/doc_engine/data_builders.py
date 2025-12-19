@@ -281,6 +281,63 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
         "options": options
     }
 
+def build_return_data(db: Session, order_id: str, options: dict) -> dict:
+    """Збирає дані повернення для Акту приймання - читає з return_cards"""
+    
+    # Спочатку отримаємо базові дані замовлення
+    order_data = build_order_data(db, order_id, options)
+    
+    # Company data
+    company = {
+        "name": "FarforRent",
+        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
+        "warehouse": "м. Харків, Військовий провулок, 1",
+        "phone": "+380 XX XXX XX XX",
+        "email": "info@farforrent.com.ua",
+    }
+    
+    # Спробуємо отримати дані з return_cards
+    receivers = []
+    return_items = []
+    fees = {}
+    
+    try:
+        result = db.execute(text("""
+            SELECT items, receivers, notes, fees
+            FROM return_cards
+            WHERE order_id = :order_id
+        """), {"order_id": order_id})
+        
+        row = result.fetchone()
+        if row:
+            # Парсимо JSON поля
+            if row[0]:  # items
+                return_items = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            if row[1]:  # receivers
+                receivers = json.loads(row[1]) if isinstance(row[1], str) else row[1]
+            if row[3]:  # fees
+                fees = json.loads(row[3]) if isinstance(row[3], str) else row[3]
+    except Exception as e:
+        # Якщо таблиці немає або помилка - використовуємо items з замовлення
+        pass
+    
+    # Якщо return_items порожній - використовуємо items з замовлення
+    if not return_items:
+        return_items = order_data.get("items", [])
+    
+    return {
+        "order": order_data.get("order", {}),
+        "items": return_items,
+        "receivers": receivers,
+        "fees": fees,
+        "totals": order_data.get("totals", {}),
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "options": options
+    }
+
+
 def build_damage_data(db: Session, damage_case_id: str, options: dict) -> dict:
     """Збирає дані кейсу пошкодження для документа"""
     # Company data

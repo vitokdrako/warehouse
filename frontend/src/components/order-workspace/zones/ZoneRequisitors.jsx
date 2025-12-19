@@ -93,12 +93,15 @@ export default function ZoneRequisitors({
         </div>
       )}
       
-      {/* Показати обраних */}
-      {selectedIds.length > 0 && (
+      {/* Показати обраних - завжди якщо є */}
+      {(selectedIds.length > 0 || selectedNames.length > 0) && (
         <div className="mt-3 pt-3 border-t border-corp-border">
           <div className="text-xs text-corp-text-muted mb-1">Відповідальні за комплектацію:</div>
           <div className="font-medium text-corp-text-dark">
-            {selectedNames.join(', ')}
+            {selectedNames.length > 0 
+              ? selectedNames.join(', ') 
+              : `${selectedIds.length} обрано (завантаження...)`
+            }
           </div>
         </div>
       )}

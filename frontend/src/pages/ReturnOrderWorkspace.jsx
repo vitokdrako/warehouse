@@ -186,6 +186,37 @@ export default function ReturnOrderWorkspace() {
   
   const canComplete = allReturned && allSerialsOk
 
+  // === ЗБЕРЕЖЕННЯ ПРОГРЕСУ ===
+  const saveProgress = async () => {
+    setSaving(true)
+    try {
+      await axios.put(`${BACKEND_URL}/api/decor-orders/${orderId}/return-progress`, {
+        items: items.map(item => ({
+          id: item.id,
+          sku: item.sku,
+          name: item.name,
+          rented_qty: item.rented_qty,
+          returned_qty: item.returned_qty,
+          ok_serials: item.ok_serials || [],
+          findings: item.findings || [],
+        })),
+        receivers: selectedReceivers,
+        notes: notes,
+        fees: {
+          late_fee: lateFee,
+          cleaning_fee: cleaningFee,
+          damage_fee: damageFee,
+        }
+      })
+      toast({ title: '✅ Збережено', description: 'Прогрес повернення збережено' })
+    } catch (err) {
+      console.error('Save error:', err)
+      toast({ title: 'Помилка збереження', variant: 'destructive' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // === ЗАВЕРШЕННЯ ===
   const completeReturn = async () => {
     if (!canComplete) {

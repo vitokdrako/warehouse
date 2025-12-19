@@ -163,7 +163,7 @@ export default function LeftRailDocuments({
             win.document.close()
           }
         } else if (data.download_url) {
-          window.open(\`\${BACKEND_URL}\${data.download_url}\`, '_blank')
+          window.open(`${BACKEND_URL}${data.download_url}`, '_blank')
         }
       } else if (action === 'print' && data.html_content) {
         // Друк

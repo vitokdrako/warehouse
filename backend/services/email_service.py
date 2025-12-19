@@ -118,6 +118,7 @@ def send_document_email(
 ) -> dict:
     """
     Відправити документ клієнту
+    Документ відправляється як є - з тим самим дизайном що й в адмінці
     
     Args:
         to_email: Email клієнта
@@ -139,70 +140,22 @@ def send_document_email(
     }
     
     doc_name = doc_names.get(document_type, document_type)
-    greeting = f"Шановний(а) {customer_name}," if customer_name else "Шановний клієнте,"
-    
     subject = f"{doc_name} - Замовлення {order_number} | FarforRent"
     
-    # Обгортаємо документ в email шаблон
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-            .header {{ background: #1e3a5f; color: white; padding: 20px; text-align: center; }}
-            .content {{ padding: 20px; }}
-            .document {{ border: 1px solid #ddd; margin: 20px 0; }}
-            .footer {{ background: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666; }}
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>FarforRent</h1>
-            <p>Оренда декору для свят</p>
-        </div>
-        
-        <div class="content">
-            <p>{greeting}</p>
-            <p>Дякуємо за ваше замовлення! Надсилаємо вам документ <strong>{doc_name}</strong> 
-               для замовлення <strong>{order_number}</strong>.</p>
-            
-            <div class="document">
-                {document_html}
-            </div>
-            
-            <p>Якщо у вас є питання, звертайтесь:</p>
-            <ul>
-                <li>📞 Телефон: +380 XX XXX XX XX</li>
-                <li>📧 Email: info@farforrent.com.ua</li>
-                <li>🌐 Сайт: farforrent.com.ua</li>
-            </ul>
-            
-            <p>З повагою,<br>Команда FarforRent</p>
-        </div>
-        
-        <div class="footer">
-            <p>© 2025 FarforRent. Оренда декору для свят.</p>
-            <p>Цей лист відправлено автоматично. Будь ласка, не відповідайте на нього.</p>
-        </div>
-    </body>
-    </html>
-    """
+    # Відправляємо документ як є - той самий дизайн що в адмінці
+    # Просто додаємо базову обгортку для email клієнтів
+    html_content = document_html
     
+    # Текстова версія для email клієнтів без HTML підтримки
     plain_content = f"""
-{greeting}
+{doc_name} - Замовлення {order_number}
 
-Дякуємо за ваше замовлення!
-Надсилаємо вам документ "{doc_name}" для замовлення {order_number}.
-
-Якщо у вас є питання, звертайтесь:
-- Телефон: +380 XX XXX XX XX
-- Email: info@farforrent.com.ua
-- Сайт: farforrent.com.ua
+Цей лист містить документ у форматі HTML.
+Якщо ви не бачите документ, відкрийте лист в браузері або увімкніть відображення HTML.
 
 З повагою,
 Команда FarforRent
+info@farforrent.com.ua
     """
     
     return send_email(

@@ -175,6 +175,15 @@ function App() {
               </ProtectedRoute>
             } 
           />
+
+          <Route 
+            path="/analytics" 
+            element={
+              <ProtectedRoute>
+                <FinanceDashboard />
+              </ProtectedRoute>
+            } 
+          />
           
           <Route 
             path="/sync" 

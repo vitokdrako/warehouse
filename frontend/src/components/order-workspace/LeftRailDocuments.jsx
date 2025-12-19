@@ -144,8 +144,27 @@ export default function LeftRailDocuments({
           const url = URL.createObjectURL(blob)
           window.open(url, '_blank')
         }
-      } else if (action === 'pdf' && data.download_url) {
-        window.open(`${BACKEND_URL}${data.download_url}`, '_blank')
+      } else if (action === 'pdf') {
+        // PDF не доступний - відкриваємо HTML з можливістю збереження як PDF через друк
+        if (data.html_content) {
+          const win = window.open('', '_blank')
+          if (win) {
+            win.document.write(`
+              <!DOCTYPE html>
+              <html><head><title>${docType} - Зберегти як PDF</title>
+              <style>@media print { @page { size: A4; margin: 15mm; } }</style>
+              </head><body>
+              <div style="background:#fffde7;padding:10px;margin-bottom:15px;border-radius:8px;font-family:sans-serif;">
+                💡 Для збереження як PDF: натисніть <b>Ctrl+P</b> → оберіть "Зберегти як PDF"
+              </div>
+              ${data.html_content}
+              </body></html>
+            `)
+            win.document.close()
+          }
+        } else if (data.download_url) {
+          window.open(\`\${BACKEND_URL}\${data.download_url}\`, '_blank')
+        }
       } else if (action === 'print' && data.html_content) {
         // Друк
         const printWin = window.open('', '_blank')

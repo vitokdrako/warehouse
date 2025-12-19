@@ -219,7 +219,7 @@ async def get_orders_report(
     date_format = {"day": "%Y-%m-%d", "week": "%Y-%u", "month": "%Y-%m"}.get(group_by, "%Y-%m-%d")
     
     try:
-        result = db.execute(text(f"""
+        result = db.execute(text("""
             SELECT 
                 DATE_FORMAT(created_at, :fmt) as period,
                 COUNT(*) as orders_count,

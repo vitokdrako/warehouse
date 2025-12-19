@@ -17,6 +17,15 @@ export default function DashboardHome() {
 
   const cabinets: CabinetCard[] = [
     {
+      id: 'analytics',
+      title: 'Аналітика',
+      icon: '📊',
+      description: 'Звіти: доходи, товари, клієнти, шкоди',
+      route: '/analytics',
+      color: 'from-violet-500 to-purple-500',
+      roles: ['admin', 'manager']
+    },
+    {
       id: 'finance',
       title: 'Фінанси',
       icon: '💰',

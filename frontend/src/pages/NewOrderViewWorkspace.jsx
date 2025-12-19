@@ -655,6 +655,12 @@ export default function NewOrderViewWorkspace() {
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.totalDeposit}
           />
+          <LeftRailDocuments
+            orderId={orderId}
+            orderNumber={order?.order_number}
+            orderStatus={decorOrderStatus ? 'confirmed' : 'awaiting_confirmation'}
+            customerEmail={clientEmail}
+          />
           <LeftRailTimeline orderId={orderId} events={timeline} />
         </>
       }

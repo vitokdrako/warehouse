@@ -13,6 +13,7 @@ import {
   OrderWorkspaceLayout,
   LeftRailClient,
   LeftRailFinance,
+  LeftRailDocuments,
   LeftRailTimeline,
 } from '../components/order-workspace'
 

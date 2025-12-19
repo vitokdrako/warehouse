@@ -652,7 +652,7 @@ function DamagePanel({ period }) {
               </tr>
             </thead>
             <tbody>
-              {data.damaged_products.map((p, i) => (
+              {(data.damaged_products || []).map((p, i) => (
                 <tr key={i} className="border-t hover:bg-slate-50">
                   <td className="p-3">
                     <div className="font-medium">{p.name}</div>

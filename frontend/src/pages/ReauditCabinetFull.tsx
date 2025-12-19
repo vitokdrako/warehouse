@@ -749,10 +749,16 @@ export default function ReauditCabinetFull({
                   <div className="mt-1 text-lg font-semibold text-corp-text-dark">{selected.rentalsCount} разів</div>
                   <div className="mt-1 text-slate-400">останній: {selected.lastOrderId || '—'}</div>
                 </div>
-                <div className="rounded-xl bg-slate-50 p-3">
-                  <div className="text-corp-text-muted">Кейси шкоди</div>
+                <div 
+                  className="rounded-xl bg-slate-50 p-3 cursor-pointer hover:bg-blue-50 hover:border-blue-200 border border-transparent transition-colors"
+                  onClick={() => setShowConditionPanel(true)}
+                >
+                  <div className="text-corp-text-muted flex items-center justify-between">
+                    <span>📋 Журнал стану</span>
+                    <span className="text-blue-600 text-xs">Деталі →</span>
+                  </div>
                   <div className="mt-1 text-lg font-semibold text-corp-text-dark">{selected.damagesCount}</div>
-                  <div className="mt-1 text-slate-400">доходу: ₴ {fmtUA(selected.totalProfit)}</div>
+                  <div className="mt-1 text-slate-400">записів у журналі</div>
                 </div>
               </div>
 

@@ -121,3 +121,67 @@ async def confirm_order_changes(token: str):
         "message": "Дякуємо! Ваше підтвердження отримано.",
         "token": token
     }
+
+
+# ==================== ВІДПРАВКА ДОКУМЕНТІВ ====================
+
+class SendDocumentRequest(BaseModel):
+    to_email: str
+    document_type: str
+    document_html: str
+    order_number: str
+    customer_name: Optional[str] = None
+
+
+@router.post("/send-document")
+async def send_document_to_client(request: SendDocumentRequest):
+    """
+    Відправити документ клієнту на email
+    
+    - document_type: invoice_offer, contract_rent, issue_act, return_act, etc.
+    - document_html: HTML вміст документа
+    - order_number: Номер замовлення
+    - customer_name: Ім'я клієнта (опціонально)
+    """
+    from services.email_service import send_document_email
+    
+    if not request.to_email:
+        raise HTTPException(status_code=400, detail="Email не вказано")
+    
+    if not request.document_html:
+        raise HTTPException(status_code=400, detail="Документ порожній")
+    
+    result = send_document_email(
+        to_email=request.to_email,
+        document_type=request.document_type,
+        document_html=request.document_html,
+        order_number=request.order_number,
+        customer_name=request.customer_name
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result["message"])
+    
+    return result
+
+
+@router.post("/test-smtp")
+async def test_smtp_connection():
+    """
+    Тест SMTP з'єднання
+    """
+    from services.email_service import send_email, SMTP_HOST, SMTP_PORT, SMTP_FROM_EMAIL
+    
+    result = send_email(
+        to_email=SMTP_FROM_EMAIL,  # Відправляємо самому собі
+        subject="🧪 Тест SMTP - FarforRent",
+        html_content="<h1>SMTP працює!</h1><p>Це тестовий лист.</p>",
+        plain_content="SMTP працює! Це тестовий лист."
+    )
+    
+    return {
+        **result,
+        "smtp_host": SMTP_HOST,
+        "smtp_port": SMTP_PORT,
+        "from_email": SMTP_FROM_EMAIL
+    }

@@ -191,7 +191,8 @@ async def get_product_damage_history(
                 id, product_id, sku, product_name, category,
                 order_id, order_number, stage,
                 damage_type, damage_code, severity, fee,
-                photo_url, note, created_by, created_at
+                photo_url, note, created_by, created_at,
+                qty, fee_per_item
             FROM product_damage_history
             WHERE product_id = :product_id
             ORDER BY created_at DESC
@@ -199,6 +200,9 @@ async def get_product_damage_history(
         
         history = []
         for row in result:
+            qty = row[16] if len(row) > 16 and row[16] else 1
+            fee_per_item = float(row[17]) if len(row) > 17 and row[17] else float(row[11]) if row[11] else 0.0
+            
             history.append({
                 "id": row[0],
                 "product_id": row[1],
@@ -213,6 +217,8 @@ async def get_product_damage_history(
                 "damage_code": row[9],
                 "severity": row[10],
                 "fee": float(row[11]) if row[11] else 0.0,
+                "qty": qty,
+                "fee_per_item": fee_per_item,
                 "photo_url": row[12],
                 "note": row[13],
                 "created_by": row[14],

@@ -96,6 +96,9 @@ export default function DamageModal({
     
     setSaving(true)
     
+    // Розрахунок загальної суми: ціна за одиницю × кількість
+    const totalFee = formData.fee * formData.qty
+    
     try {
       const damageRecord = {
         id: 'pd-' + Math.floor(Math.random()*90000+100),
@@ -103,7 +106,9 @@ export default function DamageModal({
         category: formData.category,
         severity: formData.severity,
         note: formData.note,
-        fee: formData.fee,
+        fee: totalFee,  // Загальна сума
+        fee_per_item: formData.fee,  // Ціна за одиницю
+        qty: formData.qty,  // Кількість пошкоджених
         at: new Date().toISOString(),
         photoName: formData.photoName
       }
@@ -120,7 +125,9 @@ export default function DamageModal({
         damage_type: selectedKind?.label || formData.kindCode,
         damage_code: formData.kindCode,
         severity: formData.severity,
-        fee: formData.fee,
+        fee: totalFee,  // Загальна сума (ціна × кількість)
+        fee_per_item: formData.fee,  // Ціна за одиницю
+        qty: formData.qty,  // Кількість пошкоджених одиниць
         photo_url: formData.photoName,
         note: formData.note,
         created_by: 'manager' // TODO: get from auth context

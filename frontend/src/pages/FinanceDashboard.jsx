@@ -421,7 +421,7 @@ function ProductsPanel({ period }) {
               </tr>
             </thead>
             <tbody>
-              {data.top_products.map((p, i) => (
+              {(data.top_products || []).map((p, i) => (
                 <tr key={i} className="border-t hover:bg-slate-50">
                   <td className="p-3">
                     <div className="font-medium">{p.name}</div>

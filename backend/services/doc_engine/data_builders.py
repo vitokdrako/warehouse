@@ -103,9 +103,10 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         qty = int(row[2] or 1)
         price_per_day = float(row[3] or 0)
         total_rental = float(row[4] or 0) or (price_per_day * qty * order["rental_days"])
-        # Use damage_price as deposit basis, or calculate from rental price
+        # Застава = 50% від повного збитку (damage_price)
         damage_price = float(row[10] or 0) if row[10] else 0
-        deposit_per_item = damage_price if damage_price else price_per_day * 3
+        full_damage_cost = damage_price if damage_price else price_per_day * 6  # fallback: 6 днів оренди
+        deposit_per_item = full_damage_cost / 2  # Застава = 50% від повного збитку
         
         item_deposit = deposit_per_item * qty
         

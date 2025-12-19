@@ -506,7 +506,7 @@ function ClientsPanel({ period }) {
 
       {/* Client analysis */}
       <div className="grid gap-4 md:grid-cols-4">
-        <StatCard icon="👥" title="Всього клієнтів" value={data.summary.total_clients} />
+        <StatCard icon="👥" title="Всього клієнтів" value={data.summary?.total_clients || 0} />
         <StatCard 
           icon="🆕" 
           title="Нових клієнтів" 

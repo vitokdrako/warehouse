@@ -106,6 +106,76 @@ async def get_overview(
                 COALESCE(AVG(fee), 0) as avg_damage,
                 COUNT(DISTINCT order_id) as damaged_orders
             FROM product_damage_history
+
+
+# ================== ORDER DAMAGE FEE ==================
+
+@router.get("/order-damage-fee/{order_id}")
+async def get_order_damage_fee(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати суму шкод для замовлення з product_damage_history.
+    Використовується в фінансовому кабінеті для показу "Потребує доплати"
+    """
+    try:
+        # Сума шкод з product_damage_history
+        result = db.execute(text("""
+            SELECT 
+                COALESCE(SUM(fee), 0) as total_damage_fee,
+                COUNT(*) as damage_count
+            FROM product_damage_history
+            WHERE order_id = :order_id
+        """), {"order_id": order_id})
+        
+        row = result.fetchone()
+        total_damage_fee = float(row[0]) if row else 0
+        damage_count = row[1] if row else 0
+        
+        # Перевіримо чи вже оплачено (в fin_payments)
+        paid_result = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) as paid
+            FROM fin_payments
+            WHERE order_id = :order_id AND payment_type = 'damage'
+        """), {"order_id": order_id})
+        paid_row = paid_result.fetchone()
+        paid_damage = float(paid_row[0]) if paid_row else 0
+        
+        due_amount = max(0, total_damage_fee - paid_damage)
+        
+        # Деталі шкод
+        details_result = db.execute(text("""
+            SELECT product_name, damage_type, fee, qty, created_at
+            FROM product_damage_history
+            WHERE order_id = :order_id
+            ORDER BY created_at DESC
+        """), {"order_id": order_id})
+        
+        damage_items = []
+        for r in details_result:
+            damage_items.append({
+                "product_name": r[0],
+                "damage_type": r[1],
+                "fee": float(r[2]) if r[2] else 0,
+                "qty": r[3] or 1,
+                "created_at": r[4].isoformat() if r[4] else None
+            })
+        
+        return {
+            "order_id": order_id,
+            "total_damage_fee": total_damage_fee,
+            "paid_damage": paid_damage,
+            "due_amount": due_amount,
+            "damage_count": damage_count,
+            "needs_payment": due_amount > 0,
+            "damage_items": damage_items
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
             WHERE DATE(created_at) BETWEEN :start AND :end
             AND fee > 0
         """), {"start": start_date, "end": end_date})

@@ -426,7 +426,7 @@ export default function OrdersArchive() {
                       {/* Right: Finance History */}
                       <div>
                         <h3 className="font-semibold text-corp-text-dark mb-3">💰 Фінансова історія</h3>
-                        {financeHistory[order.order_id || parseInt(order.id)] ? (
+                        {Array.isArray(financeHistory[order.order_id || parseInt(order.id)]) && financeHistory[order.order_id || parseInt(order.id)].length > 0 ? (
                           <div className="space-y-2 max-h-64 overflow-y-auto">
                             {financeHistory[order.order_id || parseInt(order.id)].map((transaction, idx) => (
                               <div key={idx} className="flex gap-3 text-sm border-l-2 border-emerald-200 pl-3 py-1">

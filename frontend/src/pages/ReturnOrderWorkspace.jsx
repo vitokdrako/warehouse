@@ -270,6 +270,12 @@ export default function ReturnOrderWorkspace() {
               rentAmount={totalRent}
               depositAmount={totalDeposit}
             />
+            <LeftRailDocuments
+              orderId={order?.order_id}
+              orderNumber={order?.order_number}
+              orderStatus="returning"
+              customerEmail={clientEmail}
+            />
             <LeftRailTimeline orderId={order?.order_id} events={timeline} />
           </>
         }

@@ -92,10 +92,24 @@ export default function LeftRailDocuments({
     return DOCS_BY_STATUS[orderStatus] || DOCS_BY_STATUS['pending'] || []
   }
 
+  // Документи які потребують issueCardId замість orderId
+  const ISSUE_CARD_DOCS = ['issue_act', 'picking_list', 'issue_checklist']
+  
   // Генерація документа
   const generateDocument = async (docType, action = 'preview') => {
     setGenerating(docType)
     setError(null)
+    
+    // Визначаємо правильний entity_id
+    const entityId = ISSUE_CARD_DOCS.includes(docType) 
+      ? (issueCardId || orderId) 
+      : orderId
+    
+    if (!entityId) {
+      setError('ID не знайдено')
+      setGenerating(null)
+      return
+    }
     
     try {
       const response = await fetch(`${BACKEND_URL}/api/documents/generate`, {
@@ -106,7 +120,7 @@ export default function LeftRailDocuments({
         },
         body: JSON.stringify({
           doc_type: docType,
-          entity_id: String(orderId),
+          entity_id: String(entityId),
           format: action === 'pdf' ? 'pdf' : 'html',
           options: {}
         })

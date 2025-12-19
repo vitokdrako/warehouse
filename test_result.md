@@ -1,10 +1,26 @@
-# Test Results - Issue Card Workspace Routing Fix
+# Test Results - DamageModal Quantity Field & Condition Log
 
 ## Testing Protocol
-1. Test Issue Card Workspace page at /issue-workspace/IC-7121-20251218133354
-2. Verify backend APIs for issue cards and orders
-3. Check for redirect issues and console errors
-4. Ensure proper React Router configuration
+1. Test DamageModal with new "quantity" field
+2. Verify automatic total calculation (fee × qty)
+3. Test ProductConditionPanel (Журнал стану) in ReauditCabinet
+4. Verify backend saves qty and fee_per_item correctly
+
+## New Features to Test:
+1. **DamageModal Quantity Field**:
+   - Navigate to order assembly or return page 
+   - Click on damage button for any item
+   - Verify "Кількість" (quantity) field is visible
+   - Enter quantity > 1 and verify total calculation appears
+   - Verify message shows "X шт × ₴Y = ₴Z"
+   - Save damage and verify data is stored correctly
+
+2. **ProductConditionPanel (Журнал стану)**:
+   - Navigate to "Переоблік" (Reaudit Cabinet)
+   - Select any product from the list
+   - Click on "📋 Журнал стану" card
+   - Verify side panel opens with damage history
+   - Test adding new damage record from panel
 
 ## Test Credentials
 - email: vitokdrako@gmail.com

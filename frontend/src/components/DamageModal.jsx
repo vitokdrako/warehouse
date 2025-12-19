@@ -68,6 +68,7 @@ export default function DamageModal({
         severity: 'low',
         note: '',
         fee: 0,
+        qty: 1,
         photoName: ''
       })
       setPhotos([])

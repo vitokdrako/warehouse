@@ -123,6 +123,9 @@ export default function ReauditCabinetFull({
   const [rentalHistory, setRentalHistory] = useState<RentalHistoryItem[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   
+  // Панель журналу стану
+  const [showConditionPanel, setShowConditionPanel] = useState(false)
+  
   // Стан для редагування
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState({

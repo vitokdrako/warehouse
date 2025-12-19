@@ -750,13 +750,7 @@ export default function NewOrderViewWorkspace() {
         onRemoveItem={handleRemoveItem}
       />
       
-      {/* Документи */}
-      <ZoneDocuments
-        orderId={orderId}
-        entityType="order"
-        title="Документи"
-        hint="Генерація рахунків, договорів та актів"
-      />
+      {/* Документи переміщено в LeftRailDocuments */}
       
       {/* Коментар клієнта (read-only) */}
       {clientComment && (

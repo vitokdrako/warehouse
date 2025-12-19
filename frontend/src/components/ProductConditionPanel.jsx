@@ -339,6 +339,27 @@ export default function ProductConditionPanel({
                   </span>
                 </div>
                 
+                {/* Показати кількість та суму */}
+                {(record.qty > 1 || record.fee > 0) && (
+                  <div className="mt-2 flex items-center gap-2 text-xs">
+                    {record.qty > 1 && (
+                      <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                        {record.qty} шт
+                      </span>
+                    )}
+                    {record.fee > 0 && (
+                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700">
+                        ₴{record.fee.toLocaleString('uk-UA')}
+                        {record.qty > 1 && record.fee_per_item && (
+                          <span className="text-amber-500 ml-1">
+                            ({record.qty}×₴{record.fee_per_item})
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                )}
+                
                 {record.note && (
                   <p className="mt-2 text-sm text-slate-600">{record.note}</p>
                 )}

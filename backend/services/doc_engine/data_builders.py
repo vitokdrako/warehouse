@@ -250,7 +250,6 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
         "status": row[3],
         "customer_name": row[7] or "",
         "customer_phone": phone,
-        "requisitors": [],
         "prepared_at": row[5].strftime("%d.%m.%Y %H:%M") if row[5] else "",
         "issued_at": row[6].strftime("%d.%m.%Y %H:%M") if row[6] else "",
         "rental_start_date": row[10].strftime("%d.%m.%Y") if row[10] else "",
@@ -258,7 +257,8 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
         "rental_days": row[12] or 1,
         "delivery_type": row[13] or "pickup",
         "delivery_address": row[14] or "",
-        "notes": row[15] or ""
+        "notes": row[15] or "",
+        "preparation_notes": preparation_notes or ""
     }
     
     company = {

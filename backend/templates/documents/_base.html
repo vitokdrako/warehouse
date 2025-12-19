@@ -42,6 +42,20 @@
         .highlight { background: #fffde7; }
         .warning { color: #d32f2f; }
         .success { color: #388e3c; }
+        /* Числа не переносяться на новий рядок */
+        .text-right, .text-center, td:last-child, th:last-child { white-space: nowrap; }
+        /* Мобільна адаптація */
+        @media screen and (max-width: 600px) {
+            body { padding: 10px; font-size: 9pt; }
+            .header { flex-direction: column; gap: 10px; }
+            .doc-info { text-align: left; }
+            table { font-size: 8pt; }
+            th, td { padding: 4px 6px; }
+            /* Числові колонки не переносяться */
+            td:nth-child(n+4), th:nth-child(n+4) { white-space: nowrap; min-width: 60px; }
+            /* Горизонтальний скрол для таблиці */
+            .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
         @media print { body { padding: 0; } .document { max-width: 100%; } }
     </style>
     {% block extra_styles %}{% endblock %}

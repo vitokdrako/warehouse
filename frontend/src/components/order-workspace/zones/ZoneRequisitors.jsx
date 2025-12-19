@@ -89,12 +89,14 @@ export default function ZoneRequisitors({
       ) : (
         <div className="flex flex-wrap gap-2">
           {requisitors.map((person) => {
-            const isSelected = selectedIds.includes(person.user_id)
+            const isSelected = isUserSelected(person.user_id)
+            // Прибираємо "Реквізитор" з імені для відображення
+            const displayName = person.full_name?.replace(/\s*реквізитор\s*/gi, '').trim() || person.full_name
             
             return (
               <button
                 key={person.user_id}
-                onClick={() => toggleRequisitor(person.user_id)}
+                onClick={() => toggleRequisitor(person.user_id, displayName)}
                 disabled={readOnly}
                 className={`
                   flex items-center gap-2 px-4 py-2.5 rounded-lg border font-medium text-sm
@@ -106,7 +108,7 @@ export default function ZoneRequisitors({
                   ${readOnly ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
                 `}
               >
-                <span>{person.full_name}</span>
+                <span>{displayName}</span>
                 {isSelected && <span className="text-corp-primary font-bold">✓</span>}
               </button>
             )

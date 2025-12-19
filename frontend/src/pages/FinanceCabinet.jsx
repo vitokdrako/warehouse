@@ -815,6 +815,21 @@ export default function FinanceCabinet() {
   return (
     <div className="min-h-screen bg-corp-bg-page font-montserrat">
       <CorporateHeader cabinetName="Фінансовий кабінет" showBackButton onBackClick={() => navigate('/manager')} />
+      
+      {/* Link to Analytics */}
+      <div className="bg-white border-b border-corp-border">
+        <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between">
+          <div className="text-sm text-slate-500">Управління фінансами замовлень</div>
+          <button
+            onClick={() => navigate('/analytics')}
+            className="flex items-center gap-2 rounded-xl bg-violet-100 px-4 py-2 text-sm font-medium text-violet-700 hover:bg-violet-200 transition"
+          >
+            <span>📊</span>
+            Аналітика та звіти
+          </button>
+        </div>
+      </div>
+      
       <TabBar tab={tab} setTab={setTab} />
       
       {tab === 'overview' && (loading.dashboard ? (

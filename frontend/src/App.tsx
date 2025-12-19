@@ -19,6 +19,7 @@ import ExtendedCatalog from './pages/ExtendedCatalog';
 import UniversalOpsCalendar from './pages/UniversalOpsCalendar';
 import CatalogBoard from './pages/CatalogBoard';
 import FinanceCabinet from './pages/FinanceCabinet';
+import FinanceDashboard from './pages/FinanceDashboard';
 // New unified workspace components
 import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';

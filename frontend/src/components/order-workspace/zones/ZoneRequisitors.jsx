@@ -39,19 +39,40 @@ export default function ZoneRequisitors({
     }
   }
   
-  const toggleRequisitor = (userId) => {
+  const toggleRequisitor = (userId, fullName) => {
     if (readOnly) return
     
-    const newSelection = selectedIds.includes(userId)
-      ? selectedIds.filter(id => id !== userId)
-      : [...selectedIds, userId]
+    // Зберігаємо об'єкти {user_id, name} замість просто ID
+    const isSelected = selectedIds.some(r => 
+      (typeof r === 'object' ? r.user_id : r) === userId
+    )
+    
+    let newSelection
+    if (isSelected) {
+      newSelection = selectedIds.filter(r => 
+        (typeof r === 'object' ? r.user_id : r) !== userId
+      )
+    } else {
+      newSelection = [...selectedIds, { user_id: userId, name: fullName }]
+    }
     
     onSelectionChange?.(newSelection)
   }
   
-  const selectedNames = requisitors
-    .filter(r => selectedIds.includes(r.user_id))
-    .map(r => r.full_name)
+  // Отримуємо імена - підтримуємо і старий формат (просто ID) і новий (об'єкти)
+  const selectedNames = selectedIds.map(r => {
+    if (typeof r === 'object' && r.name) {
+      return r.name
+    }
+    // Старий формат - шукаємо в завантажених реквізиторах
+    const found = requisitors.find(req => req.user_id === r)
+    return found?.full_name || r
+  }).filter(Boolean)
+  
+  // Перевірка чи обраний (підтримка обох форматів)
+  const isUserSelected = (userId) => selectedIds.some(r => 
+    (typeof r === 'object' ? r.user_id : r) === userId
+  )
   
   const tone = selectedIds.length > 0 ? 'ok' : 'warn'
   

@@ -628,7 +628,7 @@ function DamagePanel({ period }) {
       <Card>
         <div className="p-4 border-b font-semibold">По типах пошкоджень</div>
         <div className="p-4 flex flex-wrap gap-3">
-          {data.by_type.map((t, i) => (
+          {(data.by_type || []).map((t, i) => (
             <div key={i} className="rounded-xl border px-4 py-2">
               <div className="text-sm font-medium">{t.type}</div>
               <div className="text-xs text-slate-500">{t.count} випадків • {money(t.total)}</div>

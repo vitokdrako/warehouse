@@ -209,6 +209,18 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
     # Use customer_phone or phone fallback
     phone = row[8] or row[9] or ""
     
+    # Parse requisitors (row[16])
+    requisitors_json = row[16] if len(row) > 16 else None
+    requisitors = []
+    if requisitors_json:
+        try:
+            requisitors = json.loads(requisitors_json) if isinstance(requisitors_json, str) else requisitors_json
+        except:
+            requisitors = []
+    
+    # Preparation notes (row[17])
+    preparation_notes = row[17] if len(row) > 17 else ""
+    
     # Enrich items with location data
     for item in items:
         product_id = item.get('product_id') or item.get('inventory_id')

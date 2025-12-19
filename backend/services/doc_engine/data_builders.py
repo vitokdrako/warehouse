@@ -191,7 +191,8 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
             ic.items, ic.prepared_at, ic.issued_at,
             o.customer_name, o.customer_phone, o.phone,
             o.rental_start_date, o.rental_end_date, o.rental_days,
-            o.delivery_type, o.delivery_address, o.notes
+            o.delivery_type, o.delivery_address, o.notes,
+            ic.requisitors, ic.preparation_notes
         FROM issue_cards ic
         JOIN orders o ON o.order_id = ic.order_id
         WHERE ic.id = :id

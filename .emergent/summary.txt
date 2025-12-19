@@ -1,57 +1,73 @@
 <analysis>**original_problem_statement:**
-The user's initial request was to build a Rental Finance Engine. This has since evolved into a full-scale application with a sophisticated order management and document generation system.
+The user's initial goal was to finalize the Document Engine V2 and fix a critical bug blocking the order workflow. This evolved to include several major new features and refinements:
+- A complete email integration for sending documents to clients.
+- A new Decor Condition Log to track item damage history separately from client billing, with a corresponding UI in the Reaudit Cabinet.
+- Significant UX improvements to the order assembly and return processes, including adding responsible personnel tracking and quick-action buttons.
+- Multiple bug fixes and logic adjustments in document generation and data saving.
 
-**PRODUCT REQUIREMENTS (current phase):**
-1.  **Document Engine V2:** Implement a complete document generation system based on a highly detailed, 14-point specification provided by the user. This includes:
-    *   A dedicated UI panel for documents on the left side of the order workspace.
-    *   Dynamic availability of documents based on the order's current status (e.g., Invoice/Offer is available at Confirm status, Issue Act at Issue status).
-    *   An option to email each generated document to the client.
-    *   Document generation and payment actions must *not* block the user from advancing the order's status.
-2.  **Bug Fix: Ready for Issue Button:** The Готово до видачі (Ready for Issue) button is currently inactive, blocking the order lifecycle. This needs to be diagnosed and fixed.
-3.  **UI/UX Refinements:**
-    *   The document generation UI should be moved from the main body/footer of the order card to a dedicated panel on the left rail, just above the Operations Log ().
-    *   Ensure the UI updates in real-time after actions are performed, without requiring a manual page refresh.
+**PRODUCT REQUIREMENTS:**
+1.  **Document Engine V2 Finalization:**
+    *   Move the document UI to a dedicated left-side panel () across all order workspace views (, , ).
+    *   Dynamically show/hide documents based on the order's status (e.g., Picking List only during assembly, Checklist only after assembly).
+    *   Fix the inactive Готово до видачі (Ready for Issue) button, ensuring document status does not block workflow progression.
+2.  **Email Integration:**
+    *   Implement a full SMTP integration using user-provided credentials to send generated documents as email attachments.
+    *   The email's HTML body should be identical to the document's preview.
+    *   Ensure email templates are mobile-responsive, especially preventing numbers from wrapping.
+3.  **Decor Condition Log:**
+    *   Damages recorded during assembly () must be logged but **not** financially charged to the client.
+    *   Create a Журнал стану (Condition Log) UI in the Кабінет переобліку (Reaudit Cabinet) to view an item's full damage history.
+    *   This UI should include a side panel showing defect type, photo, date, responsible person, and order number.
+4.  **Workflow Enhancements:**
+    *   **Assembly ():**
+        *   Track the Комплектувальники (Assemblers) responsible for picking the order and save this information.
+        *   Display the assemblers' names in the Чеклист видачі (Issue Checklist) document.
+        *   Add a Зібрано ✓ (Picked ✓) button on each item for one-click quantity confirmation.
+    *   **Returns ():**
+        *   Track the Приймальники (Receivers) responsible for the return.
+        *   Add a Прийнято ✓ (Accepted ✓) button for quick confirmation of returned items.
+        *   Implement a Зберегти (Save) button to save return progress (quantities, receivers, fees) before final completion.
+5.  **Damage & Deposit Logic:**
+    *   In the damage modal, add a quantity field to specify how many of a multi-item set are damaged/need cleaning, and automatically calculate the total fee.
+    *   The Акт передачі (Issue Act) must show any  recorded during assembly.
+    *   The security deposit () calculation in documents must be 50% of the item's full damage price.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is a full-stack React/FastAPI/MySQL rental management system. Key features include a finance engine, order lifecycle management, and an admin panel.
-
-In this session, the agent has:
--   Successfully fixed user tracking in the order timeline by enriching the JWT token with the user's full name.
--   Expanded the Admin Panel into a dynamic, tab-based interface, adding placeholders for Payroll, Settings, and Logs.
--   Added backend test coverage for the existing Payroll and Vendor APIs.
--   Integrated the  component into the main application layout.
--   Implemented a basic frontend event bus () to provide real-time UI updates for financial transactions.
--   Scaffolded the backend for the new Document Engine V2: created 14 new HTML templates, updated the document registry (), and fixed the generation API () to work correctly with JSON payloads.
--   Fixed the corresponding frontend API call in  to send a JSON payload.
--   Created a new, empty component  intended to house the new document UI.
+The application is a full-stack React/FastAPI/MySQL rental management system. The agent has successfully completed several major tasks in this session:
+- The **Document Engine V2 UI** is now fully integrated into a left-side panel across all three order workspaces, dynamically showing documents based on status.
+- The critical **Ready for Issue button bug** has been resolved.
+- A systemic **frontend routing issue** caused by a misconfigured proxy was diagnosed (with help from subagents) and fixed by creating a proper  file.
+- Full **SMTP email integration** is complete. Documents can be emailed to clients, and the templates have been made mobile-responsive.
+- **Assembler and Receiver tracking** is implemented on the assembly and return pages, respectively. This data is saved to the database.
+- **UX improvements** like Picked ✓ and Accepted ✓ buttons have been added to streamline workflows.
+- A **Save Progress feature for returns** has been implemented with a new backend endpoint and a  database table.
+- The **Return Act and Issue Act documents** have been significantly enhanced to show responsible personnel, item locations, and pre-existing damage conditions.
+- The **security deposit calculation** has been corrected in the document data builders.
+- The foundation for the **Decor Condition Log** is in place, with a new UI component () added to the Reaudit Cabinet.
 
 **Last working item**:
--   **Last item agent was working:** Implementing the user's detailed specification for the Document Engine V2 and fixing associated bugs. The agent had just fixed the backend API and frontend service for document generation and created the new  component. The next step was to integrate this new component into the layout and fix the blocked Ready for Issue button.
+-   **Last item agent was working:** Implementing the user's request to add a quantity field to the damage/cleaning modal () to allow partial damage reporting and automatic fee calculation. The agent had started by analyzing the component files.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. After the UI is built, the agent needs to verify that the correct documents appear at each order status, that generation works, and that the Ready for Issue button is now active and functional.
+-   **Which testing method agent to use?** Frontend testing agent to verify the new quantity field in the modal, the automatic calculation, and that the correct data is saved.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0) Implement Document Engine V2 UI and Fix Related Bugs**
-    -   **Description:** The user has provided a detailed specification for a new document engine but reported that document generation is not working from the UI and the Ready for Issue button is inactive, blocking the workflow.
-    -   **Attempted fixes:**
-        -   The backend API for document generation was fixed and tested.
-        -   The frontend  service was fixed to match the new API contract.
-        -   A new component, , was created as a placeholder for the new UI.
-        -   The agent identified the logic for the Ready for Issue button in  as the likely source of the block.
+-   **Issue 1: (P0) Implement Quantity in Damage Modal**
+    -   **Description:** The user wants to specify a quantity when reporting damage or cleaning for items that have multiple units in an order (e.g., cleaning fee for 10 out of 30 candlesticks). The system should then auto-calculate the total fee.
+    -   **Attempted fixes:** The agent started analyzing  but has not yet implemented the changes.
     -   **Next debug checklist:**
-        1.  Add the new  component to  above .
-        2.  Implement the logic inside  to fetch available document types for the current order status from  and render a button for each.
-        3.  For each document button, add a Generate/Preview action and a (placeholder) Email to client action.
-        4.  In , modify the  condition to remove any dependency on document generation, as requested by the user.
-        5.  Verify that payment actions and document generation do not block status change buttons.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical workflow for the user. Fixing it will unblock the entire order fulfillment process and implement a core business requirement.
+        1.  In , add a new state for  and an input field in the UI.
+        2.  Update the  to include this quantity.
+        3.  Modify the fee calculation logic to be .
+        4.  Ensure the  function passes the quantity along with the rest of the damage record.
+        5.  Verify the backend () can store this extra information (it may require a schema/model update).
+    -   **Why fix this issue and what will be achieved with the fix?** It will provide more granular control over damage/cleaning assessment and automate fee calculation, saving user time and reducing errors.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Should Test frontend/backend/both after fix?** Both. Frontend for UI/calculation, backend to ensure data is saved correctly.
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
@@ -59,21 +75,37 @@ In this session, the agent has:
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P1) **Email Document Integration:** Implement the Email to client functionality for generated documents. This will require choosing an email provider (like Resend or SendGrid), using , and creating a backend endpoint to handle sending.
-    -   (P1) **Telegram Bot Integration:** The user mentioned a Telegram bot for client communication, which could be a future integration task.
+    -   (P1) **Complete Decor Condition Log UI:** The  is created but empty. It needs to be implemented to fetch and display the damage history for a selected product from the  endpoint.
+    -   (P1) **Verify Assembler/Receiver Info in Documents:** Ensure the  (assemblers) and  are correctly displayed in the Checklist and Return Act documents after being saved.
 -   **Future Tasks:**
+    -   (P2) **Telegram Bot Integration:** The user provided a , indicating a future requirement for Telegram integration.
     -   (P2) Develop detailed financial reports (e.g., Cost per Order, Inventory ROI).
-    -   (P2) Re-address mobile responsiveness for the entire application.
     -   (P3) Develop an admin interface for editing document templates.
     -   (P3) Integrate digital signature capabilities.
 
 **Completed work in this session**
--   **Timeline User Tracking (DONE):** Fixed  inserts and enriched the JWT token to log and display the user's full name () for all actions.
--   **Admin Panel Expansion (DONE):** Refactored  to be dynamic and added new tabs for Payroll, Settings, and System Logs.
--   **Backend Test Coverage (DONE):** Created  and  to ensure API stability.
--   **LegalFooter Integration (DONE):** The  component is now live across the application.
--   **Real-Time UI Updates (Initial Phase DONE):** A simple  was created and implemented for financial components (, ) to refresh data after payments.
--   **Document Engine V2 Backend (DONE):** Created 14 new HTML templates and updated the backend registry and data builders. The generation API endpoint is fixed and functional.
+-   **Document Engine V2 UI (DONE):** Integrated  into , , and  and removed the old .
+-   **Ready for Issue Button (DONE):** Unblocked the button by relaxing its enabling logic.
+-   **Systemic Routing/Proxy Fix (DONE):** Resolved a critical issue where all workspace pages were redirecting to  by implementing .
+-   **SMTP Email Integration (DONE):** Implemented document sending via email using user-provided SMTP credentials.
+-   **Mobile Email Template Fix (DONE):** Added CSS to prevent number wrapping in emailed documents.
+-   **Assembler & Receiver Tracking (DONE):** Implemented UI and backend logic to save responsible personnel for assembly and returns. Fixed a 422 error by adding the  column to the  table and making the Pydantic model more flexible.
+-   **Return Workflow Save Progress (DONE):** Created a  table and a  API endpoint to allow saving incomplete returns.
+-   **UX Quick-Action Buttons (DONE):** Added Зібрано ✓ (Picked) and Прийнято ✓ (Accepted) buttons to streamline workflows.
+-   **Document Logic & Content (DONE):**
+    -   Corrected the security deposit () formula.
+    -   Enhanced Issue Act to show .
+    -   Overhauled Return Act to be based on the new  data.
+    -   Fixed Jinja2  errors in multiple templates.
+    -   Implemented a browser-based Print to PDF fallback since 
+-----
+
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- dependencies were missing.
+-   **Pre-Issue Damage Saving (DONE):** Fixed a bug where  was not being included in the save payload.
 
 **Earlier issues found/mentioned but not fixed**
 -   None.
@@ -82,58 +114,98 @@ In this session, the agent has:
 -   None.
 
 **Code Architecture**
-
+requisitors
 
 **Key Technical Concepts**
--   **Specification-Driven Development:** The agent is working off a very detailed, multi-page specification from the user for the document engine, dictating UI, logic, and triggers.
--   **Frontend Event Bus:** A simple custom event emitter () was introduced to trigger UI refreshes and solve the stale data problem in a lightweight manner.
--   **Dynamic UI Configuration:** The  was refactored to use a configuration array for its tabs, making it much more extensible.
--   **JWT Payload Enrichment:** The JWT token was updated in  to include the user's full name, allowing for more precise user tracking throughout the application.
+-   **Frontend Proxy Configuration:** Debugged and resolved a critical  proxy issue by moving configuration from  to a dedicated  file.
+-   **SMTP Integration:** Implemented email sending using Python's  and user credentials from .
+-   **Robust Document Generation:** Implemented a graceful fallback for PDF generation. When 
+-----
+
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- fails due to missing system dependencies, the system provides the raw HTML and instructs the user on how to use the browser's Print to PDF feature.
+-   **Jinja2 Template Debugging:** Fixed multiple server-side rendering errors by changing data access from dot notation () to bracket notation () for dictionary-like objects.
+-   **Incremental Data Saving:** Introduced a new pattern for saving partial progress (e.g., returns) to a separate table () before the final state transition.
+-   **Dynamic Component Logic:** Heavily utilized conditional rendering in React () to tailor the UI based on application state ().
 
 **key DB schema**
--   No database schema changes were made in this session.
+-   **issue_cards:** Added a new column  (TEXT) to store a JSON array of assemblers.
+-   **return_cards:** **NEW TABLE** created to store progress of returns.
+    -   uid=0(root) gid=0(root) groups=0(root) (VARCHAR, PK)
+    -    (INT)
+    -    (JSON)
+    -    (JSON)
+    -    (TEXT)
+    -   , ,  (DECIMAL)
+    -   ,  (DATETIME)
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
--   **Backend (Document Engine):** , 
--   **Backend (Tests):** , 
--   **Frontend (New UI):**  (to be built),  (refactored)
--   **Frontend (Bug Fix):** , 
--   **Frontend (Real-time):** 
+-   **Core Frontend Workspaces:** , , 
+-   **Key Frontend Components:** , 
+-   **Core Backend Logic:** , , 
+-   **Email Integration:** , 
+-   **Environment/Config:** , 
 
 **Areas that need refactoring**:
--   The  solution is a good first step for real-time updates. However, for a more scalable and robust solution, the application would benefit from a dedicated data-fetching library like React Query or SWR. This would centralize caching, refetching, and state synchronization logic.
+-   The Pydantic model for  was made to accept  for the  field as a quick fix. It should be properly typed to expect a  (a list of objects with id and name) for better validation and clarity.
+-    is a very large component. The new  was a good step, but more of the logic within  could be broken down into smaller, more manageable components.
 
 **key api endpoints**
--   : **Modified** to accept a JSON body. This is the core endpoint for the new document engine.
--    and  endpoints now have Pytest coverage.
+-   : Modified to accept and save .
+-   : **NEW** endpoint to generate and email a document.
+-   : **NEW** endpoint to save partial return data to the  table.
 
 **Critical Info for New Agent**
 -   **You MUST respond in українська (Ukrainian).**
--   Your immediate and highest priority is to fully implement the **Document Engine V2** as specified by the user. Refer to their detailed scenario-based messages.
--   The implementation involves two main parts:
-    1.  **Building the UI:** Populate the new  component. It must dynamically show document buttons based on the order's status.
-    2.  **Fixing the Bug:** The Готово до видачі (Ready for Issue) button in  is blocked. You must fix its logic and ensure document status does not prevent order progression.
--   The user has explicitly requested an email to client feature for documents, which will be the next major task and will require a new integration (e.g., Resend).
+-   The immediate priority is the **pending issue: adding a quantity field to the damage modal**.
+-   The system has a fallback for PDF generation because 
+-----
 
-**Last 10 User Messages and any pending user messages**
-1.  **User:** Provided a complete, final list of 14 document types, their generation triggers, and printing requirements. (Status: **IN PROGRESS**)
-2.  **User:** Confirmed to generate all 14 templates and move the document UI out of the card body/footer. (Status: **IN PROGRESS**)
-3.  **User:** Confirmed the next tasks are real-time UI updates and integrating the . (Status: **RESOLVED**)
-4.  **User:** Confirmed the next tasks are creating tests for Payroll/Vendors and expanding the Admin Panel. (Status: **RESOLVED**)
-5.  **User:** Reported that document generation has stopped working and the Ready for issue button is inactive. (Status: **IN PROGRESS**)
-6.  **User:** Asked to define where documents should be displayed. (Status: **AWAITING IMPLEMENTATION**)
-7.  **User:** Provided an extremely detailed, step-by-step scenario of the entire order lifecycle, specifying exactly which document should be available at which stage. This is the primary specification to follow. (Status: **IN PROGRESS**)
-8.  **User (pending):** Needs the agent to implement the document UI on the left rail, ensure it doesn't block other buttons, and add an email option. (Status: **PENDING**)
-9.  **User (pending):** Needs the Ready for Issue button to be unblocked. (Status: **PENDING**)
-10. **Agent:** Asked for clarification on where to place the document UI. (Status: **ANSWERED by user**)
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- dependencies are not installed. It opens an HTML preview and instructs the user to print to PDF. Do not try to fix 
+-----
+
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- by reinstalling it; work with the existing fallback.
+-   The frontend routing was recently fixed via . Be mindful of this file if any new API routes are added or if routing issues reappear.
+-   Data for incomplete returns is now stored in a new  table. The Return Act document should read from this table.
+
+**documents and test_reports created in this job**
+- None.
+
+**Last 10 User Messages and any pending HUMAN messages**
+-   Коть а коли ми зафіксували пошкодження на режимі видачі то чи може система перевіряти це і у акті передачі позначати є зафіксовані пошкодження... (Request to show pre-issue damages in the Issue Act).
+-   Видача 7004 я зафіксувала пошкодження у кензан KE001. Але акт передачі показує без дефектів цю позицію... (Bug report: pre-issue damages are not being saved/displayed).
+-   Давай тепер підшаманимо картку повернення. Треба додати людей хто приймає замовлення... (Request to add Receivers and an Accepted button to the return workspace).
+-   Тепер у футері треба додати логіку збереження повернення... (Request to add a Save button to the return workspace).
+-   Думаю акт приймання має бути по логіці такий самий як акт видачі... (Request to overhaul the Return Act document).
+-   Оу у зафіксувати пошкодження має бути ще кількість... (Request to add a quantity field to the damage modal - **This is the current task**).
+-   Зрозуміло! Додам поле кількості в модалку пошкоджень та автоматичний розрахунок (Agent acknowledging the last request).
+-   Коть а в режимі комплектації чек лісті видачі генерується але не скачуєтьс і превью не вантажиться (Bug report: PDF/preview not working).
+-   ERROR in ./src/components/order-workspace/LeftRailDocuments.jsx... (User forwarding a frontend compilation error).
+-   Так коть, тепер давай в режимі комплектації залишком із документів тільки лист комплектації інші документи сховаємо... (Request to change document visibility based on order status).
 
 **Project Health Check:**
--   **Broken:**
-    -   The UI for document generation is non-existent/broken.
-    -   The Ready for Issue button is inactive, blocking a critical user workflow.
+-   **Broken:** The PDF generation via 
+-----
+
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- is non-functional due to missing system dependencies, but a stable browser-based workaround is in place.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
@@ -144,18 +216,18 @@ WeasyPrint could not import some external libraries. Please carefully follow the
 https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
 https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
 
------ (for PDF generation)
--   **Emergent LLM Key Applicability:** None currently. An email integration (e.g., , ) is required for a future task, which will need an API key from the user.
+----- (for PDF generation, currently non-operational with a fallback).
+-   **SMTP:** Integration with a custom SMTP server () for sending emails. Credentials are in .
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, for backend API changes and initial eventBus implementation.
--   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** , 
--   **Known regressions:** The document generation UI, which previously existed in some form, is now broken pending the implementation of the new  component.
+-   **Testing agent used after significant changes:** YES, the  and  were instrumental in diagnosing and fixing the frontend proxy/routing issue.
+-   **Troubleshoot agent used after agent stuck in loop:** YES, for the proxy issue.
+-   **Test files created:** None.
+-   **Known regressions:** None. The previous major regression (broken document UI) has been fixed.
 
 **Credentials to test flow:**
 -   email: 
 -   password: 
 
 **What agent forgot to execute**
--   The agent was actively implementing the user's request for the Document Engine V2. The main pending task is to complete the frontend UI for it () and fix the related Ready for Issue button bug in .</analysis>
+- The agent was in the middle of implementing the quantity field in the . The frontend UI and backend logic for this feature are not yet complete.</analysis>

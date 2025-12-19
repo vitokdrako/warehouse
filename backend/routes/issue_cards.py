@@ -156,6 +156,14 @@ def parse_issue_card(row, db: Session = None):
     # Parse manager_notes if exists
     manager_notes = row[14] if len(row) > 14 else None
     
+    # Parse requisitors (колонка 21 - requisitors)
+    requisitors = []
+    if len(row) > 21 and row[21]:
+        try:
+            requisitors = json.loads(row[21]) if isinstance(row[21], str) else row[21]
+        except:
+            requisitors = []
+    
     return {
         "id": row[0],
         "order_id": row[1],
@@ -172,6 +180,7 @@ def parse_issue_card(row, db: Session = None):
         "updated_at": row[12].isoformat() if row[12] else None,
         "checklist": checklist,
         "manager_notes": manager_notes,
+        "requisitors": requisitors,
         **order_data  # Додати всі поля замовлення
     }
 

@@ -341,7 +341,7 @@ function OrdersPanel({ period }) {
               </tr>
             </thead>
             <tbody>
-              {data.data.map((row, i) => (
+              {(data.data || []).map((row, i) => (
                 <tr key={i} className="border-t hover:bg-slate-50">
                   <td className="p-3">{row.period}</td>
                   <td className="p-3 text-right">{row.orders_count}</td>

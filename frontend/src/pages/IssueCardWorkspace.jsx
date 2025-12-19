@@ -277,9 +277,11 @@ export default function IssueCardWorkspace() {
           qty: it.qty,
           picked_qty: it.picked_qty,
           scanned: it.scanned,
+          serials: it.serials,
           packaging: it.packaging,
-          location_zone: it.location?.zone,
-          location_state: it.location?.state
+          pre_damage: it.pre_damage || [],
+          location_zone: it.location_zone || it.location?.zone,
+          location_state: it.location_state || it.location?.state
         })),
         checklist: checklistObj,
         preparation_notes: notes,

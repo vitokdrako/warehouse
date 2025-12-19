@@ -135,22 +135,33 @@ export default function LeftRailDocuments({
       if (action === 'preview' && data.html_content) {
         // Відкрити preview
         const win = window.open('', '_blank')
-        win.document.write(data.html_content)
-        win.document.close()
+        if (win) {
+          win.document.write(data.html_content)
+          win.document.close()
+        } else {
+          // Popup заблоковано - показати в новій вкладці через data URL
+          const blob = new Blob([data.html_content], { type: 'text/html' })
+          const url = URL.createObjectURL(blob)
+          window.open(url, '_blank')
+        }
       } else if (action === 'pdf' && data.download_url) {
         window.open(`${BACKEND_URL}${data.download_url}`, '_blank')
       } else if (action === 'print' && data.html_content) {
         // Друк
         const printWin = window.open('', '_blank')
-        printWin.document.write(`
-          <!DOCTYPE html>
-          <html><head><title>Друк</title>
-          <style>@media print { @page { size: A4; margin: 15mm; } }</style>
-          </head><body>${data.html_content}
-          <script>window.onload=function(){window.print();}</script>
-          </body></html>
-        `)
-        printWin.document.close()
+        if (printWin) {
+          printWin.document.write(`
+            <!DOCTYPE html>
+            <html><head><title>Друк</title>
+            <style>@media print { @page { size: A4; margin: 15mm; } }</style>
+            </head><body>${data.html_content}
+            <script>window.onload=function(){window.print();}</script>
+            </body></html>
+          `)
+          printWin.document.close()
+        } else {
+          alert('Дозвольте popup вікна для друку документів')
+        }
       }
       
       setGeneratedDocs(prev => ({ ...prev, [docType]: data.doc_number }))

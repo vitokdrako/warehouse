@@ -29,16 +29,17 @@
 </table>
 
 <h2>Товари</h2>
+<div class="table-wrap">
 <table>
     <thead>
         <tr>
-            <th style="width:40px">№</th>
+            <th style="width:30px">№</th>
             <th>Найменування</th>
-            <th style="width:60px">SKU</th>
-            <th style="width:50px">К-сть</th>
-            <th style="width:80px">Ціна/день</th>
-            <th style="width:90px">Сума оренди</th>
-            <th style="width:90px">Застава</th>
+            <th style="min-width:50px">SKU</th>
+            <th style="min-width:40px">К-сть</th>
+            <th style="min-width:70px">Ціна/день</th>
+            <th style="min-width:80px">Оренда</th>
+            <th style="min-width:80px">Застава</th>
         </tr>
     </thead>
     <tbody>
@@ -48,13 +49,14 @@
             <td>{{ item.get('name', '') }}</td>
             <td>{{ item.get('sku', '') }}</td>
             <td class="text-center">{{ item.get('quantity') or item.get('qty', 1) }}</td>
-            <td class="text-right">{{ item.price_per_day|money }} ₴</td>
-            <td class="text-right">{{ item.total_rent|money }} ₴</td>
-            <td class="text-right">{{ item.total_deposit|money }} ₴</td>
+            <td class="text-right">{{ "%.2f"|format(item.price_per_day) }}&nbsp;₴</td>
+            <td class="text-right">{{ "%.2f"|format(item.total_rent) }}&nbsp;₴</td>
+            <td class="text-right">{{ "%.2f"|format(item.total_deposit) }}&nbsp;₴</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
+</div>
 
 <table class="totals">
     <tr><td style="width:70%"></td><td>Оренда:</td><td class="text-right">{{ totals.rent|money }} ₴</td></tr>

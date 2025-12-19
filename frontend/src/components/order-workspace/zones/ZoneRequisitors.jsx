@@ -64,7 +64,7 @@ export default function ZoneRequisitors({
       {loading ? (
         <div className="text-center py-4 text-corp-text-muted">Завантаження...</div>
       ) : requisitors.length === 0 ? (
-        <div className="text-center py-4 text-corp-text-muted">Немає доступних реквізиторів</div>
+        <div className="text-center py-4 text-corp-text-muted">Немає доступних комплектувальників</div>
       ) : (
         <div className="flex flex-wrap gap-2">
           {requisitors.map((person) => {

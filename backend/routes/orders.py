@@ -1871,6 +1871,61 @@ async def send_to_assembly(
     return await move_to_preparation(order_id, None, current_user, db)
 
 
+@decor_router.put("/{order_id}/return-progress")
+async def save_return_progress(
+    order_id: int,
+    progress_data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Зберегти прогрес повернення (до завершення)
+    Дозволяє зберігати проміжний стан для генерації документів
+    """
+    try:
+        items = progress_data.get('items', [])
+        receivers = progress_data.get('receivers', [])
+        notes = progress_data.get('notes', '')
+        fees = progress_data.get('fees', {})
+        
+        # Зберігаємо прогрес в return_cards або orders
+        # Спочатку перевіримо чи є return_cards таблиця
+        try:
+            db.execute(text("""
+                INSERT INTO return_cards (order_id, items, receivers, notes, fees, created_at, updated_at)
+                VALUES (:order_id, :items, :receivers, :notes, :fees, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE 
+                    items = :items,
+                    receivers = :receivers, 
+                    notes = :notes,
+                    fees = :fees,
+                    updated_at = NOW()
+            """), {
+                "order_id": order_id,
+                "items": json.dumps(items),
+                "receivers": json.dumps(receivers),
+                "notes": notes,
+                "fees": json.dumps(fees)
+            })
+        except Exception as e:
+            # Якщо таблиці немає - зберігаємо в orders.return_data
+            db.execute(text("""
+                UPDATE orders 
+                SET notes = :notes,
+                    updated_at = NOW()
+                WHERE order_id = :order_id
+            """), {
+                "order_id": order_id,
+                "notes": notes
+            })
+        
+        db.commit()
+        return {"success": True, "message": "Прогрес збережено"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка збереження: {str(e)}")
+
+
 @decor_router.post("/{order_id}/complete-return")
 async def complete_return(
     order_id: int,

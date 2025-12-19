@@ -349,3 +349,119 @@ def get_document_by_id(db: Session, document_id: str) -> dict:
         "html_content": row[8],
         "created_at": row[9]
     }
+
+
+
+def get_latest_document(db: Session, entity_type: str, entity_id: str, doc_type: str) -> dict:
+    """Отримує останній згенерований документ певного типу для сутності"""
+    
+    result = db.execute(text("""
+        SELECT id, doc_type, doc_number, entity_type, entity_id,
+               version, status, signed_at, html_content, created_at
+        FROM documents
+        WHERE entity_type = :entity_type 
+          AND entity_id = :entity_id 
+          AND doc_type = :doc_type
+        ORDER BY version DESC
+        LIMIT 1
+    """), {"entity_type": entity_type, "entity_id": entity_id, "doc_type": doc_type})
+    
+    row = result.fetchone()
+    if not row:
+        return None
+    
+    return {
+        "id": row[0],
+        "doc_type": row[1],
+        "doc_number": row[2],
+        "entity_type": row[3],
+        "entity_id": row[4],
+        "version": row[5],
+        "status": row[6],
+        "signed_at": row[7],
+        "html_content": row[8],
+        "created_at": row[9]
+    }
+
+
+# ============ Останній документ для перегляду ============
+
+@router.get("/latest/{entity_type}/{entity_id}/{doc_type}")
+async def get_latest_entity_document(
+    entity_type: str,
+    entity_id: str,
+    doc_type: str,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримує останній згенерований документ певного типу.
+    Використовується для перегляду без повторної генерації.
+    """
+    doc = get_latest_document(db, entity_type, entity_id, doc_type)
+    
+    if not doc:
+        return {
+            "exists": False,
+            "message": "Документ ще не згенеровано"
+        }
+    
+    config = DOC_REGISTRY.get(doc_type, {})
+    
+    return {
+        "exists": True,
+        "id": doc["id"],
+        "doc_type": doc["doc_type"],
+        "doc_type_name": config.get("name", doc_type),
+        "doc_number": doc["doc_number"],
+        "version": doc["version"],
+        "status": doc["status"],
+        "signed_at": doc["signed_at"].isoformat() if doc["signed_at"] else None,
+        "created_at": doc["created_at"].isoformat() if doc["created_at"] else None,
+        "preview_url": f"/api/documents/{doc['id']}/preview",
+        "pdf_url": f"/api/documents/{doc['id']}/pdf",
+        "html_content": doc["html_content"]
+    }
+
+
+@router.get("/history/{entity_type}/{entity_id}/{doc_type}")
+async def get_document_history(
+    entity_type: str,
+    entity_id: str,
+    doc_type: str,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримує історію всіх версій документа певного типу.
+    """
+    result = db.execute(text("""
+        SELECT id, doc_type, doc_number, version, status, signed_at, created_at
+        FROM documents
+        WHERE entity_type = :entity_type 
+          AND entity_id = :entity_id 
+          AND doc_type = :doc_type
+        ORDER BY version DESC
+    """), {"entity_type": entity_type, "entity_id": entity_id, "doc_type": doc_type})
+    
+    config = DOC_REGISTRY.get(doc_type, {})
+    
+    versions = []
+    for row in result:
+        versions.append({
+            "id": row[0],
+            "doc_type": row[1],
+            "doc_type_name": config.get("name", doc_type),
+            "doc_number": row[2],
+            "version": row[3],
+            "status": row[4],
+            "signed_at": row[5].isoformat() if row[5] else None,
+            "created_at": row[6].isoformat() if row[6] else None,
+            "preview_url": f"/api/documents/{row[0]}/preview",
+            "pdf_url": f"/api/documents/{row[0]}/pdf"
+        })
+    
+    return {
+        "doc_type": doc_type,
+        "doc_type_name": config.get("name", doc_type),
+        "total_versions": len(versions),
+        "versions": versions
+    }

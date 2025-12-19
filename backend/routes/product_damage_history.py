@@ -103,7 +103,9 @@ async def create_damage_record(
     - damage_type: Тип пошкодження
     - damage_code: Код типу пошкодження
     - severity: 'low', 'medium', 'high', 'critical'
-    - fee: Сума збитку
+    - fee: Загальна сума збитку (fee_per_item × qty)
+    - fee_per_item: Сума за одиницю (опціонально)
+    - qty: Кількість пошкоджених одиниць (за замовчуванням 1)
     - photo_url: URL фото (опціонально)
     - note: Примітка (опціонально)
     - created_by: Хто зафіксував (опціонально)
@@ -113,17 +115,24 @@ async def create_damage_record(
         damage_id = str(uuid.uuid4())
         processing_type = damage_data.get("processing_type", "none")
         
+        # Отримуємо qty та fee_per_item
+        qty = damage_data.get("qty", 1)
+        fee = damage_data.get("fee", 0.0)
+        fee_per_item = damage_data.get("fee_per_item", fee)  # Якщо не передано, використовуємо fee
+        
         db.execute(text("""
             INSERT INTO product_damage_history (
                 id, product_id, sku, product_name, category,
                 order_id, order_number, stage,
                 damage_type, damage_code, severity, fee,
+                fee_per_item, qty,
                 photo_url, note, created_by, created_at,
                 processing_type, processing_status
             ) VALUES (
                 :id, :product_id, :sku, :product_name, :category,
                 :order_id, :order_number, :stage,
                 :damage_type, :damage_code, :severity, :fee,
+                :fee_per_item, :qty,
                 :photo_url, :note, :created_by, NOW(),
                 :processing_type, :processing_status
             )
@@ -139,7 +148,9 @@ async def create_damage_record(
             "damage_type": damage_data.get("damage_type"),
             "damage_code": damage_data.get("damage_code"),
             "severity": damage_data.get("severity", "low"),
-            "fee": damage_data.get("fee", 0.0),
+            "fee": fee,
+            "fee_per_item": fee_per_item,
+            "qty": qty,
             "photo_url": damage_data.get("photo_url"),
             "note": damage_data.get("note"),
             "created_by": damage_data.get("created_by", "system"),
@@ -151,8 +162,11 @@ async def create_damage_record(
         
         return {
             "success": True,
-            "message": "Пошкодження зафіксовано",
-            "damage_id": damage_id
+            "message": f"Пошкодження зафіксовано ({qty} шт × ₴{fee_per_item} = ₴{fee})",
+            "damage_id": damage_id,
+            "qty": qty,
+            "fee": fee,
+            "fee_per_item": fee_per_item
         }
         
     except Exception as e:

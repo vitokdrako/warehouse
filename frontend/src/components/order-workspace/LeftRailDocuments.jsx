@@ -207,12 +207,33 @@ export default function LeftRailDocuments({
       if (!genResponse.ok) throw new Error('Помилка генерації')
       const genData = await genResponse.json()
       
-      // TODO: Implement email sending endpoint
-      // Поки що показуємо preview з можливістю копіювання
-      alert(`📧 Документ ${genData.doc_number} готовий до відправки на ${customerEmail}\n\nФункція email буде додана пізніше.`)
+      // Відправляємо документ на email
+      const emailResponse = await fetch(`${BACKEND_URL}/api/email/send-document`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          to_email: customerEmail,
+          document_type: docType,
+          document_html: genData.html_content,
+          order_number: orderNumber || `#${orderId}`,
+          customer_name: null // TODO: pass customer name
+        })
+      })
+      
+      if (!emailResponse.ok) {
+        const errData = await emailResponse.json()
+        throw new Error(errData.detail || 'Помилка відправки email')
+      }
+      
+      const emailResult = await emailResponse.json()
+      alert(`✅ ${emailResult.message}`)
       
     } catch (err) {
       setError(err.message)
+      alert(`❌ Помилка: ${err.message}`)
     } finally {
       setSending(null)
     }

@@ -1,71 +1,56 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react'
-import { FileText, Printer, Download, Mail, Eye, ChevronDown, ChevronUp } from 'lucide-react'
+import { FileText, Printer, Download, Mail, Eye, ChevronDown, ChevronUp, RefreshCw, History, Clock } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 /**
- * LeftRailDocuments - Документи в лівій панелі
- * Показує документи відповідно до статусу замовлення
- * Не блокує жодних дій - тільки для генерації/друку
+ * LeftRailDocuments - Документи з версіонуванням
+ * 
+ * Нова логіка:
+ * - "Перегляд" - показує ОСТАННІЙ згенерований документ
+ * - "Генерувати" - створює НОВУ версію документа
+ * - "Історія" - показує всі версії
  */
 
 // Документи по статусах замовлення
 const DOCS_BY_STATUS = {
-  // Draft/Waiting - тільки preview рахунку
   'pending': [],
   'awaiting_customer': [],
   'draft': [],
-  
-  // Confirm - рахунок-оферта
   'confirmed': [
-    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', printRequired: false, emailRequired: true },
+    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
   ],
-  
-  // Packing/Processing - тільки лист комплектації
   'processing': [
     { type: 'picking_list', name: 'Лист комплектації', icon: '📦', printRequired: true, internal: true },
   ],
-  
-  // Ready for issue - чеклист видачі + документи клієнта
   'ready_for_issue': [
     { type: 'issue_checklist', name: 'Чеклист видачі', icon: '✅', printRequired: true, internal: true },
     { type: 'contract_rent', name: 'Договір оренди', icon: '📋', printRequired: true },
     { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
     { type: 'issue_act', name: 'Акт передачі', icon: '📤', printRequired: true, critical: true },
   ],
-  
-  // Issued / On rent
   'issued': [
-    { type: 'issue_act', name: 'Акт передачі', icon: '📤', printRequired: true },
-    { type: 'rental_extension', name: 'Додаткова угода', icon: '📝', showIf: 'dates_changed' },
+    { type: 'issue_act', name: 'Акт передачі', icon: '📤' },
   ],
   'on_rent': [
     { type: 'issue_act', name: 'Акт передачі', icon: '📤' },
-    { type: 'rental_extension', name: 'Додаткова угода', icon: '📝' },
   ],
-  
-  // Returning
   'returning': [
-    { type: 'partial_return_act', name: 'Акт часткового поверн.', icon: '📦', printRequired: true },
     { type: 'return_act', name: 'Акт приймання', icon: '📥', printRequired: true, critical: true },
   ],
   'returned': [
     { type: 'return_act', name: 'Акт приймання', icon: '📥', printRequired: true },
     { type: 'damage_report', name: 'Акт пошкоджень', icon: '⚠️' },
-    { type: 'damage_settlement_act', name: 'Акт утримання', icon: '💰' },
-    { type: 'damage_invoice', name: 'Рахунок на пошкодження', icon: '💳' },
   ],
-  
-  // Completed
   'completed': [
-    { type: 'deposit_refund_act', name: 'Акт поверн. застави', icon: '✅', printRequired: true },
-    { type: 'damage_settlement_act', name: 'Акт утримання', icon: '💰' },
+    { type: 'deposit_refund_act', name: 'Акт поверн. застави', icon: '✅' },
   ],
-  
-  // Cancelled
   'cancelled': [],
 }
+
+// Документи які потребують issueCardId
+const ISSUE_CARD_DOCS = ['issue_act', 'picking_list', 'issue_checklist']
 
 export default function LeftRailDocuments({ 
   orderId, 
@@ -78,28 +63,74 @@ export default function LeftRailDocuments({
   const [expanded, setExpanded] = useState(true)
   const [generating, setGenerating] = useState(null)
   const [sending, setSending] = useState(null)
-  const [generatedDocs, setGeneratedDocs] = useState({})
   const [error, setError] = useState(null)
+  const [docVersions, setDocVersions] = useState({}) // { docType: { exists, version, id, ... } }
+  const [historyModal, setHistoryModal] = useState(null) // docType для показу історії
+  const [historyData, setHistoryData] = useState([])
 
   const getToken = () => localStorage.getItem('token')
 
-  // Отримати документи для поточного статусу
-  const getAvailableDocs = () => {
-    return DOCS_BY_STATUS[orderStatus] || DOCS_BY_STATUS['pending'] || []
+  // Завантажити інформацію про останні версії документів
+  const loadDocumentVersions = async () => {
+    const docs = DOCS_BY_STATUS[orderStatus] || []
+    const versions = {}
+    
+    for (const doc of docs) {
+      const entityType = ISSUE_CARD_DOCS.includes(doc.type) ? 'issue_card' : 'order'
+      const entityId = ISSUE_CARD_DOCS.includes(doc.type) ? (issueCardId || orderId) : orderId
+      
+      if (!entityId) continue
+      
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/documents/latest/${entityType}/${entityId}/${doc.type}`, {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          versions[doc.type] = data
+        }
+      } catch (e) {
+        console.error(`Error loading version for ${doc.type}:`, e)
+      }
+    }
+    
+    setDocVersions(versions)
   }
 
-  // Документи які потребують issueCardId замість orderId
-  const ISSUE_CARD_DOCS = ['issue_act', 'picking_list', 'issue_checklist']
-  
-  // Генерація документа
-  const generateDocument = async (docType, action = 'preview') => {
+  useEffect(() => {
+    if (orderId && orderStatus) {
+      loadDocumentVersions()
+    }
+  }, [orderId, orderStatus, issueCardId])
+
+  // Переглянути ОСТАННІЙ документ (без генерації)
+  const viewLastDocument = async (docType) => {
+    const docInfo = docVersions[docType]
+    
+    if (!docInfo?.exists) {
+      alert('Документ ще не згенеровано. Натисніть "Генерувати" для створення.')
+      return
+    }
+    
+    // Відкрити preview
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.write(docInfo.html_content)
+      win.document.close()
+    } else {
+      const blob = new Blob([docInfo.html_content], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+    }
+  }
+
+  // Генерувати НОВИЙ документ
+  const generateNewDocument = async (docType) => {
     setGenerating(docType)
     setError(null)
     
-    // Визначаємо правильний entity_id
-    const entityId = ISSUE_CARD_DOCS.includes(docType) 
-      ? (issueCardId || orderId) 
-      : orderId
+    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue_card' : 'order'
+    const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId
     
     if (!entityId) {
       setError('ID не знайдено')
@@ -117,7 +148,7 @@ export default function LeftRailDocuments({
         body: JSON.stringify({
           doc_type: docType,
           entity_id: String(entityId),
-          format: action === 'pdf' ? 'pdf' : 'html',
+          format: 'html',
           options: {}
         })
       })
@@ -128,58 +159,18 @@ export default function LeftRailDocuments({
       
       const data = await response.json()
       
-      if (action === 'preview' && data.html_content) {
-        // Відкрити preview
+      // Оновити версію
+      await loadDocumentVersions()
+      
+      // Показати новий документ
+      if (data.html_content) {
         const win = window.open('', '_blank')
         if (win) {
           win.document.write(data.html_content)
           win.document.close()
-        } else {
-          // Popup заблоковано - показати в новій вкладці через data URL
-          const blob = new Blob([data.html_content], { type: 'text/html' })
-          const url = URL.createObjectURL(blob)
-          window.open(url, '_blank')
-        }
-      } else if (action === 'pdf') {
-        // PDF не доступний - відкриваємо HTML з можливістю збереження як PDF через друк
-        if (data.html_content) {
-          const win = window.open('', '_blank')
-          if (win) {
-            win.document.write(`
-              <!DOCTYPE html>
-              <html><head><title>${docType} - Зберегти як PDF</title>
-              <style>@media print { @page { size: A4; margin: 15mm; } }</style>
-              </head><body>
-              <div style="background:#fffde7;padding:10px;margin-bottom:15px;border-radius:8px;font-family:sans-serif;">
-                💡 Для збереження як PDF: натисніть <b>Ctrl+P</b> → оберіть "Зберегти як PDF"
-              </div>
-              ${data.html_content}
-              </body></html>
-            `)
-            win.document.close()
-          }
-        } else if (data.download_url) {
-          window.open(`${BACKEND_URL}${data.download_url}`, '_blank')
-        }
-      } else if (action === 'print' && data.html_content) {
-        // Друк
-        const printWin = window.open('', '_blank')
-        if (printWin) {
-          printWin.document.write(`
-            <!DOCTYPE html>
-            <html><head><title>Друк</title>
-            <style>@media print { @page { size: A4; margin: 15mm; } }</style>
-            </head><body>${data.html_content}
-            <script>window.onload=function(){window.print();}</script>
-            </body></html>
-          `)
-          printWin.document.close()
-        } else {
-          alert('Дозвольте popup вікна для друку документів')
         }
       }
       
-      setGeneratedDocs(prev => ({ ...prev, [docType]: data.doc_number }))
       onDocumentGenerated(docType, data)
       
     } catch (err) {
@@ -190,22 +181,92 @@ export default function LeftRailDocuments({
     }
   }
 
-  // Відправка email
+  // Друк останнього документа
+  const printDocument = async (docType) => {
+    const docInfo = docVersions[docType]
+    
+    if (!docInfo?.exists) {
+      // Якщо немає - генеруємо
+      await generateNewDocument(docType)
+      return
+    }
+    
+    const printWin = window.open('', '_blank')
+    if (printWin) {
+      printWin.document.write(`
+        <!DOCTYPE html>
+        <html><head><title>Друк</title>
+        <style>@media print { @page { size: A4; margin: 15mm; } }</style>
+        </head><body>${docInfo.html_content}
+        <script>window.onload=function(){window.print();}</script>
+        </body></html>
+      `)
+      printWin.document.close()
+    }
+  }
+
+  // Завантажити історію версій
+  const loadHistory = async (docType) => {
+    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue_card' : 'order'
+    const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId
+    
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/documents/history/${entityType}/${entityId}/${docType}`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setHistoryData(data.versions || [])
+        setHistoryModal(docType)
+      }
+    } catch (e) {
+      console.error('Error loading history:', e)
+    }
+  }
+
+  // Переглянути конкретну версію
+  const viewVersion = async (docId) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/documents/${docId}/preview`, {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      })
+      if (res.ok) {
+        const html = await res.text()
+        const win = window.open('', '_blank')
+        if (win) {
+          win.document.write(html)
+          win.document.close()
+        }
+      }
+    } catch (e) {
+      console.error('Error viewing version:', e)
+    }
+  }
+
+  // Email
   const sendEmail = async (docType) => {
     if (!customerEmail) {
       alert('Email клієнта не вказано')
       return
     }
     
-    // Визначаємо правильний entity_id
-    const entityId = ISSUE_CARD_DOCS.includes(docType) 
-      ? (issueCardId || orderId) 
-      : orderId
+    const docInfo = docVersions[docType]
+    
+    // Якщо документ не існує - спочатку генеруємо
+    if (!docInfo?.exists) {
+      await generateNewDocument(docType)
+      // Перезавантажуємо версії
+      await loadDocumentVersions()
+    }
     
     setSending(docType)
+    setError(null)
+    
+    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue_card' : 'order'
+    const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId
+    
     try {
-      // Спочатку генеруємо документ
-      const genResponse = await fetch(`${BACKEND_URL}/api/documents/generate`, {
+      const emailResponse = await fetch(`${BACKEND_URL}/api/email/send-document`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,27 +275,10 @@ export default function LeftRailDocuments({
         body: JSON.stringify({
           doc_type: docType,
           entity_id: String(entityId),
-          format: 'html',
-          options: {}
-        })
-      })
-      
-      if (!genResponse.ok) throw new Error('Помилка генерації')
-      const genData = await genResponse.json()
-      
-      // Відправляємо документ на email
-      const emailResponse = await fetch(`${BACKEND_URL}/api/email/send-document`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`
-        },
-        body: JSON.stringify({
-          to_email: customerEmail,
-          document_type: docType,
-          document_html: genData.html_content,
-          order_number: orderNumber || `#${orderId}`,
-          customer_name: null // TODO: pass customer name
+          entity_type: entityType,
+          recipient_email: customerEmail,
+          recipient_name: '',
+          order_number: orderNumber
         })
       })
       
@@ -254,9 +298,8 @@ export default function LeftRailDocuments({
     }
   }
 
-  const availableDocs = getAvailableDocs()
+  const availableDocs = DOCS_BY_STATUS[orderStatus] || []
   
-  // Не показувати блок якщо немає документів (draft/awaiting)
   if (availableDocs.length === 0) {
     return null
   }
@@ -289,96 +332,158 @@ export default function LeftRailDocuments({
             </div>
           )}
           
-          {availableDocs.map((doc) => (
-            <div 
-              key={doc.type}
-              className={`
-                p-3 rounded-xl border transition-all
-                ${doc.critical ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50'}
-                ${doc.internal ? 'opacity-75' : ''}
-              `}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span>{doc.icon}</span>
-                  <span className="text-sm font-medium">{doc.name}</span>
+          {availableDocs.map((doc) => {
+            const versionInfo = docVersions[doc.type]
+            const hasVersion = versionInfo?.exists
+            
+            return (
+              <div 
+                key={doc.type}
+                className={`
+                  p-3 rounded-xl border transition-all
+                  ${doc.critical ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50'}
+                `}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span>{doc.icon}</span>
+                    <span className="text-sm font-medium">{doc.name}</span>
+                  </div>
+                  {doc.critical && (
+                    <span className="text-xs text-amber-600 font-medium">обов'язк.</span>
+                  )}
                 </div>
-                {doc.internal && (
-                  <span className="text-xs text-slate-500">внутр.</span>
+                
+                {/* Версія */}
+                {hasVersion && (
+                  <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
+                    <span>✓ v{versionInfo.version}</span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500">{versionInfo.doc_number}</span>
+                  </div>
                 )}
-                {doc.critical && (
-                  <span className="text-xs text-amber-600 font-medium">обов'язк.</span>
+                
+                {!hasVersion && (
+                  <div className="text-xs text-slate-400 mb-2">
+                    Документ ще не згенеровано
+                  </div>
                 )}
+                
+                <div className="flex flex-wrap gap-1">
+                  {/* Перегляд (тільки якщо є версія) */}
+                  <button
+                    onClick={() => viewLastDocument(doc.type)}
+                    disabled={!hasVersion}
+                    className={`
+                      flex items-center gap-1 px-2 py-1 text-xs rounded
+                      ${hasVersion 
+                        ? 'bg-white border hover:bg-slate-100' 
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
+                    `}
+                    title={hasVersion ? 'Переглянути останню версію' : 'Спочатку згенеруйте документ'}
+                  >
+                    <Eye className="w-3 h-3" />
+                    Перегляд
+                  </button>
+                  
+                  {/* Генерувати */}
+                  <button
+                    onClick={() => generateNewDocument(doc.type)}
+                    disabled={generating === doc.type}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
+                    title="Генерувати нову версію"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${generating === doc.type ? 'animate-spin' : ''}`} />
+                    {generating === doc.type ? '...' : 'Генерувати'}
+                  </button>
+                  
+                  {/* Друк */}
+                  {doc.printRequired && (
+                    <button
+                      onClick={() => printDocument(doc.type)}
+                      disabled={generating === doc.type}
+                      className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 rounded hover:bg-slate-200 disabled:opacity-50"
+                      title="Друк"
+                    >
+                      <Printer className="w-3 h-3" />
+                    </button>
+                  )}
+                  
+                  {/* Історія (якщо є хоча б 1 версія) */}
+                  {hasVersion && (
+                    <button
+                      onClick={() => loadHistory(doc.type)}
+                      className="flex items-center gap-1 px-2 py-1 text-xs bg-white border rounded hover:bg-slate-100"
+                      title="Історія версій"
+                    >
+                      <History className="w-3 h-3" />
+                    </button>
+                  )}
+                  
+                  {/* Email */}
+                  {doc.emailRequired && (
+                    <button
+                      onClick={() => sendEmail(doc.type)}
+                      disabled={sending === doc.type}
+                      className="flex items-center gap-1 px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50"
+                      title="Надіслати email"
+                    >
+                      <Mail className="w-3 h-3" />
+                      {sending === doc.type ? '...' : ''}
+                    </button>
+                  )}
+                </div>
               </div>
-              
-              {generatedDocs[doc.type] && (
-                <div className="text-xs text-green-600 mb-2">
-                  ✓ {generatedDocs[doc.type]}
+            )
+          })}
+        </div>
+      )}
+      
+      {/* History Modal */}
+      {historyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setHistoryModal(null)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold">📋 Історія документа</h3>
+              <button 
+                onClick={() => setHistoryModal(null)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 max-h-80 overflow-y-auto">
+              {historyData.length === 0 ? (
+                <p className="text-slate-500 text-center py-4">Немає версій</p>
+              ) : (
+                <div className="space-y-2">
+                  {historyData.map((ver, i) => (
+                    <div 
+                      key={ver.id}
+                      className={`
+                        p-3 rounded-lg border cursor-pointer hover:bg-slate-50
+                        ${i === 0 ? 'border-blue-300 bg-blue-50' : 'border-slate-200'}
+                      `}
+                      onClick={() => viewVersion(ver.id)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">v{ver.version}</span>
+                          {i === 0 && (
+                            <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">Остання</span>
+                          )}
+                        </div>
+                        <span className="text-xs text-slate-500">{ver.doc_number}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                        <Clock className="w-3 h-3" />
+                        {new Date(ver.created_at).toLocaleString('uk-UA')}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-              
-              <div className="flex flex-wrap gap-1">
-                {/* Preview */}
-                <button
-                  onClick={() => generateDocument(doc.type, 'preview')}
-                  disabled={generating === doc.type}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-white border rounded hover:bg-slate-100 disabled:opacity-50"
-                  title="Переглянути"
-                >
-                  <Eye className="w-3 h-3" />
-                  {generating === doc.type ? '...' : 'Перегляд'}
-                </button>
-                
-                {/* Print */}
-                <button
-                  onClick={() => generateDocument(doc.type, 'print')}
-                  disabled={generating === doc.type}
-                  className={`
-                    flex items-center gap-1 px-2 py-1 text-xs rounded disabled:opacity-50
-                    ${doc.printRequired 
-                      ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-                      : 'bg-white border hover:bg-slate-100'}
-                  `}
-                  title="Друкувати"
-                >
-                  <Printer className="w-3 h-3" />
-                </button>
-                
-                {/* PDF */}
-                <button
-                  onClick={() => generateDocument(doc.type, 'pdf')}
-                  disabled={generating === doc.type}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-white border rounded hover:bg-slate-100 disabled:opacity-50"
-                  title="Завантажити PDF"
-                >
-                  <Download className="w-3 h-3" />
-                </button>
-                
-                {/* Email - тільки для не-внутрішніх */}
-                {!doc.internal && (
-                  <button
-                    onClick={() => sendEmail(doc.type)}
-                    disabled={sending === doc.type || !customerEmail}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-white border rounded hover:bg-slate-100 disabled:opacity-50"
-                    title={customerEmail ? `Надіслати на ${customerEmail}` : 'Email не вказано'}
-                  >
-                    <Mail className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
             </div>
-          ))}
-          
-          {/* Legend */}
-          <div className="pt-2 border-t border-slate-200 flex flex-wrap gap-3 text-xs text-slate-500">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 bg-amber-300 rounded"></span>
-              Критичний
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 bg-blue-300 rounded"></span>
-              Друкувати
-            </span>
           </div>
         </div>
       )}

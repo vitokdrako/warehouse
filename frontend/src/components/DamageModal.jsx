@@ -195,8 +195,8 @@ export default function DamageModal({
             </div>
           </div>
           
-          {/* Severity & Fee */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Severity, Quantity & Fee */}
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <div className="text-slate-500 mb-1">Рівень</div>
               <select 
@@ -211,7 +211,22 @@ export default function DamageModal({
               </select>
             </div>
             <div>
-              <div className="text-slate-500 mb-1">Сума (грн)</div>
+              <div className="text-slate-500 mb-1">Кількість</div>
+              <input 
+                className="w-full rounded-xl border px-3 py-2" 
+                type="number" 
+                min="1"
+                value={formData.qty} 
+                onChange={e=>setFormData(prev=>({...prev, qty: Math.max(1, Number(e.target.value)||1)}))} 
+              />
+              {item?.quantity > 1 && (
+                <div className="mt-1 text-xs text-slate-400">
+                  Макс: {item.quantity} шт
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-slate-500 mb-1">Ціна за 1 шт (грн)</div>
               <div className="flex gap-2">
                 <input 
                   className="w-full rounded-xl border px-3 py-2" 
@@ -220,8 +235,9 @@ export default function DamageModal({
                   onChange={e=>setFormData(prev=>({...prev, fee:Number(e.target.value)||0}))} 
                 />
                 <button 
-                  className="rounded-lg border px-2 hover:bg-slate-50" 
+                  className="rounded-lg border px-2 hover:bg-slate-50 text-xs" 
                   onClick={()=> setFormData(prev=>({...prev, fee: defaultFeeFor(selectedKind)}))}
+                  title="Авто-розрахунок"
                 >
                   Авто
                 </button>
@@ -241,6 +257,21 @@ export default function DamageModal({
               ) : null)}
             </div>
           </div>
+          
+          {/* Загальна сума (авторозрахунок) */}
+          {formData.qty > 1 && formData.fee > 0 && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-amber-800 text-sm">💰 Загальна сума:</span>
+                <span className="text-amber-900 font-bold text-lg">
+                  ₴ {(formData.fee * formData.qty).toLocaleString('uk-UA')}
+                </span>
+              </div>
+              <div className="text-xs text-amber-600 mt-1">
+                {formData.qty} шт × ₴{formData.fee} = ₴{formData.fee * formData.qty}
+              </div>
+            </div>
+          )}
 
           {/* Mobile Photo Capture */}
           <div className="mb-4">

@@ -22,20 +22,16 @@ const DOCS_BY_STATUS = {
     { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', printRequired: false, emailRequired: true },
   ],
   
-  // Packing/Processing - внутрішні документи + договір
+  // Packing/Processing - тільки лист комплектації
   'processing': [
-    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', printRequired: false },
-    { type: 'contract_rent', name: 'Договір оренди', icon: '📋', printRequired: true },
-    { type: 'issue_checklist', name: 'Чеклист видачі', icon: '✅', printRequired: true, internal: true },
     { type: 'picking_list', name: 'Лист комплектації', icon: '📦', printRequired: true, internal: true },
   ],
   
-  // Ready for issue - акт передачі
+  // Ready for issue - чеклист видачі + документи клієнта
   'ready_for_issue': [
-    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄' },
+    { type: 'issue_checklist', name: 'Чеклист видачі', icon: '✅', printRequired: true, internal: true },
     { type: 'contract_rent', name: 'Договір оренди', icon: '📋', printRequired: true },
-    { type: 'issue_checklist', name: 'Чеклист видачі', icon: '✅', internal: true },
-    { type: 'picking_list', name: 'Лист комплектації', icon: '📦', internal: true },
+    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
     { type: 'issue_act', name: 'Акт передачі', icon: '📤', printRequired: true, critical: true },
   ],
   

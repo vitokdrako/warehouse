@@ -16,11 +16,14 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
     
     # Order-based documents
     order_docs = [
-        "invoice_offer", "contract_rent", "return_act", "deposit_settlement_act", 
+        "invoice_offer", "contract_rent", "deposit_settlement_act", 
         "invoice_additional", "return_intake_checklist", "delivery_note", 
         "rental_extension", "partial_return_act", "damage_settlement_act",
         "deposit_refund_act"
     ]
+    
+    # Return act - окремо, бо читає з return_cards
+    return_docs = ["return_act"]
     
     # Issue card based documents
     issue_docs = ["issue_act", "picking_list", "issue_checklist"]
@@ -31,7 +34,9 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
     # Vendor task based documents
     vendor_docs = ["vendor_work_act"]
     
-    if doc_type in order_docs:
+    if doc_type in return_docs:
+        return build_return_data(db, entity_id, options)
+    elif doc_type in order_docs:
         return build_order_data(db, entity_id, options)
     elif doc_type in issue_docs:
         return build_issue_card_data(db, entity_id, options)

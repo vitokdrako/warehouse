@@ -2,9 +2,20 @@
 {% block title %}Чеклист видачі {{ issue_card.order_number }}{% endblock %}
 {% block extra_styles %}
 <style>
-    .checklist-item { padding: 8px; border-bottom: 1px solid #eee; }
-    .checklist-item:nth-child(odd) { background: #fafafa; }
-    .check-box { width: 18px; height: 18px; border: 2px solid #333; display: inline-block; margin-right: 10px; vertical-align: middle; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+    .info-box { background: #f8f9fa; border-radius: 8px; padding: 12px; }
+    .info-box .label { font-size: 9pt; color: #666; margin-bottom: 4px; }
+    .info-box .value { font-weight: bold; font-size: 11pt; }
+    .item-row { display: flex; align-items: center; padding: 10px 8px; border-bottom: 1px solid #eee; }
+    .item-row:nth-child(odd) { background: #fafafa; }
+    .item-check { width: 20px; height: 20px; border: 2px solid #28a745; border-radius: 4px; margin-right: 12px; display: flex; align-items: center; justify-content: center; color: #28a745; font-weight: bold; }
+    .item-check.done { background: #d4edda; }
+    .item-info { flex: 1; }
+    .item-qty { background: #e3f2fd; padding: 4px 10px; border-radius: 4px; font-weight: bold; }
+    .requisitors-box { background: #fff3e0; border: 1px solid #ffcc80; border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+    .requisitors-title { font-size: 10pt; color: #e65100; margin-bottom: 5px; }
+    .requisitors-names { font-size: 12pt; font-weight: bold; }
+    .notes-box { background: #e8f5e9; border-radius: 8px; padding: 12px; margin-top: 15px; }
 </style>
 {% endblock %}
 {% block content %}
@@ -21,44 +32,67 @@
 
 <h1>📋 ЧЕКЛИСТ ВИДАЧІ</h1>
 
-<table class="mb-4">
-    <tr><td style="width:150px">Замовлення:</td><td class="font-bold">{{ issue_card.order_number }}</td></tr>
-    <tr><td>Клієнт:</td><td>{{ issue_card.customer_name }}</td></tr>
-    <tr><td>Дата видачі:</td><td class="font-bold">{{ issue_card.rental_start_date }}</td></tr>
-    <tr><td>Комплектувальник:</td><td>_______________________</td></tr>
-</table>
-
-<h2>Товари для комплектації</h2>
-{% for item in items %}
-<div class="checklist-item">
-    <div class="check-box"></div>
-    <strong>{{ item.get('name', '') }}</strong> ({{ item.get('sku') or item.get('article', '') }})
-    <span style="float:right">
-        К-сть: <strong>{{ item.get('quantity') or item.get('qty', 1) }}</strong> | 
-        Локація: <strong>{{ item.location or 'N/A' }}</strong>
-    </span>
-    <div style="margin-left:28px; font-size:8pt; color:#666;">
-        <span class="check-box" style="width:12px;height:12px;"></span> Візуальний огляд
-        <span class="check-box" style="width:12px;height:12px;margin-left:15px;"></span> Упаковано
-        <span class="check-box" style="width:12px;height:12px;margin-left:15px;"></span> QR/маркування
+<div class="info-grid">
+    <div class="info-box">
+        <div class="label">Замовлення</div>
+        <div class="value">{{ issue_card.order_number }}</div>
     </div>
+    <div class="info-box">
+        <div class="label">Клієнт</div>
+        <div class="value">{{ issue_card.customer_name }}</div>
+    </div>
+    <div class="info-box">
+        <div class="label">Дата видачі</div>
+        <div class="value">{{ issue_card.rental_start_date }}</div>
+    </div>
+    <div class="info-box">
+        <div class="label">Дата повернення</div>
+        <div class="value">{{ issue_card.rental_end_date }}</div>
+    </div>
+</div>
+
+{% if requisitors %}
+<div class="requisitors-box">
+    <div class="requisitors-title">👷 Відповідальні за комплектацію:</div>
+    <div class="requisitors-names">
+        {% for r in requisitors %}
+            {{ r.name if r.name else r }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<h2>✅ Укомплектовані позиції</h2>
+{% for item in items %}
+<div class="item-row">
+    <div class="item-check done">✓</div>
+    <div class="item-info">
+        <strong>{{ item.get('name', '') }}</strong>
+        <div style="font-size:9pt;color:#666;">{{ item.get('sku') or item.get('article', '') }} | Локація: {{ item.get('location', 'N/A') }}</div>
+    </div>
+    <div class="item-qty">{{ item.get('picked_qty') or item.get('quantity') or item.get('qty', 1) }} шт</div>
 </div>
 {% endfor %}
 
-<h2 class="mt-4">Фінальна перевірка</h2>
-<div class="checklist-item"><div class="check-box"></div> Всі позиції укомплектовано</div>
-<div class="checklist-item"><div class="check-box"></div> Товар упаковано належним чином</div>
-<div class="checklist-item"><div class="check-box"></div> QR-коди/маркування на місці</div>
-<div class="checklist-item"><div class="check-box"></div> Фото комплекту зроблено</div>
-<div class="checklist-item"><div class="check-box"></div> Акт передачі роздруковано</div>
+<div style="margin-top:15px; padding:10px; background:#e3f2fd; border-radius:8px; text-align:center;">
+    <strong>Всього позицій:</strong> {{ items|length }} | 
+    <strong>Всього одиниць:</strong> {% set total = namespace(value=0) %}{% for item in items %}{% set total.value = total.value + (item.get('picked_qty') or item.get('quantity') or item.get('qty', 1)) %}{% endfor %}{{ total.value }}
+</div>
 
-<div class="signatures">
+{% if issue_card.preparation_notes %}
+<div class="notes-box">
+    <strong>📝 Примітки:</strong><br>
+    {{ issue_card.preparation_notes }}
+</div>
+{% endif %}
+
+<div class="signatures" style="margin-top:30px;">
     <div class="signature-block">
         <p>Комплектувальник:</p>
         <div class="signature-line"></div>
     </div>
     <div class="signature-block">
-        <p>Перевірив:</p>
+        <p>Перевірив / Видав:</p>
         <div class="signature-line"></div>
     </div>
 </div>

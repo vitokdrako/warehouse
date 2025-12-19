@@ -68,6 +68,9 @@ export default function ReturnOrderWorkspace() {
   
   // Модалка пошкоджень
   const [damageModal, setDamageModal] = useState({ open: false, itemId: null })
+  
+  // Приймальники (хто приймає повернення)
+  const [selectedReceivers, setSelectedReceivers] = useState([])
 
   // === ЗАВАНТАЖЕННЯ ===
   const loadOrder = async () => {

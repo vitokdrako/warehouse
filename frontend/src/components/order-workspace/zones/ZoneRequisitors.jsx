@@ -62,11 +62,13 @@ export default function ZoneRequisitors({
   // Отримуємо імена - підтримуємо і старий формат (просто ID) і новий (об'єкти)
   const selectedNames = selectedIds.map(r => {
     if (typeof r === 'object' && r.name) {
-      return r.name
+      // Прибираємо "Реквізитор" з імені
+      return r.name.replace(/\s*реквізитор\s*/gi, '').trim()
     }
     // Старий формат - шукаємо в завантажених реквізиторах
     const found = requisitors.find(req => req.user_id === r)
-    return found?.full_name || r
+    const name = found?.full_name || ''
+    return name.replace(/\s*реквізитор\s*/gi, '').trim() || r
   }).filter(Boolean)
   
   // Перевірка чи обраний (підтримка обох форматів)

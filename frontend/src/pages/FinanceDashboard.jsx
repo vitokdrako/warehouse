@@ -313,10 +313,10 @@ function OrdersPanel({ period }) {
 
       {/* Totals */}
       <div className="grid gap-4 md:grid-cols-4">
-        <StatCard icon="📦" title="Всього замовлень" value={data.totals.orders} />
-        <StatCard icon="💰" title="Виручка (оренда)" value={money(data.totals.rent_revenue)} />
-        <StatCard icon="🧾" title="Середній чек" value={money(data.totals.avg_check)} />
-        <StatCard icon="✅" title="Закрито" value={data.totals.by_status?.closed || 0} />
+        <StatCard icon="📦" title="Всього замовлень" value={data.totals?.orders || 0} />
+        <StatCard icon="💰" title="Виручка (оренда)" value={money(data.totals?.rent_revenue || 0)} />
+        <StatCard icon="🧾" title="Середній чек" value={money(data.totals?.avg_check || 0)} />
+        <StatCard icon="✅" title="Закрито" value={data.totals?.by_status?.closed || 0} />
       </div>
 
       {/* Chart */}

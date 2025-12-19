@@ -27,6 +27,8 @@ const CardHd = ({ title, subtitle, right }) => (
 );
 const CardBd = ({ className, children }) => <div className={cls('p-4', className)}>{children}</div>;
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+
 export default function OrderFinancePanel({ order, onUpdate }) {
   const [rentAmount, setRentAmount] = useState(order.rent.due);
   const [rentMethod, setRentMethod] = useState('cash');
@@ -35,6 +37,27 @@ export default function OrderFinancePanel({ order, onUpdate }) {
   const [depositCurrency, setDepositCurrency] = useState('UAH');
   const [exchangeRate, setExchangeRate] = useState(1);
   const [loading, setLoading] = useState(null);
+  
+  // Damage data from product_damage_history
+  const [damageData, setDamageData] = useState(null);
+  const [damageAmount, setDamageAmount] = useState(0);
+  
+  // Load damage data from API
+  React.useEffect(() => {
+    const loadDamageData = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/analytics/order-damage-fee/${order.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDamageData(data);
+          setDamageAmount(data.due_amount || 0);
+        }
+      } catch (e) {
+        console.error('Error loading damage data:', e);
+      }
+    };
+    if (order.id) loadDamageData();
+  }, [order.id]);
 
   // Exchange rates (can be fetched from API)
   const RATES = { UAH: 1, USD: 41.5, EUR: 45.2 };

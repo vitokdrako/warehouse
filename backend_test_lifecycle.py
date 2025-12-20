@@ -16,7 +16,7 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://rentalproc-app.preview.emergentagent.com/api"
+BASE_URL = "https://financial-hub-38.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
@@ -518,7 +518,7 @@ def main():
     print("      - Should log user info to lifecycle")
     print(f"Test Order ID: {TEST_ORDER_ID}")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
-    print("URL: https://rentalproc-app.preview.emergentagent.com")
+    print("URL: https://financial-hub-38.preview.emergentagent.com")
     print("=" * 80)
     
     tester = OrderLifecycleTester(BASE_URL)

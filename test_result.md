@@ -109,21 +109,18 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
 
 test_plan:
   current_focus:
     - "Finance Console Overview Tab"
-    - "Finance Console Orders Tab"
-    - "Finance Console Ledger Tab"
-    - "Finance Console Expenses Tab"
-    - "Finance Console Payroll Tab"
-    - "Finance Console Vendors Tab"
-    - "Corporate Header Integration"
-  stuck_tasks: []
-  test_all: true
+  stuck_tasks: 
+    - "Finance Console Overview Tab"
+  test_all: false
   test_priority: "high_first"
 
 agent_communication:
   - agent: "testing"
     message: "Starting comprehensive testing of Finance Console App at /finance route. Will test all 6 tabs (Overview, Orders, Ledger, Expenses, Payroll, Vendors) plus header integration. Using credentials: vitokdrako@gmail.com / test123"
+  - agent: "testing"
+    message: "TESTING COMPLETED: Finance Console App is mostly functional. Navigation works via 'Фінанси' button from manager dashboard. All 6 tabs are present and clickable. Corporate header displays correctly. CRITICAL ISSUE: Overview tab loads but shows no KPI data (no financial metrics like 'Чистий прибуток', 'Дохід з оренди', money symbols). Backend APIs are responding (200 OK) but frontend is not rendering the financial data. This is a data loading/rendering issue in the Overview tab component."

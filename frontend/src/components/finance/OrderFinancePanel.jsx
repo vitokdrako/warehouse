@@ -67,9 +67,12 @@ export default function OrderFinancePanel({ order, onUpdate }) {
   const uahEquivalent = depositCurrency === 'UAH' ? depositAmount : depositAmount * exchangeRate;
 
   const handlePayment = async (type) => {
-    let amount = type === 'rent' ? rentAmount : type === 'deposit' ? depositAmount : order.damage.due;
+    let amount = type === 'rent' ? rentAmount : type === 'deposit' ? depositAmount : damageAmount;
     let method = type === 'rent' ? rentMethod : depositMethod;
-    if (amount <= 0) return;
+    if (amount <= 0) {
+      alert('Сума має бути більше 0');
+      return;
+    }
     setLoading(type);
     
     // Отримуємо інформацію про поточного користувача

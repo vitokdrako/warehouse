@@ -173,7 +173,7 @@ function App() {
             path="/finance" 
             element={
               <ProtectedRoute>
-                <FinanceCabinet />
+                <FinanceConsoleApp />
               </ProtectedRoute>
             } 
           />
@@ -182,7 +182,7 @@ function App() {
             path="/analytics" 
             element={
               <ProtectedRoute>
-                <FinanceDashboard />
+                <FinanceConsoleApp />
               </ProtectedRoute>
             } 
           />

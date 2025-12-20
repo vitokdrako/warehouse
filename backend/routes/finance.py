@@ -1039,12 +1039,12 @@ async def get_orders_with_finance(
     Отримати замовлення з фінансовою інформацією для Finance Cabinet.
     """
     try:
-        # Запит до orders з фінансовими даними
+        # Запит до orders з фінансовими даними (без payment_status)
         query = """
             SELECT 
                 o.order_id, o.order_number, o.customer_name, o.customer_phone,
                 o.status, o.total_price, o.deposit_amount,
-                o.rental_start_date, o.rental_end_date, o.payment_status,
+                o.rental_start_date, o.rental_end_date,
                 COALESCE(d.held_amount, 0) as deposit_held,
                 COALESCE(d.used_amount, 0) as deposit_used,
                 COALESCE(d.refunded_amount, 0) as deposit_refunded,
@@ -1074,11 +1074,10 @@ async def get_orders_with_finance(
                 "total_deposit": float(row[6] or 0),
                 "rental_start_date": str(row[7]) if row[7] else None,
                 "rental_end_date": str(row[8]) if row[8] else None,
-                "payment_status": row[9],
-                "deposit_held": float(row[10] or 0),
-                "deposit_used": float(row[11] or 0),
-                "deposit_refunded": float(row[12] or 0),
-                "rent_paid": float(row[13] or 0)
+                "deposit_held": float(row[9] or 0),
+                "deposit_used": float(row[10] or 0),
+                "deposit_refunded": float(row[11] or 0),
+                "rent_paid": float(row[12] or 0)
             })
         
         return {"orders": orders, "total": len(orders)}

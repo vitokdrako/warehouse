@@ -12,6 +12,278 @@ from utils.image_helper import normalize_image_url
 
 router = APIRouter(prefix="/api/catalog", tags=["catalog"])
 
+
+@router.get("/categories")
+async def get_categories(
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати дерево категорій та підкатегорій з кількістю товарів
+    """
+    try:
+        # Отримати всі категорії з кількістю товарів
+        result = db.execute(text("""
+            SELECT 
+                p.category_name,
+                p.subcategory_name,
+                COUNT(DISTINCT p.product_id) as product_count,
+                SUM(p.quantity) as total_qty
+            FROM products p
+            WHERE p.status = 1 AND p.category_name IS NOT NULL
+            GROUP BY p.category_name, p.subcategory_name
+            ORDER BY p.category_name, p.subcategory_name
+        """))
+        
+        categories_map = {}
+        for row in result:
+            cat_name = row[0] or "Без категорії"
+            subcat_name = row[1]
+            count = row[2]
+            qty = row[3] or 0
+            
+            if cat_name not in categories_map:
+                categories_map[cat_name] = {
+                    "name": cat_name,
+                    "product_count": 0,
+                    "total_qty": 0,
+                    "subcategories": []
+                }
+            
+            categories_map[cat_name]["product_count"] += count
+            categories_map[cat_name]["total_qty"] += qty
+            
+            if subcat_name:
+                categories_map[cat_name]["subcategories"].append({
+                    "name": subcat_name,
+                    "product_count": count,
+                    "total_qty": qty
+                })
+        
+        # Отримати унікальні кольори
+        colors_result = db.execute(text("""
+            SELECT DISTINCT color FROM products 
+            WHERE status = 1 AND color IS NOT NULL AND color != ''
+            ORDER BY color
+        """))
+        colors = [row[0] for row in colors_result]
+        
+        # Отримати унікальні матеріали
+        materials_result = db.execute(text("""
+            SELECT DISTINCT material FROM products 
+            WHERE status = 1 AND material IS NOT NULL AND material != ''
+            ORDER BY material
+        """))
+        materials = [row[0] for row in materials_result]
+        
+        return {
+            "categories": list(categories_map.values()),
+            "colors": colors,
+            "materials": materials
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
+@router.get("/items-by-category")
+async def get_items_by_category(
+    category: str = None,
+    subcategory: str = None,
+    color: str = None,
+    material: str = None,
+    min_qty: int = None,
+    max_qty: int = None,
+    search: str = None,
+    availability: str = None,  # 'available', 'in_rent', 'reserved', 'all'
+    limit: int = 200,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати товари з фільтрами по категоріям, кольору, матеріалу, кількості
+    """
+    try:
+        sql_parts = ["""
+            SELECT 
+                p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
+                p.category_name, p.subcategory_name,
+                p.quantity, p.zone, p.aisle, p.shelf,
+                p.color, p.material, p.size,
+                p.cleaning_status, p.product_state,
+                p.description
+            FROM products p
+            WHERE p.status = 1
+        """]
+        
+        params = {}
+        
+        # Category filter
+        if category and category != 'all':
+            sql_parts.append("AND p.category_name = :category")
+            params['category'] = category
+        
+        # Subcategory filter
+        if subcategory and subcategory != 'all':
+            sql_parts.append("AND p.subcategory_name = :subcategory")
+            params['subcategory'] = subcategory
+        
+        # Color filter
+        if color and color != 'all':
+            sql_parts.append("AND p.color = :color")
+            params['color'] = color
+        
+        # Material filter
+        if material and material != 'all':
+            sql_parts.append("AND p.material = :material")
+            params['material'] = material
+        
+        # Quantity filter
+        if min_qty is not None:
+            sql_parts.append("AND p.quantity >= :min_qty")
+            params['min_qty'] = min_qty
+        
+        if max_qty is not None:
+            sql_parts.append("AND p.quantity <= :max_qty")
+            params['max_qty'] = max_qty
+        
+        # Search filter
+        if search:
+            sql_parts.append("""
+                AND (
+                    p.sku LIKE :search 
+                    OR p.name LIKE :search 
+                    OR p.color LIKE :search 
+                    OR p.material LIKE :search
+                )
+            """)
+            params['search'] = f"%{search}%"
+        
+        sql_parts.append("ORDER BY p.category_name, p.subcategory_name, p.name")
+        sql_parts.append(f"LIMIT {limit}")
+        
+        final_sql = " ".join(sql_parts)
+        results = db.execute(text(final_sql), params).fetchall()
+        
+        # Отримати всі product_ids для оптимізації запитів
+        product_ids = [row[0] for row in results]
+        
+        if not product_ids:
+            return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0}}
+        
+        # Резерви
+        reserved_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+            AND o.rental_end_date >= CURDATE()
+            GROUP BY oi.product_id
+        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
+        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+        
+        # В оренді
+        in_rent_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('issued', 'on_rent')
+            AND o.rental_end_date >= CURDATE()
+            GROUP BY oi.product_id
+        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
+        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+        
+        # У кого в оренді (детально)
+        who_has_result = db.execute(text("""
+            SELECT 
+                oi.product_id, 
+                o.order_number, 
+                c.firstname, 
+                c.lastname, 
+                c.phone,
+                o.rental_end_date,
+                oi.quantity
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            JOIN customers c ON o.customer_id = c.customer_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('issued', 'on_rent')
+            ORDER BY o.rental_end_date
+        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
+        
+        who_has_dict = {}
+        for row in who_has_result:
+            pid = row[0]
+            if pid not in who_has_dict:
+                who_has_dict[pid] = []
+            who_has_dict[pid].append({
+                "order_number": row[1],
+                "customer": f"{row[2] or ''} {row[3] or ''}".strip(),
+                "phone": row[4],
+                "return_date": str(row[5]) if row[5] else None,
+                "qty": row[6]
+            })
+        
+        # Формуємо результат
+        items = []
+        stats = {"total": 0, "available": 0, "in_rent": 0, "reserved": 0}
+        
+        for row in results:
+            product_id = row[0]
+            total_qty = row[8] or 0
+            reserved_qty = reserved_dict.get(product_id, 0)
+            in_rent_qty = in_rent_dict.get(product_id, 0)
+            available_qty = max(0, total_qty - reserved_qty - in_rent_qty)
+            
+            # Stats
+            stats["total"] += total_qty
+            stats["available"] += available_qty
+            stats["in_rent"] += in_rent_qty
+            stats["reserved"] += reserved_qty
+            
+            # Availability filter
+            if availability == 'available' and available_qty == 0:
+                continue
+            if availability == 'in_rent' and in_rent_qty == 0:
+                continue
+            if availability == 'reserved' and reserved_qty == 0:
+                continue
+            
+            items.append({
+                "product_id": product_id,
+                "sku": row[1],
+                "name": row[2],
+                "price": float(row[3]) if row[3] else 0.0,
+                "rental_price": float(row[4]) if row[4] else 0.0,
+                "image": normalize_image_url(row[5]),
+                "category": row[6],
+                "subcategory": row[7],
+                "total": total_qty,
+                "available": available_qty,
+                "reserved": reserved_qty,
+                "in_rent": in_rent_qty,
+                "location": {
+                    "zone": row[9] or "",
+                    "aisle": row[10] or "",
+                    "shelf": row[11] or ""
+                },
+                "color": row[12],
+                "material": row[13],
+                "size": row[14],
+                "cleaning_status": row[15],
+                "product_state": row[16],
+                "description": row[17],
+                "who_has": who_has_dict.get(product_id, [])
+            })
+        
+        return {"items": items, "stats": stats}
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
 @router.get("")
 async def get_catalog_items(
     category: str = None,

@@ -304,38 +304,6 @@ function DamageItemRow({ item, onSendTo }) {
     </div>
   );
 }
-          <div className="font-bold text-slate-900">{money(item.fee)}</div>
-          <div className="text-xs text-slate-500">{item.severity || "low"}</div>
-        </div>
-      </div>
-      
-      {/* Assignment buttons - only show if not assigned */}
-      {!isAssigned && (
-        <div className="mt-3 pt-3 border-t border-amber-200 flex flex-wrap gap-2">
-          <span className="text-xs text-amber-700 self-center mr-2">Відправити на:</span>
-          <button
-            onClick={() => onSendTo(item, "wash")}
-            className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-200 transition"
-          >
-            🧼 Мийку
-          </button>
-          <button
-            onClick={() => onSendTo(item, "restoration")}
-            className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-200 transition"
-          >
-            🔧 Реставрацію
-          </button>
-          <button
-            onClick={() => onSendTo(item, "laundry")}
-            className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-200 transition"
-          >
-            🧺 Хімчистку
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ----------------------------- Order Detail Panel (right side) -----------------------------
 function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh }) {

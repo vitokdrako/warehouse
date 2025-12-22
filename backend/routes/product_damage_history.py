@@ -610,10 +610,8 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
                 pdh.photo_url, pdh.note,
                 pdh.processing_status, pdh.sent_to_processing_at,
                 pdh.returned_from_processing_at, pdh.processing_notes,
-                pdh.created_at, pdh.created_by,
-                NULL as product_image
+                pdh.created_at, pdh.created_by
             FROM product_damage_history pdh
-            LEFT JOIN products p ON pdh.product_id = p.id
             WHERE pdh.processing_type = 'restoration'
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))

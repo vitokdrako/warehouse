@@ -117,6 +117,37 @@ Testing the new unified DamageHubApp with 4 tabs: Головна, Мийка, Р
 
 ---
 
+## CATALOG PAGE TEST RESULTS - IN PROGRESS 🔄
+
+### Test Execution Summary
+**Date:** January 2025  
+**Status:** TESTING IN PROGRESS  
+**Route Tested:** /catalog  
+**Authentication:** Using provided credentials (vitokdrako@gmail.com)
+
+### Issues Fixed During Testing
+1. **Backend API Error** - Fixed database column reference from `c.telephone` to `c.phone` in catalog.py line 203
+   - **Status:** ✅ FIXED - Backend restarted successfully
+
+### Test Plan
+1. ✅ Fix backend API issues
+2. 🔄 Login and navigate to /catalog
+3. 🔄 Verify layout components (sidebar, filter panel, stats bar, product grid)
+4. 🔄 Test category tree functionality (expand/collapse, filtering)
+5. 🔄 Test filter functionality (search, color, material, quantity, availability)
+6. 🔄 Test product cards and detail modal
+7. 🔄 Verify visual styling and responsiveness
+
+### Expected Features
+- Category sidebar on the left with expand/collapse
+- Filter panel with: search, color, material, quantity range, availability
+- Stats bar showing: found items, available, in rent, reserved counts
+- Product grid with cards showing: image, SKU, name, category, color/material tags, stock info
+- Detail modal with full product info and "who has it" rental info
+- Corporate colors (green primary #b1cb29), Montserrat font, clean modern UI
+
+---
+
 ## FINANCE CONSOLE DAMAGE-TO-ARCHIVE WORKFLOW TEST RESULTS - COMPLETED ✅
 
 ### Test Execution Summary

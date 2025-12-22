@@ -539,9 +539,9 @@ export default function DamageHubApp() {
   // Mark processing as complete
   const handleComplete = async (item) => {
     try {
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/complete`, {
+      await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/complete-processing`, {
         method: "POST",
-        body: JSON.stringify({})
+        body: JSON.stringify({ notes: "Обробку завершено" })
       });
       // Reload queues
       await loadWashItems();

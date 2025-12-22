@@ -253,6 +253,12 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   const [depCurrency, setDepCurrency] = useState("UAH");
   const [depAmount, setDepAmount] = useState("");
   const [saving, setSaving] = useState(false);
+  
+  // Damage fees state
+  const [damageFees, setDamageFees] = useState([]);
+  const [damageAmount, setDamageAmount] = useState("");
+  const [damageMethod, setDamageMethod] = useState("cash");
+  const [loadingDamage, setLoadingDamage] = useState(false);
 
   // Find deposit for this order
   const deposit = deposits.find(d => d.order_id === order.order_id);
@@ -260,16 +266,27 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   // Calculate available deposit in ORIGINAL currency
   const depositCurrency = deposit?.currency || "UAH";
   const depositActualAmount = deposit?.actual_amount || 0;
-  const depositUsedOriginal = deposit?.used_amount_original || 0; // Amount used in original currency
+  const depositUsedOriginal = deposit?.used_amount_original || 0;
   const depositRefundedOriginal = deposit?.refunded_amount_original || 0;
   
-  // If we don't have original amounts, calculate from UAH
   const exchangeRate = deposit?.exchange_rate || 1;
   const usedInOriginal = depositUsedOriginal || (exchangeRate > 0 ? (deposit?.used_amount || 0) / exchangeRate : 0);
   const refundedInOriginal = depositRefundedOriginal || (exchangeRate > 0 ? (deposit?.refunded_amount || 0) / exchangeRate : 0);
   
   const availableInOriginal = Math.max(0, depositActualAmount - usedInOriginal - refundedInOriginal);
   const availableDeposit = deposit ? Math.max(0, (deposit.held_amount || 0) - (deposit.used_amount || 0) - (deposit.refunded_amount || 0)) : 0;
+
+  // Calculate damage totals
+  const totalDamageFee = damageFees.reduce((sum, d) => sum + (d.fee || 0), 0);
+  const damagePaid = damageFees.reduce((sum, d) => sum + (d.paid_amount || 0), 0);
+  const damageDue = Math.max(0, totalDamageFee - damagePaid);
+  
+  // Order financial status
+  const isRentPaid = rentDue <= 0;
+  const hasDamage = totalDamageFee > 0;
+  const isDamagePaid = damageDue <= 0;
+  const awaitingAdditionalPayment = isRentPaid && hasDamage && !isDamagePaid;
+  const isFullyPaid = isRentPaid && (!hasDamage || isDamagePaid);
 
   // Format amount in deposit's currency
   const formatDepositAmount = (amount) => {
@@ -278,9 +295,26 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
     return `${symbol}${Number(amount || 0).toLocaleString("uk-UA", { maximumFractionDigits: 2 })}`;
   };
 
+  // Load damage fees for this order
+  const loadDamageFees = async () => {
+    setLoadingDamage(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/analytics/order_damage_fee/${order.order_id}`);
+      const data = await res.json();
+      setDamageFees(data.damages || []);
+      if (data.total_unpaid > 0) {
+        setDamageAmount(data.total_unpaid);
+      }
+    } catch (e) {
+      console.error("Error loading damage fees:", e);
+      setDamageFees([]);
+    }
+    setLoadingDamage(false);
+  };
+
   useEffect(() => {
     setRentAmount(rentDue);
-    // Don't auto-fill deposit amount - let user enter it
+    loadDamageFees();
   }, [order.order_id, rentDue]);
 
   const acceptRent = async () => {
@@ -348,9 +382,50 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
     setSaving(false);
   };
 
+  const acceptDamagePayment = async () => {
+    if (Number(damageAmount) <= 0) return;
+    setSaving(true);
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      await authFetch(`${BACKEND_URL}/api/finance/payments`, {
+        method: "POST",
+        body: JSON.stringify({
+          payment_type: "damage",
+          method: damageMethod,
+          amount: Number(damageAmount),
+          order_id: order.order_id,
+          accepted_by_id: user.id,
+          accepted_by_name: user.email,
+          note: `Оплата шкоди по ордеру #${order.order_number}`,
+        }),
+      });
+      loadDamageFees();
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+    }
+    setSaving(false);
+  };
+
+  const archiveOrder = async () => {
+    if (!confirm("Архівувати замовлення? Воно зникне з активних ордерів.")) return;
+    setSaving(true);
+    try {
+      await authFetch(`${BACKEND_URL}/api/orders/${order.order_id}/archive`, {
+        method: "POST",
+      });
+      alert("✅ Замовлення архівовано");
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+      alert("Помилка архівування");
+    }
+    setSaving(false);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header with status badges */}
       <Card>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -359,14 +434,59 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
             <div className="mt-0.5 text-xs text-slate-500">{order.customer_phone}</div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {/* Awaiting additional payment badge */}
+            {awaitingAdditionalPayment && (
+              <Badge tone="danger">⚠️ Очікує доплати</Badge>
+            )}
+            {isFullyPaid && (
+              <Badge tone="ok">✓ Повністю сплачено</Badge>
+            )}
             <Pill tone={rentDue > 0 ? "warn" : "ok"} icon={rentDue > 0 ? "⏳" : "✓"} label={rentDue > 0 ? `Оренда ${money(rentDue)}` : "Оренда OK"} />
-            <Pill tone={depositDue > 0 ? "info" : "ok"} icon="🔒" label={depositDue > 0 ? `Застава ${money(depositDue)}` : "Застава OK"} />
+            {hasDamage && (
+              <Pill tone={damageDue > 0 ? "danger" : "ok"} icon="🔧" label={damageDue > 0 ? `Шкода ${money(damageDue)}` : "Шкода OK"} />
+            )}
             <Badge tone="neutral">{order.status}</Badge>
           </div>
         </div>
+        
+        {/* Archive button if fully paid */}
+        {isFullyPaid && order.status !== 'archived' && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-slate-600">
+                Замовлення повністю оплачене. Можна архівувати.
+              </div>
+              <GhostBtn onClick={archiveOrder} disabled={saving}>
+                📦 Архівувати
+              </GhostBtn>
+            </div>
+          </div>
+        )}
       </Card>
 
       <KPIBar order={order} deposit={deposit} />
+
+      {/* Damage Fee Alert */}
+      {hasDamage && damageDue > 0 && (
+        <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <div className="font-semibold text-rose-900">Є непогашена шкода!</div>
+              <div className="text-sm text-rose-800 mt-1">
+                Клієнт має доплатити <span className="font-bold">{money(damageDue)}</span> за пошкодження.
+              </div>
+              <div className="mt-2 space-y-1">
+                {damageFees.map((d, i) => (
+                  <div key={i} className="text-xs text-rose-700">
+                    • {d.product_name}: {money(d.fee)} ({d.damage_type})
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Rent Payment */}
@@ -389,6 +509,57 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
               {saving ? "..." : "Зарахувати"}
             </PrimaryBtn>
           </div>
+        </Card>
+
+        {/* Damage Payment */}
+        <Card 
+          title="Оплата шкоди" 
+          subtitle="Доплата за пошкодження" 
+          right={hasDamage ? <Pill tone={damageDue > 0 ? "danger" : "ok"} label="damage" /> : <Pill tone="neutral" label="—" />}
+        >
+          {loadingDamage ? (
+            <div className="text-center text-slate-500 py-4">Завантаження...</div>
+          ) : hasDamage ? (
+            <>
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Всього шкоди:</span>
+                  <span className="font-semibold">{money(totalDamageFee)}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1">
+                  <span className="text-slate-600">Сплачено:</span>
+                  <span className="font-medium text-emerald-600">{money(damagePaid)}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-1 pt-1 border-t border-slate-200">
+                  <span className="text-slate-700 font-medium">До сплати:</span>
+                  <span className="font-bold text-rose-600">{money(damageDue)}</span>
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-xs text-slate-500">Метод</label>
+                  <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={damageMethod} onChange={(e) => setDamageMethod(e.target.value)}>
+                    <option value="cash">Готівка</option>
+                    <option value="bank">Безготівка</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500">Сума (₴)</label>
+                  <input className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" value={damageAmount} onChange={(e) => setDamageAmount(e.target.value)} type="number" />
+                </div>
+              </div>
+              <div className="mt-3">
+                <PrimaryBtn variant="danger" disabled={Number(damageAmount) <= 0 || damageDue <= 0 || saving} onClick={acceptDamagePayment}>
+                  {saving ? "..." : "Прийняти оплату шкоди"}
+                </PrimaryBtn>
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-slate-400 py-4">
+              <span className="text-2xl block mb-2">✓</span>
+              Пошкоджень не зафіксовано
+            </div>
+          )}
         </Card>
 
         {/* Deposit */}
@@ -433,7 +604,7 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
         </Card>
 
         {/* Deposit Operations */}
-        <Card title="Операції із заставою" className="lg:col-span-2">
+        <Card title="Операції із заставою">
           {deposit ? (
             <>
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -448,6 +619,40 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
                       Утримано: {formatDepositAmount(usedInOriginal)} • Повернуто: {formatDepositAmount(refundedInOriginal)}
                     </div>
                   </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-corp-primary">{formatDepositAmount(availableInOriginal)}</div>
+                    {depositCurrency !== "UAH" && (
+                      <div className="text-xs text-slate-500">≈ {money(availableDeposit)}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {depositCurrency !== "UAH" && availableInOriginal > 0 && (
+                <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2">
+                  <div className="text-sm text-amber-800">
+                    ⚠️ Повернути клієнту: <span className="font-bold">{formatDepositAmount(availableInOriginal)}</span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="mt-3 flex gap-3">
+                <GhostBtn disabled={availableDeposit <= 0 || saving} onClick={refundDeposit}>
+                  Повернути заставу ({formatDepositAmount(availableInOriginal)})
+                </GhostBtn>
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-slate-400 py-4">
+              <span className="text-2xl block mb-2">🔒</span>
+              Застава ще не прийнята
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+};
                   <div className="text-right">
                     <div className="text-2xl font-bold text-corp-primary">{formatDepositAmount(availableInOriginal)}</div>
                     {depositCurrency !== "UAH" && (

@@ -65,7 +65,7 @@ const Badge = ({ tone = "neutral", children }) => {
     warn: "bg-amber-50 text-amber-800 border-amber-200",
     danger: "bg-rose-50 text-rose-800 border-rose-200",
     info: "bg-sky-50 text-sky-800 border-sky-200",
-    neutral: "bg-slate-100 text-slate-700 border-slate-200",
+    neutral: "bg-corp-bg-light text-corp-text-main border-corp-border",
     ink: "bg-slate-900 text-white border-slate-900",
     primary: "bg-corp-primary/10 text-corp-primary border-corp-primary/30",
     gold: "bg-amber-100 text-amber-900 border-amber-300",
@@ -93,7 +93,7 @@ const PrimaryBtn = ({ onClick, children, disabled }) => (
     disabled={disabled}
     className={cls(
       "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition",
-      disabled ? "bg-slate-200 text-slate-500 cursor-not-allowed" : "bg-corp-primary text-white hover:bg-corp-primary-hover"
+      disabled ? "bg-corp-border text-corp-text-muted cursor-not-allowed" : "bg-corp-primary text-white hover:bg-corp-primary-hover"
     )}
   >
     {children}
@@ -106,7 +106,7 @@ const GhostBtn = ({ onClick, children, disabled }) => (
     disabled={disabled}
     className={cls(
       "inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition",
-      disabled ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed" : "border-corp-border bg-white text-corp-text-main hover:bg-slate-50 hover:border-slate-300"
+      disabled ? "border-corp-border bg-corp-bg-page text-corp-text-muted cursor-not-allowed" : "border-corp-border bg-white text-corp-text-main hover:bg-corp-bg-page hover:border-corp-border"
     )}
   >
     {children}
@@ -155,7 +155,7 @@ const TabBtn = ({ active, onClick, children }) => (
       "rounded-xl px-4 py-2.5 text-sm font-semibold transition border",
       active 
         ? "bg-corp-primary text-white shadow-sm border-corp-primary" 
-        : "bg-white text-corp-text-main border-corp-border hover:bg-slate-50 hover:border-slate-300"
+        : "bg-white text-corp-text-main border-corp-border hover:bg-corp-bg-page hover:border-corp-border"
     )}
   >
     {children}
@@ -182,7 +182,7 @@ const OrderRow = ({ order, selected, onSelect }) => {
         "w-full rounded-2xl border px-4 py-3.5 text-left shadow-sm transition",
         selected 
           ? "border-corp-primary bg-corp-primary/5 ring-2 ring-corp-primary/20" 
-          : "border-corp-border bg-white hover:bg-slate-50 hover:border-slate-300"
+          : "border-corp-border bg-white hover:bg-corp-bg-page hover:border-corp-border"
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -221,7 +221,7 @@ const OrdersList = ({ orders, selectedId, onSelect, query, setQuery, reload, loa
     <div className="space-y-3">
       <Card title="Ордери" subtitle={`${filtered.length} записів`} right={<GhostBtn onClick={reload}>Оновити</GhostBtn>}>
         <input
-          className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-corp-primary/20"
+          className="h-10 w-full rounded-xl border border-corp-border px-3 text-sm outline-none focus:ring-2 focus:ring-corp-primary/20"
           placeholder="Пошук: код / клієнт / телефон"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -230,9 +230,9 @@ const OrdersList = ({ orders, selectedId, onSelect, query, setQuery, reload, loa
 
       <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
         {loading ? (
-          <div className="p-4 text-center text-slate-500">Завантаження...</div>
+          <div className="p-4 text-center text-corp-text-muted">Завантаження...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-4 text-center text-slate-400">Немає замовлень</div>
+          <div className="p-4 text-center text-corp-text-muted">Немає замовлень</div>
         ) : (
           filtered.map((o) => (
             <OrderRow key={o.order_id} order={o} selected={o.order_id === selectedId} onSelect={onSelect} />
@@ -477,9 +477,9 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
       <Card>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-base font-semibold text-slate-900">#{order.order_number}</div>
-            <div className="mt-0.5 text-sm text-slate-600">{order.customer_name}</div>
-            <div className="mt-0.5 text-xs text-slate-500">{order.customer_phone}</div>
+            <div className="text-base font-semibold text-corp-text-dark">#{order.order_number}</div>
+            <div className="mt-0.5 text-sm text-corp-text-main">{order.customer_name}</div>
+            <div className="mt-0.5 text-xs text-corp-text-muted">{order.customer_phone}</div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {/* Awaiting additional payment badge */}
@@ -499,9 +499,9 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
         
         {/* Archive button if fully paid */}
         {isFullyPaid && order.status !== 'archived' && (
-          <div className="mt-3 pt-3 border-t border-slate-100">
+          <div className="mt-3 pt-3 border-t border-corp-border-light">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-600">
+              <div className="text-sm text-corp-text-main">
                 Замовлення повністю оплачене. Можна архівувати.
               </div>
               <GhostBtn onClick={archiveOrder} disabled={saving}>
@@ -541,15 +541,15 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
         <Card title="Оплата оренди" subtitle="CASH/BANK → RENT_REV" right={<Pill tone="info" label="rent" />}>
           <div className="grid gap-3 md:grid-cols-2">
             <div>
-              <label className="text-xs text-slate-500">Метод</label>
-              <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={rentMethod} onChange={(e) => setRentMethod(e.target.value)}>
+              <label className="text-xs text-corp-text-muted">Метод</label>
+              <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={rentMethod} onChange={(e) => setRentMethod(e.target.value)}>
                 <option value="cash">Готівка</option>
                 <option value="bank">Безготівка</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-500">Сума (₴)</label>
-              <input className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" value={rentAmount} onChange={(e) => setRentAmount(e.target.value)} type="number" />
+              <label className="text-xs text-corp-text-muted">Сума (₴)</label>
+              <input className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" value={rentAmount} onChange={(e) => setRentAmount(e.target.value)} type="number" />
             </div>
           </div>
           <div className="mt-3">
@@ -566,34 +566,34 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
           right={hasDamage ? <Pill tone={damageDue > 0 ? "danger" : "ok"} label="damage" /> : <Pill tone="neutral" label="—" />}
         >
           {loadingDamage ? (
-            <div className="text-center text-slate-500 py-4">Завантаження...</div>
+            <div className="text-center text-corp-text-muted py-4">Завантаження...</div>
           ) : hasDamage ? (
             <>
-              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-3">
+              <div className="rounded-xl bg-corp-bg-page border border-corp-border p-3 mb-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-600">Всього шкоди:</span>
+                  <span className="text-corp-text-main">Всього шкоди:</span>
                   <span className="font-semibold">{money(totalDamageFee)}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-1">
-                  <span className="text-slate-600">Сплачено:</span>
+                  <span className="text-corp-text-main">Сплачено:</span>
                   <span className="font-medium text-emerald-600">{money(damagePaid)}</span>
                 </div>
-                <div className="flex justify-between text-sm mt-1 pt-1 border-t border-slate-200">
-                  <span className="text-slate-700 font-medium">До сплати:</span>
+                <div className="flex justify-between text-sm mt-1 pt-1 border-t border-corp-border">
+                  <span className="text-corp-text-main font-medium">До сплати:</span>
                   <span className="font-bold text-rose-600">{money(damageDue)}</span>
                 </div>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <label className="text-xs text-slate-500">Метод</label>
-                  <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={damageMethod} onChange={(e) => setDamageMethod(e.target.value)}>
+                  <label className="text-xs text-corp-text-muted">Метод</label>
+                  <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={damageMethod} onChange={(e) => setDamageMethod(e.target.value)}>
                     <option value="cash">Готівка</option>
                     <option value="bank">Безготівка</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500">Сума (₴)</label>
-                  <input className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" value={damageAmount} onChange={(e) => setDamageAmount(e.target.value)} type="number" />
+                  <label className="text-xs text-corp-text-muted">Сума (₴)</label>
+                  <input className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" value={damageAmount} onChange={(e) => setDamageAmount(e.target.value)} type="number" />
                 </div>
               </div>
               <div className="mt-3">
@@ -603,7 +603,7 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
               </div>
             </>
           ) : (
-            <div className="text-center text-slate-400 py-4">
+            <div className="text-center text-corp-text-muted py-4">
               <span className="text-2xl block mb-2">✓</span>
               Пошкоджень не зафіксовано
             </div>
@@ -614,24 +614,24 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
         <Card title="Прийом застави" subtitle="CASH/BANK → DEP_LIAB" right={<Pill tone="info" label="hold" />}>
           <div className="grid gap-3 md:grid-cols-3">
             <div>
-              <label className="text-xs text-slate-500">Метод</label>
-              <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={depMethod} onChange={(e) => setDepMethod(e.target.value)}>
+              <label className="text-xs text-corp-text-muted">Метод</label>
+              <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={depMethod} onChange={(e) => setDepMethod(e.target.value)}>
                 <option value="cash">Готівка</option>
                 <option value="bank">Безготівка</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-500">Валюта</label>
-              <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={depCurrency} onChange={(e) => setDepCurrency(e.target.value)}>
+              <label className="text-xs text-corp-text-muted">Валюта</label>
+              <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={depCurrency} onChange={(e) => setDepCurrency(e.target.value)}>
                 <option value="UAH">₴ UAH</option>
                 <option value="USD">$ USD</option>
                 <option value="EUR">€ EUR</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-500">Сума ({depCurrency})</label>
+              <label className="text-xs text-corp-text-muted">Сума ({depCurrency})</label>
               <input 
-                className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" 
+                className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" 
                 value={depAmount} 
                 onChange={(e) => setDepAmount(e.target.value)} 
                 type="number" 
@@ -640,7 +640,7 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
             </div>
           </div>
           {depCurrency !== "UAH" && depAmount && (
-            <div className="mt-2 text-xs text-slate-500">
+            <div className="mt-2 text-xs text-corp-text-muted">
               ≈ {money(Number(depAmount) * (depCurrency === "USD" ? 41.5 : 45.2))} за курсом {depCurrency === "USD" ? "41.5" : "45.2"}
             </div>
           )}
@@ -655,22 +655,22 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
         <Card title="Операції із заставою">
           {deposit ? (
             <>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="rounded-xl border border-corp-border bg-corp-bg-page px-4 py-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-semibold">Доступно для повернення</div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-corp-text-muted mt-1">
                       Прийнято: <span className="font-medium">{formatDepositAmount(depositActualAmount)}</span>
-                      {depositCurrency !== "UAH" && <span className="text-slate-400"> (≈ {money(deposit.held_amount)})</span>}
+                      {depositCurrency !== "UAH" && <span className="text-corp-text-muted"> (≈ {money(deposit.held_amount)})</span>}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-corp-text-muted">
                       Утримано: {formatDepositAmount(usedInOriginal)} • Повернуто: {formatDepositAmount(refundedInOriginal)}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-corp-primary">{formatDepositAmount(availableInOriginal)}</div>
                     {depositCurrency !== "UAH" && (
-                      <div className="text-xs text-slate-500">≈ {money(availableDeposit)}</div>
+                      <div className="text-xs text-corp-text-muted">≈ {money(availableDeposit)}</div>
                     )}
                   </div>
                 </div>
@@ -691,7 +691,7 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
               </div>
             </>
           ) : (
-            <div className="text-center text-slate-400 py-4">
+            <div className="text-center text-corp-text-muted py-4">
               <span className="text-2xl block mb-2">🔒</span>
               Застава ще не прийнята
             </div>
@@ -719,13 +719,13 @@ const LedgerTab = ({ ledger, reload, loading }) => {
       <Card title="Облік (Ledger)" subtitle="Головна книга" right={<GhostBtn onClick={reload}>Оновити</GhostBtn>}>
         <div className="grid gap-3 md:grid-cols-2">
           <input
-            className="h-10 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-corp-primary/20"
+            className="h-10 rounded-xl border border-corp-border px-3 text-sm outline-none focus:ring-2 focus:ring-corp-primary/20"
             placeholder="Пошук: тип / примітка"
             value={filter.q}
             onChange={(e) => setFilter((s) => ({ ...s, q: e.target.value }))}
           />
           <select
-            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            className="h-10 rounded-xl border border-corp-border bg-white px-3 text-sm"
             value={filter.acc}
             onChange={(e) => setFilter((s) => ({ ...s, acc: e.target.value }))}
           >
@@ -738,36 +738,36 @@ const LedgerTab = ({ ledger, reload, loading }) => {
         </div>
       </Card>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      <div className="overflow-hidden rounded-2xl border border-corp-border bg-white">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50">
+          <thead className="bg-corp-bg-page">
             <tr>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-600">Дата</th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-600">Тип</th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-600">Проводки</th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-600">Сума</th>
-              <th className="px-4 py-3 text-xs font-semibold text-slate-600">Примітка</th>
+              <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Дата</th>
+              <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Тип</th>
+              <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Проводки</th>
+              <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Сума</th>
+              <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Примітка</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-500">Завантаження...</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-corp-text-muted">Завантаження...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">Немає записів</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-corp-text-muted">Немає записів</td></tr>
             ) : (
               filtered.map((r) => (
-                <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50/50">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600">{fmtDate(r.occurred_at)}</td>
+                <tr key={r.id} className="border-t border-corp-border-light hover:bg-corp-bg-page/50">
+                  <td className="px-4 py-3 font-mono text-xs text-corp-text-main">{fmtDate(r.occurred_at)}</td>
                   <td className="px-4 py-3"><Badge tone="neutral">{r.tx_type}</Badge></td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {r.entries?.map((e, i) => (
-                        <span key={i} className="text-xs bg-slate-100 px-1.5 py-0.5 rounded">{e.direction}:{e.account_code}</span>
+                        <span key={i} className="text-xs bg-corp-bg-light px-1.5 py-0.5 rounded">{e.direction}:{e.account_code}</span>
                       ))}
                     </div>
                   </td>
                   <td className="px-4 py-3 font-semibold">{money(r.amount)}</td>
-                  <td className="px-4 py-3 text-xs text-slate-500 max-w-[200px] truncate">{r.note || "—"}</td>
+                  <td className="px-4 py-3 text-xs text-corp-text-muted max-w-[200px] truncate">{r.note || "—"}</td>
                 </tr>
               ))
             )}
@@ -1001,7 +1001,7 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
           </div>
         </div>
         
-        <div className="mt-3 text-xs text-slate-500">
+        <div className="mt-3 text-xs text-corp-text-muted">
           💡 Витрати на ремонт/реставрацію оплачуються з бюджету шкоди. Зарплати та оренда — з каси.
         </div>
       </Card>
@@ -1011,8 +1011,8 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
         <Card title="Разова витрата" subtitle="Вибір бюджету обов'язковий" right={<Pill tone="info" icon="💸" label="expense" />}>
           <div className="grid gap-3">
             {/* Funding selector - prominent */}
-            <div className="rounded-xl border-2 border-dashed border-slate-300 p-3 bg-slate-50">
-              <label className="text-xs font-semibold text-slate-700 block mb-2">Джерело фінансування</label>
+            <div className="rounded-xl border-2 border-dashed border-corp-border p-3 bg-corp-bg-page">
+              <label className="text-xs font-semibold text-corp-text-main block mb-2">Джерело фінансування</label>
               <div className="flex gap-2">
                 <button
                   onClick={() => setOneFunding('general')}
@@ -1020,7 +1020,7 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
                     "flex-1 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition",
                     oneFunding === 'general' 
                       ? "border-blue-500 bg-blue-50 text-blue-900" 
-                      : "border-slate-200 bg-white hover:bg-slate-50"
+                      : "border-corp-border bg-white hover:bg-corp-bg-page"
                   )}
                 >
                   💰 Каса
@@ -1032,7 +1032,7 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
                     "flex-1 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition",
                     oneFunding === 'damage_pool' 
                       ? "border-amber-500 bg-amber-50 text-amber-900" 
-                      : "border-slate-200 bg-white hover:bg-slate-50"
+                      : "border-corp-border bg-white hover:bg-corp-bg-page"
                   )}
                 >
                   🔧 Бюджет шкоди
@@ -1043,28 +1043,28 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
             
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="text-xs text-slate-500">Назва</label>
-                <input className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" value={oneName} onChange={(e) => setOneName(e.target.value)} />
+                <label className="text-xs text-corp-text-muted">Назва</label>
+                <input className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" value={oneName} onChange={(e) => setOneName(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs text-slate-500">Категорія</label>
-                <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={oneCategory} onChange={(e) => setOneCategory(e.target.value)}>
+                <label className="text-xs text-corp-text-muted">Категорія</label>
+                <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={oneCategory} onChange={(e) => setOneCategory(e.target.value)}>
                   {suggestedCategories.map(c => (
                     <option key={c.code} value={c.code}>{c.name}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs text-slate-500">Метод</label>
-                <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={oneMethod} onChange={(e) => setOneMethod(e.target.value)}>
+                <label className="text-xs text-corp-text-muted">Метод</label>
+                <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={oneMethod} onChange={(e) => setOneMethod(e.target.value)}>
                   <option value="cash">Готівка</option>
                   <option value="bank">Безготівка</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs text-slate-500">Сума (₴)</label>
+                <label className="text-xs text-corp-text-muted">Сума (₴)</label>
                 <input 
-                  className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" 
+                  className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" 
                   value={oneAmount} 
                   onChange={(e) => setOneAmount(e.target.value)} 
                   type="number"
@@ -1089,25 +1089,25 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
             
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <label className="text-xs text-slate-500">Працівник</label>
-                <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={payEmp} onChange={(e) => setPayEmp(e.target.value)}>
+                <label className="text-xs text-corp-text-muted">Працівник</label>
+                <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={payEmp} onChange={(e) => setPayEmp(e.target.value)}>
                   {employees.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-xs text-slate-500">Метод</label>
-                <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
+                <label className="text-xs text-corp-text-muted">Метод</label>
+                <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={payMethod} onChange={(e) => setPayMethod(e.target.value)}>
                   <option value="cash">Готівка</option>
                   <option value="bank">Безготівка</option>
                 </select>
               </div>
               <div>
-                <label className="text-xs text-slate-500">ЗП (₴)</label>
-                <input className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" value={paySalary} onChange={(e) => setPaySalary(e.target.value)} type="number" />
+                <label className="text-xs text-corp-text-muted">ЗП (₴)</label>
+                <input className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" value={paySalary} onChange={(e) => setPaySalary(e.target.value)} type="number" />
               </div>
               <div>
-                <label className="text-xs text-slate-500">Бонус (₴)</label>
-                <input className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" value={payBonus} onChange={(e) => setPayBonus(e.target.value)} type="number" />
+                <label className="text-xs text-corp-text-muted">Бонус (₴)</label>
+                <input className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" value={payBonus} onChange={(e) => setPayBonus(e.target.value)} type="number" />
               </div>
             </div>
           </div>
@@ -1119,25 +1119,25 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
 
       {/* Payroll Table */}
       <Card title="Нарахування зарплат" subtitle="Історія виплат">
-        <div className="overflow-hidden rounded-xl border border-slate-200">
+        <div className="overflow-hidden rounded-xl border border-corp-border">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-corp-bg-page">
               <tr>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Працівник</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Період</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Сума</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Статус</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Працівник</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Період</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Сума</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Статус</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {payroll.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Немає нарахувань</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-corp-text-muted">Немає нарахувань</td></tr>
               ) : (
                 payroll.map(p => (
-                  <tr key={p.id} className="border-t border-slate-100">
+                  <tr key={p.id} className="border-t border-corp-border-light">
                     <td className="px-4 py-3 font-medium">{p.employee_name || `ID: ${p.employee_id}`}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600">{p.period_start?.slice(0, 10)} — {p.period_end?.slice(0, 10)}</td>
+                    <td className="px-4 py-3 text-xs text-corp-text-main">{p.period_start?.slice(0, 10)} — {p.period_end?.slice(0, 10)}</td>
                     <td className="px-4 py-3 font-semibold">{money(p.total_amount)}</td>
                     <td className="px-4 py-3">
                       <Badge tone={p.status === "paid" ? "ok" : "warn"}>{p.status === "paid" ? "Виплачено" : "Очікує"}</Badge>
@@ -1155,32 +1155,32 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
 
       {/* Expense Records */}
       <Card title="Проведені витрати" right={<GhostBtn onClick={() => { loadData(); reload(); }}>Оновити</GhostBtn>}>
-        <div className="overflow-hidden rounded-xl border border-slate-200">
+        <div className="overflow-hidden rounded-xl border border-corp-border">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50">
+            <thead className="bg-corp-bg-page">
               <tr>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Дата</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Категорія</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Бюджет</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Метод</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Сума</th>
-                <th className="px-4 py-3 text-xs font-semibold text-slate-600">Примітка</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Дата</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Категорія</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Бюджет</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Метод</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Сума</th>
+                <th className="px-4 py-3 text-xs font-semibold text-corp-text-main">Примітка</th>
               </tr>
             </thead>
             <tbody>
               {loadingExp ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-500">Завантаження...</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-corp-text-muted">Завантаження...</td></tr>
               ) : expenses.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Немає витрат</td></tr>
+                <tr><td colSpan={6} className="px-4 py-6 text-center text-corp-text-muted">Немає витрат</td></tr>
               ) : (
                 expenses.map(e => (
-                  <tr key={e.id} className="border-t border-slate-100">
-                    <td className="px-4 py-3 font-mono text-xs text-slate-600">{fmtDate(e.occurred_at)}</td>
+                  <tr key={e.id} className="border-t border-corp-border-light">
+                    <td className="px-4 py-3 font-mono text-xs text-corp-text-main">{fmtDate(e.occurred_at)}</td>
                     <td className="px-4 py-3"><Badge tone="neutral">{e.category_name || e.category_code}</Badge></td>
                     <td className="px-4 py-3"><FundingBadge funding={e.funding} /></td>
                     <td className="px-4 py-3"><Badge tone="info">{(e.method || "cash").toUpperCase()}</Badge></td>
                     <td className="px-4 py-3 font-semibold text-rose-600">{money(e.amount)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500 max-w-[150px] truncate">{e.note || "—"}</td>
+                    <td className="px-4 py-3 text-xs text-corp-text-muted max-w-[150px] truncate">{e.note || "—"}</td>
                   </tr>
                 ))
               )}

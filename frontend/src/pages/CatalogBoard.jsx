@@ -1,9 +1,8 @@
 /* eslint-disable */
 // Каталог товарів - гнучкий інструмент перегляду для менеджера
-// По категоріям/підкатегоріям, з фільтрами: колір, матеріал, кількість, пошук
+// По категоріям/підкатегоріям горизонтально, з фільтрами та діапазоном дат
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { getImageUrl, handleImageError } from '../utils/imageHelper'
 import CorporateHeader from '../components/CorporateHeader'
 
@@ -12,6 +11,14 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 // Utility functions
 const cls = (...a) => a.filter(Boolean).join(' ')
 const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
+
+// Get today's date in YYYY-MM-DD format
+const getTodayISO = () => new Date().toISOString().slice(0, 10)
+const getNextWeekISO = () => {
+  const d = new Date()
+  d.setDate(d.getDate() + 7)
+  return d.toISOString().slice(0, 10)
+}
 
 // Badge component
 function Badge({ children, variant = 'default' }) {
@@ -30,100 +37,141 @@ function Badge({ children, variant = 'default' }) {
   )
 }
 
-// Sidebar Category Tree
-function CategoryTree({ categories, selected, onSelect, loading }) {
-  const [expanded, setExpanded] = useState({})
-  
-  const toggleExpand = (cat) => {
-    setExpanded(prev => ({ ...prev, [cat]: !prev[cat] }))
-  }
-  
+// Horizontal Category Selector
+function CategorySelector({ categories, selected, onSelect, loading }) {
   if (loading) {
     return (
-      <div className="p-4 text-corp-text-muted text-sm">Завантаження категорій...</div>
+      <div className="p-4 text-corp-text-muted text-sm">Завантаження...</div>
     )
   }
   
   return (
-    <div className="space-y-1">
-      {/* All items */}
-      <button
-        onClick={() => onSelect({ category: null, subcategory: null })}
-        className={cls(
-          'w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-          !selected.category 
-            ? 'bg-corp-primary text-white' 
-            : 'text-corp-text-main hover:bg-corp-bg-light'
-        )}
-      >
-        Всі товари
-      </button>
-      
-      {/* Category list */}
-      {categories.map(cat => (
-        <div key={cat.name}>
+    <div className="space-y-3">
+      {/* Categories - horizontal scroll */}
+      <div>
+        <label className="text-xs text-corp-text-muted font-medium block mb-2">Категорія</label>
+        <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => {
-              if (cat.subcategories?.length > 0) {
-                toggleExpand(cat.name)
-              }
-              onSelect({ category: cat.name, subcategory: null })
-            }}
+            onClick={() => onSelect({ category: null, subcategory: null })}
             className={cls(
-              'w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between',
-              selected.category === cat.name && !selected.subcategory
-                ? 'bg-corp-primary text-white'
-                : 'text-corp-text-main hover:bg-corp-bg-light'
+              'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
+              !selected.category 
+                ? 'bg-corp-primary text-white border-corp-primary shadow-sm' 
+                : 'bg-white text-corp-text-main border-corp-border hover:border-corp-primary hover:text-corp-primary'
             )}
           >
-            <span className="truncate flex-1">{cat.name}</span>
-            <span className={cls(
-              'text-xs ml-2',
-              selected.category === cat.name && !selected.subcategory ? 'text-white/80' : 'text-corp-text-muted'
-            )}>
-              {cat.product_count}
-            </span>
-            {cat.subcategories?.length > 0 && (
-              <span className="ml-1">{expanded[cat.name] ? '▼' : '▶'}</span>
-            )}
+            Всі ({categories.reduce((sum, c) => sum + c.product_count, 0)})
           </button>
-          
-          {/* Subcategories */}
-          {expanded[cat.name] && cat.subcategories?.length > 0 && (
-            <div className="ml-3 mt-1 space-y-1 border-l-2 border-corp-border pl-2">
-              {cat.subcategories.map(sub => (
+          {categories.map(cat => (
+            <button
+              key={cat.name}
+              onClick={() => onSelect({ category: cat.name, subcategory: null })}
+              className={cls(
+                'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
+                selected.category === cat.name && !selected.subcategory
+                  ? 'bg-corp-primary text-white border-corp-primary shadow-sm'
+                  : 'bg-white text-corp-text-main border-corp-border hover:border-corp-primary hover:text-corp-primary'
+              )}
+            >
+              {cat.name} ({cat.product_count})
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      {/* Subcategories - shown only when category selected */}
+      {selected.category && (
+        <div>
+          <label className="text-xs text-corp-text-muted font-medium block mb-2">Підкатегорія</label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => onSelect({ ...selected, subcategory: null })}
+              className={cls(
+                'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
+                !selected.subcategory
+                  ? 'bg-corp-primary/80 text-white border-corp-primary/80 shadow-sm'
+                  : 'bg-white text-corp-text-main border-corp-border hover:border-corp-primary hover:text-corp-primary'
+              )}
+            >
+              Всі підкатегорії
+            </button>
+            {categories
+              .find(c => c.name === selected.category)
+              ?.subcategories?.map(sub => (
                 <button
                   key={sub.name}
-                  onClick={() => onSelect({ category: cat.name, subcategory: sub.name })}
+                  onClick={() => onSelect({ ...selected, subcategory: sub.name })}
                   className={cls(
-                    'w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between',
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
                     selected.subcategory === sub.name
-                      ? 'bg-corp-primary/80 text-white'
-                      : 'text-corp-text-main hover:bg-corp-bg-light'
+                      ? 'bg-corp-primary/80 text-white border-corp-primary/80 shadow-sm'
+                      : 'bg-white text-corp-text-main border-corp-border hover:border-corp-primary hover:text-corp-primary'
                   )}
                 >
-                  <span className="truncate">{sub.name}</span>
-                  <span className={cls(
-                    'text-xs',
-                    selected.subcategory === sub.name ? 'text-white/80' : 'text-corp-text-muted'
-                  )}>
-                    {sub.product_count}
-                  </span>
+                  {sub.name} ({sub.product_count})
                 </button>
               ))}
-            </div>
-          )}
+          </div>
         </div>
-      ))}
+      )}
     </div>
   )
 }
 
-// Filter Panel
+// Date Range Picker
+function DateRangePicker({ dateFrom, dateTo, onChange, onClear }) {
+  return (
+    <div className="bg-gradient-to-r from-sky-50 to-indigo-50 rounded-xl border border-sky-200 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">📅</span>
+          <h3 className="font-semibold text-corp-text-dark">Перевірка доступності на період</h3>
+        </div>
+        {(dateFrom || dateTo) && (
+          <button
+            onClick={onClear}
+            className="text-xs text-corp-text-muted hover:text-rose-600 transition-colors"
+          >
+            Скинути дати
+          </button>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <label className="text-xs text-corp-text-muted font-medium block mb-1">Дата початку</label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => onChange({ dateFrom: e.target.value, dateTo })}
+            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
+          />
+        </div>
+        <div className="text-corp-text-muted pt-5">→</div>
+        <div className="flex-1">
+          <label className="text-xs text-corp-text-muted font-medium block mb-1">Дата закінчення</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => onChange({ dateFrom, dateTo: e.target.value })}
+            min={dateFrom}
+            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500"
+          />
+        </div>
+      </div>
+      {dateFrom && dateTo && (
+        <div className="mt-3 text-xs text-sky-700 bg-sky-100 rounded-lg px-3 py-2">
+          Показуємо доступність товарів на період: <strong>{dateFrom}</strong> — <strong>{dateTo}</strong>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Filter Panel (compact)
 function FilterPanel({ filters, setFilters, colors, materials, onReset }) {
   return (
-    <div className="bg-white rounded-xl border border-corp-border p-4 space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="bg-white rounded-xl border border-corp-border p-4">
+      <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-corp-text-dark">Фільтри</h3>
         <button 
           onClick={onReset}
@@ -133,97 +181,103 @@ function FilterPanel({ filters, setFilters, colors, materials, onReset }) {
         </button>
       </div>
       
-      {/* Search */}
-      <div>
-        <label className="text-xs text-corp-text-muted font-medium block mb-1">Пошук</label>
-        <input
-          type="text"
-          value={filters.search}
-          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          placeholder="SKU, назва, колір..."
-          className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30 focus:border-corp-primary"
-        />
-      </div>
-      
-      {/* Color */}
-      <div>
-        <label className="text-xs text-corp-text-muted font-medium block mb-1">Колір</label>
-        <select
-          value={filters.color}
-          onChange={(e) => setFilters({ ...filters, color: e.target.value })}
-          className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
-        >
-          <option value="">Всі кольори</option>
-          {colors.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-      </div>
-      
-      {/* Material */}
-      <div>
-        <label className="text-xs text-corp-text-muted font-medium block mb-1">Матеріал</label>
-        <select
-          value={filters.material}
-          onChange={(e) => setFilters({ ...filters, material: e.target.value })}
-          className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
-        >
-          <option value="">Всі матеріали</option>
-          {materials.map(m => (
-            <option key={m} value={m}>{m}</option>
-          ))}
-        </select>
-      </div>
-      
-      {/* Quantity range */}
-      <div>
-        <label className="text-xs text-corp-text-muted font-medium block mb-1">Кількість</label>
-        <div className="flex gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Search */}
+        <div className="col-span-2">
+          <label className="text-xs text-corp-text-muted font-medium block mb-1">Пошук</label>
           <input
-            type="number"
-            value={filters.minQty}
-            onChange={(e) => setFilters({ ...filters, minQty: e.target.value })}
-            placeholder="від"
-            min="0"
-            className="w-1/2 rounded-lg border border-corp-border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
-          />
-          <input
-            type="number"
-            value={filters.maxQty}
-            onChange={(e) => setFilters({ ...filters, maxQty: e.target.value })}
-            placeholder="до"
-            min="0"
-            className="w-1/2 rounded-lg border border-corp-border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+            type="text"
+            value={filters.search}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            placeholder="SKU, назва, колір..."
+            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30 focus:border-corp-primary"
           />
         </div>
-      </div>
-      
-      {/* Availability */}
-      <div>
-        <label className="text-xs text-corp-text-muted font-medium block mb-1">Наявність</label>
-        <select
-          value={filters.availability}
-          onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
-          className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
-        >
-          <option value="">Всі</option>
-          <option value="available">Доступні</option>
-          <option value="in_rent">В оренді</option>
-          <option value="reserved">В резерві</option>
-        </select>
+        
+        {/* Color */}
+        <div>
+          <label className="text-xs text-corp-text-muted font-medium block mb-1">Колір</label>
+          <select
+            value={filters.color}
+            onChange={(e) => setFilters({ ...filters, color: e.target.value })}
+            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+          >
+            <option value="">Всі</option>
+            {colors.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Material */}
+        <div>
+          <label className="text-xs text-corp-text-muted font-medium block mb-1">Матеріал</label>
+          <select
+            value={filters.material}
+            onChange={(e) => setFilters({ ...filters, material: e.target.value })}
+            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+          >
+            <option value="">Всі</option>
+            {materials.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </div>
+        
+        {/* Quantity range */}
+        <div>
+          <label className="text-xs text-corp-text-muted font-medium block mb-1">Кількість</label>
+          <div className="flex gap-1">
+            <input
+              type="number"
+              value={filters.minQty}
+              onChange={(e) => setFilters({ ...filters, minQty: e.target.value })}
+              placeholder="від"
+              min="0"
+              className="w-1/2 rounded-lg border border-corp-border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+            />
+            <input
+              type="number"
+              value={filters.maxQty}
+              onChange={(e) => setFilters({ ...filters, maxQty: e.target.value })}
+              placeholder="до"
+              min="0"
+              className="w-1/2 rounded-lg border border-corp-border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+            />
+          </div>
+        </div>
+        
+        {/* Availability */}
+        <div>
+          <label className="text-xs text-corp-text-muted font-medium block mb-1">Наявність</label>
+          <select
+            value={filters.availability}
+            onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
+            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+          >
+            <option value="">Всі</option>
+            <option value="available">Доступні</option>
+            <option value="in_rent">В оренді</option>
+            <option value="reserved">В резерві</option>
+          </select>
+        </div>
       </div>
     </div>
   )
 }
 
 // Product Card
-function ProductCard({ item, onClick }) {
+function ProductCard({ item, onClick, dateFilterActive }) {
+  const hasConflict = item.has_conflict
   const hasRentals = item.who_has?.length > 0
   
   return (
     <div 
       onClick={onClick}
-      className="bg-white rounded-xl border border-corp-border p-3 hover:shadow-md transition-shadow cursor-pointer group"
+      className={cls(
+        'bg-white rounded-xl border p-3 hover:shadow-md transition-shadow cursor-pointer group',
+        hasConflict ? 'border-rose-300 bg-rose-50/30' : 'border-corp-border'
+      )}
     >
       {/* Image */}
       <div className="relative mb-3">
@@ -235,10 +289,13 @@ function ProductCard({ item, onClick }) {
         />
         {/* Status badges */}
         <div className="absolute top-2 right-2 flex flex-col gap-1">
-          {item.in_rent > 0 && (
+          {hasConflict && (
+            <Badge variant="error">Конфлікт</Badge>
+          )}
+          {item.in_rent > 0 && !hasConflict && (
             <Badge variant="warning">{item.in_rent} в оренді</Badge>
           )}
-          {item.reserved > 0 && (
+          {item.reserved > 0 && !hasConflict && (
             <Badge variant="info">{item.reserved} резерв</Badge>
           )}
         </div>
@@ -250,13 +307,6 @@ function ProductCard({ item, onClick }) {
         <div className="font-medium text-corp-text-dark text-sm line-clamp-2 group-hover:text-corp-primary transition-colors">
           {item.name}
         </div>
-        
-        {/* Category */}
-        {item.category && (
-          <div className="text-xs text-corp-text-muted">
-            {item.category}{item.subcategory ? ` / ${item.subcategory}` : ''}
-          </div>
-        )}
         
         {/* Properties */}
         <div className="flex flex-wrap gap-1 mt-2">
@@ -273,11 +323,11 @@ function ProductCard({ item, onClick }) {
           <div className="flex gap-2">
             <span className={cls(
               'text-sm font-semibold',
-              item.available > 0 ? 'text-emerald-600' : 'text-corp-text-muted'
+              item.available > 0 ? 'text-emerald-600' : 'text-rose-600'
             )}>
               {item.available} дост.
             </span>
-            <span className="text-sm text-corp-text-muted">/ {item.total} всього</span>
+            <span className="text-sm text-corp-text-muted">/ {item.total}</span>
           </div>
           {item.rental_price > 0 && (
             <span className="text-sm font-medium text-corp-primary">
@@ -286,18 +336,13 @@ function ProductCard({ item, onClick }) {
           )}
         </div>
         
-        {/* Who has it */}
+        {/* Who has it - показуємо коротко */}
         {hasRentals && (
           <div className="mt-2 pt-2 border-t border-dashed border-corp-border">
-            <div className="text-xs text-corp-text-muted mb-1">У кого в оренді:</div>
-            {item.who_has.slice(0, 2).map((rental, idx) => (
-              <div key={idx} className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 mb-1">
-                {rental.customer} · {rental.qty} шт · до {rental.return_date}
-              </div>
-            ))}
-            {item.who_has.length > 2 && (
-              <div className="text-xs text-corp-text-muted">...ще {item.who_has.length - 2}</div>
-            )}
+            <div className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+              {item.who_has[0].customer} · {item.who_has[0].qty} шт
+              {item.who_has.length > 1 && ` (+${item.who_has.length - 1})`}
+            </div>
           </div>
         )}
       </div>
@@ -306,7 +351,7 @@ function ProductCard({ item, onClick }) {
 }
 
 // Product Detail Modal
-function ProductDetailModal({ item, onClose }) {
+function ProductDetailModal({ item, onClose, dateFilterActive }) {
   if (!item) return null
   
   return (
@@ -333,6 +378,18 @@ function ProductDetailModal({ item, onClose }) {
             </button>
           </div>
           
+          {/* Conflict warning */}
+          {item.has_conflict && (
+            <div className="mb-4 bg-rose-50 border border-rose-200 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-rose-700 font-semibold mb-2">
+                <span>⚠️</span> Конфлікт на вибраний період
+              </div>
+              <p className="text-sm text-rose-600">
+                Товар недоступний на вибрані дати. Перегляньте інформацію про бронювання нижче.
+              </p>
+            </div>
+          )}
+          
           {/* Content */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Image */}
@@ -349,10 +406,18 @@ function ProductDetailModal({ item, onClose }) {
             <div className="space-y-4">
               {/* Stock */}
               <div className="bg-corp-bg-page rounded-xl p-4">
-                <h3 className="font-semibold text-corp-text-dark mb-3">Наявність</h3>
+                <h3 className="font-semibold text-corp-text-dark mb-3">
+                  Наявність {dateFilterActive && '(на період)'}
+                </h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white rounded-lg p-3 border border-corp-border">
-                    <div className="text-2xl font-bold text-emerald-600">{item.available}</div>
+                  <div className={cls(
+                    'rounded-lg p-3 border',
+                    item.available > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'
+                  )}>
+                    <div className={cls(
+                      'text-2xl font-bold',
+                      item.available > 0 ? 'text-emerald-600' : 'text-rose-600'
+                    )}>{item.available}</div>
                     <div className="text-xs text-corp-text-muted">Доступно</div>
                   </div>
                   <div className="bg-white rounded-lg p-3 border border-corp-border">
@@ -423,12 +488,6 @@ function ProductDetailModal({ item, onClose }) {
                       <span className="font-medium">{item.size}</span>
                     </div>
                   )}
-                  {item.price > 0 && (
-                    <div>
-                      <span className="text-corp-text-muted">Вартість:</span>{' '}
-                      <span className="font-medium">{fmtUA(item.price)} ₴</span>
-                    </div>
-                  )}
                   {item.rental_price > 0 && (
                     <div>
                       <span className="text-corp-text-muted">Оренда:</span>{' '}
@@ -440,10 +499,18 @@ function ProductDetailModal({ item, onClose }) {
             </div>
           </div>
           
-          {/* Who has */}
+          {/* Who has - Bookings */}
           {item.who_has?.length > 0 && (
-            <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <h3 className="font-semibold text-amber-800 mb-3">У кого в оренді ({item.who_has.length})</h3>
+            <div className={cls(
+              'mt-6 border rounded-xl p-4',
+              item.has_conflict ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
+            )}>
+              <h3 className={cls(
+                'font-semibold mb-3',
+                item.has_conflict ? 'text-rose-800' : 'text-amber-800'
+              )}>
+                {item.has_conflict ? 'Конфліктуючі бронювання' : 'Поточні бронювання'} ({item.who_has.length})
+              </h3>
               <div className="space-y-2">
                 {item.who_has.map((rental, idx) => (
                   <div key={idx} className="bg-white rounded-lg p-3 border border-amber-200">
@@ -451,12 +518,12 @@ function ProductDetailModal({ item, onClose }) {
                       <div>
                         <div className="font-medium text-corp-text-dark">{rental.customer}</div>
                         <div className="text-xs text-corp-text-muted">
-                          Замовлення: {rental.order_number} · Кількість: {rental.qty} шт
+                          Замовлення: {rental.order_number} · {rental.qty} шт · {rental.status}
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-medium text-amber-700">
-                          Повернення: {rental.return_date || '—'}
+                          {rental.start_date} → {rental.return_date}
                         </div>
                         {rental.phone && (
                           <div className="text-xs text-corp-text-muted">{rental.phone}</div>
@@ -484,7 +551,6 @@ function ProductDetailModal({ item, onClose }) {
 
 // Main Component
 export default function CatalogBoard() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categories, setCategories] = useState([])
@@ -501,18 +567,19 @@ export default function CatalogBoard() {
     maxQty: '',
     availability: ''
   })
+  const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
+  const [dateFilterActive, setDateFilterActive] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // Load categories on mount
   useEffect(() => {
     loadCategories()
   }, [])
 
-  // Load items when category or filters change
+  // Load items when category, filters, or dates change
   useEffect(() => {
     loadItems()
-  }, [selectedCategory, filters])
+  }, [selectedCategory, filters, dateRange])
 
   const loadCategories = async () => {
     try {
@@ -542,11 +609,14 @@ export default function CatalogBoard() {
       if (filters.minQty) params.append('min_qty', filters.minQty)
       if (filters.maxQty) params.append('max_qty', filters.maxQty)
       if (filters.availability) params.append('availability', filters.availability)
+      if (dateRange.dateFrom) params.append('date_from', dateRange.dateFrom)
+      if (dateRange.dateTo) params.append('date_to', dateRange.dateTo)
       
       const res = await fetch(`${BACKEND_URL}/api/catalog/items-by-category?${params}`)
       const data = await res.json()
       setItems(data.items || [])
       setStats(data.stats || { total: 0, available: 0, in_rent: 0, reserved: 0 })
+      setDateFilterActive(data.date_filter_active || false)
     } catch (err) {
       console.error('Error loading items:', err)
     } finally {
@@ -565,6 +635,10 @@ export default function CatalogBoard() {
     })
   }
 
+  const clearDates = () => {
+    setDateRange({ dateFrom: '', dateTo: '' })
+  }
+
   // Active filter count
   const activeFilterCount = useMemo(() => {
     let count = 0
@@ -574,121 +648,115 @@ export default function CatalogBoard() {
     if (filters.minQty) count++
     if (filters.maxQty) count++
     if (filters.availability) count++
+    if (dateRange.dateFrom && dateRange.dateTo) count++
     return count
-  }, [filters])
+  }, [filters, dateRange])
+
+  // Count conflicts
+  const conflictCount = useMemo(() => {
+    return items.filter(i => i.has_conflict).length
+  }, [items])
 
   return (
     <div className="min-h-screen bg-corp-bg-page font-montserrat">
       <CorporateHeader cabinetName="Каталог" />
       
-      <div className="flex">
-        {/* Sidebar - Categories */}
-        <aside className={cls(
-          'w-64 bg-white border-r border-corp-border min-h-[calc(100vh-64px)] transition-all duration-300',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full absolute'
-        )}>
-          <div className="p-4">
-            <h2 className="font-semibold text-corp-text-dark mb-4">Категорії</h2>
-            <CategoryTree
-              categories={categories}
-              selected={selectedCategory}
-              onSelect={setSelectedCategory}
-              loading={categoriesLoading}
-            />
-          </div>
-        </aside>
+      <div className="max-w-[1600px] mx-auto px-4 py-4 space-y-4">
+        {/* Date Range Picker */}
+        <DateRangePicker 
+          dateFrom={dateRange.dateFrom}
+          dateTo={dateRange.dateTo}
+          onChange={setDateRange}
+          onClear={clearDates}
+        />
         
-        {/* Main content */}
-        <main className="flex-1 p-4">
-          {/* Stats bar */}
-          <div className="bg-white rounded-xl border border-corp-border p-4 mb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex gap-6">
-                <div>
-                  <div className="text-2xl font-bold text-corp-text-dark">{items.length}</div>
-                  <div className="text-xs text-corp-text-muted">Знайдено товарів</div>
-                </div>
-                <div className="border-l border-corp-border pl-6">
-                  <div className="text-2xl font-bold text-emerald-600">{fmtUA(stats.available)}</div>
-                  <div className="text-xs text-corp-text-muted">Доступно одиниць</div>
-                </div>
-                <div className="border-l border-corp-border pl-6">
-                  <div className="text-2xl font-bold text-amber-600">{fmtUA(stats.in_rent)}</div>
-                  <div className="text-xs text-corp-text-muted">В оренді</div>
-                </div>
-                <div className="border-l border-corp-border pl-6">
-                  <div className="text-2xl font-bold text-sky-600">{fmtUA(stats.reserved)}</div>
-                  <div className="text-xs text-corp-text-muted">Резерв</div>
-                </div>
+        {/* Categories - horizontal */}
+        <div className="bg-white rounded-xl border border-corp-border p-4">
+          <CategorySelector
+            categories={categories}
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
+            loading={categoriesLoading}
+          />
+        </div>
+        
+        {/* Filters */}
+        <FilterPanel 
+          filters={filters} 
+          setFilters={setFilters} 
+          colors={colors}
+          materials={materials}
+          onReset={resetFilters}
+        />
+        
+        {/* Stats bar */}
+        <div className="bg-white rounded-xl border border-corp-border p-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <div>
+              <div className="text-2xl font-bold text-corp-text-dark">{items.length}</div>
+              <div className="text-xs text-corp-text-muted">Знайдено</div>
+            </div>
+            <div className="border-l border-corp-border pl-6">
+              <div className="text-2xl font-bold text-emerald-600">{fmtUA(stats.available)}</div>
+              <div className="text-xs text-corp-text-muted">Доступно</div>
+            </div>
+            <div className="border-l border-corp-border pl-6">
+              <div className="text-2xl font-bold text-amber-600">{fmtUA(stats.in_rent)}</div>
+              <div className="text-xs text-corp-text-muted">В оренді</div>
+            </div>
+            <div className="border-l border-corp-border pl-6">
+              <div className="text-2xl font-bold text-sky-600">{fmtUA(stats.reserved)}</div>
+              <div className="text-xs text-corp-text-muted">Резерв</div>
+            </div>
+            {conflictCount > 0 && (
+              <div className="border-l border-corp-border pl-6">
+                <div className="text-2xl font-bold text-rose-600">{conflictCount}</div>
+                <div className="text-xs text-corp-text-muted">Конфліктів</div>
               </div>
-              
-              {/* Toggle sidebar */}
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="text-corp-text-muted hover:text-corp-text-dark p-2"
-              >
-                {sidebarOpen ? '◀ Сховати' : '▶ Категорії'}
-              </button>
-            </div>
+            )}
+            {activeFilterCount > 0 && (
+              <div className="ml-auto">
+                <Badge variant="primary">Фільтрів: {activeFilterCount}</Badge>
+              </div>
+            )}
           </div>
-          
-          <div className="flex gap-4">
-            {/* Filters */}
-            <div className="w-64 flex-shrink-0">
-              <FilterPanel 
-                filters={filters} 
-                setFilters={setFilters} 
-                colors={colors}
-                materials={materials}
-                onReset={resetFilters}
+        </div>
+        
+        {/* Product grid */}
+        {loading ? (
+          <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
+            <div className="text-corp-text-muted">Завантаження товарів...</div>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
+            <div className="text-4xl mb-4">📦</div>
+            <div className="text-corp-text-muted">Товарів не знайдено</div>
+            <button
+              onClick={() => { resetFilters(); clearDates(); setSelectedCategory({ category: null, subcategory: null }); }}
+              className="mt-4 text-corp-primary hover:underline text-sm"
+            >
+              Скинути всі фільтри
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {items.map(item => (
+              <ProductCard
+                key={item.product_id}
+                item={item}
+                onClick={() => setSelectedItem(item)}
+                dateFilterActive={dateFilterActive}
               />
-              
-              {activeFilterCount > 0 && (
-                <div className="mt-2 text-center">
-                  <Badge variant="primary">
-                    Активних фільтрів: {activeFilterCount}
-                  </Badge>
-                </div>
-              )}
-            </div>
-            
-            {/* Product grid */}
-            <div className="flex-1">
-              {loading ? (
-                <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
-                  <div className="text-corp-text-muted">Завантаження товарів...</div>
-                </div>
-              ) : items.length === 0 ? (
-                <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
-                  <div className="text-4xl mb-4">📦</div>
-                  <div className="text-corp-text-muted">Товарів не знайдено</div>
-                  <button
-                    onClick={resetFilters}
-                    className="mt-4 text-corp-primary hover:underline text-sm"
-                  >
-                    Скинути фільтри
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {items.map(item => (
-                    <ProductCard
-                      key={item.product_id}
-                      item={item}
-                      onClick={() => setSelectedItem(item)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            ))}
           </div>
-        </main>
+        )}
       </div>
       
       {/* Detail Modal */}
       <ProductDetailModal
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
+        dateFilterActive={dateFilterActive}
       />
     </div>
   )

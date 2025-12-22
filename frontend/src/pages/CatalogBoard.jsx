@@ -399,13 +399,37 @@ function ProductDetailModal({ item, onClose, dateFilterActive }) {
                   </div>
                   <div className="bg-white rounded-lg p-3 border border-corp-border">
                     <div className="text-2xl font-bold text-amber-600">{item.in_rent}</div>
-                    <div className="text-xs text-corp-text-muted">В оренді</div>
+                    <div className="text-xs text-corp-text-muted">Видано</div>
                   </div>
                   <div className="bg-white rounded-lg p-3 border border-corp-border">
                     <div className="text-2xl font-bold text-sky-600">{item.reserved}</div>
                     <div className="text-xs text-corp-text-muted">Резерв</div>
                   </div>
                 </div>
+                
+                {/* Processing statuses */}
+                {((item.on_wash || 0) + (item.on_restoration || 0) + (item.on_laundry || 0) > 0) && (
+                  <div className="mt-3 pt-3 border-t border-corp-border">
+                    <div className="text-xs text-corp-text-muted mb-2">На обробці:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {item.on_wash > 0 && (
+                        <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-1 rounded-lg">
+                          Мийка: {item.on_wash}
+                        </span>
+                      )}
+                      {item.on_restoration > 0 && (
+                        <span className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-1 rounded-lg">
+                          Реставрація: {item.on_restoration}
+                        </span>
+                      )}
+                      {item.on_laundry > 0 && (
+                        <span className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-lg">
+                          Хімчистка: {item.on_laundry}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Location */}

@@ -95,11 +95,14 @@ async def get_items_by_category(
     max_qty: int = None,
     search: str = None,
     availability: str = None,  # 'available', 'in_rent', 'reserved', 'all'
+    date_from: str = None,  # YYYY-MM-DD - початок періоду оренди
+    date_to: str = None,    # YYYY-MM-DD - кінець періоду оренди
     limit: int = 200,
     db: Session = Depends(get_rh_db)
 ):
     """
     Отримати товари з фільтрами по категоріям, кольору, матеріалу, кількості
+    З підтримкою перевірки доступності на конкретний період
     """
     try:
         sql_parts = ["""
@@ -167,49 +170,104 @@ async def get_items_by_category(
         product_ids = [row[0] for row in results]
         
         if not product_ids:
-            return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0}}
+            return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0}, "date_filter_active": bool(date_from and date_to)}
         
-        # Резерви
-        reserved_result = db.execute(text("""
-            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.order_id
-            WHERE oi.product_id IN :product_ids
-            AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
-            AND o.rental_end_date >= CURDATE()
-            GROUP BY oi.product_id
-        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
-        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+        # Якщо вказані дати - перевіряємо доступність на конкретний період
+        use_date_filter = date_from and date_to
         
-        # В оренді
-        in_rent_result = db.execute(text("""
-            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.order_id
-            WHERE oi.product_id IN :product_ids
-            AND o.status IN ('issued', 'on_rent')
-            AND o.rental_end_date >= CURDATE()
-            GROUP BY oi.product_id
-        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
-        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
-        
-        # У кого в оренді (детально)
-        who_has_result = db.execute(text("""
-            SELECT 
-                oi.product_id, 
-                o.order_number, 
-                c.firstname, 
-                c.lastname, 
-                c.telephone,
-                o.rental_end_date,
-                oi.quantity
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.order_id
-            JOIN customers c ON o.customer_id = c.customer_id
-            WHERE oi.product_id IN :product_ids
-            AND o.status IN ('issued', 'on_rent')
-            ORDER BY o.rental_end_date
-        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
+        if use_date_filter:
+            # Резерви на конкретний період (перетинання дат)
+            reserved_result = db.execute(text("""
+                SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE oi.product_id IN :product_ids
+                AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+                AND o.rental_start_date <= :date_to
+                AND o.rental_end_date >= :date_from
+                GROUP BY oi.product_id
+            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)), 
+            {"date_from": date_from, "date_to": date_to})
+            reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+            
+            # В оренді на конкретний період
+            in_rent_result = db.execute(text("""
+                SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE oi.product_id IN :product_ids
+                AND o.status IN ('issued', 'on_rent')
+                AND o.rental_start_date <= :date_to
+                AND o.rental_end_date >= :date_from
+                GROUP BY oi.product_id
+            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)),
+            {"date_from": date_from, "date_to": date_to})
+            in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+            
+            # У кого в оренді на цей період
+            who_has_result = db.execute(text("""
+                SELECT 
+                    oi.product_id, 
+                    o.order_number, 
+                    c.firstname, 
+                    c.lastname, 
+                    c.telephone,
+                    o.rental_start_date,
+                    o.rental_end_date,
+                    oi.quantity,
+                    o.status
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                JOIN customers c ON o.customer_id = c.customer_id
+                WHERE oi.product_id IN :product_ids
+                AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent', 'awaiting_customer', 'pending')
+                AND o.rental_start_date <= :date_to
+                AND o.rental_end_date >= :date_from
+                ORDER BY o.rental_start_date
+            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)),
+            {"date_from": date_from, "date_to": date_to})
+        else:
+            # Без дат - показуємо поточний стан
+            reserved_result = db.execute(text("""
+                SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE oi.product_id IN :product_ids
+                AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+                AND o.rental_end_date >= CURDATE()
+                GROUP BY oi.product_id
+            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
+            reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+            
+            in_rent_result = db.execute(text("""
+                SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE oi.product_id IN :product_ids
+                AND o.status IN ('issued', 'on_rent')
+                AND o.rental_end_date >= CURDATE()
+                GROUP BY oi.product_id
+            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
+            in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+            
+            who_has_result = db.execute(text("""
+                SELECT 
+                    oi.product_id, 
+                    o.order_number, 
+                    c.firstname, 
+                    c.lastname, 
+                    c.telephone,
+                    o.rental_start_date,
+                    o.rental_end_date,
+                    oi.quantity,
+                    o.status
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                JOIN customers c ON o.customer_id = c.customer_id
+                WHERE oi.product_id IN :product_ids
+                AND o.status IN ('issued', 'on_rent')
+                ORDER BY o.rental_end_date
+            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
         
         who_has_dict = {}
         for row in who_has_result:
@@ -220,8 +278,10 @@ async def get_items_by_category(
                 "order_number": row[1],
                 "customer": f"{row[2] or ''} {row[3] or ''}".strip(),
                 "phone": row[4],
-                "return_date": str(row[5]) if row[5] else None,
-                "qty": row[6]
+                "start_date": str(row[5]) if row[5] else None,
+                "return_date": str(row[6]) if row[6] else None,
+                "qty": row[7],
+                "status": row[8]
             })
         
         # Формуємо результат
@@ -249,6 +309,10 @@ async def get_items_by_category(
             if availability == 'reserved' and reserved_qty == 0:
                 continue
             
+            # Конфлікти на період
+            conflicts = who_has_dict.get(product_id, [])
+            has_conflict = use_date_filter and (reserved_qty > 0 or in_rent_qty > 0)
+            
             items.append({
                 "product_id": product_id,
                 "sku": row[1],
@@ -262,6 +326,7 @@ async def get_items_by_category(
                 "available": available_qty,
                 "reserved": reserved_qty,
                 "in_rent": in_rent_qty,
+                "has_conflict": has_conflict,
                 "location": {
                     "zone": row[9] or "",
                     "aisle": row[10] or "",
@@ -273,10 +338,16 @@ async def get_items_by_category(
                 "cleaning_status": row[15],
                 "product_state": row[16],
                 "description": row[17],
-                "who_has": who_has_dict.get(product_id, [])
+                "who_has": conflicts
             })
         
-        return {"items": items, "stats": stats}
+        return {
+            "items": items, 
+            "stats": stats,
+            "date_filter_active": use_date_filter,
+            "date_from": date_from,
+            "date_to": date_to
+        }
         
     except Exception as e:
         import traceback

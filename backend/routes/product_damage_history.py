@@ -700,6 +700,17 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
 async def send_to_wash(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """Відправити товар на мийку"""
     try:
+        # Перевірка чи товар вже відправлений на обробку
+        existing = db.execute(text("""
+            SELECT processing_type FROM product_damage_history WHERE id = :damage_id
+        """), {"damage_id": damage_id}).fetchone()
+        
+        if not existing:
+            raise HTTPException(status_code=404, detail="Запис не знайдено")
+        
+        if existing[0] and existing[0] != 'none':
+            raise HTTPException(status_code=400, detail=f"Товар вже відправлено на {existing[0]}")
+        
         db.execute(text("""
             UPDATE product_damage_history
             SET processing_type = 'wash',
@@ -715,6 +726,8 @@ async def send_to_wash(damage_id: str, data: dict, db: Session = Depends(get_rh_
         db.commit()
         return {"success": True, "message": "Товар відправлено на мийку"}
         
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")

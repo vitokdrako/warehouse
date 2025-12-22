@@ -447,10 +447,10 @@ export default function DamageHubApp() {
     if (!orderId) return;
     setDetailLoading(true);
     try {
-      // Use the working endpoint
+      // Use the working endpoint - note: returns 'history' not 'items'
       const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/order/${orderId}`);
       const data = await res.json();
-      setSelectedOrderItems(data.items || []);
+      setSelectedOrderItems(data.history || data.items || []);
     } catch (e) {
       console.error("Error loading order details:", e);
       setSelectedOrderItems([]);

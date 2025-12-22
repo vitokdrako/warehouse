@@ -450,7 +450,7 @@ async def use_deposit(deposit_id: int, amount: float, damage_case_id: Optional[i
     if amount > available: raise HTTPException(status_code=400, detail=f"Not enough deposit. Available: {available}")
     
     try:
-        tx_id = post_transaction(db, "deposit_hold_used", amount, "DEP_HOLD", "DMG_COMP",
+        tx_id = post_transaction(db, "deposit_hold_used", amount, "DEP_LIAB", "DMG_COMP",
                                  "damage_case" if damage_case_id else "order", damage_case_id or dep[0],
                                  order_id=dep[0], damage_case_id=damage_case_id, note=note or "Утримання із застави")
         

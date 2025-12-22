@@ -643,37 +643,26 @@ export default function DamageHubApp() {
       <CorporateHeader cabinetName="Кабінет шкоди" />
 
       <div className="mx-auto max-w-7xl px-4 py-4 space-y-4">
-        {/* Header Card */}
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+        {/* Header Card with Tabs */}
+        <div className="rounded-2xl border border-corp-border bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-semibold">Кабінет шкоди</span>
-                <span className={cls("h-2 w-2 rounded-full", modeMeta[mode].color)} />
-              </div>
-              <div className="mt-1 text-sm text-slate-500">{modeMeta[mode].hint}</div>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Tabs mode={mode} setMode={(m) => { setMode(m); setQ(""); }} />
-              <div className="flex items-center gap-2 rounded-xl border bg-white px-3 py-2">
-                <span className="text-sm text-slate-500">🔍</span>
-                <input
-                  className="w-48 bg-transparent text-sm outline-none"
-                  placeholder="Пошук..."
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                />
-              </div>
+            <Tabs mode={mode} setMode={(m) => { setMode(m); setQ(""); }} />
+            <div className="flex items-center gap-2 rounded-xl border border-corp-border bg-white px-3 py-2">
+              <input
+                className="w-48 bg-transparent text-sm outline-none font-montserrat"
+                placeholder="Пошук..."
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
             </div>
           </div>
         </div>
 
         {/* KPI Stats */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-          <div className="rounded-2xl border bg-white p-4 shadow-sm">
-            <div className="text-xs text-slate-500">Кейсів</div>
-            <div className="text-2xl font-bold">{stats.totalCases}</div>
+          <div className="corp-stat-card">
+            <div className="corp-stat-label">Кейсів</div>
+            <div className="corp-stat-value">{stats.totalCases}</div>
           </div>
           <div className="rounded-2xl border bg-rose-50 border-rose-200 p-4 shadow-sm">
             <div className="text-xs text-rose-600">Очікують оплати</div>

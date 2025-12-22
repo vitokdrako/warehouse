@@ -25,7 +25,7 @@ TEST_CREDENTIALS = {
 }
 TEST_ORDER_ID = 7004  # Order ID with damages from review request
 
-class IssueCardWorkspaceTester:
+class FinanceConsoleTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
@@ -84,31 +84,39 @@ class IssueCardWorkspaceTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
     
-    def test_issue_card_endpoint(self) -> Dict[str, Any]:
-        """Test GET /api/issue-cards/{id} - should return issue card data"""
+    def test_order_damage_fee_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/analytics/order-damage-fee/{order_id} - should return damage fee data"""
         try:
-            self.log(f"🧪 Testing issue card endpoint for {TEST_ISSUE_CARD_ID}...")
+            self.log(f"🧪 Testing order damage fee endpoint for order {TEST_ORDER_ID}...")
             
-            response = self.session.get(f"{self.base_url}/issue-cards/{TEST_ISSUE_CARD_ID}")
+            response = self.session.get(f"{self.base_url}/analytics/order-damage-fee/{TEST_ORDER_ID}")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                self.log(f"✅ Retrieved issue card data")
+                self.log(f"✅ Retrieved order damage fee data")
                 
                 # Check for expected fields
-                expected_fields = ['id', 'order_id', 'order_number', 'status', 'items']
+                expected_fields = ['order_id', 'total_damage_fee', 'paid_damage', 'due_amount', 'damage_items']
                 missing_fields = [field for field in expected_fields if field not in data]
                 
                 if missing_fields:
-                    self.log(f"⚠️ Missing issue card fields: {missing_fields}")
+                    self.log(f"⚠️ Missing damage fee fields: {missing_fields}")
                 
                 # Log key information
-                self.log(f"   ✅ Issue Card ID: {data.get('id')}")
                 self.log(f"   ✅ Order ID: {data.get('order_id')}")
-                self.log(f"   ✅ Order Number: {data.get('order_number')}")
-                self.log(f"   ✅ Status: {data.get('status')}")
-                self.log(f"   ✅ Items count: {len(data.get('items', []))}")
+                self.log(f"   ✅ Total Damage Fee: ₴{data.get('total_damage_fee', 0)}")
+                self.log(f"   ✅ Paid Damage: ₴{data.get('paid_damage', 0)}")
+                self.log(f"   ✅ Due Amount: ₴{data.get('due_amount', 0)}")
+                self.log(f"   ✅ Damage Items count: {len(data.get('damage_items', []))}")
+                self.log(f"   ✅ Needs Payment: {data.get('needs_payment', False)}")
+                
+                # Log damage items details
+                damage_items = data.get('damage_items', [])
+                if damage_items:
+                    self.log(f"   📋 Damage Items:")
+                    for item in damage_items:
+                        self.log(f"      - {item.get('product_name', 'Unknown')}: {item.get('damage_type', 'Unknown')} - ₴{item.get('fee', 0)}")
                 
                 return {
                     "success": True, 
@@ -116,38 +124,49 @@ class IssueCardWorkspaceTester:
                     "missing_fields": missing_fields
                 }
             else:
-                self.log(f"❌ Failed to get issue card: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to get order damage fee: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing issue card: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing order damage fee: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_decor_order_endpoint(self) -> Dict[str, Any]:
-        """Test GET /api/decor-orders/{id} - should return order data"""
+    def test_damage_payment_endpoint(self, amount: float = 100) -> Dict[str, Any]:
+        """Test POST /api/finance/payments - should accept damage payment"""
         try:
-            self.log(f"🧪 Testing decor order endpoint for order {TEST_ORDER_ID}...")
+            self.log(f"🧪 Testing damage payment endpoint with amount ₴{amount}...")
             
-            response = self.session.get(f"{self.base_url}/decor-orders/{TEST_ORDER_ID}")
+            payment_data = {
+                "payment_type": "damage",
+                "method": "cash",
+                "amount": amount,
+                "order_id": TEST_ORDER_ID,
+                "payer_name": "Test Customer",
+                "note": f"Test damage payment for order {TEST_ORDER_ID}",
+                "accepted_by_name": "Test Manager"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/finance/payments",
+                json=payment_data
+            )
             
             if response.status_code == 200:
                 data = response.json()
                 
-                self.log(f"✅ Retrieved order data")
+                self.log(f"✅ Damage payment accepted successfully")
                 
                 # Check for expected fields
-                expected_fields = ['order_id', 'order_number', 'customer_name', 'status', 'items']
+                expected_fields = ['success', 'payment_id']
                 missing_fields = [field for field in expected_fields if field not in data]
                 
                 if missing_fields:
-                    self.log(f"⚠️ Missing order fields: {missing_fields}")
+                    self.log(f"⚠️ Missing payment response fields: {missing_fields}")
                 
                 # Log key information
-                self.log(f"   ✅ Order ID: {data.get('order_id')}")
-                self.log(f"   ✅ Order Number: {data.get('order_number')}")
-                self.log(f"   ✅ Customer: {data.get('customer_name')}")
-                self.log(f"   ✅ Status: {data.get('status')}")
-                self.log(f"   ✅ Items count: {len(data.get('items', []))}")
+                self.log(f"   ✅ Success: {data.get('success')}")
+                self.log(f"   ✅ Payment ID: {data.get('payment_id')}")
+                self.log(f"   ✅ Transaction ID: {data.get('tx_id')}")
                 
                 return {
                     "success": True, 
@@ -155,20 +174,58 @@ class IssueCardWorkspaceTester:
                     "missing_fields": missing_fields
                 }
             else:
-                self.log(f"❌ Failed to get order: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Failed to accept damage payment: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing order: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing damage payment: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_frontend_routing(self) -> Dict[str, Any]:
-        """Test frontend routing to issue workspace"""
+    def test_order_archive_endpoint(self) -> Dict[str, Any]:
+        """Test POST /api/orders/{order_id}/archive - should archive order"""
         try:
-            self.log(f"🧪 Testing frontend routing to issue workspace...")
+            self.log(f"🧪 Testing order archive endpoint for order {TEST_ORDER_ID}...")
+            
+            response = self.session.post(f"{self.base_url}/orders/{TEST_ORDER_ID}/archive")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log(f"✅ Order archived successfully")
+                
+                # Check for expected fields
+                expected_fields = ['message', 'order_id', 'is_archived']
+                missing_fields = [field for field in expected_fields if field not in data]
+                
+                if missing_fields:
+                    self.log(f"⚠️ Missing archive response fields: {missing_fields}")
+                
+                # Log key information
+                self.log(f"   ✅ Message: {data.get('message')}")
+                self.log(f"   ✅ Order ID: {data.get('order_id')}")
+                self.log(f"   ✅ Order Number: {data.get('order_number')}")
+                self.log(f"   ✅ Is Archived: {data.get('is_archived')}")
+                
+                return {
+                    "success": True, 
+                    "data": data,
+                    "missing_fields": missing_fields
+                }
+            else:
+                self.log(f"❌ Failed to archive order: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing order archive: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_frontend_finance_console(self) -> Dict[str, Any]:
+        """Test frontend finance console accessibility"""
+        try:
+            self.log(f"🧪 Testing frontend finance console accessibility...")
             
             # Test the specific URL from the review request
-            frontend_url = f"{FRONTEND_URL}/issue-workspace/{TEST_ISSUE_CARD_ID}"
+            frontend_url = f"{FRONTEND_URL}/finance"
             
             # Make a request to the frontend URL (without authentication headers)
             frontend_session = requests.Session()
@@ -178,7 +235,7 @@ class IssueCardWorkspaceTester:
             self.log(f"   Response status: {response.status_code}")
             
             if response.status_code == 200:
-                self.log(f"✅ Frontend page loads successfully")
+                self.log(f"✅ Finance console page loads successfully")
                 
                 # Check if it contains React app content
                 content = response.text
@@ -192,192 +249,159 @@ class IssueCardWorkspaceTester:
             elif response.status_code in [301, 302, 307, 308]:
                 # Check for redirects
                 redirect_location = response.headers.get('Location', '')
-                self.log(f"❌ Frontend redirects to: {redirect_location}")
-                
-                if '/manager' in redirect_location:
-                    self.log(f"   ❌ CONFIRMED: Redirecting to /manager (this is the reported issue)")
+                self.log(f"❌ Finance console redirects to: {redirect_location}")
                 
                 return {
                     "success": False, 
                     "status_code": response.status_code,
-                    "redirect_location": redirect_location,
-                    "issue_confirmed": '/manager' in redirect_location
+                    "redirect_location": redirect_location
                 }
             else:
-                self.log(f"❌ Frontend returns status: {response.status_code}")
+                self.log(f"❌ Finance console returns status: {response.status_code}")
                 return {"success": False, "status_code": response.status_code}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing frontend routing: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing frontend finance console: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_browser_console_simulation(self) -> Dict[str, Any]:
-        """Simulate browser console errors that might occur"""
+    def test_order_details_endpoint(self) -> Dict[str, Any]:
+        """Test GET /api/orders/{order_id} - should return order details"""
         try:
-            self.log(f"🧪 Checking for potential JavaScript/console errors...")
+            self.log(f"🧪 Testing order details endpoint for order {TEST_ORDER_ID}...")
             
-            # Check if the issue card exists and has proper data structure
-            issue_result = self.test_issue_card_endpoint()
-            order_result = self.test_decor_order_endpoint()
-            
-            potential_issues = []
-            
-            if not issue_result.get("success"):
-                potential_issues.append("Issue card API fails - would cause frontend error")
-            
-            if not order_result.get("success"):
-                potential_issues.append("Order API fails - would cause frontend error")
-            
-            # Check for data consistency
-            if issue_result.get("success") and order_result.get("success"):
-                issue_data = issue_result.get("data", {})
-                order_data = order_result.get("data", {})
-                
-                issue_order_id = issue_data.get("order_id")
-                order_id = order_data.get("order_id")
-                
-                if str(issue_order_id) != str(order_id):
-                    potential_issues.append(f"Order ID mismatch: issue_card.order_id={issue_order_id}, order.order_id={order_id}")
-            
-            if potential_issues:
-                self.log(f"❌ Found potential console errors:")
-                for issue in potential_issues:
-                    self.log(f"   - {issue}")
-                return {"success": False, "potential_issues": potential_issues}
-            else:
-                self.log(f"✅ No obvious console error sources detected")
-                return {"success": True, "potential_issues": []}
-                
-        except Exception as e:
-            self.log(f"❌ Exception checking console errors: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_document_preview(self, document_id: str) -> Dict[str, Any]:
-        """Test GET /api/documents/{document_id}/preview - should return HTML preview"""
-        try:
-            self.log(f"🧪 Testing document preview for document {document_id}...")
-            
-            response = self.session.get(f"{self.base_url}/documents/{document_id}/preview")
+            response = self.session.get(f"{self.base_url}/orders/{TEST_ORDER_ID}")
             
             if response.status_code == 200:
-                html_content = response.text
+                data = response.json()
                 
-                self.log(f"✅ Retrieved document preview ({len(html_content)} chars)")
+                self.log(f"✅ Retrieved order details")
                 
-                # Check HTML structure
-                if '<html' not in html_content.lower():
-                    self.log(f"⚠️ Preview doesn't contain proper HTML structure")
+                # Check for expected fields
+                expected_fields = ['order_id', 'order_number', 'customer_name', 'status']
+                missing_fields = [field for field in expected_fields if field not in data]
+                
+                if missing_fields:
+                    self.log(f"⚠️ Missing order fields: {missing_fields}")
+                
+                # Log key information
+                self.log(f"   ✅ Order ID: {data.get('order_id')}")
+                self.log(f"   ✅ Order Number: {data.get('order_number')}")
+                self.log(f"   ✅ Customer: {data.get('customer_name')}")
+                self.log(f"   ✅ Status: {data.get('status')}")
+                self.log(f"   ✅ Total Rental: ₴{data.get('total_rental', 0)}")
+                self.log(f"   ✅ Total Deposit: ₴{data.get('total_deposit', 0)}")
                 
                 return {
                     "success": True, 
-                    "html_content": html_content,
-                    "html_length": len(html_content)
+                    "data": data,
+                    "missing_fields": missing_fields
                 }
             else:
-                self.log(f"❌ Failed to get document preview: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
+                self.log(f"❌ Failed to get order details: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing document preview: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-    
-    def test_document_pdf(self, document_id: str) -> Dict[str, Any]:
-        """Test GET /api/documents/{document_id}/pdf - should return PDF file"""
-        try:
-            self.log(f"🧪 Testing document PDF generation for document {document_id}...")
-            
-            response = self.session.get(f"{self.base_url}/documents/{document_id}/pdf")
-            
-            if response.status_code == 200:
-                content_type = response.headers.get('content-type', '')
-                content_length = len(response.content)
-                
-                self.log(f"✅ Retrieved PDF document ({content_length} bytes)")
-                
-                # Check PDF content type
-                if 'application/pdf' not in content_type:
-                    self.log(f"⚠️ Unexpected content type: {content_type}")
-                
-                # Check PDF magic bytes
-                if not response.content.startswith(b'%PDF'):
-                    self.log(f"⚠️ Content doesn't start with PDF magic bytes")
-                
-                return {
-                    "success": True, 
-                    "content_type": content_type,
-                    "content_length": content_length
-                }
-            else:
-                self.log(f"❌ Failed to get document PDF: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing document PDF: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing order details: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def verify_issue_workspace_behavior(self) -> Dict[str, Any]:
-        """Verify expected behavior for Issue Card Workspace"""
+    def verify_finance_console_workflow(self) -> Dict[str, Any]:
+        """Verify expected behavior for Finance Console damage-to-archive workflow"""
         try:
-            self.log("🔍 Verifying Issue Card Workspace behavior...")
+            self.log("🔍 Verifying Finance Console damage-to-archive workflow...")
             
             results = {
-                "issue_card_api_working": False,
-                "order_api_working": False,
-                "frontend_routing_working": False,
-                "console_errors_detected": False,
-                "redirect_issue_confirmed": False
+                "order_details_working": False,
+                "damage_fee_api_working": False,
+                "damage_payment_working": False,
+                "order_archive_working": False,
+                "frontend_console_working": False,
+                "workflow_complete": False
             }
             
-            # Test 1: Issue Card API
-            self.log("   Testing Issue Card API...")
-            issue_result = self.test_issue_card_endpoint()
-            
-            if issue_result.get("success"):
-                results["issue_card_api_working"] = True
-                self.log(f"   ✅ Issue Card API: Working")
-            else:
-                self.log("   ❌ Issue Card API: Failed", "ERROR")
-            
-            # Test 2: Order API
-            self.log("   Testing Order API...")
-            order_result = self.test_decor_order_endpoint()
+            # Test 1: Order Details API
+            self.log("   Testing Order Details API...")
+            order_result = self.test_order_details_endpoint()
             
             if order_result.get("success"):
-                results["order_api_working"] = True
-                self.log(f"   ✅ Order API: Working")
+                results["order_details_working"] = True
+                self.log(f"   ✅ Order Details API: Working")
             else:
-                self.log("   ❌ Order API: Failed", "ERROR")
+                self.log("   ❌ Order Details API: Failed", "ERROR")
             
-            # Test 3: Frontend Routing
-            self.log("   Testing Frontend Routing...")
-            routing_result = self.test_frontend_routing()
+            # Test 2: Damage Fee API
+            self.log("   Testing Damage Fee API...")
+            damage_fee_result = self.test_order_damage_fee_endpoint()
             
-            if routing_result.get("success"):
-                results["frontend_routing_working"] = True
-                self.log(f"   ✅ Frontend Routing: Working")
+            if damage_fee_result.get("success"):
+                results["damage_fee_api_working"] = True
+                self.log(f"   ✅ Damage Fee API: Working")
+                
+                # Check if there are unpaid damages
+                damage_data = damage_fee_result.get("data", {})
+                due_amount = damage_data.get("due_amount", 0)
+                if due_amount > 0:
+                    self.log(f"   💰 Found unpaid damages: ₴{due_amount}")
+                else:
+                    self.log(f"   ℹ️ No unpaid damages found")
             else:
-                results["redirect_issue_confirmed"] = routing_result.get("issue_confirmed", False)
-                self.log("   ❌ Frontend Routing: Failed", "ERROR")
+                self.log("   ❌ Damage Fee API: Failed", "ERROR")
             
-            # Test 4: Console Error Detection
-            self.log("   Checking for Console Errors...")
-            console_result = self.test_browser_console_simulation()
+            # Test 3: Damage Payment API (only if there are damages)
+            if results["damage_fee_api_working"]:
+                damage_data = damage_fee_result.get("data", {})
+                due_amount = damage_data.get("due_amount", 0)
+                
+                if due_amount > 0:
+                    self.log("   Testing Damage Payment API...")
+                    payment_result = self.test_damage_payment_endpoint(min(due_amount, 100))
+                    
+                    if payment_result.get("success"):
+                        results["damage_payment_working"] = True
+                        self.log(f"   ✅ Damage Payment API: Working")
+                    else:
+                        self.log("   ❌ Damage Payment API: Failed", "ERROR")
+                else:
+                    results["damage_payment_working"] = True  # No payment needed
+                    self.log(f"   ✅ Damage Payment API: Not needed (no damages)")
             
-            if not console_result.get("success"):
-                results["console_errors_detected"] = True
-                self.log("   ❌ Potential Console Errors: Detected", "ERROR")
+            # Test 4: Order Archive API
+            self.log("   Testing Order Archive API...")
+            archive_result = self.test_order_archive_endpoint()
+            
+            if archive_result.get("success"):
+                results["order_archive_working"] = True
+                self.log(f"   ✅ Order Archive API: Working")
             else:
-                self.log(f"   ✅ Console Errors: None detected")
+                self.log("   ❌ Order Archive API: Failed", "ERROR")
+            
+            # Test 5: Frontend Console
+            self.log("   Testing Frontend Console...")
+            frontend_result = self.test_frontend_finance_console()
+            
+            if frontend_result.get("success"):
+                results["frontend_console_working"] = True
+                self.log(f"   ✅ Frontend Console: Working")
+            else:
+                self.log("   ❌ Frontend Console: Failed", "ERROR")
+            
+            # Overall workflow assessment
+            critical_apis = [
+                results["order_details_working"],
+                results["damage_fee_api_working"],
+                results["damage_payment_working"],
+                results["order_archive_working"]
+            ]
+            results["workflow_complete"] = all(critical_apis)
             
             return results
             
         except Exception as e:
-            self.log(f"❌ Exception verifying Issue Workspace behavior: {str(e)}", "ERROR")
+            self.log(f"❌ Exception verifying Finance Console workflow: {str(e)}", "ERROR")
             return {"error": str(e)}
 
-    def run_comprehensive_issue_workspace_test(self):
-        """Run the comprehensive Issue Card Workspace test"""
-        self.log("🚀 Starting comprehensive Issue Card Workspace test")
+    def run_comprehensive_finance_console_test(self):
+        """Run the comprehensive Finance Console damage-to-archive test"""
+        self.log("🚀 Starting comprehensive Finance Console damage-to-archive test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -391,92 +415,115 @@ class IssueCardWorkspaceTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test Issue Card API
-        self.log(f"\n🔍 Step 2: Testing Issue Card API ({TEST_ISSUE_CARD_ID})...")
-        issue_result = self.test_issue_card_endpoint()
-        issue_success = issue_result.get("success", False)
-        
-        # Step 4: Test Order API
-        self.log(f"\n🔍 Step 3: Testing Order API ({TEST_ORDER_ID})...")
-        order_result = self.test_decor_order_endpoint()
+        # Step 3: Test Order Details
+        self.log(f"\n🔍 Step 2: Testing Order Details API ({TEST_ORDER_ID})...")
+        order_result = self.test_order_details_endpoint()
         order_success = order_result.get("success", False)
         
-        # Step 5: Test Frontend Routing
-        self.log(f"\n🔍 Step 4: Testing Frontend Routing...")
-        routing_result = self.test_frontend_routing()
-        routing_success = routing_result.get("success", False)
+        # Step 4: Test Damage Fee API
+        self.log(f"\n🔍 Step 3: Testing Damage Fee API ({TEST_ORDER_ID})...")
+        damage_fee_result = self.test_order_damage_fee_endpoint()
+        damage_fee_success = damage_fee_result.get("success", False)
         
-        # Step 6: Test Console Errors
-        self.log(f"\n🔍 Step 5: Testing Console Error Detection...")
-        console_result = self.test_browser_console_simulation()
-        console_success = console_result.get("success", False)
+        # Step 5: Test Damage Payment API (conditional)
+        payment_success = True
+        payment_result = {"success": True, "data": {"message": "No payment needed"}}
         
-        # Step 7: Comprehensive verification
-        self.log("\n🔍 Step 6: Comprehensive verification...")
-        behavior_results = self.verify_issue_workspace_behavior()
+        if damage_fee_success:
+            damage_data = damage_fee_result.get("data", {})
+            due_amount = damage_data.get("due_amount", 0)
+            
+            if due_amount > 0:
+                self.log(f"\n🔍 Step 4: Testing Damage Payment API (₴{due_amount})...")
+                payment_result = self.test_damage_payment_endpoint(min(due_amount, 100))
+                payment_success = payment_result.get("success", False)
+            else:
+                self.log(f"\n🔍 Step 4: Skipping Damage Payment (no unpaid damages)...")
         
-        # Step 8: Summary
+        # Step 6: Test Order Archive API
+        self.log(f"\n🔍 Step 5: Testing Order Archive API...")
+        archive_result = self.test_order_archive_endpoint()
+        archive_success = archive_result.get("success", False)
+        
+        # Step 7: Test Frontend Console
+        self.log(f"\n🔍 Step 6: Testing Frontend Console...")
+        frontend_result = self.test_frontend_finance_console()
+        frontend_success = frontend_result.get("success", False)
+        
+        # Step 8: Comprehensive verification
+        self.log("\n🔍 Step 7: Comprehensive verification...")
+        workflow_results = self.verify_finance_console_workflow()
+        
+        # Step 9: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE ISSUE CARD WORKSPACE TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE FINANCE CONSOLE TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        if issue_success:
-            self.log(f"   • Issue Card API: ✅ Working")
-            issue_data = issue_result.get("data", {})
-            self.log(f"     - Issue Card ID: {issue_data.get('id')}")
-            self.log(f"     - Order ID: {issue_data.get('order_id')}")
-            self.log(f"     - Status: {issue_data.get('status')}")
-        else:
-            self.log(f"   • Issue Card API: ❌ Failed")
-            self.log(f"     - Error: {issue_result.get('response_text', 'Unknown error')}")
-        
         if order_success:
-            self.log(f"   • Order API: ✅ Working")
+            self.log(f"   • Order Details API: ✅ Working")
             order_data = order_result.get("data", {})
-            self.log(f"     - Customer: {order_data.get('customer_name')}")
             self.log(f"     - Order Number: {order_data.get('order_number')}")
+            self.log(f"     - Customer: {order_data.get('customer_name')}")
+            self.log(f"     - Status: {order_data.get('status')}")
         else:
-            self.log(f"   • Order API: ❌ Failed")
+            self.log(f"   • Order Details API: ❌ Failed")
             self.log(f"     - Error: {order_result.get('response_text', 'Unknown error')}")
         
-        if routing_success:
-            self.log(f"   • Frontend Routing: ✅ Working")
+        if damage_fee_success:
+            self.log(f"   • Damage Fee API: ✅ Working")
+            damage_data = damage_fee_result.get("data", {})
+            self.log(f"     - Total Damage Fee: ₴{damage_data.get('total_damage_fee', 0)}")
+            self.log(f"     - Due Amount: ₴{damage_data.get('due_amount', 0)}")
+            self.log(f"     - Damage Items: {len(damage_data.get('damage_items', []))}")
         else:
-            self.log(f"   • Frontend Routing: ❌ Failed")
-            if routing_result.get("issue_confirmed"):
-                self.log(f"     - ❌ CONFIRMED: Page redirects to /manager (reported issue)")
-            redirect_location = routing_result.get("redirect_location", "")
+            self.log(f"   • Damage Fee API: ❌ Failed")
+            self.log(f"     - Error: {damage_fee_result.get('response_text', 'Unknown error')}")
+        
+        if payment_success:
+            self.log(f"   • Damage Payment API: ✅ Working")
+            payment_data = payment_result.get("data", {})
+            if payment_data.get("payment_id"):
+                self.log(f"     - Payment ID: {payment_data.get('payment_id')}")
+            else:
+                self.log(f"     - Status: {payment_data.get('message', 'OK')}")
+        else:
+            self.log(f"   • Damage Payment API: ❌ Failed")
+            self.log(f"     - Error: {payment_result.get('response_text', 'Unknown error')}")
+        
+        if archive_success:
+            self.log(f"   • Order Archive API: ✅ Working")
+            archive_data = archive_result.get("data", {})
+            self.log(f"     - Archived: {archive_data.get('is_archived', False)}")
+        else:
+            self.log(f"   • Order Archive API: ❌ Failed")
+            self.log(f"     - Error: {archive_result.get('response_text', 'Unknown error')}")
+        
+        if frontend_success:
+            self.log(f"   • Frontend Console: ✅ Working")
+        else:
+            self.log(f"   • Frontend Console: ❌ Failed")
+            redirect_location = frontend_result.get("redirect_location", "")
             if redirect_location:
                 self.log(f"     - Redirect Location: {redirect_location}")
         
-        if console_success:
-            self.log(f"   • Console Errors: ✅ None detected")
-        else:
-            self.log(f"   • Console Errors: ❌ Potential issues detected")
-            potential_issues = console_result.get("potential_issues", [])
-            for issue in potential_issues:
-                self.log(f"     - {issue}")
-        
-        self.log(f"\n🎉 ISSUE CARD WORKSPACE TESTING COMPLETED!")
+        self.log(f"\n🎉 FINANCE CONSOLE TESTING COMPLETED!")
         
         # Check if critical functionality works
-        critical_apis = [issue_success, order_success]
+        critical_apis = [order_success, damage_fee_success, payment_success, archive_success]
         critical_success = all(critical_apis)
         
-        if critical_success and routing_success:
-            self.log(f"\n✅ ALL ISSUE CARD WORKSPACE COMPONENTS WORKING!")
-            self.log(f"   The workspace should load correctly")
+        if critical_success and frontend_success:
+            self.log(f"\n✅ ALL FINANCE CONSOLE COMPONENTS WORKING!")
+            self.log(f"   The damage-to-archive workflow should work correctly")
         else:
-            self.log(f"\n⚠️ ISSUE CARD WORKSPACE HAS PROBLEMS:")
+            self.log(f"\n⚠️ FINANCE CONSOLE HAS PROBLEMS:")
             if not critical_success:
-                self.log(f"   - Backend APIs failing")
-            if not routing_success:
-                self.log(f"   - Frontend routing issues (redirects to /manager)")
-                if routing_result.get("issue_confirmed"):
-                    self.log(f"   - ❌ CONFIRMED: This matches the reported issue")
+                self.log(f"   - Backend APIs have issues")
+            if not frontend_success:
+                self.log(f"   - Frontend console access issues")
         
-        return critical_success and routing_success
+        return critical_success and frontend_success
 
 def main():
     """Main test execution"""

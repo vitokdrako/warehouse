@@ -248,7 +248,8 @@ async def get_order_damage_history(
                 id, product_id, sku, product_name, category,
                 order_id, order_number, stage,
                 damage_type, damage_code, severity, fee,
-                photo_url, note, created_by, created_at
+                photo_url, note, created_by, created_at,
+                processing_type, processing_status, sent_to_processing_at
             FROM product_damage_history
             WHERE order_id = :order_id
             ORDER BY created_at DESC
@@ -273,7 +274,10 @@ async def get_order_damage_history(
                 "photo_url": row[12],
                 "note": row[13],
                 "created_by": row[14],
-                "created_at": row[15].isoformat() if row[15] else None
+                "created_at": row[15].isoformat() if row[15] else None,
+                "processing_type": row[16],
+                "processing_status": row[17],
+                "sent_to_processing_at": row[18].isoformat() if row[18] else None
             })
         
         return {

@@ -753,13 +753,17 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
     try:
         # Отримати інформацію про товар
         damage_info = db.execute(text("""
-            SELECT product_id, sku, product_name, category, order_id, order_number
+            SELECT product_id, sku, product_name, category, order_id, order_number, processing_type
             FROM product_damage_history
             WHERE id = :damage_id
         """), {"damage_id": damage_id}).fetchone()
         
         if not damage_info:
             raise HTTPException(status_code=404, detail="Damage record not found")
+        
+        # Перевірка чи товар вже відправлений на обробку
+        if damage_info[6] and damage_info[6] != 'none':
+            raise HTTPException(status_code=400, detail=f"Товар вже відправлено на {damage_info[6]}")
         
         laundry_company = data.get("laundry_company", "Хімчистка №1")
         expected_return_date = data.get("expected_return_date")
@@ -784,17 +788,17 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
                 "notes": notes
             })
         
-        # Створити laundry_item
+        # Створити laundry_item (без order_id - такої колонки немає)
         item_id = f"ITEM-{datetime.now().strftime('%Y%m%d%H%M%S')}"
         db.execute(text("""
             INSERT INTO laundry_items (
-                id, batch_id, product_id, sku, product_name,
-                condition_before, quantity, order_id, order_number,
-                created_at, updated_at
+                id, batch_id, product_id, sku, product_name, category,
+                quantity, returned_quantity, condition_before, notes,
+                created_at
             ) VALUES (
-                :id, :batch_id, :product_id, :sku, :product_name,
-                'damaged', 1, :order_id, :order_number,
-                NOW(), NOW()
+                :id, :batch_id, :product_id, :sku, :product_name, :category,
+                1, 0, 'damaged', :notes,
+                NOW()
             )
         """), {
             "id": item_id,
@@ -802,8 +806,8 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
             "product_id": damage_info[0],
             "sku": damage_info[1],
             "product_name": damage_info[2],
-            "order_id": damage_info[4],
-            "order_number": damage_info[5]
+            "category": damage_info[3],
+            "notes": f"Від ордера {damage_info[5] or ''}"
         })
         
         # Оновити damage record

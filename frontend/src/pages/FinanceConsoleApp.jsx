@@ -279,10 +279,10 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   const availableInOriginal = Math.max(0, depositActualAmount - usedInOriginal - refundedInOriginal);
   const availableDeposit = deposit ? Math.max(0, (deposit.held_amount || 0) - (deposit.used_amount || 0) - (deposit.refunded_amount || 0)) : 0;
 
-  // Calculate damage totals
-  const totalDamageFee = damageFees.reduce((sum, d) => sum + (d.fee || 0), 0);
-  const damagePaid = damageFees.reduce((sum, d) => sum + (d.paid_amount || 0), 0);
-  const damageDue = Math.max(0, totalDamageFee - damagePaid);
+  // Calculate damage totals from API response (not from items)
+  const totalDamageFee = damageTotal;
+  const damagePaid = damagePaidTotal;
+  const damageDue = damageDueTotal;
   
   // Order financial status
   const isRentPaid = rentDue <= 0;

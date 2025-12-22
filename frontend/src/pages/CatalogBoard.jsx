@@ -37,82 +37,69 @@ function Badge({ children, variant = 'default' }) {
   )
 }
 
-// Horizontal Category Selector
+// Category Dropdowns - два селекти: категорія та підкатегорія
 function CategorySelector({ categories, selected, onSelect, loading }) {
-  if (loading) {
-    return (
-      <div className="p-4 text-corp-text-muted text-sm">Завантаження...</div>
-    )
-  }
+  // Отримати підкатегорії для вибраної категорії
+  const subcategories = selected.category 
+    ? categories.find(c => c.name === selected.category)?.subcategories || []
+    : []
+  
+  // Загальна кількість товарів
+  const totalProducts = categories.reduce((sum, c) => sum + c.product_count, 0)
   
   return (
-    <div className="space-y-3">
-      {/* Categories - horizontal scroll */}
-      <div>
-        <label className="text-xs text-corp-text-muted font-medium block mb-2">Категорія</label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => onSelect({ category: null, subcategory: null })}
-            className={cls(
-              'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
-              !selected.category 
-                ? 'bg-corp-primary text-white border-corp-primary shadow-sm' 
-                : 'bg-white text-corp-text-main border-corp-border hover:border-corp-primary hover:text-corp-primary'
-            )}
-          >
-            Всі ({categories.reduce((sum, c) => sum + c.product_count, 0)})
-          </button>
+    <div className="flex flex-wrap items-end gap-4">
+      {/* Category dropdown */}
+      <div className="min-w-[250px]">
+        <label className="text-xs text-corp-text-muted font-medium block mb-1">Категорія</label>
+        <select
+          value={selected.category || ''}
+          onChange={(e) => onSelect({ category: e.target.value || null, subcategory: null })}
+          disabled={loading}
+          className="w-full rounded-lg border border-corp-border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-corp-primary/30 focus:border-corp-primary bg-white"
+        >
+          <option value="">Всі категорії ({totalProducts})</option>
           {categories.map(cat => (
-            <button
-              key={cat.name}
-              onClick={() => onSelect({ category: cat.name, subcategory: null })}
-              className={cls(
-                'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
-                selected.category === cat.name && !selected.subcategory
-                  ? 'bg-corp-primary text-white border-corp-primary shadow-sm'
-                  : 'bg-white text-corp-text-main border-corp-border hover:border-corp-primary hover:text-corp-primary'
-              )}
-            >
+            <option key={cat.name} value={cat.name}>
               {cat.name} ({cat.product_count})
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
       </div>
       
-      {/* Subcategories - shown only when category selected */}
-      {selected.category && (
-        <div>
-          <label className="text-xs text-corp-text-muted font-medium block mb-2">Підкатегорія</label>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => onSelect({ ...selected, subcategory: null })}
-              className={cls(
-                'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
-                !selected.subcategory
-                  ? 'bg-corp-primary/80 text-white border-corp-primary/80 shadow-sm'
-                  : 'bg-white text-corp-text-main border-corp-border hover:border-corp-primary hover:text-corp-primary'
-              )}
-            >
-              Всі підкатегорії
-            </button>
-            {categories
-              .find(c => c.name === selected.category)
-              ?.subcategories?.map(sub => (
-                <button
-                  key={sub.name}
-                  onClick={() => onSelect({ ...selected, subcategory: sub.name })}
-                  className={cls(
-                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
-                    selected.subcategory === sub.name
-                      ? 'bg-corp-primary/80 text-white border-corp-primary/80 shadow-sm'
-                      : 'bg-white text-corp-text-main border-corp-border hover:border-corp-primary hover:text-corp-primary'
-                  )}
-                >
-                  {sub.name} ({sub.product_count})
-                </button>
-              ))}
-          </div>
-        </div>
+      {/* Subcategory dropdown - показується коли вибрана категорія */}
+      <div className="min-w-[250px]">
+        <label className="text-xs text-corp-text-muted font-medium block mb-1">Підкатегорія</label>
+        <select
+          value={selected.subcategory || ''}
+          onChange={(e) => onSelect({ ...selected, subcategory: e.target.value || null })}
+          disabled={!selected.category || loading}
+          className={cls(
+            "w-full rounded-lg border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-corp-primary/30 bg-white",
+            !selected.category 
+              ? "border-corp-border/50 text-corp-text-muted cursor-not-allowed" 
+              : "border-corp-border focus:border-corp-primary"
+          )}
+        >
+          <option value="">
+            {selected.category ? `Всі підкатегорії (${subcategories.reduce((s, sub) => s + sub.product_count, 0)})` : 'Спочатку оберіть категорію'}
+          </option>
+          {subcategories.map(sub => (
+            <option key={sub.name} value={sub.name}>
+              {sub.name} ({sub.product_count})
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Показати вибране */}
+      {(selected.category || selected.subcategory) && (
+        <button
+          onClick={() => onSelect({ category: null, subcategory: null })}
+          className="px-3 py-2.5 text-sm text-corp-text-muted hover:text-rose-600 transition-colors"
+        >
+          Скинути
+        </button>
       )}
     </div>
   )

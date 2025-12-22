@@ -17,8 +17,8 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://awesome-montalcini.preview.emergentagent.com/api"
-FRONTEND_URL = "https://awesome-montalcini.preview.emergentagent.com"
+BASE_URL = "https://damage-workflow.preview.emergentagent.com/api"
+FRONTEND_URL = "https://damage-workflow.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
@@ -540,7 +540,7 @@ def main():
     print("      - Should load finance console properly")
     print(f"Test Order ID: {TEST_ORDER_ID}")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
-    print("URL: https://awesome-montalcini.preview.emergentagent.com")
+    print("URL: https://damage-workflow.preview.emergentagent.com")
     print("=" * 80)
     
     tester = FinanceConsoleTester(BASE_URL)

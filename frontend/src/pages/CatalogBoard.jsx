@@ -573,32 +573,50 @@ export default function CatalogBoard() {
           <main className="flex-1 space-y-4">
             {/* Stats bar */}
             <div className="bg-white rounded-xl border border-corp-border p-4">
-              <div className="flex flex-wrap items-center gap-6">
+              <div className="flex flex-wrap items-center gap-4">
                 <div>
-                  <div className="text-2xl font-bold text-corp-text-dark">{items.length}</div>
+                  <div className="text-xl font-bold text-corp-text-dark">{items.length}</div>
                   <div className="text-xs text-corp-text-muted">Знайдено</div>
                 </div>
-                <div className="border-l border-corp-border pl-6">
-                  <div className="text-2xl font-bold text-emerald-600">{fmtUA(stats.available)}</div>
+                <div className="border-l border-corp-border pl-4">
+                  <div className="text-xl font-bold text-emerald-600">{fmtUA(stats.available)}</div>
                   <div className="text-xs text-corp-text-muted">Доступно</div>
                 </div>
-                <div className="border-l border-corp-border pl-6">
-                  <div className="text-2xl font-bold text-amber-600">{fmtUA(stats.in_rent)}</div>
+                <div className="border-l border-corp-border pl-4">
+                  <div className="text-xl font-bold text-amber-600">{fmtUA(stats.in_rent)}</div>
                   <div className="text-xs text-corp-text-muted">В оренді</div>
                 </div>
-                <div className="border-l border-corp-border pl-6">
-                  <div className="text-2xl font-bold text-sky-600">{fmtUA(stats.reserved)}</div>
+                <div className="border-l border-corp-border pl-4">
+                  <div className="text-xl font-bold text-sky-600">{fmtUA(stats.reserved)}</div>
                   <div className="text-xs text-corp-text-muted">Резерв</div>
                 </div>
+                {stats.on_wash > 0 && (
+                  <div className="border-l border-corp-border pl-4">
+                    <div className="text-xl font-bold text-blue-500">{fmtUA(stats.on_wash)}</div>
+                    <div className="text-xs text-corp-text-muted">Мийка</div>
+                  </div>
+                )}
+                {stats.on_restoration > 0 && (
+                  <div className="border-l border-corp-border pl-4">
+                    <div className="text-xl font-bold text-purple-600">{fmtUA(stats.on_restoration)}</div>
+                    <div className="text-xs text-corp-text-muted">Реставрація</div>
+                  </div>
+                )}
+                {stats.on_laundry > 0 && (
+                  <div className="border-l border-corp-border pl-4">
+                    <div className="text-xl font-bold text-indigo-600">{fmtUA(stats.on_laundry)}</div>
+                    <div className="text-xs text-corp-text-muted">Хімчистка</div>
+                  </div>
+                )}
                 {conflictCount > 0 && (
-                  <div className="border-l border-corp-border pl-6">
-                    <div className="text-2xl font-bold text-rose-600">{conflictCount}</div>
+                  <div className="border-l border-corp-border pl-4">
+                    <div className="text-xl font-bold text-rose-600">{conflictCount}</div>
                     <div className="text-xs text-corp-text-muted">Конфліктів</div>
                   </div>
                 )}
                 {dateFilterActive && (
                   <div className="ml-auto">
-                    <Badge variant="info">Фільтр по датах активний</Badge>
+                    <Badge variant="info">Фільтр по датах</Badge>
                   </div>
                 )}
               </div>

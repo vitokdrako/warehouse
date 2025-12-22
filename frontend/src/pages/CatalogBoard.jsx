@@ -649,22 +649,25 @@ export default function CatalogBoard() {
       <CorporateHeader cabinetName="Каталог" />
       
       <div className="max-w-[1600px] mx-auto px-4 py-4 space-y-4">
-        {/* Date Range Picker */}
-        <DateRangePicker 
-          dateFrom={dateRange.dateFrom}
-          dateTo={dateRange.dateTo}
-          onChange={setDateRange}
-          onClear={clearDates}
-        />
-        
-        {/* Categories - horizontal */}
-        <div className="bg-white rounded-xl border border-corp-border p-4">
-          <CategorySelector
-            categories={categories}
-            selected={selectedCategory}
-            onSelect={setSelectedCategory}
-            loading={categoriesLoading}
+        {/* Top row: Date Range + Categories */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Date Range Picker */}
+          <DateRangePicker 
+            dateFrom={dateRange.dateFrom}
+            dateTo={dateRange.dateTo}
+            onChange={setDateRange}
+            onClear={clearDates}
           />
+          
+          {/* Categories */}
+          <div className="bg-white rounded-xl border border-corp-border p-4">
+            <CategorySelector
+              categories={categories}
+              selected={selectedCategory}
+              onSelect={setSelectedCategory}
+              loading={categoriesLoading}
+            />
+          </div>
         </div>
         
         {/* Filters */}

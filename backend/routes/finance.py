@@ -480,7 +480,7 @@ async def refund_deposit(deposit_id: int, amount: float, method: str = "cash",
     
     try:
         credit_acc = "CASH" if method == "cash" else "BANK"
-        tx_id = post_transaction(db, "deposit_refund", amount, "DEP_HOLD", credit_acc, "order", dep[0],
+        tx_id = post_transaction(db, "deposit_refund", amount, "DEP_LIAB", credit_acc, "order", dep[0],
                                  order_id=dep[0], note=note or "Повернення застави")
         
         new_refunded = float(dep[3]) + amount

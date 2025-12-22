@@ -1,5 +1,6 @@
 /* eslint-disable */
 // Каталог товарів - гнучкий інструмент перегляду для менеджера
+// Вкладки: Товари | Набори
 // Sidebar зліва: дати, категорії, фільтри | Справа: товари
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -28,6 +29,366 @@ function Badge({ children, variant = 'default' }) {
     </span>
   )
 }
+
+// ============================================
+// SETS TAB COMPONENTS
+// ============================================
+
+// Set Card
+function SetCard({ set, onEdit, onDelete }) {
+  return (
+    <div className="bg-white rounded-xl border border-corp-border p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start gap-4">
+        {/* Image */}
+        <div className="w-24 h-24 rounded-lg bg-corp-bg-light flex-shrink-0 overflow-hidden">
+          {set.image_url ? (
+            <img src={set.image_url} alt={set.name} className="w-full h-full object-cover" />
+          ) : set.items[0]?.image ? (
+            <img src={getImageUrl(set.items[0].image)} alt={set.name} className="w-full h-full object-cover" onError={handleImageError} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-3xl text-corp-text-muted">📦</div>
+          )}
+        </div>
+        
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-corp-text-dark truncate">{set.name}</h3>
+            {!set.is_active && <Badge variant="warning">Неактивний</Badge>}
+          </div>
+          {set.description && (
+            <p className="text-sm text-corp-text-muted line-clamp-2 mb-2">{set.description}</p>
+          )}
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-corp-text-muted">{set.items_count} товарів</span>
+            <span className="font-semibold text-corp-primary">{fmtUA(set.final_price)} ₴</span>
+            {set.set_price && set.set_price !== set.calculated_price && (
+              <span className="text-xs text-corp-text-muted line-through">{fmtUA(set.calculated_price)} ₴</span>
+            )}
+          </div>
+          
+          {/* Items preview */}
+          <div className="flex flex-wrap gap-1 mt-2">
+            {set.items.slice(0, 4).map((item, idx) => (
+              <span key={idx} className="text-xs bg-corp-bg-light px-2 py-0.5 rounded">
+                {item.name.slice(0, 20)}{item.name.length > 20 ? '...' : ''} x{item.quantity}
+              </span>
+            ))}
+            {set.items.length > 4 && (
+              <span className="text-xs text-corp-text-muted">+{set.items.length - 4}</span>
+            )}
+          </div>
+        </div>
+        
+        {/* Actions */}
+        <div className="flex flex-col gap-1">
+          <button onClick={() => onEdit(set)} className="p-2 text-corp-text-muted hover:text-corp-primary rounded-lg hover:bg-corp-bg-light transition-colors">
+            ✏️
+          </button>
+          <button onClick={() => onDelete(set.id)} className="p-2 text-corp-text-muted hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors">
+            🗑️
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Create/Edit Set Modal
+function SetModal({ set, products, onClose, onSave }) {
+  const [name, setName] = useState(set?.name || '')
+  const [description, setDescription] = useState(set?.description || '')
+  const [setPrice, setSetPrice] = useState(set?.set_price || '')
+  const [items, setItems] = useState(set?.items?.map(i => ({ product_id: i.product_id, quantity: i.quantity, name: i.name, rental_price: i.rental_price })) || [])
+  const [search, setSearch] = useState('')
+  const [saving, setSaving] = useState(false)
+  
+  // Filter products for search
+  const filteredProducts = useMemo(() => {
+    if (!search) return []
+    const term = search.toLowerCase()
+    return products.filter(p => 
+      p.sku?.toLowerCase().includes(term) || 
+      p.name?.toLowerCase().includes(term)
+    ).slice(0, 10)
+  }, [products, search])
+  
+  // Calculate total
+  const calculatedPrice = items.reduce((sum, i) => sum + (i.rental_price || 0) * i.quantity, 0)
+  
+  const addProduct = (product) => {
+    const existing = items.find(i => i.product_id === product.product_id)
+    if (existing) {
+      setItems(items.map(i => i.product_id === product.product_id ? { ...i, quantity: i.quantity + 1 } : i))
+    } else {
+      setItems([...items, { product_id: product.product_id, quantity: 1, name: product.name, rental_price: product.rental_price }])
+    }
+    setSearch('')
+  }
+  
+  const updateQty = (productId, qty) => {
+    if (qty < 1) {
+      setItems(items.filter(i => i.product_id !== productId))
+    } else {
+      setItems(items.map(i => i.product_id === productId ? { ...i, quantity: qty } : i))
+    }
+  }
+  
+  const removeItem = (productId) => {
+    setItems(items.filter(i => i.product_id !== productId))
+  }
+  
+  const handleSave = async () => {
+    if (!name.trim()) return alert('Введіть назву набору')
+    if (items.length === 0) return alert('Додайте товари до набору')
+    
+    setSaving(true)
+    try {
+      await onSave({
+        id: set?.id,
+        name: name.trim(),
+        description: description.trim() || null,
+        set_price: setPrice ? parseFloat(setPrice) : null,
+        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
+      })
+      onClose()
+    } catch (err) {
+      alert('Помилка збереження: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-corp-border">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-corp-text-dark">
+              {set ? 'Редагувати набір' : 'Новий набір'}
+            </h2>
+            <button onClick={onClose} className="text-corp-text-muted hover:text-corp-text-dark text-2xl">×</button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Name */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Назва набору *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Наприклад: Весільний комплект"
+              className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+            />
+          </div>
+          
+          {/* Description */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Опис</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Опис набору..."
+              rows={2}
+              className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+            />
+          </div>
+          
+          {/* Add products */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Додати товари</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Пошук по SKU або назві..."
+                className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+              />
+              {filteredProducts.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-corp-border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {filteredProducts.map(p => (
+                    <button
+                      key={p.product_id}
+                      onClick={() => addProduct(p)}
+                      className="w-full text-left px-3 py-2 hover:bg-corp-bg-light flex items-center gap-2"
+                    >
+                      <span className="text-xs text-corp-text-muted">{p.sku}</span>
+                      <span className="flex-1 truncate">{p.name}</span>
+                      <span className="text-sm text-corp-primary">{fmtUA(p.rental_price)} ₴</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Items list */}
+          {items.length > 0 && (
+            <div>
+              <label className="text-sm font-medium text-corp-text-dark block mb-2">Товари в наборі ({items.length})</label>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {items.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-corp-bg-light rounded-lg p-2">
+                    <span className="flex-1 text-sm truncate">{item.name}</span>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => updateQty(item.product_id, item.quantity - 1)} className="w-6 h-6 rounded bg-white border hover:bg-corp-bg-page">-</button>
+                      <span className="w-8 text-center text-sm">{item.quantity}</span>
+                      <button onClick={() => updateQty(item.product_id, item.quantity + 1)} className="w-6 h-6 rounded bg-white border hover:bg-corp-bg-page">+</button>
+                    </div>
+                    <span className="text-sm text-corp-primary w-20 text-right">{fmtUA(item.rental_price * item.quantity)} ₴</span>
+                    <button onClick={() => removeItem(item.product_id)} className="text-rose-500 hover:text-rose-700">×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Price */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-corp-text-dark block mb-1">Сума товарів</label>
+              <div className="text-lg font-semibold text-corp-text-dark">{fmtUA(calculatedPrice)} ₴</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-corp-text-dark block mb-1">Ціна набору (знижка)</label>
+              <input
+                type="number"
+                value={setPrice}
+                onChange={(e) => setSetPrice(e.target.value)}
+                placeholder={calculatedPrice.toString()}
+                className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6 border-t border-corp-border flex gap-3 justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-corp-text-muted hover:text-corp-text-dark">
+            Скасувати
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={saving || !name.trim() || items.length === 0}
+            className="px-6 py-2 bg-corp-primary text-white rounded-lg hover:bg-corp-primary/90 disabled:opacity-50"
+          >
+            {saving ? 'Збереження...' : (set ? 'Зберегти' : 'Створити')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Sets Tab Content
+function SetsTab({ products }) {
+  const [sets, setSets] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editingSet, setEditingSet] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+  
+  useEffect(() => {
+    loadSets()
+  }, [])
+  
+  const loadSets = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`${BACKEND_URL}/api/product-sets`)
+      const data = await res.json()
+      setSets(data.sets || [])
+    } catch (err) {
+      console.error('Error loading sets:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const handleSave = async (setData) => {
+    const method = setData.id ? 'PUT' : 'POST'
+    const url = setData.id ? `${BACKEND_URL}/api/product-sets/${setData.id}` : `${BACKEND_URL}/api/product-sets`
+    
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(setData)
+    })
+    
+    if (!res.ok) throw new Error('Failed to save')
+    await loadSets()
+  }
+  
+  const handleDelete = async (setId) => {
+    if (!confirm('Видалити набір?')) return
+    
+    await fetch(`${BACKEND_URL}/api/product-sets/${setId}`, { method: 'DELETE' })
+    await loadSets()
+  }
+  
+  const openCreate = () => {
+    setEditingSet(null)
+    setShowModal(true)
+  }
+  
+  const openEdit = (set) => {
+    setEditingSet(set)
+    setShowModal(true)
+  }
+  
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-corp-text-dark">Набори товарів</h2>
+          <p className="text-sm text-corp-text-muted">Комплекти для швидкого додавання до замовлень</p>
+        </div>
+        <button 
+          onClick={openCreate}
+          className="px-4 py-2 bg-corp-primary text-white rounded-lg hover:bg-corp-primary/90 font-medium"
+        >
+          + Новий набір
+        </button>
+      </div>
+      
+      {/* Sets list */}
+      {loading ? (
+        <div className="text-center py-12 text-corp-text-muted">Завантаження...</div>
+      ) : sets.length === 0 ? (
+        <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
+          <div className="text-4xl mb-4">📦</div>
+          <div className="text-corp-text-muted mb-4">Наборів ще немає</div>
+          <button onClick={openCreate} className="text-corp-primary hover:underline">
+            Створити перший набір
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sets.map(set => (
+            <SetCard key={set.id} set={set} onEdit={openEdit} onDelete={handleDelete} />
+          ))}
+        </div>
+      )}
+      
+      {/* Modal */}
+      {showModal && (
+        <SetModal
+          set={editingSet}
+          products={products}
+          onClose={() => setShowModal(false)}
+          onSave={handleSave}
+        />
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// PRODUCTS TAB (existing Sidebar)
+// ============================================
 
 // Sidebar Component - All filters on the left
 function Sidebar({ 

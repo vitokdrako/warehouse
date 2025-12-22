@@ -43,7 +43,7 @@ function Pill({onClick, children, tone='slate'}){
 }
 function Card({title,right,children}){
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-corp-border bg-white p-4">
       <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-semibold">{title}</h3>{right}</div>
       {children}
     </div>
@@ -61,7 +61,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
           value={q} 
           onChange={e=>setQ(e.target.value)} 
           placeholder="введіть текст або відскануйте штрих‑код…" 
-          className="mt-1 w-full rounded-xl border border-slate-300 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+          className="mt-1 w-full rounded-xl border border-corp-border px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
         />
       </div>
       
@@ -69,7 +69,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
       <div className="flex flex-wrap gap-3 items-end">
         <div className="min-w-[180px]">
           <label className="text-xs text-corp-text-muted font-medium">Категорія</label>
-          <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={cat} onChange={e=>setCat(e.target.value)}>
+          <select className="mt-1 w-full rounded-xl border border-corp-border px-3 py-2" value={cat} onChange={e=>setCat(e.target.value)}>
             <option value="all">Всі</option>
             {categories.map(c => (
               <option key={c} value={c}>{c}</option>
@@ -78,7 +78,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
         </div>
         <div className="min-w-[150px]">
           <label className="text-xs text-corp-text-muted font-medium">Стан</label>
-          <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={state} onChange={e=>setState(e.target.value)}>
+          <select className="mt-1 w-full rounded-xl border border-corp-border px-3 py-2" value={state} onChange={e=>setState(e.target.value)}>
             <option value="all">Будь‑який</option>
             <option value="ok">В наявності</option>
             <option value="fragile">Крихке</option>
@@ -87,7 +87,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
         </div>
         <div className="min-w-[150px]">
           <label className="text-xs text-corp-text-muted font-medium">Чистка</label>
-          <select className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2" value={clean} onChange={e=>setClean(e.target.value)}>
+          <select className="mt-1 w-full rounded-xl border border-corp-border px-3 py-2" value={clean} onChange={e=>setClean(e.target.value)}>
             <option value="all">Будь‑яка</option>
             <option value="clean">Чисте</option>
             <option value="wash">На мийці</option>
@@ -110,7 +110,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
             'rounded-full px-3 py-1 text-xs font-medium border transition-colors',
             clean === 'repair' 
               ? 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-300' 
-              : 'bg-white text-corp-text-main border-slate-200 hover:bg-slate-50'
+              : 'bg-white text-corp-text-main border-corp-border hover:bg-corp-bg-page'
           )}
         >
           🔧 В реставрації
@@ -121,7 +121,7 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
             'rounded-full px-3 py-1 text-xs font-medium border transition-colors',
             clean === 'wash' 
               ? 'bg-sky-100 text-sky-700 border-sky-300' 
-              : 'bg-white text-corp-text-main border-slate-200 hover:bg-slate-50'
+              : 'bg-white text-corp-text-main border-corp-border hover:bg-corp-bg-page'
           )}
         >
           🚿 На мийці
@@ -132,14 +132,14 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
             'rounded-full px-3 py-1 text-xs font-medium border transition-colors',
             state === 'damaged' 
               ? 'bg-rose-100 text-rose-700 border-rose-300' 
-              : 'bg-white text-corp-text-main border-slate-200 hover:bg-slate-50'
+              : 'bg-white text-corp-text-main border-corp-border hover:bg-corp-bg-page'
           )}
         >
           ⚠️ Пошкоджено
         </button>
         <button
           onClick={() => {setState('all'); setClean('all'); setCat('all')}}
-          className="rounded-full px-3 py-1 text-xs font-medium border bg-white text-corp-text-main border-slate-200 hover:bg-slate-50 transition-colors"
+          className="rounded-full px-3 py-1 text-xs font-medium border bg-white text-corp-text-main border-corp-border hover:bg-corp-bg-page transition-colors"
         >
           ✖️ Скинути фільтри
         </button>
@@ -152,16 +152,16 @@ function Filters({q,setQ, cat,setCat, state,setState, clean,setClean, categories
 function Table({rows, onOpen, loading}){
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+      <div className="rounded-2xl border border-corp-border bg-white p-12 text-center">
         <div className="text-corp-text-muted">Завантаження каталогу...</div>
       </div>
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200">
+    <div className="overflow-hidden rounded-2xl border border-corp-border">
       <table className="min-w-full text-sm">
-        <thead className="bg-slate-50 text-left text-corp-text-muted">
+        <thead className="bg-corp-bg-page text-left text-corp-text-muted">
           <tr>
             <th className="px-3 py-2">Фото</th>
             <th className="px-3 py-2">SKU / Назва</th>
@@ -176,17 +176,17 @@ function Table({rows, onOpen, loading}){
         </thead>
         <tbody>
           {rows.map(p=> (
-            <tr key={p.id} className="border-t hover:bg-slate-50/50">
+            <tr key={p.id} className="border-t hover:bg-corp-bg-page/50">
               <td className="px-3 py-2">
                 {p.cover ? (
                   <img 
                     src={getImageUrl(p.cover)} 
                     alt={p.name} 
-                    className="h-12 w-18 rounded-md object-cover bg-slate-100" 
+                    className="h-12 w-18 rounded-md object-cover bg-corp-bg-light" 
                     onError={handleImageError}
                   />
                 ) : (
-                  <div className="h-12 w-18 rounded-md bg-slate-100 flex items-center justify-center text-xl">📦</div>
+                  <div className="h-12 w-18 rounded-md bg-corp-bg-light flex items-center justify-center text-xl">📦</div>
                 )}
               </td>
               <td className="px-3 py-2">
@@ -207,14 +207,14 @@ function Table({rows, onOpen, loading}){
                   {p.due_back.map(d=> (
                     <div key={d.order_id} className="text-xs text-corp-text-main">#{d.order_id} · {d.customer} · {d.qty} шт · поверн: {d.date}</div>
                   ))}
-                  {p.due_back.length===0 && <div className="text-xs text-slate-400">—</div>}
+                  {p.due_back.length===0 && <div className="text-xs text-corp-text-muted">—</div>}
                 </div>
               </td>
               <td className="px-3 py-2">
                 {p.in_restore > 0 ? (
                   <Badge tone={CLEAN.repair.tone}>🔧 {p.in_restore} шт</Badge>
                 ) : (
-                  <div className="text-xs text-slate-400">—</div>
+                  <div className="text-xs text-corp-text-muted">—</div>
                 )}
               </td>
               <td className="px-3 py-2">
@@ -399,7 +399,7 @@ function Drawer({open, item, onClose, onSave}){
           </Card>
           <Card title={`🔨 Історія пошкоджень (${damageHistory.length})`}>
             {loadingHistory ? (
-              <div className="text-sm text-slate-400">Завантаження...</div>
+              <div className="text-sm text-corp-text-muted">Завантаження...</div>
             ) : damageHistory.length > 0 ? (
               <div className="max-h-48 space-y-2 overflow-y-auto text-sm">
                 {damageHistory.map(d => (
@@ -416,7 +416,7 @@ function Drawer({open, item, onClose, onSave}){
                         <div className={`text-sm font-semibold ${d.severity === 'high' ? 'text-red-600' : d.severity === 'medium' ? 'text-amber-600' : 'text-green-600'}`}>
                           ₴{fmtUA(d.fee)}
                         </div>
-                        <div className="text-xs text-slate-400">
+                        <div className="text-xs text-corp-text-muted">
                           {new Date(d.created_at).toLocaleDateString('uk-UA')}
                         </div>
                       </div>
@@ -716,7 +716,7 @@ export default function CatalogBoard(){
           <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold">🔗 Керування наборами</h2>
-              <button onClick={() => setFamilyModal({...familyModal, open: false})} className="text-slate-400 hover:text-corp-text-main text-2xl">×</button>
+              <button onClick={() => setFamilyModal({...familyModal, open: false})} className="text-corp-text-muted hover:text-corp-text-main text-2xl">×</button>
             </div>
 
             {/* Створити новий набір */}
@@ -736,7 +736,7 @@ export default function CatalogBoard(){
                   </div>
                 ) : (
                   familyModal.families.map(family => (
-                    <div key={family.id} className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                    <div key={family.id} className="border border-corp-border rounded-lg p-4 bg-corp-bg-page">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-lg">{family.name}</h3>
                         <div className="flex gap-2">
@@ -779,13 +779,13 @@ export default function CatalogBoard(){
                       
                       {/* Товари в наборі */}
                       <div className="mt-3">
-                        <div className="text-sm font-medium text-slate-700 mb-2">Товари в наборі:</div>
+                        <div className="text-sm font-medium text-corp-text-main mb-2">Товари в наборі:</div>
                         <div 
                           className={cls(
                             "min-h-[100px] rounded-lg p-2 transition-colors",
                             family.products && family.products.length > 0 
                               ? "grid grid-cols-2 gap-2" 
-                              : "border-2 border-dashed border-slate-300 flex items-center justify-center"
+                              : "border-2 border-dashed border-corp-border flex items-center justify-center"
                           )}
                           onDragOver={(e) => {
                             e.preventDefault()
@@ -825,17 +825,17 @@ export default function CatalogBoard(){
                             family.products.map(prod => (
                               <div 
                                 key={prod.product_id} 
-                                className="flex items-center gap-2 p-2 bg-white rounded border border-slate-200 hover:shadow-sm transition-shadow"
+                                className="flex items-center gap-2 p-2 bg-white rounded border border-corp-border hover:shadow-sm transition-shadow"
                               >
                                 {prod.cover ? (
                                   <img 
                                     src={getImageUrl(prod.cover)} 
                                     alt={prod.name}
-                                    className="w-12 h-12 object-cover rounded bg-slate-100" 
+                                    className="w-12 h-12 object-cover rounded bg-corp-bg-light" 
                                     onError={handleImageError}
                                   />
                                 ) : null}
-                                <div className="w-12 h-12 bg-slate-100 rounded flex items-center justify-center text-2xl" style={{display: 'none'}}>
+                                <div className="w-12 h-12 bg-corp-bg-light rounded flex items-center justify-center text-2xl" style={{display: 'none'}}>
                                   📦
                                 </div>
                                 <div className="flex-1 text-sm">
@@ -851,7 +851,7 @@ export default function CatalogBoard(){
                               </div>
                             ))
                           ) : (
-                            <div className="text-sm text-slate-400 text-center py-4">
+                            <div className="text-sm text-corp-text-muted text-center py-4">
                               <div className="text-2xl mb-2">📦</div>
                               <div>Перетягніть товари сюди</div>
                               <div className="text-xs">або оберіть нижче і натисніть "Прив'язати"</div>
@@ -871,7 +871,7 @@ export default function CatalogBoard(){
                   {selectedProducts.length > 0 && (
                     <button 
                       onClick={() => setSelectedProducts([])}
-                      className="text-sm text-corp-text-muted hover:text-slate-700"
+                      className="text-sm text-corp-text-muted hover:text-corp-text-main"
                     >
                       Скасувати вибір ({selectedProducts.length})
                     </button>
@@ -885,11 +885,11 @@ export default function CatalogBoard(){
                     value={familySearch}
                     onChange={(e) => setFamilySearch(e.target.value)}
                     placeholder="🔍 Пошук по SKU або назві..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-corp-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 max-h-64 overflow-auto bg-slate-50 p-3 rounded-lg">
+                <div className="grid grid-cols-3 gap-2 max-h-64 overflow-auto bg-corp-bg-page p-3 rounded-lg">
                   {products
                     .filter(p => {
                       if (!familySearch) return true
@@ -904,7 +904,7 @@ export default function CatalogBoard(){
                           "flex items-center gap-2 p-2 border rounded cursor-move transition-all relative",
                           selectedProducts.includes(p.product_id) 
                             ? "bg-blue-50 border-blue-300 shadow-sm" 
-                            : "bg-white border-slate-200 hover:bg-slate-50 hover:shadow-md"
+                            : "bg-white border-corp-border hover:bg-corp-bg-page hover:shadow-md"
                         )}
                         draggable
                         onDragStart={(e) => {
@@ -931,11 +931,11 @@ export default function CatalogBoard(){
                           <img 
                             src={getImageUrl(p.cover)} 
                             alt={p.name}
-                            className="w-8 h-8 object-cover rounded bg-slate-100" 
+                            className="w-8 h-8 object-cover rounded bg-corp-bg-light" 
                             onError={handleImageError}
                           />
                         ) : (
-                          <div className="w-8 h-8 bg-slate-100 rounded flex items-center justify-center text-xs">📦</div>
+                          <div className="w-8 h-8 bg-corp-bg-light rounded flex items-center justify-center text-xs">📦</div>
                         )}
                         <div className="text-xs flex-1 min-w-0">
                           <div className="font-medium truncate">{p.name}</div>

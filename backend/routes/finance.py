@@ -1037,9 +1037,10 @@ async def get_orders_with_finance(
 ):
     """
     Отримати замовлення з фінансовою інформацією для Finance Cabinet.
+    Включає damage_due для відображення бейджу шкоди.
     """
     try:
-        # Запит до orders з фінансовими даними (без payment_status)
+        # Запит до orders з фінансовими даними та шкодою
         query = """
             SELECT 
                 o.order_id, o.order_number, o.customer_name, o.customer_phone,
@@ -1048,7 +1049,9 @@ async def get_orders_with_finance(
                 COALESCE(d.held_amount, 0) as deposit_held,
                 COALESCE(d.used_amount, 0) as deposit_used,
                 COALESCE(d.refunded_amount, 0) as deposit_refunded,
-                COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = o.order_id AND payment_type = 'rent'), 0) as rent_paid
+                COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = o.order_id AND payment_type = 'rent'), 0) as rent_paid,
+                COALESCE((SELECT SUM(fee) FROM product_damage_history WHERE order_id = o.order_id), 0) as damage_total,
+                COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = o.order_id AND payment_type = 'damage'), 0) as damage_paid
             FROM orders o
             LEFT JOIN fin_deposit_holds d ON d.order_id = o.order_id
             WHERE o.is_archived = FALSE
@@ -1063,6 +1066,10 @@ async def get_orders_with_finance(
         
         orders = []
         for row in result:
+            damage_total = float(row[13] or 0)
+            damage_paid = float(row[14] or 0)
+            damage_due = max(0, damage_total - damage_paid)
+            
             orders.append({
                 "order_id": row[0],
                 "order_number": row[1],
@@ -1077,7 +1084,10 @@ async def get_orders_with_finance(
                 "deposit_held": float(row[9] or 0),
                 "deposit_used": float(row[10] or 0),
                 "deposit_refunded": float(row[11] or 0),
-                "rent_paid": float(row[12] or 0)
+                "rent_paid": float(row[12] or 0),
+                "damage_total": damage_total,
+                "damage_paid": damage_paid,
+                "damage_due": damage_due
             })
         
         return {"orders": orders, "total": len(orders)}

@@ -211,8 +211,11 @@ function Sidebar({
             >
               <option value="">Всі</option>
               <option value="available">Доступні</option>
-              <option value="in_rent">В оренді</option>
-              <option value="reserved">В резерві</option>
+              <option value="in_rent">В оренді (видані)</option>
+              <option value="reserved">Резерв (очікують)</option>
+              <option value="on_wash">На мийці</option>
+              <option value="on_restoration">На реставрації</option>
+              <option value="on_laundry">В хімчистці</option>
             </select>
           </div>
         </div>

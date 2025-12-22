@@ -43,8 +43,8 @@ function Pill({onClick, children, tone='slate'}){
 }
 function Card({title,right,children}){
   return (
-    <div className="rounded-2xl border border-corp-border bg-white p-4">
-      <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-semibold">{title}</h3>{right}</div>
+    <div className="rounded-2xl border border-corp-border bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between"><h3 className="text-base font-semibold text-corp-text-dark">{title}</h3>{right}</div>
       {children}
     </div>
   )

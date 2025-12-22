@@ -1233,12 +1233,12 @@ export default function FinanceConsoleApp() {
   const selectedOrder = useMemo(() => orders.find(o => o.order_id === selectedId), [orders, selectedId]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
       <CorporateHeader cabinetName="Фінансова консоль" />
       
       <div className="mx-auto max-w-[1400px] px-4 py-4">
         {/* Tabs */}
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white border border-slate-200 p-2 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white border border-corp-border p-2 shadow-sm">
           <TabBtn active={tab === "orders"} onClick={() => setTab("orders")}>
             📋 Ордери
           </TabBtn>
@@ -1268,7 +1268,7 @@ export default function FinanceConsoleApp() {
                 selectedOrder ? (
                   <OrderFinancePanel order={selectedOrder} onRefresh={loadAll} deposits={deposits} />
                 ) : (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+                  <div className="rounded-2xl border border-corp-border bg-white p-10 text-center text-corp-text-muted shadow-sm">
                     {loading ? "Завантаження..." : "Оберіть замовлення зліва"}
                   </div>
                 )

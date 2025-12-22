@@ -68,7 +68,7 @@ const tonePill = (tone) =>
     tone === "warn" && "bg-amber-50 text-amber-900 border-amber-200",
     tone === "danger" && "bg-rose-50 text-rose-800 border-rose-200",
     tone === "info" && "bg-blue-50 text-blue-800 border-blue-200",
-    tone === "neutral" && "bg-slate-50 text-slate-700 border-slate-200"
+    tone === "neutral" && "bg-corp-bg-page text-corp-text-main border-corp-border"
   );
 
 const Badge = ({ tone = "neutral", children }) => <span className={tonePill(tone)}>{children}</span>;
@@ -79,7 +79,7 @@ const GhostBtn = ({ onClick, children, disabled, className = "" }) => (
     disabled={disabled}
     className={cls(
       "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium transition",
-      disabled ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed" : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
+      disabled ? "border-corp-border bg-corp-bg-page text-corp-text-muted cursor-not-allowed" : "border-corp-border bg-white text-corp-text-dark hover:bg-corp-bg-page",
       className
     )}
   >
@@ -102,7 +102,7 @@ const PrimaryBtn = ({ onClick, children, disabled, variant = "primary" }) => {
       disabled={disabled}
       className={cls(
         "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition",
-        disabled ? "bg-slate-200 text-slate-500 cursor-not-allowed" : variants[variant]
+        disabled ? "bg-corp-border text-corp-text-muted cursor-not-allowed" : variants[variant]
       )}
     >
       {children}
@@ -153,20 +153,20 @@ function OrderCaseRow({ caseData, active, onClick }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-slate-900">#{caseData.order_number}</span>
+            <span className="text-sm font-bold text-corp-text-dark">#{caseData.order_number}</span>
             {isPaid ? (
               <Badge tone="ok">✓ Сплачено</Badge>
             ) : (
               <Badge tone="danger">⏳ Очікує оплати</Badge>
             )}
           </div>
-          <div className="mt-1 text-sm text-slate-700">{caseData.customer_name || "—"}</div>
-          <div className="mt-1 text-xs text-slate-500">
+          <div className="mt-1 text-sm text-corp-text-main">{caseData.customer_name || "—"}</div>
+          <div className="mt-1 text-xs text-corp-text-muted">
             {caseData.items_count} позиц. • {fmtDate(caseData.latest_damage)}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <div className="text-lg font-bold text-slate-900">{money(caseData.total_fee)}</div>
+          <div className="text-lg font-bold text-corp-text-dark">{money(caseData.total_fee)}</div>
           {hasPending && (
             <Badge tone="warn">⚡ {caseData.pending_assignment} не розподілено</Badge>
           )}
@@ -175,11 +175,11 @@ function OrderCaseRow({ caseData, active, onClick }) {
       {/* Progress bar for paid amount */}
       {!isPaid && caseData.damage_paid > 0 && (
         <div className="mt-3">
-          <div className="flex justify-between text-xs text-slate-500 mb-1">
+          <div className="flex justify-between text-xs text-corp-text-muted mb-1">
             <span>Сплачено: {money(caseData.damage_paid)}</span>
             <span>Залишок: {money(caseData.damage_due)}</span>
           </div>
-          <div className="h-1.5 rounded-full bg-slate-200">
+          <div className="h-1.5 rounded-full bg-corp-border">
             <div 
               className="h-full rounded-full bg-emerald-500 transition-all"
               style={{ width: `${Math.min(100, (caseData.damage_paid / caseData.total_fee) * 100)}%` }}
@@ -200,7 +200,7 @@ function DamageItemRow({ item, onSendTo }) {
       restoration: { label: "🔧 Реставрація", tone: "warn", bg: "bg-amber-100 text-amber-800" },
       laundry: { label: "🧺 Хімчистка", tone: "ok", bg: "bg-emerald-100 text-emerald-800" },
     };
-    const m = map[item.processing_type] || { label: item.processing_type, tone: "neutral", bg: "bg-slate-100" };
+    const m = map[item.processing_type] || { label: item.processing_type, tone: "neutral", bg: "bg-corp-bg-light" };
     return <Badge tone={m.tone}>{m.label}</Badge>;
   };
 
@@ -221,7 +221,7 @@ function DamageItemRow({ item, onSendTo }) {
   return (
     <div className={cls(
       "rounded-xl border p-3 transition",
-      isAssigned ? "bg-slate-50 border-slate-200" : "bg-amber-50 border-amber-200"
+      isAssigned ? "bg-corp-bg-page border-corp-border" : "bg-amber-50 border-amber-200"
     )}>
       <div className="flex items-start gap-3">
         {/* Photo */}
@@ -230,11 +230,11 @@ function DamageItemRow({ item, onSendTo }) {
             <img 
               src={photoUrl} 
               alt={item.product_name}
-              className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+              className="w-16 h-16 rounded-lg object-cover border border-corp-border"
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           ) : (
-            <div className="w-16 h-16 rounded-lg bg-slate-200 flex items-center justify-center text-2xl">
+            <div className="w-16 h-16 rounded-lg bg-corp-border flex items-center justify-center text-2xl">
               📦
             </div>
           )}
@@ -244,30 +244,30 @@ function DamageItemRow({ item, onSendTo }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-slate-900 truncate">{item.product_name}</div>
-              <div className="mt-0.5 text-xs text-slate-500">
+              <div className="font-semibold text-corp-text-dark truncate">{item.product_name}</div>
+              <div className="mt-0.5 text-xs text-corp-text-muted">
                 SKU: {item.sku || "—"} • {item.damage_type || "Пошкодження"}
               </div>
             </div>
             <div className="text-right shrink-0">
-              <div className="font-bold text-slate-900">{money(item.fee)}</div>
-              <div className="text-xs text-slate-500">{item.severity || "low"}</div>
+              <div className="font-bold text-corp-text-dark">{money(item.fee)}</div>
+              <div className="text-xs text-corp-text-muted">{item.severity || "low"}</div>
             </div>
           </div>
           
           {/* Note */}
           {item.note && (
-            <div className="mt-1 text-xs text-slate-600 italic truncate">"{item.note}"</div>
+            <div className="mt-1 text-xs text-corp-text-main italic truncate">"{item.note}"</div>
           )}
           
           {/* Processing Status - показуємо куди відправлено */}
           {isAssigned && (
             <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-slate-500">Відправлено:</span>
+              <span className="text-xs text-corp-text-muted">Відправлено:</span>
               {getProcessingBadge()}
               {getStatusBadge()}
               {item.sent_to_processing_at && (
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-corp-text-muted">
                   {fmtDate(item.sent_to_processing_at)}
                 </span>
               )}
@@ -310,8 +310,8 @@ function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh }) {
     return (
       <div className="rounded-2xl border bg-white p-8 shadow-sm text-center">
         <span className="text-5xl mb-4 block">📋</span>
-        <div className="text-slate-500 text-lg">Оберіть кейс зі списку</div>
-        <div className="text-slate-400 text-sm mt-1">Тут з'являться деталі пошкоджень</div>
+        <div className="text-corp-text-muted text-lg">Оберіть кейс зі списку</div>
+        <div className="text-corp-text-muted text-sm mt-1">Тут з'являться деталі пошкоджень</div>
       </div>
     );
   }
@@ -336,7 +336,7 @@ function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh }) {
             </div>
             <div className="mt-1 text-sm">{orderCase.customer_name}</div>
             {orderCase.customer_phone && (
-              <div className="text-xs text-slate-500">{orderCase.customer_phone}</div>
+              <div className="text-xs text-corp-text-muted">{orderCase.customer_phone}</div>
             )}
           </div>
           <div className="text-right">
@@ -351,30 +351,30 @@ function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh }) {
       {/* Stats */}
       <div className="grid grid-cols-3 divide-x border-b">
         <div className="p-3 text-center">
-          <div className="text-2xl font-bold text-slate-900">{items.length}</div>
-          <div className="text-xs text-slate-500">Всього</div>
+          <div className="text-2xl font-bold text-corp-text-dark">{items.length}</div>
+          <div className="text-xs text-corp-text-muted">Всього</div>
         </div>
         <div className="p-3 text-center">
           <div className="text-2xl font-bold text-amber-600">{pendingCount}</div>
-          <div className="text-xs text-slate-500">Не розподілено</div>
+          <div className="text-xs text-corp-text-muted">Не розподілено</div>
         </div>
         <div className="p-3 text-center">
           <div className="text-2xl font-bold text-emerald-600">{assignedCount}</div>
-          <div className="text-xs text-slate-500">В роботі</div>
+          <div className="text-xs text-corp-text-muted">В роботі</div>
         </div>
       </div>
 
       {/* Items List */}
       <div className="p-4 max-h-[60vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-semibold text-slate-700">Пошкоджені позиції</span>
+          <span className="text-sm font-semibold text-corp-text-main">Пошкоджені позиції</span>
           <GhostBtn onClick={onRefresh} className="text-xs py-1.5">🔄 Оновити</GhostBtn>
         </div>
         
         {loading ? (
-          <div className="text-center py-8 text-slate-400">Завантаження...</div>
+          <div className="text-center py-8 text-corp-text-muted">Завантаження...</div>
         ) : items.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">Немає позицій</div>
+          <div className="text-center py-8 text-corp-text-muted">Немає позицій</div>
         ) : (
           <div className="space-y-2">
             {items.map((item) => (
@@ -386,7 +386,7 @@ function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh }) {
 
       {/* Actions */}
       {!isPaid && (
-        <div className="px-4 py-3 bg-slate-50 border-t">
+        <div className="px-4 py-3 bg-corp-bg-page border-t">
           <a
             href={`/finance?order=${orderCase.order_id}`}
             className="inline-flex items-center justify-center w-full rounded-xl bg-corp-primary text-white px-4 py-2.5 text-sm font-semibold hover:bg-corp-primary-dark transition"
@@ -412,17 +412,17 @@ function ProcessingItemRow({ item, onComplete, onRemove }) {
     <div className="rounded-xl border bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <div className="font-semibold text-slate-900">{item.product_name}</div>
-          <div className="mt-0.5 text-xs text-slate-500">
+          <div className="font-semibold text-corp-text-dark">{item.product_name}</div>
+          <div className="mt-0.5 text-xs text-corp-text-muted">
             SKU: {item.sku} • {item.order_number || "—"}
           </div>
           {item.processing_notes && (
-            <div className="mt-1 text-xs text-slate-600 italic">"{item.processing_notes}"</div>
+            <div className="mt-1 text-xs text-corp-text-main italic">"{item.processing_notes}"</div>
           )}
         </div>
         <div className="flex flex-col items-end gap-1.5">
           <Badge tone={s.tone}>{s.label}</Badge>
-          <span className="text-xs text-slate-500">{fmtDate(item.sent_to_processing_at)}</span>
+          <span className="text-xs text-corp-text-muted">{fmtDate(item.sent_to_processing_at)}</span>
         </div>
       </div>
       <div className="mt-3 pt-2 border-t flex gap-2">
@@ -639,7 +639,7 @@ export default function DamageHubApp() {
   }, [orderCases, washItems, restoreItems, laundryItems]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-corp-bg-page">
       <CorporateHeader cabinetName="Кабінет шкоди" />
 
       <div className="mx-auto max-w-7xl px-4 py-4 space-y-4">
@@ -692,14 +692,14 @@ export default function DamageHubApp() {
           <div className="grid lg:grid-cols-5 gap-4">
             {/* Left - Order List */}
             <div className="lg:col-span-2 space-y-3">
-              <div className="text-sm font-semibold text-slate-600 px-1">
+              <div className="text-sm font-semibold text-corp-text-main px-1">
                 Ордери з пошкодженнями ({filteredCases.length})
               </div>
               <div className="max-h-[70vh] overflow-y-auto space-y-2 pr-1">
                 {loading ? (
-                  <div className="text-center py-8 text-slate-400">Завантаження...</div>
+                  <div className="text-center py-8 text-corp-text-muted">Завантаження...</div>
                 ) : filteredCases.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400">Немає кейсів</div>
+                  <div className="text-center py-8 text-corp-text-muted">Немає кейсів</div>
                 ) : (
                   filteredCases.map((c) => (
                     <OrderCaseRow
@@ -732,7 +732,7 @@ export default function DamageHubApp() {
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="text-lg font-semibold mb-4">🧼 Товари на мийці ({filteredWashItems.length})</div>
             {filteredWashItems.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
+              <div className="text-center py-12 text-corp-text-muted">
                 <span className="text-4xl block mb-2">🧼</span>
                 Немає товарів на мийці
               </div>
@@ -754,7 +754,7 @@ export default function DamageHubApp() {
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="text-lg font-semibold mb-4">🔧 Товари на реставрації ({filteredRestoreItems.length})</div>
             {filteredRestoreItems.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
+              <div className="text-center py-12 text-corp-text-muted">
                 <span className="text-4xl block mb-2">🔧</span>
                 Немає товарів на реставрації
               </div>
@@ -776,7 +776,7 @@ export default function DamageHubApp() {
           <div className="rounded-2xl border bg-white p-4 shadow-sm">
             <div className="text-lg font-semibold mb-4">🧺 Товари на хімчистці ({filteredLaundryItems.length})</div>
             {filteredLaundryItems.length === 0 ? (
-              <div className="text-center py-12 text-slate-400">
+              <div className="text-center py-12 text-corp-text-muted">
                 <span className="text-4xl block mb-2">🧺</span>
                 Немає товарів на хімчистці
               </div>

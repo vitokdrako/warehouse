@@ -207,17 +207,37 @@ const OrdersList = ({ orders, selectedId, onSelect, query, setQuery, reload, loa
   );
 };
 
-const KPIBar = ({ order }) => {
+const KPIBar = ({ order, deposit }) => {
   const rentDue = Math.max(0, (order.total_rental || 0) - (order.rent_paid || 0));
   const depositHeld = order.deposit_held || 0;
   const totalDue = rentDue + Math.max(0, (order.total_deposit || 0) - depositHeld);
+  
+  // Format deposit in original currency
+  const formatDeposit = () => {
+    if (!deposit) return "—";
+    const currency = deposit.currency || "UAH";
+    const amount = deposit.actual_amount || deposit.held_amount || 0;
+    if (currency === "UAH") return money(amount);
+    // Show foreign currency as-is
+    const symbol = currency === "USD" ? "$" : currency === "EUR" ? "€" : currency;
+    return `${symbol}${amount.toLocaleString("uk-UA")}`;
+  };
+  
+  // Sub text showing UAH equivalent if foreign currency
+  const depositSub = () => {
+    if (!deposit) return null;
+    const currency = deposit.currency || "UAH";
+    if (currency === "UAH") return "(не дохід)";
+    const uahAmount = deposit.held_amount || 0;
+    return `≈ ${money(uahAmount)}`;
+  };
   
   return (
     <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
       <Stat label="Нараховано" value={money(order.total_rental || 0)} />
       <Stat label="Оплачено" value={money(order.rent_paid || 0)} />
-      <Stat label="Очік. застава" value={money(order.total_deposit || 0)} sub="(не дохід)" />
-      <Stat label="Факт. застава" value={money(depositHeld)} />
+      <Stat label="Очік. застава" value={money(order.total_deposit || 0)} sub="(в ₴)" />
+      <Stat label="Факт. застава" value={formatDeposit()} sub={depositSub()} />
       <Stat label="До сплати" value={money(totalDue)} sub={totalDue > 0 ? "є борг" : "✓"} />
     </div>
   );

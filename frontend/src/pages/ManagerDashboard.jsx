@@ -330,7 +330,7 @@ export default function ManagerDashboard() {
 
       {/* Filters */}
       <section className="mx-auto max-w-7xl px-6 py-4">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Filter label="Менеджер">
             <select className="corp-select">
               <option>Всі</option>

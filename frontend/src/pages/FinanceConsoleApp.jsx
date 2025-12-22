@@ -304,14 +304,22 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
     try {
       const res = await authFetch(`${BACKEND_URL}/api/analytics/order-damage-fee/${order.order_id}`);
       const data = await res.json();
-      // API returns damage_items array with product_name, damage_type, fee
+      // API returns: total_damage_fee, paid_damage, due_amount, damage_items
       setDamageFees(data.damage_items || []);
+      setDamageTotal(data.total_damage_fee || 0);
+      setDamagePaidTotal(data.paid_damage || 0);
+      setDamageDueTotal(data.due_amount || 0);
       if (data.due_amount > 0) {
         setDamageAmount(data.due_amount);
+      } else {
+        setDamageAmount("");
       }
     } catch (e) {
       console.error("Error loading damage fees:", e);
       setDamageFees([]);
+      setDamageTotal(0);
+      setDamagePaidTotal(0);
+      setDamageDueTotal(0);
     }
     setLoadingDamage(false);
   };

@@ -310,6 +310,12 @@ export default function ManagerDashboard() {
             >
               Переоблік
             </button>
+            <button 
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+              onClick={() => navigate('/orders-archive')}
+            >
+              Архів
+            </button>
             {user?.role === 'admin' && (
               <button 
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"

@@ -1,111 +1,278 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to finalize the Document Engine V2 and fix a critical bug blocking the order workflow. This evolved to include several major new features and refinements:
-- A complete email integration for sending documents to clients.
-- A new Decor Condition Log to track item damage history separately from client billing, with a corresponding UI in the Reaudit Cabinet.
-- Significant UX improvements to the order assembly and return processes, including adding responsible personnel tracking and quick-action buttons.
-- Multiple bug fixes and logic adjustments in document generation and data saving.
+The user's initial goal was to finalize the Damage-to-Archive workflow. This quickly expanded into a series of major UI/UX refactors and bug fixes across the application.
 
-**PRODUCT REQUIREMENTS:**
-1.  **Document Engine V2 Finalization:**
-    *   Move the document UI to a dedicated left-side panel () across all order workspace views (, , ).
-    *   Dynamically show/hide documents based on the order's status (e.g., Picking List only during assembly, Checklist only after assembly).
-    *   Fix the inactive Готово до видачі (Ready for Issue) button, ensuring document status does not block workflow progression.
-2.  **Email Integration:**
-    *   Implement a full SMTP integration using user-provided credentials to send generated documents as email attachments.
-    *   The email's HTML body should be identical to the document's preview.
-    *   Ensure email templates are mobile-responsive, especially preventing numbers from wrapping.
-3.  **Decor Condition Log:**
-    *   Damages recorded during assembly () must be logged but **not** financially charged to the client.
-    *   Create a Журнал стану (Condition Log) UI in the Кабінет переобліку (Reaudit Cabinet) to view an item's full damage history.
-    *   This UI should include a side panel showing defect type, photo, date, responsible person, and order number.
-4.  **Workflow Enhancements:**
-    *   **Assembly ():**
-        *   Track the Комплектувальники (Assemblers) responsible for picking the order and save this information.
-        *   Display the assemblers' names in the Чеклист видачі (Issue Checklist) document.
-        *   Add a Зібрано ✓ (Picked ✓) button on each item for one-click quantity confirmation.
-    *   **Returns ():**
-        *   Track the Приймальники (Receivers) responsible for the return.
-        *   Add a Прийнято ✓ (Accepted ✓) button for quick confirmation of returned items.
-        *   Implement a Зберегти (Save) button to save return progress (quantities, receivers, fees) before final completion.
-5.  **Damage & Deposit Logic:**
-    *   In the damage modal, add a quantity field to specify how many of a multi-item set are damaged/need cleaning, and automatically calculate the total fee.
-    *   The Акт передачі (Issue Act) must show any  recorded during assembly.
-    *   The security deposit () calculation in documents must be 50% of the item's full damage price.
+1.  **Complete Damage Workflow:** Finish and test the flow where a damage fee from an order automatically appears in the finance console, allows for payment, and enables the order to be archived.
+2.  **Fix Critical Bugs:** Resolve issues preventing damage payments from being processed and customer deposits from being refunded.
+3.  **Enhance Financial UI:** Add a visual indicator (badge) to the main order list in the finance console to show which orders have outstanding damage fees.
+4.  **Overhaul Damage Hub:** Completely redesign the . The new design should list orders with damages, show detailed items for a selected order, and allow managers to send specific items for Washing, Restoration, or Dry-cleaning. This action should lock the item and update its status.
+5.  **Dashboard UI Cleanup:** Move the Archive button on the manager dashboard to the main navigation header and remove the On Restoration KPI card for a cleaner layout.
+6.  **Apply Corporate Branding:** Implement a consistent corporate visual style (based on ) across the , , and  pages. This includes applying specific colors, fonts, and layouts, and removing emojis from UI elements.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is a full-stack React/FastAPI/MySQL rental management system. The agent has successfully completed several major tasks in this session:
-- The **Document Engine V2 UI** is now fully integrated into a left-side panel across all three order workspaces, dynamically showing documents based on status.
-- The critical **Ready for Issue button bug** has been resolved.
-- A systemic **frontend routing issue** caused by a misconfigured proxy was diagnosed (with help from subagents) and fixed by creating a proper  file.
-- Full **SMTP email integration** is complete. Documents can be emailed to clients, and the templates have been made mobile-responsive.
-- **Assembler and Receiver tracking** is implemented on the assembly and return pages, respectively. This data is saved to the database.
-- **UX improvements** like Picked ✓ and Accepted ✓ buttons have been added to streamline workflows.
-- A **Save Progress feature for returns** has been implemented with a new backend endpoint and a  database table.
-- The **Return Act and Issue Act documents** have been significantly enhanced to show responsible personnel, item locations, and pre-existing damage conditions.
-- The **security deposit calculation** has been corrected in the document data builders.
-- The foundation for the **Decor Condition Log** is in place, with a new UI component () added to the Reaudit Cabinet.
+The agent has successfully completed a majority of the user's requests.
+- The Damage-to-Archive workflow is complete and was tested by the testing subagent.
+- Critical bugs related to damage payment processing and deposit refunds have been fixed and verified.
+- The  now displays a badge for orders with outstanding damage fees.
+- The  has been completely refactored to meet the new specifications, including the workflow for sending items to processing (wash, restoration, laundry) and preventing duplicate submissions.
+- The  has been cleaned up as requested.
+- Corporate branding has been successfully applied to the  and .
+- Obsolete files (, , ) have been deleted.
 
 **Last working item**:
--   **Last item agent was working:** Implementing the user's request to add a quantity field to the damage/cleaning modal () to allow partial damage reporting and automatic fee calculation. The agent had started by analyzing the component files.
+-   **Last item agent was working:** Applying the corporate visual style to the  page. The agent was tasked with adding the , applying the , and replacing generic  color classes with the theme-specific  classes to match the branding of the rest of the application.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent to verify the new quantity field in the modal, the automatic calculation, and that the correct data is saved.
+-   **Which testing method agent to use?** . The agent needs to verify the visual changes on the  page. If performance issues persist, the agent should use  to check frontend and backend logs.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0) Implement Quantity in Damage Modal**
-    -   **Description:** The user wants to specify a quantity when reporting damage or cleaning for items that have multiple units in an order (e.g., cleaning fee for 10 out of 30 candlesticks). The system should then auto-calculate the total fee.
-    -   **Attempted fixes:** The agent started analyzing  but has not yet implemented the changes.
-    -   **Next debug checklist:**
-        1.  In , add a new state for  and an input field in the UI.
-        2.  Update the  to include this quantity.
-        3.  Modify the fee calculation logic to be .
-        4.  Ensure the  function passes the quantity along with the rest of the damage record.
-        5.  Verify the backend () can store this extra information (it may require a schema/model update).
-    -   **Why fix this issue and what will be achieved with the fix?** It will provide more granular control over damage/cleaning assessment and automate fee calculation, saving user time and reducing errors.
+-   **Issue 1: (P0) Catalog page () is loading very slowly or timing out after styling changes.**
+    -   **Description:** After the agent applied the corporate styling classes to , attempts to take a screenshot have been failing due to slow page loads or timeouts.
     -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both. Frontend for UI/calculation, backend to ensure data is saved correctly.
+
+**Issues Detail**:
+-   **Issue 1: Catalog page is slow/timing out**
+    -   **Attempted fixes:** The agent successfully applied the new CSS classes to the  file. However, subsequent verification attempts failed. The last tool call () timed out.
+    -   **Next debug checklist**:
+        1.  Check the frontend browser console logs for any JavaScript errors that might be blocking rendering. Use  on the latest log file in .
+        2.  Check the backend logs for slow database queries or other errors that could be impacting the catalog API endpoints. Use ==> /var/log/supervisor/backend.err.log <==
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6575]
+INFO:     Started server process [7040]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [7040]
+INFO:     Started server process [7547]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [7547]
+INFO:     Started server process [7940]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [7940]
+INFO:     Started server process [8104]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8104]
+INFO:     Started server process [8311]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8311]
+INFO:     Stopping reloader process [6322]
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [8435] using WatchFiles
+INFO:     Started server process [8437]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [8437]
+INFO:     Started server process [10599]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [10599]
+INFO:     Started server process [10794]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [10794]
+INFO:     Started server process [10971]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [10971]
+INFO:     Stopping reloader process [8435]
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [11095] using WatchFiles
+INFO:     Started server process [11097]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'routes/product_damage_history.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [11097]
+INFO:     Started server process [11716]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Will watch for changes in these directories: ['/app/backend']
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [29] using WatchFiles
+INFO:     Started server process [70]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+
+==> /var/log/supervisor/backend.out.log <==
+INFO:     10.64.131.6:53194 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.139:60334 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.6:53208 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.140:38090 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.136:60450 - "GET /api/decor-orders?status=all&archived=true&limit=1000 HTTP/1.1" 200 OK
+INFO:     10.64.131.137:57464 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.132.138:53462 - "GET /api/decor-orders?status=all&archived=true&limit=1000 HTTP/1.1" 200 OK
+INFO:     10.64.131.136:41062 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.132.139:40054 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.132.140:58402 - "GET /api/product-cleaning/all HTTP/1.1" 200 OK
+INFO:     10.64.131.137:44972 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.6:57506 - "GET /api/product-damage-history/recent?limit=100 HTTP/1.1" 200 OK
+INFO:     10.64.132.140:55960 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.140:55966 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.6:43638 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.137:44982 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.139:40068 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.132.138:49748 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.137:44972 - "GET /api/product-damage-history/recent?limit=100 HTTP/1.1" 200 OK
+INFO:     10.64.131.9:47960 - "GET /api/tasks HTTP/1.1" 200 OK
+INFO:     10.64.131.137:44972 - "GET /api/tasks HTTP/1.1" 200 OK
+INFO:     10.64.131.137:49718 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.9:59426 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.132.140:47366 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.138:43188 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.131.6:42346 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.6:52898 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.136:44546 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.9:59426 - "OPTIONS /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.6:52898 - "OPTIONS /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.132.138:43188 - "OPTIONS /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.6:42346 - "OPTIONS /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.140:47366 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.140:47670 - "OPTIONS /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.9:59028 - "OPTIONS /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.137:46850 - "OPTIONS /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.136:45714 - "OPTIONS /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.137:46844 - "OPTIONS /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.138:59034 - "OPTIONS /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.137:49718 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.136:44560 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.138:43188 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.136:44546 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.139:50478 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.131.137:43304 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.6:59454 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     10.64.131.9:42466 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.137:34188 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.131.6:33722 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.136:35180 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.138:57420 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+[Admin] User from token: vitokdrako@gmail.com, role: admin
+INFO:     10.64.132.139:57860 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.136:40082 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.138:51112 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.131.137:38590 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.6:40490 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.9:34196 - "GET /api/orders?limit=50 HTTP/1.1" 200 OK
+INFO:     10.64.131.6:54330 - "GET /api/admin/users HTTP/1.1" 200 OK
+[Admin] User from token: vitokdrako@gmail.com, role: admin
+INFO:     10.64.131.136:40082 - "GET /api/admin/users HTTP/1.1" 200 OK
+[Admin] User from token: vitokdrako@gmail.com, role: admin
+INFO:     10.64.131.9:34196 - "GET /api/admin/users HTTP/1.1" 200 OK
+INFO:     10.64.131.136:51244 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.137:41032 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.132.138:35810 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.139:35076 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.137:41022 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.139:50268 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.137:34980 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.131.6:44212 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.6:47676 - "GET /api/decor-orders?status=all&archived=true&limit=1000 HTTP/1.1" 200 OK
+INFO:     10.64.131.9:47464 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.6:44220 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.9:47480 - "GET /api/decor-orders?status=all&archived=true&limit=1000 HTTP/1.1" 200 OK
+INFO:     10.64.131.136:51244 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.137:59512 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.6:47274 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.137:59522 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.6:47284 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.139:41216 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.138:44996 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.139:42906 - "GET /api/finance/ledger?limit=100 HTTP/1.1" 200 OK
+INFO:     10.64.131.136:47234 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.138:36566 - "GET /api/finance/deposits HTTP/1.1" 200 OK
+INFO:     10.64.131.9:47494 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.9:36166 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.139:42920 - "GET /api/manager/finance/orders-with-finance?limit=100 HTTP/1.1" 200 OK
+INFO:     10.64.132.138:35810 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.131.137:41022 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.6:49652 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.132.139:50268 - "GET /api/product-damage-history/processing/wash HTTP/1.1" 200 OK
+INFO:     10.64.131.9:47480 - "GET /api/product-damage-history/processing/laundry HTTP/1.1" 200 OK
+INFO:     10.64.131.6:47676 - "GET /api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning HTTP/1.1" 200 OK
+INFO:     10.64.131.9:47464 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.137:34980 - "GET /api/manager/finance/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.6:44212 - "GET /api/issue-cards HTTP/1.1" 200 OK
+INFO:     10.64.132.139:35076 - "GET /api/product-cleaning/stats/summary HTTP/1.1" 200 OK
+INFO:     10.64.131.136:42454 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK
+INFO:     10.64.131.137:41032 - "GET /api/orders?status=awaiting_customer HTTP/1.1" 200 OK.
+        3.  Review the changes in  to ensure no infinite loops or inefficient rendering patterns were introduced.
+        4.  Test the primary API endpoint for the catalog () using  to isolate whether the slowdown is in the backend or frontend.
+    -   **Why fix this issue and what will be achieved with the fix?** The catalog is a core feature of the application. It must be functional and performant for users to browse and manage products.
+    -   **Should Test frontend/backend/both after fix?** Both. First, confirm the API is fast, then confirm the frontend loads quickly and looks correct.
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   None apart from the pending issue.
+-   **Task 1: (P0) Finalize and verify the corporate styling of the Catalog page.**
+    -   **Where to resume:** Begin with the debugging checklist for Issue 1 to resolve the performance problem.
+    -   **What will be achieved with this?** This will complete the user's request for a consistent brand identity across all major application pages.
+    -   **Status:** BLOCKED
+    -   **Should Test frontend/backend/both after fix?** Frontend (visual verification).
+    -   **Blocked on something:** Issue 1: Catalog page is slow/timing out.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P1) **Complete Decor Condition Log UI:** The  is created but empty. It needs to be implemented to fetch and display the damage history for a selected product from the  endpoint.
-    -   (P1) **Verify Assembler/Receiver Info in Documents:** Ensure the  (assemblers) and  are correctly displayed in the Checklist and Return Act documents after being saved.
+    -   (P1) **Implement Backend for Expenses:** The  tab in  is currently frontend-only. The backend needs to be built to support , , , and  persistence.
+    -   (P1) **Implement Export to Excel/CSV:** Add an export feature to both the  and .
 -   **Future Tasks:**
-    -   (P2) **Telegram Bot Integration:** The user provided a , indicating a future requirement for Telegram integration.
-    -   (P2) Develop detailed financial reports (e.g., Cost per Order, Inventory ROI).
-    -   (P3) Develop an admin interface for editing document templates.
-    -   (P3) Integrate digital signature capabilities.
+    -   (P2) **Telegram Bot Integration.**
+    -   (P3) **Admin Interface for Document Templates.**
+    -   (P3) **Digital Signature Integration.**
 
 **Completed work in this session**
--   **Document Engine V2 UI (DONE):** Integrated  into , , and  and removed the old .
--   **Ready for Issue Button (DONE):** Unblocked the button by relaxing its enabling logic.
--   **Systemic Routing/Proxy Fix (DONE):** Resolved a critical issue where all workspace pages were redirecting to  by implementing .
--   **SMTP Email Integration (DONE):** Implemented document sending via email using user-provided SMTP credentials.
--   **Mobile Email Template Fix (DONE):** Added CSS to prevent number wrapping in emailed documents.
--   **Assembler & Receiver Tracking (DONE):** Implemented UI and backend logic to save responsible personnel for assembly and returns. Fixed a 422 error by adding the  column to the  table and making the Pydantic model more flexible.
--   **Return Workflow Save Progress (DONE):** Created a  table and a  API endpoint to allow saving incomplete returns.
--   **UX Quick-Action Buttons (DONE):** Added Зібрано ✓ (Picked) and Прийнято ✓ (Accepted) buttons to streamline workflows.
--   **Document Logic & Content (DONE):**
-    -   Corrected the security deposit () formula.
-    -   Enhanced Issue Act to show .
-    -   Overhauled Return Act to be based on the new  data.
-    -   Fixed Jinja2  errors in multiple templates.
-    -   Implemented a browser-based Print to PDF fallback since 
------
-
-WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
-
------ dependencies were missing.
--   **Pre-Issue Damage Saving (DONE):** Fixed a bug where  was not being included in the save payload.
+-   **Damage-to-Archive Workflow (DONE):** Fully implemented and tested the flow for handling and paying for damages and archiving orders.
+-   **Damage Payment Bug Fix (DONE):** Resolved an issue that prevented damage payments from being accepted in .
+-   **Deposit Refund Bug Fix (DONE):** Fixed a 520 error caused by an incorrect account code ( vs ) in the deposit refund endpoint.
+-   **Financial UI Enhancement (DONE):** Added a  badge to the order list in  for quick visibility of outstanding payments.
+-   **Damage Hub Overhaul (DONE):** Completely refactored  to show orders, item details, and allow sending items for processing (wash/restoration/laundry).
+-   **Dashboard Cleanup (DONE):** Moved the Archive button and removed the Restoration KPI card from .
+-   **Corporate Branding (DONE for Finance & Damage):** Applied consistent corporate styles to  and .
+-   **Code Cleanup (DONE):** Deleted obsolete components: , , and .
 
 **Earlier issues found/mentioned but not fixed**
 -   None.
@@ -114,99 +281,64 @@ https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting
 -   None.
 
 **Code Architecture**
-requisitors
+
 
 **Key Technical Concepts**
--   **Frontend Proxy Configuration:** Debugged and resolved a critical  proxy issue by moving configuration from  to a dedicated  file.
--   **SMTP Integration:** Implemented email sending using Python's  and user credentials from .
--   **Robust Document Generation:** Implemented a graceful fallback for PDF generation. When 
------
-
-WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
-
------ fails due to missing system dependencies, the system provides the raw HTML and instructs the user on how to use the browser's Print to PDF feature.
--   **Jinja2 Template Debugging:** Fixed multiple server-side rendering errors by changing data access from dot notation () to bracket notation () for dictionary-like objects.
--   **Incremental Data Saving:** Introduced a new pattern for saving partial progress (e.g., returns) to a separate table () before the final state transition.
--   **Dynamic Component Logic:** Heavily utilized conditional rendering in React () to tailor the UI based on application state ().
+-   **UI/UX Refactoring:** Major components () were rewritten from scratch based on new user specifications.
+-   **Corporate Theming:** Applied a consistent visual style using a custom Tailwind CSS theme ( colors, ).
+-   **Backend Debugging:** Diagnosed and fixed several bugs, including incorrect API logic, SQL errors (unknown columns, wrong account codes), and race conditions (preventing double-submission of items).
+-   **State Management:** Refactored React state () in  to correctly handle complex data objects from API responses (e.g., damage payment status).
 
 **key DB schema**
--   **issue_cards:** Added a new column  (TEXT) to store a JSON array of assemblers.
--   **return_cards:** **NEW TABLE** created to store progress of returns.
-    -   uid=0(root) gid=0(root) groups=0(root) (VARCHAR, PK)
-    -    (INT)
-    -    (JSON)
-    -    (JSON)
-    -    (TEXT)
-    -   , ,  (DECIMAL)
-    -   ,  (DATETIME)
+-   **product_damage_history:**  and  columns are now used to track items sent to wash/restoration/laundry.
+-   **fin_accounts:** The code  is confirmed as the correct account for deposit transactions, not .
+-   **laundry_items:** This table does NOT contain  or ; the logic was updated to reflect this.
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
--   **Core Frontend Workspaces:** , , 
--   **Key Frontend Components:** , 
--   **Core Backend Logic:** , , 
--   **Email Integration:** , 
--   **Environment/Config:** , 
+-    (Currently being worked on)
+-    (Heavily modified)
+-    (Completely rewritten)
+-    (Modified)
+-    (Heavily modified)
+-    (Modified)
+-    (Reference for corporate styles)
 
 **Areas that need refactoring**:
--   The Pydantic model for  was made to accept  for the  field as a quick fix. It should be properly typed to expect a  (a list of objects with id and name) for better validation and clarity.
--    is a very large component. The new  was a good step, but more of the logic within  could be broken down into smaller, more manageable components.
+-   None. The agent performed cleanup of old files during the session.
 
 **key api endpoints**
--   : Modified to accept and save .
--   : **NEW** endpoint to generate and email a document.
--   : **NEW** endpoint to save partial return data to the  table.
+-   : Updated with logic to prevent re-sending an already processed item.
+-   : Fixed to use the correct  account.
+-   : Modified to include  amount.
+-   : Modified to include  and .
 
 **Critical Info for New Agent**
 -   **You MUST respond in українська (Ukrainian).**
--   The immediate priority is the **pending issue: adding a quantity field to the damage modal**.
--   The system has a fallback for PDF generation because 
------
-
-WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
-
------ dependencies are not installed. It opens an HTML preview and instructs the user to print to PDF. Do not try to fix 
------
-
-WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
-
------ by reinstalling it; work with the existing fallback.
--   The frontend routing was recently fixed via . Be mindful of this file if any new API routes are added or if routing issues reappear.
--   Data for incomplete returns is now stored in a new  table. The Return Act document should read from this table.
+-   The immediate priority is to solve the performance issue on the  page. Start by investigating backend and frontend logs.
+-   The corporate style guide is defined in  under the  theme. Key colors are  (),  (),  (), and  (). The primary font is .
+-   The user is highly engaged and provides specific, actionable feedback. Pay close attention to their requests for UI/UX changes.
 
 **documents and test_reports created in this job**
-- None.
+-    (Updated by testing subagent)
 
 **Last 10 User Messages and any pending HUMAN messages**
--   Коть а коли ми зафіксували пошкодження на режимі видачі то чи може система перевіряти це і у акті передачі позначати є зафіксовані пошкодження... (Request to show pre-issue damages in the Issue Act).
--   Видача 7004 я зафіксувала пошкодження у кензан KE001. Але акт передачі показує без дефектів цю позицію... (Bug report: pre-issue damages are not being saved/displayed).
--   Давай тепер підшаманимо картку повернення. Треба додати людей хто приймає замовлення... (Request to add Receivers and an Accepted button to the return workspace).
--   Тепер у футері треба додати логіку збереження повернення... (Request to add a Save button to the return workspace).
--   Думаю акт приймання має бути по логіці такий самий як акт видачі... (Request to overhaul the Return Act document).
--   Оу у зафіксувати пошкодження має бути ще кількість... (Request to add a quantity field to the damage modal - **This is the current task**).
--   Зрозуміло! Додам поле кількості в модалку пошкоджень та автоматичний розрахунок (Agent acknowledging the last request).
--   Коть а в режимі комплектації чек лісті видачі генерується але не скачуєтьс і превью не вантажиться (Bug report: PDF/preview not working).
--   ERROR in ./src/components/order-workspace/LeftRailDocuments.jsx... (User forwarding a frontend compilation error).
--   Так коть, тепер давай в режимі комплектації залишком із документів тільки лист комплектації інші документи сховаємо... (Request to change document visibility based on order status).
+1.  
+2.  
+3.  
+4.  
+5.  
+6.   (Tool output, not user)
+7.  
+8.  
+9.  
+10. 
 
 **Project Health Check:**
--   **Broken:** The PDF generation via 
------
-
-WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
-
------ is non-functional due to missing system dependencies, but a stable browser-based workaround is in place.
--   **Mocked:** None.
+-   **Broken:** The  page is currently broken due to a severe performance issue, making it unusable.
+-   **Mocked:** No mocked parts.
 
 **3rd Party Integrations**
 -   
@@ -216,18 +348,18 @@ WeasyPrint could not import some external libraries. Please carefully follow the
 https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
 https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
 
------ (for PDF generation, currently non-operational with a fallback).
--   **SMTP:** Integration with a custom SMTP server () for sending emails. Credentials are in .
+----- (PDF generation)
+-   Custom SMTP server ()
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, the  and  were instrumental in diagnosing and fixing the frontend proxy/routing issue.
--   **Troubleshoot agent used after agent stuck in loop:** YES, for the proxy issue.
--   **Test files created:** None.
--   **Known regressions:** None. The previous major regression (broken document UI) has been fixed.
+-   **Testing agent used after significant changes:** YES (for the damage-to-archive workflow)
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:**  was updated.
+-   **Known regressions:** The  page performance has severely degraded after recent styling changes.
 
 **Credentials to test flow:**
 -   email: 
 -   password: 
 
 **What agent forgot to execute**
-- The agent was in the middle of implementing the quantity field in the . The frontend UI and backend logic for this feature are not yet complete.</analysis>
+-   The agent did not fully verify the performance impact of its styling changes on the  page before considering the task complete, leading to the current blocker.</analysis>

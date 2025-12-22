@@ -94,7 +94,7 @@ async def get_items_by_category(
     min_qty: int = None,
     max_qty: int = None,
     search: str = None,
-    availability: str = None,  # 'available', 'in_rent', 'reserved', 'all'
+    availability: str = None,  # 'available', 'in_rent', 'reserved', 'on_wash', 'on_restoration', 'on_laundry'
     date_from: str = None,  # YYYY-MM-DD - початок періоду оренди
     date_to: str = None,    # YYYY-MM-DD - кінець періоду оренди
     limit: int = 200,
@@ -103,6 +103,13 @@ async def get_items_by_category(
     """
     Отримати товари з фільтрами по категоріям, кольору, матеріалу, кількості
     З підтримкою перевірки доступності на конкретний період
+    
+    Статуси:
+    - reserved: awaiting_customer, processing, ready_for_issue, pending (очікують видачі)
+    - in_rent: issued, on_rent (видані клієнту)
+    - on_wash: на мийці (з product_damage_history)
+    - on_restoration: на реставрації (з product_damage_history)
+    - on_laundry: в хімчистці (з product_damage_history)
     """
     try:
         sql_parts = ["""

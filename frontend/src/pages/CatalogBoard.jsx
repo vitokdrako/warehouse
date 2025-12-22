@@ -648,29 +648,46 @@ export default function CatalogBoard(){
   }
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">Каталог / Інвентар</h1>
-          {inRestoreCount > 0 && (
-            <Badge tone={CLEAN.repair.tone}>
-              🔧 {inRestoreCount} в реставрації
-            </Badge>
-          )}
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
+      <CorporateHeader cabinetName="Каталог" />
+      
+      <div className="mx-auto max-w-7xl px-4 py-4">
+        {/* Action buttons */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {inRestoreCount > 0 && (
+              <Badge tone={CLEAN.repair.tone}>
+                {inRestoreCount} в реставрації
+              </Badge>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button 
+              className="rounded-xl border border-corp-border bg-white px-3 py-2 text-sm font-medium hover:bg-corp-bg-light flex items-center gap-1" 
+              onClick={() => setScannerOpen(true)}
+            >
+              Сканувати SKU
+            </button>
+            <button 
+              className="rounded-xl border border-corp-border bg-white px-3 py-2 text-sm font-medium hover:bg-corp-bg-light" 
+              onClick={openFamilyManager}
+            >
+              Керувати наборами
+            </button>
+            <button 
+              className="rounded-xl border border-corp-border bg-white px-3 py-2 text-sm font-medium hover:bg-corp-bg-light" 
+              onClick={()=>alert('Експорт CSV')}
+            >
+              Експорт
+            </button>
+            <button 
+              className="rounded-xl border border-corp-border bg-white px-3 py-2 text-sm font-medium hover:bg-corp-bg-light" 
+              onClick={()=>alert('Імпорт CSV')}
+            >
+              Імпорт
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button 
-            className="rounded-full bg-blue-600 text-white px-3 py-1 text-sm font-medium hover:bg-blue-700 flex items-center gap-1" 
-            onClick={() => setScannerOpen(true)}
-          >
-            📷 Сканувати SKU
-          </button>
-          <button className="rounded-full bg-purple-500 text-white px-3 py-1 text-sm font-medium hover:bg-purple-600" onClick={openFamilyManager}>🔗 Керувати наборами</button>
-          <button className="rounded-full bg-slate-200 px-3 py-1 text-sm" onClick={()=>navigate('/')}>← Назад</button>
-          <button className="rounded-full bg-slate-200 px-3 py-1 text-sm" onClick={()=>alert('Експорт CSV (мок)')}>Експорт</button>
-          <button className="rounded-full bg-slate-200 px-3 py-1 text-sm" onClick={()=>alert('Імпорт CSV (мок)')}>Імпорт</button>
-        </div>
-      </div>
       
       {/* Barcode Scanner */}
       <BarcodeScanner

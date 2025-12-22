@@ -1,6 +1,13 @@
-# Test Results - Damage Hub App
+# Test Results - Finance Console & Damage-to-Archive Workflow
 
 ## Test Focus
+Testing the damage-to-archive workflow in FinanceConsoleApp:
+1. Damage fees display from product_damage_history
+2. "Очікує доплати" badge when order has unpaid damage
+3. Damage payment acceptance
+4. Order archiving when fully paid
+
+## Previous Test: Damage Hub App (PASSED)
 Testing the new unified DamageHubApp with 4 tabs: Головна, Мийка, Реставрація, Хімчистка
 
 ## Test Credentials

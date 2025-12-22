@@ -737,6 +737,17 @@ async def send_to_wash(damage_id: str, data: dict, db: Session = Depends(get_rh_
 async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """Відправити товар в реставрацію"""
     try:
+        # Перевірка чи товар вже відправлений на обробку
+        existing = db.execute(text("""
+            SELECT processing_type FROM product_damage_history WHERE id = :damage_id
+        """), {"damage_id": damage_id}).fetchone()
+        
+        if not existing:
+            raise HTTPException(status_code=404, detail="Запис не знайдено")
+        
+        if existing[0] and existing[0] != 'none':
+            raise HTTPException(status_code=400, detail=f"Товар вже відправлено на {existing[0]}")
+        
         db.execute(text("""
             UPDATE product_damage_history
             SET processing_type = 'restoration',
@@ -752,6 +763,8 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
         db.commit()
         return {"success": True, "message": "Товар відправлено в реставрацію"}
         
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")

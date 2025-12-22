@@ -858,12 +858,14 @@ function ProductDetailModal({ item, onClose, dateFilterActive }) {
 
 // Main Component
 export default function CatalogBoard() {
+  const [activeTab, setActiveTab] = useState('products') // 'products' | 'sets'
   const [loading, setLoading] = useState(true)
   const [categoriesLoading, setCategoriesLoading] = useState(true)
   const [categories, setCategories] = useState([])
   const [colors, setColors] = useState([])
   const [materials, setMaterials] = useState([])
   const [items, setItems] = useState([])
+  const [allProducts, setAllProducts] = useState([]) // For sets modal
   const [stats, setStats] = useState({ 
     total: 0, available: 0, in_rent: 0, reserved: 0,
     on_wash: 0, on_restoration: 0, on_laundry: 0 
@@ -884,6 +886,7 @@ export default function CatalogBoard() {
   // Load categories on mount
   useEffect(() => {
     loadCategories()
+    loadAllProducts()
   }, [])
 
   // Load items when filters change
@@ -903,6 +906,16 @@ export default function CatalogBoard() {
       console.error('Error loading categories:', err)
     } finally {
       setCategoriesLoading(false)
+    }
+  }
+
+  const loadAllProducts = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/catalog/items-by-category?limit=2000`)
+      const data = await res.json()
+      setAllProducts(data.items || [])
+    } catch (err) {
+      console.error('Error loading all products:', err)
     }
   }
 
@@ -946,6 +959,36 @@ export default function CatalogBoard() {
   return (
     <div className="min-h-screen bg-corp-bg-page font-montserrat">
       <CorporateHeader cabinetName="Каталог" />
+      
+      {/* Tabs */}
+      <div className="bg-white border-b border-corp-border">
+        <div className="max-w-[1800px] mx-auto px-4">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab('products')}
+              className={cls(
+                'px-6 py-3 font-medium text-sm border-b-2 transition-colors',
+                activeTab === 'products'
+                  ? 'border-corp-primary text-corp-primary'
+                  : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+              )}
+            >
+              Товари
+            </button>
+            <button
+              onClick={() => setActiveTab('sets')}
+              className={cls(
+                'px-6 py-3 font-medium text-sm border-b-2 transition-colors',
+                activeTab === 'sets'
+                  ? 'border-corp-primary text-corp-primary'
+                  : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+              )}
+            >
+              Набори
+            </button>
+          </div>
+        </div>
+      </div>
       
       <div className="max-w-[1800px] mx-auto px-4 py-4">
         <div className="flex gap-4">

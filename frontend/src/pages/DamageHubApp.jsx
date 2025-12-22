@@ -639,7 +639,7 @@ export default function DamageHubApp() {
   }, [orderCases, washItems, restoreItems, laundryItems]);
 
   return (
-    <div className="min-h-screen bg-corp-bg-page">
+    <div className="min-h-screen bg-corp-bg-page font-montserrat">
       <CorporateHeader cabinetName="Кабінет шкоди" />
 
       <div className="mx-auto max-w-7xl px-4 py-4 space-y-4">

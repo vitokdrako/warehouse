@@ -106,7 +106,7 @@ const GhostBtn = ({ onClick, children, disabled }) => (
     disabled={disabled}
     className={cls(
       "inline-flex items-center justify-center rounded-xl border px-4 py-2 text-sm font-semibold transition",
-      disabled ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed" : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50"
+      disabled ? "border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed" : "border-corp-border bg-white text-corp-text-main hover:bg-slate-50 hover:border-slate-300"
     )}
   >
     {children}
@@ -114,12 +114,12 @@ const GhostBtn = ({ onClick, children, disabled }) => (
 );
 
 const Card = ({ title, subtitle, right, children, className }) => (
-  <div className={cls("rounded-2xl border border-slate-200 bg-white shadow-sm", className)}>
+  <div className={cls("rounded-2xl border border-corp-border bg-white shadow-sm", className)}>
     {(title || right) && (
-      <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
+      <div className="flex items-center justify-between gap-2 border-b border-corp-border/50 px-5 py-4">
         <div>
-          {title && <div className="text-sm font-semibold text-slate-900">{title}</div>}
-          {subtitle && <div className="text-xs text-slate-500">{subtitle}</div>}
+          {title && <div className="text-sm font-semibold text-corp-text-dark">{title}</div>}
+          {subtitle && <div className="text-xs text-corp-text-muted">{subtitle}</div>}
         </div>
         {right && <div className="flex items-center gap-2">{right}</div>}
       </div>
@@ -128,13 +128,25 @@ const Card = ({ title, subtitle, right, children, className }) => (
   </div>
 );
 
-const Stat = ({ label, value, sub }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-    <div className="text-xs text-slate-500">{label}</div>
-    <div className="mt-1 text-lg font-semibold text-slate-900">{value}</div>
-    {sub && <div className="mt-0.5 text-xs text-slate-500">{sub}</div>}
-  </div>
-);
+const Stat = ({ label, value, sub, tone }) => {
+  const toneClasses = {
+    ok: "border-emerald-200 bg-emerald-50",
+    warn: "border-amber-200 bg-amber-50",
+    danger: "border-rose-200 bg-rose-50",
+    info: "border-sky-200 bg-sky-50",
+    primary: "border-corp-primary/30 bg-corp-primary/5",
+  };
+  return (
+    <div className={cls(
+      "corp-stat-card",
+      tone && toneClasses[tone]
+    )}>
+      <div className="corp-stat-label">{label}</div>
+      <div className="corp-stat-value">{value}</div>
+      {sub && <div className="text-xs text-corp-text-muted mt-1">{sub}</div>}
+    </div>
+  );
+};
 
 const TabBtn = ({ active, onClick, children }) => (
   <button

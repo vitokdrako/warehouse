@@ -251,17 +251,37 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   const [rentMethod, setRentMethod] = useState("cash");
   const [depMethod, setDepMethod] = useState("cash");
   const [depCurrency, setDepCurrency] = useState("UAH");
-  const [depAmount, setDepAmount] = useState(depositDue);
+  const [depAmount, setDepAmount] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Find deposit for this order
   const deposit = deposits.find(d => d.order_id === order.order_id);
-  const availableDeposit = deposit ? Math.max(0, deposit.held_amount - (deposit.used_amount || 0) - (deposit.refunded_amount || 0)) : 0;
+  
+  // Calculate available deposit in ORIGINAL currency
+  const depositCurrency = deposit?.currency || "UAH";
+  const depositActualAmount = deposit?.actual_amount || 0;
+  const depositUsedOriginal = deposit?.used_amount_original || 0; // Amount used in original currency
+  const depositRefundedOriginal = deposit?.refunded_amount_original || 0;
+  
+  // If we don't have original amounts, calculate from UAH
+  const exchangeRate = deposit?.exchange_rate || 1;
+  const usedInOriginal = depositUsedOriginal || (exchangeRate > 0 ? (deposit?.used_amount || 0) / exchangeRate : 0);
+  const refundedInOriginal = depositRefundedOriginal || (exchangeRate > 0 ? (deposit?.refunded_amount || 0) / exchangeRate : 0);
+  
+  const availableInOriginal = Math.max(0, depositActualAmount - usedInOriginal - refundedInOriginal);
+  const availableDeposit = deposit ? Math.max(0, (deposit.held_amount || 0) - (deposit.used_amount || 0) - (deposit.refunded_amount || 0)) : 0;
+
+  // Format amount in deposit's currency
+  const formatDepositAmount = (amount) => {
+    if (depositCurrency === "UAH") return money(amount);
+    const symbol = depositCurrency === "USD" ? "$" : depositCurrency === "EUR" ? "€" : depositCurrency;
+    return `${symbol}${Number(amount || 0).toLocaleString("uk-UA", { maximumFractionDigits: 2 })}`;
+  };
 
   useEffect(() => {
     setRentAmount(rentDue);
-    setDepAmount(depositDue);
-  }, [order.order_id, rentDue, depositDue]);
+    // Don't auto-fill deposit amount - let user enter it
+  }, [order.order_id, rentDue]);
 
   const acceptRent = async () => {
     if (Number(rentAmount) <= 0) return;
@@ -291,6 +311,7 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
     setSaving(true);
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const rate = depCurrency === "USD" ? 41.5 : depCurrency === "EUR" ? 45.2 : 1;
       await authFetch(`${BACKEND_URL}/api/finance/deposits/create`, {
         method: "POST",
         body: JSON.stringify({
@@ -298,13 +319,15 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
           expected_amount: order.total_deposit || 0,
           actual_amount: Number(depAmount),
           currency: depCurrency,
-          exchange_rate: depCurrency === "USD" ? 41.5 : depCurrency === "EUR" ? 45.2 : 1,
+          exchange_rate: rate,
+          held_amount: depCurrency === "UAH" ? Number(depAmount) : Number(depAmount) * rate,
           method: depMethod,
           accepted_by_id: user.id,
           accepted_by_name: user.email,
         }),
       });
       onRefresh();
+      setDepAmount("");
     } catch (e) {
       console.error(e);
     }
@@ -343,7 +366,7 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
         </div>
       </Card>
 
-      <KPIBar order={order} />
+      <KPIBar order={order} deposit={deposit} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Rent Payment */}
@@ -357,7 +380,7 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-500">Сума</label>
+              <label className="text-xs text-slate-500">Сума (₴)</label>
               <input className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" value={rentAmount} onChange={(e) => setRentAmount(e.target.value)} type="number" />
             </div>
           </div>
@@ -381,16 +404,27 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
             <div>
               <label className="text-xs text-slate-500">Валюта</label>
               <select className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm" value={depCurrency} onChange={(e) => setDepCurrency(e.target.value)}>
-                <option value="UAH">UAH</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
+                <option value="UAH">₴ UAH</option>
+                <option value="USD">$ USD</option>
+                <option value="EUR">€ EUR</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-500">Сума</label>
-              <input className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" value={depAmount} onChange={(e) => setDepAmount(e.target.value)} type="number" />
+              <label className="text-xs text-slate-500">Сума ({depCurrency})</label>
+              <input 
+                className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" 
+                value={depAmount} 
+                onChange={(e) => setDepAmount(e.target.value)} 
+                type="number" 
+                placeholder={depCurrency === "UAH" ? "0" : "напр. 300"}
+              />
             </div>
           </div>
+          {depCurrency !== "UAH" && depAmount && (
+            <div className="mt-2 text-xs text-slate-500">
+              ≈ {money(Number(depAmount) * (depCurrency === "USD" ? 41.5 : 45.2))} за курсом {depCurrency === "USD" ? "41.5" : "45.2"}
+            </div>
+          )}
           <div className="mt-3">
             <PrimaryBtn disabled={Number(depAmount) <= 0 || saving} onClick={acceptDeposit}>
               {saving ? "..." : "Прийняти"}
@@ -400,20 +434,50 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
 
         {/* Deposit Operations */}
         <Card title="Операції із заставою" className="lg:col-span-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-semibold">Доступно для повернення</div>
-                <div className="text-xs text-slate-500">Утримано: {money(deposit?.used_amount || 0)} • Повернуто: {money(deposit?.refunded_amount || 0)}</div>
+          {deposit ? (
+            <>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold">Доступно для повернення</div>
+                    <div className="text-xs text-slate-500 mt-1">
+                      Прийнято: <span className="font-medium">{formatDepositAmount(depositActualAmount)}</span>
+                      {depositCurrency !== "UAH" && <span className="text-slate-400"> (≈ {money(deposit.held_amount)})</span>}
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Утримано: {formatDepositAmount(usedInOriginal)} • Повернуто: {formatDepositAmount(refundedInOriginal)}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-corp-primary">{formatDepositAmount(availableInOriginal)}</div>
+                    {depositCurrency !== "UAH" && (
+                      <div className="text-xs text-slate-500">≈ {money(availableDeposit)}</div>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="text-lg font-semibold">{money(availableDeposit)}</div>
+              
+              {/* Warning for foreign currency */}
+              {depositCurrency !== "UAH" && availableInOriginal > 0 && (
+                <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2">
+                  <div className="text-sm text-amber-800">
+                    ⚠️ Повернути клієнту: <span className="font-bold">{formatDepositAmount(availableInOriginal)}</span>
+                  </div>
+                </div>
+              )}
+              
+              <div className="mt-3 flex gap-3">
+                <GhostBtn disabled={availableDeposit <= 0 || saving} onClick={refundDeposit}>
+                  Повернути заставу ({formatDepositAmount(availableInOriginal)})
+                </GhostBtn>
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-slate-400 py-4">
+              <span className="text-2xl block mb-2">🔒</span>
+              Застава ще не прийнята
             </div>
-          </div>
-          <div className="mt-3 flex gap-3">
-            <GhostBtn disabled={availableDeposit <= 0 || saving} onClick={refundDeposit}>
-              Повернути заставу
-            </GhostBtn>
-          </div>
+          )}
         </Card>
       </div>
     </div>

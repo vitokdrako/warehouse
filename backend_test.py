@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Issue Card Workspace
-Testing the specific issue reported:
-1. GET /api/issue-cards/IC-7121-20251218133354 - Issue card data
-2. GET /api/decor-orders/7121 - Order data
-3. Frontend routing to /issue-workspace/IC-7121-20251218133354
-4. Authentication and workspace loading workflow
+Backend Testing Script for Finance Console Damage-to-Archive Workflow
+Testing the specific workflow reported:
+1. GET /api/analytics/order-damage-fee/{order_id} - Get unpaid damage fees for order
+2. POST /api/orders/{order_id}/archive - Archive order
+3. POST /api/finance/payments - Accept damage payment
+4. Authentication and finance console workflow
 """
 
 import requests
@@ -23,8 +23,7 @@ TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
 }
-TEST_ISSUE_CARD_ID = "IC-7121-20251218133354"  # Issue card from review request
-TEST_ORDER_ID = "7121"  # Order ID from review request
+TEST_ORDER_ID = 7004  # Order ID with damages from review request
 
 class IssueCardWorkspaceTester:
     def __init__(self, base_url: str):

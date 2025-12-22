@@ -299,11 +299,12 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   const loadDamageFees = async () => {
     setLoadingDamage(true);
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/analytics/order_damage_fee/${order.order_id}`);
+      const res = await authFetch(`${BACKEND_URL}/api/analytics/order-damage-fee/${order.order_id}`);
       const data = await res.json();
-      setDamageFees(data.damages || []);
-      if (data.total_unpaid > 0) {
-        setDamageAmount(data.total_unpaid);
+      // API returns damage_items array with product_name, damage_type, fee
+      setDamageFees(data.damage_items || []);
+      if (data.due_amount > 0) {
+        setDamageAmount(data.due_amount);
       }
     } catch (e) {
       console.error("Error loading damage fees:", e);

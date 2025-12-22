@@ -113,10 +113,10 @@ const PrimaryBtn = ({ onClick, children, disabled, variant = "primary" }) => {
 // ----------------------------- Tabs Component -----------------------------
 function Tabs({ mode, setMode }) {
   const tabs = [
-    { id: MODES.ALL, label: "Головна", icon: "📋" },
-    { id: MODES.WASH, label: "Мийка", icon: "🧼" },
-    { id: MODES.RESTORE, label: "Реставрація", icon: "🔧" },
-    { id: MODES.DRYCLEAN, label: "Хімчистка", icon: "🧺" },
+    { id: MODES.ALL, label: "Головна" },
+    { id: MODES.WASH, label: "Мийка" },
+    { id: MODES.RESTORE, label: "Реставрація" },
+    { id: MODES.DRYCLEAN, label: "Хімчистка" },
   ];
 
   return (
@@ -126,11 +126,10 @@ function Tabs({ mode, setMode }) {
           key={t.id}
           className={cls(
             "inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition",
-            mode === t.id ? "bg-corp-primary text-white shadow-sm border-corp-primary" : "bg-white border-slate-200 hover:bg-slate-50"
+            mode === t.id ? "bg-corp-primary text-white shadow-sm border-corp-primary" : "bg-white border-corp-border hover:bg-corp-bg-light"
           )}
           onClick={() => setMode(t.id)}
         >
-          <span>{t.icon}</span>
           <span>{t.label}</span>
         </button>
       ))}

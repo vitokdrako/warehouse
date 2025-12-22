@@ -503,10 +503,8 @@ async def get_damage_case_details(order_id: int, db: Session = Depends(get_rh_db
                 pdh.photo_url, pdh.note, pdh.created_by, pdh.created_at,
                 pdh.processing_type, pdh.processing_status,
                 pdh.sent_to_processing_at, pdh.returned_from_processing_at,
-                pdh.processing_notes, pdh.laundry_batch_id, pdh.laundry_item_id,
-                NULL as product_image
+                pdh.processing_notes, pdh.laundry_batch_id, pdh.laundry_item_id
             FROM product_damage_history pdh
-            LEFT JOIN products p ON pdh.product_id = p.id
             WHERE pdh.order_id = :order_id
             ORDER BY pdh.created_at DESC
         """), {"order_id": order_id})
@@ -536,8 +534,7 @@ async def get_damage_case_details(order_id: int, db: Session = Depends(get_rh_db
                 "returned_from_processing_at": row[19].isoformat() if row[19] else None,
                 "processing_notes": row[20],
                 "laundry_batch_id": row[21],
-                "laundry_item_id": row[22],
-                "product_image": row[23]
+                "laundry_item_id": row[22]
             })
         
         return {

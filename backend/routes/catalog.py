@@ -291,22 +291,69 @@ async def get_items_by_category(
                 "status": row[8]
             })
         
+        # Отримати товари на обробці (мийка, реставрація, хімчистка) з product_damage_history
+        processing_result = db.execute(text("""
+            SELECT 
+                product_id,
+                processing_type,
+                COALESCE(SUM(qty), 0) as qty
+            FROM product_damage_history
+            WHERE product_id IN :product_ids
+            AND processing_type IN ('wash', 'restoration', 'laundry')
+            AND processing_status IN ('pending', 'in_progress')
+            GROUP BY product_id, processing_type
+        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
+        
+        # Словники для кожного типу обробки
+        on_wash_dict = {}
+        on_restoration_dict = {}
+        on_laundry_dict = {}
+        
+        for row in processing_result:
+            pid = row[0]
+            ptype = row[1]
+            qty = int(row[2])
+            
+            if ptype == 'wash':
+                on_wash_dict[pid] = on_wash_dict.get(pid, 0) + qty
+            elif ptype == 'restoration':
+                on_restoration_dict[pid] = on_restoration_dict.get(pid, 0) + qty
+            elif ptype == 'laundry':
+                on_laundry_dict[pid] = on_laundry_dict.get(pid, 0) + qty
+        
         # Формуємо результат
         items = []
-        stats = {"total": 0, "available": 0, "in_rent": 0, "reserved": 0}
+        stats = {
+            "total": 0, 
+            "available": 0, 
+            "in_rent": 0, 
+            "reserved": 0,
+            "on_wash": 0,
+            "on_restoration": 0,
+            "on_laundry": 0
+        }
         
         for row in results:
             product_id = row[0]
             total_qty = row[8] or 0
             reserved_qty = reserved_dict.get(product_id, 0)
             in_rent_qty = in_rent_dict.get(product_id, 0)
-            available_qty = max(0, total_qty - reserved_qty - in_rent_qty)
+            on_wash_qty = on_wash_dict.get(product_id, 0)
+            on_restoration_qty = on_restoration_dict.get(product_id, 0)
+            on_laundry_qty = on_laundry_dict.get(product_id, 0)
+            
+            # Доступно = всього - резерв - в оренді - на обробці
+            processing_total = on_wash_qty + on_restoration_qty + on_laundry_qty
+            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - processing_total)
             
             # Stats
             stats["total"] += total_qty
             stats["available"] += available_qty
             stats["in_rent"] += in_rent_qty
             stats["reserved"] += reserved_qty
+            stats["on_wash"] += on_wash_qty
+            stats["on_restoration"] += on_restoration_qty
+            stats["on_laundry"] += on_laundry_qty
             
             # Availability filter
             if availability == 'available' and available_qty == 0:
@@ -314,6 +361,12 @@ async def get_items_by_category(
             if availability == 'in_rent' and in_rent_qty == 0:
                 continue
             if availability == 'reserved' and reserved_qty == 0:
+                continue
+            if availability == 'on_wash' and on_wash_qty == 0:
+                continue
+            if availability == 'on_restoration' and on_restoration_qty == 0:
+                continue
+            if availability == 'on_laundry' and on_laundry_qty == 0:
                 continue
             
             # Конфлікти на період
@@ -333,6 +386,9 @@ async def get_items_by_category(
                 "available": available_qty,
                 "reserved": reserved_qty,
                 "in_rent": in_rent_qty,
+                "on_wash": on_wash_qty,
+                "on_restoration": on_restoration_qty,
+                "on_laundry": on_laundry_qty,
                 "has_conflict": has_conflict,
                 "location": {
                     "zone": row[9] or "",

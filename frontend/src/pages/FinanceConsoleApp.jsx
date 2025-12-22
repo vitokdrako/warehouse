@@ -47,18 +47,34 @@ const authFetch = async (url, options = {}) => {
   return res;
 };
 
-// ----------------------------- UI Components -----------------------------
+// ----------------------------- UI Components (Corporate Style) -----------------------------
 const Badge = ({ tone = "neutral", children }) => {
   const map = {
+    ok: "corp-badge corp-badge-success",
+    warn: "corp-badge corp-badge-warning",
+    danger: "corp-badge corp-badge-danger",
+    info: "corp-badge corp-badge-info",
+    neutral: "corp-badge corp-badge-neutral",
+    ink: "corp-badge corp-badge-dark",
+    primary: "corp-badge corp-badge-primary",
+    gold: "corp-badge corp-badge-gold",
+  };
+  // Fallback to inline styles if corp-badge not available
+  const fallback = {
     ok: "bg-emerald-50 text-emerald-800 border-emerald-200",
     warn: "bg-amber-50 text-amber-800 border-amber-200",
     danger: "bg-rose-50 text-rose-800 border-rose-200",
     info: "bg-sky-50 text-sky-800 border-sky-200",
-    neutral: "bg-slate-50 text-slate-800 border-slate-200",
+    neutral: "bg-slate-100 text-slate-700 border-slate-200",
     ink: "bg-slate-900 text-white border-slate-900",
+    primary: "bg-corp-primary/10 text-corp-primary border-corp-primary/30",
+    gold: "bg-amber-100 text-amber-900 border-amber-300",
   };
   return (
-    <span className={cls("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium", map[tone] || map.neutral)}>
+    <span className={cls(
+      "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold",
+      map[tone] || fallback[tone] || fallback.neutral
+    )}>
       {children}
     </span>
   );
@@ -76,8 +92,8 @@ const PrimaryBtn = ({ onClick, children, disabled }) => (
     onClick={onClick}
     disabled={disabled}
     className={cls(
-      "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition",
-      disabled ? "bg-slate-200 text-slate-500 cursor-not-allowed" : "bg-corp-primary text-white hover:bg-corp-primary-dark"
+      "inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition",
+      disabled ? "bg-slate-200 text-slate-500 cursor-not-allowed" : "bg-corp-primary text-white hover:bg-corp-primary-hover"
     )}
   >
     {children}

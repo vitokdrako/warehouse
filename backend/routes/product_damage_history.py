@@ -434,37 +434,56 @@ async def get_damage_dashboard(db: Session = Depends(get_rh_db)):
 async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
     """
     Отримати damage cases згруповані по замовленнях (для головної вкладки)
-    Показує всі пошкодження згруповані по order_id
+    Показує всі пошкодження згруповані по order_id з інформацією про оплату
     """
     try:
         result = db.execute(text("""
             SELECT 
-                order_id,
-                order_number,
+                pdh.order_id,
+                pdh.order_number,
                 COUNT(*) as items_count,
-                SUM(fee) as total_fee,
-                MAX(created_at) as latest_damage,
-                GROUP_CONCAT(DISTINCT processing_type) as processing_types,
-                MIN(created_at) as first_damage
-            FROM product_damage_history
-            WHERE order_id IS NOT NULL
-            GROUP BY order_id, order_number
+                SUM(pdh.fee) as total_fee,
+                MAX(pdh.created_at) as latest_damage,
+                GROUP_CONCAT(DISTINCT pdh.processing_type) as processing_types,
+                MIN(pdh.created_at) as first_damage,
+                o.customer_name,
+                o.customer_phone,
+                o.status as order_status,
+                COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = pdh.order_id AND payment_type = 'damage'), 0) as damage_paid,
+                SUM(CASE WHEN pdh.processing_type IS NULL OR pdh.processing_type = '' THEN 1 ELSE 0 END) as pending_assignment,
+                SUM(CASE WHEN pdh.processing_status = 'completed' THEN 1 ELSE 0 END) as completed_count
+            FROM product_damage_history pdh
+            LEFT JOIN orders o ON o.order_id = pdh.order_id
+            WHERE pdh.order_id IS NOT NULL
+            GROUP BY pdh.order_id, pdh.order_number, o.customer_name, o.customer_phone, o.status
             ORDER BY latest_damage DESC
         """))
         
         cases = []
         for row in result:
+            total_fee = float(row[3]) if row[3] else 0.0
+            damage_paid = float(row[10]) if row[10] else 0.0
+            damage_due = max(0, total_fee - damage_paid)
+            
             cases.append({
                 "order_id": row[0],
                 "order_number": row[1],
                 "items_count": row[2],
-                "total_fee": float(row[3]) if row[3] else 0.0,
+                "total_fee": total_fee,
+                "damage_paid": damage_paid,
+                "damage_due": damage_due,
+                "is_paid": damage_due <= 0,
                 "latest_damage": row[4].isoformat() if row[4] else None,
                 "processing_types": row[5].split(',') if row[5] else [],
-                "first_damage": row[6].isoformat() if row[6] else None
+                "first_damage": row[6].isoformat() if row[6] else None,
+                "customer_name": row[7],
+                "customer_phone": row[8],
+                "order_status": row[9],
+                "pending_assignment": row[11] or 0,
+                "completed_count": row[12] or 0
             })
         
-        return {"cases": cases}
+        return {"cases": cases, "total": len(cases)}
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")

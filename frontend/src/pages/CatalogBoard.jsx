@@ -236,6 +236,7 @@ function Sidebar({
 function ProductCard({ item, onClick, dateFilterActive }) {
   const hasConflict = item.has_conflict
   const hasRentals = item.who_has?.length > 0
+  const hasProcessing = (item.on_wash || 0) + (item.on_restoration || 0) + (item.on_laundry || 0) > 0
   
   return (
     <div 
@@ -259,10 +260,19 @@ function ProductCard({ item, onClick, dateFilterActive }) {
             <Badge variant="error">Конфлікт</Badge>
           )}
           {item.in_rent > 0 && !hasConflict && (
-            <Badge variant="warning">{item.in_rent} орен.</Badge>
+            <Badge variant="warning">{item.in_rent} вид.</Badge>
           )}
           {item.reserved > 0 && !hasConflict && (
             <Badge variant="info">{item.reserved} рез.</Badge>
+          )}
+          {item.on_wash > 0 && (
+            <Badge variant="default">{item.on_wash} мий.</Badge>
+          )}
+          {item.on_restoration > 0 && (
+            <Badge variant="default">{item.on_restoration} рест.</Badge>
+          )}
+          {item.on_laundry > 0 && (
+            <Badge variant="default">{item.on_laundry} хім.</Badge>
           )}
         </div>
       </div>

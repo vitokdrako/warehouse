@@ -195,13 +195,13 @@ function OrderCaseRow({ caseData, active, onClick }) {
 // ----------------------------- Item Row (for detail panel) -----------------------------
 function DamageItemRow({ item, onSendTo }) {
   const getProcessingBadge = () => {
-    if (!item.processing_type) return null;
+    if (!item.processing_type || item.processing_type === 'none') return null;
     const map = {
-      wash: { label: "🧼 Мийка", tone: "info" },
-      restoration: { label: "🔧 Реставрація", tone: "warn" },
-      laundry: { label: "🧺 Хімчистка", tone: "ok" },
+      wash: { label: "🧼 Мийка", tone: "info", bg: "bg-blue-100 text-blue-800" },
+      restoration: { label: "🔧 Реставрація", tone: "warn", bg: "bg-amber-100 text-amber-800" },
+      laundry: { label: "🧺 Хімчистка", tone: "ok", bg: "bg-emerald-100 text-emerald-800" },
     };
-    const m = map[item.processing_type] || { label: item.processing_type, tone: "neutral" };
+    const m = map[item.processing_type] || { label: item.processing_type, tone: "neutral", bg: "bg-slate-100" };
     return <Badge tone={m.tone}>{m.label}</Badge>;
   };
 
@@ -210,34 +210,100 @@ function DamageItemRow({ item, onSendTo }) {
     const map = {
       pending: { label: "Очікує", tone: "warn" },
       in_progress: { label: "В роботі", tone: "info" },
-      completed: { label: "Виконано", tone: "ok" },
+      completed: { label: "✓ Виконано", tone: "ok" },
     };
     const m = map[item.processing_status] || { label: item.processing_status, tone: "neutral" };
     return <Badge tone={m.tone}>{m.label}</Badge>;
   };
 
-  const isAssigned = !!item.processing_type;
+  const isAssigned = item.processing_type && item.processing_type !== 'none';
+  const photoUrl = item.photo_url || item.product_image;
 
   return (
     <div className={cls(
       "rounded-xl border p-3 transition",
       isAssigned ? "bg-slate-50 border-slate-200" : "bg-amber-50 border-amber-200"
     )}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-slate-900">{item.product_name}</span>
-            {getProcessingBadge()}
-            {getStatusBadge()}
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            SKU: {item.sku || "—"} • {item.damage_type || "Пошкодження"}
-          </div>
-          {item.note && (
-            <div className="mt-1 text-xs text-slate-600 italic">"{item.note}"</div>
+      <div className="flex items-start gap-3">
+        {/* Photo */}
+        <div className="shrink-0">
+          {photoUrl ? (
+            <img 
+              src={photoUrl} 
+              alt={item.product_name}
+              className="w-16 h-16 rounded-lg object-cover border border-slate-200"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-lg bg-slate-200 flex items-center justify-center text-2xl">
+              📦
+            </div>
           )}
         </div>
-        <div className="text-right">
+        
+        {/* Content */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-slate-900 truncate">{item.product_name}</div>
+              <div className="mt-0.5 text-xs text-slate-500">
+                SKU: {item.sku || "—"} • {item.damage_type || "Пошкодження"}
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-bold text-slate-900">{money(item.fee)}</div>
+              <div className="text-xs text-slate-500">{item.severity || "low"}</div>
+            </div>
+          </div>
+          
+          {/* Note */}
+          {item.note && (
+            <div className="mt-1 text-xs text-slate-600 italic truncate">"{item.note}"</div>
+          )}
+          
+          {/* Processing Status - показуємо куди відправлено */}
+          {isAssigned && (
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-slate-500">Відправлено:</span>
+              {getProcessingBadge()}
+              {getStatusBadge()}
+              {item.sent_to_processing_at && (
+                <span className="text-xs text-slate-400">
+                  {fmtDate(item.sent_to_processing_at)}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {/* Assignment buttons - only show if not assigned */}
+          {!isAssigned && (
+            <div className="mt-2 pt-2 border-t border-amber-200 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-amber-700">Відправити на:</span>
+              <button
+                onClick={() => onSendTo(item, "wash")}
+                className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-blue-200 transition"
+              >
+                🧼 Мийку
+              </button>
+              <button
+                onClick={() => onSendTo(item, "restoration")}
+                className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200 transition"
+              >
+                🔧 Реставрацію
+              </button>
+              <button
+                onClick={() => onSendTo(item, "laundry")}
+                className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-200 transition"
+              >
+                🧺 Хімчистку
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
           <div className="font-bold text-slate-900">{money(item.fee)}</div>
           <div className="text-xs text-slate-500">{item.severity || "low"}</div>
         </div>

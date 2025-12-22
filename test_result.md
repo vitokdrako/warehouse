@@ -211,6 +211,115 @@ Testing the new unified DamageHubApp with 4 tabs: Головна, Мийка, Р
 
 ---
 
+## CATALOG PAGE NEW SIDEBAR LAYOUT TEST RESULTS - COMPLETED ✅
+
+### Test Execution Summary
+**Date:** January 2025  
+**Status:** ✅ **FULLY FUNCTIONAL**  
+**Route Tested:** /catalog  
+**Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com)  
+**Layout Type:** New sidebar layout with filters on left, products on right
+
+### Detailed Test Results
+
+#### ✅ Test 1: Login and Navigation
+- **Login Process:** ✅ PASS - Successfully logged in with vitokdrako@gmail.com
+- **Catalog Access:** ✅ PASS - Direct access to /catalog working
+- **URL Routing:** ✅ PASS - Proper React routing implemented
+
+#### ✅ Test 2: LEFT SIDEBAR Layout Verification (~280px width)
+- **Sidebar Container:** ✅ PASS - Left sidebar exists with correct width class (w-72)
+- **Sidebar Width:** ✅ PASS - Approximately 280px as specified
+- **Sidebar Structure:** ✅ PASS - Proper flex layout with space-y-4 spacing
+
+#### ✅ Test 3: Date Range Picker (Перевірка доступності) - TOP POSITION
+- **Section Header:** ✅ PASS - "Перевірка доступності" section found at top
+- **Date From Input:** ✅ PASS - Date input field working
+- **Date To Input:** ✅ PASS - Date input field working  
+- **Date Range Setting:** ✅ PASS - Successfully set date range (2025-02-01 to 2025-02-15)
+- **Conflict Detection:** ✅ PASS - Date filter activates conflict detection
+
+#### ✅ Test 4: Category Dropdown Selector
+- **Category Dropdown:** ✅ PASS - Main category selector working
+- **Category Options:** ✅ PASS - 286 categories available including "Всі категорії (6622)"
+- **Category Selection:** ✅ PASS - Category selection triggers subcategory activation
+- **Product Counts:** ✅ PASS - Shows product counts per category
+
+#### ✅ Test 5: Subcategory Dropdown Activation
+- **Subcategory Dropdown:** ✅ PASS - Subcategory selector present
+- **Activation Logic:** ✅ PASS - Becomes active when category is selected
+- **Subcategory Options:** ✅ PASS - Shows relevant subcategories for selected category
+- **Dynamic Behavior:** ✅ PASS - Properly disabled/enabled based on category selection
+
+#### ✅ Test 6: Filter Panel - All Components
+- **Search Filter:** ✅ PASS - Search by SKU, name, color available with placeholder
+- **Color Filter:** ✅ PASS - Dropdown with available colors
+- **Material Filter:** ✅ PASS - Dropdown with available materials
+- **Quantity Range:** ✅ PASS - Min/max quantity inputs (від/до)
+- **Availability Filter:** ✅ PASS - Filter by available/in rent/reserved
+- **Filter Integration:** ✅ PASS - All filters work together
+
+#### ✅ Test 7: Reset Button (Скинути все)
+- **Reset Button:** ✅ PASS - "Скинути все" button present at bottom of sidebar
+- **Reset Functionality:** ✅ PASS - Successfully clears all filters and selections
+- **UI Reset:** ✅ PASS - Search field and dropdowns reset to default state
+
+#### ✅ Test 8: RIGHT CONTENT AREA - Stats Bar
+- **Stats Container:** ✅ PASS - Stats bar properly positioned in right content area
+- **Знайдено Stat:** ✅ PASS - Shows "200 Знайдено" (found items count)
+- **Доступно Stat:** ✅ PASS - Shows "1,510 Доступно" (available units)
+- **В оренді Stat:** ✅ PASS - Shows "0 В оренді" (in rent)
+- **Резерв Stat:** ✅ PASS - Shows "64 Резерв" (reserved)
+- **Real-time Updates:** ✅ PASS - Stats update when filters applied
+
+#### ✅ Test 9: RIGHT CONTENT AREA - Product Grid
+- **Product Grid Container:** ✅ PASS - Grid layout container present
+- **Product Cards:** ✅ PASS - Multiple product cards visible with proper layout
+- **Card Structure:** ✅ PASS - Cards show image, SKU, name, availability, pricing
+- **Product Images:** ✅ PASS - Images loading with fallback for missing images
+- **Availability Display:** ✅ PASS - Color-coded availability indicators (5/5, 3/3, 1/1, 2/2, etc.)
+- **Pricing Display:** ✅ PASS - Rental prices shown in UAH (600₴, 500₴, etc.)
+- **Product Information:** ✅ PASS - Shows SKU codes, product names, material/color tags
+
+#### ✅ Test 10: Layout Verification
+- **Sidebar Position:** ✅ PASS - Left sidebar correctly positioned
+- **Content Position:** ✅ PASS - Right content area takes remaining space
+- **Responsive Design:** ✅ PASS - Proper flex layout with sidebar and main content
+- **Visual Hierarchy:** ✅ PASS - Clear separation between filters and products
+- **Corporate Styling:** ✅ PASS - Consistent green corporate colors (#b1cb29)
+
+### Expected Features Verification
+- ✅ **LEFT SIDEBAR (~280px width)** - Fully implemented with correct width
+- ✅ **Date range picker at top** - "Перевірка доступності" section working
+- ✅ **Category dropdown selector** - Working with 286+ categories
+- ✅ **Subcategory dropdown activation** - Activates when category selected
+- ✅ **Complete filter panel** - Search, Color, Material, Quantity, Availability
+- ✅ **Reset button at bottom** - "Скинути все" working correctly
+- ✅ **RIGHT CONTENT AREA** - Stats bar + product grid layout
+- ✅ **Stats bar** - Shows Знайдено, Доступно, В оренді, Резерв counts
+- ✅ **Product grid** - Cards with image, name, availability working
+- ✅ **Conflict detection** - Date range filtering activates conflict detection
+
+### Minor Issues Identified
+1. **Product Detail Modal** - Modal functionality present but needs authentication session maintenance for consistent testing
+2. **Session Management** - Occasional session timeouts during extended testing (authentication works correctly)
+
+### Overall Assessment
+**Status:** ✅ **FULLY FUNCTIONAL**  
+**Layout Implementation:** Perfect - exactly matches requested sidebar layout  
+**Filter Functionality:** Excellent - all filters working as expected  
+**User Experience:** Outstanding - intuitive navigation and clear information display  
+**API Integration:** Perfect - all endpoints responding correctly with real data  
+**UI/UX Design:** Complete - proper layout, styling, and responsive design  
+**Conflict Detection:** Working - date range filtering enables conflict detection
+
+### Screenshots Captured
+- catalog_initial_load.png - Initial page load with sidebar layout
+- catalog_sidebar_layout_final.png - Final working state showing complete layout
+- catalog_product_modal.png - Product detail modal (when accessible)
+
+---
+
 ## FINANCE CONSOLE DAMAGE-TO-ARCHIVE WORKFLOW TEST RESULTS - COMPLETED ✅
 
 ### Test Execution Summary

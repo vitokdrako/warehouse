@@ -504,7 +504,7 @@ async def get_damage_case_details(order_id: int, db: Session = Depends(get_rh_db
                 pdh.processing_type, pdh.processing_status,
                 pdh.sent_to_processing_at, pdh.returned_from_processing_at,
                 pdh.processing_notes, pdh.laundry_batch_id, pdh.laundry_item_id,
-                p.image as product_image
+                NULL as product_image
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.id
             WHERE pdh.order_id = :order_id
@@ -564,7 +564,7 @@ async def get_wash_queue(db: Session = Depends(get_rh_db)):
                 pdh.processing_status, pdh.sent_to_processing_at,
                 pdh.returned_from_processing_at, pdh.processing_notes,
                 pdh.created_at, pdh.created_by,
-                p.image as product_image
+                NULL as product_image
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.id
             WHERE pdh.processing_type = 'wash'
@@ -614,7 +614,7 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
                 pdh.processing_status, pdh.sent_to_processing_at,
                 pdh.returned_from_processing_at, pdh.processing_notes,
                 pdh.created_at, pdh.created_by,
-                p.image as product_image
+                NULL as product_image
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.id
             WHERE pdh.processing_type = 'restoration'
@@ -665,7 +665,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 pdh.returned_from_processing_at, pdh.processing_notes,
                 pdh.laundry_batch_id, pdh.laundry_item_id,
                 pdh.created_at, pdh.created_by,
-                p.image as product_image,
+                NULL as product_image,
                 lb.laundry_company, lb.status as batch_status
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.id

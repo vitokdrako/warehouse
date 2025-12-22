@@ -200,7 +200,7 @@ async def get_items_by_category(
                 o.order_number, 
                 c.firstname, 
                 c.lastname, 
-                c.phone,
+                c.telephone,
                 o.rental_end_date,
                 oi.quantity
             FROM order_items oi

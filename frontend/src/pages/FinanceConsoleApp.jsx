@@ -152,8 +152,10 @@ const TabBtn = ({ active, onClick, children }) => (
   <button
     onClick={onClick}
     className={cls(
-      "rounded-xl px-4 py-2.5 text-sm font-semibold transition",
-      active ? "bg-corp-primary text-white shadow-sm" : "bg-white text-slate-700 hover:bg-slate-50"
+      "rounded-xl px-4 py-2.5 text-sm font-semibold transition border",
+      active 
+        ? "bg-corp-primary text-white shadow-sm border-corp-primary" 
+        : "bg-white text-corp-text-main border-corp-border hover:bg-slate-50 hover:border-slate-300"
     )}
   >
     {children}
@@ -177,15 +179,17 @@ const OrderRow = ({ order, selected, onSelect }) => {
     <button
       onClick={() => onSelect(order.order_id)}
       className={cls(
-        "w-full rounded-2xl border px-4 py-3 text-left shadow-sm transition",
-        selected ? "border-corp-primary/50 bg-corp-primary/5" : "border-slate-200 bg-white hover:bg-slate-50"
+        "w-full rounded-2xl border px-4 py-3.5 text-left shadow-sm transition",
+        selected 
+          ? "border-corp-primary bg-corp-primary/5 ring-2 ring-corp-primary/20" 
+          : "border-corp-border bg-white hover:bg-slate-50 hover:border-slate-300"
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-slate-900">#{order.order_number}</div>
-          <div className="mt-0.5 text-xs text-slate-600">{order.customer_name}</div>
-          <div className="mt-0.5 text-xs text-slate-500">
+          <div className="text-sm font-bold text-corp-text-dark">#{order.order_number}</div>
+          <div className="mt-0.5 text-xs text-corp-text-main">{order.customer_name}</div>
+          <div className="mt-0.5 text-xs text-corp-text-muted">
             Оренда: {money(order.rent_paid || 0)} / {money(order.total_rental || 0)}
           </div>
         </div>

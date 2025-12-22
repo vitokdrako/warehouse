@@ -143,6 +143,7 @@ const Shell = ({ left, right }) => (
 const OrderRow = ({ order, selected, onSelect }) => {
   const rentDue = Math.max(0, (order.total_rental || 0) - (order.rent_paid || 0));
   const depositDue = Math.max(0, (order.total_deposit || 0) - (order.deposit_held || 0));
+  const damageDue = order.damage_due || 0;
   
   return (
     <button
@@ -162,6 +163,9 @@ const OrderRow = ({ order, selected, onSelect }) => {
         </div>
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           <Pill tone={rentDue > 0 ? "warn" : "ok"} icon={rentDue > 0 ? "⏳" : "✓"} label={rentDue > 0 ? `${money(rentDue)}` : "OK"} />
+          {damageDue > 0 && (
+            <Pill tone="danger" icon="🔧" label={money(damageDue)} />
+          )}
           <Pill tone={depositDue > 0 ? "info" : "ok"} icon="🔒" label={depositDue > 0 ? `${money(depositDue)}` : "OK"} />
           <Badge tone="neutral">{order.status}</Badge>
         </div>

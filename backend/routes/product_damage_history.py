@@ -589,8 +589,7 @@ async def get_wash_queue(db: Session = Depends(get_rh_db)):
                 "returned_from_processing_at": row[14].isoformat() if row[14] else None,
                 "processing_notes": row[15],
                 "created_at": row[16].isoformat() if row[16] else None,
-                "created_by": row[17],
-                "product_image": row[18]
+                "created_by": row[17]
             })
         
         return {"items": items, "total": len(items)}
@@ -639,8 +638,7 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
                 "returned_from_processing_at": row[14].isoformat() if row[14] else None,
                 "processing_notes": row[15],
                 "created_at": row[16].isoformat() if row[16] else None,
-                "created_by": row[17],
-                "product_image": row[18]
+                "created_by": row[17]
             })
         
         return {"items": items, "total": len(items)}

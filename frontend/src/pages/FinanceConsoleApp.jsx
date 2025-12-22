@@ -256,6 +256,9 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   
   // Damage fees state
   const [damageFees, setDamageFees] = useState([]);
+  const [damageTotal, setDamageTotal] = useState(0);
+  const [damagePaidTotal, setDamagePaidTotal] = useState(0);
+  const [damageDueTotal, setDamageDueTotal] = useState(0);
   const [damageAmount, setDamageAmount] = useState("");
   const [damageMethod, setDamageMethod] = useState("cash");
   const [loadingDamage, setLoadingDamage] = useState(false);

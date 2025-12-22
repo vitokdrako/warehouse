@@ -1240,13 +1240,13 @@ export default function FinanceConsoleApp() {
         {/* Tabs */}
         <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white border border-corp-border p-2 shadow-sm">
           <TabBtn active={tab === "orders"} onClick={() => setTab("orders")}>
-            📋 Ордери
+            Ордери
           </TabBtn>
           <TabBtn active={tab === "ledger"} onClick={() => setTab("ledger")}>
-            📒 Облік
+            Облік
           </TabBtn>
           <TabBtn active={tab === "expenses"} onClick={() => setTab("expenses")}>
-            💸 Витрати
+            Витрати
           </TabBtn>
         </div>
 

@@ -447,7 +447,8 @@ export default function DamageHubApp() {
     if (!orderId) return;
     setDetailLoading(true);
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/cases/${orderId}/details`);
+      // Use the working endpoint
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/order/${orderId}`);
       const data = await res.json();
       setSelectedOrderItems(data.items || []);
     } catch (e) {

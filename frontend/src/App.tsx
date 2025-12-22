@@ -115,7 +115,7 @@ function App() {
             path="/damages" 
             element={
               <ProtectedRoute>
-                <DamageCabinet />
+                <DamageHubApp />
               </ProtectedRoute>
             } 
           />

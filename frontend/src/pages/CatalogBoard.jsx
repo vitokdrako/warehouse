@@ -466,7 +466,10 @@ export default function CatalogBoard() {
   const [colors, setColors] = useState([])
   const [materials, setMaterials] = useState([])
   const [items, setItems] = useState([])
-  const [stats, setStats] = useState({ total: 0, available: 0, in_rent: 0, reserved: 0 })
+  const [stats, setStats] = useState({ 
+    total: 0, available: 0, in_rent: 0, reserved: 0,
+    on_wash: 0, on_restoration: 0, on_laundry: 0 
+  })
   const [selectedCategory, setSelectedCategory] = useState({ category: null, subcategory: null })
   const [filters, setFilters] = useState({
     search: '',

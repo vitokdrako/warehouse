@@ -356,19 +356,19 @@ async def create_transaction(
 ### Backend API Test:
 ```bash
 # 1. Отримати історію
-curl "https://damage-workflow.preview.emergentagent.com/api/user-tracking/orders/7040/history"
+curl "https://doc-management-9.preview.emergentagent.com/api/user-tracking/orders/7040/history"
 
 # 2. Отримати нотатки
-curl "https://damage-workflow.preview.emergentagent.com/api/user-tracking/orders/7040/notes"
+curl "https://doc-management-9.preview.emergentagent.com/api/user-tracking/orders/7040/notes"
 
 # 3. Додати нотатку (з токеном)
-curl -X POST "https://damage-workflow.preview.emergentagent.com/api/user-tracking/orders/7040/notes" \
+curl -X POST "https://doc-management-9.preview.emergentagent.com/api/user-tracking/orders/7040/notes" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"note": "Тестова внутрішня нотатка"}'
 
 # 4. Залогувати комплектацію
-curl -X POST "https://damage-workflow.preview.emergentagent.com/api/user-tracking/orders/7040/pack-item" \
+curl -X POST "https://doc-management-9.preview.emergentagent.com/api/user-tracking/orders/7040/pack-item" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

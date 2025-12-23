@@ -29,8 +29,8 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://doc-management.preview.emergentagent.com/api"
-FRONTEND_URL = "https://doc-management.preview.emergentagent.com"
+BASE_URL = "https://doc-management-9.preview.emergentagent.com/api"
+FRONTEND_URL = "https://doc-management-9.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
@@ -40,7 +40,7 @@ TEST_CREDENTIALS = {
 CORRECT_COMPANY_NAME = "ФОП Арсалані Олександра Ігорівна"
 OLD_INCORRECT_NAME = "ФОП Маркін Ілля Павлович"
 
-class DocumentsTester:
+class DocumentGenerationTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
@@ -50,7 +50,6 @@ class DocumentsTester:
         })
         self.auth_token = None
         self.test_order_id = None  # Store order ID for document generation tests
-        self.generated_documents = []  # Store generated document IDs for testing
         
     def log(self, message: str, level: str = "INFO"):
         """Log test messages with timestamp"""
@@ -101,29 +100,24 @@ class DocumentsTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
 
-    # ============================================
-    # DOCUMENTS FUNCTIONALITY TESTS
-    # ============================================
-    
-    def test_get_orders_with_finance(self, limit: int = 10) -> Dict[str, Any]:
-        """Test GET /api/manager/finance/orders-with-finance?limit=10"""
+    def get_orders_list(self, limit: int = 10) -> Dict[str, Any]:
+        """Get list of orders to find an existing order_id"""
         try:
-            self.log("🧪 Testing get orders with finance data...")
+            self.log("🧪 Getting list of orders...")
             
-            response = self.session.get(f"{self.base_url}/manager/finance/orders-with-finance?limit={limit}")
+            response = self.session.get(f"{self.base_url}/orders?limit={limit}")
             
             if response.status_code == 200:
                 data = response.json()
-                orders = data.get('orders', [])
-                total = data.get('total', 0)
+                orders = data.get('orders', []) if isinstance(data, dict) else data
                 
-                self.log(f"✅ Retrieved {total} orders with finance data")
+                self.log(f"✅ Retrieved {len(orders)} orders")
                 
                 if orders:
-                    # Show first few orders
+                    # Show first few orders and store first order ID
                     self.log("📋 Sample orders:")
                     for order in orders[:3]:  # Show first 3
-                        order_id = order.get('order_id')
+                        order_id = order.get('order_id') or order.get('id')
                         order_number = order.get('order_number', 'No number')
                         customer_name = order.get('customer_name', 'No name')
                         status = order.get('status', 'unknown')
@@ -139,79 +133,27 @@ class DocumentsTester:
                 
                 return {
                     "success": True, 
-                    "data": data, 
-                    "count": total,
-                    "has_orders": total > 0,
+                    "data": orders, 
+                    "count": len(orders),
+                    "has_orders": len(orders) > 0,
                     "first_order_id": self.test_order_id
                 }
             else:
-                self.log(f"❌ Get orders with finance failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Get orders failed: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing get orders with finance: {str(e)}", "ERROR")
+            self.log(f"❌ Exception getting orders: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_get_documents_for_order(self, order_id: str) -> Dict[str, Any]:
-        """Test GET /api/documents/entity/order/{order_id}"""
+    def generate_invoice_offer_document(self, order_id: str) -> Dict[str, Any]:
+        """Generate invoice_offer document and verify company name"""
         try:
-            self.log(f"🧪 Testing get documents for order: {order_id}...")
-            
-            response = self.session.get(f"{self.base_url}/documents/entity/order/{order_id}")
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                documents = data.get('documents', [])
-                available_types = data.get('available_types', [])
-                
-                self.log(f"✅ Documents retrieved successfully")
-                self.log(f"   📄 Existing documents: {len(documents)}")
-                self.log(f"   📋 Available types: {len(available_types)}")
-                
-                if available_types:
-                    self.log("📋 Available document types:")
-                    for doc_type in available_types[:5]:  # Show first 5
-                        doc_code = doc_type.get('doc_type', 'unknown')
-                        doc_name = doc_type.get('name', 'No name')
-                        self.log(f"   - {doc_code}: {doc_name}")
-                    
-                    if len(available_types) > 5:
-                        self.log(f"   ... and {len(available_types) - 5} more")
-                
-                if documents:
-                    self.log("📄 Existing documents:")
-                    for doc in documents[:3]:  # Show first 3
-                        doc_id = doc.get('id', 'unknown')
-                        doc_type = doc.get('doc_type', 'unknown')
-                        doc_number = doc.get('doc_number', 'No number')
-                        status = doc.get('status', 'unknown')
-                        self.log(f"   - {doc_id}: {doc_type} {doc_number} ({status})")
-                
-                return {
-                    "success": True,
-                    "data": data,
-                    "documents_count": len(documents),
-                    "available_types_count": len(available_types),
-                    "has_documents": len(documents) > 0,
-                    "has_available_types": len(available_types) > 0
-                }
-            else:
-                self.log(f"❌ Get documents for order failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing get documents for order: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_generate_document(self, doc_type: str, entity_id: str) -> Dict[str, Any]:
-        """Test POST /api/documents/generate"""
-        try:
-            self.log(f"🧪 Testing generate document: {doc_type} for entity {entity_id}...")
+            self.log(f"🧪 Generating invoice_offer document for order: {order_id}...")
             
             request_data = {
-                "doc_type": doc_type,
-                "entity_id": entity_id,
+                "doc_type": "invoice_offer",
+                "entity_id": str(order_id),
                 "format": "html"
             }
             
@@ -233,20 +175,30 @@ class DocumentsTester:
                 self.log(f"   🔢 Document Number: {doc_number}")
                 self.log(f"   📝 HTML Content Length: {len(html_content)} characters")
                 
-                # Store document ID for PDF and email tests
-                if document_id:
-                    self.generated_documents.append({
-                        'id': document_id,
-                        'type': doc_type,
-                        'number': doc_number
-                    })
+                # Verify company name in HTML content
+                has_correct_name = CORRECT_COMPANY_NAME in html_content
+                has_old_name = OLD_INCORRECT_NAME in html_content
+                
+                self.log(f"\n🔍 Company Name Verification:")
+                if has_correct_name:
+                    self.log(f"   ✅ Contains correct company name: '{CORRECT_COMPANY_NAME}'")
+                else:
+                    self.log(f"   ❌ Missing correct company name: '{CORRECT_COMPANY_NAME}'", "ERROR")
+                
+                if has_old_name:
+                    self.log(f"   ❌ Still contains old incorrect name: '{OLD_INCORRECT_NAME}'", "ERROR")
+                else:
+                    self.log(f"   ✅ Does NOT contain old incorrect name: '{OLD_INCORRECT_NAME}'")
                 
                 # Check if HTML content is substantial
                 has_content = len(html_content) > 1000
                 if has_content:
-                    self.log(f"✅ Document has substantial content")
+                    self.log(f"   ✅ Document has substantial content")
                 else:
-                    self.log(f"⚠️ Document content may be minimal", "WARNING")
+                    self.log(f"   ⚠️ Document content may be minimal", "WARNING")
+                
+                # Overall validation
+                validation_passed = has_correct_name and not has_old_name and has_content
                 
                 return {
                     "success": True,
@@ -255,120 +207,107 @@ class DocumentsTester:
                     "doc_number": doc_number,
                     "html_length": len(html_content),
                     "has_substantial_content": has_content,
-                    "generation_success": success
+                    "generation_success": success,
+                    "has_correct_company_name": has_correct_name,
+                    "has_old_company_name": has_old_name,
+                    "validation_passed": validation_passed,
+                    "html_content": html_content  # Include for debugging if needed
                 }
             else:
                 self.log(f"❌ Generate document failed: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing generate document: {str(e)}", "ERROR")
+            self.log(f"❌ Exception generating document: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_download_pdf(self, document_id: str) -> Dict[str, Any]:
-        """Test GET /api/documents/{document_id}/pdf"""
-        try:
-            self.log(f"🧪 Testing PDF download for document: {document_id}...")
+    def run_company_name_verification_test(self):
+        """Run the complete company name verification test as per review request"""
+        self.log("🚀 Starting Document Generation Company Name Verification Test")
+        self.log("=" * 80)
+        self.log(f"Testing company legal name update in document generation")
+        self.log(f"Expected: '{CORRECT_COMPANY_NAME}'")
+        self.log(f"Should NOT contain: '{OLD_INCORRECT_NAME}'")
+        self.log("=" * 80)
+        
+        # Step 1: Health check
+        if not self.test_api_health():
+            self.log("❌ API health check failed, aborting tests", "ERROR")
+            return False
+        
+        # Step 2: Authentication
+        self.log("\n🔍 Step 1: Testing authentication...")
+        if not self.authenticate():
+            self.log("❌ Authentication failed, aborting tests", "ERROR")
+            return False
+        
+        # Step 3: Get orders list
+        self.log("\n🔍 Step 2: Getting list of orders...")
+        orders_result = self.get_orders_list()
+        orders_success = orders_result.get("success", False)
+        has_orders = orders_result.get("has_orders", False)
+        
+        if not orders_success or not has_orders:
+            self.log("❌ Failed to get orders or no orders available, aborting tests", "ERROR")
+            return False
+        
+        order_id = orders_result.get("first_order_id")
+        if not order_id:
+            self.log("❌ No order ID found, aborting tests", "ERROR")
+            return False
+        
+        # Step 4: Generate invoice_offer document
+        self.log(f"\n🔍 Step 3: Generating invoice_offer document for order {order_id}...")
+        doc_result = self.generate_invoice_offer_document(order_id)
+        doc_success = doc_result.get("success", False)
+        validation_passed = doc_result.get("validation_passed", False)
+        
+        # Step 5: Summary
+        self.log("\n" + "=" * 80)
+        self.log("📊 COMPANY NAME VERIFICATION TEST SUMMARY:")
+        self.log(f"   • API Health: ✅ OK")
+        self.log(f"   • Authentication: ✅ Working")
+        self.log(f"   • Orders List: ✅ Retrieved {orders_result.get('count', 0)} orders")
+        self.log(f"   • Test Order ID: {order_id}")
+        
+        if doc_success:
+            has_correct = doc_result.get("has_correct_company_name", False)
+            has_old = doc_result.get("has_old_company_name", False)
+            content_length = doc_result.get("html_length", 0)
             
-            response = self.session.get(f"{self.base_url}/documents/{document_id}/pdf")
+            self.log(f"\n   📄 DOCUMENT GENERATION:")
+            self.log(f"   • Document Generated: ✅ Success")
+            self.log(f"   • Document ID: {doc_result.get('document_id', 'N/A')}")
+            self.log(f"   • Document Number: {doc_result.get('doc_number', 'N/A')}")
+            self.log(f"   • HTML Content Length: {content_length} characters")
             
-            if response.status_code == 200:
-                content_type = response.headers.get('content-type', '')
-                content_length = len(response.content)
-                content_disposition = response.headers.get('content-disposition', '')
-                
-                self.log(f"✅ PDF downloaded successfully")
-                self.log(f"   📄 Content-Type: {content_type}")
-                self.log(f"   📏 Content Length: {content_length} bytes")
-                self.log(f"   📎 Content-Disposition: {content_disposition}")
-                
-                # Check if it's actually a PDF
-                is_pdf = content_type == 'application/pdf'
-                has_content = content_length > 1000
-                has_disposition = 'attachment' in content_disposition
-                
-                if is_pdf:
-                    self.log(f"✅ Content-Type is correct (application/pdf)")
-                else:
-                    self.log(f"⚠️ Content-Type may be incorrect: {content_type}", "WARNING")
-                
-                if has_content:
-                    self.log(f"✅ PDF has substantial content ({content_length} bytes)")
-                else:
-                    self.log(f"⚠️ PDF content may be minimal", "WARNING")
-                
-                if has_disposition:
-                    self.log(f"✅ Proper download headers present")
-                else:
-                    self.log(f"⚠️ Download headers may be missing", "WARNING")
-                
-                return {
-                    "success": True,
-                    "content_type": content_type,
-                    "content_length": content_length,
-                    "content_disposition": content_disposition,
-                    "is_pdf": is_pdf,
-                    "has_substantial_content": has_content,
-                    "has_download_headers": has_disposition
-                }
+            self.log(f"\n   🏢 COMPANY NAME VERIFICATION:")
+            if has_correct:
+                self.log(f"   • Correct Company Name: ✅ Found '{CORRECT_COMPANY_NAME}'")
             else:
-                self.log(f"❌ PDF download failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing PDF download: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_send_document_email(self, document_id: str, test_email: str = "test@example.com") -> Dict[str, Any]:
-        """Test POST /api/documents/{document_id}/send-email"""
-        try:
-            self.log(f"🧪 Testing send document email for: {document_id}...")
+                self.log(f"   • Correct Company Name: ❌ Missing '{CORRECT_COMPANY_NAME}'")
             
-            request_data = {
-                "email": test_email
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/documents/{document_id}/send-email",
-                json=request_data
-            )
-            
-            # Note: This endpoint might fail if SMTP is not configured, but we test if it exists and responds
-            if response.status_code == 200:
-                data = response.json()
-                success = data.get('success', False)
-                message = data.get('message', '')
-                
-                self.log(f"✅ Email sending endpoint working")
-                self.log(f"   📧 Success: {success}")
-                self.log(f"   📄 Message: {message}")
-                
-                return {
-                    "success": True,
-                    "data": data,
-                    "email_success": success,
-                    "message": message,
-                    "endpoint_exists": True
-                }
-            elif response.status_code == 500:
-                # SMTP configuration issue - endpoint exists but can't send
-                self.log(f"⚠️ Email endpoint exists but SMTP may not be configured", "WARNING")
-                self.log(f"   📧 Response: {response.status_code} - {response.text}")
-                
-                return {
-                    "success": True,  # Endpoint exists
-                    "endpoint_exists": True,
-                    "smtp_configured": False,
-                    "status_code": response.status_code,
-                    "response_text": response.text
-                }
+            if has_old:
+                self.log(f"   • Old Company Name: ❌ Still contains '{OLD_INCORRECT_NAME}'")
             else:
-                self.log(f"❌ Send email failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing send email: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
+                self.log(f"   • Old Company Name: ✅ Does NOT contain '{OLD_INCORRECT_NAME}'")
+            
+            if validation_passed:
+                self.log(f"\n✅ COMPANY NAME UPDATE VERIFICATION PASSED!")
+                self.log(f"   The document generation correctly uses the new company name")
+                self.log(f"   '{CORRECT_COMPANY_NAME}' and does not contain the old name")
+            else:
+                self.log(f"\n❌ COMPANY NAME UPDATE VERIFICATION FAILED!")
+                if not has_correct:
+                    self.log(f"   - Document does not contain the correct company name")
+                if has_old:
+                    self.log(f"   - Document still contains the old incorrect company name")
+        else:
+            self.log(f"\n   📄 DOCUMENT GENERATION:")
+            self.log(f"   • Document Generated: ❌ Failed")
+            validation_passed = False
+        
+        return validation_passed
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

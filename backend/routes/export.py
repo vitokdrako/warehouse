@@ -17,8 +17,12 @@ router = APIRouter(prefix="/api/export", tags=["Export"])
 
 
 def make_csv_response(data: list, filename: str, columns: list) -> StreamingResponse:
-    """Create CSV response from data"""
+    """Create CSV response from data with UTF-8 BOM for Excel compatibility"""
     output = io.StringIO()
+    
+    # Write UTF-8 BOM for Excel compatibility
+    output.write('\ufeff')
+    
     writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
     
     # Write header with Ukrainian column names

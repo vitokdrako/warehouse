@@ -698,7 +698,268 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
           )}
         </Card>
       </div>
+      
+      {/* Documents Block v2.0 - Full Width */}
+      <OrderDocumentsBlock orderId={order.order_id || order.id} orderNumber={order.order_number} />
     </div>
+  );
+};
+
+// ----------------------------- Order Documents Block v2.0 -----------------------------
+const OrderDocumentsBlock = ({ orderId, orderNumber }) => {
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(null);
+  const [showHistory, setShowHistory] = useState(null);
+  const [emailModal, setEmailModal] = useState(null);
+  const [emailTo, setEmailTo] = useState("");
+  const [sending, setSending] = useState(false);
+  
+  const FINANCE_DOCS = [
+    { type: "invoice_offer", name: "Рахунок-оферта", icon: "📄" },
+    { type: "contract_rent", name: "Договір оренди", icon: "📋" },
+    { type: "deposit_settlement_act", name: "Акт взаєморозрахунків", icon: "🧾" },
+    { type: "deposit_refund_act", name: "Акт повернення застави", icon: "💰" },
+    { type: "damage_settlement_act", name: "Акт утримання із застави", icon: "⚠️" },
+    { type: "invoice_additional", name: "Додатковий рахунок", icon: "💵" },
+  ];
+  
+  const getToken = () => localStorage.getItem("token");
+  
+  // Завантажити документи
+  useEffect(() => {
+    if (!orderId) return;
+    const loadDocs = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/documents/entity/order/${orderId}`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setDocuments(data.documents || []);
+        }
+      } catch (e) {
+        console.error("Load docs error", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadDocs();
+  }, [orderId]);
+  
+  // Знайти останній документ певного типу
+  const getLatestDoc = (docType) => {
+    return documents.find(d => d.doc_type === docType);
+  };
+  
+  // Генерувати документ
+  const generateDoc = async (docType) => {
+    setGenerating(docType);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/documents/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({
+          doc_type: docType,
+          entity_id: String(orderId),
+          format: "html"
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success && data.html_content) {
+        // Відкрити у новому вікні
+        const win = window.open("", "_blank");
+        win.document.write(data.html_content);
+        win.document.close();
+        
+        // Оновити список документів
+        const docsRes = await fetch(`${BACKEND_URL}/api/documents/entity/order/${orderId}`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        if (docsRes.ok) {
+          const docsData = await docsRes.json();
+          setDocuments(docsData.documents || []);
+        }
+      }
+    } catch (e) {
+      console.error("Generate error", e);
+    } finally {
+      setGenerating(null);
+    }
+  };
+  
+  // Переглянути документ
+  const viewDoc = async (doc) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/documents/${doc.id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.html_content) {
+          const win = window.open("", "_blank");
+          win.document.write(data.html_content);
+          win.document.close();
+        }
+      }
+    } catch (e) {
+      console.error("View error", e);
+    }
+  };
+  
+  // Відправити email
+  const sendEmail = async (doc) => {
+    if (!emailTo) return;
+    setSending(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/documents/${doc.id}/send-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ email: emailTo })
+      });
+      if (res.ok) {
+        setEmailModal(null);
+        setEmailTo("");
+      }
+    } catch (e) {
+      console.error("Email error", e);
+    } finally {
+      setSending(false);
+    }
+  };
+  
+  // Історія документів
+  const getDocHistory = (docType) => {
+    return documents.filter(d => d.doc_type === docType);
+  };
+  
+  return (
+    <Card title="📄 Документи" subtitle="Версія 2.0">
+      {loading ? (
+        <div className="text-center py-4 text-corp-text-muted">Завантаження...</div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {FINANCE_DOCS.map(doc => {
+            const latest = getLatestDoc(doc.type);
+            const history = getDocHistory(doc.type);
+            const isGenerating = generating === doc.type;
+            
+            return (
+              <div
+                key={doc.type}
+                className="rounded-xl border border-corp-border p-3 hover:border-amber-300 hover:shadow-sm transition"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{doc.icon}</span>
+                    <div>
+                      <div className="font-medium text-corp-text-dark text-sm">{doc.name}</div>
+                      {latest ? (
+                        <div className="text-xs text-emerald-600">
+                          ✓ v2 · {latest.doc_number}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-corp-text-muted">Не згенеровано</div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1">
+                    {latest && (
+                      <>
+                        <button
+                          onClick={() => viewDoc(latest)}
+                          className="px-2 py-1 text-xs rounded-lg hover:bg-corp-bg-page transition"
+                          title="Перегляд"
+                        >
+                          👁
+                        </button>
+                        <button
+                          onClick={() => { setEmailModal(latest); setEmailTo(""); }}
+                          className="px-2 py-1 text-xs rounded-lg hover:bg-corp-bg-page transition"
+                          title="Email"
+                        >
+                          📧
+                        </button>
+                        {history.length > 1 && (
+                          <button
+                            onClick={() => setShowHistory(showHistory === doc.type ? null : doc.type)}
+                            className="px-2 py-1 text-xs rounded-lg hover:bg-corp-bg-page transition"
+                            title="Історія"
+                          >
+                            🕐 {history.length}
+                          </button>
+                        )}
+                      </>
+                    )}
+                    <button
+                      onClick={() => generateDoc(doc.type)}
+                      disabled={isGenerating}
+                      className="px-2 py-1 text-xs rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 transition disabled:opacity-50"
+                    >
+                      {isGenerating ? "..." : "🔄"}
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Історія */}
+                {showHistory === doc.type && history.length > 1 && (
+                  <div className="mt-2 pt-2 border-t border-corp-border">
+                    <div className="text-xs text-corp-text-muted mb-1">Історія версій:</div>
+                    <div className="space-y-1">
+                      {history.map((h, i) => (
+                        <div key={h.id} className="flex items-center justify-between text-xs">
+                          <span className="text-corp-text-muted">
+                            {h.doc_number} · {fmtDate(h.created_at).slice(0, 10)}
+                          </span>
+                          <button
+                            onClick={() => viewDoc(h)}
+                            className="text-amber-600 hover:underline"
+                          >
+                            Перегляд
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      
+      {/* Email Modal */}
+      {emailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5">
+            <h3 className="font-bold mb-3">📧 Відправити на Email</h3>
+            <p className="text-sm text-corp-text-muted mb-3">{emailModal.doc_number}</p>
+            <input
+              type="email"
+              value={emailTo}
+              onChange={(e) => setEmailTo(e.target.value)}
+              placeholder="email@example.com"
+              className="h-10 w-full rounded-xl border border-corp-border px-3 text-sm mb-3"
+            />
+            <div className="flex gap-2 justify-end">
+              <GhostBtn onClick={() => setEmailModal(null)}>Скасувати</GhostBtn>
+              <PrimaryBtn onClick={() => sendEmail(emailModal)} disabled={sending || !emailTo}>
+                {sending ? "..." : "Відправити"}
+              </PrimaryBtn>
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 };
 

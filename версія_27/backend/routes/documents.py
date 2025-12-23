@@ -245,6 +245,79 @@ async def sign_document(
     return {"success": True, "message": "Документ позначено як підписаний"}
 
 
+# ============ Відправка Email ============
+
+class SendEmailRequest(BaseModel):
+    email: str
+
+@router.post("/{document_id}/send-email")
+async def send_document_email(
+    document_id: str,
+    request: SendEmailRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Відправляє документ на email.
+    """
+    from routes.email import send_email_with_attachment
+    
+    doc = get_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Документ не знайдено")
+    
+    # Отримуємо HTML документа
+    html_content = doc.get("html_content")
+    if not html_content:
+        raise HTTPException(status_code=400, detail="Документ не має HTML вмісту")
+    
+    # Генеруємо PDF
+    try:
+        pdf_bytes = render_pdf(html_content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка генерації PDF: {str(e)}")
+    
+    # Відправляємо email
+    doc_type_name = DOC_REGISTRY.get(doc["doc_type"], {}).get("name", doc["doc_type"])
+    subject = f"FarforRent - {doc_type_name} {doc['doc_number']}"
+    body = f"""
+    <h2>Документ від FarforRent</h2>
+    <p>Доброго дня!</p>
+    <p>Вам надіслано документ: <strong>{doc_type_name}</strong></p>
+    <p>Номер документа: <strong>{doc['doc_number']}</strong></p>
+    <br>
+    <p>Документ у вкладенні.</p>
+    <br>
+    <p>З повагою,<br>Команда FarforRent</p>
+    """
+    
+    try:
+        await send_email_with_attachment(
+            to_email=request.email,
+            subject=subject,
+            body=body,
+            attachment=pdf_bytes,
+            attachment_filename=f"{doc['doc_number']}.pdf"
+        )
+        
+        # Логуємо відправку
+        db.execute(text("""
+            INSERT INTO document_email_log (document_id, email, sent_at, status)
+            VALUES (:doc_id, :email, NOW(), 'sent')
+        """), {"doc_id": document_id, "email": request.email})
+        db.commit()
+        
+        return {"success": True, "message": f"Документ відправлено на {request.email}"}
+    except Exception as e:
+        # Логуємо помилку
+        db.execute(text("""
+            INSERT INTO document_email_log (document_id, email, sent_at, status, error)
+            VALUES (:doc_id, :email, NOW(), 'failed', :error)
+        """), {"doc_id": document_id, "email": request.email, "error": str(e)})
+        db.commit()
+        
+        raise HTTPException(status_code=500, detail=f"Помилка відправки email: {str(e)}")
+
+
 @router.post("/{document_id}/regenerate")
 async def regenerate_document(
     document_id: str,

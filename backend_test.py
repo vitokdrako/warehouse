@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for CSV Export Functionality
-Testing the CSV Export endpoints for FinanceConsoleApp and DamageHubApp:
-1. Export Ledger (Transactions) - GET /api/export/ledger
-2. Export Expenses - GET /api/export/expenses  
-3. Export Orders Finance - GET /api/export/orders-finance
-4. Export Damage Cases - GET /api/export/damage-cases
-5. Export Tasks - GET /api/export/tasks
-6. Export Laundry Queue - GET /api/export/laundry-queue
+Backend Testing Script for Document Generation Functionality
+Testing the Document Generation endpoints across all order stages:
+1. Get all document types - GET /api/documents/types (should return 18+ types)
+2. Generate Picking List - POST /api/documents/generate
+3. Generate Invoice Offer - POST /api/documents/generate
+4. Generate Contract - POST /api/documents/generate
+5. Generate Issue Act - POST /api/documents/generate
+6. Generate Issue Checklist - POST /api/documents/generate
+7. Test PDF download - GET /api/documents/{document_id}/pdf
+8. Test document history - GET /api/documents/entity/issue/{entity_id}
 
-Each endpoint should return CSV format with UTF-8 BOM and Ukrainian headers.
+Each document should generate successfully with proper HTML content and PDF download capability.
 """
 
 import requests

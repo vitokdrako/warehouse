@@ -697,10 +697,10 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
             </div>
           )}
         </Card>
-        
-        {/* Documents Block v2.0 */}
-        <OrderDocumentsBlock orderId={order.order_id || order.id} orderNumber={order.order_number} />
       </div>
+      
+      {/* Documents Block v2.0 - Full Width */}
+      <OrderDocumentsBlock orderId={order.order_id || order.id} orderNumber={order.order_number} />
     </div>
   );
 };

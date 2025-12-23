@@ -301,8 +301,8 @@ def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> d
     refund_amount = max(0, deposit - total_deduction)
     
     company = {
-        "name": "FarforRent",
-        "legal_name": "ФОП Маркін Ілля Павлович",
+        "name": "FarforDecorOrenda",
+        "legal_name": "ФОП Арсалані Олександра Ігорівна",
         "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
         "phone": "+380 XX XXX XX XX",
         "email": "rfarfordecor@gmail.com.ua",

@@ -207,9 +207,34 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
     if not row:
         raise ValueError(f"Issue card not found: {issue_card_id}")
     
+    order_id = row[1]
+    
     # Parse items JSON
     items_json = row[4]
     items = json.loads(items_json) if isinstance(items_json, str) else (items_json or [])
+    
+    # If items are empty, fallback to order_items
+    if not items and order_id:
+        items_result = db.execute(text("""
+            SELECT 
+                oi.product_name as name, oi.product_id, oi.quantity,
+                p.sku, p.zone, p.aisle, p.shelf
+            FROM order_items oi
+            LEFT JOIN products p ON p.product_id = oi.product_id
+            WHERE oi.order_id = :order_id
+        """), {"order_id": order_id})
+        
+        items = []
+        for item_row in items_result:
+            location_parts = [item_row[4], item_row[5], item_row[6]]
+            location = "-".join(filter(None, location_parts)) if any(location_parts) else "N/A"
+            items.append({
+                "name": item_row[0] or "",
+                "product_id": item_row[1],
+                "quantity": item_row[2] or 1,
+                "sku": item_row[3] or "",
+                "location": location
+            })
     
     # Use customer_phone or phone fallback
     phone = row[8] or row[9] or ""

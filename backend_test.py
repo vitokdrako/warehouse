@@ -352,802 +352,9 @@ class DocumentGenerationTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
 
-    def validate_csv_format(self, content: str, expected_headers: list, endpoint_name: str) -> Dict[str, Any]:
-        """Validate CSV format and structure"""
-        try:
-            # Check UTF-8 BOM
-            has_bom = content.startswith('\ufeff')
-            if not has_bom:
-                self.log(f"⚠️ {endpoint_name}: Missing UTF-8 BOM", "WARNING")
-            
-            # Parse CSV content
-            lines = content.strip().split('\n')
-            if not lines:
-                return {"success": False, "error": "Empty CSV content"}
-            
-            # Check headers
-            header_line = lines[0].replace('\ufeff', '')  # Remove BOM for parsing
-            headers = [h.strip('"') for h in header_line.split(',')]
-            
-            # Validate expected headers
-            missing_headers = []
-            for expected in expected_headers:
-                if expected not in headers:
-                    missing_headers.append(expected)
-            
-            if missing_headers:
-                self.log(f"⚠️ {endpoint_name}: Missing headers: {missing_headers}", "WARNING")
-            
-            # Count data rows
-            data_rows = len(lines) - 1  # Exclude header
-            
-            return {
-                "success": True,
-                "has_bom": has_bom,
-                "headers": headers,
-                "expected_headers": expected_headers,
-                "missing_headers": missing_headers,
-                "data_rows": data_rows,
-                "total_lines": len(lines)
-            }
-            
-        except Exception as e:
-            return {"success": False, "error": str(e)}
-
-    # ============================================
-    # CSV EXPORT TESTS
-    # ============================================
-    
-    def test_export_ledger(self, month: Optional[str] = None) -> Dict[str, Any]:
-        """Test GET /api/export/ledger"""
-        try:
-            endpoint = "/export/ledger"
-            url = f"{self.base_url}{endpoint}"
-            
-            if month:
-                url += f"?month={month}"
-                self.log(f"🧪 Testing export ledger endpoint with month filter: {month}")
-            else:
-                self.log(f"🧪 Testing export ledger endpoint (all data)")
-            
-            response = self.session.get(url)
-            
-            if response.status_code == 200:
-                content = response.text
-                expected_headers = ["Дата", "Тип операції", "Сума (₴)", "Примітка", "Тип сутності", "Автор"]
-                
-                validation = self.validate_csv_format(content, expected_headers, "Export Ledger")
-                
-                if validation["success"]:
-                    self.log(f"✅ Export Ledger: CSV format valid")
-                    self.log(f"   📊 Data rows: {validation['data_rows']}")
-                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
-                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
-                    
-                    return {
-                        "success": True, 
-                        "validation": validation,
-                        "content_length": len(content),
-                        "month_filter": month
-                    }
-                else:
-                    self.log(f"❌ Export Ledger: CSV validation failed - {validation.get('error')}", "ERROR")
-                    return {"success": False, "error": validation.get("error")}
-            else:
-                self.log(f"❌ Export Ledger failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing export ledger: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_export_expenses(self, month: Optional[str] = None) -> Dict[str, Any]:
-        """Test GET /api/export/expenses"""
-        try:
-            endpoint = "/export/expenses"
-            url = f"{self.base_url}{endpoint}"
-            
-            if month:
-                url += f"?month={month}"
-                self.log(f"🧪 Testing export expenses endpoint with month filter: {month}")
-            else:
-                self.log(f"🧪 Testing export expenses endpoint (all data)")
-            
-            response = self.session.get(url)
-            
-            if response.status_code == 200:
-                content = response.text
-                expected_headers = ["Дата", "Тип", "Категорія", "Сума (₴)", "Метод", "Джерело", "Примітка", "Статус"]
-                
-                validation = self.validate_csv_format(content, expected_headers, "Export Expenses")
-                
-                if validation["success"]:
-                    self.log(f"✅ Export Expenses: CSV format valid")
-                    self.log(f"   📊 Data rows: {validation['data_rows']}")
-                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
-                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
-                    
-                    return {
-                        "success": True, 
-                        "validation": validation,
-                        "content_length": len(content),
-                        "month_filter": month
-                    }
-                else:
-                    self.log(f"❌ Export Expenses: CSV validation failed - {validation.get('error')}", "ERROR")
-                    return {"success": False, "error": validation.get("error")}
-            else:
-                self.log(f"❌ Export Expenses failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing export expenses: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_export_orders_finance(self, status: Optional[str] = None) -> Dict[str, Any]:
-        """Test GET /api/export/orders-finance"""
-        try:
-            endpoint = "/export/orders-finance"
-            url = f"{self.base_url}{endpoint}"
-            
-            if status:
-                url += f"?status={status}"
-                self.log(f"🧪 Testing export orders finance endpoint with status filter: {status}")
-            else:
-                self.log(f"🧪 Testing export orders finance endpoint (all data)")
-            
-            response = self.session.get(url)
-            
-            if response.status_code == 200:
-                content = response.text
-                expected_headers = ["Номер ордера", "Статус", "Клієнт", "Телефон", "Оренда (₴)", "Застава (₴)", "Шкода (₴)", "Дата створення"]
-                
-                validation = self.validate_csv_format(content, expected_headers, "Export Orders Finance")
-                
-                if validation["success"]:
-                    self.log(f"✅ Export Orders Finance: CSV format valid")
-                    self.log(f"   📊 Data rows: {validation['data_rows']}")
-                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
-                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
-                    
-                    return {
-                        "success": True, 
-                        "validation": validation,
-                        "content_length": len(content),
-                        "status_filter": status
-                    }
-                else:
-                    self.log(f"❌ Export Orders Finance: CSV validation failed - {validation.get('error')}", "ERROR")
-                    return {"success": False, "error": validation.get("error")}
-            else:
-                self.log(f"❌ Export Orders Finance failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing export orders finance: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_export_damage_cases(self) -> Dict[str, Any]:
-        """Test GET /api/export/damage-cases"""
-        try:
-            endpoint = "/export/damage-cases"
-            url = f"{self.base_url}{endpoint}"
-            
-            self.log(f"🧪 Testing export damage cases endpoint")
-            
-            response = self.session.get(url)
-            
-            if response.status_code == 200:
-                content = response.text
-                expected_headers = ["Номер ордера", "Товар", "SKU", "Категорія", "Тип шкоди", "Серйозність", "Компенсація (₴)", "Тип обробки", "Статус", "Примітка", "Дата"]
-                
-                validation = self.validate_csv_format(content, expected_headers, "Export Damage Cases")
-                
-                if validation["success"]:
-                    self.log(f"✅ Export Damage Cases: CSV format valid")
-                    self.log(f"   📊 Data rows: {validation['data_rows']}")
-                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
-                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
-                    
-                    return {
-                        "success": True, 
-                        "validation": validation,
-                        "content_length": len(content)
-                    }
-                else:
-                    self.log(f"❌ Export Damage Cases: CSV validation failed - {validation.get('error')}", "ERROR")
-                    return {"success": False, "error": validation.get("error")}
-            else:
-                self.log(f"❌ Export Damage Cases failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing export damage cases: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_export_tasks(self, task_type: Optional[str] = None) -> Dict[str, Any]:
-        """Test GET /api/export/tasks"""
-        try:
-            endpoint = "/export/tasks"
-            url = f"{self.base_url}{endpoint}"
-            
-            if task_type:
-                url += f"?task_type={task_type}"
-                self.log(f"🧪 Testing export tasks endpoint with task_type filter: {task_type}")
-            else:
-                self.log(f"🧪 Testing export tasks endpoint (all tasks)")
-            
-            response = self.session.get(url)
-            
-            if response.status_code == 200:
-                content = response.text
-                expected_headers = ["ID", "Тип", "Ордер", "Назва", "Опис", "Статус", "Пріоритет", "Виконавець", "Створено", "Завершено"]
-                
-                validation = self.validate_csv_format(content, expected_headers, "Export Tasks")
-                
-                if validation["success"]:
-                    self.log(f"✅ Export Tasks: CSV format valid")
-                    self.log(f"   📊 Data rows: {validation['data_rows']}")
-                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
-                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
-                    
-                    return {
-                        "success": True, 
-                        "validation": validation,
-                        "content_length": len(content),
-                        "task_type_filter": task_type
-                    }
-                else:
-                    self.log(f"❌ Export Tasks: CSV validation failed - {validation.get('error')}", "ERROR")
-                    return {"success": False, "error": validation.get("error")}
-            else:
-                self.log(f"❌ Export Tasks failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing export tasks: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_export_laundry_queue(self) -> Dict[str, Any]:
-        """Test GET /api/export/laundry-queue"""
-        try:
-            endpoint = "/export/laundry-queue"
-            url = f"{self.base_url}{endpoint}"
-            
-            self.log(f"🧪 Testing export laundry queue endpoint")
-            
-            response = self.session.get(url)
-            
-            if response.status_code == 200:
-                content = response.text
-                expected_headers = ["Ордер", "Товар", "SKU", "Тип шкоди", "Статус", "Партія", "Створено", "Відправлено"]
-                
-                validation = self.validate_csv_format(content, expected_headers, "Export Laundry Queue")
-                
-                if validation["success"]:
-                    self.log(f"✅ Export Laundry Queue: CSV format valid")
-                    self.log(f"   📊 Data rows: {validation['data_rows']}")
-                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
-                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
-                    
-                    return {
-                        "success": True, 
-                        "validation": validation,
-                        "content_length": len(content)
-                    }
-                else:
-                    self.log(f"❌ Export Laundry Queue: CSV validation failed - {validation.get('error')}", "ERROR")
-                    return {"success": False, "error": validation.get("error")}
-            else:
-                self.log(f"❌ Export Laundry Queue failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing export laundry queue: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        })
-        self.auth_token = None
-        self.test_template_id = None
-        self.test_due_item_id = None
-        
-    def log(self, message: str, level: str = "INFO"):
-        """Log test messages with timestamp"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        print(f"[{timestamp}] {level}: {message}")
-        
-    def test_api_health(self) -> bool:
-        """Test if API is accessible"""
-        try:
-            response = self.session.get(f"{self.base_url}/health")
-            if response.status_code == 200:
-                self.log("✅ API Health Check: OK")
-                return True
-            else:
-                self.log(f"❌ API Health Check Failed: {response.status_code}", "ERROR")
-                return False
-        except Exception as e:
-            self.log(f"❌ API Health Check Exception: {str(e)}", "ERROR")
-            return False
-    
-    def authenticate(self) -> bool:
-        """Authenticate with the API"""
-        try:
-            self.log("🔐 Authenticating with provided credentials...")
-            
-            response = self.session.post(
-                f"{self.base_url}/auth/login",
-                json=TEST_CREDENTIALS
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.auth_token = data.get('access_token')
-                if self.auth_token:
-                    self.session.headers.update({
-                        'Authorization': f'Bearer {self.auth_token}'
-                    })
-                    self.log("✅ Authentication successful")
-                    return True
-                else:
-                    self.log("❌ No access token in response", "ERROR")
-                    return False
-            else:
-                self.log(f"❌ Authentication failed: {response.status_code} - {response.text}", "ERROR")
-                return False
-                
-        except Exception as e:
-            self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
-            return False
-
-    # ============================================
-    # TEMPLATES CRUD TESTS
-    # ============================================
-    
-    def test_list_templates(self) -> Dict[str, Any]:
-        """Test GET /api/expense-management/templates"""
-        try:
-            self.log("🧪 Testing list templates endpoint...")
-            
-            response = self.session.get(f"{self.base_url}/expense-management/templates")
-            
-            if response.status_code == 200:
-                data = response.json()
-                templates = data.get('templates', [])
-                
-                self.log(f"✅ Retrieved {len(templates)} templates")
-                
-                # Check structure
-                if templates:
-                    template = templates[0]
-                    expected_fields = ['id', 'name', 'amount', 'frequency']
-                    missing_fields = [field for field in expected_fields if field not in template]
-                    
-                    if missing_fields:
-                        self.log(f"⚠️ Missing template fields: {missing_fields}")
-                
-                return {"success": True, "data": data, "count": len(templates)}
-            else:
-                self.log(f"❌ Failed to list templates: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing list templates: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_create_template(self) -> Dict[str, Any]:
-        """Test POST /api/expense-management/templates"""
-        try:
-            self.log("🧪 Testing create template endpoint...")
-            
-            template_data = {
-                "name": "Тест витрата",
-                "description": "Тестовий шаблон витрати",
-                "category_id": 1,  # Add category_id
-                "amount": 500.0,
-                "frequency": "monthly",
-                "day_of_month": 15,
-                "funding_source": "general",
-                "vendor_name": "Тестовий постачальник"
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/expense-management/templates",
-                json=template_data
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                self.log(f"✅ Template created successfully")
-                
-                # Store template ID for later tests
-                self.test_template_id = data.get('template_id')
-                
-                # Check for expected fields
-                expected_fields = ['success', 'template_id']
-                missing_fields = [field for field in expected_fields if field not in data]
-                
-                if missing_fields:
-                    self.log(f"⚠️ Missing create response fields: {missing_fields}")
-                
-                self.log(f"   ✅ Template ID: {self.test_template_id}")
-                
-                return {"success": True, "data": data, "template_id": self.test_template_id}
-            else:
-                self.log(f"❌ Failed to create template: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing create template: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_update_template(self) -> Dict[str, Any]:
-        """Test PUT /api/expense-management/templates/{id}"""
-        if not self.test_template_id:
-            return {"success": False, "error": "No template ID available for update test"}
-            
-        try:
-            self.log(f"🧪 Testing update template endpoint (ID: {self.test_template_id})...")
-            
-            update_data = {
-                "amount": 600.0,
-                "description": "Оновлений тестовий шаблон"
-            }
-            
-            response = self.session.put(
-                f"{self.base_url}/expense-management/templates/{self.test_template_id}",
-                json=update_data
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                self.log(f"✅ Template updated successfully")
-                
-                return {"success": True, "data": data}
-            else:
-                self.log(f"❌ Failed to update template: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing update template: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    # ============================================
-    # DUE ITEMS TESTS
-    # ============================================
-    
-    def test_list_due_items(self) -> Dict[str, Any]:
-        """Test GET /api/expense-management/due-items"""
-        try:
-            self.log("🧪 Testing list due items endpoint...")
-            
-            response = self.session.get(f"{self.base_url}/expense-management/due-items")
-            
-            if response.status_code == 200:
-                data = response.json()
-                due_items = data.get('due_items', [])
-                
-                self.log(f"✅ Retrieved {len(due_items)} due items")
-                
-                # Check structure
-                if due_items:
-                    item = due_items[0]
-                    expected_fields = ['id', 'name', 'amount', 'due_date', 'status']
-                    missing_fields = [field for field in expected_fields if field not in item]
-                    
-                    if missing_fields:
-                        self.log(f"⚠️ Missing due item fields: {missing_fields}")
-                
-                return {"success": True, "data": data, "count": len(due_items)}
-            else:
-                self.log(f"❌ Failed to list due items: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing list due items: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_create_due_item(self) -> Dict[str, Any]:
-        """Test POST /api/expense-management/due-items"""
-        try:
-            self.log("🧪 Testing create due item endpoint...")
-            
-            due_item_data = {
-                "template_id": self.test_template_id,
-                "name": "Тестовий платіж",
-                "description": "Тестовий запланований платіж",
-                "category_id": 1,  # Add category_id to avoid null constraint error
-                "amount": 300.0,
-                "due_date": "2025-02-15",
-                "funding_source": "general",
-                "vendor_name": "Тестовий постачальник"
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/expense-management/due-items",
-                json=due_item_data
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                self.log(f"✅ Due item created successfully")
-                
-                # Store due item ID for later tests
-                self.test_due_item_id = data.get('due_item_id')
-                
-                self.log(f"   ✅ Due Item ID: {self.test_due_item_id}")
-                
-                return {"success": True, "data": data, "due_item_id": self.test_due_item_id}
-            else:
-                self.log(f"❌ Failed to create due item: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing create due item: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_generate_due_items(self) -> Dict[str, Any]:
-        """Test POST /api/expense-management/due-items/generate?month=YYYY-MM"""
-        try:
-            self.log(f"🧪 Testing generate due items endpoint for month {TEST_MONTH}...")
-            
-            response = self.session.post(
-                f"{self.base_url}/expense-management/due-items/generate?month={TEST_MONTH}"
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                created_count = data.get('created', 0)
-                self.log(f"✅ Generated {created_count} due items for {TEST_MONTH}")
-                
-                return {"success": True, "data": data, "created": created_count}
-            else:
-                self.log(f"❌ Failed to generate due items: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing generate due items: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_pay_due_item(self) -> Dict[str, Any]:
-        """Test POST /api/expense-management/due-items/{id}/pay"""
-        if not self.test_due_item_id:
-            return {"success": False, "error": "No due item ID available for pay test"}
-            
-        try:
-            self.log(f"🧪 Testing pay due item endpoint (ID: {self.test_due_item_id})...")
-            
-            payment_data = {
-                "method": "cash"
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/expense-management/due-items/{self.test_due_item_id}/pay",
-                json=payment_data
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                self.log(f"✅ Due item paid successfully")
-                
-                expense_id = data.get('expense_id')
-                self.log(f"   ✅ Created expense record ID: {expense_id}")
-                
-                return {"success": True, "data": data, "expense_id": expense_id}
-            else:
-                self.log(f"❌ Failed to pay due item: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing pay due item: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_cancel_due_item(self) -> Dict[str, Any]:
-        """Test POST /api/expense-management/due-items/{id}/cancel"""
-        # Create a new due item for cancellation test
-        try:
-            self.log("🧪 Testing cancel due item endpoint...")
-            
-            # First create a due item to cancel
-            due_item_data = {
-                "name": "Тестовий платіж для скасування",
-                "category_id": 1,  # Add category_id
-                "amount": 100.0,
-                "due_date": "2025-02-20",
-                "funding_source": "general"
-            }
-            
-            create_response = self.session.post(
-                f"{self.base_url}/expense-management/due-items",
-                json=due_item_data
-            )
-            
-            if create_response.status_code != 200:
-                return {"success": False, "error": "Failed to create due item for cancellation test"}
-            
-            cancel_item_id = create_response.json().get('due_item_id')
-            
-            # Now cancel it
-            response = self.session.post(
-                f"{self.base_url}/expense-management/due-items/{cancel_item_id}/cancel"
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                self.log(f"✅ Due item cancelled successfully")
-                
-                return {"success": True, "data": data}
-            else:
-                self.log(f"❌ Failed to cancel due item: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing cancel due item: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_delete_due_item(self) -> Dict[str, Any]:
-        """Test DELETE /api/expense-management/due-items/{id}"""
-        # Create a new due item for deletion test
-        try:
-            self.log("🧪 Testing delete due item endpoint...")
-            
-            # First create a due item to delete
-            due_item_data = {
-                "name": "Тестовий платіж для видалення",
-                "category_id": 1,  # Add category_id
-                "amount": 50.0,
-                "due_date": "2025-02-25",
-                "funding_source": "general"
-            }
-            
-            create_response = self.session.post(
-                f"{self.base_url}/expense-management/due-items",
-                json=due_item_data
-            )
-            
-            if create_response.status_code != 200:
-                return {"success": False, "error": "Failed to create due item for deletion test"}
-            
-            delete_item_id = create_response.json().get('due_item_id')
-            
-            # Now delete it
-            response = self.session.delete(
-                f"{self.base_url}/expense-management/due-items/{delete_item_id}"
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                self.log(f"✅ Due item deleted successfully")
-                
-                return {"success": True, "data": data}
-            else:
-                self.log(f"❌ Failed to delete due item: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing delete due item: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    # ============================================
-    # EXPENSES TESTS
-    # ============================================
-    
-    def test_list_expenses(self) -> Dict[str, Any]:
-        """Test GET /api/expense-management/expenses"""
-        try:
-            self.log("🧪 Testing list expenses endpoint...")
-            
-            response = self.session.get(f"{self.base_url}/expense-management/expenses")
-            
-            if response.status_code == 200:
-                data = response.json()
-                expenses = data.get('expenses', [])
-                totals = data.get('totals', {})
-                
-                self.log(f"✅ Retrieved {len(expenses)} expense records")
-                self.log(f"   ✅ Total amount: ₴{totals.get('total', 0)}")
-                self.log(f"   ✅ General fund: ₴{totals.get('general', 0)}")
-                self.log(f"   ✅ Damage pool: ₴{totals.get('damage_pool', 0)}")
-                
-                # Check structure
-                if expenses:
-                    expense = expenses[0]
-                    expected_fields = ['id', 'amount', 'method', 'funding_source', 'occurred_at']
-                    missing_fields = [field for field in expected_fields if field not in expense]
-                    
-                    if missing_fields:
-                        self.log(f"⚠️ Missing expense fields: {missing_fields}")
-                
-                return {"success": True, "data": data, "count": len(expenses)}
-            else:
-                self.log(f"❌ Failed to list expenses: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing list expenses: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_get_summary(self) -> Dict[str, Any]:
-        """Test GET /api/expense-management/summary"""
-        try:
-            self.log("🧪 Testing get summary endpoint...")
-            
-            response = self.session.get(f"{self.base_url}/expense-management/summary")
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                month = data.get('month')
-                due_items = data.get('due_items', {})
-                expenses = data.get('expenses', {})
-                
-                self.log(f"✅ Retrieved summary for month: {month}")
-                
-                # Log due items stats
-                counts = due_items.get('counts', {})
-                amounts = due_items.get('amounts', {})
-                self.log(f"   📋 Due Items:")
-                self.log(f"      - Pending: {counts.get('pending', 0)} items (₴{amounts.get('pending', 0)})")
-                self.log(f"      - Paid: {counts.get('paid', 0)} items (₴{amounts.get('paid', 0)})")
-                self.log(f"      - Overdue: {counts.get('overdue', 0)} items (₴{amounts.get('overdue', 0)})")
-                
-                # Log expenses stats
-                by_funding = expenses.get('by_funding', {})
-                total_expenses = expenses.get('total', 0)
-                self.log(f"   💰 Expenses:")
-                self.log(f"      - Total: ₴{total_expenses}")
-                self.log(f"      - General fund: ₴{by_funding.get('general', 0)}")
-                self.log(f"      - Damage pool: ₴{by_funding.get('damage_pool', 0)}")
-                
-                return {"success": True, "data": data}
-            else:
-                self.log(f"❌ Failed to get summary: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing get summary: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_delete_template(self) -> Dict[str, Any]:
-        """Test DELETE /api/expense-management/templates/{id} - cleanup"""
-        if not self.test_template_id:
-            return {"success": True, "message": "No template to delete"}
-            
-        try:
-            self.log(f"🧪 Testing delete template endpoint (cleanup - ID: {self.test_template_id})...")
-            
-            response = self.session.delete(
-                f"{self.base_url}/expense-management/templates/{self.test_template_id}"
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                self.log(f"✅ Template deleted successfully (cleanup)")
-                
-                return {"success": True, "data": data}
-            else:
-                self.log(f"❌ Failed to delete template: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing delete template: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-    def run_comprehensive_csv_export_test(self):
-        """Run comprehensive CSV Export API test following the review request specifications"""
-        self.log("🚀 Starting comprehensive CSV Export API test")
+    def run_comprehensive_document_generation_test(self):
+        """Run comprehensive Document Generation API test following the review request specifications"""
+        self.log("🚀 Starting comprehensive Document Generation API test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -1161,181 +368,181 @@ class DocumentGenerationTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test Export Ledger (Transactions)
-        self.log("\n🔍 Step 2: Testing Export Ledger (Transactions)...")
+        # Step 3: Test Get All Document Types
+        self.log("\n🔍 Step 2: Testing Get All Document Types...")
+        doc_types_result = self.test_get_document_types()
+        doc_types_success = doc_types_result.get("success", False)
+        meets_requirement = doc_types_result.get("meets_requirement", False)
         
-        # Test all transactions
-        ledger_all_result = self.test_export_ledger()
-        ledger_all_success = ledger_all_result.get("success", False)
+        # Step 4: Test Generate Picking List
+        self.log("\n🔍 Step 3: Testing Generate Picking List...")
+        picking_list_result = self.test_generate_document(
+            "picking_list", 
+            "IC-6996-20251223095239",
+            "items"  # Expected content check
+        )
+        picking_list_success = picking_list_result.get("success", False)
         
-        # Test with month filter
-        ledger_month_result = self.test_export_ledger("2025-12")
-        ledger_month_success = ledger_month_result.get("success", False)
+        # Step 5: Test Generate Invoice Offer
+        self.log("\n🔍 Step 4: Testing Generate Invoice Offer...")
+        invoice_offer_result = self.test_generate_document(
+            "invoice_offer", 
+            "7136"
+        )
+        invoice_offer_success = invoice_offer_result.get("success", False)
         
-        # Step 4: Test Export Expenses
-        self.log("\n🔍 Step 3: Testing Export Expenses...")
+        # Step 6: Test Generate Contract
+        self.log("\n🔍 Step 5: Testing Generate Contract...")
+        contract_result = self.test_generate_document(
+            "contract_rent", 
+            "7136"
+        )
+        contract_success = contract_result.get("success", False)
         
-        # Test all expenses
-        expenses_all_result = self.test_export_expenses()
-        expenses_all_success = expenses_all_result.get("success", False)
+        # Step 7: Test Generate Issue Act
+        self.log("\n🔍 Step 6: Testing Generate Issue Act...")
+        issue_act_result = self.test_generate_document(
+            "issue_act", 
+            "IC-6996-20251223095239",
+            "items"  # Expected content check
+        )
+        issue_act_success = issue_act_result.get("success", False)
         
-        # Test with month filter
-        expenses_month_result = self.test_export_expenses("2025-12")
-        expenses_month_success = expenses_month_result.get("success", False)
+        # Step 8: Test Generate Issue Checklist
+        self.log("\n🔍 Step 7: Testing Generate Issue Checklist...")
+        issue_checklist_result = self.test_generate_document(
+            "issue_checklist", 
+            "IC-6996-20251223095239"
+        )
+        issue_checklist_success = issue_checklist_result.get("success", False)
         
-        # Step 5: Test Export Orders Finance
-        self.log("\n🔍 Step 4: Testing Export Orders Finance...")
+        # Step 9: Test PDF Download (using first generated document)
+        pdf_success = False
+        if self.generated_documents:
+            self.log("\n🔍 Step 8: Testing PDF Download...")
+            first_doc_id = self.generated_documents[0]
+            pdf_result = self.test_pdf_download(first_doc_id)
+            pdf_success = pdf_result.get("success", False)
+        else:
+            self.log("\n⚠️ Step 8: Skipping PDF Download - no documents generated", "WARNING")
         
-        # Test all orders
-        orders_all_result = self.test_export_orders_finance()
-        orders_all_success = orders_all_result.get("success", False)
+        # Step 10: Test Document History
+        self.log("\n🔍 Step 9: Testing Document History...")
+        history_result = self.test_document_history("issue", "IC-6996-20251223095239")
+        history_success = history_result.get("success", False)
         
-        # Test with status filter
-        orders_status_result = self.test_export_orders_finance("active")
-        orders_status_success = orders_status_result.get("success", False)
-        
-        # Step 6: Test Export Damage Cases
-        self.log("\n🔍 Step 5: Testing Export Damage Cases...")
-        
-        damage_cases_result = self.test_export_damage_cases()
-        damage_cases_success = damage_cases_result.get("success", False)
-        
-        # Step 7: Test Export Tasks
-        self.log("\n🔍 Step 6: Testing Export Tasks...")
-        
-        # Test all tasks
-        tasks_all_result = self.test_export_tasks()
-        tasks_all_success = tasks_all_result.get("success", False)
-        
-        # Test washing tasks
-        tasks_washing_result = self.test_export_tasks("washing")
-        tasks_washing_success = tasks_washing_result.get("success", False)
-        
-        # Step 8: Test Export Laundry Queue
-        self.log("\n🔍 Step 7: Testing Export Laundry Queue...")
-        
-        laundry_queue_result = self.test_export_laundry_queue()
-        laundry_queue_success = laundry_queue_result.get("success", False)
-        
-        # Step 9: Summary
+        # Step 11: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE CSV EXPORT TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE DOCUMENT GENERATION TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        # Export Ledger
-        self.log(f"\n   📋 EXPORT LEDGER (TRANSACTIONS):")
-        if ledger_all_success:
-            validation = ledger_all_result.get("validation", {})
-            self.log(f"   • Export All Ledger: ✅ Working ({validation.get('data_rows', 0)} rows)")
-            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
-            self.log(f"     - Ukrainian Headers: ✅ Present")
+        # Document Types
+        self.log(f"\n   📋 DOCUMENT TYPES:")
+        if doc_types_success:
+            count = doc_types_result.get("count", 0)
+            requirement_status = "✅ Meets requirement (18+)" if meets_requirement else "⚠️ Below requirement (18+)"
+            self.log(f"   • Get Document Types: ✅ Working ({count} types) - {requirement_status}")
         else:
-            self.log(f"   • Export All Ledger: ❌ Failed")
-            
-        if ledger_month_success:
-            validation = ledger_month_result.get("validation", {})
-            self.log(f"   • Export Ledger (2025-12): ✅ Working ({validation.get('data_rows', 0)} rows)")
-        else:
-            self.log(f"   • Export Ledger (2025-12): ❌ Failed")
+            self.log(f"   • Get Document Types: ❌ Failed")
         
-        # Export Expenses
-        self.log(f"\n   💰 EXPORT EXPENSES:")
-        if expenses_all_success:
-            validation = expenses_all_result.get("validation", {})
-            self.log(f"   • Export All Expenses: ✅ Working ({validation.get('data_rows', 0)} rows)")
-            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
-            self.log(f"     - Ukrainian Headers: ✅ Present")
-        else:
-            self.log(f"   • Export All Expenses: ❌ Failed")
-            
-        if expenses_month_success:
-            validation = expenses_month_result.get("validation", {})
-            self.log(f"   • Export Expenses (2025-12): ✅ Working ({validation.get('data_rows', 0)} rows)")
-        else:
-            self.log(f"   • Export Expenses (2025-12): ❌ Failed")
+        # Document Generation Tests
+        self.log(f"\n   📄 DOCUMENT GENERATION:")
         
-        # Export Orders Finance
-        self.log(f"\n   🛒 EXPORT ORDERS FINANCE:")
-        if orders_all_success:
-            validation = orders_all_result.get("validation", {})
-            self.log(f"   • Export All Orders: ✅ Working ({validation.get('data_rows', 0)} rows)")
-            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
-            self.log(f"     - Ukrainian Headers: ✅ Present")
+        if picking_list_success:
+            html_len = picking_list_result.get("html_length", 0)
+            has_content = picking_list_result.get("has_content", False)
+            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
+            self.log(f"   • Picking List (IC-6996-20251223095239): ✅ Working ({html_len} chars) - {content_status}")
         else:
-            self.log(f"   • Export All Orders: ❌ Failed")
-            
-        if orders_status_success:
-            validation = orders_status_result.get("validation", {})
-            self.log(f"   • Export Orders (active): ✅ Working ({validation.get('data_rows', 0)} rows)")
-        else:
-            self.log(f"   • Export Orders (active): ❌ Failed")
+            self.log(f"   • Picking List (IC-6996-20251223095239): ❌ Failed")
         
-        # Export Damage Cases
-        self.log(f"\n   🔧 EXPORT DAMAGE CASES:")
-        if damage_cases_success:
-            validation = damage_cases_result.get("validation", {})
-            self.log(f"   • Export Damage Cases: ✅ Working ({validation.get('data_rows', 0)} rows)")
-            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
-            self.log(f"     - Ukrainian Headers: ✅ Present")
+        if invoice_offer_success:
+            html_len = invoice_offer_result.get("html_length", 0)
+            has_content = invoice_offer_result.get("has_content", False)
+            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
+            self.log(f"   • Invoice Offer (7136): ✅ Working ({html_len} chars) - {content_status}")
         else:
-            self.log(f"   • Export Damage Cases: ❌ Failed")
+            self.log(f"   • Invoice Offer (7136): ❌ Failed")
         
-        # Export Tasks
-        self.log(f"\n   📋 EXPORT TASKS:")
-        if tasks_all_success:
-            validation = tasks_all_result.get("validation", {})
-            self.log(f"   • Export All Tasks: ✅ Working ({validation.get('data_rows', 0)} rows)")
-            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
-            self.log(f"     - Ukrainian Headers: ✅ Present")
+        if contract_success:
+            html_len = contract_result.get("html_length", 0)
+            has_content = contract_result.get("has_content", False)
+            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
+            self.log(f"   • Contract (7136): ✅ Working ({html_len} chars) - {content_status}")
         else:
-            self.log(f"   • Export All Tasks: ❌ Failed")
-            
-        if tasks_washing_success:
-            validation = tasks_washing_result.get("validation", {})
-            self.log(f"   • Export Washing Tasks: ✅ Working ({validation.get('data_rows', 0)} rows)")
-        else:
-            self.log(f"   • Export Washing Tasks: ❌ Failed")
+            self.log(f"   • Contract (7136): ❌ Failed")
         
-        # Export Laundry Queue
-        self.log(f"\n   🧺 EXPORT LAUNDRY QUEUE:")
-        if laundry_queue_success:
-            validation = laundry_queue_result.get("validation", {})
-            self.log(f"   • Export Laundry Queue: ✅ Working ({validation.get('data_rows', 0)} rows)")
-            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
-            self.log(f"     - Ukrainian Headers: ✅ Present")
+        if issue_act_success:
+            html_len = issue_act_result.get("html_length", 0)
+            has_content = issue_act_result.get("has_content", False)
+            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
+            self.log(f"   • Issue Act (IC-6996-20251223095239): ✅ Working ({html_len} chars) - {content_status}")
         else:
-            self.log(f"   • Export Laundry Queue: ❌ Failed")
+            self.log(f"   • Issue Act (IC-6996-20251223095239): ❌ Failed")
         
-        self.log(f"\n🎉 CSV EXPORT TESTING COMPLETED!")
+        if issue_checklist_success:
+            html_len = issue_checklist_result.get("html_length", 0)
+            has_content = issue_checklist_result.get("has_content", False)
+            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
+            self.log(f"   • Issue Checklist (IC-6996-20251223095239): ✅ Working ({html_len} chars) - {content_status}")
+        else:
+            self.log(f"   • Issue Checklist (IC-6996-20251223095239): ❌ Failed")
+        
+        # PDF Download
+        self.log(f"\n   📥 PDF DOWNLOAD:")
+        if pdf_success:
+            self.log(f"   • PDF Download: ✅ Working")
+        else:
+            self.log(f"   • PDF Download: ❌ Failed or Skipped")
+        
+        # Document History
+        self.log(f"\n   📚 DOCUMENT HISTORY:")
+        if history_success:
+            docs_count = history_result.get("documents_count", 0)
+            self.log(f"   • Document History: ✅ Working ({docs_count} documents found)")
+        else:
+            self.log(f"   • Document History: ❌ Failed")
+        
+        self.log(f"\n🎉 DOCUMENT GENERATION TESTING COMPLETED!")
         
         # Check if critical functionality works
-        ledger_working = ledger_all_success and ledger_month_success
-        expenses_working = expenses_all_success and expenses_month_success
-        orders_working = orders_all_success and orders_status_success
-        damage_working = damage_cases_success
-        tasks_working = tasks_all_success and tasks_washing_success
-        laundry_working = laundry_queue_success
+        generation_tests = [
+            picking_list_success, invoice_offer_success, contract_success,
+            issue_act_success, issue_checklist_success
+        ]
         
-        all_working = all([ledger_working, expenses_working, orders_working, damage_working, tasks_working, laundry_working])
+        core_working = doc_types_success and meets_requirement
+        generation_working = all(generation_tests)
+        pdf_working = pdf_success or not self.generated_documents  # OK if no docs to test
+        history_working = history_success
+        
+        all_working = core_working and generation_working and pdf_working and history_working
         
         if all_working:
-            self.log(f"\n✅ ALL CSV EXPORT ENDPOINTS WORKING!")
-            self.log(f"   The CSV export functionality is fully functional")
+            self.log(f"\n✅ ALL DOCUMENT GENERATION FUNCTIONALITY WORKING!")
+            self.log(f"   The document generation system is fully functional")
         else:
-            self.log(f"\n⚠️ CSV EXPORT HAS PROBLEMS:")
-            if not ledger_working:
-                self.log(f"   - Ledger export has issues")
-            if not expenses_working:
-                self.log(f"   - Expenses export has issues")
-            if not orders_working:
-                self.log(f"   - Orders finance export has issues")
-            if not damage_working:
-                self.log(f"   - Damage cases export has issues")
-            if not tasks_working:
-                self.log(f"   - Tasks export has issues")
-            if not laundry_working:
-                self.log(f"   - Laundry queue export has issues")
+            self.log(f"\n⚠️ DOCUMENT GENERATION HAS PROBLEMS:")
+            if not core_working:
+                self.log(f"   - Document types endpoint has issues or doesn't meet 18+ requirement")
+            if not generation_working:
+                failed_docs = []
+                if not picking_list_success:
+                    failed_docs.append("Picking List")
+                if not invoice_offer_success:
+                    failed_docs.append("Invoice Offer")
+                if not contract_success:
+                    failed_docs.append("Contract")
+                if not issue_act_success:
+                    failed_docs.append("Issue Act")
+                if not issue_checklist_success:
+                    failed_docs.append("Issue Checklist")
+                self.log(f"   - Document generation failed for: {', '.join(failed_docs)}")
+            if not pdf_working:
+                self.log(f"   - PDF download functionality has issues")
+            if not history_working:
+                self.log(f"   - Document history functionality has issues")
         
         return all_working
         """Run the comprehensive Expense Management API test following the specified flow"""

@@ -299,6 +299,16 @@ function App() {
             } 
           />
           
+          {/* Document Templates Admin */}
+          <Route 
+            path="/admin/templates" 
+            element={
+              <ProtectedRoute>
+                <DocumentTemplatesAdmin />
+              </ProtectedRoute>
+            } 
+          />
+          
           {/* Order Workspace Demo */}
           <Route 
             path="/workspace-demo" 

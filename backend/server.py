@@ -93,6 +93,7 @@ app.include_router(laundry.router)
 app.include_router(documents.router)
 app.include_router(analytics.router)
 app.include_router(product_sets.router)
+app.include_router(expense_management.router)
 
 # Configure logging
 logging.basicConfig(

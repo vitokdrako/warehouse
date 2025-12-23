@@ -984,7 +984,7 @@ export default function CatalogBoard() {
                   : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
               )}
             >
-              Набори
+              Сети
             </button>
           </div>
         </div>

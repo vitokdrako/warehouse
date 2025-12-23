@@ -54,7 +54,7 @@ async def export_ledger(
     month: Optional[str] = None,  # YYYY-MM
     db: Session = Depends(get_rh_db)
 ):
-    """Експорт головної книги (Ledger) в CSV"""
+    """Експорт транзакцій (Ledger) в CSV"""
     
     where_clause = ""
     params = {}
@@ -69,10 +69,9 @@ async def export_ledger(
             t.tx_type,
             t.amount,
             t.note,
-            o.order_number,
-            t.created_by_name
+            t.entity_type,
+            t.accepted_by_name
         FROM fin_transactions t
-        LEFT JOIN orders o ON t.order_id = o.id
         {where_clause}
         ORDER BY t.occurred_at DESC
     """
@@ -86,11 +85,11 @@ async def export_ledger(
             row[1] or "",  # tx_type
             str(row[2]) if row[2] else "0",  # amount
             row[3] or "",  # note
-            row[4] or "",  # order_number
-            row[5] or "",  # created_by_name
+            row[4] or "",  # entity_type
+            row[5] or "",  # accepted_by_name
         ])
     
-    columns = ["Дата", "Тип операції", "Сума (₴)", "Примітка", "Номер ордера", "Автор"]
+    columns = ["Дата", "Тип операції", "Сума (₴)", "Примітка", "Тип сутності", "Автор"]
     filename = f"ledger_{month or 'all'}_{datetime.now().strftime('%Y%m%d')}.csv"
     
     return make_csv_response(data, filename, columns)
@@ -241,63 +240,70 @@ async def export_damage_cases(
     params = {}
     
     if status:
-        where_clause = "WHERE pdh.status = :status"
+        where_clause = "WHERE pdh.processing_status = :status"
         params["status"] = status
     
     query = f"""
         SELECT 
-            o.order_number,
-            c.full_name as customer_name,
-            p.sku,
-            p.name as product_name,
+            pdh.order_number,
+            pdh.product_name,
+            pdh.sku,
+            pdh.category,
             pdh.damage_type,
-            pdh.description,
+            pdh.severity,
             pdh.fee,
-            pdh.status,
+            pdh.processing_type,
+            pdh.processing_status,
+            pdh.note,
             DATE_FORMAT(pdh.created_at, '%Y-%m-%d') as created_date
         FROM product_damage_history pdh
-        LEFT JOIN orders o ON pdh.order_id = o.id
-        LEFT JOIN clients c ON o.customer_id = c.id
-        LEFT JOIN products p ON pdh.product_id = p.id
         {where_clause}
         ORDER BY pdh.created_at DESC
     """
     
     rows = db.execute(text(query), params).fetchall()
     
-    damage_type_map = {
-        "broken": "Зламано",
-        "scratched": "Подряпано",
-        "stained": "Плями",
-        "missing_parts": "Відсутні частини",
-        "other": "Інше"
+    processing_type_map = {
+        "none": "Не призначено",
+        "wash": "Мийка",
+        "restoration": "Реставрація",
+        "laundry": "Хімчистка"
     }
     
     status_map = {
-        "open": "Відкрито",
-        "awaiting_client": "Чекаємо клієнта",
-        "awaiting_payment": "Чекаємо оплату",
-        "in_repair": "В ремонті",
-        "closed": "Закрито"
+        "pending": "Очікує",
+        "in_progress": "В роботі",
+        "completed": "Завершено",
+        "failed": "Невдача"
+    }
+    
+    severity_map = {
+        "low": "Низька",
+        "medium": "Середня",
+        "high": "Висока",
+        "critical": "Критична"
     }
     
     data = []
     for row in rows:
         data.append([
             row[0] or "",  # order_number
-            row[1] or "",  # customer_name
+            row[1] or "",  # product_name
             row[2] or "",  # sku
-            row[3] or "",  # product_name
-            damage_type_map.get(row[4], row[4] or ""),  # damage_type
-            row[5] or "",  # description
+            row[3] or "",  # category
+            row[4] or "",  # damage_type
+            severity_map.get(row[5], row[5] or ""),  # severity
             str(row[6]) if row[6] else "0",  # fee
-            status_map.get(row[7], row[7] or ""),  # status
-            row[8] or "",  # created_date
+            processing_type_map.get(row[7], row[7] or ""),  # processing_type
+            status_map.get(row[8], row[8] or ""),  # processing_status
+            row[9] or "",  # note
+            row[10] or "",  # created_date
         ])
     
     columns = [
-        "Номер ордера", "Клієнт", "SKU", "Товар", 
-        "Тип шкоди", "Опис", "Компенсація (₴)", "Статус", "Дата"
+        "Номер ордера", "Товар", "SKU", "Категорія", 
+        "Тип шкоди", "Серйозність", "Компенсація (₴)",
+        "Тип обробки", "Статус", "Примітка", "Дата"
     ]
     filename = f"damage_cases_{datetime.now().strftime('%Y%m%d')}.csv"
     
@@ -329,17 +335,15 @@ async def export_tasks(
         SELECT 
             t.id,
             t.task_type,
-            p.sku,
-            p.name as product_name,
-            o.order_number,
+            t.order_number,
+            t.title,
             t.description,
             t.status,
             t.priority,
+            t.assigned_to,
             DATE_FORMAT(t.created_at, '%Y-%m-%d') as created_date,
             DATE_FORMAT(t.completed_at, '%Y-%m-%d') as completed_date
         FROM tasks t
-        LEFT JOIN products p ON t.product_id = p.id
-        LEFT JOIN orders o ON t.order_id = o.id
         {where_clause}
         ORDER BY t.created_at DESC
     """
@@ -371,19 +375,19 @@ async def export_tasks(
         data.append([
             str(row[0]) if row[0] else "",  # id
             task_type_map.get(row[1], row[1] or ""),  # task_type
-            row[2] or "",  # sku
-            row[3] or "",  # product_name
-            row[4] or "",  # order_number
-            row[5] or "",  # description
-            status_map.get(row[6], row[6] or ""),  # status
-            priority_map.get(row[7], row[7] or ""),  # priority
+            row[2] or "",  # order_number
+            row[3] or "",  # title
+            row[4] or "",  # description
+            status_map.get(row[5], row[5] or ""),  # status
+            priority_map.get(row[6], row[6] or ""),  # priority
+            row[7] or "",  # assigned_to
             row[8] or "",  # created_date
             row[9] or "",  # completed_date
         ])
     
     columns = [
-        "ID", "Тип", "SKU", "Товар", "Ордер", 
-        "Опис", "Статус", "Пріоритет", "Створено", "Завершено"
+        "ID", "Тип", "Ордер", "Назва", "Опис", 
+        "Статус", "Пріоритет", "Виконавець", "Створено", "Завершено"
     ]
     
     type_suffix = task_type or "all"
@@ -396,48 +400,47 @@ async def export_tasks(
 async def export_laundry_queue(
     db: Session = Depends(get_rh_db)
 ):
-    """Експорт черги хімчистки"""
+    """Експорт черги хімчистки з product_damage_history"""
     
     query = """
         SELECT 
-            lq.id,
-            p.sku,
-            p.name as product_name,
-            o.order_number,
-            lq.status,
-            lq.priority,
-            DATE_FORMAT(lq.created_at, '%Y-%m-%d') as created_date,
-            DATE_FORMAT(lq.sent_at, '%Y-%m-%d') as sent_date
-        FROM laundry_queue lq
-        LEFT JOIN products p ON lq.product_id = p.id
-        LEFT JOIN orders o ON lq.order_id = o.id
-        ORDER BY lq.created_at DESC
+            pdh.order_number,
+            pdh.product_name,
+            pdh.sku,
+            pdh.damage_type,
+            pdh.processing_status,
+            pdh.laundry_batch_id,
+            DATE_FORMAT(pdh.created_at, '%Y-%m-%d') as created_date,
+            DATE_FORMAT(pdh.sent_to_processing_at, '%Y-%m-%d') as sent_date
+        FROM product_damage_history pdh
+        WHERE pdh.processing_type = 'laundry'
+        ORDER BY pdh.created_at DESC
     """
     
     rows = db.execute(text(query)).fetchall()
     
     status_map = {
         "pending": "В черзі",
-        "sent": "Відправлено",
+        "in_progress": "Відправлено",
         "completed": "Повернуто",
-        "cancelled": "Скасовано"
+        "failed": "Проблема"
     }
     
     data = []
     for row in rows:
         data.append([
-            str(row[0]) if row[0] else "",  # id
-            row[1] or "",  # sku
-            row[2] or "",  # product_name
-            row[3] or "",  # order_number
-            status_map.get(row[4], row[4] or ""),  # status
-            str(row[5]) if row[5] else "1",  # priority
+            row[0] or "",  # order_number
+            row[1] or "",  # product_name
+            row[2] or "",  # sku
+            row[3] or "",  # damage_type
+            status_map.get(row[4], row[4] or ""),  # processing_status
+            row[5] or "",  # laundry_batch_id
             row[6] or "",  # created_date
             row[7] or "",  # sent_date
         ])
     
     columns = [
-        "ID", "SKU", "Товар", "Ордер", "Статус", "Пріоритет", "Створено", "Відправлено"
+        "Ордер", "Товар", "SKU", "Тип шкоди", "Статус", "Партія", "Створено", "Відправлено"
     ]
     filename = f"laundry_queue_{datetime.now().strftime('%Y%m%d')}.csv"
     

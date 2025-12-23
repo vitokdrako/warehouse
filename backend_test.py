@@ -43,7 +43,7 @@ TEST_CREDENTIALS = {
 }
 TEST_MONTH = "2025-01"  # Month for testing (not used in document generation)
 
-class TemplateAdminTester:
+class DocumentsTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

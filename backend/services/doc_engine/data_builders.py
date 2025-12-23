@@ -31,11 +31,16 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
     # Damage case based documents
     damage_docs = ["damage_report", "damage_report_client", "damage_invoice"]
     
+    # Damage settlement - special handling for order-based damage
+    damage_settlement_docs = ["damage_settlement_act"]
+    
     # Vendor task based documents
     vendor_docs = ["vendor_work_act"]
     
     if doc_type in return_docs:
         return build_return_data(db, entity_id, options)
+    elif doc_type in damage_settlement_docs:
+        return build_damage_settlement_data(db, entity_id, options)
     elif doc_type in order_docs:
         return build_order_data(db, entity_id, options)
     elif doc_type in issue_docs:

@@ -1,29 +1,23 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Documents Functionality in Finance Console
-Testing the Documents functionality endpoints as per review request:
+Backend Testing Script for Document Generation Company Name Update
+Testing the document generation to verify company legal name has been updated correctly.
 
-**Test Cases:**
-1. Get orders with finance data: GET /api/manager/finance/orders-with-finance?limit=10
-2. Get documents for an order: GET /api/documents/entity/order/{order_id}
-3. Generate invoice_offer document: POST /api/documents/generate
-4. Generate contract_rent document: POST /api/documents/generate
-5. Download PDF: GET /api/documents/{document_id}/pdf
-6. Send document via email: POST /api/documents/{document_id}/send-email
+**Test Scenario:**
+Generate an `invoice_offer` document for an existing order and verify the company details 
+contain "ФОП Арсалані Олександра Ігорівна" instead of "ФОП Маркін Ілля Павлович".
 
-**Finance documents available:**
-- invoice_offer: Рахунок-оферта
-- contract_rent: Договір оренди
-- invoice_additional: Додатковий рахунок
-- rental_extension: Додаткова угода
-- deposit_settlement_act: Акт взаєморозрахунків
-- deposit_refund_act: Акт повернення застави
-- damage_settlement_act: Акт утримання із застави
+**Test Steps:**
+1. Login with credentials: email: `vitokdrako@gmail.com`, password: `test123`
+2. Get list of orders via `GET /api/orders` to find an existing order_id
+3. Generate a document using `POST /api/documents/generate` with:
+   - doc_type: "invoice_offer"
+   - entity_id: [order_id from step 2]
+4. Verify the generated HTML contains:
+   - "ФОП Арсалані Олександра Ігорівна" (correct company name)
+   - Does NOT contain "ФОП Маркін Ілля Павлович" (old incorrect name)
 
-**Key Validation:**
-- Document generation works for order-based docs
-- PDF download works
-- Email sending endpoint exists
+**File changed:** /app/backend/services/doc_engine/data_builders.py - company legal_name updated in all builder functions.
 """
 
 import requests

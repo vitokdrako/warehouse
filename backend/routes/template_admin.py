@@ -46,6 +46,7 @@ class TemplateUpdateRequest(BaseModel):
 # ============================================
 
 @router.get("/")
+@router.get("")
 async def list_templates():
     """Список всіх шаблонів документів з метаданими"""
     templates = []

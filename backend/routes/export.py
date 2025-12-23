@@ -192,28 +192,20 @@ async def export_orders_finance(
     
     data = []
     for row in rows:
-        rent_due = max(0, (row[4] or 0) - (row[5] or 0))
-        deposit_due = max(0, (row[6] or 0) - (row[7] or 0))
-        
         data.append([
             row[0] or "",  # order_number
             status_map.get(row[1], row[1] or ""),  # status
             row[2] or "",  # customer_name
             row[3] or "",  # customer_phone
             str(row[4]) if row[4] else "0",  # total_rental
-            str(row[5]) if row[5] else "0",  # rent_paid
-            str(rent_due),  # rent_due
-            str(row[6]) if row[6] else "0",  # total_deposit
-            str(row[7]) if row[7] else "0",  # deposit_held
-            str(deposit_due),  # deposit_due
-            row[8] or "",  # created_date
+            str(row[5]) if row[5] else "0",  # total_deposit
+            str(row[6]) if row[6] else "0",  # damage_fee
+            row[7] or "",  # created_date
         ])
     
     columns = [
         "Номер ордера", "Статус", "Клієнт", "Телефон", 
-        "Нараховано (₴)", "Оплачено (₴)", "Борг оренди (₴)",
-        "Очік. застава (₴)", "Факт. застава (₴)", "Борг застави (₴)",
-        "Дата створення"
+        "Оренда (₴)", "Застава (₴)", "Шкода (₴)", "Дата створення"
     ]
     filename = f"orders_finance_{datetime.now().strftime('%Y%m%d')}.csv"
     

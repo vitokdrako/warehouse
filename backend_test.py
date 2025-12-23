@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Finance Console Damage-to-Archive Workflow
-Testing the specific workflow reported:
-1. GET /api/analytics/order-damage-fee/{order_id} - Get unpaid damage fees for order
-2. POST /api/orders/{order_id}/archive - Archive order
-3. POST /api/finance/payments - Accept damage payment
-4. Authentication and finance console workflow
+Backend Testing Script for Expense Management API
+Testing the Expense Management endpoints:
+1. Templates CRUD operations
+2. Due Items operations including generation and payment
+3. Expenses listing and summary
+4. Complete test flow as specified in review request
 """
 
 import requests
@@ -23,7 +23,7 @@ TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
 }
-TEST_ORDER_ID = 7004  # Order ID with damages from review request
+TEST_MONTH = "2025-02"  # Month for generating due items
 
 class FinanceConsoleTester:
     def __init__(self, base_url: str):

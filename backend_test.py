@@ -176,6 +176,8 @@ class DocumentGenerationTester:
                     self.log(f"   📝 HTML Content Length: {len(html_content)} characters")
                     
                     # Store document ID for later tests and cleanup
+                    if not hasattr(self, 'generated_documents'):
+                        self.generated_documents = []
                     self.generated_documents.append(document_id)
                     
                     # Check if HTML content is not empty

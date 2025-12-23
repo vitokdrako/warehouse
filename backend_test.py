@@ -129,6 +129,7 @@ class ExpenseManagementTester:
             template_data = {
                 "name": "Тест витрата",
                 "description": "Тестовий шаблон витрати",
+                "category_id": 1,  # Add category_id
                 "amount": 500.0,
                 "frequency": "monthly",
                 "day_of_month": 15,

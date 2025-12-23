@@ -13,7 +13,7 @@ import io
 
 from database_rentalhub import get_rh_db
 
-router = APIRouter(prefix="/export", tags=["Export"])
+router = APIRouter(prefix="/api/export", tags=["Export"])
 
 
 def make_csv_response(data: list, filename: str, columns: list) -> StreamingResponse:

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Акт утримання OC-7004</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10pt; line-height: 1.5; color: #333; padding: 20px; }
+        .document { max-width: 210mm; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #B4A96C; }
+        .logo { font-size: 18pt; font-weight: bold; color: #B4A96C; }
+        .logo-sub { font-size: 9pt; color: #666; }
+        .doc-info { text-align: right; font-size: 9pt; }
+        .doc-number { font-size: 12pt; font-weight: bold; color: #333; }
+        .doc-date { color: #666; }
+        h1 { font-size: 14pt; text-align: center; margin: 20px 0; text-transform: uppercase; }
+        h2 { font-size: 11pt; margin: 15px 0 10px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 9pt; }
+        th { background: #f5f5f5; font-weight: bold; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: bold; }
+        .text-sm { font-size: 8pt; }
+        .text-lg { font-size: 11pt; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mt-4 { margin-top: 16px; }
+        .totals { margin-top: 15px; }
+        .totals td { border: none; padding: 4px 8px; }
+        .totals .total-row { font-weight: bold; font-size: 11pt; background: #f9f9f9; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 40px; }
+        .signature-block { width: 45%; }
+        .signature-line { border-bottom: 1px solid #333; margin-top: 40px; }
+        .signature-label { font-size: 8pt; color: #666; margin-top: 5px; }
+        .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 8pt; color: #666; text-align: center; }
+        .company-details { font-size: 8pt; color: #666; margin-top: 10px; }
+        .stamp-area { width: 100px; height: 100px; border: 1px dashed #ccc; margin-top: 10px; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 8pt; }
+        .checkbox { display: inline-block; width: 12px; height: 12px; border: 1px solid #333; margin-right: 8px; vertical-align: middle; }
+        .checkbox.checked::after { content: '✓'; }
+        .highlight { background: #fffde7; }
+        .warning { color: #d32f2f; }
+        .success { color: #388e3c; }
+        /* Числа не переносяться на новий рядок */
+        .text-right, .text-center, td:last-child, th:last-child { white-space: nowrap; }
+        /* Мобільна адаптація */
+        @media screen and (max-width: 600px) {
+            body { padding: 10px; font-size: 9pt; }
+            .header { flex-direction: column; gap: 10px; }
+            .doc-info { text-align: left; }
+            table { font-size: 8pt; }
+            th, td { padding: 4px 6px; }
+            /* Числові колонки не переносяться */
+            td:nth-child(n+4), th:nth-child(n+4) { white-space: nowrap; min-width: 60px; }
+            /* Горизонтальний скрол для таблиці */
+            .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
+        @media print { body { padding: 0; } .document { max-width: 100%; } }
+    </style>
+    
+<style>
+    .damage-table th { background: #fef3c7; }
+    .damage-row:hover { background: #fffbeb; }
+    .severity-low { color: #059669; }
+    .severity-medium { color: #d97706; }
+    .severity-high { color: #dc2626; }
+    .severity-critical { color: #7c2d12; font-weight: bold; }
+    .summary-box { background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 15px 0; }
+    .refund-box { background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; }
+    .deduction-box { background: #fee2e2; border: 2px solid #ef4444; border-radius: 8px; padding: 15px; }
+</style>
+
+</head>
+<body>
+    <div class="document">
+        
+<div class="header">
+    <div>
+        <div class="logo">FarforRent</div>
+        <div class="text-sm">ФОП Маркін Ілля Павлович</div>
+    </div>
+    <div class="doc-info">
+        <div class="doc-number">DSA-2025-000011</div>
+        <div class="doc-date">23.12.2025 12:43</div>
+    </div>
+</div>
+
+<h1>АКТ УТРИМАННЯ ІЗ ЗАСТАВИ</h1>
+
+<table class="mb-4">
+    <tr><td style="width:150px">Замовлення:</td><td class="font-bold">OC-7004</td></tr>
+    <tr><td>Клієнт:</td><td class="font-bold">Люба Катаєва</td></tr>
+    <tr><td>Телефон:</td><td>+38(063)933-99-90</td></tr>
+    <tr><td>Період оренди:</td><td>24.11.2025 — 01.12.2025</td></tr>
+</table>
+
+<div class="summary-box">
+    <div class="flex justify-between">
+        <span>Внесена застава:</span>
+        <span class="font-bold text-lg">14 800.00 ₴</span>
+    </div>
+</div>
+
+
+<h2>📋 Виявлені пошкодження (7)</h2>
+<table class="damage-table">
+    <thead>
+        <tr>
+            <th style="width:30%">Товар</th>
+            <th>Тип шкоди</th>
+            <th>Серйозність</th>
+            <th class="text-center">К-сть</th>
+            <th class="text-right">Ціна/шт</th>
+            <th class="text-right">Сума</th>
+        </tr>
+    </thead>
+    <tbody>
+        
+        <tr class="damage-row">
+            <td>
+                <div class="font-medium">Свічник кераміка,  на 1 d 2.2 см  свічки 9*8* d20.5см </div>
+                <div class="text-xs text-gray-500">CA241</div>
+            </td>
+            <td>Брудні (віск, залишки свічок, сліди горіння)</td>
+            <td>
+                <span class="severity-low">Незначна</span>
+            </td>
+            <td class="text-center">2</td>
+            <td class="text-right">50.00 ₴</td>
+            <td class="text-right font-medium">100.00 ₴</td>
+        </tr>
+        
+        
+        <tr class="damage-row">
+            <td>
+                <div class="font-medium">Кензан 11 см</div>
+                <div class="text-xs text-gray-500">KE001</div>
+            </td>
+            <td>Брудні (земля, глина, фарба, флористичний матеріал)</td>
+            <td>
+                <span class="severity-low">Незначна</span>
+            </td>
+            <td class="text-center">1</td>
+            <td class="text-right">40.00 ₴</td>
+            <td class="text-right font-medium">40.00 ₴</td>
+        </tr>
+        
+        <tr class="damage-row">
+            <td colspan="6" class="text-sm text-gray-600" style="padding-left: 20px;">
+                💬 dirty
+            </td>
+        </tr>
+        
+        
+        <tr class="damage-row">
+            <td>
+                <div class="font-medium">Свічник кераміка,  на 1 d 2.2 см  свічки 9*8* d20.5см </div>
+                <div class="text-xs text-gray-500">CA241</div>
+            </td>
+            <td>Брудні (віск, залишки свічок, сліди горіння)</td>
+            <td>
+                <span class="severity-low">Незначна</span>
+            </td>
+            <td class="text-center">1</td>
+            <td class="text-right">50.00 ₴</td>
+            <td class="text-right font-medium">50.00 ₴</td>
+        </tr>
+        
+        
+        <tr class="damage-row">
+            <td>
+                <div class="font-medium">Свічник кераміка,  на 1 d 2.2 см  свічки 9*8* d20.5см </div>
+                <div class="text-xs text-gray-500">CA241</div>
+            </td>
+            <td>Брудні (віск, залишки свічок, сліди горіння)</td>
+            <td>
+                <span class="severity-low">Незначна</span>
+            </td>
+            <td class="text-center">1</td>
+            <td class="text-right">100.00 ₴</td>
+            <td class="text-right font-medium">100.00 ₴</td>
+        </tr>
+        
+        <tr class="damage-row">
+            <td colspan="6" class="text-sm text-gray-600" style="padding-left: 20px;">
+                💬 dirty
+            </td>
+        </tr>
+        
+        
+        <tr class="damage-row">
+            <td>
+                <div class="font-medium">Ваза</div>
+                <div class="text-xs text-gray-500">VZ2301</div>
+            </td>
+            <td>Скол або подряпини</td>
+            <td>
+                <span class="severity-medium">Середня</span>
+            </td>
+            <td class="text-center">1</td>
+            <td class="text-right">500.00 ₴</td>
+            <td class="text-right font-medium">500.00 ₴</td>
+        </tr>
+        
+        <tr class="damage-row">
+            <td colspan="6" class="text-sm text-gray-600" style="padding-left: 20px;">
+                💬 change glass
+            </td>
+        </tr>
+        
+        
+        <tr class="damage-row">
+            <td>
+                <div class="font-medium">Кензан 6 см</div>
+                <div class="text-xs text-gray-500">KE004</div>
+            </td>
+            <td>Брудні (земля, глина, фарба, флористичний матеріал)</td>
+            <td>
+                <span class="severity-low">Незначна</span>
+            </td>
+            <td class="text-center">1</td>
+            <td class="text-right">0.00 ₴</td>
+            <td class="text-right font-medium">0.00 ₴</td>
+        </tr>
+        
+        <tr class="damage-row">
+            <td colspan="6" class="text-sm text-gray-600" style="padding-left: 20px;">
+                💬 Іржавіть
+            </td>
+        </tr>
+        
+        
+        <tr class="damage-row">
+            <td>
+                <div class="font-medium">Кензан 11 см</div>
+                <div class="text-xs text-gray-500">KE001</div>
+            </td>
+            <td>Брудні (земля, глина, фарба, флористичний матеріал)</td>
+            <td>
+                <span class="severity-low">Незначна</span>
+            </td>
+            <td class="text-center">1</td>
+            <td class="text-right">0.00 ₴</td>
+            <td class="text-right font-medium">0.00 ₴</td>
+        </tr>
+        
+        <tr class="damage-row">
+            <td colspan="6" class="text-sm text-gray-600" style="padding-left: 20px;">
+                💬 hjcghjghjgjg
+            </td>
+        </tr>
+        
+        
+    </tbody>
+</table>
+
+
+<h2>💰 Розрахунок утримань</h2>
+<table>
+    <tbody>
+        
+        <tr>
+            <td style="width:70%">Компенсація за пошкодження/втрати</td>
+            <td class="text-right">790.00 ₴</td>
+        </tr>
+        
+        
+        
+    </tbody>
+    <tfoot>
+        <tr class="font-bold" style="border-top: 2px solid #000;">
+            <td>ВСЬОГО УТРИМАНО:</td>
+            <td class="text-right">790.00 ₴</td>
+        </tr>
+    </tfoot>
+</table>
+
+<div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+    <div class="deduction-box">
+        <div class="text-sm">Утримано із застави:</div>
+        <div class="font-bold text-xl">-790.00 ₴</div>
+    </div>
+    <div class="refund-box">
+        <div class="text-sm">До повернення клієнту:</div>
+        <div class="font-bold text-xl">14 010.00 ₴</div>
+    </div>
+</div>
+
+<div class="highlight" style="padding:12px; margin-top:20px; background: #f3f4f6;">
+    <p class="text-sm">
+        Підписуючи цей акт, сторони підтверджують:<br>
+        • Факт виявлення пошкоджень зафіксовано вірно<br>
+        • Суми компенсацій узгоджені<br>
+        • Розрахунок утримань та повернення застави прийнято
+    </p>
+</div>
+
+<div class="signatures">
+    <div class="signature-block">
+        <p class="font-bold">ОРЕНДОДАВЕЦЬ:</p>
+        <p class="text-sm">ФОП Маркін Ілля Павлович</p>
+        <div class="signature-line"></div>
+        <p class="text-xs">Дата: _______________</p>
+    </div>
+    <div class="signature-block">
+        <p class="font-bold">ОРЕНДАР:</p>
+        <p class="text-sm">Люба Катаєва</p>
+        <div class="signature-line"></div>
+        <p class="text-xs">Дата: _______________</p>
+    </div>
+</div>
+
+    </div>
+</body>
+</html>

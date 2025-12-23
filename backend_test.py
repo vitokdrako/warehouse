@@ -29,7 +29,7 @@ TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
 }
-TEST_MONTH = "2025-02"  # Month for generating due items
+TEST_MONTH = "2025-01"  # Month for testing (not used in document generation)
 
 class DocumentGenerationTester:
     def __init__(self, base_url: str):

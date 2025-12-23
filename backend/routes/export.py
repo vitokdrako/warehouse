@@ -167,20 +167,19 @@ async def export_orders_finance(
         SELECT 
             o.order_number,
             o.status,
-            c.full_name as customer_name,
-            c.telephone as customer_phone,
-            o.total_rental,
+            o.customer_name,
+            o.customer_phone,
+            o.total_price as total_rental,
             COALESCE(SUM(CASE WHEN p.payment_type = 'rent' THEN p.amount ELSE 0 END), 0) as rent_paid,
-            o.total_deposit,
+            o.deposit_amount as total_deposit,
             COALESCE(d.held_amount, 0) as deposit_held,
             DATE_FORMAT(o.created_at, '%Y-%m-%d') as created_date
         FROM orders o
-        LEFT JOIN clients c ON o.customer_id = c.id
-        LEFT JOIN fin_payments p ON o.id = p.order_id
-        LEFT JOIN deposits d ON o.id = d.order_id
+        LEFT JOIN fin_payments p ON o.order_id = p.order_id
+        LEFT JOIN deposits d ON o.order_id = d.order_id
         {where_clause}
-        GROUP BY o.id, o.order_number, o.status, c.full_name, c.telephone, 
-                 o.total_rental, o.total_deposit, d.held_amount, o.created_at
+        GROUP BY o.order_id, o.order_number, o.status, o.customer_name, o.customer_phone, 
+                 o.total_price, o.deposit_amount, d.held_amount, o.created_at
         ORDER BY o.created_at DESC
     """
     

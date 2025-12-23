@@ -164,3 +164,34 @@ info@farforrent.com.ua
         html_content=html_content,
         plain_content=plain_content
     )
+
+
+async def send_email_with_attachment(
+    to_email: str,
+    subject: str,
+    body: str,
+    attachment: bytes,
+    attachment_filename: str,
+    content_type: str = "application/pdf"
+) -> dict:
+    """
+    Відправити email з вкладенням (async версія для FastAPI)
+    
+    Args:
+        to_email: Email отримувача
+        subject: Тема листа
+        body: HTML тіло листа
+        attachment: Байти вкладення
+        attachment_filename: Назва файлу
+        content_type: MIME тип вкладення
+    """
+    return send_email(
+        to_email=to_email,
+        subject=subject,
+        html_content=body,
+        attachments=[{
+            "filename": attachment_filename,
+            "content": attachment,
+            "content_type": content_type
+        }]
+    )

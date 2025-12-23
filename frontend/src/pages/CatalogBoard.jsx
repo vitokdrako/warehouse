@@ -43,8 +43,8 @@ function FamilyCard({ family, onEdit, onDelete }) {
         <div className="flex -space-x-2">
           {family.products.slice(0, 3).map((p, idx) => (
             <div key={idx} className="w-12 h-12 rounded-lg border-2 border-white bg-corp-bg-light overflow-hidden">
-              {p.image ? (
-                <img src={getImageUrl(p.image)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+              {p.cover ? (
+                <img src={getImageUrl(p.cover)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-xs text-corp-text-muted">📦</div>
               )}

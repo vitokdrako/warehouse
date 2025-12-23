@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Expense Management API
-Testing the Expense Management endpoints:
-1. Templates CRUD operations
-2. Due Items operations including generation and payment
-3. Expenses listing and summary
-4. Complete test flow as specified in review request
+Backend Testing Script for CSV Export Functionality
+Testing the CSV Export endpoints for FinanceConsoleApp and DamageHubApp:
+1. Export Ledger (Transactions) - GET /api/export/ledger
+2. Export Expenses - GET /api/export/expenses  
+3. Export Orders Finance - GET /api/export/orders-finance
+4. Export Damage Cases - GET /api/export/damage-cases
+5. Export Tasks - GET /api/export/tasks
+6. Export Laundry Queue - GET /api/export/laundry-queue
+
+Each endpoint should return CSV format with UTF-8 BOM and Ukrainian headers.
 """
 
 import requests

@@ -31,7 +31,365 @@ function Badge({ children, variant = 'default' }) {
 }
 
 // ============================================
-// SETS TAB COMPONENTS
+// FAMILIES TAB (Набори - варіанти товару)
+// ============================================
+
+// Family Card
+function FamilyCard({ family, onEdit, onDelete }) {
+  return (
+    <div className="bg-white rounded-xl border border-corp-border p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start gap-4">
+        {/* Images preview */}
+        <div className="flex -space-x-2">
+          {family.products.slice(0, 3).map((p, idx) => (
+            <div key={idx} className="w-12 h-12 rounded-lg border-2 border-white bg-corp-bg-light overflow-hidden">
+              {p.image ? (
+                <img src={getImageUrl(p.image)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-corp-text-muted">📦</div>
+              )}
+            </div>
+          ))}
+          {family.products.length > 3 && (
+            <div className="w-12 h-12 rounded-lg border-2 border-white bg-corp-bg-light flex items-center justify-center text-xs text-corp-text-muted">
+              +{family.products.length - 3}
+            </div>
+          )}
+        </div>
+        
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-corp-text-dark">{family.name || 'Без назви'}</h3>
+          {family.description && (
+            <p className="text-sm text-corp-text-muted line-clamp-1">{family.description}</p>
+          )}
+          <div className="flex flex-wrap gap-1 mt-2">
+            {family.products.map((p, idx) => (
+              <span key={idx} className="text-xs bg-corp-bg-light px-2 py-0.5 rounded">
+                {p.name.length > 25 ? p.name.slice(0, 25) + '...' : p.name}
+              </span>
+            ))}
+          </div>
+        </div>
+        
+        {/* Actions */}
+        <div className="flex gap-1">
+          <button onClick={() => onEdit(family)} className="p-2 text-corp-text-muted hover:text-corp-primary rounded-lg hover:bg-corp-bg-light">
+            ✏️
+          </button>
+          <button onClick={() => onDelete(family.id)} className="p-2 text-corp-text-muted hover:text-rose-600 rounded-lg hover:bg-rose-50">
+            🗑️
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Create/Edit Family Modal
+function FamilyModal({ family, products, onClose, onSave }) {
+  const [name, setName] = useState(family?.name || '')
+  const [description, setDescription] = useState(family?.description || '')
+  const [selectedProducts, setSelectedProducts] = useState(family?.products?.map(p => p.product_id) || [])
+  const [search, setSearch] = useState('')
+  const [saving, setSaving] = useState(false)
+  
+  // Filter products for search
+  const filteredProducts = useMemo(() => {
+    if (!search) return []
+    const term = search.toLowerCase()
+    return products.filter(p => 
+      (p.sku?.toLowerCase().includes(term) || p.name?.toLowerCase().includes(term)) &&
+      !selectedProducts.includes(p.product_id)
+    ).slice(0, 10)
+  }, [products, search, selectedProducts])
+  
+  // Get selected product details
+  const selectedProductDetails = useMemo(() => {
+    return selectedProducts.map(pid => products.find(p => p.product_id === pid)).filter(Boolean)
+  }, [selectedProducts, products])
+  
+  const addProduct = (product) => {
+    setSelectedProducts([...selectedProducts, product.product_id])
+    setSearch('')
+  }
+  
+  const removeProduct = (productId) => {
+    setSelectedProducts(selectedProducts.filter(id => id !== productId))
+  }
+  
+  const handleSave = async () => {
+    if (!name.trim()) return alert('Введіть назву набору')
+    if (selectedProducts.length < 2) return alert('Додайте мінімум 2 товари')
+    
+    setSaving(true)
+    try {
+      await onSave({
+        id: family?.id,
+        name: name.trim(),
+        description: description.trim() || null,
+        product_ids: selectedProducts
+      })
+      onClose()
+    } catch (err) {
+      alert('Помилка збереження: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-corp-border">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-corp-text-dark">
+              {family ? 'Редагувати набір' : 'Новий набір'}
+            </h2>
+            <button onClick={onClose} className="text-corp-text-muted hover:text-corp-text-dark text-2xl">×</button>
+          </div>
+          <p className="text-sm text-corp-text-muted mt-1">
+            Зв'яжіть схожі товари (розміри, кольори одного товару)
+          </p>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Name */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Назва набору *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Наприклад: Свічник (всі розміри)"
+              className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+            />
+          </div>
+          
+          {/* Description */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Опис</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Опис набору..."
+              className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+            />
+          </div>
+          
+          {/* Add products */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Додати товари</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Пошук по SKU або назві..."
+                className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+              />
+              {filteredProducts.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-corp-border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                  {filteredProducts.map(p => (
+                    <button
+                      key={p.product_id}
+                      onClick={() => addProduct(p)}
+                      className="w-full text-left px-3 py-2 hover:bg-corp-bg-light flex items-center gap-2"
+                    >
+                      <span className="text-xs text-corp-text-muted">{p.sku}</span>
+                      <span className="flex-1 truncate">{p.name}</span>
+                      {p.color && <span className="text-xs bg-corp-bg-light px-1 rounded">{p.color}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Selected products */}
+          {selectedProductDetails.length > 0 && (
+            <div>
+              <label className="text-sm font-medium text-corp-text-dark block mb-2">
+                Товари в наборі ({selectedProductDetails.length})
+              </label>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {selectedProductDetails.map((p, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-corp-bg-light rounded-lg p-2">
+                    <div className="w-10 h-10 rounded bg-white overflow-hidden flex-shrink-0">
+                      {p.image ? (
+                        <img src={getImageUrl(p.image)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-corp-text-muted">📦</div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{p.name}</div>
+                      <div className="text-xs text-corp-text-muted">{p.sku}</div>
+                    </div>
+                    {p.color && <span className="text-xs bg-white px-2 py-0.5 rounded">{p.color}</span>}
+                    {p.size && <span className="text-xs bg-white px-2 py-0.5 rounded">{p.size}</span>}
+                    <button onClick={() => removeProduct(p.product_id)} className="text-rose-500 hover:text-rose-700 p-1">×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <div className="p-6 border-t border-corp-border flex gap-3 justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-corp-text-muted hover:text-corp-text-dark">
+            Скасувати
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={saving || !name.trim() || selectedProducts.length < 2}
+            className="px-6 py-2 bg-corp-primary text-white rounded-lg hover:bg-corp-primary/90 disabled:opacity-50"
+          >
+            {saving ? 'Збереження...' : (family ? 'Зберегти' : 'Створити')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Families Tab Content
+function FamiliesTab({ products }) {
+  const [families, setFamilies] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [editingFamily, setEditingFamily] = useState(null)
+  const [showModal, setShowModal] = useState(false)
+  
+  useEffect(() => {
+    loadFamilies()
+  }, [])
+  
+  const loadFamilies = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`${BACKEND_URL}/api/catalog/families`)
+      const data = await res.json()
+      setFamilies(data.families || [])
+    } catch (err) {
+      console.error('Error loading families:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const handleSave = async (familyData) => {
+    if (familyData.id) {
+      // Update existing - first update info, then reassign products
+      await fetch(`${BACKEND_URL}/api/catalog/families/${familyData.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: familyData.name, description: familyData.description })
+      })
+      // Reassign products
+      await fetch(`${BACKEND_URL}/api/catalog/families/${familyData.id}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_ids: familyData.product_ids })
+      })
+    } else {
+      // Create new
+      const res = await fetch(`${BACKEND_URL}/api/catalog/families`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: familyData.name, description: familyData.description })
+      })
+      const data = await res.json()
+      // Assign products
+      if (data.family_id) {
+        await fetch(`${BACKEND_URL}/api/catalog/families/${data.family_id}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_ids: familyData.product_ids })
+        })
+      }
+    }
+    await loadFamilies()
+  }
+  
+  const handleDelete = async (familyId) => {
+    if (!confirm('Видалити набір? Товари залишаться, але не будуть пов\'язані.')) return
+    
+    // Remove all products from family first
+    const family = families.find(f => f.id === familyId)
+    if (family) {
+      for (const p of family.products) {
+        await fetch(`${BACKEND_URL}/api/catalog/products/${p.product_id}/remove-family`, { method: 'POST' })
+      }
+    }
+    await loadFamilies()
+  }
+  
+  const openCreate = () => {
+    setEditingFamily(null)
+    setShowModal(true)
+  }
+  
+  const openEdit = (family) => {
+    setEditingFamily(family)
+    setShowModal(true)
+  }
+  
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-corp-text-dark">Набори (варіанти товарів)</h2>
+          <p className="text-sm text-corp-text-muted">Зв'язуйте схожі товари: розміри, кольори одного товару</p>
+        </div>
+        <button 
+          onClick={openCreate}
+          className="px-4 py-2 bg-corp-primary text-white rounded-lg hover:bg-corp-primary/90 font-medium"
+        >
+          + Новий набір
+        </button>
+      </div>
+      
+      {/* Families list */}
+      {loading ? (
+        <div className="text-center py-12 text-corp-text-muted">Завантаження...</div>
+      ) : families.length === 0 ? (
+        <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
+          <div className="text-4xl mb-4">🔗</div>
+          <div className="text-corp-text-muted mb-4">Наборів ще немає</div>
+          <p className="text-sm text-corp-text-muted mb-4">
+            Створіть набір щоб зв'язати схожі товари<br/>
+            (наприклад: Свічник 17см, 20см, 23см)
+          </p>
+          <button onClick={openCreate} className="text-corp-primary hover:underline">
+            Створити перший набір
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {families.map(family => (
+            <FamilyCard key={family.id} family={family} onEdit={openEdit} onDelete={handleDelete} />
+          ))}
+        </div>
+      )}
+      
+      {/* Modal */}
+      {showModal && (
+        <FamilyModal
+          family={editingFamily}
+          products={products}
+          onClose={() => setShowModal(false)}
+          onSave={handleSave}
+        />
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// SETS TAB (Сети - комплекти товарів)
 // ============================================
 
 // Set Card

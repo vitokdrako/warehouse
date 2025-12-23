@@ -146,13 +146,12 @@ async def download_pdf(document_id: str, db: Session = Depends(get_rh_db)):
 
 @router.get("/{document_id}")
 async def get_document(document_id: str, db: Session = Depends(get_rh_db)):
-    """Отримує інформацію про документ"""
+    """Отримує інформацію про документ включаючи html_content"""
     
     doc = get_document_by_id(db, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не знайдено")
     
-    # Не повертаємо html_content в списку - він великий
     return {
         "id": doc["id"],
         "doc_type": doc["doc_type"],
@@ -163,6 +162,7 @@ async def get_document(document_id: str, db: Session = Depends(get_rh_db)):
         "status": doc["status"],
         "signed_at": doc["signed_at"],
         "created_at": doc["created_at"],
+        "html_content": doc.get("html_content", ""),
         "preview_url": f"/api/documents/{doc['id']}/preview",
         "pdf_url": f"/api/documents/{doc['id']}/pdf"
     }

@@ -34,6 +34,7 @@ import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
 import InventoryRecount from './pages/InventoryRecount';
 import OrdersArchive from './pages/OrdersArchive';
 import SyncPanel from './pages/SyncPanel';
+import DocumentTemplatesAdmin from './pages/DocumentTemplatesAdmin';
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

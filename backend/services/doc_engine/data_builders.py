@@ -204,7 +204,7 @@ def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> d
         SELECT 
             order_id, order_number, status, customer_name, customer_phone,
             total_price, deposit_amount, rental_start_date, rental_end_date,
-            damage_fee, laundry_fee
+            damage_fee
         FROM orders
         WHERE order_id = :order_id
     """), {"order_id": order_id})
@@ -224,7 +224,6 @@ def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> d
         "rental_start_date": order_row[7].strftime("%d.%m.%Y") if order_row[7] else "",
         "rental_end_date": order_row[8].strftime("%d.%m.%Y") if order_row[8] else "",
         "damage_fee": float(order_row[9] or 0),
-        "laundry_fee": float(order_row[10] or 0),
     }
     
     # Отримуємо дані про шкоду з product_damage_history

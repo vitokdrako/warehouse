@@ -56,20 +56,21 @@ async def export_ledger(
     params = {}
     
     if month:
-        where_clause = "WHERE DATE_FORMAT(occurred_at, '%Y-%m') = :month"
+        where_clause = "WHERE DATE_FORMAT(t.occurred_at, '%Y-%m') = :month"
         params["month"] = month
     
     query = f"""
         SELECT 
-            DATE_FORMAT(occurred_at, '%Y-%m-%d %H:%i') as date,
-            tx_type,
-            amount,
-            note,
-            order_number,
-            created_by_name
-        FROM general_ledger
+            DATE_FORMAT(t.occurred_at, '%Y-%m-%d %H:%i') as date,
+            t.tx_type,
+            t.amount,
+            t.note,
+            o.order_number,
+            t.created_by_name
+        FROM fin_transactions t
+        LEFT JOIN orders o ON t.order_id = o.id
         {where_clause}
-        ORDER BY occurred_at DESC
+        ORDER BY t.occurred_at DESC
     """
     
     rows = db.execute(text(query), params).fetchall()

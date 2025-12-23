@@ -846,7 +846,7 @@ const OrderDocumentsBlock = ({ orderId, orderNumber }) => {
       {loading ? (
         <div className="text-center py-4 text-corp-text-muted">Завантаження...</div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {FINANCE_DOCS.map(doc => {
             const latest = getLatestDoc(doc.type);
             const history = getDocHistory(doc.type);
@@ -855,7 +855,7 @@ const OrderDocumentsBlock = ({ orderId, orderNumber }) => {
             return (
               <div
                 key={doc.type}
-                className="rounded-xl border border-corp-border p-3 hover:border-amber-300 transition"
+                className="rounded-xl border border-corp-border p-3 hover:border-amber-300 hover:shadow-sm transition"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

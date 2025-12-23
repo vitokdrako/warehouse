@@ -780,71 +780,59 @@ const LedgerTab = ({ ledger, reload, loading }) => {
 
 // ----------------------------- Expenses Tab -----------------------------
 const ExpensesTab = ({ reload, loading, dashboard }) => {
+  const [subTab, setSubTab] = useState("due"); // due | templates | history | oneoff
+  const [templates, setTemplates] = useState([]);
+  const [dueItems, setDueItems] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [payroll, setPayroll] = useState([]);
-  const [budgets, setBudgets] = useState({ cash: 0, damage_pool: 0 });
+  const [summary, setSummary] = useState(null);
   const [loadingExp, setLoadingExp] = useState(true);
   const [msg, setMsg] = useState(null);
   const [err, setErr] = useState(null);
+  
+  // Month selector
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   // One-off form
   const [oneName, setOneName] = useState("Разова витрата");
-  const [oneCategory, setOneCategory] = useState("CONSUMABLES");
+  const [oneCategory, setOneCategory] = useState("");
   const [oneMethod, setOneMethod] = useState("cash");
   const [oneFunding, setOneFunding] = useState("general");
   const [oneAmount, setOneAmount] = useState("");
 
-  // Payroll form
-  const [payEmp, setPayEmp] = useState("");
-  const [paySalary, setPaySalary] = useState(25000);
-  const [payBonus, setPayBonus] = useState(0);
-  const [payMethod, setPayMethod] = useState("cash");
-  const [payFunding, setPayFunding] = useState("general");
+  // Template form
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
 
   const loadData = async () => {
     setLoadingExp(true);
     try {
-      const [expRes, catRes, empRes, payRes, dashRes] = await Promise.all([
-        authFetch(`${BACKEND_URL}/api/finance/expenses`),
+      const [templatesRes, dueRes, expRes, catRes, summaryRes] = await Promise.all([
+        authFetch(`${BACKEND_URL}/api/expense-management/templates`),
+        authFetch(`${BACKEND_URL}/api/expense-management/due-items?month=${selectedMonth}`),
+        authFetch(`${BACKEND_URL}/api/expense-management/expenses?month=${selectedMonth}`),
         authFetch(`${BACKEND_URL}/api/finance/categories`),
-        authFetch(`${BACKEND_URL}/api/finance/employees`),
-        authFetch(`${BACKEND_URL}/api/finance/payroll`),
-        authFetch(`${BACKEND_URL}/api/finance/dashboard?period=month`),
+        authFetch(`${BACKEND_URL}/api/expense-management/summary?month=${selectedMonth}`),
       ]);
+      
+      const templatesData = await templatesRes.json();
+      const dueData = await dueRes.json();
       const expData = await expRes.json();
       const catData = await catRes.json();
-      const empData = await empRes.json();
-      const payData = await payRes.json();
-      const dashData = await dashRes.json();
+      const summaryData = await summaryRes.json();
       
+      setTemplates(templatesData.templates || []);
+      setDueItems(dueData.due_items || []);
       setExpenses(expData.expenses || []);
       setCategories(Array.isArray(catData) ? catData : []);
-      setEmployees(empData.employees || []);
-      setPayroll(payData.payroll || []);
+      setSummary(summaryData);
       
-      // Calculate budgets from dashboard
-      const metrics = dashData.metrics || {};
-      const rentRevenue = metrics.rent_revenue || 0;
-      const damageComp = metrics.damage_compensation || 0;
-      const operatingExp = metrics.operating_expenses || 0;
-      
-      // Calculate expenses by funding source
-      const generalExpenses = (expData.expenses || [])
-        .filter(e => e.funding !== 'damage_pool')
-        .reduce((s, e) => s + (e.amount || 0), 0);
-      const damageExpenses = (expData.expenses || [])
-        .filter(e => e.funding === 'damage_pool')
-        .reduce((s, e) => s + (e.amount || 0), 0);
-      
-      setBudgets({
-        cash: rentRevenue - generalExpenses,
-        damage_pool: damageComp - damageExpenses,
-      });
-      
-      if (empData.employees?.length > 0 && !payEmp) {
-        setPayEmp(empData.employees[0].id);
+      if (catData.length > 0 && !oneCategory) {
+        const expCats = catData.filter(c => c.type === 'expense');
+        if (expCats.length > 0) setOneCategory(expCats[0].code);
       }
     } catch (e) {
       console.error(e);
@@ -852,39 +840,66 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
     setLoadingExp(false);
   };
 
-  useEffect(() => { loadData(); }, []);
-
-  const totals = useMemo(() => {
-    const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-    const general = expenses.filter(e => e.funding !== 'damage_pool').reduce((s, e) => s + (e.amount || 0), 0);
-    const damage = expenses.filter(e => e.funding === 'damage_pool').reduce((s, e) => s + (e.amount || 0), 0);
-    return { total, general, damage };
-  }, [expenses]);
+  useEffect(() => { loadData(); }, [selectedMonth]);
 
   const clearMsg = () => { setMsg(null); setErr(null); };
 
+  // Generate due items from templates
+  const generateDueItems = async () => {
+    clearMsg();
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/expense-management/due-items/generate?month=${selectedMonth}`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      setMsg(`Згенеровано ${data.created} планових платежів`);
+      loadData();
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
+  // Pay due item
+  const payDueItem = async (itemId, method = "cash") => {
+    clearMsg();
+    try {
+      await authFetch(`${BACKEND_URL}/api/expense-management/due-items/${itemId}/pay`, {
+        method: "POST",
+        body: JSON.stringify({ method })
+      });
+      setMsg("Платіж проведено ✅");
+      loadData();
+      reload();
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
+  // Cancel due item
+  const cancelDueItem = async (itemId) => {
+    clearMsg();
+    try {
+      await authFetch(`${BACKEND_URL}/api/expense-management/due-items/${itemId}/cancel`, {
+        method: "POST"
+      });
+      setMsg("Платіж скасовано");
+      loadData();
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
+  // Create one-off expense
   const createExpense = async () => {
     if (Number(oneAmount) <= 0) return;
     clearMsg();
-    
-    // Validate budget
-    const amount = Number(oneAmount);
-    if (oneFunding === 'damage_pool' && amount > budgets.damage_pool) {
-      setErr(`Недостатньо бюджету шкоди. Доступно: ${money(budgets.damage_pool)}`);
-      return;
-    }
-    if (oneFunding === 'general' && amount > budgets.cash) {
-      setErr(`Недостатньо коштів у касі. Доступно: ${money(budgets.cash)}`);
-      return;
-    }
-    
     try {
       await authFetch(`${BACKEND_URL}/api/finance/expenses`, {
         method: "POST",
         body: JSON.stringify({
           expense_type: "expense",
           category_code: oneCategory,
-          amount: amount,
+          amount: Number(oneAmount),
           method: oneMethod,
           funding: oneFunding,
           note: oneName,
@@ -898,6 +913,592 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
       setErr(e.message);
     }
   };
+
+  // Save template
+  const saveTemplate = async (templateData) => {
+    clearMsg();
+    try {
+      if (templateData.id) {
+        await authFetch(`${BACKEND_URL}/api/expense-management/templates/${templateData.id}`, {
+          method: "PUT",
+          body: JSON.stringify(templateData)
+        });
+      } else {
+        await authFetch(`${BACKEND_URL}/api/expense-management/templates`, {
+          method: "POST",
+          body: JSON.stringify(templateData)
+        });
+      }
+      setMsg("Шаблон збережено ✅");
+      setShowTemplateModal(false);
+      setEditingTemplate(null);
+      loadData();
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
+  // Delete template
+  const deleteTemplate = async (id) => {
+    if (!confirm("Видалити шаблон?")) return;
+    clearMsg();
+    try {
+      await authFetch(`${BACKEND_URL}/api/expense-management/templates/${id}`, {
+        method: "DELETE"
+      });
+      setMsg("Шаблон видалено");
+      loadData();
+    } catch (e) {
+      setErr(e.message);
+    }
+  };
+
+  const expenseCategories = useMemo(() => categories.filter(c => c.type === 'expense'), [categories]);
+  
+  const FundingBadge = ({ funding }) => {
+    if (funding === 'damage_pool') return <Badge tone="warn">зі шкоди</Badge>;
+    return <Badge tone="info">каса</Badge>;
+  };
+
+  const StatusBadge = ({ status }) => {
+    const map = {
+      pending: { tone: "neutral", label: "Очікує" },
+      paid: { tone: "ok", label: "Оплачено" },
+      overdue: { tone: "danger", label: "Прострочено" },
+      cancelled: { tone: "neutral", label: "Скасовано" },
+    };
+    const s = map[status] || map.pending;
+    return <Badge tone={s.tone}>{s.label}</Badge>;
+  };
+
+  const FrequencyLabel = ({ freq }) => {
+    const map = {
+      once: "Разово",
+      daily: "Щодня",
+      weekly: "Щотижня",
+      monthly: "Щомісяця",
+      quarterly: "Щоквартально",
+      yearly: "Щороку",
+    };
+    return map[freq] || freq;
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Messages */}
+      {err && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-800">{err}</div>}
+      {msg && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">{msg}</div>}
+
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card title="До сплати" className="!p-4">
+            <div className="text-2xl font-bold text-amber-600">{money(summary.due_items?.total_pending || 0)}</div>
+            <div className="text-xs text-corp-text-muted mt-1">
+              {summary.due_items?.counts?.pending || 0} очікують, {summary.due_items?.counts?.overdue || 0} прострочено
+            </div>
+          </Card>
+          <Card title="Оплачено" className="!p-4">
+            <div className="text-2xl font-bold text-emerald-600">{money(summary.due_items?.amounts?.paid || 0)}</div>
+            <div className="text-xs text-corp-text-muted mt-1">{summary.due_items?.counts?.paid || 0} платежів</div>
+          </Card>
+          <Card title="Витрати (каса)" className="!p-4">
+            <div className="text-2xl font-bold text-blue-600">{money(summary.expenses?.by_funding?.general || 0)}</div>
+          </Card>
+          <Card title="Витрати (шкода)" className="!p-4">
+            <div className="text-2xl font-bold text-orange-600">{money(summary.expenses?.by_funding?.damage_pool || 0)}</div>
+          </Card>
+        </div>
+      )}
+
+      {/* Sub-tabs */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white border border-corp-border p-2">
+        <button
+          onClick={() => setSubTab("due")}
+          className={cls(
+            "rounded-lg px-4 py-2 text-sm font-medium transition",
+            subTab === "due" ? "bg-corp-primary text-white" : "hover:bg-corp-bg-page"
+          )}
+        >
+          Планові платежі
+        </button>
+        <button
+          onClick={() => setSubTab("templates")}
+          className={cls(
+            "rounded-lg px-4 py-2 text-sm font-medium transition",
+            subTab === "templates" ? "bg-corp-primary text-white" : "hover:bg-corp-bg-page"
+          )}
+        >
+          Шаблони
+        </button>
+        <button
+          onClick={() => setSubTab("history")}
+          className={cls(
+            "rounded-lg px-4 py-2 text-sm font-medium transition",
+            subTab === "history" ? "bg-corp-primary text-white" : "hover:bg-corp-bg-page"
+          )}
+        >
+          Історія
+        </button>
+        <button
+          onClick={() => setSubTab("oneoff")}
+          className={cls(
+            "rounded-lg px-4 py-2 text-sm font-medium transition",
+            subTab === "oneoff" ? "bg-corp-primary text-white" : "hover:bg-corp-bg-page"
+          )}
+        >
+          Разова витрата
+        </button>
+        
+        {/* Month selector */}
+        <div className="ml-auto flex items-center gap-2">
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="rounded-lg border border-corp-border px-3 py-2 text-sm"
+          />
+          <GhostBtn onClick={loadData}>Оновити</GhostBtn>
+        </div>
+      </div>
+
+      {/* Due Items Tab */}
+      {subTab === "due" && (
+        <Card 
+          title="Планові платежі" 
+          subtitle={`Місяць: ${selectedMonth}`}
+          right={
+            <div className="flex gap-2">
+              <GhostBtn onClick={generateDueItems}>Згенерувати з шаблонів</GhostBtn>
+            </div>
+          }
+        >
+          {loadingExp ? (
+            <div className="py-8 text-center text-corp-text-muted">Завантаження...</div>
+          ) : dueItems.length === 0 ? (
+            <div className="py-8 text-center text-corp-text-muted">
+              Немає планових платежів на цей місяць.
+              <div className="mt-2">
+                <button onClick={generateDueItems} className="text-corp-primary hover:underline">
+                  Згенерувати з шаблонів
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-corp-border">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-corp-bg-page">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-semibold">Назва</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Дата</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Сума</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Джерело</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Статус</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dueItems.map(item => (
+                    <tr key={item.id} className={cls(
+                      "border-t border-corp-border-light",
+                      item.status === 'overdue' && "bg-rose-50"
+                    )}>
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{item.name}</div>
+                        {item.vendor_name && <div className="text-xs text-corp-text-muted">{item.vendor_name}</div>}
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">{item.due_date}</td>
+                      <td className="px-4 py-3 font-semibold">{money(item.amount)}</td>
+                      <td className="px-4 py-3"><FundingBadge funding={item.funding_source} /></td>
+                      <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
+                      <td className="px-4 py-3">
+                        {(item.status === 'pending' || item.status === 'overdue') && (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => payDueItem(item.id, 'cash')}
+                              className="rounded bg-emerald-100 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-200"
+                            >
+                              Готівка
+                            </button>
+                            <button
+                              onClick={() => payDueItem(item.id, 'bank')}
+                              className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700 hover:bg-blue-200"
+                            >
+                              Безготівка
+                            </button>
+                            <button
+                              onClick={() => cancelDueItem(item.id)}
+                              className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                        {item.status === 'paid' && (
+                          <span className="text-xs text-corp-text-muted">{item.paid_at?.slice(0, 10)}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Templates Tab */}
+      {subTab === "templates" && (
+        <Card 
+          title="Шаблони витрат" 
+          subtitle="Регулярні платежі"
+          right={
+            <PrimaryBtn onClick={() => { setEditingTemplate(null); setShowTemplateModal(true); }}>
+              + Новий шаблон
+            </PrimaryBtn>
+          }
+        >
+          {loadingExp ? (
+            <div className="py-8 text-center text-corp-text-muted">Завантаження...</div>
+          ) : templates.length === 0 ? (
+            <div className="py-8 text-center text-corp-text-muted">
+              Немає шаблонів. Створіть перший шаблон для автоматичного планування витрат.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {templates.map(t => (
+                <div key={t.id} className="flex items-center gap-4 rounded-xl border border-corp-border p-4 hover:bg-corp-bg-page">
+                  <div className="flex-1">
+                    <div className="font-medium">{t.name}</div>
+                    <div className="text-xs text-corp-text-muted">
+                      {t.category_name || "Без категорії"} · <FrequencyLabel freq={t.frequency} /> · день {t.day_of_month}
+                      {t.vendor_name && ` · ${t.vendor_name}`}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-lg">{money(t.amount)}</div>
+                    <FundingBadge funding={t.funding_source} />
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => { setEditingTemplate(t); setShowTemplateModal(true); }}
+                      className="rounded p-2 hover:bg-corp-bg-light"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => deleteTemplate(t.id)}
+                      className="rounded p-2 hover:bg-rose-50 text-rose-600"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* History Tab */}
+      {subTab === "history" && (
+        <Card title="Історія витрат" subtitle={`Місяць: ${selectedMonth}`}>
+          {loadingExp ? (
+            <div className="py-8 text-center text-corp-text-muted">Завантаження...</div>
+          ) : expenses.length === 0 ? (
+            <div className="py-8 text-center text-corp-text-muted">Немає витрат за цей період</div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-corp-border">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-corp-bg-page">
+                  <tr>
+                    <th className="px-4 py-3 text-xs font-semibold">Дата</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Категорія</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Джерело</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Метод</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Сума</th>
+                    <th className="px-4 py-3 text-xs font-semibold">Примітка</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.map(e => (
+                    <tr key={e.id} className="border-t border-corp-border-light">
+                      <td className="px-4 py-3 font-mono text-xs">{fmtDate(e.occurred_at)}</td>
+                      <td className="px-4 py-3"><Badge tone="neutral">{e.category_name || e.category_code}</Badge></td>
+                      <td className="px-4 py-3"><FundingBadge funding={e.funding_source} /></td>
+                      <td className="px-4 py-3"><Badge tone="info">{(e.method || "cash").toUpperCase()}</Badge></td>
+                      <td className="px-4 py-3 font-semibold text-rose-600">{money(e.amount)}</td>
+                      <td className="px-4 py-3 text-xs text-corp-text-muted max-w-[150px] truncate">{e.note || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* One-off Expense Tab */}
+      {subTab === "oneoff" && (
+        <Card title="Разова витрата" subtitle="Одноразовий платіж">
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Form */}
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-corp-text-muted">Назва</label>
+                <input 
+                  className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" 
+                  value={oneName} 
+                  onChange={(e) => setOneName(e.target.value)} 
+                />
+              </div>
+              <div>
+                <label className="text-xs text-corp-text-muted">Категорія</label>
+                <select 
+                  className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" 
+                  value={oneCategory} 
+                  onChange={(e) => setOneCategory(e.target.value)}
+                >
+                  {expenseCategories.map(c => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-corp-text-muted">Метод</label>
+                  <select 
+                    className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" 
+                    value={oneMethod} 
+                    onChange={(e) => setOneMethod(e.target.value)}
+                  >
+                    <option value="cash">Готівка</option>
+                    <option value="bank">Безготівка</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-corp-text-muted">Сума (₴)</label>
+                  <input 
+                    className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" 
+                    value={oneAmount} 
+                    onChange={(e) => setOneAmount(e.target.value)} 
+                    type="number"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-corp-text-muted">Джерело фінансування</label>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={() => setOneFunding('general')}
+                    className={cls(
+                      "flex-1 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition",
+                      oneFunding === 'general' 
+                        ? "border-blue-500 bg-blue-50 text-blue-900" 
+                        : "border-corp-border bg-white hover:bg-corp-bg-page"
+                    )}
+                  >
+                    💰 Каса
+                  </button>
+                  <button
+                    onClick={() => setOneFunding('damage_pool')}
+                    className={cls(
+                      "flex-1 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition",
+                      oneFunding === 'damage_pool' 
+                        ? "border-amber-500 bg-amber-50 text-amber-900" 
+                        : "border-corp-border bg-white hover:bg-corp-bg-page"
+                    )}
+                  >
+                    🔧 Бюджет шкоди
+                  </button>
+                </div>
+              </div>
+              <PrimaryBtn disabled={Number(oneAmount) <= 0} onClick={createExpense}>
+                Провести витрату
+              </PrimaryBtn>
+            </div>
+            
+            {/* Tips */}
+            <div className="rounded-xl bg-corp-bg-page p-4 text-sm text-corp-text-muted">
+              <div className="font-semibold text-corp-text-dark mb-2">Підказки</div>
+              <ul className="space-y-2">
+                <li>💰 <b>Каса</b> — для зарплат, оренди, комунальних</li>
+                <li>🔧 <b>Бюджет шкоди</b> — для ремонту, реставрації, хімчистки</li>
+                <li>💡 Регулярні витрати краще додати як <b>шаблон</b></li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <TemplateModal
+          template={editingTemplate}
+          categories={expenseCategories}
+          onClose={() => { setShowTemplateModal(false); setEditingTemplate(null); }}
+          onSave={saveTemplate}
+        />
+      )}
+    </div>
+  );
+};
+
+// Template Modal Component
+const TemplateModal = ({ template, categories, onClose, onSave }) => {
+  const [name, setName] = useState(template?.name || "");
+  const [description, setDescription] = useState(template?.description || "");
+  const [categoryId, setCategoryId] = useState(template?.category_id || "");
+  const [amount, setAmount] = useState(template?.amount || "");
+  const [frequency, setFrequency] = useState(template?.frequency || "monthly");
+  const [dayOfMonth, setDayOfMonth] = useState(template?.day_of_month || 1);
+  const [fundingSource, setFundingSource] = useState(template?.funding_source || "general");
+  const [vendorName, setVendorName] = useState(template?.vendor_name || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!name || !amount) return;
+    setSaving(true);
+    await onSave({
+      id: template?.id,
+      name,
+      description: description || null,
+      category_id: categoryId || null,
+      amount: Number(amount),
+      frequency,
+      day_of_month: dayOfMonth,
+      funding_source: fundingSource,
+      vendor_name: vendorName || null,
+    });
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl max-w-lg w-full p-6">
+        <h2 className="text-xl font-bold mb-4">{template ? "Редагувати шаблон" : "Новий шаблон"}</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-corp-text-muted">Назва *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full h-10 rounded-xl border border-corp-border px-3"
+              placeholder="Наприклад: Оренда приміщення"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-corp-text-muted">Сума (₴) *</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="mt-1 w-full h-10 rounded-xl border border-corp-border px-3"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-corp-text-muted">Категорія</label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="mt-1 w-full h-10 rounded-xl border border-corp-border bg-white px-3"
+              >
+                <option value="">Без категорії</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-corp-text-muted">Частота</label>
+              <select
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value)}
+                className="mt-1 w-full h-10 rounded-xl border border-corp-border bg-white px-3"
+              >
+                <option value="once">Разово</option>
+                <option value="weekly">Щотижня</option>
+                <option value="monthly">Щомісяця</option>
+                <option value="quarterly">Щоквартально</option>
+                <option value="yearly">Щороку</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-corp-text-muted">День місяця</label>
+              <input
+                type="number"
+                value={dayOfMonth}
+                onChange={(e) => setDayOfMonth(Number(e.target.value))}
+                min={1}
+                max={28}
+                className="mt-1 w-full h-10 rounded-xl border border-corp-border px-3"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="text-xs text-corp-text-muted">Джерело фінансування</label>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFundingSource('general')}
+                className={cls(
+                  "flex-1 rounded-xl border-2 px-4 py-2 text-sm font-semibold transition",
+                  fundingSource === 'general' 
+                    ? "border-blue-500 bg-blue-50 text-blue-900" 
+                    : "border-corp-border bg-white"
+                )}
+              >
+                💰 Каса
+              </button>
+              <button
+                type="button"
+                onClick={() => setFundingSource('damage_pool')}
+                className={cls(
+                  "flex-1 rounded-xl border-2 px-4 py-2 text-sm font-semibold transition",
+                  fundingSource === 'damage_pool' 
+                    ? "border-amber-500 bg-amber-50 text-amber-900" 
+                    : "border-corp-border bg-white"
+                )}
+              >
+                🔧 Бюджет шкоди
+              </button>
+            </div>
+          </div>
+          
+          <div>
+            <label className="text-xs text-corp-text-muted">Постачальник (опціонально)</label>
+            <input
+              type="text"
+              value={vendorName}
+              onChange={(e) => setVendorName(e.target.value)}
+              className="mt-1 w-full h-10 rounded-xl border border-corp-border px-3"
+              placeholder="ТОВ Приклад"
+            />
+          </div>
+        </div>
+        
+        <div className="mt-6 flex gap-3 justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-corp-text-muted hover:text-corp-text-dark">
+            Скасувати
+          </button>
+          <PrimaryBtn onClick={handleSave} disabled={saving || !name || !amount}>
+            {saving ? "Збереження..." : "Зберегти"}
+          </PrimaryBtn>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   const payPayroll = async (id) => {
     clearMsg();

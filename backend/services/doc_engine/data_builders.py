@@ -434,8 +434,8 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
     }
     
     company = {
-        "name": "FarforRent",
-        "legal_name": "ФОП Прізвище І.Б.",
+        "name": "FarforDecorOrenda",
+        "legal_name": "ФОП Арсалані Олександра Ігорівна",
         "phone": "+380 XX XXX XX XX"
     }
     

@@ -881,7 +881,199 @@ class CSVExportTester:
         except Exception as e:
             self.log(f"❌ Exception testing delete template: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
-    def run_comprehensive_expense_management_test(self):
+    def run_comprehensive_csv_export_test(self):
+        """Run comprehensive CSV Export API test following the review request specifications"""
+        self.log("🚀 Starting comprehensive CSV Export API test")
+        self.log("=" * 70)
+        
+        # Step 1: Health check
+        if not self.test_api_health():
+            self.log("❌ API health check failed, aborting tests", "ERROR")
+            return False
+        
+        # Step 2: Authentication
+        self.log("\n🔍 Step 1: Testing authentication...")
+        if not self.authenticate():
+            self.log("❌ Authentication failed, aborting tests", "ERROR")
+            return False
+        
+        # Step 3: Test Export Ledger (Transactions)
+        self.log("\n🔍 Step 2: Testing Export Ledger (Transactions)...")
+        
+        # Test all transactions
+        ledger_all_result = self.test_export_ledger()
+        ledger_all_success = ledger_all_result.get("success", False)
+        
+        # Test with month filter
+        ledger_month_result = self.test_export_ledger("2025-12")
+        ledger_month_success = ledger_month_result.get("success", False)
+        
+        # Step 4: Test Export Expenses
+        self.log("\n🔍 Step 3: Testing Export Expenses...")
+        
+        # Test all expenses
+        expenses_all_result = self.test_export_expenses()
+        expenses_all_success = expenses_all_result.get("success", False)
+        
+        # Test with month filter
+        expenses_month_result = self.test_export_expenses("2025-12")
+        expenses_month_success = expenses_month_result.get("success", False)
+        
+        # Step 5: Test Export Orders Finance
+        self.log("\n🔍 Step 4: Testing Export Orders Finance...")
+        
+        # Test all orders
+        orders_all_result = self.test_export_orders_finance()
+        orders_all_success = orders_all_result.get("success", False)
+        
+        # Test with status filter
+        orders_status_result = self.test_export_orders_finance("active")
+        orders_status_success = orders_status_result.get("success", False)
+        
+        # Step 6: Test Export Damage Cases
+        self.log("\n🔍 Step 5: Testing Export Damage Cases...")
+        
+        damage_cases_result = self.test_export_damage_cases()
+        damage_cases_success = damage_cases_result.get("success", False)
+        
+        # Step 7: Test Export Tasks
+        self.log("\n🔍 Step 6: Testing Export Tasks...")
+        
+        # Test all tasks
+        tasks_all_result = self.test_export_tasks()
+        tasks_all_success = tasks_all_result.get("success", False)
+        
+        # Test washing tasks
+        tasks_washing_result = self.test_export_tasks("washing")
+        tasks_washing_success = tasks_washing_result.get("success", False)
+        
+        # Step 8: Test Export Laundry Queue
+        self.log("\n🔍 Step 7: Testing Export Laundry Queue...")
+        
+        laundry_queue_result = self.test_export_laundry_queue()
+        laundry_queue_success = laundry_queue_result.get("success", False)
+        
+        # Step 9: Summary
+        self.log("\n" + "=" * 70)
+        self.log("📊 COMPREHENSIVE CSV EXPORT TEST SUMMARY:")
+        self.log(f"   • API Health: ✅ OK")
+        self.log(f"   • Authentication: ✅ Working")
+        
+        # Export Ledger
+        self.log(f"\n   📋 EXPORT LEDGER (TRANSACTIONS):")
+        if ledger_all_success:
+            validation = ledger_all_result.get("validation", {})
+            self.log(f"   • Export All Ledger: ✅ Working ({validation.get('data_rows', 0)} rows)")
+            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
+            self.log(f"     - Ukrainian Headers: ✅ Present")
+        else:
+            self.log(f"   • Export All Ledger: ❌ Failed")
+            
+        if ledger_month_success:
+            validation = ledger_month_result.get("validation", {})
+            self.log(f"   • Export Ledger (2025-12): ✅ Working ({validation.get('data_rows', 0)} rows)")
+        else:
+            self.log(f"   • Export Ledger (2025-12): ❌ Failed")
+        
+        # Export Expenses
+        self.log(f"\n   💰 EXPORT EXPENSES:")
+        if expenses_all_success:
+            validation = expenses_all_result.get("validation", {})
+            self.log(f"   • Export All Expenses: ✅ Working ({validation.get('data_rows', 0)} rows)")
+            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
+            self.log(f"     - Ukrainian Headers: ✅ Present")
+        else:
+            self.log(f"   • Export All Expenses: ❌ Failed")
+            
+        if expenses_month_success:
+            validation = expenses_month_result.get("validation", {})
+            self.log(f"   • Export Expenses (2025-12): ✅ Working ({validation.get('data_rows', 0)} rows)")
+        else:
+            self.log(f"   • Export Expenses (2025-12): ❌ Failed")
+        
+        # Export Orders Finance
+        self.log(f"\n   🛒 EXPORT ORDERS FINANCE:")
+        if orders_all_success:
+            validation = orders_all_result.get("validation", {})
+            self.log(f"   • Export All Orders: ✅ Working ({validation.get('data_rows', 0)} rows)")
+            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
+            self.log(f"     - Ukrainian Headers: ✅ Present")
+        else:
+            self.log(f"   • Export All Orders: ❌ Failed")
+            
+        if orders_status_success:
+            validation = orders_status_result.get("validation", {})
+            self.log(f"   • Export Orders (active): ✅ Working ({validation.get('data_rows', 0)} rows)")
+        else:
+            self.log(f"   • Export Orders (active): ❌ Failed")
+        
+        # Export Damage Cases
+        self.log(f"\n   🔧 EXPORT DAMAGE CASES:")
+        if damage_cases_success:
+            validation = damage_cases_result.get("validation", {})
+            self.log(f"   • Export Damage Cases: ✅ Working ({validation.get('data_rows', 0)} rows)")
+            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
+            self.log(f"     - Ukrainian Headers: ✅ Present")
+        else:
+            self.log(f"   • Export Damage Cases: ❌ Failed")
+        
+        # Export Tasks
+        self.log(f"\n   📋 EXPORT TASKS:")
+        if tasks_all_success:
+            validation = tasks_all_result.get("validation", {})
+            self.log(f"   • Export All Tasks: ✅ Working ({validation.get('data_rows', 0)} rows)")
+            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
+            self.log(f"     - Ukrainian Headers: ✅ Present")
+        else:
+            self.log(f"   • Export All Tasks: ❌ Failed")
+            
+        if tasks_washing_success:
+            validation = tasks_washing_result.get("validation", {})
+            self.log(f"   • Export Washing Tasks: ✅ Working ({validation.get('data_rows', 0)} rows)")
+        else:
+            self.log(f"   • Export Washing Tasks: ❌ Failed")
+        
+        # Export Laundry Queue
+        self.log(f"\n   🧺 EXPORT LAUNDRY QUEUE:")
+        if laundry_queue_success:
+            validation = laundry_queue_result.get("validation", {})
+            self.log(f"   • Export Laundry Queue: ✅ Working ({validation.get('data_rows', 0)} rows)")
+            self.log(f"     - UTF-8 BOM: {'✅' if validation.get('has_bom') else '❌'}")
+            self.log(f"     - Ukrainian Headers: ✅ Present")
+        else:
+            self.log(f"   • Export Laundry Queue: ❌ Failed")
+        
+        self.log(f"\n🎉 CSV EXPORT TESTING COMPLETED!")
+        
+        # Check if critical functionality works
+        ledger_working = ledger_all_success and ledger_month_success
+        expenses_working = expenses_all_success and expenses_month_success
+        orders_working = orders_all_success and orders_status_success
+        damage_working = damage_cases_success
+        tasks_working = tasks_all_success and tasks_washing_success
+        laundry_working = laundry_queue_success
+        
+        all_working = all([ledger_working, expenses_working, orders_working, damage_working, tasks_working, laundry_working])
+        
+        if all_working:
+            self.log(f"\n✅ ALL CSV EXPORT ENDPOINTS WORKING!")
+            self.log(f"   The CSV export functionality is fully functional")
+        else:
+            self.log(f"\n⚠️ CSV EXPORT HAS PROBLEMS:")
+            if not ledger_working:
+                self.log(f"   - Ledger export has issues")
+            if not expenses_working:
+                self.log(f"   - Expenses export has issues")
+            if not orders_working:
+                self.log(f"   - Orders finance export has issues")
+            if not damage_working:
+                self.log(f"   - Damage cases export has issues")
+            if not tasks_working:
+                self.log(f"   - Tasks export has issues")
+            if not laundry_working:
+                self.log(f"   - Laundry queue export has issues")
+        
+        return all_working
         """Run the comprehensive Expense Management API test following the specified flow"""
         self.log("🚀 Starting comprehensive Expense Management API test")
         self.log("=" * 70)

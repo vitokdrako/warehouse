@@ -1334,6 +1334,17 @@ export default function CatalogBoard() {
               Товари
             </button>
             <button
+              onClick={() => setActiveTab('families')}
+              className={cls(
+                'px-6 py-3 font-medium text-sm border-b-2 transition-colors',
+                activeTab === 'families'
+                  ? 'border-corp-primary text-corp-primary'
+                  : 'border-transparent text-corp-text-muted hover:text-corp-text-dark'
+              )}
+            >
+              Набори
+            </button>
+            <button
               onClick={() => setActiveTab('sets')}
               className={cls(
                 'px-6 py-3 font-medium text-sm border-b-2 transition-colors',

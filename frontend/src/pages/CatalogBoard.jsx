@@ -271,7 +271,8 @@ function FamiliesTab({ products }) {
       setLoading(true)
       const res = await fetch(`${BACKEND_URL}/api/catalog/families`)
       const data = await res.json()
-      setFamilies(data.families || [])
+      // API returns array directly or {families: [...]}
+      setFamilies(Array.isArray(data) ? data : data.families || [])
     } catch (err) {
       console.error('Error loading families:', err)
     } finally {

@@ -25,7 +25,7 @@ TEST_CREDENTIALS = {
 }
 TEST_MONTH = "2025-02"  # Month for generating due items
 
-class FinanceConsoleTester:
+class ExpenseManagementTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
@@ -34,6 +34,8 @@ class FinanceConsoleTester:
             'Accept': 'application/json'
         })
         self.auth_token = None
+        self.test_template_id = None
+        self.test_due_item_id = None
         
     def log(self, message: str, level: str = "INFO"):
         """Log test messages with timestamp"""
@@ -83,6 +85,443 @@ class FinanceConsoleTester:
         except Exception as e:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
+
+    # ============================================
+    # TEMPLATES CRUD TESTS
+    # ============================================
+    
+    def test_list_templates(self) -> Dict[str, Any]:
+        """Test GET /api/expense-management/templates"""
+        try:
+            self.log("🧪 Testing list templates endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/expense-management/templates")
+            
+            if response.status_code == 200:
+                data = response.json()
+                templates = data.get('templates', [])
+                
+                self.log(f"✅ Retrieved {len(templates)} templates")
+                
+                # Check structure
+                if templates:
+                    template = templates[0]
+                    expected_fields = ['id', 'name', 'amount', 'frequency']
+                    missing_fields = [field for field in expected_fields if field not in template]
+                    
+                    if missing_fields:
+                        self.log(f"⚠️ Missing template fields: {missing_fields}")
+                
+                return {"success": True, "data": data, "count": len(templates)}
+            else:
+                self.log(f"❌ Failed to list templates: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing list templates: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_create_template(self) -> Dict[str, Any]:
+        """Test POST /api/expense-management/templates"""
+        try:
+            self.log("🧪 Testing create template endpoint...")
+            
+            template_data = {
+                "name": "Тест витрата",
+                "description": "Тестовий шаблон витрати",
+                "amount": 500.0,
+                "frequency": "monthly",
+                "day_of_month": 15,
+                "funding_source": "general",
+                "vendor_name": "Тестовий постачальник"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/expense-management/templates",
+                json=template_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log(f"✅ Template created successfully")
+                
+                # Store template ID for later tests
+                self.test_template_id = data.get('template_id')
+                
+                # Check for expected fields
+                expected_fields = ['success', 'template_id']
+                missing_fields = [field for field in expected_fields if field not in data]
+                
+                if missing_fields:
+                    self.log(f"⚠️ Missing create response fields: {missing_fields}")
+                
+                self.log(f"   ✅ Template ID: {self.test_template_id}")
+                
+                return {"success": True, "data": data, "template_id": self.test_template_id}
+            else:
+                self.log(f"❌ Failed to create template: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing create template: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_update_template(self) -> Dict[str, Any]:
+        """Test PUT /api/expense-management/templates/{id}"""
+        if not self.test_template_id:
+            return {"success": False, "error": "No template ID available for update test"}
+            
+        try:
+            self.log(f"🧪 Testing update template endpoint (ID: {self.test_template_id})...")
+            
+            update_data = {
+                "amount": 600.0,
+                "description": "Оновлений тестовий шаблон"
+            }
+            
+            response = self.session.put(
+                f"{self.base_url}/expense-management/templates/{self.test_template_id}",
+                json=update_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log(f"✅ Template updated successfully")
+                
+                return {"success": True, "data": data}
+            else:
+                self.log(f"❌ Failed to update template: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing update template: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    # ============================================
+    # DUE ITEMS TESTS
+    # ============================================
+    
+    def test_list_due_items(self) -> Dict[str, Any]:
+        """Test GET /api/expense-management/due-items"""
+        try:
+            self.log("🧪 Testing list due items endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/expense-management/due-items")
+            
+            if response.status_code == 200:
+                data = response.json()
+                due_items = data.get('due_items', [])
+                
+                self.log(f"✅ Retrieved {len(due_items)} due items")
+                
+                # Check structure
+                if due_items:
+                    item = due_items[0]
+                    expected_fields = ['id', 'name', 'amount', 'due_date', 'status']
+                    missing_fields = [field for field in expected_fields if field not in item]
+                    
+                    if missing_fields:
+                        self.log(f"⚠️ Missing due item fields: {missing_fields}")
+                
+                return {"success": True, "data": data, "count": len(due_items)}
+            else:
+                self.log(f"❌ Failed to list due items: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing list due items: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_create_due_item(self) -> Dict[str, Any]:
+        """Test POST /api/expense-management/due-items"""
+        try:
+            self.log("🧪 Testing create due item endpoint...")
+            
+            due_item_data = {
+                "template_id": self.test_template_id,
+                "name": "Тестовий платіж",
+                "description": "Тестовий запланований платіж",
+                "amount": 300.0,
+                "due_date": "2025-02-15",
+                "funding_source": "general",
+                "vendor_name": "Тестовий постачальник"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/expense-management/due-items",
+                json=due_item_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log(f"✅ Due item created successfully")
+                
+                # Store due item ID for later tests
+                self.test_due_item_id = data.get('due_item_id')
+                
+                self.log(f"   ✅ Due Item ID: {self.test_due_item_id}")
+                
+                return {"success": True, "data": data, "due_item_id": self.test_due_item_id}
+            else:
+                self.log(f"❌ Failed to create due item: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing create due item: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_generate_due_items(self) -> Dict[str, Any]:
+        """Test POST /api/expense-management/due-items/generate?month=YYYY-MM"""
+        try:
+            self.log(f"🧪 Testing generate due items endpoint for month {TEST_MONTH}...")
+            
+            response = self.session.post(
+                f"{self.base_url}/expense-management/due-items/generate?month={TEST_MONTH}"
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                created_count = data.get('created', 0)
+                self.log(f"✅ Generated {created_count} due items for {TEST_MONTH}")
+                
+                return {"success": True, "data": data, "created": created_count}
+            else:
+                self.log(f"❌ Failed to generate due items: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing generate due items: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_pay_due_item(self) -> Dict[str, Any]:
+        """Test POST /api/expense-management/due-items/{id}/pay"""
+        if not self.test_due_item_id:
+            return {"success": False, "error": "No due item ID available for pay test"}
+            
+        try:
+            self.log(f"🧪 Testing pay due item endpoint (ID: {self.test_due_item_id})...")
+            
+            payment_data = {
+                "method": "cash"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/expense-management/due-items/{self.test_due_item_id}/pay",
+                json=payment_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log(f"✅ Due item paid successfully")
+                
+                expense_id = data.get('expense_id')
+                self.log(f"   ✅ Created expense record ID: {expense_id}")
+                
+                return {"success": True, "data": data, "expense_id": expense_id}
+            else:
+                self.log(f"❌ Failed to pay due item: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing pay due item: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_cancel_due_item(self) -> Dict[str, Any]:
+        """Test POST /api/expense-management/due-items/{id}/cancel"""
+        # Create a new due item for cancellation test
+        try:
+            self.log("🧪 Testing cancel due item endpoint...")
+            
+            # First create a due item to cancel
+            due_item_data = {
+                "name": "Тестовий платіж для скасування",
+                "amount": 100.0,
+                "due_date": "2025-02-20",
+                "funding_source": "general"
+            }
+            
+            create_response = self.session.post(
+                f"{self.base_url}/expense-management/due-items",
+                json=due_item_data
+            )
+            
+            if create_response.status_code != 200:
+                return {"success": False, "error": "Failed to create due item for cancellation test"}
+            
+            cancel_item_id = create_response.json().get('due_item_id')
+            
+            # Now cancel it
+            response = self.session.post(
+                f"{self.base_url}/expense-management/due-items/{cancel_item_id}/cancel"
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log(f"✅ Due item cancelled successfully")
+                
+                return {"success": True, "data": data}
+            else:
+                self.log(f"❌ Failed to cancel due item: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing cancel due item: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_delete_due_item(self) -> Dict[str, Any]:
+        """Test DELETE /api/expense-management/due-items/{id}"""
+        # Create a new due item for deletion test
+        try:
+            self.log("🧪 Testing delete due item endpoint...")
+            
+            # First create a due item to delete
+            due_item_data = {
+                "name": "Тестовий платіж для видалення",
+                "amount": 50.0,
+                "due_date": "2025-02-25",
+                "funding_source": "general"
+            }
+            
+            create_response = self.session.post(
+                f"{self.base_url}/expense-management/due-items",
+                json=due_item_data
+            )
+            
+            if create_response.status_code != 200:
+                return {"success": False, "error": "Failed to create due item for deletion test"}
+            
+            delete_item_id = create_response.json().get('due_item_id')
+            
+            # Now delete it
+            response = self.session.delete(
+                f"{self.base_url}/expense-management/due-items/{delete_item_id}"
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log(f"✅ Due item deleted successfully")
+                
+                return {"success": True, "data": data}
+            else:
+                self.log(f"❌ Failed to delete due item: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing delete due item: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    # ============================================
+    # EXPENSES TESTS
+    # ============================================
+    
+    def test_list_expenses(self) -> Dict[str, Any]:
+        """Test GET /api/expense-management/expenses"""
+        try:
+            self.log("🧪 Testing list expenses endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/expense-management/expenses")
+            
+            if response.status_code == 200:
+                data = response.json()
+                expenses = data.get('expenses', [])
+                totals = data.get('totals', {})
+                
+                self.log(f"✅ Retrieved {len(expenses)} expense records")
+                self.log(f"   ✅ Total amount: ₴{totals.get('total', 0)}")
+                self.log(f"   ✅ General fund: ₴{totals.get('general', 0)}")
+                self.log(f"   ✅ Damage pool: ₴{totals.get('damage_pool', 0)}")
+                
+                # Check structure
+                if expenses:
+                    expense = expenses[0]
+                    expected_fields = ['id', 'amount', 'method', 'funding_source', 'occurred_at']
+                    missing_fields = [field for field in expected_fields if field not in expense]
+                    
+                    if missing_fields:
+                        self.log(f"⚠️ Missing expense fields: {missing_fields}")
+                
+                return {"success": True, "data": data, "count": len(expenses)}
+            else:
+                self.log(f"❌ Failed to list expenses: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing list expenses: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_get_summary(self) -> Dict[str, Any]:
+        """Test GET /api/expense-management/summary"""
+        try:
+            self.log("🧪 Testing get summary endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/expense-management/summary")
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                month = data.get('month')
+                due_items = data.get('due_items', {})
+                expenses = data.get('expenses', {})
+                
+                self.log(f"✅ Retrieved summary for month: {month}")
+                
+                # Log due items stats
+                counts = due_items.get('counts', {})
+                amounts = due_items.get('amounts', {})
+                self.log(f"   📋 Due Items:")
+                self.log(f"      - Pending: {counts.get('pending', 0)} items (₴{amounts.get('pending', 0)})")
+                self.log(f"      - Paid: {counts.get('paid', 0)} items (₴{amounts.get('paid', 0)})")
+                self.log(f"      - Overdue: {counts.get('overdue', 0)} items (₴{amounts.get('overdue', 0)})")
+                
+                # Log expenses stats
+                by_funding = expenses.get('by_funding', {})
+                total_expenses = expenses.get('total', 0)
+                self.log(f"   💰 Expenses:")
+                self.log(f"      - Total: ₴{total_expenses}")
+                self.log(f"      - General fund: ₴{by_funding.get('general', 0)}")
+                self.log(f"      - Damage pool: ₴{by_funding.get('damage_pool', 0)}")
+                
+                return {"success": True, "data": data}
+            else:
+                self.log(f"❌ Failed to get summary: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing get summary: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_delete_template(self) -> Dict[str, Any]:
+        """Test DELETE /api/expense-management/templates/{id} - cleanup"""
+        if not self.test_template_id:
+            return {"success": True, "message": "No template to delete"}
+            
+        try:
+            self.log(f"🧪 Testing delete template endpoint (cleanup - ID: {self.test_template_id})...")
+            
+            response = self.session.delete(
+                f"{self.base_url}/expense-management/templates/{self.test_template_id}"
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                self.log(f"✅ Template deleted successfully (cleanup)")
+                
+                return {"success": True, "data": data}
+            else:
+                self.log(f"❌ Failed to delete template: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing delete template: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     
     def test_order_damage_fee_endpoint(self) -> Dict[str, Any]:
         """Test GET /api/analytics/order-damage-fee/{order_id} - should return damage fee data"""

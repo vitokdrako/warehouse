@@ -29,13 +29,16 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://catalog-revamp-2.preview.emergentagent.com/api"
-FRONTEND_URL = "https://catalog-revamp-2.preview.emergentagent.com"
+BASE_URL = "https://doc-management.preview.emergentagent.com/api"
+FRONTEND_URL = "https://doc-management.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
 }
-TEST_MONTH = "2025-01"  # Month for testing (not used in document generation)
+
+# Company name validation
+CORRECT_COMPANY_NAME = "ФОП Арсалані Олександра Ігорівна"
+OLD_INCORRECT_NAME = "ФОП Маркін Ілля Павлович"
 
 class DocumentsTester:
     def __init__(self, base_url: str):

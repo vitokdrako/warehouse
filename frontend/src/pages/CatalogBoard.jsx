@@ -322,7 +322,7 @@ function SetsTab({ products }) {
   }
   
   const handleDelete = async (setId) => {
-    if (!confirm('Видалити набір?')) return
+    if (!confirm('Видалити сет?')) return
     
     await fetch(`${BACKEND_URL}/api/product-sets/${setId}`, { method: 'DELETE' })
     await loadSets()
@@ -343,14 +343,14 @@ function SetsTab({ products }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-corp-text-dark">Набори товарів</h2>
+          <h2 className="text-lg font-semibold text-corp-text-dark">Сети товарів</h2>
           <p className="text-sm text-corp-text-muted">Комплекти для швидкого додавання до замовлень</p>
         </div>
         <button 
           onClick={openCreate}
           className="px-4 py-2 bg-corp-primary text-white rounded-lg hover:bg-corp-primary/90 font-medium"
         >
-          + Новий набір
+          + Новий сет
         </button>
       </div>
       
@@ -360,9 +360,9 @@ function SetsTab({ products }) {
       ) : sets.length === 0 ? (
         <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
           <div className="text-4xl mb-4">📦</div>
-          <div className="text-corp-text-muted mb-4">Наборів ще немає</div>
+          <div className="text-corp-text-muted mb-4">Сетів ще немає</div>
           <button onClick={openCreate} className="text-corp-primary hover:underline">
-            Створити перший набір
+            Створити перший сет
           </button>
         </div>
       ) : (

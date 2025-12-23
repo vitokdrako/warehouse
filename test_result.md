@@ -983,3 +983,29 @@ Based on backend API functionality, the frontend should display:
 #### No Issues Requiring Main Agent Action
 - **Agent:** testing
 - **Message:** No critical issues found during comprehensive CSV export testing. All specified test cases from review request completed successfully. CSV export functionality is fully functional and ready for user acceptance testing.
+
+---
+
+## CSV Export Testing - 2025-12-23
+
+### Test Results: ✅ ALL PASSED
+
+| Endpoint | Status | Description |
+|----------|--------|-------------|
+| `/api/export/ledger` | ✅ PASS | 22 transactions exported |
+| `/api/export/expenses` | ✅ PASS | 5 expenses exported |
+| `/api/export/orders-finance` | ✅ PASS | 10 orders exported |
+| `/api/export/damage-cases` | ✅ PASS | 10 damage cases exported |
+| `/api/export/tasks` | ✅ PASS | 7 tasks exported |
+| `/api/export/laundry-queue` | ✅ PASS | 1 laundry record exported |
+
+### Features Verified:
+- UTF-8 BOM for Excel compatibility ✅
+- Ukrainian column headers ✅
+- Month and status filtering ✅
+- Proper CSV format ✅
+
+### Frontend Export Buttons Added:
+- FinanceConsoleApp - Облік (Ledger): "📥 Експорт CSV"
+- FinanceConsoleApp - Витрати/Історія: "📥 Експорт CSV"
+- DamageHubApp - Головна: "📥 CSV"

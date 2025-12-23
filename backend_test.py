@@ -243,6 +243,7 @@ class ExpenseManagementTester:
                 "template_id": self.test_template_id,
                 "name": "Тестовий платіж",
                 "description": "Тестовий запланований платіж",
+                "category_id": 1,  # Add category_id to avoid null constraint error
                 "amount": 300.0,
                 "due_date": "2025-02-15",
                 "funding_source": "general",

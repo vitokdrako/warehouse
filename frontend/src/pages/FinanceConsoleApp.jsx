@@ -1919,6 +1919,8 @@ export default function FinanceConsoleApp() {
             />
           ) : tab === "ledger" ? (
             <LedgerTab ledger={ledger} reload={loadAll} loading={loading} />
+          ) : tab === "documents" ? (
+            <DocumentsTab orders={orders} />
           ) : (
             <ExpensesTab reload={loadAll} loading={loading} />
           )}

@@ -991,96 +991,100 @@ export default function CatalogBoard() {
       </div>
       
       <div className="max-w-[1800px] mx-auto px-4 py-4">
-        <div className="flex gap-4">
-          {/* Left Sidebar */}
-          <Sidebar
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            filters={filters}
-            setFilters={setFilters}
-            colors={colors}
-            materials={materials}
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            onResetAll={resetAll}
-            loading={categoriesLoading}
-          />
-          
-          {/* Right Content */}
-          <main className="flex-1 space-y-4">
-            {/* Stats bar */}
-            <div className="bg-white rounded-xl border border-corp-border p-4">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="min-w-[60px]">
-                  <div className="text-xl font-bold text-corp-text-dark">{items.length}</div>
-                  <div className="text-xs text-corp-text-muted">Знайдено</div>
-                </div>
-                <div className="border-l border-corp-border pl-4 min-w-[70px]">
-                  <div className="text-xl font-bold text-emerald-600">{fmtUA(stats.available)}</div>
-                  <div className="text-xs text-corp-text-muted">Доступно</div>
-                </div>
-                <div className="border-l border-corp-border pl-4 min-w-[60px]">
-                  <div className="text-xl font-bold text-amber-600">{fmtUA(stats.in_rent)}</div>
-                  <div className="text-xs text-corp-text-muted">Видано</div>
-                </div>
-                <div className="border-l border-corp-border pl-4 min-w-[60px]">
-                  <div className="text-xl font-bold text-sky-600">{fmtUA(stats.reserved)}</div>
-                  <div className="text-xs text-corp-text-muted">Резерв</div>
-                </div>
-                <div className="border-l border-corp-border pl-4 min-w-[60px]">
-                  <div className="text-xl font-bold text-blue-500">{fmtUA(stats.on_wash)}</div>
-                  <div className="text-xs text-corp-text-muted">Мийка</div>
-                </div>
-                <div className="border-l border-corp-border pl-4 min-w-[70px]">
-                  <div className="text-xl font-bold text-purple-600">{fmtUA(stats.on_restoration)}</div>
-                  <div className="text-xs text-corp-text-muted">Реставрація</div>
-                </div>
-                <div className="border-l border-corp-border pl-4 min-w-[70px]">
-                  <div className="text-xl font-bold text-indigo-600">{fmtUA(stats.on_laundry)}</div>
-                  <div className="text-xs text-corp-text-muted">Хімчистка</div>
-                </div>
-                {conflictCount > 0 && (
-                  <div className="border-l border-corp-border pl-4">
-                    <div className="text-xl font-bold text-rose-600">{conflictCount}</div>
-                    <div className="text-xs text-corp-text-muted">Конфліктів</div>
-                  </div>
-                )}
-                {dateFilterActive && (
-                  <div className="ml-auto">
-                    <Badge variant="info">Фільтр по датах</Badge>
-                  </div>
-                )}
-              </div>
-            </div>
+        {activeTab === 'products' ? (
+          <div className="flex gap-4">
+            {/* Left Sidebar */}
+            <Sidebar
+              categories={categories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              filters={filters}
+              setFilters={setFilters}
+              colors={colors}
+              materials={materials}
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+              onResetAll={resetAll}
+              loading={categoriesLoading}
+            />
             
-            {/* Product grid */}
-            {loading ? (
-              <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
-                <div className="text-corp-text-muted">Завантаження...</div>
+            {/* Right Content */}
+            <main className="flex-1 space-y-4">
+              {/* Stats bar */}
+              <div className="bg-white rounded-xl border border-corp-border p-4">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="min-w-[60px]">
+                    <div className="text-xl font-bold text-corp-text-dark">{items.length}</div>
+                    <div className="text-xs text-corp-text-muted">Знайдено</div>
+                  </div>
+                  <div className="border-l border-corp-border pl-4 min-w-[70px]">
+                    <div className="text-xl font-bold text-emerald-600">{fmtUA(stats.available)}</div>
+                    <div className="text-xs text-corp-text-muted">Доступно</div>
+                  </div>
+                  <div className="border-l border-corp-border pl-4 min-w-[60px]">
+                    <div className="text-xl font-bold text-amber-600">{fmtUA(stats.in_rent)}</div>
+                    <div className="text-xs text-corp-text-muted">Видано</div>
+                  </div>
+                  <div className="border-l border-corp-border pl-4 min-w-[60px]">
+                    <div className="text-xl font-bold text-sky-600">{fmtUA(stats.reserved)}</div>
+                    <div className="text-xs text-corp-text-muted">Резерв</div>
+                  </div>
+                  <div className="border-l border-corp-border pl-4 min-w-[60px]">
+                    <div className="text-xl font-bold text-blue-500">{fmtUA(stats.on_wash)}</div>
+                    <div className="text-xs text-corp-text-muted">Мийка</div>
+                  </div>
+                  <div className="border-l border-corp-border pl-4 min-w-[70px]">
+                    <div className="text-xl font-bold text-purple-600">{fmtUA(stats.on_restoration)}</div>
+                    <div className="text-xs text-corp-text-muted">Реставрація</div>
+                  </div>
+                  <div className="border-l border-corp-border pl-4 min-w-[70px]">
+                    <div className="text-xl font-bold text-indigo-600">{fmtUA(stats.on_laundry)}</div>
+                    <div className="text-xs text-corp-text-muted">Хімчистка</div>
+                  </div>
+                  {conflictCount > 0 && (
+                    <div className="border-l border-corp-border pl-4">
+                      <div className="text-xl font-bold text-rose-600">{conflictCount}</div>
+                      <div className="text-xs text-corp-text-muted">Конфліктів</div>
+                    </div>
+                  )}
+                  {dateFilterActive && (
+                    <div className="ml-auto">
+                      <Badge variant="info">Фільтр по датах</Badge>
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : items.length === 0 ? (
-              <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
-                <div className="text-4xl mb-4">📦</div>
-                <div className="text-corp-text-muted mb-4">Товарів не знайдено</div>
-                <button onClick={resetAll} className="text-corp-primary hover:underline text-sm">
-                  Скинути всі фільтри
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {items.map(item => (
-                  <ProductCard
-                    key={item.product_id}
-                    item={item}
-                    onClick={() => setSelectedItem(item)}
-                    dateFilterActive={dateFilterActive}
-                  />
-                ))}
-              </div>
-            )}
-          </main>
-        </div>
+              
+              {/* Product grid */}
+              {loading ? (
+                <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
+                  <div className="text-corp-text-muted">Завантаження...</div>
+                </div>
+              ) : items.length === 0 ? (
+                <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
+                  <div className="text-4xl mb-4">📦</div>
+                  <div className="text-corp-text-muted mb-4">Товарів не знайдено</div>
+                  <button onClick={resetAll} className="text-corp-primary hover:underline text-sm">
+                    Скинути всі фільтри
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  {items.map(item => (
+                    <ProductCard
+                      key={item.product_id}
+                      item={item}
+                      onClick={() => setSelectedItem(item)}
+                      dateFilterActive={dateFilterActive}
+                    />
+                  ))}
+                </div>
+              )}
+            </main>
+          </div>
+        ) : (
+          <SetsTab products={allProducts} />
+        )}
       </div>
       
       {/* Detail Modal */}

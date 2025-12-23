@@ -192,6 +192,144 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         "options": options
     }
 
+
+def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> dict:
+    """
+    Збирає дані для Акту утримання із застави з реальними даними шкоди.
+    Підтягує product_damage_history для цього ордера.
+    """
+    
+    # Основні дані замовлення
+    result = db.execute(text("""
+        SELECT 
+            order_id, order_number, status, customer_name, customer_phone,
+            total_price, deposit_amount, rental_start_date, rental_end_date,
+            damage_fee, laundry_fee
+        FROM orders
+        WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    order_row = result.fetchone()
+    if not order_row:
+        raise ValueError(f"Order not found: {order_id}")
+    
+    order = {
+        "id": order_row[0],
+        "order_number": order_row[1] or f"OC-{order_row[0]}",
+        "status": order_row[2],
+        "customer_name": order_row[3] or "",
+        "customer_phone": order_row[4] or "",
+        "total_price": float(order_row[5] or 0),
+        "deposit_amount": float(order_row[6] or 0),
+        "rental_start_date": order_row[7].strftime("%d.%m.%Y") if order_row[7] else "",
+        "rental_end_date": order_row[8].strftime("%d.%m.%Y") if order_row[8] else "",
+        "damage_fee": float(order_row[9] or 0),
+        "laundry_fee": float(order_row[10] or 0),
+    }
+    
+    # Отримуємо дані про шкоду з product_damage_history
+    damage_result = db.execute(text("""
+        SELECT 
+            pdh.id, pdh.product_name, pdh.sku, pdh.damage_type, pdh.severity,
+            pdh.fee, pdh.note, pdh.processing_type, pdh.processing_status,
+            pdh.qty, pdh.fee_per_item,
+            DATE_FORMAT(pdh.created_at, '%d.%m.%Y') as damage_date
+        FROM product_damage_history pdh
+        WHERE pdh.order_id = :order_id
+        ORDER BY pdh.created_at DESC
+    """), {"order_id": order_id})
+    
+    damage_items = []
+    total_damage_fee = 0
+    total_laundry_fee = 0
+    
+    damage_type_names = {
+        "broken": "Зламано",
+        "scratched": "Подряпано", 
+        "stained": "Плями",
+        "chipped": "Відколото",
+        "cracked": "Тріщина",
+        "missing": "Відсутнє",
+        "dirty": "Забруднено",
+        "other": "Інше"
+    }
+    
+    severity_names = {
+        "low": "Незначна",
+        "medium": "Середня",
+        "high": "Значна",
+        "critical": "Критична"
+    }
+    
+    for row in damage_result:
+        fee = float(row[5] or 0)
+        qty = int(row[9] or 1)
+        fee_per_item = float(row[10] or 0) if row[10] else (fee / qty if qty else fee)
+        processing_type = row[7] or "none"
+        
+        if processing_type == "laundry":
+            total_laundry_fee += fee
+        else:
+            total_damage_fee += fee
+        
+        damage_items.append({
+            "id": row[0],
+            "product_name": row[1] or "",
+            "sku": row[2] or "",
+            "damage_type": damage_type_names.get(row[3], row[3] or ""),
+            "damage_type_code": row[3] or "",
+            "severity": severity_names.get(row[4], row[4] or ""),
+            "severity_code": row[4] or "",
+            "fee": fee,
+            "fee_per_item": fee_per_item,
+            "qty": qty,
+            "note": row[6] or "",
+            "processing_type": row[7] or "",
+            "processing_status": row[8] or "",
+            "damage_date": row[11] or ""
+        })
+    
+    # Розрахунки
+    deposit = order["deposit_amount"]
+    damage_amount = total_damage_fee
+    cleaning_fee = total_laundry_fee
+    
+    # Прострочення (якщо є в options)
+    late_days = options.get("late_days", 0)
+    late_fee = options.get("late_fee", 0)
+    
+    total_deduction = damage_amount + cleaning_fee + late_fee
+    refund_amount = max(0, deposit - total_deduction)
+    
+    company = {
+        "name": "FarforRent",
+        "legal_name": "ФОП Маркін Ілля Павлович",
+        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
+        "phone": "+380 XX XXX XX XX",
+        "email": "rfarfordecor@gmail.com.ua",
+    }
+    
+    return {
+        "order": order,
+        "damage_items": damage_items,
+        "totals": {
+            "deposit": deposit,
+            "damage_count": len(damage_items),
+        },
+        "deductions": {
+            "damage_amount": damage_amount,
+            "cleaning_fee": cleaning_fee,
+            "late_days": late_days,
+            "late_fee": late_fee,
+            "total_deduction": total_deduction,
+            "refund_amount": refund_amount,
+        },
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "options": options
+    }
+
+
 def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dict:
     """Збирає дані картки видачі для документа (RentalHub schema)"""
     

@@ -11,7 +11,7 @@ from datetime import datetime, date
 import csv
 import io
 
-from db import get_db, get_rh_db
+from database_rentalhub import get_rh_db
 
 router = APIRouter(prefix="/export", tags=["Export"])
 

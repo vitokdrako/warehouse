@@ -664,248 +664,70 @@ class TemplateAdminTester:
                 self.log(f"   - Preview functionality has issues")
         
         return all_working
-        """Run the comprehensive Expense Management API test following the specified flow"""
-        self.log("🚀 Starting comprehensive Expense Management API test")
-        self.log("=" * 70)
-        
-        # Step 1: Health check
-        if not self.test_api_health():
-            self.log("❌ API health check failed, aborting tests", "ERROR")
-            return False
-        
-        # Step 2: Authentication
-        self.log("\n🔍 Step 1: Testing authentication...")
-        if not self.authenticate():
-            self.log("❌ Authentication failed, aborting tests", "ERROR")
-            return False
-        
-        # Step 3: Test Templates CRUD
-        self.log("\n🔍 Step 2: Testing Templates CRUD...")
-        
-        # List templates (initial)
-        list_result_1 = self.test_list_templates()
-        list_success_1 = list_result_1.get("success", False)
-        initial_count = list_result_1.get("count", 0)
-        
-        # Create template
-        create_result = self.test_create_template()
-        create_success = create_result.get("success", False)
-        
-        # Update template
-        update_result = self.test_update_template()
-        update_success = update_result.get("success", False)
-        
-        # List templates (after create)
-        list_result_2 = self.test_list_templates()
-        list_success_2 = list_result_2.get("success", False)
-        after_create_count = list_result_2.get("count", 0)
-        
-        # Step 4: Test Due Items operations
-        self.log("\n🔍 Step 3: Testing Due Items operations...")
-        
-        # Generate due items from templates
-        generate_result = self.test_generate_due_items()
-        generate_success = generate_result.get("success", False)
-        
-        # List due items
-        list_due_result = self.test_list_due_items()
-        list_due_success = list_due_result.get("success", False)
-        
-        # Create manual due item
-        create_due_result = self.test_create_due_item()
-        create_due_success = create_due_result.get("success", False)
-        
-        # Pay due item
-        pay_result = self.test_pay_due_item()
-        pay_success = pay_result.get("success", False)
-        
-        # Cancel due item
-        cancel_result = self.test_cancel_due_item()
-        cancel_success = cancel_result.get("success", False)
-        
-        # Delete due item
-        delete_due_result = self.test_delete_due_item()
-        delete_due_success = delete_due_result.get("success", False)
-        
-        # Step 5: Test Expenses
-        self.log("\n🔍 Step 4: Testing Expenses...")
-        
-        # List expenses
-        expenses_result = self.test_list_expenses()
-        expenses_success = expenses_result.get("success", False)
-        
-        # Get summary
-        summary_result = self.test_get_summary()
-        summary_success = summary_result.get("success", False)
-        
-        # Step 6: Cleanup
-        self.log("\n🔍 Step 5: Cleanup...")
-        
-        # Delete test template
-        delete_result = self.test_delete_template()
-        delete_success = delete_result.get("success", False)
-        
-        # Step 7: Summary
-        self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE EXPENSE MANAGEMENT TEST SUMMARY:")
-        self.log(f"   • API Health: ✅ OK")
-        self.log(f"   • Authentication: ✅ Working")
-        
-        # Templates CRUD
-        self.log(f"\n   📋 TEMPLATES CRUD:")
-        if list_success_1:
-            self.log(f"   • List Templates (initial): ✅ Working ({initial_count} templates)")
-        else:
-            self.log(f"   • List Templates (initial): ❌ Failed")
-            
-        if create_success:
-            self.log(f"   • Create Template: ✅ Working (ID: {self.test_template_id})")
-        else:
-            self.log(f"   • Create Template: ❌ Failed")
-            
-        if update_success:
-            self.log(f"   • Update Template: ✅ Working")
-        else:
-            self.log(f"   • Update Template: ❌ Failed")
-            
-        if list_success_2:
-            self.log(f"   • List Templates (after create): ✅ Working ({after_create_count} templates)")
-        else:
-            self.log(f"   • List Templates (after create): ❌ Failed")
-            
-        if delete_success:
-            self.log(f"   • Delete Template: ✅ Working")
-        else:
-            self.log(f"   • Delete Template: ❌ Failed")
-        
-        # Due Items
-        self.log(f"\n   📅 DUE ITEMS:")
-        if generate_success:
-            generated_count = generate_result.get("created", 0)
-            self.log(f"   • Generate Due Items: ✅ Working ({generated_count} created for {TEST_MONTH})")
-        else:
-            self.log(f"   • Generate Due Items: ❌ Failed")
-            
-        if list_due_success:
-            due_count = list_due_result.get("count", 0)
-            self.log(f"   • List Due Items: ✅ Working ({due_count} items)")
-        else:
-            self.log(f"   • List Due Items: ❌ Failed")
-            
-        if create_due_success:
-            self.log(f"   • Create Due Item: ✅ Working (ID: {self.test_due_item_id})")
-        else:
-            self.log(f"   • Create Due Item: ❌ Failed")
-            
-        if pay_success:
-            expense_id = pay_result.get("expense_id")
-            self.log(f"   • Pay Due Item: ✅ Working (Created expense ID: {expense_id})")
-        else:
-            self.log(f"   • Pay Due Item: ❌ Failed")
-            
-        if cancel_success:
-            self.log(f"   • Cancel Due Item: ✅ Working")
-        else:
-            self.log(f"   • Cancel Due Item: ❌ Failed")
-            
-        if delete_due_success:
-            self.log(f"   • Delete Due Item: ✅ Working")
-        else:
-            self.log(f"   • Delete Due Item: ❌ Failed")
-        
-        # Expenses
-        self.log(f"\n   💰 EXPENSES:")
-        if expenses_success:
-            expense_count = expenses_result.get("count", 0)
-            self.log(f"   • List Expenses: ✅ Working ({expense_count} records)")
-        else:
-            self.log(f"   • List Expenses: ❌ Failed")
-            
-        if summary_success:
-            self.log(f"   • Get Summary: ✅ Working")
-        else:
-            self.log(f"   • Get Summary: ❌ Failed")
-        
-        self.log(f"\n🎉 EXPENSE MANAGEMENT TESTING COMPLETED!")
-        
-        # Check if critical functionality works
-        templates_working = all([list_success_1, create_success, update_success, delete_success])
-        due_items_working = all([generate_success, list_due_success, create_due_success, pay_success])
-        expenses_working = all([expenses_success, summary_success])
-        
-        all_working = templates_working and due_items_working and expenses_working
-        
-        if all_working:
-            self.log(f"\n✅ ALL EXPENSE MANAGEMENT COMPONENTS WORKING!")
-            self.log(f"   The expense management workflow is fully functional")
-        else:
-            self.log(f"\n⚠️ EXPENSE MANAGEMENT HAS PROBLEMS:")
-            if not templates_working:
-                self.log(f"   - Templates CRUD operations have issues")
-            if not due_items_working:
-                self.log(f"   - Due Items operations have issues")
-            if not expenses_working:
-                self.log(f"   - Expenses operations have issues")
-        
-        return all_working
-
 def main():
     """Main test execution"""
-    print("🧪 Backend Testing: Document Generation Functionality")
+    print("🧪 Backend Testing: Document Templates Admin Functionality")
     print("=" * 80)
-    print("Testing the Document Generation API endpoints across all order stages:")
-    print("   1. 📋 Get All Document Types:")
-    print("      - GET /api/documents/types (should return 18+ types)")
-    print("   2. 📄 Generate Documents:")
-    print("      - POST /api/documents/generate (picking_list, invoice_offer, contract_rent, issue_act, issue_checklist)")
-    print("   3. 📥 PDF Download:")
-    print("      - GET /api/documents/{document_id}/pdf")
-    print("   4. 📚 Document History:")
-    print("      - GET /api/documents/entity/issue/{entity_id}")
+    print("Testing the Document Templates Admin API endpoints:")
+    print("   1. 📋 List All Templates:")
+    print("      - GET /api/admin/templates (should return 18 templates)")
+    print("   2. 📄 Get Specific Template:")
+    print("      - GET /api/admin/templates/picking_list (verify name, versions, content, variables)")
+    print("   3. 🏗️ Get Base Template:")
+    print("      - GET /api/admin/templates/base/content (verify base HTML template)")
+    print("   4. ✏️ Update Template with Backup:")
+    print("      - PUT /api/admin/templates/picking_list (with create_backup: true)")
+    print("   5. 💾 List Backups:")
+    print("      - GET /api/admin/templates/picking_list/backups (show backup files)")
+    print("   6. 🔄 Restore from Backup:")
+    print("      - POST /api/admin/templates/picking_list/restore/{backup_filename}")
+    print("   7. 👁️ Preview Template:")
+    print("      - POST /api/admin/templates/picking_list/preview (render with sample data)")
     print(f"Backend API: {BASE_URL}")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
-    print("Expected: Successful document generation with HTML content and PDF download")
+    print("Expected: All templates have Ukrainian names, variables include order/issue_card vars")
     print("=" * 80)
     
-    tester = DocumentGenerationTester(BASE_URL)
+    tester = TemplateAdminTester(BASE_URL)
     
     try:
-        success = tester.run_comprehensive_document_generation_test()
+        success = tester.run_comprehensive_template_admin_test()
         
         if success:
-            print("\n✅ ALL DOCUMENT GENERATION FUNCTIONALITY VERIFIED SUCCESSFULLY")
-            print("📊 Summary: Document generation system working correctly")
+            print("\n✅ ALL TEMPLATE ADMIN FUNCTIONALITY VERIFIED SUCCESSFULLY")
+            print("📊 Summary: Template admin system working correctly")
             print("🎯 Expected behavior confirmed:")
-            print("   ✅ Document Types: 18+ document types available")
-            print("   ✅ Picking List: Generated with items content")
-            print("   ✅ Invoice Offer: Generated successfully")
-            print("   ✅ Contract: Generated successfully")
-            print("   ✅ Issue Act: Generated with items content")
-            print("   ✅ Issue Checklist: Generated successfully")
-            print("   ✅ PDF Download: Working with proper content-type")
-            print("   ✅ Document History: Lists all generated documents")
-            print("   - All documents have substantial HTML content")
-            print("   - PDF generation works correctly")
-            print("   - Document numbering system functional")
+            print("   ✅ Templates List: 18 templates with proper Ukrainian names")
+            print("   ✅ Specific Template: picking_list with name, versions, content, variables")
+            print("   ✅ Base Template: Base HTML template content available")
+            print("   ✅ Update Template: Template updated with backup creation")
+            print("   ✅ List Backups: Backup files shown with timestamps")
+            print("   ✅ Restore Backup: Template restored from backup file")
+            print("   ✅ Preview Template: Rendered HTML with sample data")
+            print("   - All templates have proper Ukrainian names")
+            print("   - Variables list includes order/issue_card specific vars")
+            print("   - Backup/restore functionality works correctly")
+            print("   - Preview generates valid HTML with test data")
             print("   - Authentication works with provided credentials")
             print("   - All backend APIs respond correctly")
             sys.exit(0)
         else:
-            print("\n❌ DOCUMENT GENERATION HAS PROBLEMS")
-            print("📊 Summary: Issues found in the document generation functionality")
+            print("\n❌ TEMPLATE ADMIN HAS PROBLEMS")
+            print("📊 Summary: Issues found in the template admin functionality")
             print("🔍 Key findings:")
-            print("   - Some document generation endpoints may not be working correctly")
-            print("   - Document types count may be below 18+ requirement")
-            print("   - HTML content may be empty or insufficient")
-            print("   - PDF download may not be working")
-            print("   - Document history may not be accessible")
+            print("   - Some template admin endpoints may not be working correctly")
+            print("   - Templates count may be below 18 requirement")
+            print("   - Template names may not be in Ukrainian")
+            print("   - Variables may not include order/issue_card specific vars")
+            print("   - Backup/restore functionality may not be working")
+            print("   - Preview may not generate valid HTML with sample data")
             print("🔧 Recommended investigation:")
-            print("   1. Check document templates and data builders")
-            print("   2. Verify entity IDs exist in database")
-            print("   3. Check document generation logic in documents.py")
-            print("   4. Verify PDF rendering functionality")
-            print("   5. Check database permissions and connections")
-            print("   6. Verify document registry configuration")
+            print("   1. Check template registry and available templates")
+            print("   2. Verify template files exist in templates directory")
+            print("   3. Check template_admin.py route implementation")
+            print("   4. Verify backup directory permissions and functionality")
+            print("   5. Check template rendering and preview functionality")
+            print("   6. Verify database connections and template metadata")
             sys.exit(1)
             
     except KeyboardInterrupt:

@@ -385,6 +385,7 @@ class ExpenseManagementTester:
             # First create a due item to delete
             due_item_data = {
                 "name": "Тестовий платіж для видалення",
+                "category_id": 1,  # Add category_id
                 "amount": 50.0,
                 "due_date": "2025-02-25",
                 "funding_source": "general"

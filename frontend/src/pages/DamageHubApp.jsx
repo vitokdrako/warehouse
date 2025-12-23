@@ -692,8 +692,14 @@ export default function DamageHubApp() {
           <div className="grid lg:grid-cols-5 gap-4">
             {/* Left - Order List */}
             <div className="lg:col-span-2 space-y-3">
-              <div className="text-sm font-semibold text-corp-text-main px-1">
-                Ордери з пошкодженнями ({filteredCases.length})
+              <div className="flex items-center justify-between px-1">
+                <div className="text-sm font-semibold text-corp-text-main">
+                  Ордери з пошкодженнями ({filteredCases.length})
+                </div>
+                <GhostBtn onClick={() => {
+                  const token = localStorage.getItem("token");
+                  window.open(`${BACKEND_URL}/api/export/damage-cases?token=${token}`, '_blank');
+                }} className="text-xs py-1">📥 CSV</GhostBtn>
               </div>
               <div className="max-h-[70vh] overflow-y-auto space-y-2 pr-1">
                 {loading ? (

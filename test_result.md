@@ -1403,4 +1403,20 @@ Based on review request requirements, all functionality confirmed working:
 - **Agent:** testing
 - **Message:** No critical issues found during comprehensive Document Templates Admin testing. All specified test cases from review request completed successfully. Template admin system is fully functional and ready for user acceptance testing.
 
+#### Latest Test Results (December 23, 2025) - Document Generation Company Name Update
+- **Agent:** testing
+- **Message:** Document generation company name update testing completed successfully. All backend APIs working perfectly as per review request specifications. Company legal name successfully updated from "ФОП Маркін Ілля Павлович" to "ФОП Арсалані Олександра Ігорівна" in generated documents.
+
+#### Test Summary for Main Agent - Company Name Update
+- **Agent:** testing  
+- **Message:** ✅ DOCUMENT GENERATION COMPANY NAME UPDATE VERIFIED - Login successful (vitokdrako@gmail.com), Orders retrieved (10 orders), invoice_offer document generated successfully (DOC-INV2025000035-V13), Company name verification PASSED (contains correct name "ФОП Арсалані Олександра Ігорівна", does NOT contain old name "ФОП Маркін Ілля Павлович"), HTML content substantial (13,145 characters). File /app/backend/services/doc_engine/data_builders.py updated correctly. No critical issues found. Ready for production use.
+
+#### Backend API Status - Document Generation
+- **Agent:** testing
+- **Message:** All document generation API endpoints tested and working: GET /api/orders (orders listing), POST /api/documents/generate (document generation with updated company name). Authentication, order retrieval, and document generation with correct company name all verified. File change in data_builders.py working correctly.
+
+#### No Issues Requiring Main Agent Action - Company Name Update
+- **Agent:** testing
+- **Message:** No critical issues found during document generation company name update testing. All specified test cases from review request completed successfully. Company name update is fully functional and documents now contain the correct legal name "ФОП Арсалані Олександра Ігорівна" instead of the old incorrect name.
+
 ---

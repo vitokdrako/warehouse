@@ -341,6 +341,7 @@ class ExpenseManagementTester:
             # First create a due item to cancel
             due_item_data = {
                 "name": "Тестовий платіж для скасування",
+                "category_id": 1,  # Add category_id
                 "amount": 100.0,
                 "due_date": "2025-02-20",
                 "funding_source": "general"

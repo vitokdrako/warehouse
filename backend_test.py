@@ -31,7 +31,269 @@ TEST_CREDENTIALS = {
 }
 TEST_MONTH = "2025-02"  # Month for generating due items
 
-class CSVExportTester:
+class DocumentGenerationTester:
+    def __init__(self, base_url: str):
+        self.base_url = base_url
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        })
+        self.auth_token = None
+        self.generated_documents = []  # Store generated document IDs for cleanup
+        
+    def log(self, message: str, level: str = "INFO"):
+        """Log test messages with timestamp"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"[{timestamp}] {level}: {message}")
+        
+    def test_api_health(self) -> bool:
+        """Test if API is accessible"""
+        try:
+            response = self.session.get(f"{self.base_url}/health")
+            if response.status_code == 200:
+                self.log("✅ API Health Check: OK")
+                return True
+            else:
+                self.log(f"❌ API Health Check Failed: {response.status_code}", "ERROR")
+                return False
+        except Exception as e:
+            self.log(f"❌ API Health Check Exception: {str(e)}", "ERROR")
+            return False
+    
+    def authenticate(self) -> bool:
+        """Authenticate with the API"""
+        try:
+            self.log("🔐 Authenticating with provided credentials...")
+            
+            response = self.session.post(
+                f"{self.base_url}/auth/login",
+                json=TEST_CREDENTIALS
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.auth_token = data.get('access_token')
+                if self.auth_token:
+                    self.session.headers.update({
+                        'Authorization': f'Bearer {self.auth_token}'
+                    })
+                    self.log("✅ Authentication successful")
+                    return True
+                else:
+                    self.log("❌ No access token in response", "ERROR")
+                    return False
+            else:
+                self.log(f"❌ Authentication failed: {response.status_code} - {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
+            return False
+
+    # ============================================
+    # DOCUMENT GENERATION TESTS
+    # ============================================
+    
+    def test_get_document_types(self) -> Dict[str, Any]:
+        """Test GET /api/documents/types - Should return 18+ document types"""
+        try:
+            self.log("🧪 Testing get document types endpoint...")
+            
+            response = self.session.get(f"{self.base_url}/documents/types")
+            
+            if response.status_code == 200:
+                data = response.json()
+                doc_types_count = len(data)
+                
+                self.log(f"✅ Retrieved {doc_types_count} document types")
+                
+                # Check if we have 18+ document types as expected
+                if doc_types_count >= 18:
+                    self.log(f"✅ Document types count meets requirement (18+): {doc_types_count}")
+                else:
+                    self.log(f"⚠️ Document types count below expected (18+): {doc_types_count}", "WARNING")
+                
+                # Log some document types for verification
+                if data:
+                    self.log("📋 Available document types:")
+                    for doc_type in data[:5]:  # Show first 5
+                        doc_key = doc_type.get('doc_type', 'unknown')
+                        doc_name = doc_type.get('name', 'No name')
+                        self.log(f"   - {doc_key}: {doc_name}")
+                    if len(data) > 5:
+                        self.log(f"   ... and {len(data) - 5} more")
+                
+                return {
+                    "success": True, 
+                    "data": data, 
+                    "count": doc_types_count,
+                    "meets_requirement": doc_types_count >= 18
+                }
+            else:
+                self.log(f"❌ Get document types failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing get document types: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_generate_document(self, doc_type: str, entity_id: str, expected_content_check: str = None) -> Dict[str, Any]:
+        """Test POST /api/documents/generate for specific document type"""
+        try:
+            self.log(f"🧪 Testing generate document: {doc_type} for entity {entity_id}...")
+            
+            request_data = {
+                "doc_type": doc_type,
+                "entity_id": entity_id,
+                "format": "html"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/documents/generate",
+                json=request_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                # Check required response fields
+                required_fields = ['success', 'document_id', 'doc_number', 'html_content']
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if missing_fields:
+                    self.log(f"⚠️ Missing response fields: {missing_fields}", "WARNING")
+                
+                success = data.get('success', False)
+                document_id = data.get('document_id')
+                doc_number = data.get('doc_number')
+                html_content = data.get('html_content', '')
+                
+                if success and document_id:
+                    self.log(f"✅ Document generated successfully")
+                    self.log(f"   📄 Document ID: {document_id}")
+                    self.log(f"   🔢 Document Number: {doc_number}")
+                    self.log(f"   📝 HTML Content Length: {len(html_content)} characters")
+                    
+                    # Store document ID for later tests and cleanup
+                    self.generated_documents.append(document_id)
+                    
+                    # Check if HTML content is not empty
+                    if html_content and len(html_content) > 100:
+                        self.log(f"✅ HTML content appears to be substantial")
+                        
+                        # Check for expected content if specified
+                        if expected_content_check:
+                            if expected_content_check.lower() in html_content.lower():
+                                self.log(f"✅ Expected content found: {expected_content_check}")
+                            else:
+                                self.log(f"⚠️ Expected content not found: {expected_content_check}", "WARNING")
+                    else:
+                        self.log(f"⚠️ HTML content appears to be empty or too short", "WARNING")
+                    
+                    return {
+                        "success": True,
+                        "data": data,
+                        "document_id": document_id,
+                        "doc_number": doc_number,
+                        "html_length": len(html_content),
+                        "has_content": len(html_content) > 100
+                    }
+                else:
+                    self.log(f"❌ Document generation failed: success={success}, document_id={document_id}", "ERROR")
+                    return {"success": False, "error": "Generation failed", "data": data}
+            else:
+                self.log(f"❌ Generate document failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing generate document: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_pdf_download(self, document_id: str) -> Dict[str, Any]:
+        """Test GET /api/documents/{document_id}/pdf"""
+        try:
+            self.log(f"🧪 Testing PDF download for document {document_id}...")
+            
+            response = self.session.get(f"{self.base_url}/documents/{document_id}/pdf")
+            
+            if response.status_code == 200:
+                content_type = response.headers.get('content-type', '')
+                content_length = len(response.content)
+                
+                if 'application/pdf' in content_type:
+                    self.log(f"✅ PDF download successful")
+                    self.log(f"   📄 Content-Type: {content_type}")
+                    self.log(f"   📊 Content Length: {content_length} bytes")
+                    
+                    # Check if PDF content is substantial
+                    if content_length > 1000:  # PDFs should be at least 1KB
+                        self.log(f"✅ PDF content appears to be substantial")
+                        return {
+                            "success": True,
+                            "content_type": content_type,
+                            "content_length": content_length,
+                            "is_substantial": True
+                        }
+                    else:
+                        self.log(f"⚠️ PDF content appears to be too small", "WARNING")
+                        return {
+                            "success": True,
+                            "content_type": content_type,
+                            "content_length": content_length,
+                            "is_substantial": False
+                        }
+                else:
+                    self.log(f"⚠️ Unexpected content type: {content_type}", "WARNING")
+                    return {"success": False, "error": f"Wrong content type: {content_type}"}
+            else:
+                self.log(f"❌ PDF download failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing PDF download: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_document_history(self, entity_type: str, entity_id: str) -> Dict[str, Any]:
+        """Test GET /api/documents/entity/{entity_type}/{entity_id}"""
+        try:
+            self.log(f"🧪 Testing document history for {entity_type}/{entity_id}...")
+            
+            response = self.session.get(f"{self.base_url}/documents/entity/{entity_type}/{entity_id}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                documents = data.get('documents', [])
+                available_types = data.get('available_types', [])
+                
+                self.log(f"✅ Document history retrieved successfully")
+                self.log(f"   📄 Documents found: {len(documents)}")
+                self.log(f"   📋 Available types: {len(available_types)}")
+                
+                # Log document details
+                if documents:
+                    self.log("📋 Generated documents:")
+                    for doc in documents[:3]:  # Show first 3
+                        doc_type = doc.get('doc_type', 'unknown')
+                        doc_number = doc.get('doc_number', 'no number')
+                        status = doc.get('status', 'unknown')
+                        self.log(f"   - {doc_type}: {doc_number} ({status})")
+                    if len(documents) > 3:
+                        self.log(f"   ... and {len(documents) - 3} more")
+                
+                return {
+                    "success": True,
+                    "data": data,
+                    "documents_count": len(documents),
+                    "available_types_count": len(available_types)
+                }
+            else:
+                self.log(f"❌ Document history failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing document history: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

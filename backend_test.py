@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Document Generation Functionality
-Testing the Document Generation endpoints across all order stages:
-1. Get all document types - GET /api/documents/types (should return 18+ types)
-2. Generate Picking List - POST /api/documents/generate
-3. Generate Invoice Offer - POST /api/documents/generate
-4. Generate Contract - POST /api/documents/generate
-5. Generate Issue Act - POST /api/documents/generate
-6. Generate Issue Checklist - POST /api/documents/generate
-7. Test PDF download - GET /api/documents/{document_id}/pdf
-8. Test document history - GET /api/documents/entity/issue/{entity_id}
+Backend Testing Script for Document Templates Admin Functionality
+Testing the Document Templates Admin endpoints:
+1. List all templates - GET /api/admin/templates (should return 18 templates)
+2. Get specific template - GET /api/admin/templates/picking_list
+3. Get base template - GET /api/admin/templates/base/content
+4. Update template with backup - PUT /api/admin/templates/picking_list
+5. List backups - GET /api/admin/templates/picking_list/backups
+6. Restore from backup - POST /api/admin/templates/picking_list/restore/{backup_filename}
+7. Preview template - POST /api/admin/templates/picking_list/preview
 
-Each document should generate successfully with proper HTML content and PDF download capability.
+Each endpoint should work correctly with proper Ukrainian names and validation.
 """
 
 import requests

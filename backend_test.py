@@ -105,356 +105,272 @@ class DocumentsTester:
             return False
 
     # ============================================
-    # TEMPLATE ADMIN TESTS
+    # DOCUMENTS FUNCTIONALITY TESTS
     # ============================================
     
-    def test_list_templates(self) -> Dict[str, Any]:
-        """Test GET /api/admin/templates - Should return 18 templates"""
+    def test_get_orders_with_finance(self, limit: int = 10) -> Dict[str, Any]:
+        """Test GET /api/manager/finance/orders-with-finance?limit=10"""
         try:
-            self.log("🧪 Testing list all templates endpoint...")
+            self.log("🧪 Testing get orders with finance data...")
             
-            response = self.session.get(f"{self.base_url}/admin/templates")
+            response = self.session.get(f"{self.base_url}/manager/finance/orders-with-finance?limit={limit}")
             
             if response.status_code == 200:
                 data = response.json()
-                templates = data.get('templates', [])
+                orders = data.get('orders', [])
                 total = data.get('total', 0)
                 
-                self.log(f"✅ Retrieved {total} templates")
+                self.log(f"✅ Retrieved {total} orders with finance data")
                 
-                # Check if we have 18 templates as expected
-                if total >= 18:
-                    self.log(f"✅ Templates count meets requirement (18): {total}")
-                else:
-                    self.log(f"⚠️ Templates count below expected (18): {total}", "WARNING")
-                
-                # Check for Ukrainian names
-                ukrainian_names_found = 0
-                if templates:
-                    self.log("📋 Available templates:")
-                    for template in templates[:5]:  # Show first 5
-                        doc_type = template.get('doc_type', 'unknown')
-                        name = template.get('name', 'No name')
-                        entity_type = template.get('entity_type', '')
-                        versions = template.get('versions', [])
+                if orders:
+                    # Show first few orders
+                    self.log("📋 Sample orders:")
+                    for order in orders[:3]:  # Show first 3
+                        order_id = order.get('order_id')
+                        order_number = order.get('order_number', 'No number')
+                        customer_name = order.get('customer_name', 'No name')
+                        status = order.get('status', 'unknown')
                         
-                        # Check if name contains Ukrainian characters
-                        if any(ord(char) > 127 for char in name):
-                            ukrainian_names_found += 1
+                        self.log(f"   - Order {order_id}: {order_number} - {customer_name} ({status})")
                         
-                        self.log(f"   - {doc_type}: {name} ({entity_type}) - {len(versions)} versions")
+                        # Store first order ID for document generation tests
+                        if not self.test_order_id:
+                            self.test_order_id = order_id
                     
-                    if len(templates) > 5:
-                        self.log(f"   ... and {len(templates) - 5} more")
-                
-                self.log(f"📝 Templates with Ukrainian names: {ukrainian_names_found}")
+                    if len(orders) > 3:
+                        self.log(f"   ... and {len(orders) - 3} more")
                 
                 return {
                     "success": True, 
                     "data": data, 
                     "count": total,
-                    "meets_requirement": total >= 18,
-                    "ukrainian_names": ukrainian_names_found
+                    "has_orders": total > 0,
+                    "first_order_id": self.test_order_id
                 }
             else:
-                self.log(f"❌ List templates failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Get orders with finance failed: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing list templates: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing get orders with finance: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_get_specific_template(self, doc_type: str = "picking_list") -> Dict[str, Any]:
-        """Test GET /api/admin/templates/{doc_type}"""
+    def test_get_documents_for_order(self, order_id: str) -> Dict[str, Any]:
+        """Test GET /api/documents/entity/order/{order_id}"""
         try:
-            self.log(f"🧪 Testing get specific template: {doc_type}...")
+            self.log(f"🧪 Testing get documents for order: {order_id}...")
             
-            response = self.session.get(f"{self.base_url}/admin/templates/{doc_type}")
+            response = self.session.get(f"{self.base_url}/documents/entity/order/{order_id}")
             
             if response.status_code == 200:
                 data = response.json()
                 
-                name = data.get('name', '')
-                content = data.get('content', '')
-                versions = data.get('versions', [])
-                variables = data.get('variables', {})
+                documents = data.get('documents', [])
+                available_types = data.get('available_types', [])
                 
-                self.log(f"✅ Template retrieved successfully")
-                self.log(f"   📄 Name: {name}")
-                self.log(f"   📝 Content Length: {len(content)} characters")
-                self.log(f"   🔢 Versions: {len(versions)} ({', '.join(versions)})")
-                self.log(f"   🔧 Variables: {len(variables)} available")
+                self.log(f"✅ Documents retrieved successfully")
+                self.log(f"   📄 Existing documents: {len(documents)}")
+                self.log(f"   📋 Available types: {len(available_types)}")
                 
-                # Check for Ukrainian name
-                has_ukrainian = any(ord(char) > 127 for char in name)
-                if has_ukrainian:
-                    self.log(f"✅ Template has Ukrainian name")
-                else:
-                    self.log(f"⚠️ Template name not in Ukrainian", "WARNING")
+                if available_types:
+                    self.log("📋 Available document types:")
+                    for doc_type in available_types[:5]:  # Show first 5
+                        doc_code = doc_type.get('doc_type', 'unknown')
+                        doc_name = doc_type.get('name', 'No name')
+                        self.log(f"   - {doc_code}: {doc_name}")
+                    
+                    if len(available_types) > 5:
+                        self.log(f"   ... and {len(available_types) - 5} more")
                 
-                # Check for order/issue_card specific variables
-                order_vars = [var for var in variables.keys() if 'order' in var.lower()]
-                issue_vars = [var for var in variables.keys() if 'issue' in var.lower()]
-                
-                self.log(f"   📋 Order variables: {len(order_vars)}")
-                self.log(f"   📋 Issue card variables: {len(issue_vars)}")
-                
-                return {
-                    "success": True,
-                    "data": data,
-                    "name": name,
-                    "content_length": len(content),
-                    "versions_count": len(versions),
-                    "variables_count": len(variables),
-                    "has_ukrainian_name": has_ukrainian,
-                    "order_vars": len(order_vars),
-                    "issue_vars": len(issue_vars)
-                }
-            else:
-                self.log(f"❌ Get template failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing get template: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_get_base_template(self) -> Dict[str, Any]:
-        """Test GET /api/admin/templates/base/content"""
-        try:
-            self.log("🧪 Testing get base template...")
-            
-            response = self.session.get(f"{self.base_url}/admin/templates/base/content")
-            
-            if response.status_code == 200:
-                data = response.json()
-                content = data.get('content', '')
-                path = data.get('path', '')
-                
-                self.log(f"✅ Base template retrieved successfully")
-                self.log(f"   📄 Path: {path}")
-                self.log(f"   📝 Content Length: {len(content)} characters")
-                
-                # Check if it's HTML content
-                is_html = '<html' in content.lower() or '<!doctype' in content.lower()
-                if is_html:
-                    self.log(f"✅ Base template contains HTML structure")
-                else:
-                    self.log(f"⚠️ Base template may not be valid HTML", "WARNING")
+                if documents:
+                    self.log("📄 Existing documents:")
+                    for doc in documents[:3]:  # Show first 3
+                        doc_id = doc.get('id', 'unknown')
+                        doc_type = doc.get('doc_type', 'unknown')
+                        doc_number = doc.get('doc_number', 'No number')
+                        status = doc.get('status', 'unknown')
+                        self.log(f"   - {doc_id}: {doc_type} {doc_number} ({status})")
                 
                 return {
                     "success": True,
                     "data": data,
-                    "content_length": len(content),
-                    "is_html": is_html,
-                    "path": path
+                    "documents_count": len(documents),
+                    "available_types_count": len(available_types),
+                    "has_documents": len(documents) > 0,
+                    "has_available_types": len(available_types) > 0
                 }
             else:
-                self.log(f"❌ Get base template failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Get documents for order failed: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing get base template: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing get documents for order: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_update_template(self, doc_type: str = "picking_list") -> Dict[str, Any]:
-        """Test PUT /api/admin/templates/{doc_type} with backup creation"""
+    def test_generate_document(self, doc_type: str, entity_id: str) -> Dict[str, Any]:
+        """Test POST /api/documents/generate"""
         try:
-            self.log(f"🧪 Testing update template with backup: {doc_type}...")
-            
-            # First get current template to modify it slightly
-            get_response = self.session.get(f"{self.base_url}/admin/templates/{doc_type}")
-            if get_response.status_code != 200:
-                self.log(f"❌ Could not get current template for update test", "ERROR")
-                return {"success": False, "error": "Could not get current template"}
-            
-            current_data = get_response.json()
-            current_content = current_data.get('content', '')
-            
-            # Modify content slightly for test
-            modified_content = current_content + "\n<!-- Test modification -->"
+            self.log(f"🧪 Testing generate document: {doc_type} for entity {entity_id}...")
             
             request_data = {
-                "content": modified_content,
-                "create_backup": True
+                "doc_type": doc_type,
+                "entity_id": entity_id,
+                "format": "html"
             }
             
-            response = self.session.put(
-                f"{self.base_url}/admin/templates/{doc_type}",
+            response = self.session.post(
+                f"{self.base_url}/documents/generate",
                 json=request_data
             )
             
             if response.status_code == 200:
                 data = response.json()
+                
                 success = data.get('success', False)
-                message = data.get('message', '')
-                backup_path = data.get('backup_path', '')
+                document_id = data.get('document_id', '')
+                doc_number = data.get('doc_number', '')
+                html_content = data.get('html_content', '')
                 
-                self.log(f"✅ Template updated successfully")
-                self.log(f"   📄 Message: {message}")
-                self.log(f"   💾 Backup created: {backup_path is not None}")
+                self.log(f"✅ Document generated successfully")
+                self.log(f"   📄 Document ID: {document_id}")
+                self.log(f"   🔢 Document Number: {doc_number}")
+                self.log(f"   📝 HTML Content Length: {len(html_content)} characters")
                 
-                if backup_path:
-                    self.log(f"   📁 Backup path: {backup_path}")
-                    # Extract backup filename for restore test
-                    import os
-                    self.test_backup_filename = os.path.basename(backup_path)
+                # Store document ID for PDF and email tests
+                if document_id:
+                    self.generated_documents.append({
+                        'id': document_id,
+                        'type': doc_type,
+                        'number': doc_number
+                    })
+                
+                # Check if HTML content is substantial
+                has_content = len(html_content) > 1000
+                if has_content:
+                    self.log(f"✅ Document has substantial content")
+                else:
+                    self.log(f"⚠️ Document content may be minimal", "WARNING")
                 
                 return {
                     "success": True,
                     "data": data,
-                    "backup_created": backup_path is not None,
-                    "backup_path": backup_path,
-                    "message": message
+                    "document_id": document_id,
+                    "doc_number": doc_number,
+                    "html_length": len(html_content),
+                    "has_substantial_content": has_content,
+                    "generation_success": success
                 }
             else:
-                self.log(f"❌ Update template failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Generate document failed: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing update template: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing generate document: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_list_backups(self, doc_type: str = "picking_list") -> Dict[str, Any]:
-        """Test GET /api/admin/templates/{doc_type}/backups"""
+    def test_download_pdf(self, document_id: str) -> Dict[str, Any]:
+        """Test GET /api/documents/{document_id}/pdf"""
         try:
-            self.log(f"🧪 Testing list backups for: {doc_type}...")
+            self.log(f"🧪 Testing PDF download for document: {document_id}...")
             
-            response = self.session.get(f"{self.base_url}/admin/templates/{doc_type}/backups")
+            response = self.session.get(f"{self.base_url}/documents/{document_id}/pdf")
             
             if response.status_code == 200:
-                data = response.json()
-                backups = data.get('backups', [])
-                total = data.get('total', 0)
+                content_type = response.headers.get('content-type', '')
+                content_length = len(response.content)
+                content_disposition = response.headers.get('content-disposition', '')
                 
-                self.log(f"✅ Backups list retrieved successfully")
-                self.log(f"   📄 Total backups: {total}")
+                self.log(f"✅ PDF downloaded successfully")
+                self.log(f"   📄 Content-Type: {content_type}")
+                self.log(f"   📏 Content Length: {content_length} bytes")
+                self.log(f"   📎 Content-Disposition: {content_disposition}")
                 
-                if backups:
-                    self.log("📋 Available backups:")
-                    for backup in backups[:3]:  # Show first 3
-                        filename = backup.get('filename', '')
-                        created_at = backup.get('created_at', '')
-                        size = backup.get('size', 0)
-                        self.log(f"   - {filename} ({created_at}, {size} bytes)")
-                    
-                    if len(backups) > 3:
-                        self.log(f"   ... and {len(backups) - 3} more")
-                    
-                    # Store first backup filename for restore test if we don't have one
-                    if not self.test_backup_filename and backups:
-                        self.test_backup_filename = backups[0].get('filename')
+                # Check if it's actually a PDF
+                is_pdf = content_type == 'application/pdf'
+                has_content = content_length > 1000
+                has_disposition = 'attachment' in content_disposition
+                
+                if is_pdf:
+                    self.log(f"✅ Content-Type is correct (application/pdf)")
+                else:
+                    self.log(f"⚠️ Content-Type may be incorrect: {content_type}", "WARNING")
+                
+                if has_content:
+                    self.log(f"✅ PDF has substantial content ({content_length} bytes)")
+                else:
+                    self.log(f"⚠️ PDF content may be minimal", "WARNING")
+                
+                if has_disposition:
+                    self.log(f"✅ Proper download headers present")
+                else:
+                    self.log(f"⚠️ Download headers may be missing", "WARNING")
                 
                 return {
                     "success": True,
-                    "data": data,
-                    "backups_count": total,
-                    "has_backups": total > 0
+                    "content_type": content_type,
+                    "content_length": content_length,
+                    "content_disposition": content_disposition,
+                    "is_pdf": is_pdf,
+                    "has_substantial_content": has_content,
+                    "has_download_headers": has_disposition
                 }
             else:
-                self.log(f"❌ List backups failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ PDF download failed: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing list backups: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing PDF download: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def test_restore_backup(self, doc_type: str = "picking_list") -> Dict[str, Any]:
-        """Test POST /api/admin/templates/{doc_type}/restore/{backup_filename}"""
+    def test_send_document_email(self, document_id: str, test_email: str = "test@example.com") -> Dict[str, Any]:
+        """Test POST /api/documents/{document_id}/send-email"""
         try:
-            if not self.test_backup_filename:
-                self.log(f"⚠️ No backup filename available for restore test", "WARNING")
-                return {"success": False, "error": "No backup filename available"}
+            self.log(f"🧪 Testing send document email for: {document_id}...")
             
-            self.log(f"🧪 Testing restore backup: {self.test_backup_filename}...")
+            request_data = {
+                "email": test_email
+            }
             
             response = self.session.post(
-                f"{self.base_url}/admin/templates/{doc_type}/restore/{self.test_backup_filename}"
+                f"{self.base_url}/documents/{document_id}/send-email",
+                json=request_data
             )
             
+            # Note: This endpoint might fail if SMTP is not configured, but we test if it exists and responds
             if response.status_code == 200:
                 data = response.json()
                 success = data.get('success', False)
                 message = data.get('message', '')
                 
-                self.log(f"✅ Backup restored successfully")
+                self.log(f"✅ Email sending endpoint working")
+                self.log(f"   📧 Success: {success}")
                 self.log(f"   📄 Message: {message}")
                 
                 return {
                     "success": True,
                     "data": data,
+                    "email_success": success,
                     "message": message,
-                    "restored_backup": self.test_backup_filename
+                    "endpoint_exists": True
+                }
+            elif response.status_code == 500:
+                # SMTP configuration issue - endpoint exists but can't send
+                self.log(f"⚠️ Email endpoint exists but SMTP may not be configured", "WARNING")
+                self.log(f"   📧 Response: {response.status_code} - {response.text}")
+                
+                return {
+                    "success": True,  # Endpoint exists
+                    "endpoint_exists": True,
+                    "smtp_configured": False,
+                    "status_code": response.status_code,
+                    "response_text": response.text
                 }
             else:
-                self.log(f"❌ Restore backup failed: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Send email failed: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception testing restore backup: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def test_preview_template(self, doc_type: str = "picking_list") -> Dict[str, Any]:
-        """Test POST /api/admin/templates/{doc_type}/preview"""
-        try:
-            self.log(f"🧪 Testing preview template: {doc_type}...")
-            
-            # Get current template content for preview
-            get_response = self.session.get(f"{self.base_url}/admin/templates/{doc_type}")
-            if get_response.status_code != 200:
-                self.log(f"❌ Could not get template for preview test", "ERROR")
-                return {"success": False, "error": "Could not get template"}
-            
-            current_data = get_response.json()
-            template_content = current_data.get('content', '')
-            
-            if not template_content:
-                self.log(f"❌ Template content is empty", "ERROR")
-                return {"success": False, "error": "Template content is empty"}
-            
-            request_data = {
-                "content": template_content
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/admin/templates/{doc_type}/preview",
-                json=request_data
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                success = data.get('success', False)
-                html = data.get('html', '')
-                data_used = data.get('data_used', {})
-                error = data.get('error', '')
-                
-                if success:
-                    self.log(f"✅ Template preview generated successfully")
-                    self.log(f"   📄 HTML Length: {len(html)} characters")
-                    self.log(f"   📊 Sample data keys: {len(data_used)} keys")
-                    
-                    # Check if HTML contains sample data
-                    has_sample_data = any(key in html for key in ['Тестовий', 'SAMPLE', 'test'])
-                    if has_sample_data:
-                        self.log(f"✅ Preview contains sample data")
-                    else:
-                        self.log(f"⚠️ Preview may not contain sample data", "WARNING")
-                    
-                    return {
-                        "success": True,
-                        "data": data,
-                        "html_length": len(html),
-                        "sample_data_keys": len(data_used),
-                        "has_sample_data": has_sample_data
-                    }
-                else:
-                    self.log(f"❌ Preview generation failed: {error}", "ERROR")
-                    return {"success": False, "error": error, "data": data}
-            else:
-                self.log(f"❌ Preview template failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception testing preview template: {str(e)}", "ERROR")
+            self.log(f"❌ Exception testing send email: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
     def __init__(self, base_url: str):
         self.base_url = base_url

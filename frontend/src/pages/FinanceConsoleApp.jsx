@@ -714,9 +714,19 @@ const LedgerTab = ({ ledger, reload, loading }) => {
     });
   }, [ledger, filter]);
 
+  const exportLedger = () => {
+    const token = localStorage.getItem("token");
+    window.open(`${BACKEND_URL}/api/export/ledger?token=${token}`, '_blank');
+  };
+
   return (
     <div className="space-y-4">
-      <Card title="Облік (Ledger)" subtitle="Головна книга" right={<GhostBtn onClick={reload}>Оновити</GhostBtn>}>
+      <Card title="Облік (Ledger)" subtitle="Головна книга" right={
+        <div className="flex gap-2">
+          <GhostBtn onClick={exportLedger}>📥 Експорт CSV</GhostBtn>
+          <GhostBtn onClick={reload}>Оновити</GhostBtn>
+        </div>
+      }>
         <div className="grid gap-3 md:grid-cols-2">
           <input
             className="h-10 rounded-xl border border-corp-border px-3 text-sm outline-none focus:ring-2 focus:ring-corp-primary/20"

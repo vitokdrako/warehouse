@@ -500,9 +500,9 @@ class TemplateAdminTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
 
-    def run_comprehensive_document_generation_test(self):
-        """Run comprehensive Document Generation API test following the review request specifications"""
-        self.log("🚀 Starting comprehensive Document Generation API test")
+    def run_comprehensive_template_admin_test(self):
+        """Run comprehensive Template Admin API test following the review request specifications"""
+        self.log("🚀 Starting comprehensive Template Admin API test")
         self.log("=" * 70)
         
         # Step 1: Health check
@@ -516,181 +516,152 @@ class TemplateAdminTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test Get All Document Types
-        self.log("\n🔍 Step 2: Testing Get All Document Types...")
-        doc_types_result = self.test_get_document_types()
-        doc_types_success = doc_types_result.get("success", False)
-        meets_requirement = doc_types_result.get("meets_requirement", False)
+        # Step 3: Test List All Templates
+        self.log("\n🔍 Step 2: Testing List All Templates...")
+        list_result = self.test_list_templates()
+        list_success = list_result.get("success", False)
+        meets_requirement = list_result.get("meets_requirement", False)
         
-        # Step 4: Test Generate Picking List
-        self.log("\n🔍 Step 3: Testing Generate Picking List...")
-        picking_list_result = self.test_generate_document(
-            "picking_list", 
-            "IC-6996-20251223095239",
-            "items"  # Expected content check
-        )
-        picking_list_success = picking_list_result.get("success", False)
+        # Step 4: Test Get Specific Template
+        self.log("\n🔍 Step 3: Testing Get Specific Template (picking_list)...")
+        get_result = self.test_get_specific_template("picking_list")
+        get_success = get_result.get("success", False)
         
-        # Step 5: Test Generate Invoice Offer
-        self.log("\n🔍 Step 4: Testing Generate Invoice Offer...")
-        invoice_offer_result = self.test_generate_document(
-            "invoice_offer", 
-            "7136"
-        )
-        invoice_offer_success = invoice_offer_result.get("success", False)
+        # Step 5: Test Get Base Template
+        self.log("\n🔍 Step 4: Testing Get Base Template...")
+        base_result = self.test_get_base_template()
+        base_success = base_result.get("success", False)
         
-        # Step 6: Test Generate Contract
-        self.log("\n🔍 Step 5: Testing Generate Contract...")
-        contract_result = self.test_generate_document(
-            "contract_rent", 
-            "7136"
-        )
-        contract_success = contract_result.get("success", False)
+        # Step 6: Test Update Template with Backup
+        self.log("\n🔍 Step 5: Testing Update Template with Backup...")
+        update_result = self.test_update_template("picking_list")
+        update_success = update_result.get("success", False)
         
-        # Step 7: Test Generate Issue Act
-        self.log("\n🔍 Step 6: Testing Generate Issue Act...")
-        issue_act_result = self.test_generate_document(
-            "issue_act", 
-            "IC-6996-20251223095239",
-            "items"  # Expected content check
-        )
-        issue_act_success = issue_act_result.get("success", False)
+        # Step 7: Test List Backups
+        self.log("\n🔍 Step 6: Testing List Backups...")
+        backups_result = self.test_list_backups("picking_list")
+        backups_success = backups_result.get("success", False)
         
-        # Step 8: Test Generate Issue Checklist
-        self.log("\n🔍 Step 7: Testing Generate Issue Checklist...")
-        issue_checklist_result = self.test_generate_document(
-            "issue_checklist", 
-            "IC-6996-20251223095239"
-        )
-        issue_checklist_success = issue_checklist_result.get("success", False)
-        
-        # Step 9: Test PDF Download (using first generated document)
-        pdf_success = False
-        if self.generated_documents:
-            self.log("\n🔍 Step 8: Testing PDF Download...")
-            first_doc_id = self.generated_documents[0]
-            pdf_result = self.test_pdf_download(first_doc_id)
-            pdf_success = pdf_result.get("success", False)
+        # Step 8: Test Restore from Backup (if backups exist)
+        restore_success = False
+        if backups_result.get("has_backups", False):
+            self.log("\n🔍 Step 7: Testing Restore from Backup...")
+            restore_result = self.test_restore_backup("picking_list")
+            restore_success = restore_result.get("success", False)
         else:
-            self.log("\n⚠️ Step 8: Skipping PDF Download - no documents generated", "WARNING")
+            self.log("\n⚠️ Step 7: Skipping Restore from Backup - no backups available", "WARNING")
         
-        # Step 10: Test Document History
-        self.log("\n🔍 Step 9: Testing Document History...")
-        history_result = self.test_document_history("issue", "IC-6996-20251223095239")
-        history_success = history_result.get("success", False)
+        # Step 9: Test Preview Template
+        self.log("\n🔍 Step 8: Testing Preview Template...")
+        preview_result = self.test_preview_template("picking_list")
+        preview_success = preview_result.get("success", False)
         
-        # Step 11: Summary
+        # Step 10: Summary
         self.log("\n" + "=" * 70)
-        self.log("📊 COMPREHENSIVE DOCUMENT GENERATION TEST SUMMARY:")
+        self.log("📊 COMPREHENSIVE TEMPLATE ADMIN TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        # Document Types
-        self.log(f"\n   📋 DOCUMENT TYPES:")
-        if doc_types_success:
-            count = doc_types_result.get("count", 0)
-            requirement_status = "✅ Meets requirement (18+)" if meets_requirement else "⚠️ Below requirement (18+)"
-            self.log(f"   • Get Document Types: ✅ Working ({count} types) - {requirement_status}")
+        # List Templates
+        self.log(f"\n   📋 LIST TEMPLATES:")
+        if list_success:
+            count = list_result.get("count", 0)
+            ukrainian_names = list_result.get("ukrainian_names", 0)
+            requirement_status = "✅ Meets requirement (18)" if meets_requirement else "⚠️ Below requirement (18)"
+            self.log(f"   • List All Templates: ✅ Working ({count} templates) - {requirement_status}")
+            self.log(f"   • Ukrainian Names: ✅ Found {ukrainian_names} templates with Ukrainian names")
         else:
-            self.log(f"   • Get Document Types: ❌ Failed")
+            self.log(f"   • List All Templates: ❌ Failed")
         
-        # Document Generation Tests
-        self.log(f"\n   📄 DOCUMENT GENERATION:")
-        
-        if picking_list_success:
-            html_len = picking_list_result.get("html_length", 0)
-            has_content = picking_list_result.get("has_content", False)
-            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
-            self.log(f"   • Picking List (IC-6996-20251223095239): ✅ Working ({html_len} chars) - {content_status}")
+        # Get Specific Template
+        self.log(f"\n   📄 GET SPECIFIC TEMPLATE:")
+        if get_success:
+            name = get_result.get("name", "")
+            content_len = get_result.get("content_length", 0)
+            versions = get_result.get("versions_count", 0)
+            variables = get_result.get("variables_count", 0)
+            has_ukrainian = get_result.get("has_ukrainian_name", False)
+            order_vars = get_result.get("order_vars", 0)
+            issue_vars = get_result.get("issue_vars", 0)
+            
+            ukrainian_status = "✅ Ukrainian name" if has_ukrainian else "⚠️ Non-Ukrainian name"
+            self.log(f"   • Get picking_list: ✅ Working - {name} ({ukrainian_status})")
+            self.log(f"   • Content: ✅ {content_len} chars, {versions} versions, {variables} variables")
+            self.log(f"   • Variables: ✅ {order_vars} order vars, {issue_vars} issue vars")
         else:
-            self.log(f"   • Picking List (IC-6996-20251223095239): ❌ Failed")
+            self.log(f"   • Get picking_list: ❌ Failed")
         
-        if invoice_offer_success:
-            html_len = invoice_offer_result.get("html_length", 0)
-            has_content = invoice_offer_result.get("has_content", False)
-            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
-            self.log(f"   • Invoice Offer (7136): ✅ Working ({html_len} chars) - {content_status}")
+        # Get Base Template
+        self.log(f"\n   🏗️ GET BASE TEMPLATE:")
+        if base_success:
+            content_len = base_result.get("content_length", 0)
+            is_html = base_result.get("is_html", False)
+            html_status = "✅ Valid HTML" if is_html else "⚠️ May not be HTML"
+            self.log(f"   • Get Base Template: ✅ Working ({content_len} chars) - {html_status}")
         else:
-            self.log(f"   • Invoice Offer (7136): ❌ Failed")
+            self.log(f"   • Get Base Template: ❌ Failed")
         
-        if contract_success:
-            html_len = contract_result.get("html_length", 0)
-            has_content = contract_result.get("has_content", False)
-            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
-            self.log(f"   • Contract (7136): ✅ Working ({html_len} chars) - {content_status}")
+        # Update Template
+        self.log(f"\n   ✏️ UPDATE TEMPLATE:")
+        if update_success:
+            backup_created = update_result.get("backup_created", False)
+            backup_status = "✅ Backup created" if backup_created else "⚠️ No backup created"
+            self.log(f"   • Update Template: ✅ Working - {backup_status}")
         else:
-            self.log(f"   • Contract (7136): ❌ Failed")
+            self.log(f"   • Update Template: ❌ Failed")
         
-        if issue_act_success:
-            html_len = issue_act_result.get("html_length", 0)
-            has_content = issue_act_result.get("has_content", False)
-            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
-            self.log(f"   • Issue Act (IC-6996-20251223095239): ✅ Working ({html_len} chars) - {content_status}")
+        # List Backups
+        self.log(f"\n   💾 BACKUP FUNCTIONALITY:")
+        if backups_success:
+            backups_count = backups_result.get("backups_count", 0)
+            has_backups = backups_result.get("has_backups", False)
+            self.log(f"   • List Backups: ✅ Working ({backups_count} backups found)")
+            
+            if restore_success:
+                restored_backup = restore_result.get("restored_backup", "")
+                self.log(f"   • Restore Backup: ✅ Working (restored {restored_backup})")
+            elif has_backups:
+                self.log(f"   • Restore Backup: ❌ Failed")
+            else:
+                self.log(f"   • Restore Backup: ⚠️ Skipped (no backups)")
         else:
-            self.log(f"   • Issue Act (IC-6996-20251223095239): ❌ Failed")
+            self.log(f"   • List Backups: ❌ Failed")
         
-        if issue_checklist_success:
-            html_len = issue_checklist_result.get("html_length", 0)
-            has_content = issue_checklist_result.get("has_content", False)
-            content_status = "✅ Has content" if has_content else "⚠️ Empty/short content"
-            self.log(f"   • Issue Checklist (IC-6996-20251223095239): ✅ Working ({html_len} chars) - {content_status}")
+        # Preview Template
+        self.log(f"\n   👁️ PREVIEW TEMPLATE:")
+        if preview_success:
+            html_len = preview_result.get("html_length", 0)
+            sample_keys = preview_result.get("sample_data_keys", 0)
+            has_sample = preview_result.get("has_sample_data", False)
+            sample_status = "✅ Contains sample data" if has_sample else "⚠️ May not contain sample data"
+            self.log(f"   • Preview Template: ✅ Working ({html_len} chars HTML, {sample_keys} data keys)")
+            self.log(f"   • Sample Data: {sample_status}")
         else:
-            self.log(f"   • Issue Checklist (IC-6996-20251223095239): ❌ Failed")
+            self.log(f"   • Preview Template: ❌ Failed")
         
-        # PDF Download
-        self.log(f"\n   📥 PDF DOWNLOAD:")
-        if pdf_success:
-            self.log(f"   • PDF Download: ✅ Working")
-        else:
-            self.log(f"   • PDF Download: ❌ Failed or Skipped")
-        
-        # Document History
-        self.log(f"\n   📚 DOCUMENT HISTORY:")
-        if history_success:
-            docs_count = history_result.get("documents_count", 0)
-            self.log(f"   • Document History: ✅ Working ({docs_count} documents found)")
-        else:
-            self.log(f"   • Document History: ❌ Failed")
-        
-        self.log(f"\n🎉 DOCUMENT GENERATION TESTING COMPLETED!")
+        self.log(f"\n🎉 TEMPLATE ADMIN TESTING COMPLETED!")
         
         # Check if critical functionality works
-        generation_tests = [
-            picking_list_success, invoice_offer_success, contract_success,
-            issue_act_success, issue_checklist_success
-        ]
+        core_working = list_success and meets_requirement
+        template_ops_working = get_success and base_success and update_success
+        backup_working = backups_success and (restore_success or not backups_result.get("has_backups", False))
+        preview_working = preview_success
         
-        core_working = doc_types_success and meets_requirement
-        generation_working = all(generation_tests)
-        pdf_working = pdf_success or not self.generated_documents  # OK if no docs to test
-        history_working = history_success
-        
-        all_working = core_working and generation_working and pdf_working and history_working
+        all_working = core_working and template_ops_working and backup_working and preview_working
         
         if all_working:
-            self.log(f"\n✅ ALL DOCUMENT GENERATION FUNCTIONALITY WORKING!")
-            self.log(f"   The document generation system is fully functional")
+            self.log(f"\n✅ ALL TEMPLATE ADMIN FUNCTIONALITY WORKING!")
+            self.log(f"   The template admin system is fully functional")
         else:
-            self.log(f"\n⚠️ DOCUMENT GENERATION HAS PROBLEMS:")
+            self.log(f"\n⚠️ TEMPLATE ADMIN HAS PROBLEMS:")
             if not core_working:
-                self.log(f"   - Document types endpoint has issues or doesn't meet 18+ requirement")
-            if not generation_working:
-                failed_docs = []
-                if not picking_list_success:
-                    failed_docs.append("Picking List")
-                if not invoice_offer_success:
-                    failed_docs.append("Invoice Offer")
-                if not contract_success:
-                    failed_docs.append("Contract")
-                if not issue_act_success:
-                    failed_docs.append("Issue Act")
-                if not issue_checklist_success:
-                    failed_docs.append("Issue Checklist")
-                self.log(f"   - Document generation failed for: {', '.join(failed_docs)}")
-            if not pdf_working:
-                self.log(f"   - PDF download functionality has issues")
-            if not history_working:
-                self.log(f"   - Document history functionality has issues")
+                self.log(f"   - Template listing has issues or doesn't meet 18 templates requirement")
+            if not template_ops_working:
+                self.log(f"   - Template operations (get/update/base) have issues")
+            if not backup_working:
+                self.log(f"   - Backup/restore functionality has issues")
+            if not preview_working:
+                self.log(f"   - Preview functionality has issues")
         
         return all_working
         """Run the comprehensive Expense Management API test following the specified flow"""

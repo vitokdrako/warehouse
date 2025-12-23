@@ -29,7 +29,358 @@ TEST_CREDENTIALS = {
 }
 TEST_MONTH = "2025-02"  # Month for generating due items
 
-class ExpenseManagementTester:
+class CSVExportTester:
+    def __init__(self, base_url: str):
+        self.base_url = base_url
+        self.session = requests.Session()
+        self.session.headers.update({
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        })
+        self.auth_token = None
+        
+    def log(self, message: str, level: str = "INFO"):
+        """Log test messages with timestamp"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        print(f"[{timestamp}] {level}: {message}")
+        
+    def test_api_health(self) -> bool:
+        """Test if API is accessible"""
+        try:
+            response = self.session.get(f"{self.base_url}/health")
+            if response.status_code == 200:
+                self.log("✅ API Health Check: OK")
+                return True
+            else:
+                self.log(f"❌ API Health Check Failed: {response.status_code}", "ERROR")
+                return False
+        except Exception as e:
+            self.log(f"❌ API Health Check Exception: {str(e)}", "ERROR")
+            return False
+    
+    def authenticate(self) -> bool:
+        """Authenticate with the API"""
+        try:
+            self.log("🔐 Authenticating with provided credentials...")
+            
+            response = self.session.post(
+                f"{self.base_url}/auth/login",
+                json=TEST_CREDENTIALS
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.auth_token = data.get('access_token')
+                if self.auth_token:
+                    self.session.headers.update({
+                        'Authorization': f'Bearer {self.auth_token}'
+                    })
+                    self.log("✅ Authentication successful")
+                    return True
+                else:
+                    self.log("❌ No access token in response", "ERROR")
+                    return False
+            else:
+                self.log(f"❌ Authentication failed: {response.status_code} - {response.text}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
+            return False
+
+    def validate_csv_format(self, content: str, expected_headers: list, endpoint_name: str) -> Dict[str, Any]:
+        """Validate CSV format and structure"""
+        try:
+            # Check UTF-8 BOM
+            has_bom = content.startswith('\ufeff')
+            if not has_bom:
+                self.log(f"⚠️ {endpoint_name}: Missing UTF-8 BOM", "WARNING")
+            
+            # Parse CSV content
+            lines = content.strip().split('\n')
+            if not lines:
+                return {"success": False, "error": "Empty CSV content"}
+            
+            # Check headers
+            header_line = lines[0].replace('\ufeff', '')  # Remove BOM for parsing
+            headers = [h.strip('"') for h in header_line.split(',')]
+            
+            # Validate expected headers
+            missing_headers = []
+            for expected in expected_headers:
+                if expected not in headers:
+                    missing_headers.append(expected)
+            
+            if missing_headers:
+                self.log(f"⚠️ {endpoint_name}: Missing headers: {missing_headers}", "WARNING")
+            
+            # Count data rows
+            data_rows = len(lines) - 1  # Exclude header
+            
+            return {
+                "success": True,
+                "has_bom": has_bom,
+                "headers": headers,
+                "expected_headers": expected_headers,
+                "missing_headers": missing_headers,
+                "data_rows": data_rows,
+                "total_lines": len(lines)
+            }
+            
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    # ============================================
+    # CSV EXPORT TESTS
+    # ============================================
+    
+    def test_export_ledger(self, month: Optional[str] = None) -> Dict[str, Any]:
+        """Test GET /api/export/ledger"""
+        try:
+            endpoint = "/export/ledger"
+            url = f"{self.base_url}{endpoint}"
+            
+            if month:
+                url += f"?month={month}"
+                self.log(f"🧪 Testing export ledger endpoint with month filter: {month}")
+            else:
+                self.log(f"🧪 Testing export ledger endpoint (all data)")
+            
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                content = response.text
+                expected_headers = ["Дата", "Тип операції", "Сума (₴)", "Примітка", "Тип сутності", "Автор"]
+                
+                validation = self.validate_csv_format(content, expected_headers, "Export Ledger")
+                
+                if validation["success"]:
+                    self.log(f"✅ Export Ledger: CSV format valid")
+                    self.log(f"   📊 Data rows: {validation['data_rows']}")
+                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
+                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
+                    
+                    return {
+                        "success": True, 
+                        "validation": validation,
+                        "content_length": len(content),
+                        "month_filter": month
+                    }
+                else:
+                    self.log(f"❌ Export Ledger: CSV validation failed - {validation.get('error')}", "ERROR")
+                    return {"success": False, "error": validation.get("error")}
+            else:
+                self.log(f"❌ Export Ledger failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing export ledger: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_export_expenses(self, month: Optional[str] = None) -> Dict[str, Any]:
+        """Test GET /api/export/expenses"""
+        try:
+            endpoint = "/export/expenses"
+            url = f"{self.base_url}{endpoint}"
+            
+            if month:
+                url += f"?month={month}"
+                self.log(f"🧪 Testing export expenses endpoint with month filter: {month}")
+            else:
+                self.log(f"🧪 Testing export expenses endpoint (all data)")
+            
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                content = response.text
+                expected_headers = ["Дата", "Тип", "Категорія", "Сума (₴)", "Метод", "Джерело", "Примітка", "Статус"]
+                
+                validation = self.validate_csv_format(content, expected_headers, "Export Expenses")
+                
+                if validation["success"]:
+                    self.log(f"✅ Export Expenses: CSV format valid")
+                    self.log(f"   📊 Data rows: {validation['data_rows']}")
+                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
+                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
+                    
+                    return {
+                        "success": True, 
+                        "validation": validation,
+                        "content_length": len(content),
+                        "month_filter": month
+                    }
+                else:
+                    self.log(f"❌ Export Expenses: CSV validation failed - {validation.get('error')}", "ERROR")
+                    return {"success": False, "error": validation.get("error")}
+            else:
+                self.log(f"❌ Export Expenses failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing export expenses: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_export_orders_finance(self, status: Optional[str] = None) -> Dict[str, Any]:
+        """Test GET /api/export/orders-finance"""
+        try:
+            endpoint = "/export/orders-finance"
+            url = f"{self.base_url}{endpoint}"
+            
+            if status:
+                url += f"?status={status}"
+                self.log(f"🧪 Testing export orders finance endpoint with status filter: {status}")
+            else:
+                self.log(f"🧪 Testing export orders finance endpoint (all data)")
+            
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                content = response.text
+                expected_headers = ["Номер ордера", "Статус", "Клієнт", "Телефон", "Оренда (₴)", "Застава (₴)", "Шкода (₴)", "Дата створення"]
+                
+                validation = self.validate_csv_format(content, expected_headers, "Export Orders Finance")
+                
+                if validation["success"]:
+                    self.log(f"✅ Export Orders Finance: CSV format valid")
+                    self.log(f"   📊 Data rows: {validation['data_rows']}")
+                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
+                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
+                    
+                    return {
+                        "success": True, 
+                        "validation": validation,
+                        "content_length": len(content),
+                        "status_filter": status
+                    }
+                else:
+                    self.log(f"❌ Export Orders Finance: CSV validation failed - {validation.get('error')}", "ERROR")
+                    return {"success": False, "error": validation.get("error")}
+            else:
+                self.log(f"❌ Export Orders Finance failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing export orders finance: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_export_damage_cases(self) -> Dict[str, Any]:
+        """Test GET /api/export/damage-cases"""
+        try:
+            endpoint = "/export/damage-cases"
+            url = f"{self.base_url}{endpoint}"
+            
+            self.log(f"🧪 Testing export damage cases endpoint")
+            
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                content = response.text
+                expected_headers = ["Номер ордера", "Товар", "SKU", "Категорія", "Тип шкоди", "Серйозність", "Компенсація (₴)", "Тип обробки", "Статус", "Примітка", "Дата"]
+                
+                validation = self.validate_csv_format(content, expected_headers, "Export Damage Cases")
+                
+                if validation["success"]:
+                    self.log(f"✅ Export Damage Cases: CSV format valid")
+                    self.log(f"   📊 Data rows: {validation['data_rows']}")
+                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
+                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
+                    
+                    return {
+                        "success": True, 
+                        "validation": validation,
+                        "content_length": len(content)
+                    }
+                else:
+                    self.log(f"❌ Export Damage Cases: CSV validation failed - {validation.get('error')}", "ERROR")
+                    return {"success": False, "error": validation.get("error")}
+            else:
+                self.log(f"❌ Export Damage Cases failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing export damage cases: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_export_tasks(self, task_type: Optional[str] = None) -> Dict[str, Any]:
+        """Test GET /api/export/tasks"""
+        try:
+            endpoint = "/export/tasks"
+            url = f"{self.base_url}{endpoint}"
+            
+            if task_type:
+                url += f"?task_type={task_type}"
+                self.log(f"🧪 Testing export tasks endpoint with task_type filter: {task_type}")
+            else:
+                self.log(f"🧪 Testing export tasks endpoint (all tasks)")
+            
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                content = response.text
+                expected_headers = ["ID", "Тип", "Ордер", "Назва", "Опис", "Статус", "Пріоритет", "Виконавець", "Створено", "Завершено"]
+                
+                validation = self.validate_csv_format(content, expected_headers, "Export Tasks")
+                
+                if validation["success"]:
+                    self.log(f"✅ Export Tasks: CSV format valid")
+                    self.log(f"   📊 Data rows: {validation['data_rows']}")
+                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
+                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
+                    
+                    return {
+                        "success": True, 
+                        "validation": validation,
+                        "content_length": len(content),
+                        "task_type_filter": task_type
+                    }
+                else:
+                    self.log(f"❌ Export Tasks: CSV validation failed - {validation.get('error')}", "ERROR")
+                    return {"success": False, "error": validation.get("error")}
+            else:
+                self.log(f"❌ Export Tasks failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing export tasks: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def test_export_laundry_queue(self) -> Dict[str, Any]:
+        """Test GET /api/export/laundry-queue"""
+        try:
+            endpoint = "/export/laundry-queue"
+            url = f"{self.base_url}{endpoint}"
+            
+            self.log(f"🧪 Testing export laundry queue endpoint")
+            
+            response = self.session.get(url)
+            
+            if response.status_code == 200:
+                content = response.text
+                expected_headers = ["Ордер", "Товар", "SKU", "Тип шкоди", "Статус", "Партія", "Створено", "Відправлено"]
+                
+                validation = self.validate_csv_format(content, expected_headers, "Export Laundry Queue")
+                
+                if validation["success"]:
+                    self.log(f"✅ Export Laundry Queue: CSV format valid")
+                    self.log(f"   📊 Data rows: {validation['data_rows']}")
+                    self.log(f"   🔤 UTF-8 BOM: {'✅' if validation['has_bom'] else '❌'}")
+                    self.log(f"   📋 Headers: {len(validation['headers'])} found")
+                    
+                    return {
+                        "success": True, 
+                        "validation": validation,
+                        "content_length": len(content)
+                    }
+                else:
+                    self.log(f"❌ Export Laundry Queue: CSV validation failed - {validation.get('error')}", "ERROR")
+                    return {"success": False, "error": validation.get("error")}
+            else:
+                self.log(f"❌ Export Laundry Queue failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception testing export laundry queue: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

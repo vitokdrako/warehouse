@@ -1212,7 +1212,16 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
 
       {/* History Tab */}
       {subTab === "history" && (
-        <Card title="Історія витрат" subtitle={`Місяць: ${selectedMonth}`}>
+        <Card 
+          title="Історія витрат" 
+          subtitle={`Місяць: ${selectedMonth}`}
+          right={
+            <GhostBtn onClick={() => {
+              const token = localStorage.getItem("token");
+              window.open(`${BACKEND_URL}/api/export/expenses?month=${selectedMonth}&token=${token}`, '_blank');
+            }}>📥 Експорт CSV</GhostBtn>
+          }
+        >
           {loadingExp ? (
             <div className="py-8 text-center text-corp-text-muted">Завантаження...</div>
           ) : expenses.length === 0 ? (

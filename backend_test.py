@@ -52,7 +52,8 @@ class DocumentsTester:
             'Accept': 'application/json'
         })
         self.auth_token = None
-        self.test_backup_filename = None  # Store backup filename for restore test
+        self.test_order_id = None  # Store order ID for document generation tests
+        self.generated_documents = []  # Store generated document IDs for testing
         
     def log(self, message: str, level: str = "INFO"):
         """Log test messages with timestamp"""

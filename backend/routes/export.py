@@ -170,17 +170,13 @@ async def export_orders_finance(
             o.customer_name,
             o.customer_phone,
             o.total_price as total_rental,
-            COALESCE(SUM(CASE WHEN p.payment_type = 'rent' THEN p.amount ELSE 0 END), 0) as rent_paid,
             o.deposit_amount as total_deposit,
-            COALESCE(d.held_amount, 0) as deposit_held,
+            o.damage_fee,
             DATE_FORMAT(o.created_at, '%Y-%m-%d') as created_date
         FROM orders o
-        LEFT JOIN fin_payments p ON o.order_id = p.order_id
-        LEFT JOIN deposits d ON o.order_id = d.order_id
         {where_clause}
-        GROUP BY o.order_id, o.order_number, o.status, o.customer_name, o.customer_phone, 
-                 o.total_price, o.deposit_amount, d.held_amount, o.created_at
         ORDER BY o.created_at DESC
+        LIMIT 1000
     """
     
     rows = db.execute(text(query), params).fetchall()

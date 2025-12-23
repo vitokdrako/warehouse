@@ -1,16 +1,29 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Document Templates Admin Functionality
-Testing the Document Templates Admin endpoints:
-1. List all templates - GET /api/admin/templates (should return 18 templates)
-2. Get specific template - GET /api/admin/templates/picking_list
-3. Get base template - GET /api/admin/templates/base/content
-4. Update template with backup - PUT /api/admin/templates/picking_list
-5. List backups - GET /api/admin/templates/picking_list/backups
-6. Restore from backup - POST /api/admin/templates/picking_list/restore/{backup_filename}
-7. Preview template - POST /api/admin/templates/picking_list/preview
+Backend Testing Script for Documents Functionality in Finance Console
+Testing the Documents functionality endpoints as per review request:
 
-Each endpoint should work correctly with proper Ukrainian names and validation.
+**Test Cases:**
+1. Get orders with finance data: GET /api/manager/finance/orders-with-finance?limit=10
+2. Get documents for an order: GET /api/documents/entity/order/{order_id}
+3. Generate invoice_offer document: POST /api/documents/generate
+4. Generate contract_rent document: POST /api/documents/generate
+5. Download PDF: GET /api/documents/{document_id}/pdf
+6. Send document via email: POST /api/documents/{document_id}/send-email
+
+**Finance documents available:**
+- invoice_offer: Рахунок-оферта
+- contract_rent: Договір оренди
+- invoice_additional: Додатковий рахунок
+- rental_extension: Додаткова угода
+- deposit_settlement_act: Акт взаєморозрахунків
+- deposit_refund_act: Акт повернення застави
+- damage_settlement_act: Акт утримання із застави
+
+**Key Validation:**
+- Document generation works for order-based docs
+- PDF download works
+- Email sending endpoint exists
 """
 
 import requests

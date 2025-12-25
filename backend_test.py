@@ -443,88 +443,12 @@ class OrderModificationsTester:
             self.log(f"❌ Exception restoring item: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
-    def generate_invoice_offer_document(self, order_id: str) -> Dict[str, Any]:
-        """Generate invoice_offer document and verify company name"""
-        try:
-            self.log(f"🧪 Generating invoice_offer document for order: {order_id}...")
-            
-            request_data = {
-                "doc_type": "invoice_offer",
-                "entity_id": str(order_id),
-                "format": "html"
-            }
-            
-            response = self.session.post(
-                f"{self.base_url}/documents/generate",
-                json=request_data
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                success = data.get('success', False)
-                document_id = data.get('document_id', '')
-                doc_number = data.get('doc_number', '')
-                html_content = data.get('html_content', '')
-                
-                self.log(f"✅ Document generated successfully")
-                self.log(f"   📄 Document ID: {document_id}")
-                self.log(f"   🔢 Document Number: {doc_number}")
-                self.log(f"   📝 HTML Content Length: {len(html_content)} characters")
-                
-                # Verify company name in HTML content
-                has_correct_name = CORRECT_COMPANY_NAME in html_content
-                has_old_name = OLD_INCORRECT_NAME in html_content
-                
-                self.log(f"\n🔍 Company Name Verification:")
-                if has_correct_name:
-                    self.log(f"   ✅ Contains correct company name: '{CORRECT_COMPANY_NAME}'")
-                else:
-                    self.log(f"   ❌ Missing correct company name: '{CORRECT_COMPANY_NAME}'", "ERROR")
-                
-                if has_old_name:
-                    self.log(f"   ❌ Still contains old incorrect name: '{OLD_INCORRECT_NAME}'", "ERROR")
-                else:
-                    self.log(f"   ✅ Does NOT contain old incorrect name: '{OLD_INCORRECT_NAME}'")
-                
-                # Check if HTML content is substantial
-                has_content = len(html_content) > 1000
-                if has_content:
-                    self.log(f"   ✅ Document has substantial content")
-                else:
-                    self.log(f"   ⚠️ Document content may be minimal", "WARNING")
-                
-                # Overall validation
-                validation_passed = has_correct_name and not has_old_name and has_content
-                
-                return {
-                    "success": True,
-                    "data": data,
-                    "document_id": document_id,
-                    "doc_number": doc_number,
-                    "html_length": len(html_content),
-                    "has_substantial_content": has_content,
-                    "generation_success": success,
-                    "has_correct_company_name": has_correct_name,
-                    "has_old_company_name": has_old_name,
-                    "validation_passed": validation_passed,
-                    "html_content": html_content  # Include for debugging if needed
-                }
-            else:
-                self.log(f"❌ Generate document failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception generating document: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
-
-    def run_company_name_verification_test(self):
-        """Run the complete company name verification test as per review request"""
-        self.log("🚀 Starting Document Generation Company Name Verification Test")
+    def run_order_modifications_test(self):
+        """Run the complete Order Modifications API test as per review request"""
+        self.log("🚀 Starting Order Modifications API Test - Дозамовлення")
         self.log("=" * 80)
-        self.log(f"Testing company legal name update in document generation")
-        self.log(f"Expected: '{CORRECT_COMPANY_NAME}'")
-        self.log(f"Should NOT contain: '{OLD_INCORRECT_NAME}'")
+        self.log(f"Testing Order Modifications API functionality")
+        self.log("Test scenarios: Add item, Update quantity, Remove item, Get history, Get refused items, Restore item")
         self.log("=" * 80)
         
         # Step 1: Health check
@@ -538,14 +462,14 @@ class OrderModificationsTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Get orders list
-        self.log("\n🔍 Step 2: Getting list of orders...")
-        orders_result = self.get_orders_list()
+        # Step 3: Get orders for modification
+        self.log("\n🔍 Step 2: Finding orders for modification...")
+        orders_result = self.get_orders_for_modification()
         orders_success = orders_result.get("success", False)
         has_orders = orders_result.get("has_orders", False)
         
         if not orders_success or not has_orders:
-            self.log("❌ Failed to get orders or no orders available, aborting tests", "ERROR")
+            self.log("❌ Failed to get orders or no orders available for modification, aborting tests", "ERROR")
             return False
         
         order_id = orders_result.get("first_order_id")
@@ -553,58 +477,130 @@ class OrderModificationsTester:
             self.log("❌ No order ID found, aborting tests", "ERROR")
             return False
         
-        # Step 4: Generate invoice_offer document
-        self.log(f"\n🔍 Step 3: Generating invoice_offer document for order {order_id}...")
-        doc_result = self.generate_invoice_offer_document(order_id)
-        doc_success = doc_result.get("success", False)
-        validation_passed = doc_result.get("validation_passed", False)
+        # Step 4: Get product for testing
+        self.log("\n🔍 Step 3: Getting product for testing...")
+        product_result = self.get_product_for_testing()
+        product_success = product_result.get("success", False)
         
-        # Step 5: Summary
+        if not product_success:
+            self.log("❌ Failed to get product for testing, aborting tests", "ERROR")
+            return False
+        
+        product_id = product_result.get("product_id")
+        if not product_id:
+            self.log("❌ No product ID found, aborting tests", "ERROR")
+            return False
+        
+        # Step 5: Add item to order
+        self.log(f"\n🔍 Step 4: Adding item to order {order_id}...")
+        add_result = self.add_item_to_order(order_id, product_id)
+        add_success = add_result.get("success", False)
+        
+        if not add_success:
+            self.log("❌ Failed to add item to order", "ERROR")
+            return False
+        
+        item_id = add_result.get("item_id")
+        if not item_id:
+            self.log("❌ No item ID returned from add operation", "ERROR")
+            return False
+        
+        # Step 6: Update item quantity
+        self.log(f"\n🔍 Step 5: Updating item {item_id} quantity...")
+        update_result = self.update_item_quantity(order_id, item_id, 2)
+        update_success = update_result.get("success", False)
+        
+        if not update_success:
+            self.log("❌ Failed to update item quantity", "ERROR")
+            return False
+        
+        # Step 7: Get modifications history
+        self.log(f"\n🔍 Step 6: Getting modifications history...")
+        history_result = self.get_modifications_history(order_id)
+        history_success = history_result.get("success", False)
+        
+        if not history_success:
+            self.log("❌ Failed to get modifications history", "ERROR")
+            return False
+        
+        # Step 8: Remove/refuse item
+        self.log(f"\n🔍 Step 7: Removing/refusing item {item_id}...")
+        remove_result = self.remove_item_from_order(order_id, item_id)
+        remove_success = remove_result.get("success", False)
+        
+        if not remove_success:
+            self.log("❌ Failed to remove item from order", "ERROR")
+            return False
+        
+        # Step 9: Get refused items
+        self.log(f"\n🔍 Step 8: Getting refused items...")
+        refused_result = self.get_refused_items(order_id)
+        refused_success = refused_result.get("success", False)
+        
+        if not refused_success:
+            self.log("❌ Failed to get refused items", "ERROR")
+            return False
+        
+        # Step 10: Restore refused item
+        self.log(f"\n🔍 Step 9: Restoring refused item {item_id}...")
+        restore_result = self.restore_refused_item(order_id, item_id)
+        restore_success = restore_result.get("success", False)
+        
+        if not restore_success:
+            self.log("❌ Failed to restore refused item", "ERROR")
+            return False
+        
+        # Step 11: Final modifications history check
+        self.log(f"\n🔍 Step 10: Final modifications history check...")
+        final_history_result = self.get_modifications_history(order_id)
+        final_history_success = final_history_result.get("success", False)
+        
+        # Summary
         self.log("\n" + "=" * 80)
-        self.log("📊 COMPANY NAME VERIFICATION TEST SUMMARY:")
+        self.log("📊 ORDER MODIFICATIONS API TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
-        self.log(f"   • Orders List: ✅ Retrieved {orders_result.get('count', 0)} orders")
+        self.log(f"   • Orders for Modification: ✅ Found {orders_result.get('count', 0)} orders")
         self.log(f"   • Test Order ID: {order_id}")
+        self.log(f"   • Test Product ID: {product_id}")
+        self.log(f"   • Test Item ID: {item_id}")
         
-        if doc_success:
-            has_correct = doc_result.get("has_correct_company_name", False)
-            has_old = doc_result.get("has_old_company_name", False)
-            content_length = doc_result.get("html_length", 0)
+        self.log(f"\n   📋 API ENDPOINTS TESTED:")
+        self.log(f"   • GET /api/orders?status=processing: ✅ Working")
+        self.log(f"   • GET /api/products: ✅ Working")
+        self.log(f"   • POST /api/orders/{order_id}/items: {'✅ Working' if add_success else '❌ Failed'}")
+        self.log(f"   • PATCH /api/orders/{order_id}/items/{item_id}: {'✅ Working' if update_success else '❌ Failed'}")
+        self.log(f"   • DELETE /api/orders/{order_id}/items/{item_id}: {'✅ Working' if remove_success else '❌ Failed'}")
+        self.log(f"   • GET /api/orders/{order_id}/modifications: {'✅ Working' if history_success else '❌ Failed'}")
+        self.log(f"   • GET /api/orders/{order_id}/items/refused: {'✅ Working' if refused_success else '❌ Failed'}")
+        self.log(f"   • POST /api/orders/{order_id}/items/{item_id}/restore: {'✅ Working' if restore_success else '❌ Failed'}")
+        
+        self.log(f"\n   🔍 KEY VALIDATIONS:")
+        
+        # Check if all operations succeeded
+        all_operations_success = all([
+            add_success, update_success, remove_success, 
+            history_success, refused_success, restore_success, final_history_success
+        ])
+        
+        if all_operations_success:
+            self.log(f"   • Add Item: ✅ Success with totals recalculation")
+            self.log(f"   • Update Quantity: ✅ Success ({update_result.get('old_quantity', 0)} → {update_result.get('new_quantity', 0)})")
+            self.log(f"   • Remove Item: ✅ Success (marked as refused)")
+            self.log(f"   • Modifications History: ✅ Success ({history_result.get('modifications_count', 0)} modifications logged)")
+            self.log(f"   • Refused Items: ✅ Success ({refused_result.get('refused_count', 0)} refused items)")
+            self.log(f"   • Restore Item: ✅ Success (item restored to active)")
+            self.log(f"   • Final History: ✅ Success ({final_history_result.get('modifications_count', 0)} total modifications)")
             
-            self.log(f"\n   📄 DOCUMENT GENERATION:")
-            self.log(f"   • Document Generated: ✅ Success")
-            self.log(f"   • Document ID: {doc_result.get('document_id', 'N/A')}")
-            self.log(f"   • Document Number: {doc_result.get('doc_number', 'N/A')}")
-            self.log(f"   • HTML Content Length: {content_length} characters")
-            
-            self.log(f"\n   🏢 COMPANY NAME VERIFICATION:")
-            if has_correct:
-                self.log(f"   • Correct Company Name: ✅ Found '{CORRECT_COMPANY_NAME}'")
-            else:
-                self.log(f"   • Correct Company Name: ❌ Missing '{CORRECT_COMPANY_NAME}'")
-            
-            if has_old:
-                self.log(f"   • Old Company Name: ❌ Still contains '{OLD_INCORRECT_NAME}'")
-            else:
-                self.log(f"   • Old Company Name: ✅ Does NOT contain '{OLD_INCORRECT_NAME}'")
-            
-            if validation_passed:
-                self.log(f"\n✅ COMPANY NAME UPDATE VERIFICATION PASSED!")
-                self.log(f"   The document generation correctly uses the new company name")
-                self.log(f"   '{CORRECT_COMPANY_NAME}' and does not contain the old name")
-            else:
-                self.log(f"\n❌ COMPANY NAME UPDATE VERIFICATION FAILED!")
-                if not has_correct:
-                    self.log(f"   - Document does not contain the correct company name")
-                if has_old:
-                    self.log(f"   - Document still contains the old incorrect company name")
+            self.log(f"\n✅ ORDER MODIFICATIONS API TEST PASSED!")
+            self.log(f"   All API endpoints working correctly with proper validation")
+            self.log(f"   Totals recalculation working as expected")
+            self.log(f"   History logging working correctly")
         else:
-            self.log(f"\n   📄 DOCUMENT GENERATION:")
-            self.log(f"   • Document Generated: ❌ Failed")
-            validation_passed = False
+            self.log(f"\n❌ ORDER MODIFICATIONS API TEST FAILED!")
+            self.log(f"   Some API endpoints or validations failed")
         
-        return validation_passed
+        return all_operations_success
 def main():
     """Main test execution"""
     print("🧪 Backend Testing: Document Generation Company Name Update")

@@ -473,7 +473,8 @@ export function ItemModificationControls({ item, orderId, orderStatus, onUpdate 
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   
-  const canModify = ['processing', 'ready_for_issue'].includes(orderStatus)
+  const allowedStatuses = ['processing', 'ready_for_issue', 'preparation', 'ready']
+  const canModify = allowedStatuses.includes(orderStatus)
   
   if (!canModify) return null
   

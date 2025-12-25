@@ -39,11 +39,11 @@ TEST_CREDENTIALS = {
     "password": "test123"
 }
 
-# Company name validation
-CORRECT_COMPANY_NAME = "ФОП Арсалані Олександра Ігорівна"
-OLD_INCORRECT_NAME = "ФОП Маркін Ілля Павлович"
+# Company name validation - Not needed for Order Modifications testing
+# CORRECT_COMPANY_NAME = "ФОП Арсалані Олександра Ігорівна"
+# OLD_INCORRECT_NAME = "ФОП Маркін Ілля Павлович"
 
-class DocumentGenerationTester:
+class OrderModificationsTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()

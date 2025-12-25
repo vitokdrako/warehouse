@@ -96,6 +96,7 @@ app.include_router(product_sets.router)
 app.include_router(expense_management.router)
 app.include_router(export.router)
 app.include_router(template_admin.router)
+app.include_router(order_modifications.router)
 
 # Configure logging
 logging.basicConfig(

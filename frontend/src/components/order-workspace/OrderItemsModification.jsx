@@ -23,8 +23,10 @@ export default function OrderItemsModification({
 }) {
   const { toast } = useToast()
   
-  // Дозволені статуси для редагування
-  const canModify = ['processing', 'ready_for_issue'].includes(orderStatus)
+  // Дозволені статуси для редагування (order status або issue card status)
+  // Маппінг: preparation -> processing, ready -> ready_for_issue
+  const allowedStatuses = ['processing', 'ready_for_issue', 'preparation', 'ready']
+  const canModify = allowedStatuses.includes(orderStatus)
   
   // Стан
   const [loading, setLoading] = useState(false)

@@ -105,22 +105,30 @@ class OrderModificationsTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
 
-    def get_orders_list(self, limit: int = 10) -> Dict[str, Any]:
-        """Get list of orders to find an existing order_id"""
+    def get_orders_for_modification(self, limit: int = 10) -> Dict[str, Any]:
+        """Get list of orders with processing or ready_for_issue status"""
         try:
-            self.log("🧪 Getting list of orders...")
+            self.log("🧪 Getting orders with status processing or ready_for_issue...")
             
-            response = self.session.get(f"{self.base_url}/orders?limit={limit}")
+            response = self.session.get(f"{self.base_url}/orders?status=processing&limit={limit}")
             
             if response.status_code == 200:
                 data = response.json()
                 orders = data.get('orders', []) if isinstance(data, dict) else data
                 
-                self.log(f"✅ Retrieved {len(orders)} orders")
+                self.log(f"✅ Retrieved {len(orders)} processing orders")
+                
+                # If no processing orders, try ready_for_issue
+                if not orders:
+                    response = self.session.get(f"{self.base_url}/orders?status=ready_for_issue&limit={limit}")
+                    if response.status_code == 200:
+                        data = response.json()
+                        orders = data.get('orders', []) if isinstance(data, dict) else data
+                        self.log(f"✅ Retrieved {len(orders)} ready_for_issue orders")
                 
                 if orders:
                     # Show first few orders and store first order ID
-                    self.log("📋 Sample orders:")
+                    self.log("📋 Available orders for modification:")
                     for order in orders[:3]:  # Show first 3
                         order_id = order.get('order_id') or order.get('id')
                         order_number = order.get('order_number', 'No number')
@@ -129,7 +137,7 @@ class OrderModificationsTester:
                         
                         self.log(f"   - Order {order_id}: {order_number} - {customer_name} ({status})")
                         
-                        # Store first order ID for document generation tests
+                        # Store first order ID for modification tests
                         if not self.test_order_id:
                             self.test_order_id = order_id
                     
@@ -149,6 +157,290 @@ class OrderModificationsTester:
                 
         except Exception as e:
             self.log(f"❌ Exception getting orders: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def get_product_for_testing(self) -> Dict[str, Any]:
+        """Get a product for adding to order"""
+        try:
+            self.log("🧪 Getting a product for testing...")
+            
+            response = self.session.get(f"{self.base_url}/products?limit=1")
+            
+            if response.status_code == 200:
+                data = response.json()
+                products = data.get('products', []) if isinstance(data, dict) else data
+                
+                if products:
+                    product = products[0]
+                    product_id = product.get('product_id') or product.get('id')
+                    product_name = product.get('name', 'No name')
+                    sku = product.get('sku', 'No SKU')
+                    
+                    self.test_product_id = product_id
+                    self.log(f"✅ Found product: {product_id} - {sku} - {product_name}")
+                    
+                    return {
+                        "success": True,
+                        "product_id": product_id,
+                        "product_name": product_name,
+                        "sku": sku
+                    }
+                else:
+                    self.log("❌ No products found", "ERROR")
+                    return {"success": False, "error": "No products found"}
+            else:
+                self.log(f"❌ Get products failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception getting products: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def add_item_to_order(self, order_id: int, product_id: int) -> Dict[str, Any]:
+        """Add item to order"""
+        try:
+            self.log(f"🧪 Adding item (product {product_id}) to order {order_id}...")
+            
+            request_data = {
+                "product_id": product_id,
+                "quantity": 1,
+                "note": "Тестове дозамовлення"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/orders/{order_id}/items",
+                json=request_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                success = data.get('success', False)
+                message = data.get('message', '')
+                item = data.get('item', {})
+                totals = data.get('totals', {})
+                modification = data.get('modification', {})
+                
+                if item:
+                    self.test_item_id = item.get('id')
+                
+                self.log(f"✅ Item added successfully: {message}")
+                self.log(f"   📦 Item ID: {item.get('id')}")
+                self.log(f"   📝 Product: {item.get('product_name')}")
+                self.log(f"   🔢 Quantity: {item.get('quantity')}")
+                self.log(f"   💰 Total Price: ₴{totals.get('total_price', 0)}")
+                self.log(f"   💎 Deposit: ₴{totals.get('deposit_amount', 0)}")
+                
+                return {
+                    "success": True,
+                    "data": data,
+                    "item_id": item.get('id'),
+                    "totals": totals,
+                    "api_success": success
+                }
+            else:
+                self.log(f"❌ Add item failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception adding item: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def update_item_quantity(self, order_id: int, item_id: int, new_quantity: int = 2) -> Dict[str, Any]:
+        """Update item quantity"""
+        try:
+            self.log(f"🧪 Updating item {item_id} quantity to {new_quantity}...")
+            
+            request_data = {
+                "quantity": new_quantity,
+                "note": "Зміна кількості"
+            }
+            
+            response = self.session.patch(
+                f"{self.base_url}/orders/{order_id}/items/{item_id}",
+                json=request_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                success = data.get('success', False)
+                message = data.get('message', '')
+                item = data.get('item', {})
+                totals = data.get('totals', {})
+                modification = data.get('modification', {})
+                
+                self.log(f"✅ Item quantity updated: {message}")
+                self.log(f"   📦 Item ID: {item.get('id')}")
+                self.log(f"   🔄 Quantity change: {item.get('old_quantity')} → {item.get('new_quantity')}")
+                self.log(f"   💰 Price change: ₴{item.get('price_change', 0)}")
+                self.log(f"   💰 New Total: ₴{totals.get('total_price', 0)}")
+                
+                return {
+                    "success": True,
+                    "data": data,
+                    "old_quantity": item.get('old_quantity'),
+                    "new_quantity": item.get('new_quantity'),
+                    "api_success": success
+                }
+            else:
+                self.log(f"❌ Update item failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception updating item: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def remove_item_from_order(self, order_id: int, item_id: int) -> Dict[str, Any]:
+        """Remove/refuse item from order"""
+        try:
+            self.log(f"🧪 Removing/refusing item {item_id} from order {order_id}...")
+            
+            request_data = {
+                "reason": "Тестова відмова клієнта"
+            }
+            
+            response = self.session.delete(
+                f"{self.base_url}/orders/{order_id}/items/{item_id}",
+                json=request_data
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                success = data.get('success', False)
+                message = data.get('message', '')
+                item = data.get('item', {})
+                totals = data.get('totals', {})
+                
+                self.log(f"✅ Item refused: {message}")
+                self.log(f"   📦 Item ID: {item.get('id')}")
+                self.log(f"   📝 Product: {item.get('product_name')}")
+                self.log(f"   🚫 Status: {item.get('status')}")
+                self.log(f"   📝 Reason: {item.get('reason')}")
+                self.log(f"   💰 New Total: ₴{totals.get('total_price', 0)}")
+                
+                return {
+                    "success": True,
+                    "data": data,
+                    "item_status": item.get('status'),
+                    "api_success": success
+                }
+            else:
+                self.log(f"❌ Remove item failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception removing item: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def get_modifications_history(self, order_id: int) -> Dict[str, Any]:
+        """Get order modifications history"""
+        try:
+            self.log(f"🧪 Getting modifications history for order {order_id}...")
+            
+            response = self.session.get(f"{self.base_url}/orders/{order_id}/modifications")
+            
+            if response.status_code == 200:
+                data = response.json()
+                modifications = data.get('modifications', [])
+                total_count = data.get('total_count', 0)
+                
+                self.log(f"✅ Retrieved {total_count} modifications")
+                
+                if modifications:
+                    self.log("📋 Recent modifications:")
+                    for mod in modifications[:3]:  # Show first 3
+                        mod_type = mod.get('modification_type', 'unknown')
+                        product_name = mod.get('product_name', 'Unknown product')
+                        old_qty = mod.get('old_quantity', 0)
+                        new_qty = mod.get('new_quantity', 0)
+                        created_by = mod.get('created_by', 'Unknown')
+                        created_at = mod.get('created_at', 'Unknown time')
+                        
+                        self.log(f"   - {mod_type}: {product_name} ({old_qty} → {new_qty}) by {created_by} at {created_at}")
+                
+                return {
+                    "success": True,
+                    "data": data,
+                    "modifications_count": total_count,
+                    "has_modifications": total_count > 0
+                }
+            else:
+                self.log(f"❌ Get modifications failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception getting modifications: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def get_refused_items(self, order_id: int) -> Dict[str, Any]:
+        """Get refused items for order"""
+        try:
+            self.log(f"🧪 Getting refused items for order {order_id}...")
+            
+            response = self.session.get(f"{self.base_url}/orders/{order_id}/items/refused")
+            
+            if response.status_code == 200:
+                data = response.json()
+                refused_items = data.get('refused_items', [])
+                count = data.get('count', 0)
+                
+                self.log(f"✅ Retrieved {count} refused items")
+                
+                if refused_items:
+                    self.log("📋 Refused items:")
+                    for item in refused_items:
+                        product_name = item.get('product_name', 'Unknown product')
+                        quantity = item.get('quantity', 0)
+                        reason = item.get('refusal_reason', 'No reason')
+                        
+                        self.log(f"   - {product_name} (qty: {quantity}) - Reason: {reason}")
+                
+                return {
+                    "success": True,
+                    "data": data,
+                    "refused_count": count,
+                    "has_refused_items": count > 0
+                }
+            else:
+                self.log(f"❌ Get refused items failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception getting refused items: {str(e)}", "ERROR")
+            return {"success": False, "error": str(e)}
+
+    def restore_refused_item(self, order_id: int, item_id: int) -> Dict[str, Any]:
+        """Restore refused item"""
+        try:
+            self.log(f"🧪 Restoring refused item {item_id}...")
+            
+            response = self.session.post(f"{self.base_url}/orders/{order_id}/items/{item_id}/restore")
+            
+            if response.status_code == 200:
+                data = response.json()
+                success = data.get('success', False)
+                message = data.get('message', '')
+                item = data.get('item', {})
+                totals = data.get('totals', {})
+                
+                self.log(f"✅ Item restored: {message}")
+                self.log(f"   📦 Item ID: {item.get('id')}")
+                self.log(f"   📝 Product: {item.get('product_name')}")
+                self.log(f"   ✅ Status: {item.get('status')}")
+                self.log(f"   🔢 Quantity: {item.get('quantity')}")
+                self.log(f"   💰 New Total: ₴{totals.get('total_price', 0)}")
+                
+                return {
+                    "success": True,
+                    "data": data,
+                    "item_status": item.get('status'),
+                    "api_success": success
+                }
+            else:
+                self.log(f"❌ Restore item failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception restoring item: {str(e)}", "ERROR")
             return {"success": False, "error": str(e)}
 
     def generate_invoice_offer_document(self, order_id: str) -> Dict[str, Any]:

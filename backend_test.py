@@ -164,24 +164,24 @@ class OrderModificationsTester:
         try:
             self.log("🧪 Getting a product for testing...")
             
-            response = self.session.get(f"{self.base_url}/products?limit=1")
+            response = self.session.get(f"{self.base_url}/inventory?limit=1")
             
             if response.status_code == 200:
                 data = response.json()
-                products = data.get('products', []) if isinstance(data, dict) else data
+                products = data if isinstance(data, list) else []
                 
                 if products:
                     product = products[0]
-                    product_id = product.get('product_id') or product.get('id')
+                    product_id = product.get('id')
                     product_name = product.get('name', 'No name')
-                    sku = product.get('sku', 'No SKU')
+                    sku = product.get('article', 'No SKU')
                     
-                    self.test_product_id = product_id
+                    self.test_product_id = int(product_id) if product_id else None
                     self.log(f"✅ Found product: {product_id} - {sku} - {product_name}")
                     
                     return {
                         "success": True,
-                        "product_id": product_id,
+                        "product_id": int(product_id) if product_id else None,
                         "product_name": product_name,
                         "sku": sku
                     }

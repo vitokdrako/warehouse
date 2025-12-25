@@ -52,7 +52,9 @@ class OrderModificationsTester:
             'Accept': 'application/json'
         })
         self.auth_token = None
-        self.test_order_id = None  # Store order ID for document generation tests
+        self.test_order_id = None  # Store order ID for modification tests
+        self.test_product_id = None  # Store product ID for adding items
+        self.test_item_id = None  # Store item ID for update/remove tests
         
     def log(self, message: str, level: str = "INFO"):
         """Log test messages with timestamp"""

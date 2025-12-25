@@ -1,23 +1,26 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Document Generation Company Name Update
-Testing the document generation to verify company legal name has been updated correctly.
+Backend Testing Script for Order Modifications API - Дозамовлення
+Testing the new Order Modifications API for "Дозамовлення" functionality.
 
 **Test Scenario:**
-Generate an `invoice_offer` document for an existing order and verify the company details 
-contain "ФОП Арсалані Олександра Ігорівна" instead of "ФОП Маркін Ілля Павлович".
+Test all Order Modifications API endpoints for adding, updating, removing, and restoring items in orders.
 
 **Test Steps:**
 1. Login with credentials: email: `vitokdrako@gmail.com`, password: `test123`
-2. Get list of orders via `GET /api/orders` to find an existing order_id
-3. Generate a document using `POST /api/documents/generate` with:
-   - doc_type: "invoice_offer"
-   - entity_id: [order_id from step 2]
-4. Verify the generated HTML contains:
-   - "ФОП Арсалані Олександра Ігорівна" (correct company name)
-   - Does NOT contain "ФОП Маркін Ілля Павлович" (old incorrect name)
+2. Find an order with status `processing` or `ready_for_issue`
+3. Get a product_id from products API
+4. Add item to order
+5. Update item quantity
+6. Remove/Refuse item
+7. Get modifications history
+8. Get refused items
+9. Restore refused item
 
-**File changed:** /app/backend/services/doc_engine/data_builders.py - company legal_name updated in all builder functions.
+**Key validations:**
+- API should reject modifications for orders not in `processing` or `ready_for_issue` status
+- Totals should be recalculated automatically
+- History should log all changes with user info
 """
 
 import requests

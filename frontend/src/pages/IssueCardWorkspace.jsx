@@ -467,6 +467,20 @@ setTimeout(()=>window.print(),500);
           readOnly={isIssued}
         />
         
+        {/* Дозамовлення - редагування позицій */}
+        {!isIssued && (
+          <OrderItemsModification
+            orderId={order?.order_id || order?.id}
+            orderStatus={issueCard?.status || 'processing'}
+            items={items}
+            onItemsChange={setItems}
+            onTotalsChange={(totals) => {
+              if (totals.total_price !== undefined) setTotalRent(totals.total_price)
+              if (totals.deposit_amount !== undefined) setTotalDeposit(totals.deposit_amount)
+            }}
+          />
+        )}
+        
         {/* Комплектування */}
         <ZoneItemsPickup
           items={items}

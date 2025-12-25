@@ -28,6 +28,7 @@ import {
 // FinanceStatusCard тепер тільки в LeftRailFinance
 
 import DamageModal from '../components/DamageModal'
+import OrderItemsModification from '../components/order-workspace/OrderItemsModification'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

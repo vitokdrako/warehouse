@@ -519,8 +519,8 @@ async def remove_item_from_order(
     if request is None:
         request = RemoveItemRequest()
     
-    # Validate order
-    order = get_order_for_modification(db, order_id)
+    # Validate order (ensures status is valid for modification)
+    get_order_for_modification(db, order_id)
     
     # Get current item
     result = db.execute(text("""

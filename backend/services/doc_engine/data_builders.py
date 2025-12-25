@@ -37,10 +37,15 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
     # Vendor task based documents
     vendor_docs = ["vendor_work_act"]
     
+    # Order modification documents
+    modification_docs = ["order_modification"]
+    
     if doc_type in return_docs:
         return build_return_data(db, entity_id, options)
     elif doc_type in damage_settlement_docs:
         return build_damage_settlement_data(db, entity_id, options)
+    elif doc_type in modification_docs:
+        return build_order_modification_data(db, entity_id, options)
     elif doc_type in order_docs:
         return build_order_data(db, entity_id, options)
     elif doc_type in issue_docs:

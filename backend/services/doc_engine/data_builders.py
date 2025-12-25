@@ -570,3 +570,125 @@ def build_vendor_task_data(db: Session, vendor_task_id: str, options: dict) -> d
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options
     }
+
+
+
+def build_order_modification_data(db: Session, order_id: str, options: dict) -> dict:
+    """
+    Збирає дані для документа Дозамовлення
+    Включає історію змін та відмовлені позиції
+    """
+    
+    # Основні дані замовлення
+    result = db.execute(text("""
+        SELECT 
+            order_id, order_number, customer_name, customer_phone, customer_email,
+            rental_start_date, rental_end_date, rental_days,
+            total_price, deposit_amount, status
+        FROM orders
+        WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    order_row = result.fetchone()
+    if not order_row:
+        raise ValueError(f"Order not found: {order_id}")
+    
+    order = {
+        "order_id": order_row[0],
+        "order_number": order_row[1] or f"OC-{order_row[0]}",
+        "customer_name": order_row[2] or "",
+        "customer_phone": order_row[3] or "",
+        "customer_email": order_row[4] or "",
+        "rental_start_date": order_row[5].strftime("%d.%m.%Y") if order_row[5] else "",
+        "rental_end_date": order_row[6].strftime("%d.%m.%Y") if order_row[6] else "",
+        "rental_days": order_row[7] or 1,
+        "status": order_row[10]
+    }
+    
+    # Поточні суми
+    new_totals = {
+        "total_price": float(order_row[8] or 0),
+        "deposit_amount": float(order_row[9] or 0)
+    }
+    
+    # Історія змін
+    modifications = []
+    total_price_change = 0
+    total_deposit_change = 0
+    
+    try:
+        mod_result = db.execute(text("""
+            SELECT id, modification_type, product_id, product_name,
+                   old_quantity, new_quantity, old_price, new_price,
+                   price_change, deposit_change, reason, created_by,
+                   DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at
+            FROM order_modifications
+            WHERE order_id = :order_id
+            ORDER BY created_at ASC
+        """), {"order_id": order_id})
+        
+        for row in mod_result:
+            price_change = float(row[8] or 0)
+            deposit_change = float(row[9] or 0)
+            
+            total_price_change += price_change
+            total_deposit_change += deposit_change
+            
+            modifications.append({
+                "id": row[0],
+                "modification_type": row[1],
+                "product_id": row[2],
+                "product_name": row[3] or "",
+                "old_quantity": row[4] or 0,
+                "new_quantity": row[5] or 0,
+                "old_price": float(row[6] or 0),
+                "new_price": float(row[7] or 0),
+                "price_change": price_change,
+                "deposit_change": deposit_change,
+                "reason": row[10] or "",
+                "created_by": row[11] or "",
+                "created_at": row[12] or ""
+            })
+    except Exception as e:
+        # Table might not exist yet
+        print(f"Warning: Could not fetch modifications: {e}")
+    
+    # Відмовлені позиції
+    refused_items = []
+    try:
+        refused_result = db.execute(text("""
+            SELECT product_id, product_name, quantity, original_quantity, refusal_reason
+            FROM order_items
+            WHERE order_id = :order_id AND status = 'refused'
+        """), {"order_id": order_id})
+        
+        for row in refused_result:
+            refused_items.append({
+                "product_id": row[0],
+                "product_name": row[1] or "",
+                "quantity": row[2] or 0,
+                "original_quantity": row[3] or row[2] or 0,
+                "refusal_reason": row[4] or "Відмова клієнта"
+            })
+    except Exception as e:
+        print(f"Warning: Could not fetch refused items: {e}")
+    
+    company = {
+        "name": "FarforDecorOrenda",
+        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
+        "phone": "+380 XX XXX XX XX",
+        "email": "rfarfordecor@gmail.com.ua",
+    }
+    
+    return {
+        "order": order,
+        "modifications": modifications,
+        "refused_items": refused_items,
+        "new_totals": new_totals,
+        "total_price_change": total_price_change,
+        "total_deposit_change": total_deposit_change,
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "options": options
+    }

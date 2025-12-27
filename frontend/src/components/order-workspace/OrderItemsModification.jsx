@@ -107,8 +107,20 @@ export default function OrderItemsModification({
     }
   }
   
-  // Додати товар
+  // Додати товар з вибраною кількістю
   const handleAddItem = async (product) => {
+    const quantity = selectedQuantities[product.product_id] || 1
+    
+    // Перевірка наявності
+    if (quantity > product.quantity) {
+      toast({
+        title: '⚠️ Недостатня кількість',
+        description: `На складі лише ${product.quantity} шт`,
+        variant: 'destructive'
+      })
+      return
+    }
+    
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
@@ -116,15 +128,15 @@ export default function OrderItemsModification({
         `${BACKEND_URL}/api/orders/${orderId}/items`,
         {
           product_id: product.product_id,
-          quantity: 1,
-          note: 'Дозамовлення'
+          quantity: quantity,
+          note: `Дозамовлення: ${quantity} шт`
         },
         { headers: { Authorization: `Bearer ${token}` } }
       )
       
       toast({
         title: '✅ Товар додано',
-        description: `${product.name} додано до замовлення`
+        description: `${product.name} (${quantity} шт) додано до замовлення`
       })
       
       // Оновлюємо дані
@@ -136,6 +148,7 @@ export default function OrderItemsModification({
       setShowAddModal(false)
       setSearchQuery('')
       setSearchResults([])
+      setSelectedQuantities({})
       
       // Перезавантажуємо сторінку для отримання оновлених items
       window.location.reload()

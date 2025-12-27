@@ -388,7 +388,7 @@ export default function OrderItemsModification({
               />
             </div>
             
-            <div className="max-h-[300px] overflow-y-auto space-y-2">
+            <div className="max-h-[400px] overflow-y-auto space-y-2">
               {searching && (
                 <div className="text-center text-gray-500 py-4">Пошук...</div>
               )}
@@ -397,39 +397,95 @@ export default function OrderItemsModification({
                 <div className="text-center text-gray-500 py-4">Товари не знайдено</div>
               )}
               
-              {searchResults.map(product => (
-                <div
-                  key={product.product_id}
-                  className="flex items-center gap-3 p-2 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                  onClick={() => handleAddItem(product)}
-                >
-                  {product.image_url ? (
-                    <img 
-                      src={product.image_url} 
-                      alt={product.name}
-                      className="w-12 h-12 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center">
-                      <Package className="h-6 w-6 text-gray-400" />
+              {searchResults.map(product => {
+                const qty = selectedQuantities[product.product_id] || 1
+                const available = product.quantity || 0
+                
+                return (
+                  <div
+                    key={product.product_id}
+                    className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50"
+                  >
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="w-14 h-14 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center">
+                        <Package className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
+                    
+                    <div className="flex-1">
+                      <div className="font-medium text-sm">{product.name}</div>
+                      <div className="text-xs text-gray-500">
+                        {product.sku} • <span className={available > 0 ? 'text-green-600' : 'text-red-500'}>{available} шт на складі</span>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {product.rental_price || 0} ₴/день • Застава: {product.price || 0} ₴
+                      </div>
                     </div>
-                  )}
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{product.name}</div>
-                    <div className="text-xs text-gray-500">
-                      {product.sku} • {product.quantity || 0} шт на складі
+                    
+                    {/* Вибір кількості */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedQuantities(prev => ({
+                            ...prev,
+                            [product.product_id]: Math.max(1, qty - 1)
+                          }))
+                        }}
+                        disabled={qty <= 1}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      
+                      <span className="w-8 text-center font-medium">{qty}</span>
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedQuantities(prev => ({
+                            ...prev,
+                            [product.product_id]: Math.min(available, qty + 1)
+                          }))
+                        }}
+                        disabled={qty >= available}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
                     </div>
+                    
+                    {/* Кнопка додати */}
+                    <Button
+                      size="sm"
+                      onClick={() => handleAddItem(product)}
+                      disabled={loading || available === 0}
+                      className="gap-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Додати
+                    </Button>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">{product.rental_price || product.price || 0} ₴/день</div>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModal(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowAddModal(false)
+              setSelectedQuantities({})
+            }}>
               Закрити
             </Button>
           </DialogFooter>

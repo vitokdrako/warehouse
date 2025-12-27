@@ -38,6 +38,7 @@ export default function OrderItemsModification({
   const [modifications, setModifications] = useState([])
   const [refusedItems, setRefusedItems] = useState([])
   const [showRefused, setShowRefused] = useState(false)
+  const [selectedQuantities, setSelectedQuantities] = useState({}) // Вибрана кількість для кожного товару
   
   // Завантаження історії та відмовлених
   useEffect(() => {

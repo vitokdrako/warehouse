@@ -297,6 +297,7 @@ async def add_item_to_order(
 ):
     """
     Додати товар до замовлення (дозамовлення)
+    Якщо товар вже є - збільшує кількість
     Дозволено тільки на етапах: processing, ready_for_issue
     """
     ensure_modifications_table(db)
@@ -317,27 +318,132 @@ async def add_item_to_order(
     
     # Calculate prices
     rental_days = order["rental_days"]
-    total_rental = product["price_per_day"] * request.quantity * rental_days
     
-    # Insert new item
-    db.execute(text("""
-        INSERT INTO order_items 
-        (order_id, product_id, product_name, quantity, price, total_rental, image_url, status)
-        VALUES 
-        (:order_id, :product_id, :product_name, :quantity, :price, :total_rental, :image_url, 'active')
-    """), {
-        "order_id": order_id,
-        "product_id": product["product_id"],
-        "product_name": product["name"],
-        "quantity": request.quantity,
-        "price": product["price_per_day"],
-        "total_rental": total_rental,
-        "image_url": product["image_url"]
-    })
+    # Перевіряємо чи товар вже є в замовленні
+    existing_result = db.execute(text("""
+        SELECT id, quantity, price, total_rental
+        FROM order_items
+        WHERE order_id = :order_id AND product_id = :product_id AND (status = 'active' OR status IS NULL)
+        LIMIT 1
+    """), {"order_id": order_id, "product_id": request.product_id})
     
-    # Get inserted item id
-    result = db.execute(text("SELECT LAST_INSERT_ID()"))
-    item_id = result.fetchone()[0]
+    existing_item = existing_result.fetchone()
+    
+    if existing_item:
+        # Товар вже є - оновлюємо кількість
+        item_id = existing_item[0]
+        old_quantity = existing_item[1]
+        new_quantity = old_quantity + request.quantity
+        price_per_day = float(existing_item[2])
+        new_total_rental = price_per_day * new_quantity * rental_days
+        
+        db.execute(text("""
+            UPDATE order_items SET 
+                quantity = :quantity,
+                total_rental = :total_rental
+            WHERE id = :item_id
+        """), {
+            "item_id": item_id,
+            "quantity": new_quantity,
+            "total_rental": new_total_rental
+        })
+        
+        # Calculate changes
+        old_total = price_per_day * old_quantity * rental_days
+        price_change = new_total_rental - old_total
+        deposit_change = product["deposit_per_unit"] * request.quantity
+        
+        # Log modification
+        user_name = current_user.get("name", "Система") if current_user else "Система"
+        log_modification(
+            db=db,
+            order_id=order_id,
+            modification_type="update",
+            item_id=item_id,
+            product_id=product["product_id"],
+            product_name=product["name"],
+            old_quantity=old_quantity,
+            new_quantity=new_quantity,
+            old_price=old_total,
+            new_price=new_total_rental,
+            price_change=price_change,
+            deposit_change=deposit_change,
+            reason=request.note or f"Дозамовлення: +{request.quantity} шт",
+            user_name=user_name
+        )
+        
+        message = f"Кількість '{product['name']}' збільшено: {old_quantity} → {new_quantity}"
+        
+    else:
+        # Новий товар - додаємо
+        total_rental = product["price_per_day"] * request.quantity * rental_days
+        
+        db.execute(text("""
+            INSERT INTO order_items 
+            (order_id, product_id, product_name, quantity, price, total_rental, image_url, status)
+            VALUES 
+            (:order_id, :product_id, :product_name, :quantity, :price, :total_rental, :image_url, 'active')
+        """), {
+            "order_id": order_id,
+            "product_id": product["product_id"],
+            "product_name": product["name"],
+            "quantity": request.quantity,
+            "price": product["price_per_day"],
+            "total_rental": total_rental,
+            "image_url": product["image_url"]
+        })
+        
+        # Get inserted item id
+        result = db.execute(text("SELECT LAST_INSERT_ID()"))
+        item_id = result.fetchone()[0]
+        
+        # Calculate changes
+        price_change = total_rental
+        deposit_change = product["deposit_per_unit"] * request.quantity
+        new_quantity = request.quantity
+        
+        # Log modification
+        user_name = current_user.get("name", "Система") if current_user else "Система"
+        log_modification(
+            db=db,
+            order_id=order_id,
+            modification_type="add",
+            item_id=item_id,
+            product_id=product["product_id"],
+            product_name=product["name"],
+            old_quantity=0,
+            new_quantity=request.quantity,
+            new_price=total_rental,
+            price_change=price_change,
+            deposit_change=deposit_change,
+            reason=request.note or "Дозамовлення",
+            user_name=user_name
+        )
+        
+        message = f"Товар '{product['name']}' додано до замовлення"
+    
+    # Recalculate totals
+    new_totals = recalculate_order_totals(db, order_id)
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": message,
+        "item": {
+            "id": item_id,
+            "product_id": product["product_id"],
+            "product_name": product["name"],
+            "quantity": new_quantity,
+            "price": product["price_per_day"]
+        },
+        "totals": new_totals,
+        "modification": {
+            "type": "add" if not existing_item else "update",
+            "price_change": price_change,
+            "deposit_change": deposit_change
+        }
+    }
     
     # Calculate changes
     price_change = total_rental

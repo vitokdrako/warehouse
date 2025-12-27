@@ -472,6 +472,9 @@ async def add_item_to_order(
     # Recalculate totals
     new_totals = recalculate_order_totals(db, order_id)
     
+    # Sync issue_card items
+    sync_issue_card_items(db, order_id)
+    
     db.commit()
     
     return {

@@ -881,3 +881,31 @@ async def get_refused_items(
         "refused_items": items,
         "count": len(items)
     }
+
+
+@router.post("/{order_id}/sync-items")
+async def sync_order_items_to_issue_card(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Синхронізувати items з order_items до issue_card.items
+    Корисно якщо items не співпадають
+    """
+    # Перевіряємо чи існує issue_card
+    result = db.execute(text("""
+        SELECT id FROM issue_cards WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    if not result.fetchone():
+        raise HTTPException(status_code=404, detail="Issue card не знайдено")
+    
+    # Синхронізуємо
+    sync_issue_card_items(db, order_id)
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": "Items синхронізовано з order_items до issue_card"
+    }
+

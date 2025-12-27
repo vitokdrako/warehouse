@@ -241,6 +241,53 @@ def recalculate_order_totals(db: Session, order_id: int):
     }
 
 
+def sync_issue_card_items(db: Session, order_id: int):
+    """
+    Синхронізує items в issue_card з order_items
+    Викликати після додавання/видалення товарів через дозамовлення
+    """
+    import json
+    
+    # Отримуємо актуальні items з order_items
+    items_result = db.execute(text("""
+        SELECT 
+            oi.id, oi.product_id, oi.product_name, oi.quantity, oi.price,
+            p.sku, p.image_url, p.zone, p.aisle, p.shelf
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.product_id
+        WHERE oi.order_id = :order_id AND (oi.status = 'active' OR oi.status IS NULL)
+    """), {"order_id": order_id})
+    
+    new_items = []
+    for row in items_result:
+        # Формуємо локацію
+        location_parts = [row[7], row[8], row[9]]
+        location = "-".join(filter(None, [str(x) for x in location_parts if x])) if any(location_parts) else None
+        
+        new_items.append({
+            "id": row[0],
+            "product_id": row[1],
+            "name": row[2],
+            "quantity": row[3],
+            "price": float(row[4]) if row[4] else 0,
+            "sku": row[5] or "",
+            "image": row[6] or "",
+            "location": {"zone": location or "", "state": "shelf"},
+            "picked_qty": 0,
+            "scanned": [],
+            "packaging": {"cover": False, "box": False, "stretch": False, "black_case": False}
+        })
+    
+    # Оновлюємо issue_card.items
+    items_json = json.dumps(new_items, ensure_ascii=False)
+    
+    db.execute(text("""
+        UPDATE issue_cards 
+        SET items = :items
+        WHERE order_id = :order_id
+    """), {"order_id": order_id, "items": items_json})
+
+
 def log_modification(
     db: Session, 
     order_id: int, 

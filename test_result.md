@@ -1436,3 +1436,40 @@ Based on review request requirements, all functionality confirmed working:
 - **Message:** No critical issues found during Order Modifications API testing. All specified test cases from review request completed successfully. Order Modifications system is fully functional and ready for user acceptance testing. All key validations working: API rejects modifications for invalid order statuses, totals recalculated automatically, history logs all changes with user info.
 
 ---
+
+## ORDER MODIFICATION (ДОЗАМОВЛЕННЯ) FRONTEND TEST RESULTS - IN PROGRESS 🔄
+
+### Test Execution Summary
+**Date:** January 2025  
+**Status:** 🔄 **TESTING IN PROGRESS**  
+**Route Tested:** /issue  
+**Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com / test123)  
+**Test Focus:** Complete "Дозамовлення" (Order Modification) feature on Issue Card Workspace page
+
+### Test Requirements from Review Request
+1. **Login** with provided credentials
+2. **Navigate to Issue Cards page** (/issue)
+3. **Find and open an issue card with status "preparation"** - look for cards in the "На комплектації" column
+4. **Look for the "Дозамовлення" section** - should have a yellow/amber background with "📦 Дозамовлення" label and "Додати товар" button
+5. **Click "Додати товар" button** to open the add product modal
+6. **Search for a product** - type "столик" in the search field
+7. **Verify search results appear** - should show products like "Столик h50*d50см..."
+8. **Click on a product to add it** to the order
+9. **Verify success toast appears** and the page updates
+
+### Key Components to Verify
+- OrderItemsModification component renders when status is "preparation" or "ready"
+- Search uses `/api/orders/inventory/search` endpoint
+- Products are displayed with name, SKU, price and availability
+- Adding product updates order totals
+
+### Expected Behavior
+- Search should find Ukrainian product names (столик, стілець, etc.)
+- Products should be addable to the order
+- Toast notification should confirm addition
+
+### Test Status
+- **Backend APIs:** ✅ VERIFIED - All Order Modifications APIs working (from previous tests)
+- **Frontend Testing:** 🔄 IN PROGRESS
+
+---

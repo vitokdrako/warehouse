@@ -71,7 +71,7 @@ export default function OrderItemsModification({
     }
   }
   
-  // Пошук товарів
+  // Пошук товарів - використовуємо той самий API що і на сторінці створення замовлення
   const searchProducts = async (query) => {
     if (!query || query.length < 2) {
       setSearchResults([])
@@ -81,12 +81,26 @@ export default function OrderItemsModification({
     setSearching(true)
     try {
       const token = localStorage.getItem('token')
-      const res = await axios.get(`${BACKEND_URL}/api/products?search=${encodeURIComponent(query)}&limit=10`, {
+      const res = await axios.get(`${BACKEND_URL}/api/orders/inventory/search`, {
+        params: { query, limit: 20 },
         headers: { Authorization: `Bearer ${token}` }
       })
-      setSearchResults(res.data.products || res.data || [])
+      
+      // Трансформуємо результати
+      const results = (res.data.products || []).map(p => ({
+        product_id: p.product_id,
+        sku: p.sku,
+        name: p.name,
+        rental_price: p.rent_price || 0,
+        price: p.price || 0,
+        quantity: p.available_quantity || 0,
+        image_url: p.image_url
+      }))
+      
+      setSearchResults(results)
     } catch (err) {
       console.error('Search error:', err)
+      setSearchResults([])
     } finally {
       setSearching(false)
     }

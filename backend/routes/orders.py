@@ -1342,14 +1342,13 @@ async def search_inventory(
 ):
     """
     Пошук інвентарю для замовлення
-    ✅ MIGRATED
+    ✅ MIGRATED - використовує products.quantity замість inventory
     """
     result = db.execute(text("""
         SELECT 
             p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
-            i.quantity, i.zone, i.product_state
+            p.quantity, p.zone, p.aisle, p.shelf
         FROM products p
-        LEFT JOIN inventory i ON p.product_id = i.product_id
         WHERE p.status = 1 
         AND (p.name LIKE :query OR p.sku LIKE :query)
         LIMIT :limit
@@ -1357,16 +1356,19 @@ async def search_inventory(
     
     products = []
     for row in result:
+        # Формуємо локацію
+        location_parts = [row[7], row[8], row[9]]
+        location = "-".join(filter(None, location_parts)) if any(location_parts) else None
+        
         products.append({
             "product_id": row[0],
             "sku": row[1],
             "name": row[2],
             "price": float(row[3]) if row[3] else 0.0,  # Full price (damage cost)
             "rent_price": float(row[4]) if row[4] else 0.0,  # Rental price per day
-            "image": row[5],
-            "available_quantity": row[6] or 0,
-            "location": row[7],
-            "condition": row[8]
+            "image_url": row[5],
+            "available_quantity": int(row[6]) if row[6] else 0,
+            "location": location
         })
     
     return {"products": products, "total": len(products)}

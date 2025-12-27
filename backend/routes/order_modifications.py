@@ -444,52 +444,6 @@ async def add_item_to_order(
             "deposit_change": deposit_change
         }
     }
-    
-    # Calculate changes
-    price_change = total_rental
-    deposit_change = product["deposit_per_unit"] * request.quantity
-    
-    # Log modification
-    user_name = current_user.get("name", "Система") if current_user else "Система"
-    log_modification(
-        db=db,
-        order_id=order_id,
-        modification_type="add",
-        item_id=item_id,
-        product_id=product["product_id"],
-        product_name=product["name"],
-        old_quantity=0,
-        new_quantity=request.quantity,
-        new_price=total_rental,
-        price_change=price_change,
-        deposit_change=deposit_change,
-        reason=request.note or "Дозамовлення",
-        user_name=user_name
-    )
-    
-    # Recalculate totals
-    new_totals = recalculate_order_totals(db, order_id)
-    
-    db.commit()
-    
-    return {
-        "success": True,
-        "message": f"Товар '{product['name']}' додано до замовлення",
-        "item": {
-            "id": item_id,
-            "product_id": product["product_id"],
-            "product_name": product["name"],
-            "quantity": request.quantity,
-            "price": product["price_per_day"],
-            "total_rental": total_rental
-        },
-        "totals": new_totals,
-        "modification": {
-            "type": "add",
-            "price_change": price_change,
-            "deposit_change": deposit_change
-        }
-    }
 
 
 @router.patch("/{order_id}/items/{item_id}")

@@ -26,6 +26,7 @@ const DOCS_BY_STATUS = {
   ],
   'ready_for_issue': [
     { type: 'issue_act', name: 'Акт передачі', icon: '📤', printRequired: true, critical: true },
+    { type: 'damage_breakdown', name: 'Розшифровка пошкоджень', icon: '⚠️', emailRequired: true },
   ],
   'issued': [
     { type: 'issue_act', name: 'Акт передачі', icon: '📤' },

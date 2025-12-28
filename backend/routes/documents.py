@@ -259,7 +259,7 @@ async def send_document_email(
     """
     Відправляє документ на email.
     """
-    from routes.email import send_email_with_attachment
+    from services.email_service import send_email_with_attachment
     
     doc = get_document_by_id(db, document_id)
     if not doc:

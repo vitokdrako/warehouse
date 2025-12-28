@@ -121,6 +121,38 @@ def parse_issue_card(row, db: Session = None):
                     item['reserved'] = reserved_qty
                     item['in_rent'] = in_rent_qty
                     item['in_restore'] = 0  # TODO: рахувати з damages коли буде реалізовано
+                    
+                    # Завантажуємо pre_damage (шкода зафіксована при видачі)
+                    try:
+                        order_id = row[1]  # order_id from issue_card row
+                        if order_id:
+                            damage_result = db.execute(text("""
+                                SELECT damage_type, note, severity, photo_url, created_by,
+                                       DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at
+                                FROM product_damage_history
+                                WHERE order_id = :order_id 
+                                AND product_id = :product_id 
+                                AND stage = 'pre_issue'
+                                ORDER BY created_at
+                            """), {"order_id": order_id, "product_id": product_id})
+                            
+                            pre_damage = []
+                            for d_row in damage_result:
+                                pre_damage.append({
+                                    "damage_type": d_row[0],
+                                    "type": d_row[0],
+                                    "note": d_row[1] or "",
+                                    "severity": d_row[2] or "low",
+                                    "photo_url": d_row[3],
+                                    "created_by": d_row[4],
+                                    "created_at": d_row[5]
+                                })
+                            
+                            if pre_damage:
+                                item['pre_damage'] = pre_damage
+                                item['has_pre_damage'] = True
+                    except Exception as e:
+                        print(f"Warning: Could not load pre_damage: {e}")
     
     # Додати фінансові дані з таблиці orders для відображення на dashboard
     order_data = {}

@@ -1031,27 +1031,66 @@ DAMAGE_PHOTOS_DIR = Path("/app/backend/uploads/damage_photos")
 @router.post("/upload-photo")
 async def upload_damage_photo(
     file: UploadFile = File(...),
-    order_id: Optional[str] = None
+    order_number: Optional[str] = Form(None),
+    sku: Optional[str] = Form(None),
+    order_id: Optional[str] = Form(None)
 ):
     """
     Завантажити фото пошкодження.
-    Повертає URL для збереження в базі даних.
+    
+    Параметри:
+    - file: Файл зображення
+    - order_number: Номер замовлення (наприклад OC-7217)
+    - sku: SKU товару (наприклад PLATE-001)
+    - order_id: ID замовлення (опціонально, для зворотної сумісності)
+    
+    Формат імені файлу: {order_number}_{sku}_{timestamp}.{ext}
+    Приклад: OC-7217_PLATE-001_20251228_143000.jpg
     """
     try:
         # Створюємо директорію якщо не існує
         DAMAGE_PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
         
-        # Генеруємо унікальне ім'я файлу
+        # Визначаємо розширення файлу
         file_ext = Path(file.filename).suffix.lower() or ".jpg"
         if file_ext not in [".jpg", ".jpeg", ".png", ".webp", ".heic"]:
             file_ext = ".jpg"
         
+        # Формуємо ім'я файлу з номера замовлення та SKU
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        unique_id = str(uuid.uuid4())[:8]
-        order_prefix = f"order{order_id}_" if order_id else ""
-        filename = f"{order_prefix}damage_{timestamp}_{unique_id}{file_ext}"
+        
+        # Очищуємо order_number та sku від небезпечних символів
+        clean_order = ""
+        if order_number:
+            clean_order = order_number.replace("/", "-").replace("\\", "-").replace(" ", "_")
+        
+        clean_sku = ""
+        if sku:
+            clean_sku = sku.replace("/", "-").replace("\\", "-").replace(" ", "_")
+        
+        # Формуємо ім'я файлу
+        if clean_order and clean_sku:
+            # Ідеальний варіант: OC-7217_PLATE-001_20251228_143000.jpg
+            filename = f"{clean_order}_{clean_sku}_{timestamp}{file_ext}"
+        elif clean_order:
+            # Тільки замовлення: OC-7217_damage_20251228_143000.jpg
+            filename = f"{clean_order}_damage_{timestamp}{file_ext}"
+        elif clean_sku:
+            # Тільки SKU: PLATE-001_damage_20251228_143000.jpg
+            filename = f"{clean_sku}_damage_{timestamp}{file_ext}"
+        else:
+            # Fallback: damage_20251228_143000_abc123.jpg
+            unique_id = str(uuid.uuid4())[:8]
+            filename = f"damage_{timestamp}_{unique_id}{file_ext}"
         
         file_path = DAMAGE_PHOTOS_DIR / filename
+        
+        # Якщо файл з такою назвою існує - додаємо унікальний суфікс
+        if file_path.exists():
+            unique_id = str(uuid.uuid4())[:4]
+            name_without_ext = file_path.stem
+            filename = f"{name_without_ext}_{unique_id}{file_ext}"
+            file_path = DAMAGE_PHOTOS_DIR / filename
         
         # Зберігаємо файл
         with open(file_path, "wb") as buffer:

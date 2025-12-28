@@ -366,6 +366,26 @@ export default function DamageModal({
             ✕
           </button>
         </div>
+        
+        {/* Шкода зафіксована при видачі - для порівняння */}
+        {stage === 'return' && preIssueDamages.length > 0 && (
+          <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-blue-600">📦</span>
+              <span className="text-sm font-semibold text-blue-800">
+                Шкода з етапу видачі ({preIssueDamages.length}) — не нараховується повторно
+              </span>
+            </div>
+            <div className="space-y-1 max-h-[100px] overflow-y-auto">
+              {preIssueDamages.map((d, idx) => (
+                <div key={d.id || idx} className="text-xs bg-white/70 rounded px-2 py-1 border border-blue-100">
+                  <span className="font-medium">{d.damage_type}</span>
+                  {d.note && <span className="text-slate-500"> — {d.note}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-3 text-sm">
           {/* Category & Type */}

@@ -260,6 +260,49 @@ export default function DamageModal({
               </div>
             </div>
           </div>
+          
+          {/* Перегляд вже зафіксованих пошкоджень */}
+          {preIssueDamages.length > 0 && (
+            <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-amber-600">📋</span>
+                <span className="text-sm font-semibold text-amber-800">
+                  Вже зафіксовано ({preIssueDamages.length})
+                </span>
+              </div>
+              <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                {preIssueDamages.map((d, idx) => (
+                  <div key={d.id || idx} className="text-xs bg-white rounded-lg p-2 border border-amber-100">
+                    <div className="flex items-start gap-2">
+                      {d.photo_url && (
+                        <img 
+                          src={d.photo_url} 
+                          alt="Фото" 
+                          className="w-12 h-12 object-cover rounded cursor-pointer"
+                          onClick={() => window.open(d.photo_url, '_blank')}
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="font-medium text-amber-900">{d.damage_type || 'Пошкодження'}</div>
+                        {d.note && <div className="text-slate-600 mt-0.5">{d.note}</div>}
+                        <div className="text-slate-400 mt-1 flex items-center gap-2">
+                          <span>👤 {d.created_by || 'Невідомо'}</span>
+                          <span>•</span>
+                          <span>{d.created_at}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {loadingDamages && (
+            <div className="mb-4 text-center text-sm text-slate-500">
+              Завантаження...
+            </div>
+          )}
 
           <div className="grid gap-3 text-sm">
             {/* Опис - обов'язковий */}

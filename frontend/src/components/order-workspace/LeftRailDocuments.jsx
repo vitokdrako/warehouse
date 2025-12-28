@@ -25,9 +25,6 @@ const DOCS_BY_STATUS = {
     { type: 'picking_list', name: 'Лист комплектації', icon: '📦', printRequired: true, internal: true },
   ],
   'ready_for_issue': [
-    { type: 'issue_checklist', name: 'Чеклист видачі', icon: '✅', printRequired: true, internal: true },
-    { type: 'contract_rent', name: 'Договір оренди', icon: '📋', printRequired: true },
-    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
     { type: 'issue_act', name: 'Акт передачі', icon: '📤', printRequired: true, critical: true },
   ],
   'issued': [

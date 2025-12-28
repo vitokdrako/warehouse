@@ -127,7 +127,7 @@ export default function LeftRailDocuments({
     setGenerating(docType)
     setError(null)
     
-    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue_card' : 'order'
+    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue' : 'order'
     const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId
     
     if (!entityId) {
@@ -205,7 +205,7 @@ export default function LeftRailDocuments({
 
   // Завантажити історію версій
   const loadHistory = async (docType) => {
-    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue_card' : 'order'
+    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue' : 'order'
     const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId
     
     try {
@@ -260,7 +260,7 @@ export default function LeftRailDocuments({
     setSending(docType)
     setError(null)
     
-    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue_card' : 'order'
+    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue' : 'order'
     const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId
     
     try {

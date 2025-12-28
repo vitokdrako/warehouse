@@ -167,8 +167,12 @@ export default function DamageModal({
         try {
           const formDataUpload = new FormData()
           formDataUpload.append('file', photos[0])
-          if (order?.order_id) {
-            formDataUpload.append('order_id', order.order_id)
+          // Передаємо order_number та sku для формування імені файлу
+          if (order?.order_number) {
+            formDataUpload.append('order_number', order.order_number)
+          }
+          if (item?.sku) {
+            formDataUpload.append('sku', item.sku)
           }
           
           const uploadResponse = await axios.post(

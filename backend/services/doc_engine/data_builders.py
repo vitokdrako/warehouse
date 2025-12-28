@@ -710,3 +710,116 @@ def build_order_modification_data(db: Session, order_id: str, options: dict) -> 
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options
     }
+
+
+def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> dict:
+    """
+    Збирає дані для Розшифровки пошкоджень.
+    Включає тільки пошкодження зафіксовані при видачі (pre_issue) з фото.
+    Використовується для інформування клієнта про існуючі дефекти.
+    """
+    
+    # Основні дані замовлення
+    result = db.execute(text("""
+        SELECT 
+            order_id, order_number, customer_name, customer_phone, customer_email,
+            rental_start_date, rental_end_date, rental_days, status
+        FROM orders
+        WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    order_row = result.fetchone()
+    if not order_row:
+        raise ValueError(f"Order not found: {order_id}")
+    
+    order = {
+        "order_id": order_row[0],
+        "order_number": order_row[1] or f"OC-{order_row[0]}",
+        "customer_name": order_row[2] or "",
+        "customer_phone": order_row[3] or "",
+        "customer_email": order_row[4] or "",
+        "rental_start_date": order_row[5].strftime("%d.%m.%Y") if order_row[5] else "",
+        "rental_end_date": order_row[6].strftime("%d.%m.%Y") if order_row[6] else "",
+        "rental_days": order_row[7] or 1,
+        "status": order_row[8]
+    }
+    
+    # Отримуємо пошкодження зафіксовані при видачі (pre_issue)
+    damage_result = db.execute(text("""
+        SELECT 
+            pdh.id, pdh.product_id, pdh.sku, pdh.product_name,
+            pdh.damage_type, pdh.severity, pdh.note,
+            pdh.photo_url, pdh.created_by,
+            DATE_FORMAT(pdh.created_at, '%d.%m.%Y %H:%i') as created_at
+        FROM product_damage_history pdh
+        WHERE pdh.order_id = :order_id AND pdh.stage = 'pre_issue'
+        ORDER BY pdh.product_name, pdh.created_at
+    """), {"order_id": order_id})
+    
+    damage_type_names = {
+        "broken": "Зламано",
+        "scratched": "Подряпано", 
+        "stained": "Плями",
+        "chipped": "Відколото",
+        "cracked": "Тріщина",
+        "missing": "Відсутнє",
+        "dirty": "Забруднено",
+        "wax": "Віск / залишки свічок",
+        "other": "Інше"
+    }
+    
+    severity_names = {
+        "low": "low",
+        "medium": "medium",
+        "high": "high",
+        "critical": "critical"
+    }
+    
+    damages = []
+    product_ids_with_damage = set()
+    
+    for row in damage_result:
+        product_id = row[1]
+        product_ids_with_damage.add(product_id)
+        
+        damages.append({
+            "id": row[0],
+            "product_id": product_id,
+            "sku": row[2] or "",
+            "product_name": row[3] or "",
+            "damage_type": damage_type_names.get(row[4], row[4] or "Інше"),
+            "damage_type_code": row[4],
+            "severity": severity_names.get(row[5], row[5] or "low"),
+            "note": row[6] or "",
+            "photo_url": row[7],
+            "created_by": row[8] or "Система",
+            "created_at": row[9] or ""
+        })
+    
+    # Підрахунок загальної кількості позицій в замовленні
+    items_result = db.execute(text("""
+        SELECT COUNT(DISTINCT product_id) as total_items
+        FROM order_items
+        WHERE order_id = :order_id AND (status = 'active' OR status IS NULL)
+    """), {"order_id": order_id})
+    
+    total_items_row = items_result.fetchone()
+    total_items = total_items_row[0] if total_items_row else 0
+    
+    company = {
+        "name": "FarforDecorOrenda",
+        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
+        "phone": "+380 XX XXX XX XX",
+        "email": "rfarfordecor@gmail.com.ua",
+    }
+    
+    return {
+        "order": order,
+        "damages": damages,
+        "items_with_damage": len(product_ids_with_damage),
+        "total_items": total_items,
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "options": options
+    }

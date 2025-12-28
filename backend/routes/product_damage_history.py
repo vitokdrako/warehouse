@@ -97,6 +97,10 @@ async def create_damage_record(
     """
     Створити запис про пошкодження
     
+    ЛОГІКА НАРАХУВАННЯ:
+    - stage='pre_issue' (при видачі): Тільки фіксація, БЕЗ нарахування клієнту (fee=0)
+    - stage='return' (при поверненні): Нарахування клієнту ТІЛЬКИ за НОВУ шкоду
+    
     Параметри:
     - product_id: ID товару
     - sku: Артикул товару
@@ -108,22 +112,62 @@ async def create_damage_record(
     - damage_type: Тип пошкодження
     - damage_code: Код типу пошкодження
     - severity: 'low', 'medium', 'high', 'critical'
-    - fee: Загальна сума збитку (fee_per_item × qty)
+    - fee: Загальна сума збитку (для return stage)
     - fee_per_item: Сума за одиницю (опціонально)
     - qty: Кількість пошкоджених одиниць (за замовчуванням 1)
     - photo_url: URL фото (опціонально)
     - note: Примітка (опціонально)
     - created_by: Хто зафіксував (опціонально)
-    - processing_type: 'none', 'wash', 'restoration', 'laundry' (NEW)
+    - processing_type: 'none', 'wash', 'restoration', 'laundry'
     """
     try:
         damage_id = str(uuid.uuid4())
         processing_type = damage_data.get("processing_type", "none")
+        stage = damage_data.get("stage", "return")
+        order_id = damage_data.get("order_id")
+        product_id = damage_data.get("product_id")
+        damage_type = damage_data.get("damage_type")
         
         # Отримуємо qty та fee_per_item
         qty = damage_data.get("qty", 1)
-        fee = damage_data.get("fee", 0.0)
-        fee_per_item = damage_data.get("fee_per_item", fee)  # Якщо не передано, використовуємо fee
+        fee_per_item_input = damage_data.get("fee_per_item", damage_data.get("fee", 0.0))
+        fee_input = damage_data.get("fee", fee_per_item_input * qty)
+        
+        # ЛОГІКА НАРАХУВАННЯ
+        if stage == "pre_issue":
+            # При видачі - тільки фіксація, БЕЗ нарахування
+            fee = 0.0
+            fee_per_item = 0.0
+            charge_note = "Існуюча шкода (до видачі) - не нараховується клієнту"
+        else:
+            # При поверненні - перевіряємо чи вже була така шкода на видачі
+            existing_damage = None
+            if order_id and product_id:
+                result = db.execute(text("""
+                    SELECT id, damage_type, note, photo_url 
+                    FROM product_damage_history 
+                    WHERE order_id = :order_id 
+                    AND product_id = :product_id 
+                    AND stage = 'pre_issue'
+                    AND damage_type = :damage_type
+                    LIMIT 1
+                """), {
+                    "order_id": order_id,
+                    "product_id": product_id,
+                    "damage_type": damage_type
+                })
+                existing_damage = result.fetchone()
+            
+            if existing_damage:
+                # Така шкода вже була зафіксована при видачі - НЕ нараховуємо
+                fee = 0.0
+                fee_per_item = 0.0
+                charge_note = f"Шкода вже була при видачі (ID: {existing_damage[0]}) - не нараховується"
+            else:
+                # Нова шкода - нараховуємо клієнту
+                fee = fee_input
+                fee_per_item = fee_per_item_input
+                charge_note = "Нова шкода при поверненні - нараховано клієнту"
         
         db.execute(text("""
             INSERT INTO product_damage_history (
@@ -143,14 +187,14 @@ async def create_damage_record(
             )
         """), {
             "id": damage_id,
-            "product_id": damage_data.get("product_id"),
+            "product_id": product_id,
             "sku": damage_data.get("sku"),
             "product_name": damage_data.get("product_name"),
             "category": damage_data.get("category"),
-            "order_id": damage_data.get("order_id"),
+            "order_id": order_id,
             "order_number": damage_data.get("order_number"),
-            "stage": damage_data.get("stage", "return"),
-            "damage_type": damage_data.get("damage_type"),
+            "stage": stage,
+            "damage_type": damage_type,
             "damage_code": damage_data.get("damage_code"),
             "severity": damage_data.get("severity", "low"),
             "fee": fee,
@@ -167,11 +211,13 @@ async def create_damage_record(
         
         return {
             "success": True,
-            "message": f"Пошкодження зафіксовано ({qty} шт × ₴{fee_per_item} = ₴{fee})",
+            "message": charge_note,
             "damage_id": damage_id,
+            "stage": stage,
             "qty": qty,
             "fee": fee,
-            "fee_per_item": fee_per_item
+            "fee_per_item": fee_per_item,
+            "charged_to_client": fee > 0
         }
         
     except Exception as e:

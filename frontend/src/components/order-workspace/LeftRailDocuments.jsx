@@ -73,7 +73,8 @@ export default function LeftRailDocuments({
     const versions = {}
     
     for (const doc of docs) {
-      const entityType = ISSUE_CARD_DOCS.includes(doc.type) ? 'issue_card' : 'order'
+      // entity_type в БД: 'issue' для issue_card документів, 'order' для решти
+      const entityType = ISSUE_CARD_DOCS.includes(doc.type) ? 'issue' : 'order'
       const entityId = ISSUE_CARD_DOCS.includes(doc.type) ? (issueCardId || orderId) : orderId
       
       if (!entityId) continue

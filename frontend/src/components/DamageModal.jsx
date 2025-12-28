@@ -78,9 +78,40 @@ export default function DamageModal({
   
   const [photos, setPhotos] = useState([])
   const [saving, setSaving] = useState(false)
+  const [preIssueDamages, setPreIssueDamages] = useState([])
+  const [loadingDamages, setLoadingDamages] = useState(false)
   
   // Для pre_issue - спрощена форма
   const isPreIssue = stage === 'pre_issue'
+  
+  // Завантаження існуючих pre_issue пошкоджень при відкритті
+  useEffect(() => {
+    if (isOpen && order?.order_id) {
+      loadPreIssueDamages()
+    }
+  }, [isOpen, order?.order_id])
+  
+  const loadPreIssueDamages = async () => {
+    if (!order?.order_id) return
+    
+    setLoadingDamages(true)
+    try {
+      const res = await axios.get(`${BACKEND_URL}/api/product-damage-history/order/${order.order_id}/pre-issue`)
+      const damages = res.data.pre_issue_damages || []
+      // Фільтруємо тільки для поточного товару якщо item вказано
+      if (item?.inventory_id || item?.id) {
+        const productId = item.inventory_id || item.id
+        setPreIssueDamages(damages.filter(d => d.product_id == productId))
+      } else {
+        setPreIssueDamages(damages)
+      }
+    } catch (err) {
+      console.warn('Could not load pre-issue damages:', err)
+      setPreIssueDamages([])
+    } finally {
+      setLoadingDamages(false)
+    }
+  }
   
   useEffect(() => {
     if (isOpen) {

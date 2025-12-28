@@ -779,9 +779,9 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     product_ids_with_damage = set()
     
     # Base URL for photos (for WeasyPrint PDF rendering)
-    # In production, replace with actual domain
+    # Production backend URL
     import os
-    base_url = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:8001')
+    base_url = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
     
     for row in damage_result:
         product_id = row[1]

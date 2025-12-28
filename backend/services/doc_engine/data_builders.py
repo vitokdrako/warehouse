@@ -420,6 +420,44 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
                 if not item.get('sku') and loc_row[3]:
                     item['sku'] = loc_row[3]
     
+    # Load pre_damage (шкода зафіксована при видачі) for each item
+    for item in items:
+        product_id = item.get('product_id') or item.get('inventory_id')
+        if product_id and order_id:
+            try:
+                damage_result = db.execute(text("""
+                    SELECT damage_type, note, severity, photo_url, created_by,
+                           DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at
+                    FROM product_damage_history
+                    WHERE order_id = :order_id 
+                    AND product_id = :product_id 
+                    AND stage = 'pre_issue'
+                    ORDER BY created_at
+                """), {"order_id": order_id, "product_id": product_id})
+                
+                pre_damage = []
+                for d_row in damage_result:
+                    pre_damage.append({
+                        "damage_type": d_row[0],
+                        "type": d_row[0],  # alias for template
+                        "note": d_row[1] or "",
+                        "severity": d_row[2] or "low",
+                        "photo_url": d_row[3],
+                        "created_by": d_row[4],
+                        "created_at": d_row[5]
+                    })
+                
+                if pre_damage:
+                    item['pre_damage'] = pre_damage
+                    item['has_pre_damage'] = True
+                else:
+                    item['pre_damage'] = []
+                    item['has_pre_damage'] = False
+            except Exception as e:
+                print(f"Warning: Could not load pre_damage for product {product_id}: {e}")
+                item['pre_damage'] = []
+                item['has_pre_damage'] = False
+    
     issue_card = {
         "id": row[0],
         "order_id": row[1],

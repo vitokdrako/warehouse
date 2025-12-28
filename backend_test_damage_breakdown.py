@@ -315,9 +315,15 @@ class DamageBreakdownTester:
             
             if response.status_code == 200:
                 data = response.json()
-                damages = data if isinstance(data, list) else []
+                # Handle both array and object responses
+                if isinstance(data, dict):
+                    damages = data.get('pre_issue_damages', [])
+                    count = data.get('count', len(damages))
+                else:
+                    damages = data if isinstance(data, list) else []
+                    count = len(damages)
                 
-                self.log(f"✅ Pre-issue damages retrieved: {len(damages)} items")
+                self.log(f"✅ Pre-issue damages retrieved: {count} items")
                 
                 if damages:
                     self.log("📋 Sample damages found:")
@@ -336,8 +342,8 @@ class DamageBreakdownTester:
                 
                 return {
                     "success": True,
-                    "damages_count": len(damages),
-                    "has_damages": len(damages) > 0,
+                    "damages_count": count,
+                    "has_damages": count > 0,
                     "damages": damages
                 }
             else:

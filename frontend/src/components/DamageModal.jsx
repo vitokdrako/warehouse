@@ -161,6 +161,32 @@ export default function DamageModal({
     const userName = getCurrentUserName()
     
     try {
+      // Завантажуємо фото на сервер, якщо є
+      let uploadedPhotoUrl = ''
+      if (photos.length > 0) {
+        try {
+          const formDataUpload = new FormData()
+          formDataUpload.append('file', photos[0])
+          if (order?.order_id) {
+            formDataUpload.append('order_id', order.order_id)
+          }
+          
+          const uploadResponse = await axios.post(
+            `${BACKEND_URL}/api/product-damage-history/upload-photo`,
+            formDataUpload,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+          )
+          
+          if (uploadResponse.data.success) {
+            uploadedPhotoUrl = uploadResponse.data.url
+            console.log(`[DamageModal] Photo uploaded: ${uploadedPhotoUrl}`)
+          }
+        } catch (uploadErr) {
+          console.warn('[DamageModal] Photo upload failed:', uploadErr)
+          // Продовжуємо без фото
+        }
+      }
+      
       const damageRecord = {
         id: 'pd-' + Math.floor(Math.random()*90000+100),
         kind: isPreIssue ? 'pre_existing' : formData.kindCode,
@@ -171,7 +197,7 @@ export default function DamageModal({
         fee_per_item: isPreIssue ? 0 : formData.fee,
         qty: formData.qty,
         at: new Date().toISOString(),
-        photoName: formData.photoName,
+        photoName: uploadedPhotoUrl || formData.photoName,
         created_by: userName
       }
       
@@ -190,7 +216,7 @@ export default function DamageModal({
         fee: totalFee,
         fee_per_item: isPreIssue ? 0 : formData.fee,
         qty: formData.qty,
-        photo_url: formData.photoName,
+        photo_url: uploadedPhotoUrl || formData.photoName,
         note: formData.note,
         created_by: userName,
         // НЕ відправляємо в кабінет шкоди для pre_issue

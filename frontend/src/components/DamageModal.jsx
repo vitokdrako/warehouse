@@ -51,7 +51,9 @@ function getCurrentUserName() {
       const user = JSON.parse(userData)
       return user.name || user.email || 'Невідомий'
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Could not get user name:', e)
+  }
   return 'Невідомий'
 }
 

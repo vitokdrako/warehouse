@@ -16,6 +16,7 @@ export default function ZoneDocuments({
   title = 'Документи',
   hint = 'Генерація та завантаження документів',
   readOnly = false,
+  allowedDocTypes = null, // Масив дозволених типів документів (null = всі)
 }) {
   const [documents, setDocuments] = useState([])
   const [availableTypes, setAvailableTypes] = useState([])

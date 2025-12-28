@@ -778,9 +778,31 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     damages = []
     product_ids_with_damage = set()
     
+    # Base URL for photos (for WeasyPrint PDF rendering)
+    # In production, replace with actual domain
+    import os
+    base_url = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:8001')
+    
     for row in damage_result:
         product_id = row[1]
         product_ids_with_damage.add(product_id)
+        
+        # Формуємо повний URL для фото
+        photo_url = row[7]
+        if photo_url:
+            # Якщо це вже повний URL - залишаємо як є
+            if photo_url.startswith('http://') or photo_url.startswith('https://'):
+                full_photo_url = photo_url
+            # Якщо це відносний шлях - формуємо повний URL
+            elif photo_url.startswith('/uploads/'):
+                full_photo_url = f"{base_url}{photo_url}"
+            elif photo_url.startswith('uploads/'):
+                full_photo_url = f"{base_url}/{photo_url}"
+            else:
+                # Старий формат - тільки ім'я файлу (для зворотної сумісності)
+                full_photo_url = f"{base_url}/uploads/damage_photos/{photo_url}"
+        else:
+            full_photo_url = None
         
         damages.append({
             "id": row[0],
@@ -791,7 +813,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
             "damage_type_code": row[4],
             "severity": severity_names.get(row[5], row[5] or "low"),
             "note": row[6] or "",
-            "photo_url": row[7],
+            "photo_url": full_photo_url,
             "created_by": row[8] or "Система",
             "created_at": row[9] or ""
         })

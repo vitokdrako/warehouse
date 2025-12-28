@@ -45,7 +45,13 @@ export default function ZoneDocuments({
       )
       
       setDocuments(response.data.documents || [])
-      setAvailableTypes(response.data.available_types || [])
+      
+      // Фільтруємо типи документів якщо вказано allowedDocTypes
+      let types = response.data.available_types || []
+      if (allowedDocTypes && allowedDocTypes.length > 0) {
+        types = types.filter(t => allowedDocTypes.includes(t.type))
+      }
+      setAvailableTypes(types)
     } catch (error) {
       console.error('Error loading documents:', error)
     } finally {

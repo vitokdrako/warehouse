@@ -388,6 +388,54 @@ async def get_sku_damage_history(
         raise HTTPException(status_code=500, detail=f"Помилка читання: {str(e)}")
 
 
+@router.get("/order/{order_id}/pre-issue")
+async def get_pre_issue_damages(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати шкоду зафіксовану при видачі для порівняння при поверненні
+    Використовується для визначення чи шкода вже була
+    """
+    try:
+        result = db.execute(text("""
+            SELECT 
+                id, product_id, sku, product_name, 
+                damage_type, damage_code, severity,
+                photo_url, note, created_at
+            FROM product_damage_history
+            WHERE order_id = :order_id AND stage = 'pre_issue'
+            ORDER BY product_id, created_at
+        """), {"order_id": order_id})
+        
+        damages = []
+        for row in result:
+            damages.append({
+                "id": row[0],
+                "product_id": row[1],
+                "sku": row[2],
+                "product_name": row[3],
+                "damage_type": row[4],
+                "damage_code": row[5],
+                "severity": row[6],
+                "photo_url": row[7],
+                "note": row[8],
+                "created_at": row[9].isoformat() if row[9] else None
+            })
+        
+        return {
+            "order_id": order_id,
+            "pre_issue_damages": damages,
+            "count": len(damages),
+            "message": "Шкода зафіксована при видачі (не нараховується клієнту)"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка читання: {str(e)}")
+
+
+
+
 
 @router.get("/recent")
 async def get_recent_damages(

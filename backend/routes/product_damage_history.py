@@ -1019,3 +1019,103 @@ async def mark_processing_failed(damage_id: str, data: dict, db: Session = Depen
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
+
+# ==================== ЗАВАНТАЖЕННЯ ФОТО ПОШКОДЖЕНЬ ====================
+
+import shutil
+from pathlib import Path
+
+# Директорія для фото пошкоджень
+DAMAGE_PHOTOS_DIR = Path("/app/backend/uploads/damage_photos")
+
+@router.post("/upload-photo")
+async def upload_damage_photo(
+    file: UploadFile = File(...),
+    order_id: Optional[str] = None
+):
+    """
+    Завантажити фото пошкодження.
+    Повертає URL для збереження в базі даних.
+    """
+    try:
+        # Створюємо директорію якщо не існує
+        DAMAGE_PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Генеруємо унікальне ім'я файлу
+        file_ext = Path(file.filename).suffix.lower() or ".jpg"
+        if file_ext not in [".jpg", ".jpeg", ".png", ".webp", ".heic"]:
+            file_ext = ".jpg"
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        order_prefix = f"order{order_id}_" if order_id else ""
+        filename = f"{order_prefix}damage_{timestamp}_{unique_id}{file_ext}"
+        
+        file_path = DAMAGE_PHOTOS_DIR / filename
+        
+        # Зберігаємо файл
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # Повертаємо відносний URL для збереження в БД
+        relative_url = f"/uploads/damage_photos/{filename}"
+        
+        return {
+            "success": True,
+            "filename": filename,
+            "url": relative_url,
+            "full_path": str(file_path)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка завантаження фото: {str(e)}")
+
+
+@router.post("/upload-photos")
+async def upload_multiple_damage_photos(
+    files: List[UploadFile] = File(...),
+    order_id: Optional[str] = None
+):
+    """
+    Завантажити кілька фото пошкоджень.
+    """
+    uploaded = []
+    
+    for file in files:
+        try:
+            DAMAGE_PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
+            
+            file_ext = Path(file.filename).suffix.lower() or ".jpg"
+            if file_ext not in [".jpg", ".jpeg", ".png", ".webp", ".heic"]:
+                file_ext = ".jpg"
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            unique_id = str(uuid.uuid4())[:8]
+            order_prefix = f"order{order_id}_" if order_id else ""
+            filename = f"{order_prefix}damage_{timestamp}_{unique_id}{file_ext}"
+            
+            file_path = DAMAGE_PHOTOS_DIR / filename
+            
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            relative_url = f"/uploads/damage_photos/{filename}"
+            
+            uploaded.append({
+                "original_name": file.filename,
+                "filename": filename,
+                "url": relative_url
+            })
+            
+        except Exception as e:
+            uploaded.append({
+                "original_name": file.filename,
+                "error": str(e)
+            })
+    
+    return {
+        "success": True,
+        "uploaded": uploaded,
+        "count": len([u for u in uploaded if "url" in u])
+    }
+

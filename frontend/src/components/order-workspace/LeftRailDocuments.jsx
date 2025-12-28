@@ -30,6 +30,7 @@ const DOCS_BY_STATUS = {
   ],
   'issued': [
     { type: 'issue_act', name: 'Акт передачі', icon: '📤' },
+    { type: 'damage_breakdown', name: 'Розшифровка пошкоджень', icon: '⚠️', emailRequired: true },
   ],
   'on_rent': [
     { type: 'issue_act', name: 'Акт передачі', icon: '📤' },

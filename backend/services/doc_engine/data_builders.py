@@ -379,10 +379,6 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
                 "location": location,
                 "image_url": item_row[7]
             })
-                "quantity": item_row[2] or 1,
-                "sku": item_row[3] or "",
-                "location": location
-            })
     
     # Use customer_phone or phone fallback
     phone = row[8] or row[9] or ""
@@ -398,28 +394,6 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
     
     # Preparation notes (row[17])
     preparation_notes = row[17] if len(row) > 17 else ""
-    
-    # Enrich items with location data
-    for item in items:
-        product_id = item.get('product_id') or item.get('inventory_id')
-        sku = item.get('sku')
-        if product_id or sku:
-            loc_query = "SELECT zone, aisle, shelf, sku FROM products WHERE "
-            params = {}
-            if product_id:
-                loc_query += "product_id = :product_id"
-                params["product_id"] = product_id
-            else:
-                loc_query += "sku = :sku"
-                params["sku"] = sku
-            
-            loc_result = db.execute(text(loc_query), params)
-            loc_row = loc_result.fetchone()
-            if loc_row:
-                if loc_row[0] or loc_row[1] or loc_row[2]:
-                    item['location'] = "-".join(filter(None, [loc_row[0], loc_row[1], loc_row[2]]))
-                if not item.get('sku') and loc_row[3]:
-                    item['sku'] = loc_row[3]
     
     # Load pre_damage (шкода зафіксована при видачі) for each item
     for item in items:

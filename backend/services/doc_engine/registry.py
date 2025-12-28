@@ -332,6 +332,44 @@ DOC_REGISTRY = {
         "critical_for": ["legal"],
         "purpose": "legacy alias for damage_report"
     },
+    
+    # ═══════════════════════════════════════════════════════════════
+    # 15. Розшифровка пошкоджень (Damage Breakdown)
+    # ═══════════════════════════════════════════════════════════════
+    "damage_breakdown": {
+        "name": "Розшифровка пошкоджень",
+        "name_en": "Damage Breakdown",
+        "entity_type": "order",
+        "series": "DBK",
+        "template": "damage_breakdown/v1.html",
+        "requirements": ["order_id"],
+        "description": "Детальний перелік пошкоджень з фото для клієнта",
+        "trigger_stage": "pre_issue",
+        "trigger_at": "issue_with_damages",
+        "print_required": False,
+        "pdf_always": True,
+        "critical_for": ["legal"],
+        "purpose": "фіксація існуючих дефектів з фото, захист від необґрунтованих претензій"
+    },
+    
+    # ═══════════════════════════════════════════════════════════════
+    # 16. Дозамовлення (Order Modification)
+    # ═══════════════════════════════════════════════════════════════
+    "order_modification": {
+        "name": "Дозамовлення",
+        "name_en": "Order Modification",
+        "entity_type": "order",
+        "series": "MOD",
+        "template": "order_modification.html",
+        "requirements": ["order_id"],
+        "description": "Документ змін у замовленні (додані/видалені товари)",
+        "trigger_stage": "order_modified",
+        "trigger_at": "modification",
+        "print_required": False,
+        "pdf_always": True,
+        "critical_for": ["legal", "finance"],
+        "purpose": "фіксація змін у замовленні на етапі збору/видачі"
+    },
 }
 
 # ═══════════════════════════════════════════════════════════════

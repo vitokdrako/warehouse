@@ -65,7 +65,7 @@ export default function InternalNotesChat({
 
     try {
       setSending(true)
-      const response = await axios.post(`${BACKEND_URL}/api/orders/${orderId}/internal-notes`, {
+      const response = await api.post(`/api/orders/${orderId}/internal-notes`, {
         message: newMessage.trim(),
         user_id: currentUserId || null,
         user_name: currentUserName || 'Менеджер'

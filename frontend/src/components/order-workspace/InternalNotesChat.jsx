@@ -35,6 +35,10 @@ export default function InternalNotesChat({
   }, [notes])
 
   const loadNotes = async () => {
+    if (!orderId) {
+      console.warn('[InternalNotesChat] No orderId provided')
+      return
+    }
     try {
       setLoading(true)
       const response = await axios.get(`${BACKEND_URL}/api/orders/${orderId}/internal-notes`)

@@ -1,29 +1,127 @@
 /* eslint-disable */
 import { useState, useEffect, useCallback, useRef } from 'react'
+import axios from 'axios'
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 /**
- * useAutoRefresh - Хук для автоматичного оновлення даних
- * Корисно коли кілька людей працюють над одним замовленням
+ * useOrderSync - Хук для синхронізації змін між користувачами
+ * Перевіряє тільки timestamp - легкий запит кожні N секунд
+ * Оновлює дані тільки якщо хтось інший зберіг зміни
  * 
- * @param {Function} fetchFn - Функція для завантаження даних
- * @param {number} intervalMs - Інтервал оновлення в мілісекундах (default: 30000 = 30 сек)
- * @param {boolean} enabled - Чи включено автооновлення (default: true)
- * @param {Array} deps - Залежності для перезапуску
+ * @param {string} orderId - ID замовлення
+ * @param {Function} onUpdate - Callback коли потрібно оновити дані
+ * @param {number} intervalMs - Інтервал перевірки (default: 10000 = 10 сек)
+ * @param {boolean} enabled - Чи включено синхронізацію
+ */
+export function useOrderSync(orderId, onUpdate, intervalMs = 10000, enabled = true) {
+  const [lastKnownModified, setLastKnownModified] = useState(null)
+  const [lastModifiedBy, setLastModifiedBy] = useState(null)
+  const [hasNewChanges, setHasNewChanges] = useState(false)
+  const intervalRef = useRef(null)
+  const isMyUpdate = useRef(false)
+
+  // Перевірка timestamp
+  const checkForUpdates = useCallback(async () => {
+    if (!orderId || !enabled) return
+    
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/orders/${orderId}/last-modified`)
+      const { last_modified, modified_by } = response.data
+      
+      if (last_modified && lastKnownModified) {
+        // Порівнюємо timestamps
+        if (last_modified !== lastKnownModified && !isMyUpdate.current) {
+          // Хтось інший зберіг зміни!
+          setHasNewChanges(true)
+          setLastModifiedBy(modified_by)
+          
+          // Автоматично оновлюємо дані
+          if (onUpdate) {
+            onUpdate()
+          }
+        }
+      }
+      
+      setLastKnownModified(last_modified)
+      isMyUpdate.current = false
+      
+    } catch (err) {
+      // Тихо ігноруємо помилки - це фоновий процес
+    }
+  }, [orderId, enabled, lastKnownModified, onUpdate])
+
+  // Позначити що ми самі зберегли (щоб не реагувати на свої зміни)
+  const markMyUpdate = useCallback(async () => {
+    isMyUpdate.current = true
+    
+    // Оновлюємо timestamp на сервері
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      await axios.post(`${BACKEND_URL}/api/orders/${orderId}/touch`, null, {
+        params: {
+          user_id: user.id || user.user_id,
+          user_name: user.name || user.username || 'Невідомий'
+        }
+      })
+    } catch (err) {
+      console.warn('[useOrderSync] Failed to touch order:', err)
+    }
+  }, [orderId])
+
+  // Скинути прапорець нових змін
+  const dismissChanges = useCallback(() => {
+    setHasNewChanges(false)
+    setLastModifiedBy(null)
+  }, [])
+
+  // Запуск polling
+  useEffect(() => {
+    if (!enabled || !orderId) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      return
+    }
+
+    // Перша перевірка одразу
+    checkForUpdates()
+
+    // Запускаємо interval
+    intervalRef.current = setInterval(checkForUpdates, intervalMs)
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+  }, [enabled, orderId, intervalMs, checkForUpdates])
+
+  return {
+    hasNewChanges,
+    lastModifiedBy,
+    markMyUpdate,
+    dismissChanges,
+    checkForUpdates,
+  }
+}
+
+/**
+ * useAutoRefresh - Оригінальний хук (залишаємо для зворотної сумісності)
+ * Але тепер він НЕ робить автоматичне оновлення
  */
 export function useAutoRefresh(fetchFn, intervalMs = 30000, enabled = true, deps = []) {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const intervalRef = useRef(null)
   const fetchFnRef = useRef(fetchFn)
   
-  // Оновлюємо ref при зміні fetchFn
   useEffect(() => {
     fetchFnRef.current = fetchFn
   }, [fetchFn])
 
   const refresh = useCallback(async (silent = true) => {
-    if (!enabled) return
-    
     try {
       if (!silent) setIsRefreshing(true)
       await fetchFnRef.current()
@@ -33,30 +131,7 @@ export function useAutoRefresh(fetchFn, intervalMs = 30000, enabled = true, deps
     } finally {
       setIsRefreshing(false)
     }
-  }, [enabled])
-
-  // Запуск polling
-  useEffect(() => {
-    if (!enabled) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-      return
-    }
-
-    // Запускаємо interval
-    intervalRef.current = setInterval(() => {
-      refresh(true) // silent refresh
-    }, intervalMs)
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    }
-  }, [enabled, intervalMs, refresh, ...deps])
+  }, [])
 
   return {
     refresh,
@@ -72,7 +147,7 @@ export function formatLastUpdate(date) {
   if (!date) return ''
   
   const now = new Date()
-  const diff = Math.floor((now - date) / 1000) // різниця в секундах
+  const diff = Math.floor((now - date) / 1000)
   
   if (diff < 10) return 'щойно'
   if (diff < 60) return `${diff} сек тому`
@@ -81,4 +156,5 @@ export function formatLastUpdate(date) {
   return date.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default useAutoRefresh
+export default useOrderSync
+

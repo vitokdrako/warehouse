@@ -79,6 +79,8 @@ export default function InternalNotesChat({
     } catch (err) {
       console.error('[InternalNotesChat] Error sending note:', err)
       console.error('[InternalNotesChat] orderId:', orderId, 'message:', newMessage)
+      console.error('[InternalNotesChat] Response data:', err.response?.data)
+      console.error('[InternalNotesChat] Request config:', err.config)
       // Show error to user
       alert('Помилка відправки повідомлення. Спробуйте ще раз.')
     } finally {

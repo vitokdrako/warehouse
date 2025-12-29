@@ -5,14 +5,6 @@ import ZoneCard from './ZoneCard'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
-// Axios instance with proper headers
-const api = axios.create({
-  baseURL: BACKEND_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
 /**
  * InternalNotesChat - Внутрішній месенджер команди
  * Показує нотатки від різних департаментів як чат

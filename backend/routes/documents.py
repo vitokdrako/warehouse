@@ -257,9 +257,9 @@ async def send_document_email(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Відправляє документ на email.
+    Відправляє документ на email як HTML в тілі листа.
     """
-    from services.email_service import send_email_with_attachment
+    from services.email_service import send_email
     
     doc = get_document_by_id(db, document_id)
     if not doc:
@@ -270,34 +270,60 @@ async def send_document_email(
     if not html_content:
         raise HTTPException(status_code=400, detail="Документ не має HTML вмісту")
     
-    # Генеруємо PDF
-    try:
-        pdf_bytes = render_pdf(html_content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Помилка генерації PDF: {str(e)}")
-    
-    # Відправляємо email
+    # Відправляємо email з документом в тілі
     doc_type_name = DOC_REGISTRY.get(doc["doc_type"], {}).get("name", doc["doc_type"])
     subject = f"FarforRent - {doc_type_name} {doc['doc_number']}"
-    body = f"""
-    <h2>Документ від FarforRent</h2>
-    <p>Доброго дня!</p>
-    <p>Вам надіслано документ: <strong>{doc_type_name}</strong></p>
-    <p>Номер документа: <strong>{doc['doc_number']}</strong></p>
-    <br>
-    <p>Документ у вкладенні.</p>
-    <br>
-    <p>З повагою,<br>Команда FarforRent</p>
+    
+    # Обгортаємо документ в email шаблон
+    email_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: Arial, sans-serif;">
+        <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <!-- Хедер -->
+            <div style="background: #2c3e50; color: white; padding: 20px; text-align: center;">
+                <h1 style="margin: 0; font-size: 24px;">FarforRent</h1>
+                <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px;">Оренда декору для свят</p>
+            </div>
+            
+            <!-- Інфо про документ -->
+            <div style="padding: 20px; background: #ecf0f1; border-bottom: 1px solid #ddd;">
+                <p style="margin: 0; color: #555;">
+                    <strong>Документ:</strong> {doc_type_name}<br>
+                    <strong>Номер:</strong> {doc['doc_number']}
+                </p>
+            </div>
+            
+            <!-- Сам документ -->
+            <div style="padding: 20px;">
+                {html_content}
+            </div>
+            
+            <!-- Футер -->
+            <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #ddd;">
+                <p style="margin: 0; color: #888; font-size: 12px;">
+                    Цей лист згенеровано автоматично системою FarforRent.<br>
+                    Якщо у вас є питання - зв'яжіться з нами.
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
     """
     
     try:
-        await send_email_with_attachment(
+        result = send_email(
             to_email=request.email,
             subject=subject,
-            body=body,
-            attachment=pdf_bytes,
-            attachment_filename=f"{doc['doc_number']}.pdf"
+            html_content=email_html
         )
+        
+        if not result["success"]:
+            raise Exception(result["message"])
         
         # Логуємо відправку
         db.execute(text("""
@@ -309,11 +335,14 @@ async def send_document_email(
         return {"success": True, "message": f"Документ відправлено на {request.email}"}
     except Exception as e:
         # Логуємо помилку
-        db.execute(text("""
-            INSERT INTO document_email_log (document_id, email, sent_at, status, error)
-            VALUES (:doc_id, :email, NOW(), 'failed', :error)
-        """), {"doc_id": document_id, "email": request.email, "error": str(e)})
-        db.commit()
+        try:
+            db.execute(text("""
+                INSERT INTO document_email_log (document_id, email, sent_at, status, error)
+                VALUES (:doc_id, :email, NOW(), 'failed', :error)
+            """), {"doc_id": document_id, "email": request.email, "error": str(e)})
+            db.commit()
+        except:
+            pass
         
         raise HTTPException(status_code=500, detail=f"Помилка відправки email: {str(e)}")
 

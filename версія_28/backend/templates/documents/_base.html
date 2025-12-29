@@ -47,8 +47,9 @@
         /* Мобільна адаптація */
         @media screen and (max-width: 600px) {
             body { padding: 10px; font-size: 9pt; }
-            .header { flex-direction: column; gap: 10px; }
-            .doc-info { text-align: left; }
+            .header { flex-wrap: wrap; gap: 10px; }
+            .header > div:first-child { flex: 1; min-width: 120px; }
+            .header .doc-info { text-align: right; min-width: 140px; }
             table { font-size: 8pt; }
             th, td { padding: 4px 6px; }
             /* Числові колонки не переносяться */

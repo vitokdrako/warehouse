@@ -59,11 +59,18 @@ export default function InternalNotesChat({
 
     try {
       setSending(true)
-      const response = await api.post(`/api/orders/${orderId}/internal-notes`, {
+      const payload = {
         message: newMessage.trim(),
         user_id: currentUserId || null,
         user_name: currentUserName || 'Менеджер'
-      })
+      }
+      console.log('[InternalNotesChat] Sending:', { url: `${BACKEND_URL}/api/orders/${orderId}/internal-notes`, payload })
+      
+      const response = await axios.post(
+        `${BACKEND_URL}/api/orders/${orderId}/internal-notes`,
+        payload,
+        { headers: { 'Content-Type': 'application/json' } }
+      )
 
       if (response.data.success) {
         setNotes([...notes, response.data.note])

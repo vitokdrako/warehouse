@@ -49,13 +49,13 @@ export default function InternalNotesChat({
   }
 
   const handleSend = async () => {
-    if (!newMessage.trim() || sending) return
+    if (!newMessage.trim() || sending || !orderId) return
 
     try {
       setSending(true)
       const response = await axios.post(`${BACKEND_URL}/api/orders/${orderId}/internal-notes`, {
         message: newMessage.trim(),
-        user_id: currentUserId,
+        user_id: currentUserId || null,
         user_name: currentUserName || 'Менеджер'
       })
 

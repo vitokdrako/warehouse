@@ -4,9 +4,10 @@
  * Використовує уніфіковану систему Order Workspace
  */
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../hooks/use-toast'
+import { useAutoRefresh, formatLastUpdate } from '../hooks/useAutoRefresh'
 import axios from 'axios'
 
 import {
@@ -34,7 +35,7 @@ import OrderItemsModification from '../components/order-workspace/OrderItemsModi
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 const todayISO = () => new Date().toISOString().slice(0, 10)
-const nowISO = () => new Date().toISOString()
+const nowISO = () => new Date().toISOString().slice(0, 19)
 
 export default function IssueCardWorkspace() {
   const { id } = useParams()  // issue_card.id

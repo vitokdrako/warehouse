@@ -258,6 +258,7 @@ async def send_document_email(
 ):
     """
     Відправляє документ на email як HTML в тілі листа.
+    Відправляється тільки сам документ без додаткових обгорток.
     """
     from services.email_service import send_email
     
@@ -270,56 +271,15 @@ async def send_document_email(
     if not html_content:
         raise HTTPException(status_code=400, detail="Документ не має HTML вмісту")
     
-    # Відправляємо email з документом в тілі
+    # Тема листа
     doc_type_name = DOC_REGISTRY.get(doc["doc_type"], {}).get("name", doc["doc_type"])
-    subject = f"FarforRent - {doc_type_name} {doc['doc_number']}"
-    
-    # Обгортаємо документ в email шаблон
-    email_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin: 0; padding: 20px; background-color: #f5f5f5; font-family: Arial, sans-serif;">
-        <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <!-- Хедер -->
-            <div style="background: #2c3e50; color: white; padding: 20px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">FarforRent</h1>
-                <p style="margin: 5px 0 0; opacity: 0.8; font-size: 14px;">Оренда декору для свят</p>
-            </div>
-            
-            <!-- Інфо про документ -->
-            <div style="padding: 20px; background: #ecf0f1; border-bottom: 1px solid #ddd;">
-                <p style="margin: 0; color: #555;">
-                    <strong>Документ:</strong> {doc_type_name}<br>
-                    <strong>Номер:</strong> {doc['doc_number']}
-                </p>
-            </div>
-            
-            <!-- Сам документ -->
-            <div style="padding: 20px;">
-                {html_content}
-            </div>
-            
-            <!-- Футер -->
-            <div style="background: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #ddd;">
-                <p style="margin: 0; color: #888; font-size: 12px;">
-                    Цей лист згенеровано автоматично системою FarforRent.<br>
-                    Якщо у вас є питання - зв'яжіться з нами.
-                </p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
+    subject = f"FarforDecorOrenda - {doc_type_name} {doc['doc_number']}"
     
     try:
         result = send_email(
             to_email=request.email,
             subject=subject,
-            html_content=email_html
+            html_content=html_content  # Відправляємо документ як є
         )
         
         if not result["success"]:

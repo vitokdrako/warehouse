@@ -8,11 +8,10 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 /**
  * InternalNotesChat - Внутрішній месенджер команди
  * Показує нотатки від різних департаментів як чат
+ * Користувач визначається автоматично з токена авторизації
  */
 export default function InternalNotesChat({
   orderId,
-  currentUserId,
-  currentUserName,
   clientComment = '',  // Окремий коментар клієнта (read-only)
   readOnly = false,
 }) {

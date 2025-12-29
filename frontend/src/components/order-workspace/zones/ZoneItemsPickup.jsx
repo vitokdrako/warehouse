@@ -138,9 +138,9 @@ function ItemPickupCard({
       </div>
       
       {/* Лічильник комплектування */}
-      <div className="flex items-center justify-between mb-4 p-3 bg-slate-100 rounded-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 p-3 bg-slate-100 rounded-xl">
         <span className="text-sm font-medium text-slate-700">Укомплектовано:</span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button 
             onClick={() => !readOnly && onPick?.(item.id, Math.max(0, pickedQty - 1))} 
             disabled={readOnly || pickedQty === 0}
@@ -149,7 +149,7 @@ function ItemPickupCard({
             −
           </button>
           <div className={`
-            w-14 text-center text-xl font-bold py-1 rounded-lg
+            w-12 text-center text-xl font-bold py-1 rounded-lg
             ${isComplete ? 'text-emerald-600 bg-emerald-100' : isOver ? 'text-rose-600 bg-rose-100' : 'bg-white'}
           `}>
             {pickedQty}
@@ -161,15 +161,15 @@ function ItemPickupCard({
           >
             +
           </button>
-          <span className="text-sm text-slate-500 ml-1">/ {qty}</span>
+          <span className="text-sm text-slate-500">/ {qty}</span>
           
           {/* Кнопка швидкого "Зібрано" */}
           {!isComplete && !readOnly && (
             <button 
               onClick={() => onPick?.(item.id, qty)}
-              className="ml-2 px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors"
+              className="px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors"
             >
-              Зібрано ✓
+              ✓
             </button>
           )}
         </div>

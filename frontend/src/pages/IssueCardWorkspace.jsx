@@ -205,6 +205,17 @@ export default function IssueCardWorkspace() {
     }
   }
 
+  // Обгортаємо в useCallback для автооновлення
+  const loadIssueCardCallback = useCallback(loadIssueCard, [id])
+
+  // Автооновлення кожні 15 секунд (для командної роботи)
+  const { refresh, lastUpdate, isRefreshing } = useAutoRefresh(
+    loadIssueCardCallback,
+    15000, // 15 секунд
+    !loading && !!id, // включати тільки після першого завантаження
+    [id]
+  )
+
   useEffect(() => {
     if (!id) return
     loadIssueCard()

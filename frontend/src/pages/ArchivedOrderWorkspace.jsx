@@ -14,6 +14,7 @@ import {
   LeftRailClient,
   LeftRailFinance,
   LeftRailTimeline,
+  InternalNotesChat,
 } from '../components/order-workspace'
 
 import {

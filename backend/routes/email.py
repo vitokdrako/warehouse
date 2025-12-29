@@ -133,10 +133,20 @@ class SendDocumentRequest(BaseModel):
     customer_name: Optional[str] = None
 
 
+class SendDocumentByTypeRequest(BaseModel):
+    """Запит для відправки документа по типу - автоматично генерує документ"""
+    doc_type: str
+    entity_id: str
+    entity_type: Optional[str] = "order"
+    recipient_email: str
+    recipient_name: Optional[str] = None
+    order_number: Optional[str] = None
+
+
 @router.post("/send-document")
 async def send_document_to_client(request: SendDocumentRequest):
     """
-    Відправити документ клієнту на email
+    Відправити документ клієнту на email (з готовим HTML)
     
     - document_type: invoice_offer, contract_rent, issue_act, return_act, etc.
     - document_html: HTML вміст документа
@@ -163,6 +173,61 @@ async def send_document_to_client(request: SendDocumentRequest):
         raise HTTPException(status_code=500, detail=result["message"])
     
     return result
+
+
+@router.post("/send-document-by-type")
+async def send_document_by_type(request: SendDocumentByTypeRequest):
+    """
+    Автоматично генерує документ і відправляє на email.
+    
+    - doc_type: invoice_offer, contract_rent, issue_act, return_act, damage_breakdown, etc.
+    - entity_id: ID замовлення або картки
+    - entity_type: 'order' або 'issue'
+    - recipient_email: Email отримувача
+    """
+    from services.email_service import send_document_email
+    from services.doc_engine.data_builders import build_document_data
+    from services.doc_engine.generator import generate_document_html
+    from database_rentalhub import get_rh_db_sync
+    
+    if not request.recipient_email:
+        raise HTTPException(status_code=400, detail="Email не вказано")
+    
+    try:
+        db = get_rh_db_sync()
+        
+        # Генеруємо документ
+        doc_data = build_document_data(db, request.doc_type, request.entity_id, {})
+        html_content = generate_document_html(request.doc_type, doc_data)
+        
+        # Визначаємо номер замовлення
+        order_number = request.order_number
+        if not order_number and doc_data:
+            order_number = doc_data.get('order', {}).get('order_number', request.entity_id)
+        
+        # Відправляємо email
+        result = send_document_email(
+            to_email=request.recipient_email,
+            document_type=request.doc_type,
+            document_html=html_content,
+            order_number=order_number or request.entity_id,
+            customer_name=request.recipient_name
+        )
+        
+        db.close()
+        
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail=result["message"])
+        
+        return {
+            "success": True,
+            "message": f"Документ відправлено на {request.recipient_email}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
 @router.post("/test-smtp")

@@ -313,6 +313,9 @@ export default function IssueCardWorkspace() {
         requisitors: selectedRequisitors
       })
       
+      // Повідомляємо інших користувачів про зміни
+      await markMyUpdate()
+      
       toast({ title: '✅ Успіх', description: 'Прогрес збережено' })
     } catch (err) {
       console.error('Error saving:', err)

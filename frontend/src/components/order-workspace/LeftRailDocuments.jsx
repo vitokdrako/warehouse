@@ -271,7 +271,7 @@ export default function LeftRailDocuments({
     
     try {
       // Використовуємо ID збереженого документа
-      const documentId = docInfo?.latestDocId
+      const documentId = docInfo?.id
       
       if (!documentId) {
         // Якщо немає збереженого документа - використовуємо новий endpoint

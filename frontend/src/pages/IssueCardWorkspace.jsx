@@ -479,14 +479,8 @@ setTimeout(()=>window.print(),500);
           { label: '📱 QR коди', onClick: printQRCodes },
         ]}
         footerChildren={
-          <div className="text-sm text-slate-600 flex items-center gap-3">
+          <div className="text-sm text-slate-600">
             <span>Позицій: <b>{pickedCount}/{items.length}</b> · Одиниць: <b>{pickedQty}/{totalQty}</b></span>
-            {lastUpdate && (
-              <span className="text-xs text-slate-400 flex items-center gap-1">
-                {isRefreshing && <span className="animate-spin">⟳</span>}
-                Оновлено: {formatLastUpdate(lastUpdate)}
-              </span>
-            )}
           </div>
         }
       >

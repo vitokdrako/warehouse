@@ -98,6 +98,7 @@ app.include_router(export.router)
 app.include_router(template_admin.router)
 app.include_router(order_modifications.router)
 app.include_router(order_internal_notes.router)
+app.include_router(order_sync.router)
 
 # Configure logging
 logging.basicConfig(

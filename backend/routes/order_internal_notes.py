@@ -2,7 +2,7 @@
 Order Internal Notes API - Внутрішній месенджер для команди
 Нотатки по замовленню, видимі всім департаментам
 """
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
@@ -10,6 +10,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 from database_rentalhub import get_rh_db
+from utils.user_tracking_helper import get_current_user_dependency
 
 router = APIRouter(prefix="/api/orders", tags=["order-internal-notes"])
 

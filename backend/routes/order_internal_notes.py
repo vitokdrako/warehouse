@@ -17,8 +17,7 @@ router = APIRouter(prefix="/api/orders", tags=["order-internal-notes"])
 
 class NoteCreate(BaseModel):
     message: str
-    user_id: Optional[str] = None
-    user_name: Optional[str] = None
+    # user_id та user_name більше не потрібні - беремо з токена
 
 
 class NoteResponse(BaseModel):

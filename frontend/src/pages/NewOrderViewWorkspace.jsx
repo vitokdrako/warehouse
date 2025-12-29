@@ -756,18 +756,6 @@ export default function NewOrderViewWorkspace() {
       {/* Внутрішній чат команди + коментар клієнта */}
       <InternalNotesChat
         orderId={orderId}
-        currentUserId={(() => {
-          try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
-            return user.id || user.user_id || 'unknown'
-          } catch { return 'unknown' }
-        })()}
-        currentUserName={(() => {
-          try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
-            return user.name || user.username || 'Менеджер'
-          } catch { return 'Менеджер' }
-        })()}
         clientComment={clientComment}
         readOnly={decorOrderStatus === 'completed' || decorOrderStatus === 'cancelled'}
       />

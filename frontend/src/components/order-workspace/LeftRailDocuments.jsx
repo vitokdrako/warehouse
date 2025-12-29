@@ -255,47 +255,76 @@ export default function LeftRailDocuments({
       return
     }
     
-    const docInfo = docVersions[docType]
+    let docInfo = docVersions[docType]
     
     // Якщо документ не існує - спочатку генеруємо
     if (!docInfo?.exists) {
       await generateNewDocument(docType)
       // Перезавантажуємо версії
       await loadDocumentVersions()
+      // Оновлюємо docInfo після генерації
+      docInfo = docVersions[docType]
     }
     
     setSending(docType)
     setError(null)
     
-    const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue' : 'order'
-    const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId
-    
     try {
-      const emailResponse = await fetch(`${BACKEND_URL}/api/email/send-document`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`
-        },
-        body: JSON.stringify({
-          doc_type: docType,
-          entity_id: String(entityId),
-          entity_type: entityType,
-          recipient_email: customerEmail,
-          recipient_name: '',
-          order_number: orderNumber
-        })
-      })
+      // Використовуємо ID збереженого документа
+      const documentId = docInfo?.latestDocId
       
-      if (!emailResponse.ok) {
-        const errData = await emailResponse.json()
-        throw new Error(errData.detail || 'Помилка відправки email')
+      if (!documentId) {
+        // Якщо немає збереженого документа - використовуємо новий endpoint
+        const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue' : 'order'
+        const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId
+        
+        const emailResponse = await fetch(`${BACKEND_URL}/api/email/send-document-by-type`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({
+            doc_type: docType,
+            entity_id: String(entityId),
+            entity_type: entityType,
+            recipient_email: customerEmail,
+            recipient_name: '',
+            order_number: orderNumber
+          })
+        })
+        
+        if (!emailResponse.ok) {
+          const errData = await emailResponse.json()
+          throw new Error(errData.detail || 'Помилка відправки email')
+        }
+        
+        const emailResult = await emailResponse.json()
+        alert(`✅ ${emailResult.message}`)
+      } else {
+        // Відправляємо збережений документ
+        const emailResponse = await fetch(`${BACKEND_URL}/api/documents/${documentId}/send-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({
+            email: customerEmail
+          })
+        })
+        
+        if (!emailResponse.ok) {
+          const errData = await emailResponse.json()
+          throw new Error(errData.detail || 'Помилка відправки email')
+        }
+        
+        const emailResult = await emailResponse.json()
+        alert(`✅ ${emailResult.message || 'Документ відправлено'}`)
       }
       
-      const emailResult = await emailResponse.json()
-      alert(`✅ ${emailResult.message}`)
-      
     } catch (err) {
+      console.error('[LeftRailDocuments] Email error:', err)
       setError(err.message)
       alert(`❌ Помилка: ${err.message}`)
     } finally {

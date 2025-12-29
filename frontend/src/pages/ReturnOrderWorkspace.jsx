@@ -138,6 +138,17 @@ export default function ReturnOrderWorkspace() {
     }
   }
 
+  // Обгортаємо в useCallback для автооновлення
+  const loadOrderCallback = useCallback(loadOrder, [orderId])
+
+  // Автооновлення кожні 15 секунд
+  const { refresh, lastUpdate, isRefreshing } = useAutoRefresh(
+    loadOrderCallback,
+    15000,
+    !loading && !!orderId,
+    [orderId]
+  )
+
   useEffect(() => {
     if (!orderId) return
     loadOrder()

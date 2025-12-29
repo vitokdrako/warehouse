@@ -10,5 +10,6 @@ export { default as LeftRailDocuments } from './LeftRailDocuments'
 export { default as LeftRailTimeline } from './LeftRailTimeline'
 export { default as WorkspaceHeader } from './WorkspaceHeader'
 export { default as FooterActions } from './FooterActions'
+export { default as InternalNotesChat } from './InternalNotesChat'
 export { STATUS_CONFIG, STATUS_MAP, getStatusConfig, getStatusKey } from './statusConfig'
 

@@ -233,6 +233,10 @@ export default function ReturnOrderWorkspace() {
           damage_fee: damageFee,
         }
       })
+      
+      // Повідомляємо інших користувачів про зміни
+      await markMyUpdate()
+      
       toast({ title: '✅ Збережено', description: 'Прогрес повернення збережено' })
     } catch (err) {
       console.error('Save error:', err)

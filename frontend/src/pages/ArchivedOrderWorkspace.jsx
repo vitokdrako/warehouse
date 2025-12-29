@@ -271,15 +271,24 @@ export default function ArchivedOrderWorkspace() {
         readOnly={true}
       />
       
-      {/* Нотатки (read-only) */}
-      {notes && (
-        <ZoneNotes
-          notes={notes}
-          title="📝 Нотатки"
-          hint="Коментарі менеджера"
-          readOnly={true}
-        />
-      )}
+      {/* Внутрішній чат команди (read-only в архіві) */}
+      <InternalNotesChat
+        orderId={orderId}
+        currentUserId={(() => {
+          try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            return user.id || user.user_id || 'unknown'
+          } catch { return 'unknown' }
+        })()}
+        currentUserName={(() => {
+          try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            return user.name || user.username || 'Менеджер'
+          } catch { return 'Менеджер' }
+        })()}
+        clientComment={order?.customer_comment || order?.client_comment}
+        readOnly={true}
+      />
     </OrderWorkspaceLayout>
   )
 }

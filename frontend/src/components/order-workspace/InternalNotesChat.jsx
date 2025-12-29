@@ -19,7 +19,9 @@ export default function InternalNotesChat({
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(false)
   const chatEndRef = useRef(null)
+  const prevNotesCountRef = useRef(0)
 
   // Завантаження нотаток
   useEffect(() => {
@@ -28,10 +30,15 @@ export default function InternalNotesChat({
     }
   }, [orderId])
 
-  // Автоскрол до останнього повідомлення
+  // Автоскрол тільки коли додано НОВЕ повідомлення (не при оновленні)
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [notes])
+    // Скролимо тільки якщо кількість нотаток збільшилась
+    if (notes.length > prevNotesCountRef.current && shouldScrollToBottom) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      setShouldScrollToBottom(false)
+    }
+    prevNotesCountRef.current = notes.length
+  }, [notes, shouldScrollToBottom])
 
   const loadNotes = async () => {
     if (!orderId) {
@@ -52,6 +59,7 @@ export default function InternalNotesChat({
       setLoading(false)
     }
   }
+
 
   const handleSend = async () => {
     if (!newMessage.trim() || sending || !orderId) return

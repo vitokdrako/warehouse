@@ -205,21 +205,32 @@ export default function IssueCardWorkspace() {
     }
   }
 
-  // Обгортаємо в useCallback для автооновлення
+  // Обгортаємо в useCallback для синхронізації
   const loadIssueCardCallback = useCallback(loadIssueCard, [id])
 
-  // Автооновлення кожні 15 секунд (для командної роботи)
-  const { refresh, lastUpdate, isRefreshing } = useAutoRefresh(
+  // Синхронізація змін з іншими користувачами
+  const { hasNewChanges, lastModifiedBy, markMyUpdate, dismissChanges } = useOrderSync(
+    order?.order_id,
     loadIssueCardCallback,
-    15000, // 15 секунд
-    !loading && !!id, // включати тільки після першого завантаження
-    [id]
+    10000, // перевірка кожні 10 секунд
+    !loading && !!order?.order_id
   )
 
   useEffect(() => {
     if (!id) return
     loadIssueCard()
   }, [id])
+
+  // Показуємо toast коли хтось інший зберіг
+  useEffect(() => {
+    if (hasNewChanges && lastModifiedBy) {
+      toast({
+        title: '🔄 Дані оновлено',
+        description: `${lastModifiedBy} зберіг зміни`,
+      })
+      dismissChanges()
+    }
+  }, [hasNewChanges, lastModifiedBy])
 
   // === ОБРОБНИКИ ===
   const handlePick = (itemId, newPickedQty) => {

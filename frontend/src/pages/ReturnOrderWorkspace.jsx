@@ -142,17 +142,29 @@ export default function ReturnOrderWorkspace() {
   const loadOrderCallback = useCallback(loadOrder, [orderId])
 
   // Автооновлення кожні 15 секунд
-  const { refresh, lastUpdate, isRefreshing } = useAutoRefresh(
+  // Синхронізація змін з іншими користувачами
+  const { hasNewChanges, lastModifiedBy, markMyUpdate, dismissChanges } = useOrderSync(
+    orderId,
     loadOrderCallback,
-    15000,
-    !loading && !!orderId,
-    [orderId]
+    10000,
+    !loading && !!orderId
   )
 
   useEffect(() => {
     if (!orderId) return
     loadOrder()
   }, [orderId])
+
+  // Показуємо toast коли хтось інший зберіг
+  useEffect(() => {
+    if (hasNewChanges && lastModifiedBy) {
+      toast({
+        title: '🔄 Дані оновлено',
+        description: `${lastModifiedBy} зберіг зміни`,
+      })
+      dismissChanges()
+    }
+  }, [hasNewChanges, lastModifiedBy])
 
   // === ОБРОБНИКИ ===
   const handleSetReturnedQty = (itemId, qty) => {

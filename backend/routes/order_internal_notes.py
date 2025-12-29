@@ -71,13 +71,19 @@ async def get_internal_notes(
 async def add_internal_note(
     order_id: str,
     note: NoteCreate,
-    db: Session = Depends(get_rh_db)
+    db: Session = Depends(get_rh_db),
+    current_user: dict = Depends(get_current_user_dependency)
 ):
     """
     Додати внутрішню нотатку до замовлення.
+    Користувач визначається автоматично з токена авторизації.
     """
     if not note.message or not note.message.strip():
         raise HTTPException(status_code=400, detail="Повідомлення не може бути порожнім")
+    
+    # Отримуємо дані користувача з токена
+    user_id = current_user.get("user_id") or current_user.get("id")
+    user_name = current_user.get("name") or "Невідомий"
     
     try:
         db.execute(text("""
@@ -85,8 +91,8 @@ async def add_internal_note(
             VALUES (:order_id, :user_id, :user_name, :message, NOW())
         """), {
             "order_id": str(order_id),
-            "user_id": note.user_id,
-            "user_name": note.user_name or "Невідомий",
+            "user_id": str(user_id) if user_id else None,
+            "user_name": user_name,
             "message": note.message.strip()
         })
         db.commit()

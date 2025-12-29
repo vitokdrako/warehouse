@@ -753,23 +753,23 @@ export default function NewOrderViewWorkspace() {
       
       {/* Документи переміщено в LeftRailDocuments */}
       
-      {/* Коментар клієнта (read-only) */}
-      {clientComment && (
-        <ZoneNotes
-          notes=""
-          clientComment={clientComment}
-          readOnly={true}
-          title="💬 Коментар клієнта"
-          hint="Побажання клієнта до замовлення"
-        />
-      )}
-      
-      {/* Внутрішні нотатки менеджера */}
-      <ZoneNotes
-        notes={managerNotes}
-        onUpdateNotes={setManagerNotes}
-        title="📝 Внутрішні нотатки"
-        hint="Нотатки для команди (не бачить клієнт)"
+      {/* Внутрішній чат команди + коментар клієнта */}
+      <InternalNotesChat
+        orderId={orderId}
+        currentUserId={(() => {
+          try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            return user.id || user.user_id || 'unknown'
+          } catch { return 'unknown' }
+        })()}
+        currentUserName={(() => {
+          try {
+            const user = JSON.parse(localStorage.getItem('user') || '{}')
+            return user.name || user.username || 'Менеджер'
+          } catch { return 'Менеджер' }
+        })()}
+        clientComment={clientComment}
+        readOnly={decorOrderStatus === 'completed' || decorOrderStatus === 'cancelled'}
       />
     </OrderWorkspaceLayout>
   )

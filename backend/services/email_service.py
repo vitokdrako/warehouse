@@ -51,7 +51,15 @@ def send_email(
     
     try:
         # Створюємо повідомлення
-        msg = MIMEMultipart("alternative")
+        # Використовуємо "mixed" якщо є вкладення, інакше "alternative"
+        if attachments:
+            msg = MIMEMultipart("mixed")
+            # Створюємо внутрішню частину для тексту
+            msg_alt = MIMEMultipart("alternative")
+        else:
+            msg = MIMEMultipart("alternative")
+            msg_alt = msg
+            
         msg["Subject"] = subject
         msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
         msg["To"] = to_email
@@ -62,21 +70,29 @@ def send_email(
         # Додаємо текстову версію
         if plain_content:
             part1 = MIMEText(plain_content, "plain", "utf-8")
-            msg.attach(part1)
+            msg_alt.attach(part1)
         
         # Додаємо HTML версію
         part2 = MIMEText(html_content, "html", "utf-8")
-        msg.attach(part2)
+        msg_alt.attach(part2)
+        
+        # Якщо є вкладення - додаємо текстову частину до основного повідомлення
+        if attachments:
+            msg.attach(msg_alt)
         
         # Додаємо вкладення
         if attachments:
             for attachment in attachments:
-                part = MIMEBase("application", "octet-stream")
+                content_type = attachment.get("content_type", "application/octet-stream")
+                maintype, subtype = content_type.split("/", 1) if "/" in content_type else ("application", "octet-stream")
+                
+                part = MIMEBase(maintype, subtype)
                 part.set_payload(attachment["content"])
                 encoders.encode_base64(part)
                 part.add_header(
                     "Content-Disposition",
-                    f"attachment; filename={attachment['filename']}"
+                    "attachment",
+                    filename=attachment['filename']
                 )
                 msg.attach(part)
         

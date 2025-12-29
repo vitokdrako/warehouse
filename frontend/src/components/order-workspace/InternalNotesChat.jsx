@@ -167,14 +167,14 @@ export default function InternalNotesChat({
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Напишіть нотатку для команди..."
+            placeholder="Нотатка для команди..."
             rows={2}
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none resize-none"
+            className="flex-1 min-w-0 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none resize-none"
           />
           <button
             onClick={handleSend}
             disabled={!newMessage.trim() || sending}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition-colors self-end"
+            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-lg text-sm font-medium transition-colors self-end flex-shrink-0"
           >
             {sending ? '...' : '📤'}
           </button>

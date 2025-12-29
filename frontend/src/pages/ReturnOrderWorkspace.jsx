@@ -371,18 +371,6 @@ export default function ReturnOrderWorkspace() {
         {/* Внутрішній чат команди */}
         <InternalNotesChat
           orderId={orderId}
-          currentUserId={(() => {
-            try {
-              const user = JSON.parse(localStorage.getItem('user') || '{}')
-              return user.id || user.user_id || 'unknown'
-            } catch { return 'unknown' }
-          })()}
-          currentUserName={(() => {
-            try {
-              const user = JSON.parse(localStorage.getItem('user') || '{}')
-              return user.name || user.username || 'Приймальник'
-            } catch { return 'Приймальник' }
-          })()}
           clientComment={order?.customer_comment || order?.client_comment}
         />
       </OrderWorkspaceLayout>

@@ -59,17 +59,19 @@ export default function InternalNotesChat({
 
     try {
       setSending(true)
-      const payload = {
-        message: newMessage.trim(),
-        user_id: currentUserId || null,
-        user_name: currentUserName || 'Менеджер'
-      }
-      console.log('[InternalNotesChat] Sending:', { url: `${BACKEND_URL}/api/orders/${orderId}/internal-notes`, payload })
+      
+      // Отримуємо токен авторизації
+      const token = localStorage.getItem('token')
       
       const response = await axios.post(
         `${BACKEND_URL}/api/orders/${orderId}/internal-notes`,
-        payload,
-        { headers: { 'Content-Type': 'application/json' } }
+        { message: newMessage.trim() },
+        { 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          } 
+        }
       )
 
       if (response.data.success) {
@@ -78,10 +80,7 @@ export default function InternalNotesChat({
       }
     } catch (err) {
       console.error('[InternalNotesChat] Error sending note:', err)
-      console.error('[InternalNotesChat] orderId:', orderId, 'message:', newMessage)
       console.error('[InternalNotesChat] Response data:', err.response?.data)
-      console.error('[InternalNotesChat] Request config:', err.config)
-      // Show error to user
       alert('Помилка відправки повідомлення. Спробуйте ще раз.')
     } finally {
       setSending(false)

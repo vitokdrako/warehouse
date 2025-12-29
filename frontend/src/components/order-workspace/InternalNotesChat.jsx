@@ -82,6 +82,7 @@ export default function InternalNotesChat({
       )
 
       if (response.data.success) {
+        setShouldScrollToBottom(true) // Скролимо тільки при відправці нового повідомлення
         setNotes([...notes, response.data.note])
         setNewMessage('')
       }

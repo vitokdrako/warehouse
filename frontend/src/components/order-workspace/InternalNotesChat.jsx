@@ -49,7 +49,7 @@ export default function InternalNotesChat({
     }
     try {
       setLoading(true)
-      const response = await axios.get(`${BACKEND_URL}/api/orders/${orderId}/internal-notes`)
+      const response = await api.get(`/api/orders/${orderId}/internal-notes`)
       if (response.data.success) {
         setNotes(response.data.notes)
       }

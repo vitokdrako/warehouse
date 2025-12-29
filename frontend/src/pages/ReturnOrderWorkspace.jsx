@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../hooks/use-toast'
-import { useAutoRefresh, formatLastUpdate } from '../hooks/useAutoRefresh'
+import { useOrderSync } from '../hooks/useAutoRefresh'
 import axios from 'axios'
 
 import {

@@ -506,18 +506,6 @@ setTimeout(()=>window.print(),500);
         {/* Внутрішній чат команди */}
         <InternalNotesChat
           orderId={order?.order_id || issueCard?.order_id}
-          currentUserId={(() => {
-            try {
-              const user = JSON.parse(localStorage.getItem('user') || '{}')
-              return user.id || user.user_id || 'unknown'
-            } catch { return 'unknown' }
-          })()}
-          currentUserName={(() => {
-            try {
-              const user = JSON.parse(localStorage.getItem('user') || '{}')
-              return user.name || user.username || 'Комплектувальник'
-            } catch { return 'Комплектувальник' }
-          })()}
           clientComment={order?.customer_comment || order?.client_comment}
           readOnly={isIssued}
         />

@@ -333,7 +333,7 @@ function DamageItemRow({ item, onSendTo }) {
 }
 
 // ----------------------------- Order Detail Panel (right side) -----------------------------
-function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh }) {
+function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh, onDeductFromDeposit }) {
   if (!orderCase) {
     return (
       <div className="rounded-2xl border bg-white p-8 shadow-sm text-center">
@@ -347,6 +347,12 @@ function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh }) {
   const isPaid = orderCase.is_paid;
   const pendingCount = items.filter(i => !i.processing_type).length;
   const assignedCount = items.filter(i => i.processing_type).length;
+  
+  // Сума до сплати та доступний депозит
+  const amountDue = orderCase.damage_due || 0;
+  const depositAvailable = orderCase.deposit_available || 0;
+  const depositCurrency = orderCase.deposit_currency || 'UAH';
+  const canDeductFromDeposit = !isPaid && amountDue > 0 && depositAvailable > 0 && depositCurrency === 'UAH';
 
   return (
     <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
@@ -359,7 +365,7 @@ function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh }) {
               {isPaid ? (
                 <Badge tone="ok">✓ Сплачено</Badge>
               ) : (
-                <Badge tone="danger">Очікує {money(orderCase.damage_due)}</Badge>
+                <Badge tone="danger">Очікує {money(amountDue)}</Badge>
               )}
             </div>
             <div className="mt-1 text-sm">{orderCase.customer_name}</div>

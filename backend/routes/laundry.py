@@ -92,6 +92,180 @@ def parse_item(row):
         "created_at": row[13].isoformat() if row[13] else None
     }
 
+# ==================== Queue Endpoints ====================
+
+@router.get("/queue")
+async def get_laundry_queue(db: Session = Depends(get_rh_db)):
+    """
+    Отримати чергу товарів для формування партії хімчистки.
+    Це товари з processing_type='laundry' які ще не додані в партію.
+    """
+    result = db.execute(text("""
+        SELECT 
+            pdh.id,
+            pdh.product_id,
+            pdh.product_name,
+            pdh.sku,
+            pdh.category,
+            pdh.order_id,
+            pdh.order_number,
+            COALESCE(pdh.qty, 1) as qty,
+            COALESCE(pdh.processed_qty, 0) as processed_qty,
+            pdh.damage_type,
+            pdh.note,
+            pdh.created_at,
+            pdh.laundry_batch_id,
+            p.image_url as product_image
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON pdh.product_id = p.product_id
+        WHERE pdh.processing_type = 'laundry'
+        AND (pdh.laundry_batch_id IS NULL OR pdh.laundry_batch_id = '')
+        AND (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0
+        ORDER BY pdh.created_at ASC
+    """))
+    
+    items = []
+    for row in result:
+        qty = row[7] or 1
+        processed = row[8] or 0
+        items.append({
+            "id": row[0],
+            "product_id": row[1],
+            "product_name": row[2],
+            "sku": row[3],
+            "category": row[4],
+            "order_id": row[5],
+            "order_number": row[6],
+            "qty": qty,
+            "processed_qty": processed,
+            "remaining_qty": qty - processed,
+            "damage_type": row[9],
+            "note": row[10],
+            "created_at": row[11].isoformat() if row[11] else None,
+            "laundry_batch_id": row[12],
+            "product_image": row[13],
+            "condition_before": "dirty"
+        })
+    
+    return {"items": items, "total": len(items)}
+
+
+@router.post("/queue/add-to-batch")
+async def add_queue_items_to_batch(
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Додати товари з черги в партію.
+    
+    Body:
+        - item_ids: list[str] - ID записів з product_damage_history
+        - batch_id: str (optional) - ID існуючої партії, або створити нову
+        - laundry_company: str - назва хімчистки (для нової партії)
+        - expected_return_date: str (optional) - очікувана дата повернення
+    """
+    item_ids = data.get("item_ids", [])
+    batch_id = data.get("batch_id")
+    laundry_company = data.get("laundry_company", "Хімчистка")
+    expected_return_date = data.get("expected_return_date")
+    
+    if not item_ids:
+        raise HTTPException(status_code=400, detail="Не вказано товари")
+    
+    try:
+        # Якщо партія не вказана - створити нову
+        if not batch_id:
+            batch_id = f"BATCH-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            batch_number = f"LB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            
+            db.execute(text("""
+                INSERT INTO laundry_batches (
+                    id, batch_number, laundry_company, status, sent_date, 
+                    expected_return_date, total_items, returned_items, created_at, updated_at
+                ) VALUES (
+                    :id, :batch_number, :company, 'sent', NOW(), :return_date,
+                    0, 0, NOW(), NOW()
+                )
+            """), {
+                "id": batch_id,
+                "batch_number": batch_number,
+                "company": laundry_company,
+                "return_date": expected_return_date
+            })
+        
+        added_count = 0
+        total_qty = 0
+        
+        for item_id in item_ids:
+            # Отримати дані товару з черги
+            item_row = db.execute(text("""
+                SELECT pdh.product_id, pdh.product_name, pdh.sku, pdh.category,
+                       COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0) as remaining,
+                       pdh.note, p.image_url
+                FROM product_damage_history pdh
+                LEFT JOIN products p ON pdh.product_id = p.product_id
+                WHERE pdh.id = :id
+            """), {"id": item_id}).fetchone()
+            
+            if not item_row:
+                continue
+            
+            remaining_qty = item_row[4] or 1
+            
+            # Додати в laundry_items
+            laundry_item_id = f"ITEM-{datetime.now().strftime('%Y%m%d%H%M%S')}-{added_count}"
+            db.execute(text("""
+                INSERT INTO laundry_items (
+                    id, batch_id, product_id, product_name, sku, category,
+                    quantity, returned_quantity, condition_before, notes, created_at
+                ) VALUES (
+                    :id, :batch_id, :product_id, :name, :sku, :category,
+                    :qty, 0, 'dirty', :notes, NOW()
+                )
+            """), {
+                "id": laundry_item_id,
+                "batch_id": batch_id,
+                "product_id": item_row[0],
+                "name": item_row[1],
+                "sku": item_row[2],
+                "category": item_row[3],
+                "qty": remaining_qty,
+                "notes": item_row[5]
+            })
+            
+            # Оновити damage_history - вказати партію
+            db.execute(text("""
+                UPDATE product_damage_history 
+                SET laundry_batch_id = :batch_id
+                WHERE id = :id
+            """), {"batch_id": batch_id, "id": item_id})
+            
+            added_count += 1
+            total_qty += remaining_qty
+        
+        # Оновити кількість в партії
+        db.execute(text("""
+            UPDATE laundry_batches 
+            SET total_items = total_items + :qty,
+                updated_at = NOW()
+            WHERE id = :batch_id
+        """), {"batch_id": batch_id, "qty": total_qty})
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Додано {added_count} позицій ({total_qty} шт.) в партію",
+            "batch_id": batch_id,
+            "added_count": added_count,
+            "total_qty": total_qty
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
 # ==================== Batch Endpoints ====================
 
 @router.get("/batches")

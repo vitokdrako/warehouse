@@ -367,7 +367,7 @@ async def get_order_lifecycle(
     
     # 1. Отримати дату створення замовлення
     order_result = db.execute(text("""
-        SELECT created_at, status, customer_name, created_by_name
+        SELECT created_at, status, customer_name
         FROM orders 
         WHERE order_id = :order_id
     """), {"order_id": order_id}).fetchone()
@@ -377,9 +377,9 @@ async def get_order_lifecycle(
             "stage": "created",
             "notes": f"Замовлення створено для {order_result[2] or 'клієнта'}",
             "created_at": order_result[0].isoformat() if order_result[0] else None,
-            "created_by": order_result[3] or "System",
+            "created_by": "System",
             "created_by_id": None,
-            "created_by_name": order_result[3] or "System"
+            "created_by_name": "System"
         })
     
     # 2. Отримати всі записи з order_lifecycle

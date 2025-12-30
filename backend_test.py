@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Order Modifications API - Дозамовлення
-Testing the new Order Modifications API for "Дозамовлення" functionality.
+Backend Testing Script for Order Lifecycle API
+Testing the enhanced order lifecycle API endpoint.
 
 **Test Scenario:**
-Test all Order Modifications API endpoints for adding, updating, removing, and restoring items in orders.
+Test order lifecycle API endpoints for specific orders to verify complete history tracking.
 
 **Test Steps:**
 1. Login with credentials: email: `vitokdrako@gmail.com`, password: `test123`
-2. Find an order with status `processing` or `ready_for_issue`
-3. Get a product_id from products API
-4. Add item to order
-5. Update item quantity
-6. Remove/Refuse item
-7. Get modifications history
-8. Get refused items
-9. Restore refused item
+2. Test GET /api/orders/7222/lifecycle - Verify response contains array of events
+3. Test GET /api/orders/7219/lifecycle - Verify full lifecycle from creation to issue
+4. Test GET /api/orders/7220/lifecycle - Should show created and preparation stages only
+5. Verify lifecycle includes all key stages in chronological order
 
 **Key validations:**
-- API should reject modifications for orders not in `processing` or `ready_for_issue` status
-- Totals should be recalculated automatically
-- History should log all changes with user info
+- Each event should have: stage, notes, created_at, created_by
+- Events should be in chronological order (sorted by created_at)
+- API should return COMPLETE history from the beginning of the order regardless of current stage
+- Expected stages: created, preparation, ready_for_issue, issued, returned (if applicable)
 """
 
 import requests

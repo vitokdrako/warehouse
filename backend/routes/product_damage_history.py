@@ -1069,7 +1069,17 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
                 SET state = 'shelf'
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
-            print(f"[DamageHistory] 🔓 Товар {product_id} розморожено, state=shelf")
+            
+            # Оновити стан в inventory - доступний
+            db.execute(text("""
+                UPDATE inventory 
+                SET product_state = 'available', 
+                    cleaning_status = 'clean',
+                    updated_at = NOW()
+                WHERE product_id = :product_id
+            """), {"product_id": product_id})
+            
+            print(f"[DamageHistory] 🔓 Товар {product_id} розморожено, state=shelf, product_state=available")
         
         db.commit()
         return {"success": True, "message": "Обробку завершено, товар доступний для оренди"}

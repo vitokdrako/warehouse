@@ -516,7 +516,8 @@ function LaundryBatchDetailPanel({ batch, items, onReceiveItems, onCloseBatch, o
   };
   const s = statusMap[batch.status] || { label: batch.status, tone: "neutral" };
   const isCompleted = batch.status === 'completed';
-  const allReturned = batch.returned_items >= batch.total_items;
+  const hasItems = batch.total_items > 0;
+  const allReturned = hasItems && batch.returned_items >= batch.total_items;
 
   const toggleItem = (itemId) => {
     setSelectedItems(prev => 

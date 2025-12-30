@@ -112,19 +112,98 @@ async def get_items_by_category(
     - on_laundry: в хімчистці (з product_damage_history)
     """
     try:
-        sql_parts = ["""
-            SELECT 
-                p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
-                p.category_name, p.subcategory_name,
-                p.quantity, p.zone, p.aisle, p.shelf,
-                p.color, p.material, p.size,
-                p.cleaning_status, p.product_state,
-                p.description
-            FROM products p
-            WHERE p.status = 1
-        """]
+        # Спеціальна обробка для фільтрів по статусу обробки
+        # Якщо вибрано on_wash, on_restoration, on_laundry - шукаємо спочатку ці товари
+        processing_filter = availability in ('on_wash', 'on_restoration', 'on_laundry')
+        rent_filter = availability in ('in_rent', 'reserved')
         
-        params = {}
+        if processing_filter:
+            # Знайти товари на обробці
+            processing_type_map = {
+                'on_wash': 'wash',
+                'on_restoration': 'restoration',
+                'on_laundry': 'laundry'
+            }
+            p_type = processing_type_map[availability]
+            
+            processing_sql = """
+                SELECT DISTINCT pdh.product_id
+                FROM product_damage_history pdh
+                WHERE pdh.processing_type = :p_type
+                AND (pdh.processing_status IN ('pending', 'in_progress') 
+                     OR (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0)
+            """
+            processing_result = db.execute(text(processing_sql), {"p_type": p_type}).fetchall()
+            processing_product_ids = [row[0] for row in processing_result]
+            
+            if not processing_product_ids:
+                return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0, "on_wash": 0, "on_restoration": 0, "on_laundry": 0}, "date_filter_active": bool(date_from and date_to)}
+            
+            # Основний запит тільки для цих товарів
+            sql_parts = ["""
+                SELECT 
+                    p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
+                    p.category_name, p.subcategory_name,
+                    p.quantity, p.zone, p.aisle, p.shelf,
+                    p.color, p.material, p.size,
+                    p.cleaning_status, p.product_state,
+                    p.description
+                FROM products p
+                WHERE p.status = 1 AND p.product_id IN :processing_ids
+            """]
+            params = {"processing_ids": tuple(processing_product_ids)}
+            
+        elif rent_filter:
+            # Знайти товари в оренді або резерві
+            if availability == 'in_rent':
+                rent_sql = """
+                    SELECT DISTINCT oi.product_id
+                    FROM order_items oi
+                    JOIN orders o ON oi.order_id = o.order_id
+                    WHERE o.status IN ('issued', 'on_rent')
+                """
+            else:  # reserved
+                rent_sql = """
+                    SELECT DISTINCT oi.product_id
+                    FROM order_items oi
+                    JOIN orders o ON oi.order_id = o.order_id
+                    WHERE o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+                    AND o.rental_end_date >= CURDATE()
+                """
+            
+            rent_result = db.execute(text(rent_sql)).fetchall()
+            rent_product_ids = [row[0] for row in rent_result]
+            
+            if not rent_product_ids:
+                return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0, "on_wash": 0, "on_restoration": 0, "on_laundry": 0}, "date_filter_active": bool(date_from and date_to)}
+            
+            sql_parts = ["""
+                SELECT 
+                    p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
+                    p.category_name, p.subcategory_name,
+                    p.quantity, p.zone, p.aisle, p.shelf,
+                    p.color, p.material, p.size,
+                    p.cleaning_status, p.product_state,
+                    p.description
+                FROM products p
+                WHERE p.status = 1 AND p.product_id IN :rent_ids
+            """]
+            params = {"rent_ids": tuple(rent_product_ids)}
+            
+        else:
+            # Звичайний запит
+            sql_parts = ["""
+                SELECT 
+                    p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
+                    p.category_name, p.subcategory_name,
+                    p.quantity, p.zone, p.aisle, p.shelf,
+                    p.color, p.material, p.size,
+                    p.cleaning_status, p.product_state,
+                    p.description
+                FROM products p
+                WHERE p.status = 1
+            """]
+            params = {}
         
         # Category filter
         if category and category != 'all':

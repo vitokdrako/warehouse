@@ -313,14 +313,16 @@ async def get_order_damage_history(
     try:
         result = db.execute(text("""
             SELECT 
-                id, product_id, sku, product_name, category,
-                order_id, order_number, stage,
-                damage_type, damage_code, severity, fee,
-                photo_url, note, created_by, created_at,
-                processing_type, processing_status, sent_to_processing_at
-            FROM product_damage_history
-            WHERE order_id = :order_id
-            ORDER BY created_at DESC
+                pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
+                pdh.order_id, pdh.order_number, pdh.stage,
+                pdh.damage_type, pdh.damage_code, pdh.severity, pdh.fee,
+                pdh.photo_url, pdh.note, pdh.created_by, pdh.created_at,
+                pdh.processing_type, pdh.processing_status, pdh.sent_to_processing_at,
+                p.image_url as product_image
+            FROM product_damage_history pdh
+            LEFT JOIN products p ON pdh.product_id = p.product_id
+            WHERE pdh.order_id = :order_id
+            ORDER BY pdh.created_at DESC
         """), {"order_id": order_id})
         
         history = []
@@ -347,7 +349,8 @@ async def get_order_damage_history(
                 "created_at": row[15].isoformat() if row[15] else None,
                 "processing_type": row[16],
                 "processing_status": row[17],
-                "sent_to_processing_at": row[18].isoformat() if row[18] else None
+                "sent_to_processing_at": row[18].isoformat() if row[18] else None,
+                "product_image": row[19]
             })
         
         return {

@@ -1384,6 +1384,20 @@ export default function DamageHubApp() {
           </div>
         )}
 
+        {/* Status Chips for ALL mode */}
+        {mode === MODES.ALL && (
+          <StatusChips 
+            value={statusFilter} 
+            onChange={setStatusFilter}
+            counts={{
+              all: stats.totalCases,
+              pending: stats.casesPending,
+              in_progress: stats.casesInProgress,
+              completed: stats.casesCompleted,
+            }}
+          />
+        )}
+
         {/* Status Chips for Wash/Restore */}
         {(mode === MODES.WASH || mode === MODES.RESTORE) && (
           <StatusChips 

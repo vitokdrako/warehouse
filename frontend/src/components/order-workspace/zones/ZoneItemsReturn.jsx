@@ -130,7 +130,7 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
           )}
           
           <div className="flex flex-wrap gap-1 mt-2">
-            {isComplete && !hasDamage && (
+            {isFullyReturned && !hasDamage && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
                 OK
               </span>
@@ -140,7 +140,7 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
                 {findings.length} пошкодж.
               </span>
             )}
-            {!isComplete && !hasDamage && (
+            {!isFullyReturned && !hasDamage && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-medium">
                 Часткове
               </span>
@@ -167,7 +167,7 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
             </button>
             <div className={`
               w-14 text-center text-xl font-bold py-1 rounded-lg
-              ${isComplete ? 'text-emerald-600 bg-emerald-100' : 'bg-white'}
+              ${isFullyReturned ? 'text-emerald-600 bg-emerald-100' : 'bg-white'}
             `}>
               {returnedQty}
             </div>
@@ -181,7 +181,7 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
           </div>
           
           {/* Кнопка швидкого "Прийнято" */}
-          {!isComplete && !readOnly && (
+          {!isFullyReturned && !readOnly && (
             <button 
               onClick={() => onSetReturnedQty?.(item.id, rentedQty)}
               className="px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors whitespace-nowrap"

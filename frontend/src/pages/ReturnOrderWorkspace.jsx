@@ -110,24 +110,28 @@ export default function ReturnOrderWorkspace() {
       setNotes(orderData.manager_comment || orderData.notes || '')
       
       // Товари
-      const transformedItems = (orderData.items || []).map((p, idx) => ({
-        id: p.id || p.order_product_id || p.inventory_id || idx,
-        product_id: p.product_id || p.inventory_id || p.id || idx,
-        sku: p.article || p.sku || p.model || '',
-        name: p.name || p.product_name || '',
-        image: p.image || p.photo || '',
-        image_url: p.image || p.photo || p.image_url || '',
-        rented_qty: parseInt(p.quantity || p.qty) || 0,
-        returned_qty: 0,
-        serials: p.serials || [],
-        ok_serials: [],
-        findings: [],
-        // Ціни для часткового повернення
-        // damage_cost = повна вартість товару (price)
-        // price_per_day = добова ставка (rental_price)
-        price: parseFloat(p.damage_cost || p.price || p.full_price || 0),
-        rental_price: parseFloat(p.price_per_day || p.rental_price || p.daily_rate || 0),
-      }))
+      const transformedItems = (orderData.items || []).map((p, idx) => {
+        const item = {
+          id: p.id || p.order_product_id || p.inventory_id || idx,
+          product_id: p.product_id || p.inventory_id || p.id || idx,
+          sku: p.article || p.sku || p.model || '',
+          name: p.name || p.product_name || '',
+          image: p.image || p.photo || '',
+          image_url: p.image || p.photo || p.image_url || '',
+          rented_qty: parseInt(p.quantity || p.qty) || 0,
+          returned_qty: 0,
+          serials: p.serials || [],
+          ok_serials: [],
+          findings: [],
+          // Ціни для часткового повернення
+          // damage_cost = повна вартість товару (ціна купівлі)
+          // price_per_day = добова ставка (ціна оренди)
+          price: parseFloat(p.damage_cost || p.price || p.full_price || 0),
+          rental_price: parseFloat(p.price_per_day || p.rental_price || p.daily_rate || 0),
+        }
+        console.log(`[ReturnWorkspace] Item ${item.sku}: damage_cost=${p.damage_cost}, price=${item.price}, rental=${item.rental_price}`)
+        return item
+      })
       
       setItems(transformedItems)
       

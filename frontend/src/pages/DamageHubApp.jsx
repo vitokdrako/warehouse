@@ -334,7 +334,10 @@ function ProcessingDetailPanel({ mode, item, onComplete, onMarkFailed, onRefresh
     failed: { label: "Невдало", tone: "danger" },
   };
   const s = statusMap[item.processing_status] || statusMap.pending;
-  const photoUrl = item.photo_url || item.product_image;
+  
+  // Пріоритет: фото товару з галереї > фото пошкодження
+  const rawPhoto = item.product_image || item.photo_url;
+  const photoUrl = rawPhoto && !rawPhoto.startsWith('http') ? `${BACKEND_URL}/${rawPhoto}` : rawPhoto;
   const isCompleted = item.processing_status === 'completed' || remainingQty <= 0;
 
   return (

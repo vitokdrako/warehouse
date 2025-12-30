@@ -475,7 +475,6 @@ setTimeout(()=>window.print(),500);
         saving={saving}
         showSave={!isIssued}
         footerActions={[
-          { label: '🖨️ Накладна', onClick: printWarehouseSlip },
           { label: '📱 QR коди', onClick: printQRCodes },
         ]}
         footerChildren={

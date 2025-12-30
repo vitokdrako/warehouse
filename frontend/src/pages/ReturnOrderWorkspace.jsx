@@ -112,14 +112,19 @@ export default function ReturnOrderWorkspace() {
       // Товари
       const transformedItems = (orderData.items || []).map((p, idx) => ({
         id: p.id || p.order_product_id || p.inventory_id || idx,
+        product_id: p.product_id || p.id || idx,
         sku: p.article || p.sku || p.model || '',
         name: p.name || p.product_name || '',
         image: p.image || p.photo || '',
+        image_url: p.image_url || p.image || p.photo || '',
         rented_qty: parseInt(p.quantity || p.qty) || 0,
         returned_qty: 0,
         serials: p.serials || [],
         ok_serials: [],
-        findings: []
+        findings: [],
+        // Ціни для часткового повернення
+        price: parseFloat(p.price || p.full_price || 0),
+        rental_price: parseFloat(p.rental_price || p.daily_rate || 0),
       }))
       
       setItems(transformedItems)

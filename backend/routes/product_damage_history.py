@@ -1157,6 +1157,15 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
             
+            # Оновити стан в inventory - доступний
+            db.execute(text("""
+                UPDATE inventory 
+                SET product_state = 'available', 
+                    cleaning_status = 'clean',
+                    updated_at = NOW()
+                WHERE product_id = :product_id
+            """), {"product_id": product_id})
+            
             # Записати в історію
             try:
                 db.execute(text("""

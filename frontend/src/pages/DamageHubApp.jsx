@@ -1102,15 +1102,28 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleComplete = async (item, notes) => {
+  const handleComplete = async (item, notes, completedQty = null) => {
     try {
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/complete-processing`, {
+      const body = { notes: notes || "Обробку завершено" };
+      if (completedQty !== null) {
+        body.completed_qty = completedQty;
+      }
+      
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/complete-processing`, {
         method: "POST",
-        body: JSON.stringify({ notes: notes || "Обробку завершено" })
+        body: JSON.stringify(body)
       });
+      
+      const result = await res.json();
+      
       await loadWashItems();
       await loadRestoreItems();
-      alert("✅ Обробку завершено. Товар доступний для оренди.");
+      
+      if (result.is_fully_completed) {
+        alert(`✅ Обробку повністю завершено! ${result.total_qty} шт. доступні для оренди.`);
+      } else {
+        alert(`✅ Оброблено ${result.completed_qty} шт. Залишилось: ${result.remaining} шт.`);
+      }
     } catch (e) {
       console.error("Error completing:", e);
       alert("Помилка завершення обробки");

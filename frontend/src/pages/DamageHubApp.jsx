@@ -140,12 +140,20 @@ function Tabs({ mode, setMode }) {
 }
 
 // ----------------------------- Status Chips (фільтри) -----------------------------
-function StatusChips({ value, onChange, counts = {} }) {
+function StatusChips({ value, onChange, counts = {}, labels = {} }) {
+  const defaultLabels = {
+    all: "Всі",
+    pending: "Очікують",
+    in_progress: "В роботі",
+    completed: "Виконано"
+  };
+  const mergedLabels = { ...defaultLabels, ...labels };
+  
   const chips = [
-    { id: "all", label: "Всі", count: counts.all },
-    { id: "pending", label: "Очікує", count: counts.pending },
-    { id: "in_progress", label: "В роботі", count: counts.in_progress },
-    { id: "completed", label: "Виконано", count: counts.completed },
+    { id: "all", label: mergedLabels.all, count: counts.all },
+    { id: "pending", label: mergedLabels.pending, count: counts.pending },
+    { id: "in_progress", label: mergedLabels.in_progress, count: counts.in_progress },
+    { id: "completed", label: mergedLabels.completed, count: counts.completed },
   ];
 
   return (

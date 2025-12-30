@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel
 from typing import List, Optional
 
-from config.database import get_rh_db
+from database import get_rh_db
 
 router = APIRouter(prefix="/api/partial-returns", tags=["partial-returns"])
 

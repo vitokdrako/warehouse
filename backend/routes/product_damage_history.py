@@ -207,6 +207,28 @@ async def create_damage_record(
             "processing_status": "pending" if processing_type != "none" else "completed"
         })
         
+        # Заморозити товар при записі шкоди (не для pre_issue)
+        # Товар стає недоступним для оренди поки не буде оброблений
+        if stage != "pre_issue" and product_id:
+            is_total_loss = damage_data.get("is_total_loss", False) or damage_data.get("damage_code") == "TOTAL_LOSS"
+            
+            if is_total_loss:
+                # Повна втрата - товар списаний
+                new_state = 'written_off'
+            else:
+                # Звичайна шкода - товар заморожений до обробки
+                new_state = 'damaged'
+            
+            db.execute(text("""
+                UPDATE products 
+                SET state = :state
+                WHERE product_id = :product_id
+            """), {
+                "product_id": product_id,
+                "state": new_state
+            })
+            print(f"[DamageHistory] 🔒 Товар {product_id} заморожено, state={new_state}")
+        
         db.commit()
         
         return {

@@ -593,7 +593,7 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
                 SELECT id, held_amount, used_amount, refunded_amount, currency
                 FROM fin_deposit_holds 
                 WHERE order_id = :order_id AND status NOT IN ('refunded', 'cancelled')
-                ORDER BY created_at DESC
+                ORDER BY id DESC
                 LIMIT 1
             """), {"order_id": order_id}).fetchone()
             

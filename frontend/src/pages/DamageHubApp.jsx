@@ -272,6 +272,15 @@ function ProcessingItemRow({ item, active, onClick }) {
 // ----------------------------- Processing Detail Panel (Мийка/Реставрація) -----------------------------
 function ProcessingDetailPanel({ mode, item, onComplete, onMarkFailed, onRefresh }) {
   const [notes, setNotes] = useState("");
+  const [completedQty, setCompletedQty] = useState(1);
+  
+  // Reset completedQty when item changes
+  React.useEffect(() => {
+    if (item) {
+      const remaining = (item.qty || 1) - (item.processed_qty || 0);
+      setCompletedQty(Math.min(remaining, 1));
+    }
+  }, [item?.id]);
   
   if (!item) {
     return (
@@ -283,15 +292,21 @@ function ProcessingDetailPanel({ mode, item, onComplete, onMarkFailed, onRefresh
     );
   }
 
+  const totalQty = item.qty || 1;
+  const processedQty = item.processed_qty || 0;
+  const remainingQty = totalQty - processedQty;
+  const progress = totalQty > 0 ? (processedQty / totalQty) * 100 : 0;
+  const hasMultiple = totalQty > 1;
+  
   const statusMap = {
     pending: { label: "Очікує", tone: "warn" },
-    in_progress: { label: "В роботі", tone: "info" },
+    in_progress: { label: hasMultiple ? `В роботі (${processedQty}/${totalQty})` : "В роботі", tone: "info" },
     completed: { label: "✓ Виконано", tone: "ok" },
     failed: { label: "Невдало", tone: "danger" },
   };
   const s = statusMap[item.processing_status] || statusMap.pending;
   const photoUrl = item.photo_url || item.product_image;
-  const isCompleted = item.processing_status === 'completed';
+  const isCompleted = item.processing_status === 'completed' || remainingQty <= 0;
 
   return (
     <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
@@ -312,6 +327,25 @@ function ProcessingDetailPanel({ mode, item, onComplete, onMarkFailed, onRefresh
           </div>
           <Badge tone={s.tone}>{s.label}</Badge>
         </div>
+        
+        {/* Quantity Progress Bar */}
+        {hasMultiple && (
+          <div className="mt-4">
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-corp-text-muted">Оброблено</span>
+              <span className="font-bold">{processedQty} / {totalQty} шт.</span>
+            </div>
+            <div className="h-2.5 rounded-full bg-corp-border">
+              <div 
+                className={cls("h-full rounded-full transition-all", progress >= 100 ? "bg-emerald-500" : "bg-blue-500")}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {remainingQty > 0 && (
+              <div className="mt-1 text-xs text-amber-600">⏳ Залишилось: {remainingQty} шт.</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Info Grid */}
@@ -326,12 +360,12 @@ function ProcessingDetailPanel({ mode, item, onComplete, onMarkFailed, onRefresh
             <div className="font-medium mt-1">{fmtDate(item.sent_to_processing_at)}</div>
           </div>
           <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Вартість ремонту</div>
-            <div className="font-medium mt-1">{money(item.fee)}</div>
+            <div className="text-xs text-corp-text-muted">Кількість</div>
+            <div className="font-medium mt-1">{totalQty} шт.</div>
           </div>
           <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Серйозність</div>
-            <div className="font-medium mt-1">{item.severity || "low"}</div>
+            <div className="text-xs text-corp-text-muted">Вартість</div>
+            <div className="font-medium mt-1">{money(item.fee)} {hasMultiple && <span className="text-xs text-corp-text-muted">({money(item.fee_per_item || (item.fee / totalQty))}/шт)</span>}</div>
           </div>
         </div>
       </div>
@@ -347,28 +381,62 @@ function ProcessingDetailPanel({ mode, item, onComplete, onMarkFailed, onRefresh
       {/* Processing Notes */}
       {item.processing_notes && (
         <div className="px-5 py-3 border-b">
-          <div className="text-xs text-corp-text-muted font-medium mb-1">Нотатки обробки</div>
-          <div className="text-sm text-corp-text-main whitespace-pre-wrap">{item.processing_notes}</div>
+          <div className="text-xs text-corp-text-muted font-medium mb-1">Історія обробки</div>
+          <div className="text-sm text-corp-text-main whitespace-pre-wrap max-h-32 overflow-y-auto">{item.processing_notes}</div>
         </div>
       )}
 
       {/* Actions */}
-      {!isCompleted && (
+      {!isCompleted && remainingQty > 0 && (
         <div className="p-5 bg-corp-bg-page space-y-4">
+          {/* Quantity selector for partial completion */}
+          {hasMultiple && (
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-blue-800">Скільки одиниць оброблено?</label>
+                <span className="text-xs text-blue-600">Залишилось: {remainingQty} шт.</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCompletedQty(Math.max(1, completedQty - 1))}
+                  className="w-10 h-10 rounded-lg border bg-white text-lg font-bold hover:bg-slate-50"
+                  disabled={completedQty <= 1}
+                >−</button>
+                <input
+                  type="number"
+                  min={1}
+                  max={remainingQty}
+                  value={completedQty}
+                  onChange={(e) => setCompletedQty(Math.min(remainingQty, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-20 text-center text-xl font-bold border rounded-lg py-2"
+                />
+                <button
+                  onClick={() => setCompletedQty(Math.min(remainingQty, completedQty + 1))}
+                  className="w-10 h-10 rounded-lg border bg-white text-lg font-bold hover:bg-slate-50"
+                  disabled={completedQty >= remainingQty}
+                >+</button>
+                <button
+                  onClick={() => setCompletedQty(remainingQty)}
+                  className="px-3 py-2 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200"
+                >Всі ({remainingQty})</button>
+              </div>
+            </div>
+          )}
+          
           <div>
-            <label className="text-sm font-medium text-corp-text-main">Коментар до завершення</label>
+            <label className="text-sm font-medium text-corp-text-main">Коментар</label>
             <textarea
               className="mt-2 w-full rounded-xl border border-corp-border p-3 text-sm outline-none focus:ring-2 focus:ring-corp-primary/20"
               placeholder="Опис виконаних робіт..."
-              rows={3}
+              rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
           
           <div className="flex flex-wrap gap-2">
-            <PrimaryBtn variant="success" onClick={() => onComplete(item, notes)}>
-              ✓ Завершити обробку
+            <PrimaryBtn variant="success" onClick={() => onComplete(item, notes, hasMultiple ? completedQty : null)}>
+              ✓ {hasMultiple ? `Оброблено ${completedQty} шт.` : "Завершити обробку"}
             </PrimaryBtn>
             <GhostBtn onClick={() => onMarkFailed(item, notes)}>
               ✗ Невдало
@@ -383,13 +451,13 @@ function ProcessingDetailPanel({ mode, item, onComplete, onMarkFailed, onRefresh
       )}
 
       {/* Completed state */}
-      {isCompleted && (
+      {(isCompleted || remainingQty <= 0) && (
         <div className="p-5 bg-emerald-50">
           <div className="flex items-center gap-2 text-emerald-700">
             <span className="text-2xl">✓</span>
             <div>
-              <div className="font-semibold">Обробку завершено</div>
-              <div className="text-sm">{fmtDate(item.returned_from_processing_at)} • Товар доступний для оренди</div>
+              <div className="font-semibold">Обробку повністю завершено</div>
+              <div className="text-sm">{fmtDate(item.returned_from_processing_at)} • {totalQty} шт. доступні для оренди</div>
             </div>
           </div>
         </div>

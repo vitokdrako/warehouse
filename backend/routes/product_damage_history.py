@@ -1038,51 +1038,104 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
 
 @router.post("/{damage_id}/complete-processing")
 async def complete_processing(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
-    """Позначити обробку як завершену (повернуто на склад після мийки/реставрації/хімчистки)"""
+    """
+    Завершити обробку (повністю або частково).
+    
+    Body params:
+        - completed_qty: int (optional) - кількість оброблених одиниць. Якщо не вказано, завершує все.
+        - notes: str (optional) - примітки
+    """
     try:
-        # Отримати product_id для розморозки
+        # Отримати поточний запис
         damage_record = db.execute(text("""
-            SELECT product_id FROM product_damage_history WHERE id = :damage_id
+            SELECT product_id, qty, processed_qty, processing_type 
+            FROM product_damage_history 
+            WHERE id = :damage_id
         """), {"damage_id": damage_id}).fetchone()
         
-        product_id = damage_record[0] if damage_record else None
+        if not damage_record:
+            raise HTTPException(status_code=404, detail="Запис не знайдено")
         
+        product_id = damage_record[0]
+        total_qty = damage_record[1] or 1
+        already_processed = damage_record[2] or 0
+        processing_type = damage_record[3]
+        
+        # Визначити кількість для завершення
+        completed_qty = data.get("completed_qty")
+        if completed_qty is None:
+            # Якщо не вказано - завершити все що залишилось
+            completed_qty = total_qty - already_processed
+        else:
+            completed_qty = int(completed_qty)
+        
+        remaining = total_qty - already_processed
+        if completed_qty > remaining:
+            completed_qty = remaining
+        
+        if completed_qty <= 0:
+            return {"success": False, "message": "Немає товарів для завершення"}
+        
+        new_processed = already_processed + completed_qty
+        is_fully_completed = new_processed >= total_qty
+        
+        # Оновити запис
         db.execute(text("""
             UPDATE product_damage_history
-            SET processing_status = 'completed',
-                returned_from_processing_at = NOW(),
+            SET processed_qty = :new_processed,
+                processing_status = :status,
+                returned_from_processing_at = CASE WHEN :is_complete THEN NOW() ELSE returned_from_processing_at END,
                 processing_notes = CONCAT(
                     COALESCE(processing_notes, ''), 
-                    '\n', 
-                    :notes
+                    '\n[', NOW(), '] Оброблено: ', :completed_qty, ' шт. ', :notes
                 )
             WHERE id = :damage_id
         """), {
             "damage_id": damage_id,
-            "notes": data.get("notes", "Повернуто на склад")
+            "new_processed": new_processed,
+            "status": "completed" if is_fully_completed else "in_progress",
+            "is_complete": is_fully_completed,
+            "completed_qty": completed_qty,
+            "notes": data.get("notes", "")
         })
         
-        # Розморозити товар - зробити доступним для оренди
-        if product_id:
+        # Повернути товар на склад (збільшити quantity)
+        if product_id and completed_qty > 0:
             db.execute(text("""
                 UPDATE products 
-                SET product_state = 'shelf'
+                SET quantity = quantity + :qty
                 WHERE product_id = :product_id
-            """), {"product_id": product_id})
+            """), {"product_id": product_id, "qty": completed_qty})
             
-            # Оновити стан в inventory - доступний
-            db.execute(text("""
-                UPDATE inventory 
-                SET product_state = 'available', 
-                    cleaning_status = 'clean',
-                    updated_at = NOW()
-                WHERE product_id = :product_id
-            """), {"product_id": product_id})
+            # Якщо повністю завершено - оновити стан
+            if is_fully_completed:
+                db.execute(text("""
+                    UPDATE products 
+                    SET product_state = 'shelf'
+                    WHERE product_id = :product_id
+                """), {"product_id": product_id})
+                
+                db.execute(text("""
+                    UPDATE inventory 
+                    SET product_state = 'available', 
+                        cleaning_status = 'clean',
+                        updated_at = NOW()
+                    WHERE product_id = :product_id
+                """), {"product_id": product_id})
             
-            print(f"[DamageHistory] 🔓 Товар {product_id} розморожено, state=shelf, product_state=available")
+            print(f"[DamageHistory] 🔓 Товар {product_id}: оброблено {completed_qty} шт, всього {new_processed}/{total_qty}")
         
         db.commit()
-        return {"success": True, "message": "Обробку завершено, товар доступний для оренди"}
+        
+        return {
+            "success": True, 
+            "message": f"Оброблено {completed_qty} шт." if not is_fully_completed else "Обробку повністю завершено",
+            "completed_qty": completed_qty,
+            "total_processed": new_processed,
+            "total_qty": total_qty,
+            "is_fully_completed": is_fully_completed,
+            "remaining": total_qty - new_processed
+        }
         
     except Exception as e:
         db.rollback()

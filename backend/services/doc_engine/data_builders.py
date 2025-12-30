@@ -831,7 +831,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
             "damage_type_code": row[4],
             "severity": severity_names.get(row[5], row[5] or "low"),
             "note": row[6] or "",
-            "photo_url": full_photo_url,
+            "photo_url": photo_base64,  # base64 data URL
             "created_by": row[8] or "Система",
             "created_at": row[9] or ""
         })

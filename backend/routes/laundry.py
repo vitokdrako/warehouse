@@ -370,6 +370,18 @@ async def return_laundry_items(
                 "product_id": item["product_id"]
             })
             
+            # Перевірити чи всі одиниці цього товару повернуті
+            new_returned = item["returned_quantity"] + item_return.returned_quantity
+            if new_returned >= item["quantity"]:
+                # Товар повністю повернуто - оновити стан на "доступний"
+                db.execute(text("""
+                    UPDATE inventory 
+                    SET product_state = 'available', 
+                        cleaning_status = 'clean',
+                        updated_at = NOW()
+                    WHERE product_id = :product_id
+                """), {"product_id": item["product_id"]})
+            
             total_returned += item_return.returned_quantity
         
         # Оновити загальну кількість повернених товарів у партії

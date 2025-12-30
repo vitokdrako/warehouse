@@ -13,6 +13,7 @@ export default function ZoneItemsReturn({
   onToggleSerial,       // (itemId, serial) => void
   onOpenDamage,         // (itemId) => void
   readOnly = false,
+  isCompleted = false,  // Чи завершено приймання
 }) {
   const totalRented = items.reduce((s, it) => s + (it.rented_qty || 0), 0)
   const totalReturned = items.reduce((s, it) => s + (it.returned_qty || 0), 0)
@@ -39,6 +40,7 @@ export default function ZoneItemsReturn({
               onToggleSerial={onToggleSerial}
               onOpenDamage={onOpenDamage}
               readOnly={readOnly}
+              isCompleted={isCompleted}
             />
           ))}
         </div>

@@ -760,7 +760,8 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
                 pdh.photo_url, pdh.note,
                 pdh.processing_status, pdh.sent_to_processing_at,
                 pdh.returned_from_processing_at, pdh.processing_notes,
-                pdh.created_at, pdh.created_by
+                pdh.created_at, pdh.created_by,
+                pdh.qty, pdh.processed_qty, pdh.fee_per_item
             FROM product_damage_history pdh
             WHERE pdh.processing_type = 'restoration'
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
@@ -768,6 +769,8 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
         
         items = []
         for row in result:
+            qty = row[18] or 1
+            processed_qty = row[19] or 0
             items.append({
                 "id": row[0],
                 "product_id": row[1],
@@ -786,7 +789,11 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
                 "returned_from_processing_at": row[14].isoformat() if row[14] else None,
                 "processing_notes": row[15],
                 "created_at": row[16].isoformat() if row[16] else None,
-                "created_by": row[17]
+                "created_by": row[17],
+                "qty": qty,
+                "processed_qty": processed_qty,
+                "remaining_qty": qty - processed_qty,
+                "fee_per_item": float(row[20]) if row[20] else 0.0
             })
         
         return {"items": items, "total": len(items)}

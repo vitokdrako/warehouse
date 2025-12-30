@@ -1403,6 +1403,11 @@ export default function DamageHubApp() {
               in_progress: stats.casesInProgress,
               completed: stats.casesCompleted,
             }}
+            labels={{
+              pending: "Потребують уваги",
+              in_progress: "В обробці",
+              completed: "Закриті"
+            }}
           />
         )}
 

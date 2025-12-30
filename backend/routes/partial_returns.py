@@ -559,9 +559,9 @@ async def mark_extension_lost(
         
         # Створити фінансову транзакцію
         db.execute(text("""
-            INSERT INTO finance_payments 
-            (order_id, payment_type, amount, currency, status, description, occurred_at)
-            VALUES (:order_id, 'loss', :amount, 'UAH', 'pending', :description, NOW())
+            INSERT INTO fin_payments 
+            (order_id, payment_type, amount, currency, note, occurred_at)
+            VALUES (:order_id, 'loss', :amount, 'UAH', :description, NOW())
         """), {
             "order_id": order_id,
             "amount": loss_amount,

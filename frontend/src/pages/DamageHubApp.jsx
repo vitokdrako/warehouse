@@ -652,6 +652,40 @@ export default function DamageHubApp() {
     }
   };
 
+  // Вирахувати із застави
+  const handleDeductFromDeposit = async (orderCase, amount) => {
+    if (!orderCase.deposit_id) {
+      alert("Депозит не знайдено для цього замовлення");
+      return;
+    }
+    
+    const confirmed = window.confirm(
+      `Вирахувати ${money(amount)} із застави для замовлення #${orderCase.order_number}?`
+    );
+    if (!confirmed) return;
+    
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/deposits/${orderCase.deposit_id}/use?amount=${amount}&note=Вирахування за пошкодження`, {
+        method: "POST"
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(`Помилка: ${errData.detail || "Не вдалося вирахувати"}`);
+        return;
+      }
+      
+      alert(`✅ Успішно вирахувано ${money(amount)} із застави`);
+      
+      // Оновити дані
+      await loadOrderCases();
+      if (selectedOrderId) await loadOrderDetails(selectedOrderId);
+    } catch (e) {
+      console.error("Error deducting from deposit:", e);
+      alert("Помилка при вирахуванні із застави");
+    }
+  };
+
   // Selected order case data
   const selectedCase = useMemo(() => {
     return orderCases.find(c => c.order_id === selectedOrderId) || null;

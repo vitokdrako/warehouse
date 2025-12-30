@@ -10,8 +10,6 @@ export default function LeftRailClient({
   email,
   tier,           // 'new' | 'regular' | 'vip'
   orderCount,     // Кількість попередніх замовлень
-  onCopyPhone,
-  onSendEmail,
 }) {
   const tierConfig = {
     new: { label: 'Новий', color: 'bg-blue-100 text-blue-800' },
@@ -20,11 +18,6 @@ export default function LeftRailClient({
   }
   
   const tierInfo = tierConfig[tier] || tierConfig.new
-  
-  const handleCopyPhone = () => {
-    navigator.clipboard.writeText(phone || '')
-    onCopyPhone?.()
-  }
   
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -63,24 +56,6 @@ export default function LeftRailClient({
             {email || 'Не вказано'}
           </div>
         </div>
-      </div>
-      
-      {/* Actions */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button 
-          onClick={handleCopyPhone}
-          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
-        >
-          📋 Копіювати телефон
-        </button>
-        {email && (
-          <button 
-            onClick={onSendEmail}
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm hover:bg-slate-50 transition-colors"
-          >
-            ✉️ Email
-          </button>
-        )}
       </div>
     </div>
   )

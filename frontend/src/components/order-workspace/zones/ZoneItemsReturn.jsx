@@ -57,27 +57,60 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
   const serials = item.serials || []
   const okSerials = item.ok_serials || []
   
-  const isComplete = returnedQty >= rentedQty
+  const isFullyReturned = returnedQty >= rentedQty
   const hasDamage = findings.length > 0
+  const isPartialReturn = returnedQty > 0 && returnedQty < rentedQty
   
-  // Повернутий товар - неактивний, сірий
-  const isFullyReturned = isComplete && !hasDamage
+  // Сірий/неактивний ТІЛЬКИ якщо:
+  // 1. Приймання завершено (isCompleted)
+  // 2. Товар повністю повернуто
+  // 3. Немає пошкоджень
+  const isDisabled = isCompleted && isFullyReturned && !hasDamage
+  
+  // Стилі в залежності від стану
+  const getCardStyle = () => {
+    if (isDisabled) {
+      return 'border-slate-200 bg-slate-50 opacity-50'
+    }
+    if (isCompleted && isPartialReturn) {
+      // Часткове повернення після завершення - активний, жовта рамка
+      return 'border-amber-400 bg-amber-50'
+    }
+    if (isFullyReturned && !hasDamage) {
+      return 'border-emerald-300 bg-emerald-50'
+    }
+    if (hasDamage) {
+      return 'border-amber-300 bg-amber-50'
+    }
+    return 'border-slate-200 bg-white'
+  }
   
   return (
     <div className={`
       rounded-xl border p-4 transition-all
-      ${isFullyReturned 
-        ? 'border-slate-200 bg-slate-50 opacity-60 pointer-events-none' 
-        : isComplete && !hasDamage 
-          ? 'border-emerald-300 bg-emerald-50' 
-          : hasDamage 
-            ? 'border-amber-300 bg-amber-50' 
-            : 'border-slate-200 bg-white'}
+      ${getCardStyle()}
+      ${isDisabled ? 'pointer-events-none' : ''}
     `}>
+      {/* Мітка статусу після завершення */}
+      {isCompleted && (
+        <div className="mb-2">
+          {isFullyReturned && !hasDamage && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+              ✅ Повернуто
+            </span>
+          )}
+          {isPartialReturn && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">
+              ⏳ В оренді ({rentedQty - returnedQty} шт)
+            </span>
+          )}
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex gap-4 mb-4">
         {/* Фото */}
-        <div className={`w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 ${isFullyReturned ? 'grayscale' : ''}`}>
+        <div className={`w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 ${isDisabled ? 'grayscale' : ''}`}>
           {photoUrl ? (
             <img src={photoUrl} alt={item.name} className="w-full h-full object-cover" />
           ) : (
@@ -87,7 +120,7 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
         
         {/* Інформація */}
         <div className="flex-1 min-w-0">
-          <div className={`font-semibold mb-1 line-clamp-2 ${isFullyReturned ? 'text-slate-500' : 'text-slate-800'}`}>{item.name}</div>
+          <div className={`font-semibold mb-1 line-clamp-2 ${isDisabled ? 'text-slate-400' : 'text-slate-800'}`}>{item.name}</div>
           <div className="text-xs text-slate-500">SKU: {item.sku || '—'}</div>
           {/* Локація на складі */}
           {(item.location?.zone || item.location?.aisle || item.location?.shelf) && (

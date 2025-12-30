@@ -778,31 +778,46 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     damages = []
     product_ids_with_damage = set()
     
-    # Base URL for photos (for WeasyPrint PDF rendering)
-    # Production backend URL
+    # Шлях до директорії uploads для локального рендерингу WeasyPrint
     import os
+    from pathlib import Path
+    uploads_dir = Path(__file__).parent.parent.parent / "uploads"
     base_url = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
     
     for row in damage_result:
         product_id = row[1]
         product_ids_with_damage.add(product_id)
         
-        # Формуємо повний URL для фото
+        # Формуємо шлях для фото
         photo_url = row[7]
+        full_photo_url = None
+        
         if photo_url:
-            # Якщо це вже повний URL - залишаємо як є
+            # Якщо це вже повний URL - залишаємо як є (для HTML preview)
             if photo_url.startswith('http://') or photo_url.startswith('https://'):
                 full_photo_url = photo_url
-            # Якщо це відносний шлях - формуємо повний URL
+            # Якщо це відносний шлях - конвертуємо в file:// для WeasyPrint
             elif photo_url.startswith('/uploads/'):
-                full_photo_url = f"{base_url}{photo_url}"
+                # Локальний шлях для PDF рендерингу
+                local_path = uploads_dir / photo_url.replace('/uploads/', '')
+                if local_path.exists():
+                    full_photo_url = f"file://{local_path}"
+                else:
+                    # Fallback на HTTP URL для HTML preview
+                    full_photo_url = f"{base_url}{photo_url}"
             elif photo_url.startswith('uploads/'):
-                full_photo_url = f"{base_url}/{photo_url}"
+                local_path = uploads_dir / photo_url.replace('uploads/', '')
+                if local_path.exists():
+                    full_photo_url = f"file://{local_path}"
+                else:
+                    full_photo_url = f"{base_url}/{photo_url}"
             else:
-                # Старий формат - тільки ім'я файлу (для зворотної сумісності)
-                full_photo_url = f"{base_url}/uploads/damage_photos/{photo_url}"
-        else:
-            full_photo_url = None
+                # Старий формат - тільки ім'я файлу
+                local_path = uploads_dir / "damage_photos" / photo_url
+                if local_path.exists():
+                    full_photo_url = f"file://{local_path}"
+                else:
+                    full_photo_url = f"{base_url}/uploads/damage_photos/{photo_url}"
         
         damages.append({
             "id": row[0],

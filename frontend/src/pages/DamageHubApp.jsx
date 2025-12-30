@@ -217,11 +217,13 @@ function DamageItemRow({ item, onSendTo }) {
   };
 
   const isAssigned = item.processing_type && item.processing_type !== 'none';
+  const isTotalLoss = item.damage_code === 'TOTAL_LOSS' || item.damage_type === 'Повна втрата';
   const photoUrl = item.photo_url || item.product_image;
 
   return (
     <div className={cls(
       "rounded-xl border p-3 transition",
+      isTotalLoss ? "bg-red-50 border-red-200" :
       isAssigned ? "bg-corp-bg-page border-corp-border" : "bg-amber-50 border-amber-200"
     )}>
       <div className="flex items-start gap-3">
@@ -231,12 +233,18 @@ function DamageItemRow({ item, onSendTo }) {
             <img 
               src={photoUrl} 
               alt={item.product_name}
-              className="w-16 h-16 rounded-lg object-cover border border-corp-border"
+              className={cls(
+                "w-16 h-16 rounded-lg object-cover border",
+                isTotalLoss ? "border-red-300 grayscale" : "border-corp-border"
+              )}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           ) : (
-            <div className="w-16 h-16 rounded-lg bg-corp-border flex items-center justify-center text-2xl">
-              📦
+            <div className={cls(
+              "w-16 h-16 rounded-lg flex items-center justify-center text-2xl",
+              isTotalLoss ? "bg-red-200" : "bg-corp-border"
+            )}>
+              {isTotalLoss ? "❌" : "📦"}
             </div>
           )}
         </div>
@@ -245,16 +253,29 @@ function DamageItemRow({ item, onSendTo }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-corp-text-dark truncate">{item.product_name}</div>
+              <div className={cls(
+                "font-semibold truncate",
+                isTotalLoss ? "text-red-800" : "text-corp-text-dark"
+              )}>{item.product_name}</div>
               <div className="mt-0.5 text-xs text-corp-text-muted">
                 SKU: {item.sku || "—"} • {item.damage_type || "Пошкодження"}
               </div>
             </div>
             <div className="text-right shrink-0">
-              <div className="font-bold text-corp-text-dark">{money(item.fee)}</div>
+              <div className={cls(
+                "font-bold",
+                isTotalLoss ? "text-red-700" : "text-corp-text-dark"
+              )}>{money(item.fee)}</div>
               <div className="text-xs text-corp-text-muted">{item.severity || "low"}</div>
             </div>
           </div>
+          
+          {/* Total Loss Badge */}
+          {isTotalLoss && (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-lg bg-red-100 px-2.5 py-1 text-xs font-bold text-red-800">
+              🔴 ПОВНА ВТРАТА — товар списано
+            </div>
+          )}
           
           {/* Note */}
           {item.note && (

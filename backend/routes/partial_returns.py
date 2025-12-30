@@ -229,8 +229,7 @@ async def process_partial_return(
                 # 1. Зменшити кількість товару в products
                 db.execute(text("""
                     UPDATE products 
-                    SET quantity = GREATEST(0, quantity - :qty),
-                        updated_at = NOW()
+                    SET quantity = GREATEST(0, quantity - :qty)
                     WHERE product_id = :product_id
                 """), {
                     "product_id": item.product_id,

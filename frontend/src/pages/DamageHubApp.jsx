@@ -1240,8 +1240,21 @@ export default function DamageHubApp() {
       const query = q.toLowerCase();
       result = result.filter(c => `${c.order_number || ""} ${c.customer_name || ""}`.toLowerCase().includes(query));
     }
+    // Apply status filter for main tab
+    if (statusFilter !== "all" && mode === MODES.ALL) {
+      if (statusFilter === "pending") {
+        // Очікують - є товари без призначення або не сплачено
+        result = result.filter(c => (c.pending_assignment || 0) > 0 || !c.is_paid);
+      } else if (statusFilter === "in_progress") {
+        // В роботі - товари відправлені на обробку, але не все завершено
+        result = result.filter(c => (c.pending_assignment || 0) === 0 && !c.is_paid && (c.completed_count || 0) < c.items_count);
+      } else if (statusFilter === "completed") {
+        // Виконані - все оброблено і сплачено
+        result = result.filter(c => c.is_paid);
+      }
+    }
     return result;
-  }, [orderCases, q]);
+  }, [orderCases, q, statusFilter, mode]);
 
   const filteredWashItems = useMemo(() => {
     let result = washItems;

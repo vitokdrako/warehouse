@@ -844,12 +844,16 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         "email": "rfarfordecor@gmail.com.ua",
     }
     
+    # Backend URL для зображень (використовується в шаблоні)
+    backend_url = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
+    
     return {
         "order": order,
         "damages": damages,
         "items_with_damage": len(product_ids_with_damage),
         "total_items": total_items,
         "company": company,
+        "backend_url": backend_url,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options
     }

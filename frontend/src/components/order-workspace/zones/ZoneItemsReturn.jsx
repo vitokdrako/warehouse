@@ -58,16 +58,24 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
   const isComplete = returnedQty >= rentedQty
   const hasDamage = findings.length > 0
   
+  // Повернутий товар - неактивний, сірий
+  const isFullyReturned = isComplete && !hasDamage
+  
   return (
     <div className={`
-      rounded-xl border bg-white p-4
-      ${isComplete && !hasDamage ? 'border-emerald-300 bg-emerald-50' : 
-        hasDamage ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}
+      rounded-xl border p-4 transition-all
+      ${isFullyReturned 
+        ? 'border-slate-200 bg-slate-50 opacity-60 pointer-events-none' 
+        : isComplete && !hasDamage 
+          ? 'border-emerald-300 bg-emerald-50' 
+          : hasDamage 
+            ? 'border-amber-300 bg-amber-50' 
+            : 'border-slate-200 bg-white'}
     `}>
       {/* Header */}
       <div className="flex gap-4 mb-4">
         {/* Фото */}
-        <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+        <div className={`w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 ${isFullyReturned ? 'grayscale' : ''}`}>
           {photoUrl ? (
             <img src={photoUrl} alt={item.name} className="w-full h-full object-cover" />
           ) : (
@@ -77,7 +85,7 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
         
         {/* Інформація */}
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-slate-800 mb-1 line-clamp-2">{item.name}</div>
+          <div className={`font-semibold mb-1 line-clamp-2 ${isFullyReturned ? 'text-slate-500' : 'text-slate-800'}`}>{item.name}</div>
           <div className="text-xs text-slate-500">SKU: {item.sku || '—'}</div>
           {/* Локація на складі */}
           {(item.location?.zone || item.location?.aisle || item.location?.shelf) && (

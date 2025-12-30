@@ -296,8 +296,8 @@ function DamageItemRow({ item, onSendTo }) {
             </div>
           )}
           
-          {/* Assignment buttons - only show if not assigned */}
-          {!isAssigned && (
+          {/* Assignment buttons - only show if not assigned AND not total loss */}
+          {!isAssigned && !isTotalLoss && (
             <div className="mt-2 pt-2 border-t border-amber-200 flex flex-wrap items-center gap-2">
               <span className="text-xs text-amber-700">Відправити на:</span>
               <button

@@ -67,7 +67,7 @@ TEST_CREDENTIALS = {
 # CORRECT_COMPANY_NAME = "ФОП Арсалані Олександра Ігорівна"
 # OLD_INCORRECT_NAME = "ФОП Маркін Ілля Павлович"
 
-class OrderLifecycleTester:
+class PartialReturnsTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
@@ -76,8 +76,9 @@ class OrderLifecycleTester:
             'Accept': 'application/json'
         })
         self.auth_token = None
-        self.test_order_ids = [7222, 7219, 7220]  # Specific order IDs to test
-        self.expected_stages = ['created', 'preparation', 'ready_for_issue', 'issued', 'returned']
+        self.test_order_7219 = 7219  # For getting items
+        self.test_order_7220 = 7220  # For processing partial returns
+        self.extension_id = None  # Will be set after creating extension
         
     def log(self, message: str, level: str = "INFO"):
         """Log test messages with timestamp"""
@@ -128,133 +129,205 @@ class OrderLifecycleTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
 
-    def test_order_lifecycle(self, order_id: int) -> Dict[str, Any]:
-        """Test order lifecycle API for specific order"""
+    def test_get_not_returned_items(self, order_id: int) -> Dict[str, Any]:
+        """Test 1: Get items for partial return"""
         try:
-            self.log(f"🧪 Testing lifecycle for order {order_id}...")
+            self.log(f"🧪 Test 1: Getting not-returned items for order {order_id}...")
             
-            response = self.session.get(f"{self.base_url}/orders/{order_id}/lifecycle")
+            response = self.session.get(f"{self.base_url}/partial-returns/order/{order_id}/not-returned")
             
             if response.status_code == 200:
                 data = response.json()
-                events = data if isinstance(data, list) else data.get('events', [])
+                items = data if isinstance(data, list) else data.get('items', [])
                 
-                self.log(f"✅ Retrieved {len(events)} lifecycle events for order {order_id}")
+                self.log(f"✅ Retrieved {len(items)} not-returned items for order {order_id}")
                 
-                if events:
-                    self.log(f"📋 Lifecycle events for order {order_id}:")
+                if items:
+                    # Validate item structure
+                    required_fields = ['product_id', 'sku', 'name', 'rented_qty', 'full_price', 'daily_rate', 'loss_amount']
+                    valid_items = []
                     
-                    # Verify events have required fields
-                    valid_events = []
-                    for i, event in enumerate(events):
-                        stage = event.get('stage', 'unknown')
-                        notes = event.get('notes', '')
-                        created_at = event.get('created_at', 'unknown')
-                        created_by = event.get('created_by', 'unknown')
+                    for i, item in enumerate(items):
+                        self.log(f"   Item {i+1}:")
+                        self.log(f"      Product ID: {item.get('product_id')}")
+                        self.log(f"      SKU: {item.get('sku')}")
+                        self.log(f"      Name: {item.get('name')}")
+                        self.log(f"      Rented Qty: {item.get('rented_qty')}")
+                        self.log(f"      Daily Rate: {item.get('daily_rate')}")
                         
-                        self.log(f"   {i+1}. Stage: {stage}")
-                        self.log(f"      Notes: {notes}")
-                        self.log(f"      Created: {created_at}")
-                        self.log(f"      By: {created_by}")
+                        # Check if all required fields are present
+                        has_all_fields = all(field in item for field in required_fields)
+                        daily_rate = item.get('daily_rate', 0)
+                        has_positive_rate = daily_rate > 0
                         
-                        # Validate required fields
-                        if all([stage, created_at, created_by]):
-                            valid_events.append(event)
+                        if has_all_fields and has_positive_rate:
+                            valid_items.append(item)
+                            self.log(f"      ✅ Valid item with daily_rate: {daily_rate}")
                         else:
-                            self.log(f"      ⚠️ Missing required fields", "WARNING")
-                    
-                    # Check if events are in chronological order
-                    is_chronological = True
-                    if len(events) > 1:
-                        for i in range(1, len(events)):
-                            prev_time = events[i-1].get('created_at', '')
-                            curr_time = events[i].get('created_at', '')
-                            if prev_time > curr_time:
-                                is_chronological = False
-                                break
-                    
-                    # Check for expected stages
-                    stages_found = [event.get('stage') for event in events]
-                    has_created = 'created' in stages_found
+                            missing_fields = [field for field in required_fields if field not in item]
+                            if missing_fields:
+                                self.log(f"      ❌ Missing fields: {missing_fields}")
+                            if not has_positive_rate:
+                                self.log(f"      ❌ Invalid daily_rate: {daily_rate} (should be > 0)")
                     
                     return {
                         "success": True,
                         "order_id": order_id,
-                        "events_count": len(events),
-                        "valid_events_count": len(valid_events),
-                        "stages_found": stages_found,
-                        "has_created_stage": has_created,
-                        "is_chronological": is_chronological,
-                        "events": events,
-                        "first_stage": stages_found[0] if stages_found else None,
-                        "last_stage": stages_found[-1] if stages_found else None
+                        "items_count": len(items),
+                        "valid_items_count": len(valid_items),
+                        "items": items,
+                        "valid_items": valid_items
                     }
                 else:
-                    self.log(f"⚠️ No lifecycle events found for order {order_id}", "WARNING")
+                    self.log(f"⚠️ No not-returned items found for order {order_id}", "WARNING")
                     return {
                         "success": True,
                         "order_id": order_id,
-                        "events_count": 0,
-                        "valid_events_count": 0,
-                        "stages_found": [],
-                        "has_created_stage": False,
-                        "is_chronological": True,
-                        "events": [],
-                        "first_stage": None,
-                        "last_stage": None
+                        "items_count": 0,
+                        "valid_items_count": 0,
+                        "items": [],
+                        "valid_items": []
                     }
             else:
-                self.log(f"❌ Get lifecycle failed for order {order_id}: {response.status_code} - {response.text}", "ERROR")
+                self.log(f"❌ Get not-returned items failed for order {order_id}: {response.status_code} - {response.text}", "ERROR")
                 return {"success": False, "order_id": order_id, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception getting lifecycle for order {order_id}: {str(e)}", "ERROR")
+            self.log(f"❌ Exception getting not-returned items for order {order_id}: {str(e)}", "ERROR")
             return {"success": False, "order_id": order_id, "error": str(e)}
 
-    def validate_lifecycle_requirements(self, order_id: int, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate specific requirements for each test order"""
-        validations = {
-            "order_id": order_id,
-            "has_events": result.get("events_count", 0) > 0,
-            "has_required_fields": result.get("valid_events_count", 0) == result.get("events_count", 0),
-            "is_chronological": result.get("is_chronological", False),
-            "has_created_stage": result.get("has_created_stage", False)
-        }
-        
-        stages_found = result.get("stages_found", [])
-        
-        if order_id == 7222:
-            # Order 7222 should have: created, preparation, ready_for_issue, issued
-            expected_stages = ['created', 'preparation', 'ready_for_issue', 'issued']
-            validations["expected_stages_present"] = all(stage in stages_found for stage in expected_stages)
-            validations["expected_stages"] = expected_stages
-            validations["missing_stages"] = [stage for stage in expected_stages if stage not in stages_found]
+    def test_process_partial_return(self, order_id: int, item_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Test 2: Process partial return with EXTEND action"""
+        try:
+            self.log(f"🧪 Test 2: Processing partial return for order {order_id}...")
             
-        elif order_id == 7219:
-            # Order 7219 should have full lifecycle from creation to issue
-            expected_stages = ['created', 'preparation', 'ready_for_issue', 'issued']
-            validations["expected_stages_present"] = all(stage in stages_found for stage in expected_stages)
-            validations["expected_stages"] = expected_stages
-            validations["missing_stages"] = [stage for stage in expected_stages if stage not in stages_found]
+            # Prepare request body
+            request_body = {
+                "items": [{
+                    "product_id": item_data.get('product_id'),
+                    "sku": item_data.get('sku'),
+                    "name": item_data.get('name'),
+                    "rented_qty": item_data.get('rented_qty', 1),
+                    "returned_qty": 0,
+                    "not_returned_qty": 1,
+                    "action": "extend",
+                    "daily_rate": 100,
+                    "adjusted_daily_rate": 100
+                }]
+            }
             
-        elif order_id == 7220:
-            # Order 7220 should show created and preparation stages only (still in preparation)
-            expected_stages = ['created', 'preparation']
-            validations["expected_stages_present"] = all(stage in stages_found for stage in expected_stages)
-            validations["expected_stages"] = expected_stages
-            validations["missing_stages"] = [stage for stage in expected_stages if stage not in stages_found]
-            # Should NOT have ready_for_issue or issued
-            validations["no_advanced_stages"] = not any(stage in stages_found for stage in ['ready_for_issue', 'issued', 'returned'])
-        
-        return validations
+            self.log(f"   Request body: {json.dumps(request_body, indent=2)}")
+            
+            response = self.session.post(
+                f"{self.base_url}/partial-returns/order/{order_id}/process",
+                json=request_body
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log(f"✅ Partial return processed successfully for order {order_id}")
+                self.log(f"   Response: {json.dumps(data, indent=2)}")
+                
+                return {
+                    "success": True,
+                    "order_id": order_id,
+                    "response_data": data
+                }
+            else:
+                self.log(f"❌ Process partial return failed for order {order_id}: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "order_id": order_id, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception processing partial return for order {order_id}: {str(e)}", "ERROR")
+            return {"success": False, "order_id": order_id, "error": str(e)}
 
-    def run_order_lifecycle_test(self):
-        """Run the complete Order Lifecycle API test as per review request"""
-        self.log("🚀 Starting Order Lifecycle API Test")
+    def test_get_extensions(self, order_id: int) -> Dict[str, Any]:
+        """Test 3: Get extensions for order"""
+        try:
+            self.log(f"🧪 Test 3: Getting extensions for order {order_id}...")
+            
+            response = self.session.get(f"{self.base_url}/partial-returns/order/{order_id}/extensions")
+            
+            if response.status_code == 200:
+                data = response.json()
+                extensions = data if isinstance(data, list) else data.get('extensions', [])
+                
+                self.log(f"✅ Retrieved {len(extensions)} extensions for order {order_id}")
+                
+                if extensions:
+                    for i, extension in enumerate(extensions):
+                        extension_id = extension.get('id')
+                        product_id = extension.get('product_id')
+                        status = extension.get('status')
+                        daily_rate = extension.get('daily_rate')
+                        
+                        self.log(f"   Extension {i+1}:")
+                        self.log(f"      ID: {extension_id}")
+                        self.log(f"      Product ID: {product_id}")
+                        self.log(f"      Status: {status}")
+                        self.log(f"      Daily Rate: {daily_rate}")
+                        
+                        # Store the first extension ID for later use
+                        if i == 0 and extension_id:
+                            self.extension_id = extension_id
+                            self.log(f"      📝 Stored extension ID for completion test: {extension_id}")
+                
+                return {
+                    "success": True,
+                    "order_id": order_id,
+                    "extensions_count": len(extensions),
+                    "extensions": extensions
+                }
+            else:
+                self.log(f"❌ Get extensions failed for order {order_id}: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "order_id": order_id, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception getting extensions for order {order_id}: {str(e)}", "ERROR")
+            return {"success": False, "order_id": order_id, "error": str(e)}
+
+    def test_complete_extension(self, order_id: int, extension_id: int) -> Dict[str, Any]:
+        """Test 4: Complete extension (return item)"""
+        try:
+            self.log(f"🧪 Test 4: Completing extension {extension_id} for order {order_id}...")
+            
+            request_body = {
+                "days": 3,
+                "final_amount": 300
+            }
+            
+            self.log(f"   Request body: {json.dumps(request_body, indent=2)}")
+            
+            response = self.session.post(
+                f"{self.base_url}/partial-returns/order/{order_id}/extensions/{extension_id}/complete",
+                json=request_body
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.log(f"✅ Extension completed successfully")
+                self.log(f"   Response: {json.dumps(data, indent=2)}")
+                
+                return {
+                    "success": True,
+                    "order_id": order_id,
+                    "extension_id": extension_id,
+                    "response_data": data
+                }
+            else:
+                self.log(f"❌ Complete extension failed: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "order_id": order_id, "extension_id": extension_id, "status_code": response.status_code, "response_text": response.text}
+                
+        except Exception as e:
+            self.log(f"❌ Exception completing extension: {str(e)}", "ERROR")
+            return {"success": False, "order_id": order_id, "extension_id": extension_id, "error": str(e)}
+
+    def run_partial_returns_test(self):
+        """Run the complete Partial Returns API test as per review request"""
+        self.log("🚀 Starting Partial Returns API Test")
         self.log("=" * 80)
-        self.log(f"Testing Order Lifecycle API functionality")
-        self.log("Test orders: 7222, 7219, 7220")
-        self.log("Expected stages: created, preparation, ready_for_issue, issued, returned")
+        self.log(f"Testing Partial Returns API functionality")
+        self.log("Test orders: 7219 (get items), 7220 (process returns)")
         self.log("=" * 80)
         
         # Step 1: Health check
@@ -268,108 +341,113 @@ class OrderLifecycleTester:
             self.log("❌ Authentication failed, aborting tests", "ERROR")
             return False
         
-        # Step 3: Test each order lifecycle
-        test_results = {}
         all_tests_passed = True
+        test_results = {}
         
-        for order_id in self.test_order_ids:
-            self.log(f"\n🔍 Step {order_id}: Testing lifecycle for order {order_id}...")
+        # Test 1: Get items for partial return from order 7219
+        self.log(f"\n🔍 Test 1: Getting not-returned items from order {self.test_order_7219}...")
+        items_result = self.test_get_not_returned_items(self.test_order_7219)
+        test_results["get_items"] = items_result
+        
+        if not items_result.get("success", False):
+            self.log("❌ Failed to get not-returned items", "ERROR")
+            all_tests_passed = False
+        elif items_result.get("valid_items_count", 0) == 0:
+            self.log("❌ No valid items found for testing", "ERROR")
+            all_tests_passed = False
+        
+        # Get first valid item for processing
+        valid_items = items_result.get("valid_items", [])
+        first_item = valid_items[0] if valid_items else None
+        
+        if not first_item:
+            self.log("❌ No valid item available for partial return processing", "ERROR")
+            all_tests_passed = False
+            return False
+        
+        # Test 2: Process partial return with EXTEND action on order 7220
+        self.log(f"\n🔍 Test 2: Processing partial return for order {self.test_order_7220}...")
+        process_result = self.test_process_partial_return(self.test_order_7220, first_item)
+        test_results["process_return"] = process_result
+        
+        if not process_result.get("success", False):
+            self.log("❌ Failed to process partial return", "ERROR")
+            all_tests_passed = False
+        
+        # Test 3: Get extensions for order 7220
+        self.log(f"\n🔍 Test 3: Getting extensions for order {self.test_order_7220}...")
+        extensions_result = self.test_get_extensions(self.test_order_7220)
+        test_results["get_extensions"] = extensions_result
+        
+        if not extensions_result.get("success", False):
+            self.log("❌ Failed to get extensions", "ERROR")
+            all_tests_passed = False
+        elif extensions_result.get("extensions_count", 0) == 0:
+            self.log("❌ No extensions found after processing", "ERROR")
+            all_tests_passed = False
+        
+        # Test 4: Complete extension (if we have an extension ID)
+        if self.extension_id:
+            self.log(f"\n🔍 Test 4: Completing extension {self.extension_id} for order {self.test_order_7220}...")
+            complete_result = self.test_complete_extension(self.test_order_7220, self.extension_id)
+            test_results["complete_extension"] = complete_result
             
-            # Test lifecycle API
-            lifecycle_result = self.test_order_lifecycle(order_id)
-            lifecycle_success = lifecycle_result.get("success", False)
-            
-            if not lifecycle_success:
-                self.log(f"❌ Failed to get lifecycle for order {order_id}", "ERROR")
+            if not complete_result.get("success", False):
+                self.log("❌ Failed to complete extension", "ERROR")
                 all_tests_passed = False
-                test_results[order_id] = {"success": False, "result": lifecycle_result}
-                continue
-            
-            # Validate requirements for this specific order
-            validations = self.validate_lifecycle_requirements(order_id, lifecycle_result)
-            test_results[order_id] = {
-                "success": lifecycle_success,
-                "result": lifecycle_result,
-                "validations": validations
-            }
-            
-            # Check if all validations passed
-            validation_checks = [
-                validations.get("has_events", False),
-                validations.get("has_required_fields", False),
-                validations.get("is_chronological", False),
-                validations.get("has_created_stage", False),
-                validations.get("expected_stages_present", False)
-            ]
-            
-            # For order 7220, also check no advanced stages
-            if order_id == 7220:
-                validation_checks.append(validations.get("no_advanced_stages", False))
-            
-            order_passed = all(validation_checks)
-            if not order_passed:
-                all_tests_passed = False
-            
-            # Log validation results
-            self.log(f"   📊 Validation Results for Order {order_id}:")
-            self.log(f"      • Has Events: {'✅' if validations.get('has_events') else '❌'}")
-            self.log(f"      • Required Fields: {'✅' if validations.get('has_required_fields') else '❌'}")
-            self.log(f"      • Chronological Order: {'✅' if validations.get('is_chronological') else '❌'}")
-            self.log(f"      • Has Created Stage: {'✅' if validations.get('has_created_stage') else '❌'}")
-            self.log(f"      • Expected Stages Present: {'✅' if validations.get('expected_stages_present') else '❌'}")
-            
-            if order_id == 7220:
-                self.log(f"      • No Advanced Stages: {'✅' if validations.get('no_advanced_stages') else '❌'}")
-            
-            if validations.get("missing_stages"):
-                self.log(f"      • Missing Stages: {validations.get('missing_stages')}")
+        else:
+            self.log("\n⚠️ Test 4: Skipping extension completion - no extension ID available", "WARNING")
+            all_tests_passed = False
         
         # Summary
         self.log("\n" + "=" * 80)
-        self.log("📊 ORDER LIFECYCLE API TEST SUMMARY:")
+        self.log("📊 PARTIAL RETURNS API TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        self.log(f"\n   📋 ORDER LIFECYCLE TESTS:")
-        for order_id in self.test_order_ids:
-            result = test_results.get(order_id, {})
-            success = result.get("success", False)
-            lifecycle_data = result.get("result", {})
-            validations = result.get("validations", {})
-            
-            events_count = lifecycle_data.get("events_count", 0)
-            stages_found = lifecycle_data.get("stages_found", [])
-            
-            self.log(f"   • Order {order_id}: {'✅ PASS' if success and validations.get('expected_stages_present', False) else '❌ FAIL'}")
-            self.log(f"     - Events: {events_count}")
-            self.log(f"     - Stages: {', '.join(stages_found) if stages_found else 'None'}")
-            
-            if order_id == 7222:
-                self.log(f"     - Expected: created, preparation, ready_for_issue, issued")
-            elif order_id == 7219:
-                self.log(f"     - Expected: Full lifecycle from creation to issue")
-            elif order_id == 7220:
-                self.log(f"     - Expected: created, preparation only (still in preparation)")
+        self.log(f"\n   📋 PARTIAL RETURNS TESTS:")
         
-        self.log(f"\n   🔍 API ENDPOINT TESTED:")
-        self.log(f"   • GET /api/orders/{{order_id}}/lifecycle: {'✅ Working' if any(r.get('success') for r in test_results.values()) else '❌ Failed'}")
+        # Test 1 summary
+        items_success = test_results.get("get_items", {}).get("success", False)
+        items_count = test_results.get("get_items", {}).get("valid_items_count", 0)
+        self.log(f"   • Test 1 - Get Not-Returned Items: {'✅ PASS' if items_success and items_count > 0 else '❌ FAIL'}")
+        self.log(f"     - Order: {self.test_order_7219}")
+        self.log(f"     - Valid Items Found: {items_count}")
         
-        self.log(f"\n   🔍 KEY VALIDATIONS:")
-        if all_tests_passed:
-            self.log(f"   • All orders have lifecycle events: ✅")
-            self.log(f"   • All events have required fields (stage, notes, created_at, created_by): ✅")
-            self.log(f"   • Events are in chronological order: ✅")
-            self.log(f"   • All orders start with 'created' stage: ✅")
-            self.log(f"   • Order 7222 has expected stages: ✅")
-            self.log(f"   • Order 7219 has full lifecycle: ✅")
-            self.log(f"   • Order 7220 shows preparation stage only: ✅")
-            
-            self.log(f"\n✅ ORDER LIFECYCLE API TEST PASSED!")
-            self.log(f"   All API endpoints working correctly with proper lifecycle tracking")
-            self.log(f"   Complete history returned from beginning of order regardless of current stage")
+        # Test 2 summary
+        process_success = test_results.get("process_return", {}).get("success", False)
+        self.log(f"   • Test 2 - Process Partial Return: {'✅ PASS' if process_success else '❌ FAIL'}")
+        self.log(f"     - Order: {self.test_order_7220}")
+        self.log(f"     - Action: EXTEND")
+        
+        # Test 3 summary
+        extensions_success = test_results.get("get_extensions", {}).get("success", False)
+        extensions_count = test_results.get("get_extensions", {}).get("extensions_count", 0)
+        self.log(f"   • Test 3 - Get Extensions: {'✅ PASS' if extensions_success and extensions_count > 0 else '❌ FAIL'}")
+        self.log(f"     - Order: {self.test_order_7220}")
+        self.log(f"     - Extensions Found: {extensions_count}")
+        
+        # Test 4 summary
+        complete_success = test_results.get("complete_extension", {}).get("success", False)
+        self.log(f"   • Test 4 - Complete Extension: {'✅ PASS' if complete_success else '❌ FAIL'}")
+        if self.extension_id:
+            self.log(f"     - Extension ID: {self.extension_id}")
+            self.log(f"     - Days: 3, Amount: ₴300")
         else:
-            self.log(f"\n❌ ORDER LIFECYCLE API TEST FAILED!")
-            self.log(f"   Some validations failed - check individual order results above")
+            self.log(f"     - Skipped: No extension ID available")
+        
+        self.log(f"\n   🔍 API ENDPOINTS TESTED:")
+        self.log(f"   • GET /api/partial-returns/order/{{order_id}}/not-returned: {'✅ Working' if items_success else '❌ Failed'}")
+        self.log(f"   • POST /api/partial-returns/order/{{order_id}}/process: {'✅ Working' if process_success else '❌ Failed'}")
+        self.log(f"   • GET /api/partial-returns/order/{{order_id}}/extensions: {'✅ Working' if extensions_success else '❌ Failed'}")
+        self.log(f"   • POST /api/partial-returns/order/{{order_id}}/extensions/{{id}}/complete: {'✅ Working' if complete_success else '❌ Failed'}")
+        
+        if all_tests_passed:
+            self.log(f"\n✅ PARTIAL RETURNS API TEST PASSED!")
+            self.log(f"   All API endpoints working correctly with proper partial returns functionality")
+        else:
+            self.log(f"\n❌ PARTIAL RETURNS API TEST FAILED!")
+            self.log(f"   Some tests failed - check individual test results above")
         
         return all_tests_passed
 def main():

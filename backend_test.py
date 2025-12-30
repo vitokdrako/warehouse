@@ -101,59 +101,125 @@ class OrderLifecycleTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
 
-    def get_orders_for_modification(self, limit: int = 10) -> Dict[str, Any]:
-        """Get list of orders with processing or ready_for_issue status"""
+    def test_order_lifecycle(self, order_id: int) -> Dict[str, Any]:
+        """Test order lifecycle API for specific order"""
         try:
-            self.log("🧪 Getting orders with status processing or ready_for_issue...")
+            self.log(f"🧪 Testing lifecycle for order {order_id}...")
             
-            response = self.session.get(f"{self.base_url}/orders?status=processing&limit={limit}")
+            response = self.session.get(f"{self.base_url}/orders/{order_id}/lifecycle")
             
             if response.status_code == 200:
                 data = response.json()
-                orders = data.get('orders', []) if isinstance(data, dict) else data
+                events = data if isinstance(data, list) else data.get('events', [])
                 
-                self.log(f"✅ Retrieved {len(orders)} processing orders")
+                self.log(f"✅ Retrieved {len(events)} lifecycle events for order {order_id}")
                 
-                # If no processing orders, try ready_for_issue
-                if not orders:
-                    response = self.session.get(f"{self.base_url}/orders?status=ready_for_issue&limit={limit}")
-                    if response.status_code == 200:
-                        data = response.json()
-                        orders = data.get('orders', []) if isinstance(data, dict) else data
-                        self.log(f"✅ Retrieved {len(orders)} ready_for_issue orders")
-                
-                if orders:
-                    # Show first few orders and store first order ID
-                    self.log("📋 Available orders for modification:")
-                    for order in orders[:3]:  # Show first 3
-                        order_id = order.get('order_id') or order.get('id')
-                        order_number = order.get('order_number', 'No number')
-                        customer_name = order.get('customer_name', 'No name')
-                        status = order.get('status', 'unknown')
-                        
-                        self.log(f"   - Order {order_id}: {order_number} - {customer_name} ({status})")
-                        
-                        # Store first order ID for modification tests
-                        if not self.test_order_id:
-                            self.test_order_id = order_id
+                if events:
+                    self.log(f"📋 Lifecycle events for order {order_id}:")
                     
-                    if len(orders) > 3:
-                        self.log(f"   ... and {len(orders) - 3} more")
-                
-                return {
-                    "success": True, 
-                    "data": orders, 
-                    "count": len(orders),
-                    "has_orders": len(orders) > 0,
-                    "first_order_id": self.test_order_id
-                }
+                    # Verify events have required fields
+                    valid_events = []
+                    for i, event in enumerate(events):
+                        stage = event.get('stage', 'unknown')
+                        notes = event.get('notes', '')
+                        created_at = event.get('created_at', 'unknown')
+                        created_by = event.get('created_by', 'unknown')
+                        
+                        self.log(f"   {i+1}. Stage: {stage}")
+                        self.log(f"      Notes: {notes}")
+                        self.log(f"      Created: {created_at}")
+                        self.log(f"      By: {created_by}")
+                        
+                        # Validate required fields
+                        if all([stage, created_at, created_by]):
+                            valid_events.append(event)
+                        else:
+                            self.log(f"      ⚠️ Missing required fields", "WARNING")
+                    
+                    # Check if events are in chronological order
+                    is_chronological = True
+                    if len(events) > 1:
+                        for i in range(1, len(events)):
+                            prev_time = events[i-1].get('created_at', '')
+                            curr_time = events[i].get('created_at', '')
+                            if prev_time > curr_time:
+                                is_chronological = False
+                                break
+                    
+                    # Check for expected stages
+                    stages_found = [event.get('stage') for event in events]
+                    has_created = 'created' in stages_found
+                    
+                    return {
+                        "success": True,
+                        "order_id": order_id,
+                        "events_count": len(events),
+                        "valid_events_count": len(valid_events),
+                        "stages_found": stages_found,
+                        "has_created_stage": has_created,
+                        "is_chronological": is_chronological,
+                        "events": events,
+                        "first_stage": stages_found[0] if stages_found else None,
+                        "last_stage": stages_found[-1] if stages_found else None
+                    }
+                else:
+                    self.log(f"⚠️ No lifecycle events found for order {order_id}", "WARNING")
+                    return {
+                        "success": True,
+                        "order_id": order_id,
+                        "events_count": 0,
+                        "valid_events_count": 0,
+                        "stages_found": [],
+                        "has_created_stage": False,
+                        "is_chronological": True,
+                        "events": [],
+                        "first_stage": None,
+                        "last_stage": None
+                    }
             else:
-                self.log(f"❌ Get orders failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "status_code": response.status_code, "response_text": response.text}
+                self.log(f"❌ Get lifecycle failed for order {order_id}: {response.status_code} - {response.text}", "ERROR")
+                return {"success": False, "order_id": order_id, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception getting orders: {str(e)}", "ERROR")
-            return {"success": False, "error": str(e)}
+            self.log(f"❌ Exception getting lifecycle for order {order_id}: {str(e)}", "ERROR")
+            return {"success": False, "order_id": order_id, "error": str(e)}
+
+    def validate_lifecycle_requirements(self, order_id: int, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate specific requirements for each test order"""
+        validations = {
+            "order_id": order_id,
+            "has_events": result.get("events_count", 0) > 0,
+            "has_required_fields": result.get("valid_events_count", 0) == result.get("events_count", 0),
+            "is_chronological": result.get("is_chronological", False),
+            "has_created_stage": result.get("has_created_stage", False)
+        }
+        
+        stages_found = result.get("stages_found", [])
+        
+        if order_id == 7222:
+            # Order 7222 should have: created, preparation, ready_for_issue, issued
+            expected_stages = ['created', 'preparation', 'ready_for_issue', 'issued']
+            validations["expected_stages_present"] = all(stage in stages_found for stage in expected_stages)
+            validations["expected_stages"] = expected_stages
+            validations["missing_stages"] = [stage for stage in expected_stages if stage not in stages_found]
+            
+        elif order_id == 7219:
+            # Order 7219 should have full lifecycle from creation to issue
+            expected_stages = ['created', 'preparation', 'ready_for_issue', 'issued']
+            validations["expected_stages_present"] = all(stage in stages_found for stage in expected_stages)
+            validations["expected_stages"] = expected_stages
+            validations["missing_stages"] = [stage for stage in expected_stages if stage not in stages_found]
+            
+        elif order_id == 7220:
+            # Order 7220 should show created and preparation stages only (still in preparation)
+            expected_stages = ['created', 'preparation']
+            validations["expected_stages_present"] = all(stage in stages_found for stage in expected_stages)
+            validations["expected_stages"] = expected_stages
+            validations["missing_stages"] = [stage for stage in expected_stages if stage not in stages_found]
+            # Should NOT have ready_for_issue or issued
+            validations["no_advanced_stages"] = not any(stage in stages_found for stage in ['ready_for_issue', 'issued', 'returned'])
+        
+        return validations
 
     def get_product_for_testing(self) -> Dict[str, Any]:
         """Get a product for adding to order"""

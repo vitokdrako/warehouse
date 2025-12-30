@@ -313,6 +313,9 @@ export default function ReturnOrderWorkspace() {
   const handlePartialReturnConfirm = async (result) => {
     console.log('[ReturnWorkspace] Часткове повернення оброблено:', result)
     
+    // Позначити що приймання завершено (для візуального блокування)
+    setIsReturnCompleted(true)
+    
     setTimeline(prev => [
       { 
         text: result.status === 'partial_return' 

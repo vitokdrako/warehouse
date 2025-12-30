@@ -983,16 +983,18 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
         batch_id = data.get("batch_id")
         if not batch_id:
             batch_id = f"BATCH-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+            batch_number = f"LB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
             db.execute(text("""
                 INSERT INTO laundry_batches (
-                    id, laundry_company, status, sent_date, expected_return_date,
-                    notes, created_at, updated_at
+                    id, batch_number, laundry_company, status, sent_date, expected_return_date,
+                    notes, total_items, returned_items, created_at, updated_at
                 ) VALUES (
-                    :id, :company, 'sent', NOW(), :return_date,
-                    :notes, NOW(), NOW()
+                    :id, :batch_number, :company, 'sent', NOW(), :return_date,
+                    :notes, 1, 0, NOW(), NOW()
                 )
             """), {
                 "id": batch_id,
+                "batch_number": batch_number,
                 "company": laundry_company,
                 "return_date": expected_return_date,
                 "notes": notes

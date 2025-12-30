@@ -764,8 +764,10 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
                 pdh.processing_status, pdh.sent_to_processing_at,
                 pdh.returned_from_processing_at, pdh.processing_notes,
                 pdh.created_at, pdh.created_by,
-                pdh.qty, pdh.processed_qty, pdh.fee_per_item
+                pdh.qty, pdh.processed_qty, pdh.fee_per_item,
+                p.image_url as product_image
             FROM product_damage_history pdh
+            LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'restoration'
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
@@ -796,7 +798,8 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
                 "qty": qty,
                 "processed_qty": processed_qty,
                 "remaining_qty": qty - processed_qty,
-                "fee_per_item": float(row[20]) if row[20] else 0.0
+                "fee_per_item": float(row[20]) if row[20] else 0.0,
+                "product_image": row[21]
             })
         
         return {"items": items, "total": len(items)}

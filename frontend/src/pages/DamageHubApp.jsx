@@ -221,9 +221,14 @@ function OrderCaseRow({ caseData, active, onClick }) {
 
 // ----------------------------- Processing Item Row (Мийка/Реставрація) -----------------------------
 function ProcessingItemRow({ item, active, onClick }) {
+  const totalQty = item.qty || 1;
+  const processedQty = item.processed_qty || 0;
+  const hasMultiple = totalQty > 1;
+  const progress = totalQty > 0 ? (processedQty / totalQty) * 100 : 0;
+  
   const statusMap = {
     pending: { label: "Очікує", tone: "warn" },
-    in_progress: { label: "В роботі", tone: "info" },
+    in_progress: { label: hasMultiple ? `${processedQty}/${totalQty}` : "В роботі", tone: "info" },
     completed: { label: "✓ Виконано", tone: "ok" },
   };
   const s = statusMap[item.processing_status] || statusMap.pending;
@@ -253,12 +258,25 @@ function ProcessingItemRow({ item, active, onClick }) {
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-corp-text-dark truncate">{item.product_name}</div>
               <div className="mt-0.5 text-xs text-corp-text-muted">
-                SKU: {item.sku || "—"} • {item.order_number || "—"}
+                SKU: {item.sku || "—"} • {item.order_number || "—"} {hasMultiple && <span className="font-medium">• {totalQty} шт.</span>}
               </div>
             </div>
             <Badge tone={s.tone}>{s.label}</Badge>
           </div>
-          {item.sent_to_processing_at && (
+          
+          {/* Progress bar for multiple items */}
+          {hasMultiple && processedQty > 0 && (
+            <div className="mt-2">
+              <div className="h-1.5 rounded-full bg-corp-border">
+                <div 
+                  className={cls("h-full rounded-full transition-all", progress >= 100 ? "bg-emerald-500" : "bg-blue-500")}
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+          
+          {item.sent_to_processing_at && !hasMultiple && (
             <div className="mt-1 text-xs text-corp-text-muted">
               Відправлено: {fmtDate(item.sent_to_processing_at)}
             </div>

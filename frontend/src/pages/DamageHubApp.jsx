@@ -806,7 +806,10 @@ function DamageItemRow({ item, onSendTo }) {
 
   const isAssigned = item.processing_type && item.processing_type !== 'none';
   const isTotalLoss = item.damage_code === 'TOTAL_LOSS' || item.damage_type === 'Повна втрата';
-  const photoUrl = item.photo_url || item.product_image;
+  
+  // Пріоритет: фото товару з галереї > фото пошкодження
+  const rawPhoto = item.product_image || item.photo_url;
+  const photoUrl = rawPhoto && !rawPhoto.startsWith('http') ? `${BACKEND_URL}/${rawPhoto}` : rawPhoto;
 
   return (
     <div className={cls(

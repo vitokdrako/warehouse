@@ -352,9 +352,7 @@ export default function ReturnOrderWorkspace() {
         showSave={true}
         onSave={saveProgress}
         saving={saving}
-        footerActions={[
-          { label: '🖨️ Друк акта', onClick: () => window.print() },
-        ]}
+        footerActions={[]}
         footerChildren={
           <div className="text-sm text-slate-600">
             Повернуто: <b>{totalReturnedQty}/{totalRentedQty}</b> · 

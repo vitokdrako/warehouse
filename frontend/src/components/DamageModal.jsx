@@ -450,17 +450,26 @@ export default function DamageModal({
             <div>
               <div className="text-slate-500 mb-1">Тип</div>
               <select 
-                className="w-full rounded-xl border px-3 py-2" 
+                className={`w-full rounded-xl border px-3 py-2 ${formData.kindCode === 'TOTAL_LOSS' ? 'border-red-400 bg-red-50' : ''}`}
                 value={formData.kindCode} 
-                onChange={e=>{
-                  const code=e.target.value
-                  const k = kinds.find(x=>x.code===code)
-                  setFormData(prev=>({...prev, kindCode:code, fee: defaultFeeFor(k)}))
-                }}
+                onChange={e => handleKindChange(e.target.value)}
               >
                 <option value="">— оберіть —</option>
-                {kinds.map(k=> <option key={k.code} value={k.code}>{k.label}</option>)}
+                {kinds.map(k => (
+                  <option 
+                    key={k.code} 
+                    value={k.code}
+                    className={k.isTotalLoss ? 'font-bold text-red-600' : ''}
+                  >
+                    {k.label}
+                  </option>
+                ))}
               </select>
+              {formData.kindCode === 'TOTAL_LOSS' && (
+                <div className="mt-1 text-xs text-red-600 font-medium">
+                  ⚠️ Товар буде списано з залишків!
+                </div>
+              )}
             </div>
           </div>
           

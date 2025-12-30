@@ -360,9 +360,29 @@ async def get_order_lifecycle(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Отримати lifecycle events замовлення
-    ✅ Для відображення таймлайну з інформацією про менеджерів
+    Отримати ПОВНУ історію замовлення (lifecycle events)
+    ✅ Включає: створення замовлення, всі зміни статусу, видачу/повернення
     """
+    lifecycle = []
+    
+    # 1. Отримати дату створення замовлення
+    order_result = db.execute(text("""
+        SELECT created_at, status, customer_name, created_by_name
+        FROM orders 
+        WHERE order_id = :order_id
+    """), {"order_id": order_id}).fetchone()
+    
+    if order_result:
+        lifecycle.append({
+            "stage": "created",
+            "notes": f"Замовлення створено для {order_result[2] or 'клієнта'}",
+            "created_at": order_result[0].isoformat() if order_result[0] else None,
+            "created_by": order_result[3] or "System",
+            "created_by_id": None,
+            "created_by_name": order_result[3] or "System"
+        })
+    
+    # 2. Отримати всі записи з order_lifecycle
     lifecycle_result = db.execute(text("""
         SELECT stage, notes, created_at, created_by, created_by_id, created_by_name
         FROM order_lifecycle 
@@ -370,7 +390,6 @@ async def get_order_lifecycle(
         ORDER BY created_at ASC
     """), {"order_id": order_id})
     
-    lifecycle = []
     for l_row in lifecycle_result:
         # Пріоритет: created_by_name > created_by
         user_name = l_row[5] if len(l_row) > 5 and l_row[5] else (l_row[3] if len(l_row) > 3 else None)
@@ -382,6 +401,59 @@ async def get_order_lifecycle(
             "created_by_id": l_row[4] if len(l_row) > 4 else None,
             "created_by_name": l_row[5] if len(l_row) > 5 else None
         })
+    
+    # 3. Отримати інформацію про issue card (комплектацію та видачу)
+    issue_result = db.execute(text("""
+        SELECT id, status, prepared_at, issued_at, prepared_by, issued_by
+        FROM issue_cards 
+        WHERE order_id = :order_id 
+        ORDER BY created_at ASC
+    """), {"order_id": order_id})
+    
+    for ic_row in issue_result:
+        # Підготовлено (комплектація завершена)
+        if ic_row[2]:  # prepared_at
+            lifecycle.append({
+                "stage": "ready_for_issue",
+                "notes": "Комплектація завершена, готово до видачі",
+                "created_at": ic_row[2].isoformat() if ic_row[2] else None,
+                "created_by": ic_row[4] or "Warehouse Staff",
+                "created_by_id": None,
+                "created_by_name": ic_row[4] or "Warehouse Staff"
+            })
+        
+        # Видано клієнту
+        if ic_row[3]:  # issued_at
+            lifecycle.append({
+                "stage": "issued",
+                "notes": "Замовлення видано клієнту",
+                "created_at": ic_row[3].isoformat() if ic_row[3] else None,
+                "created_by": ic_row[5] or "Manager",
+                "created_by_id": None,
+                "created_by_name": ic_row[5] or "Manager"
+            })
+    
+    # 4. Отримати інформацію про return card (повернення)
+    return_result = db.execute(text("""
+        SELECT id, status, returned_at, received_by
+        FROM return_cards 
+        WHERE order_id = :order_id 
+        ORDER BY created_at ASC
+    """), {"order_id": order_id})
+    
+    for rc_row in return_result:
+        if rc_row[2]:  # returned_at
+            lifecycle.append({
+                "stage": "returned",
+                "notes": "Замовлення повернуто",
+                "created_at": rc_row[2].isoformat() if rc_row[2] else None,
+                "created_by": rc_row[3] or "Staff",
+                "created_by_id": None,
+                "created_by_name": rc_row[3] or "Staff"
+            })
+    
+    # Сортування за датою (найстаріші спочатку)
+    lifecycle.sort(key=lambda x: x["created_at"] or "")
     
     return lifecycle
 

@@ -96,6 +96,11 @@ export default function ReturnOrderWorkspace() {
       
       setOrder(orderData)
       
+      // Перевірити статус - якщо partial_return, то приймання вже завершено
+      const orderStatus = orderData.status || ''
+      const isAlreadyPartialReturn = orderStatus === 'partial_return'
+      setIsReturnCompleted(isAlreadyPartialReturn)
+      
       // Клієнт
       setClientName(orderData.client_name || orderData.customer_name || '')
       setClientPhone(orderData.client_phone || orderData.telephone || '')
@@ -112,36 +117,66 @@ export default function ReturnOrderWorkspace() {
       // Нотатки
       setNotes(orderData.manager_comment || orderData.notes || '')
       
+      // Завантажити дані про продовження (які товари ще в оренді)
+      let extensionsMap = {}
+      if (isAlreadyPartialReturn) {
+        try {
+          const extRes = await axios.get(`${BACKEND_URL}/api/partial-returns/order/${orderId}/extensions`)
+          const extensions = extRes.data?.extensions || []
+          // Створити мапу product_id -> кількість в оренді
+          extensions.filter(e => e.status === 'active').forEach(ext => {
+            extensionsMap[ext.product_id] = (extensionsMap[ext.product_id] || 0) + ext.qty
+          })
+          console.log('[ReturnWorkspace] Active extensions:', extensionsMap)
+        } catch (err) {
+          console.warn('[ReturnWorkspace] Could not load extensions:', err)
+        }
+      }
+      
       // Товари
       const transformedItems = (orderData.items || []).map((p, idx) => {
+        const productId = p.product_id || p.inventory_id || p.id || idx
+        const rentedQty = parseInt(p.quantity || p.qty) || 0
+        
+        // Якщо є активне продовження - товар ще в оренді (не повернуто)
+        const inRentQty = extensionsMap[productId] || 0
+        // Повернуто = орендовано - в оренді
+        const returnedQty = isAlreadyPartialReturn ? Math.max(0, rentedQty - inRentQty) : 0
+        
         const item = {
           id: p.id || p.order_product_id || p.inventory_id || idx,
-          product_id: p.product_id || p.inventory_id || p.id || idx,
+          product_id: productId,
           sku: p.article || p.sku || p.model || '',
           name: p.name || p.product_name || '',
           image: p.image || p.photo || '',
           image_url: p.image || p.photo || p.image_url || '',
-          rented_qty: parseInt(p.quantity || p.qty) || 0,
-          returned_qty: 0,
+          rented_qty: rentedQty,
+          returned_qty: returnedQty,
           serials: p.serials || [],
           ok_serials: [],
           findings: [],
           // Ціни для часткового повернення
-          // damage_cost = повна вартість товару (ціна купівлі)
-          // price_per_day = добова ставка (ціна оренди)
           price: parseFloat(p.damage_cost || p.price || p.full_price || 0),
           rental_price: parseFloat(p.price_per_day || p.rental_price || p.daily_rate || 0),
+          // Додаткова інформація для часткового повернення
+          in_rent_qty: inRentQty,
         }
-        console.log(`[ReturnWorkspace] Item ${item.sku}: damage_cost=${p.damage_cost}, price=${item.price}, rental=${item.rental_price}`)
+        console.log(`[ReturnWorkspace] Item ${item.sku}: rented=${rentedQty}, returned=${returnedQty}, inRent=${inRentQty}`)
         return item
       })
       
       setItems(transformedItems)
       
       // Таймлайн
-      setTimeline([
-        { text: 'Повернення розпочато', at: nowISO(), tone: 'blue' }
-      ])
+      if (isAlreadyPartialReturn) {
+        setTimeline([
+          { text: 'Часткове повернення (є товари в оренді)', at: nowISO(), tone: 'amber' }
+        ])
+      } else {
+        setTimeline([
+          { text: 'Повернення розпочато', at: nowISO(), tone: 'blue' }
+        ])
+      }
       
     } catch (err) {
       console.error('[ReturnOrderWorkspace] Error loading:', err)

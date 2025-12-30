@@ -23,8 +23,6 @@ import {
 import {
   ZoneItemsPickup,
   ZoneChecklist,
-  ZoneDocuments,
-  ZoneNotes,
   ZoneRequisitors,
 } from '../components/order-workspace/zones'
 // FinanceStatusCard тепер тільки в LeftRailFinance

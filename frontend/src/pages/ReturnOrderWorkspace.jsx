@@ -22,8 +22,6 @@ import {
 import {
   ZoneItemsReturn,
   ZoneReturnFees,
-  ZoneNotes,
-  ZoneDocuments,
   ZoneRequisitors,
 } from '../components/order-workspace/zones'
 // FinanceStatusCard тепер тільки в LeftRailFinance

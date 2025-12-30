@@ -9,7 +9,7 @@
  */
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import { DAMAGE_RULES, defaultFeeFor } from '../utils/damageRules'
+import { DAMAGE_RULES, TOTAL_LOSS_OPTION, defaultFeeFor } from '../utils/damageRules'
 import MobilePhotoCapture from './MobilePhotoCapture'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''

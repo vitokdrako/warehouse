@@ -143,56 +143,45 @@ async def get_not_returned_items(
     Отримати список неповернених товарів для замовлення
     Використовується для показу модалки часткового повернення
     """
-    # Отримати товари з return card або order_items
+    # Отримати товари з order_items
     result = db.execute(text("""
         SELECT 
             oi.product_id,
             p.sku,
             p.name,
             oi.quantity as rented_qty,
-            COALESCE(rc.returned_qty, 0) as returned_qty,
             p.price as full_price,
             p.rental_price as daily_rate,
             p.image_url
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.product_id
-        LEFT JOIN (
-            SELECT order_id, product_id, SUM(returned_qty) as returned_qty
-            FROM return_card_items
-            WHERE order_id = :order_id
-            GROUP BY order_id, product_id
-        ) rc ON oi.order_id = rc.order_id AND oi.product_id = rc.product_id
         WHERE oi.order_id = :order_id
     """), {"order_id": order_id})
     
     items = []
     for row in result:
         rented = int(row[3] or 0)
-        returned = int(row[4] or 0)
-        not_returned = rented - returned
+        full_price = float(row[4] or 0)
+        daily_rate = float(row[5] or 0)
         
-        if not_returned > 0:
-            full_price = float(row[5] or 0)
-            daily_rate = float(row[6] or 0)
-            
-            # Якщо daily_rate не вказана, використовуємо rental_price
-            if daily_rate <= 0 and full_price > 0:
-                daily_rate = round(full_price * 0.1, 2)
-            
-            items.append({
-                "product_id": row[0],
-                "sku": row[1] or "",
-                "name": row[2] or "",
-                "rented_qty": rented,
-                "returned_qty": returned,
-                "not_returned_qty": not_returned,
-                "full_price": full_price,
-                "daily_rate": daily_rate,
-                "loss_amount": full_price * not_returned,
-                "image_url": row[7] or ""
-            })
+        # Якщо daily_rate не вказана, використовуємо rental_price
+        if daily_rate <= 0 and full_price > 0:
+            daily_rate = round(full_price * 0.1, 2)
+        
+        items.append({
+            "product_id": row[0],
+            "sku": row[1] or "",
+            "name": row[2] or "",
+            "rented_qty": rented,
+            "returned_qty": 0,  # Буде заповнено з frontend
+            "not_returned_qty": rented,  # За замовчуванням всі неповернуті
+            "full_price": full_price,
+            "daily_rate": daily_rate,
+            "loss_amount": full_price * rented,
+            "image_url": row[6] or ""
+        })
     
-    return {"order_id": order_id, "not_returned_items": items}
+    return {"order_id": order_id, "items": items}
 
 
 @router.post("/order/{order_id}/process")

@@ -605,7 +605,7 @@ function Column({title, subtitle, children, tone}:{title:string,subtitle?:string
   );
 }
 
-function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,onCancelByClient}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:'new'|'issue'|'return'|'ready'|'issued'|'awaiting'|'processing'|'preparation',onClick:()=>void,order?:any,onDateUpdate?:(orderId:string,issueDate:string,returnDate:string)=>void,onCancelByClient?:(orderId:number,orderNumber:string)=>void}){
+function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,onCancelByClient}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:'new'|'issue'|'return'|'ready'|'issued'|'awaiting'|'processing'|'preparation'|'partial',onClick:()=>void,order?:any,onDateUpdate?:(orderId:string,issueDate:string,returnDate:string)=>void,onCancelByClient?:(orderId:number,orderNumber:string)=>void}){
   const map:any={
     new:{label:'Нове',css:'corp-badge corp-badge-info'},
     awaiting:{label:'Очікує',css:'corp-badge corp-badge-warning'},
@@ -614,7 +614,8 @@ function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,
     issue:{label:'Видача',css:'corp-badge corp-badge-success'},
     return:{label:'Повернення',css:'corp-badge corp-badge-warning'},
     ready:{label:'Готово',css:'corp-badge corp-badge-success'},
-    issued:{label:'Видано',css:'corp-badge corp-badge-success'}
+    issued:{label:'Видано',css:'corp-badge corp-badge-success'},
+    partial:{label:'⚠️ Часткове',css:'bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs font-medium'}
   }
   
   // Fallback якщо badge невідомий

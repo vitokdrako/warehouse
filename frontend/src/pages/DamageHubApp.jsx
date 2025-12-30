@@ -420,7 +420,31 @@ function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh, onDe
 
       {/* Actions */}
       {!isPaid && (
-        <div className="px-4 py-3 bg-corp-bg-page border-t">
+        <div className="px-4 py-3 bg-corp-bg-page border-t space-y-2">
+          {/* Deposit info and deduction button */}
+          {canDeductFromDeposit && (
+            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-200">
+              <div>
+                <div className="text-xs text-amber-700">Доступна застава:</div>
+                <div className="font-bold text-amber-800">{money(depositAvailable)}</div>
+              </div>
+              <button
+                onClick={() => onDeductFromDeposit(orderCase, Math.min(amountDue, depositAvailable))}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 text-white px-4 py-2 text-sm font-semibold hover:bg-amber-600 transition"
+              >
+                💳 Вирахувати із застави
+              </button>
+            </div>
+          )}
+          
+          {/* Non-UAH deposit warning */}
+          {!isPaid && depositAvailable > 0 && depositCurrency !== 'UAH' && (
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-600">
+              ⚠️ Застава в {depositCurrency} — вирахування недоступне
+            </div>
+          )}
+          
+          {/* Link to finance cabinet */}
           <a
             href={`/finance?order=${orderCase.order_id}`}
             className="inline-flex items-center justify-center w-full rounded-xl bg-corp-primary text-white px-4 py-2.5 text-sm font-semibold hover:bg-corp-primary-dark transition"

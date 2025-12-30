@@ -456,9 +456,9 @@ async def complete_extension(
         # Створити фінансову транзакцію
         if final_amount > 0:
             db.execute(text("""
-                INSERT INTO finance_payments 
-                (order_id, payment_type, amount, currency, status, description, occurred_at)
-                VALUES (:order_id, 'late', :amount, 'UAH', 'pending', :description, NOW())
+                INSERT INTO fin_payments 
+                (order_id, payment_type, amount, currency, note, occurred_at)
+                VALUES (:order_id, 'late', :amount, 'UAH', :description, NOW())
             """), {
                 "order_id": order_id,
                 "amount": final_amount,

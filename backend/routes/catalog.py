@@ -292,16 +292,19 @@ async def get_items_by_category(
             })
         
         # Отримати товари на обробці (мийка, реставрація, хімчистка) з product_damage_history
+        # Рахуємо тільки ті що ще не повністю оброблені (qty - processed_qty > 0)
         processing_result = db.execute(text("""
             SELECT 
                 product_id,
                 processing_type,
-                COALESCE(SUM(qty), 0) as qty
+                COALESCE(SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)), 0) as remaining_qty
             FROM product_damage_history
             WHERE product_id IN :product_ids
             AND processing_type IN ('wash', 'restoration', 'laundry')
-            AND processing_status IN ('pending', 'in_progress')
+            AND (processing_status IN ('pending', 'in_progress') 
+                 OR (COALESCE(qty, 1) - COALESCE(processed_qty, 0)) > 0)
             GROUP BY product_id, processing_type
+            HAVING remaining_qty > 0
         """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
         
         # Словники для кожного типу обробки

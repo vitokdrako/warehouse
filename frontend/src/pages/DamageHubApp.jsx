@@ -1496,11 +1496,46 @@ export default function DamageHubApp() {
 
             {mode === MODES.DRYCLEAN && (
               <>
+                {/* Черга хімчистки */}
+                {laundryQueue.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between px-1 mb-2">
+                      <div className="text-sm font-semibold text-amber-700">📋 Черга ({laundryQueue.length})</div>
+                      <GhostBtn onClick={() => handleAddToBatch(laundryQueue.map(i => i.id))} className="text-xs py-1 bg-amber-100 text-amber-800 border-amber-300">
+                        + Сформувати партію
+                      </GhostBtn>
+                    </div>
+                    <div className="space-y-2 max-h-[30vh] overflow-y-auto">
+                      {laundryQueue.map((item) => {
+                        const rawPhoto = item.product_image;
+                        const photoUrl = rawPhoto && !rawPhoto.startsWith('http') ? `${BACKEND_URL}/${rawPhoto}` : rawPhoto;
+                        return (
+                          <div key={item.id} className="rounded-xl border border-amber-200 bg-amber-50 p-2">
+                            <div className="flex items-center gap-2">
+                              {photoUrl ? (
+                                <img src={photoUrl} alt={item.product_name} className="w-10 h-10 rounded-lg object-cover border" onError={(e) => { e.target.style.display = 'none'; }} />
+                              ) : (
+                                <div className="w-10 h-10 rounded-lg bg-amber-200 flex items-center justify-center text-sm">🧺</div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium text-sm truncate">{item.product_name}</div>
+                                <div className="text-xs text-amber-700">{item.sku} • {item.remaining_qty || item.qty} шт.</div>
+                              </div>
+                              <Badge tone="warn">Очікує</Badge>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Партії */}
                 <div className="flex items-center justify-between px-1">
                   <div className="text-sm font-semibold text-corp-text-main">🧺 Партії хімчистки ({filteredBatches.length})</div>
                   <GhostBtn onClick={loadLaundryBatches} className="text-xs py-1">🔄</GhostBtn>
                 </div>
-                <div className="max-h-[70vh] overflow-y-auto space-y-2 pr-1">
+                <div className="max-h-[40vh] overflow-y-auto space-y-2 pr-1">
                   {filteredBatches.length === 0 ? (
                     <div className="text-center py-8 text-corp-text-muted">Немає партій</div>
                   ) : (

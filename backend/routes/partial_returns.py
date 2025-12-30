@@ -327,8 +327,17 @@ async def process_partial_return(
                 extensions_created += 1
                 print(f"[PartialReturn] 🟡 ПРОДОВЖЕННЯ: {item.sku} x{item.not_returned_qty}, ₴{daily_rate:.2f}/день")
         
-        # Якщо є втрати - створити фінансову транзакцію
+        # Якщо є втрати - створити фінансову транзакцію з деталями
         if total_loss_amount > 0:
+            # Збираємо деталі втрат для опису
+            loss_details = []
+            for item in data.items:
+                if item.action == 'loss':
+                    item_loss = item.loss_amount or (get_product_full_price(db, item.product_id) * item.not_returned_qty)
+                    loss_details.append(f"{item.sku} x{item.not_returned_qty} = ₴{item_loss:.2f}")
+            
+            description = f"ПОВНА ВТРАТА товарів. Замовлення #{order_number}. " + "; ".join(loss_details)
+            
             db.execute(text("""
                 INSERT INTO fin_payments 
                 (order_id, payment_type, amount, currency, note, occurred_at)
@@ -336,8 +345,9 @@ async def process_partial_return(
             """), {
                 "order_id": order_id,
                 "amount": total_loss_amount,
-                "description": f"Втрата товарів (часткове повернення): ₴{total_loss_amount:.2f}"
+                "description": description
             })
+            print(f"[PartialReturn] 💰 Створено фінансову транзакцію: {description}")
         
         # Оновити статус замовлення
         if extensions_created > 0:

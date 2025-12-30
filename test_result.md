@@ -660,8 +660,8 @@ Following the exact test flow from review request:
 ### Test Execution Summary
 **Date:** January 2025  
 **Status:** ✅ **FULLY FUNCTIONAL**  
-**API Base URL:** https://order-ui-refresh.preview.emergentagent.com/api  
-**Frontend URL:** https://order-ui-refresh.preview.emergentagent.com/finance  
+**API Base URL:** https://rental-returns-3.preview.emergentagent.com/api  
+**Frontend URL:** https://rental-returns-3.preview.emergentagent.com/finance  
 **Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com / test123)  
 **Test Focus:** Complete expense management functionality as per review request
 
@@ -709,7 +709,7 @@ Following the exact test flow from review request:
   - Expenses by Funding: General ₴18,100, Damage Pool ₴0
 
 #### ✅ Test 5: Frontend Verification
-- **Frontend URL Access:** ✅ PASS - https://order-ui-refresh.preview.emergentagent.com/finance accessible
+- **Frontend URL Access:** ✅ PASS - https://rental-returns-3.preview.emergentagent.com/finance accessible
 - **React App Loading:** ✅ PASS - Finance page contains React app content
 - **Page Routing:** ✅ PASS - Direct access to /finance working correctly
 - **No Redirects:** ✅ PASS - Finance console loads without authentication redirects
@@ -846,7 +846,7 @@ Based on backend API functionality, the frontend should display:
 ### Test Execution Summary
 **Date:** January 2025  
 **Status:** ✅ **FULLY FUNCTIONAL**  
-**API Base URL:** https://order-ui-refresh.preview.emergentagent.com/api  
+**API Base URL:** https://rental-returns-3.preview.emergentagent.com/api  
 **Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com / test123)  
 **Test Focus:** Complete CSV export functionality for FinanceConsoleApp and DamageHubApp
 
@@ -1017,7 +1017,7 @@ Based on backend API functionality, the frontend should display:
 ### Test Execution Summary
 **Date:** January 2025  
 **Status:** ✅ **FULLY FUNCTIONAL**  
-**API Base URL:** https://order-ui-refresh.preview.emergentagent.com/api  
+**API Base URL:** https://rental-returns-3.preview.emergentagent.com/api  
 **Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com / test123)  
 **Test Focus:** Complete document generation functionality across all order stages
 
@@ -1282,7 +1282,7 @@ Based on review request requirements, all functionality confirmed working:
 ### Test Execution Summary
 **Date:** December 23, 2025  
 **Status:** ✅ **FULLY FUNCTIONAL**  
-**API Base URL:** https://order-ui-refresh.preview.emergentagent.com/api  
+**API Base URL:** https://rental-returns-3.preview.emergentagent.com/api  
 **Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com / test123)  
 **Test Focus:** Complete Document Templates Admin functionality as per review request
 
@@ -1606,7 +1606,7 @@ Based on review request requirements, all functionality confirmed working:
 ### Test Execution Summary
 **Date:** December 28, 2025  
 **Status:** ✅ **FULLY FUNCTIONAL**  
-**API Base URL:** https://order-ui-refresh.preview.emergentagent.com/api  
+**API Base URL:** https://rental-returns-3.preview.emergentagent.com/api  
 **Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com / test123)  
 **Test Focus:** Complete "Damage Breakdown" (Розшифровка пошкоджень) document feature implementation
 
@@ -1786,7 +1786,7 @@ Based on review request requirements, all functionality confirmed working:
 ### Test Execution Summary
 **Date:** December 30, 2025  
 **Status:** ✅ **FULLY FUNCTIONAL**  
-**API Base URL:** https://order-ui-refresh.preview.emergentagent.com/api  
+**API Base URL:** https://rental-returns-3.preview.emergentagent.com/api  
 **Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com / test123)  
 **Test Focus:** Enhanced order lifecycle API endpoint testing
 
@@ -1953,7 +1953,7 @@ Based on review request requirements, all functionality confirmed working:
 ### Test Execution Summary
 **Date:** December 23, 2025  
 **Status:** ✅ **FULLY FUNCTIONAL**  
-**API Base URL:** https://order-ui-refresh.preview.emergentagent.com/api  
+**API Base URL:** https://rental-returns-3.preview.emergentagent.com/api  
 **Authentication:** ✅ Working with provided credentials (vitokdrako@gmail.com / test123)  
 **Test Focus:** Complete Partial Returns API functionality for orders 7219 and 7220
 

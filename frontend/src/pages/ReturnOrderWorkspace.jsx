@@ -223,18 +223,24 @@ export default function ReturnOrderWorkspace() {
   const notReturnedItems = useMemo(() => {
     return items
       .filter(it => it.returned_qty < it.rented_qty)
-      .map(it => ({
-        product_id: it.product_id || it.id,
-        sku: it.sku,
-        name: it.name,
-        rented_qty: it.rented_qty,
-        returned_qty: it.returned_qty,
-        not_returned_qty: it.rented_qty - it.returned_qty,
-        full_price: it.full_price || it.price || 0,
-        daily_rate: it.daily_rate || it.rental_price || 0,
-        loss_amount: (it.full_price || it.price || 0) * (it.rented_qty - it.returned_qty),
-        image_url: it.image_url || it.photo_url || ''
-      }))
+      .map(it => {
+        const notReturnedQty = it.rented_qty - it.returned_qty
+        const fullPrice = it.price || 0  // damage_cost = повна вартість
+        const dailyRate = it.rental_price || 0  // price_per_day = добова ставка
+        
+        return {
+          product_id: it.product_id || it.id,
+          sku: it.sku,
+          name: it.name,
+          rented_qty: it.rented_qty,
+          returned_qty: it.returned_qty,
+          not_returned_qty: notReturnedQty,
+          full_price: fullPrice,
+          daily_rate: dailyRate,
+          loss_amount: fullPrice * notReturnedQty,  // Сума втрати = повна ціна × кількість
+          image_url: it.image_url || it.image || ''
+        }
+      })
   }, [items])
   
   // Можна завершити якщо всі повернуті АБО є серійники (часткове дозволено)

@@ -583,12 +583,33 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
         
         cases = []
         for row in result:
+            order_id = row[0]
             total_fee = float(row[3]) if row[3] else 0.0
             damage_paid = float(row[10]) if row[10] else 0.0
             damage_due = max(0, total_fee - damage_paid)
             
+            # Отримуємо інформацію про депозит для цього замовлення
+            deposit_info = db.execute(text("""
+                SELECT id, held_amount, used_amount, refunded_amount, currency
+                FROM fin_deposit_holds 
+                WHERE order_id = :order_id AND status NOT IN ('refunded', 'cancelled')
+                ORDER BY created_at DESC
+                LIMIT 1
+            """), {"order_id": order_id}).fetchone()
+            
+            deposit_id = None
+            deposit_available = 0.0
+            deposit_currency = 'UAH'
+            if deposit_info:
+                deposit_id = deposit_info[0]
+                held = float(deposit_info[1]) if deposit_info[1] else 0.0
+                used = float(deposit_info[2]) if deposit_info[2] else 0.0
+                refunded = float(deposit_info[3]) if deposit_info[3] else 0.0
+                deposit_available = held - used - refunded
+                deposit_currency = deposit_info[4] or 'UAH'
+            
             cases.append({
-                "order_id": row[0],
+                "order_id": order_id,
                 "order_number": row[1],
                 "items_count": row[2],
                 "total_fee": total_fee,
@@ -602,7 +623,10 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
                 "customer_phone": row[8],
                 "order_status": row[9],
                 "pending_assignment": row[11] or 0,
-                "completed_count": row[12] or 0
+                "completed_count": row[12] or 0,
+                "deposit_id": deposit_id,
+                "deposit_available": deposit_available,
+                "deposit_currency": deposit_currency
             })
         
         return {"cases": cases, "total": len(cases)}

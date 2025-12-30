@@ -212,7 +212,26 @@ export default function ReturnOrderWorkspace() {
     it.serials.length === 0 || it.ok_serials.length >= it.rented_qty
   ), [items])
   
-  const canComplete = allReturned && allSerialsOk
+  // Список неповернених товарів (для часткового повернення)
+  const notReturnedItems = useMemo(() => {
+    return items
+      .filter(it => it.returned_qty < it.rented_qty)
+      .map(it => ({
+        product_id: it.product_id || it.id,
+        sku: it.sku,
+        name: it.name,
+        rented_qty: it.rented_qty,
+        returned_qty: it.returned_qty,
+        not_returned_qty: it.rented_qty - it.returned_qty,
+        full_price: it.full_price || it.price || 0,
+        daily_rate: it.daily_rate || it.rental_price || 0,
+        loss_amount: (it.full_price || it.price || 0) * (it.rented_qty - it.returned_qty),
+        image_url: it.image_url || it.photo_url || ''
+      }))
+  }, [items])
+  
+  // Можна завершити якщо всі повернуті АБО є серійники (часткове дозволено)
+  const canComplete = allSerialsOk && items.length > 0
 
   // === ЗБЕРЕЖЕННЯ ПРОГРЕСУ ===
   const saveProgress = async () => {

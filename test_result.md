@@ -1,53 +1,41 @@
-# Test Results - Finance Console & Damage-to-Archive Workflow
+# Test Results - Fork Session (December 30, 2025)
 
-## Test Focus
-Testing the damage-to-archive workflow in FinanceConsoleApp:
-1. Damage fees display from product_damage_history
-2. "Очікує доплати" badge when order has unpaid damage
-3. Damage payment acceptance
-4. Order archiving when fully paid
+## Current Session Focus
 
-## Previous Test: Damage Hub App (PASSED)
-Testing the new unified DamageHubApp with 4 tabs: Головна, Мийка, Реставрація, Хімчистка
+### 🔴 P0: Critical Bug Fix - `isComplete is not defined`
+**Status:** ✅ FIXED
+**Description:** The `ReturnOrderWorkspace.jsx` page was crashing with a JavaScript runtime error. 
+**Resolution:** Upon inspection, the code was already corrected - variables renamed from `isComplete` to `isCompleted`/`isFullyReturned`. Verified the fix by loading `/return/7221` page successfully.
+
+### 🟠 P1: "Вирахувати із застави" Feature
+**Status:** ✅ IMPLEMENTED
+**Components Modified:**
+1. `backend/routes/product_damage_history.py` - Added `deposit_id`, `deposit_available`, `deposit_currency` to the `/cases/grouped` endpoint
+2. `frontend/src/pages/DamageHubApp.jsx` - Added `handleDeductFromDeposit` function and passed it to `OrderDetailPanel`
+
+**How it works:**
+- Damage Hub shows deposit info for each order case
+- If deposit is available in UAH, shows "Вирахувати із застави" button
+- Clicking the button calls `POST /api/finance/deposits/{deposit_id}/use`
+- On success, refreshes the data
 
 ## Test Credentials
 - email: vitokdrako@gmail.com
 - password: test123
 
-## Components to Test
-1. **Головна tab** - Main damage cases with KPIs and status filters
-2. **Мийка tab** - Washing tasks
-3. **Реставрація tab** - Restoration tasks  
-4. **Хімчистка tab** - Dryclean queue + batches
+## API Endpoints to Test
+- GET /api/product-damage-history/cases/grouped (should return deposit_id, deposit_available)
+- POST /api/finance/deposits/{deposit_id}/use?amount={amount} 
+- GET /api/partial-returns/order/{order_id}/extensions
 
-## API Endpoints
-- GET /api/product-damage-history/recent - Damage cases
-- GET /api/tasks?task_type=washing - Wash tasks
-- GET /api/tasks?task_type=restoration - Restore tasks
-- GET /api/laundry/queue - Dryclean queue
-- GET /api/laundry/batches - Dryclean batches
-- GET /api/laundry/statistics - Laundry stats
-
-## Expected UI
-- 4 tabs: Головна, Мийка, Реставрація, Хімчистка
-- KPI cards change per mode
-- Split layout: left list + right details
-- Dryclean mode has queue + batches panels
-- CorporateHeader with "Кабінет шкоди"
+## Pages to Test
+1. `/return/{order_id}` - Return workspace (P0 fix verification)
+2. `/damages` - Damage Hub (P1 feature)
+3. `/manager` - Manager Dashboard
 
 ---
 
-## TEST RESULTS - COMPLETED ✅
-
-### Test Execution Summary
-**Date:** January 2025  
-**Status:** ALL TESTS PASSED  
-**Route Tested:** /damages  
-**Authentication:** Successfully bypassed login form issue using direct token injection
-
-### Detailed Test Results
-
-#### ✅ Test 1: Header Verification
+## Previous Test Results (From Earlier Session)
 - **Rental Hub header:** ✅ PASS - Found in header
 - **Кабінет шкоди subtitle:** ✅ PASS - Found in header
 

@@ -554,12 +554,21 @@ export default function DamageHubApp() {
       const endpoint = {
         wash: "send-to-wash",
         restoration: "send-to-restoration",
-        laundry: "send-to-laundry"
+        laundry: "send-to-laundry",
+        return_to_stock: "return-to-stock"
       }[processingType];
+      
+      if (!endpoint) {
+        console.error("Unknown processing type:", processingType);
+        return;
+      }
       
       await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/${endpoint}`, {
         method: "POST",
-        body: JSON.stringify({ notes: `Відправлено з кабінету шкоди` })
+        body: JSON.stringify({ notes: processingType === "return_to_stock" 
+          ? "Повернуто на склад без обробки" 
+          : "Відправлено з кабінету шкоди" 
+        })
       });
       
       // Reload data

@@ -778,39 +778,49 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     damages = []
     product_ids_with_damage = set()
     
-    # URL для фото - використовуємо відносний шлях, як для товарів
-    # Фронтенд proxy направить запит на backend
+    # Для вбудовування зображень напряму в HTML (base64)
     import os
+    import base64
+    import mimetypes
     from pathlib import Path
     uploads_dir = Path(__file__).parent.parent.parent / "uploads"
+    
+    def get_image_base64(file_path: Path) -> str:
+        """Конвертує зображення в base64 data URL"""
+        try:
+            if not file_path.exists():
+                return None
+            mime_type, _ = mimetypes.guess_type(str(file_path))
+            if not mime_type:
+                mime_type = 'image/jpeg'
+            with open(file_path, 'rb') as f:
+                data = base64.b64encode(f.read()).decode('utf-8')
+            return f"data:{mime_type};base64,{data}"
+        except Exception as e:
+            print(f"Error reading image {file_path}: {e}")
+            return None
     
     for row in damage_result:
         product_id = row[1]
         product_ids_with_damage.add(product_id)
         
-        # Формуємо URL для фото (відносний, як для товарів)
+        # Формуємо base64 для фото (вбудовуємо напряму в HTML)
         photo_url = row[7]
-        full_photo_url = None
+        photo_base64 = None
         
         if photo_url:
-            # Якщо це вже повний URL - залишаємо
-            if photo_url.startswith('http://') or photo_url.startswith('https://'):
-                full_photo_url = photo_url
-            # Відносний шлях /uploads/... -> uploads/...
-            elif photo_url.startswith('/uploads/'):
-                # Перевіряємо чи файл існує
+            local_path = None
+            # Визначаємо локальний шлях до файлу
+            if photo_url.startswith('/uploads/'):
                 local_path = uploads_dir / photo_url.replace('/uploads/', '')
-                if local_path.exists():
-                    full_photo_url = photo_url.lstrip('/')  # uploads/damage_photos/...
             elif photo_url.startswith('uploads/'):
                 local_path = uploads_dir / photo_url.replace('uploads/', '')
-                if local_path.exists():
-                    full_photo_url = photo_url
-            else:
+            elif not photo_url.startswith('http'):
                 # Старий формат - тільки ім'я файлу
                 local_path = uploads_dir / "damage_photos" / photo_url
-                if local_path.exists():
-                    full_photo_url = f"uploads/damage_photos/{photo_url}"
+            
+            if local_path:
+                photo_base64 = get_image_base64(local_path)
         
         damages.append({
             "id": row[0],

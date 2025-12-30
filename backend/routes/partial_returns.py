@@ -56,6 +56,14 @@ class ExtensionInfo(BaseModel):
 def ensure_tables_exist(db: Session):
     """Створити таблиці якщо не існують"""
     
+    # Додати колонку has_partial_return до orders (якщо не існує)
+    try:
+        db.execute(text("""
+            ALTER TABLE orders ADD COLUMN has_partial_return TINYINT(1) DEFAULT 0
+        """))
+    except Exception:
+        pass  # Колонка вже існує
+    
     # Таблиця для продовжень оренди
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS order_extensions (

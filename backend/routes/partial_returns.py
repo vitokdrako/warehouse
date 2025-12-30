@@ -670,3 +670,82 @@ async def mark_extension_lost(
         db.rollback()
         print(f"[PartialReturn] ❌ Error marking lost: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class ProcessLossRequest(BaseModel):
+    """Запит на обробку втрати з модалки пошкоджень"""
+    product_id: int
+    sku: str
+    name: str
+    qty: int
+    loss_amount: float
+    order_id: Optional[int] = None
+    order_number: Optional[str] = None
+
+
+@router.post("/process-loss")
+async def process_loss_from_damage_modal(
+    data: ProcessLossRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Обробити повну втрату товару з модалки пошкоджень.
+    Зменшує кількість товару та записує в історію.
+    """
+    ensure_tables_exist(db)
+    
+    try:
+        order_number = data.order_number or f"#{data.order_id}" if data.order_id else "Невідомо"
+        
+        # 1. Зменшити кількість товару в products
+        db.execute(text("""
+            UPDATE products 
+            SET quantity = GREATEST(0, quantity - :qty)
+            WHERE product_id = :product_id
+        """), {
+            "product_id": data.product_id,
+            "qty": data.qty
+        })
+        print(f"[ProcessLoss] 📦 Зменшено кількість {data.sku} на {data.qty}")
+        
+        # 2. Записати в product_history (Кабінет переобліку)
+        try:
+            db.execute(text("""
+                INSERT INTO product_history (product_id, action, actor, details, created_at)
+                VALUES (:product_id, 'ПОВНА ВТРАТА', 'system', :details, NOW())
+            """), {
+                "product_id": data.product_id,
+                "details": f"Замовлення {order_number}. Списано {data.qty} шт. Сума відшкодування: ₴{data.loss_amount:.2f}"
+            })
+            print(f"[ProcessLoss] 📜 Записано в історію декору")
+        except Exception as e:
+            print(f"[ProcessLoss] ⚠️ Помилка запису в product_history: {e}")
+        
+        # 3. Записати фінансову транзакцію (якщо є order_id)
+        if data.order_id:
+            db.execute(text("""
+                INSERT INTO fin_payments 
+                (order_id, payment_type, amount, currency, note, occurred_at)
+                VALUES (:order_id, 'loss', :amount, 'UAH', :description, NOW())
+            """), {
+                "order_id": data.order_id,
+                "amount": data.loss_amount,
+                "description": f"ПОВНА ВТРАТА: {data.sku} x{data.qty} = ₴{data.loss_amount:.2f}"
+            })
+            print(f"[ProcessLoss] 💰 Створено фінансову транзакцію")
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "product_id": data.product_id,
+            "sku": data.sku,
+            "qty_reduced": data.qty,
+            "loss_amount": data.loss_amount
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"[ProcessLoss] ❌ Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

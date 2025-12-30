@@ -222,6 +222,9 @@ export default function DamageModal({
         created_by: userName
       }
       
+      // Визначаємо чи це повна втрата
+      const isTotalLoss = formData.kindCode === 'TOTAL_LOSS'
+      
       // Save to damage history API
       const response = await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
         product_id: item.inventory_id || item.id,
@@ -240,11 +243,30 @@ export default function DamageModal({
         photo_url: uploadedPhotoUrl || formData.photoName,
         note: formData.note,
         created_by: userName,
-        // НЕ відправляємо в кабінет шкоди для pre_issue
+        // Для повної втрати - обробити як втрату
+        is_total_loss: isTotalLoss,
         processing_type: isPreIssue ? 'none' : 'none'
       })
       
       console.log(`[DamageModal] Saved damage record for ${item.sku} at stage ${stage}`, response.data)
+      
+      // Якщо повна втрата - зменшити кількість товару
+      if (isTotalLoss) {
+        try {
+          await axios.post(`${BACKEND_URL}/api/partial-returns/process-loss`, {
+            product_id: item.inventory_id || item.id,
+            sku: item.sku,
+            name: item.name,
+            qty: formData.qty,
+            loss_amount: totalFee,
+            order_id: order?.order_id,
+            order_number: order?.order_number
+          })
+          console.log(`[DamageModal] Processed total loss: ${item.sku} x${formData.qty}`)
+        } catch (lossErr) {
+          console.warn('[DamageModal] Failed to process loss:', lossErr)
+        }
+      }
       
       // Call parent callback
       if (onSave) {

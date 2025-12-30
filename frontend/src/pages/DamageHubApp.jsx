@@ -1244,6 +1244,36 @@ export default function DamageHubApp() {
     }
   };
 
+  // Сформувати партію хімчистки з черги
+  const handleAddToBatch = async (itemIds) => {
+    const company = prompt("Введіть назву хімчистки:", "Прана");
+    if (!company) return;
+    
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/queue/add-to-batch`, {
+        method: "POST",
+        body: JSON.stringify({
+          item_ids: itemIds,
+          laundry_company: company
+        })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        alert(`Помилка: ${errData.detail || "Не вдалося сформувати партію"}`);
+        return;
+      }
+      
+      const result = await res.json();
+      alert(`✅ ${result.message}`);
+      await loadLaundryQueue();
+      await loadLaundryBatches();
+    } catch (e) {
+      console.error("Error creating batch:", e);
+      alert("Помилка формування партії");
+    }
+  };
+
   // Selected items
   const selectedCase = useMemo(() => orderCases.find(c => c.order_id === selectedOrderId) || null, [orderCases, selectedOrderId]);
   const selectedWashItem = useMemo(() => washItems.find(i => i.id === selectedWashId), [washItems, selectedWashId]);

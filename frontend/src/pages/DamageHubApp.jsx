@@ -637,20 +637,25 @@ function LaundryBatchDetailPanel({ batch, items, onReceiveItems, onCloseBatch, o
       {!isCompleted && (
         <div className="p-5 bg-corp-bg-page">
           <div className="flex flex-wrap gap-2">
-            {!allReturned && (
+            {!allReturned && items.length > 0 && (
               <PrimaryBtn variant="blue" onClick={handleReceive} disabled={selectedItems.length === 0}>
                 📥 Прийняти вибрані ({selectedItems.length})
               </PrimaryBtn>
             )}
-            {allReturned && (
+            {allReturned && hasItems && (
               <PrimaryBtn variant="success" onClick={() => onCloseBatch(batch)}>
                 ✓ Закрити партію
               </PrimaryBtn>
             )}
+            {!hasItems && (
+              <div className="text-sm text-amber-600">
+                ⚠️ Партія не має товарів
+              </div>
+            )}
             <GhostBtn onClick={onRefresh}>🔄 Оновити</GhostBtn>
           </div>
           
-          {!allReturned && (
+          {!allReturned && items.length > 0 && (
             <div className="mt-3 text-sm text-corp-text-muted">
               💡 Виберіть товари які повернулись з хімчистки та натисніть "Прийняти"
             </div>

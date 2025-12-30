@@ -296,6 +296,12 @@ function DamageItemRow({ item, onSendTo }) {
               >
                 🧺 Хімчистку
               </button>
+              <button
+                onClick={() => onSendTo(item, "return_to_stock")}
+                className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 transition"
+              >
+                📦 На склад
+              </button>
             </div>
           )}
         </div>

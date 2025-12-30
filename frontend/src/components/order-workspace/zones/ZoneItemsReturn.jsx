@@ -49,7 +49,7 @@ export default function ZoneItemsReturn({
   )
 }
 
-function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, readOnly }) {
+function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, readOnly, isCompleted }) {
   const photoUrl = getImageUrl(item.image)
   const rentedQty = item.rented_qty || 0
   const returnedQty = item.returned_qty || 0

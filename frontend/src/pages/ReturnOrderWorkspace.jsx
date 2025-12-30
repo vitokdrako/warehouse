@@ -74,6 +74,9 @@ export default function ReturnOrderWorkspace() {
   // Модалка часткового повернення
   const [partialReturnModal, setPartialReturnModal] = useState({ open: false, items: [] })
   
+  // Статус завершення приймання (для візуального блокування повернених товарів)
+  const [isReturnCompleted, setIsReturnCompleted] = useState(false)
+  
   // Приймальники (хто приймає повернення)
   const [selectedReceivers, setSelectedReceivers] = useState([])
 

@@ -831,6 +831,7 @@ export default function DamageHubApp() {
                   loadOrderCases();
                   if (selectedOrderId) loadOrderDetails(selectedOrderId);
                 }}
+                onDeductFromDeposit={handleDeductFromDeposit}
               />
             </div>
           </div>

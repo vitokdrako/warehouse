@@ -897,7 +897,7 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
     try:
         # Перевірка чи товар вже відправлений на обробку
         existing = db.execute(text("""
-            SELECT processing_type FROM product_damage_history WHERE id = :damage_id
+            SELECT processing_type, product_id FROM product_damage_history WHERE id = :damage_id
         """), {"damage_id": damage_id}).fetchone()
         
         if not existing:
@@ -905,6 +905,8 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
         
         if existing[0] and existing[0] != 'none':
             raise HTTPException(status_code=400, detail=f"Товар вже відправлено на {existing[0]}")
+        
+        product_id = existing[1]
         
         db.execute(text("""
             UPDATE product_damage_history
@@ -917,6 +919,16 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
             "damage_id": damage_id,
             "notes": data.get("notes", "Відправлено в реставрацію")
         })
+        
+        # Оновити стан товару в inventory
+        if product_id:
+            db.execute(text("""
+                UPDATE inventory 
+                SET product_state = 'in_restoration', 
+                    cleaning_status = 'restoration',
+                    updated_at = NOW()
+                WHERE product_id = :product_id
+            """), {"product_id": product_id})
         
         db.commit()
         return {"success": True, "message": "Товар відправлено в реставрацію"}

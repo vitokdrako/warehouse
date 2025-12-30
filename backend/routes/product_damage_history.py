@@ -990,8 +990,15 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
 
 @router.post("/{damage_id}/complete-processing")
 async def complete_processing(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
-    """Позначити обробку як завершену (повернуто на склад)"""
+    """Позначити обробку як завершену (повернуто на склад після мийки/реставрації/хімчистки)"""
     try:
+        # Отримати product_id для розморозки
+        damage_record = db.execute(text("""
+            SELECT product_id FROM product_damage_history WHERE id = :damage_id
+        """), {"damage_id": damage_id}).fetchone()
+        
+        product_id = damage_record[0] if damage_record else None
+        
         db.execute(text("""
             UPDATE product_damage_history
             SET processing_status = 'completed',
@@ -1007,8 +1014,17 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
             "notes": data.get("notes", "Повернуто на склад")
         })
         
+        # Розморозити товар - зробити доступним для оренди
+        if product_id:
+            db.execute(text("""
+                UPDATE products 
+                SET state = 'shelf'
+                WHERE product_id = :product_id
+            """), {"product_id": product_id})
+            print(f"[DamageHistory] 🔓 Товар {product_id} розморожено, state=shelf")
+        
         db.commit()
-        return {"success": True, "message": "Обробку завершено"}
+        return {"success": True, "message": "Обробку завершено, товар доступний для оренди"}
         
     except Exception as e:
         db.rollback()

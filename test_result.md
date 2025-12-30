@@ -956,21 +956,25 @@ Based on backend API functionality, the frontend should display:
 
 ### Testing Agent → Main Agent Communication
 
-#### Latest Test Results (January 2025)
+#### Latest Test Results (December 30, 2025)
 - **Agent:** testing
-- **Message:** Comprehensive CSV export testing completed successfully. All backend APIs working perfectly as per review request specifications. All 6 export endpoints verified with proper UTF-8 BOM and Ukrainian headers.
+- **Message:** P0 & P1 testing completed successfully. P0 bug fix verified - no 'isComplete is not defined' errors found. P1 feature partially working - Damage Hub loads with all tabs, but 'Вирахувати із застави' button visibility needs investigation.
 
-#### Test Summary for Main Agent
+#### P0 Bug Fix Status
 - **Agent:** testing  
-- **Message:** ✅ ALL CSV EXPORT ENDPOINTS VERIFIED - Ledger (22 records), Expenses (5 records), Orders Finance (10 records), Damage Cases (10 records), Tasks (7 records), Laundry Queue (1 record) all working correctly with proper CSV format, UTF-8 BOM, and Ukrainian headers. No critical issues found. Ready for production use.
+- **Message:** ✅ P0 BUG FIX VERIFIED - Return Order Workspace (/return/7221) loads without JavaScript errors. No 'isComplete is not defined' errors found in console. All UI elements (Прийнято ✓, Зафіксувати пошкодження, counter buttons) are present and functional.
 
-#### Backend API Status
+#### P1 Feature Status
 - **Agent:** testing
-- **Message:** All 12 CSV export API variations tested and working: Export Ledger (with/without month filter), Export Expenses (with/without month filter), Export Orders Finance (with/without status filter), Export Damage Cases, Export Tasks (with/without task_type filter), Export Laundry Queue. Authentication, CSV format, and Ukrainian headers all verified.
+- **Message:** ⚠️ P1 FEATURE PARTIALLY WORKING - Damage Hub (/damages) loads correctly with all 4 tabs (Головна, Мийка, Реставрація, Хімчистка). KPI stats display properly. However, 'Вирахувати із застави' button not visible in current view. Backend API fixed (created_at column issue resolved) and returns deposit data correctly.
 
-#### No Issues Requiring Main Agent Action
+#### Backend API Fix Applied
 - **Agent:** testing
-- **Message:** No critical issues found during comprehensive CSV export testing. All specified test cases from review request completed successfully. CSV export functionality is fully functional and ready for user acceptance testing.
+- **Message:** ✅ BACKEND FIX APPLIED - Fixed SQL error in /api/product-damage-history/cases/grouped endpoint. Changed ORDER BY created_at to ORDER BY id in fin_deposit_holds query. API now returns deposit information correctly including order #OC-7219 with ₴8,400 available deposit.
+
+#### Navigation Test Status
+- **Agent:** testing
+- **Message:** ⚠️ NAVIGATION PARTIAL - Manager Dashboard accessible but experienced timeout during testing. Core functionality appears to work based on previous screenshots showing order management interface.
 
 ---
 

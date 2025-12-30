@@ -239,15 +239,17 @@ async def process_partial_return(
                 print(f"[PartialReturn] 📦 Зменшено кількість {item.sku} на {item.not_returned_qty}")
                 
                 # 2. Записати в product_history (Кабінет переобліку)
-                db.execute(text("""
-                    INSERT INTO product_history (product_id, event_type, event_date, notes, changed_by, qty_change)
-                    VALUES (:product_id, 'loss', NOW(), :notes, 'system', :qty_change)
-                """), {
-                    "product_id": item.product_id,
-                    "notes": f"Повна втрата. Замовлення #{order_number}. Списано {item.not_returned_qty} шт. Сума: ₴{loss_amount:.2f}",
-                    "qty_change": -item.not_returned_qty
-                })
-                print(f"[PartialReturn] 📜 Записано в історію декору")
+                try:
+                    db.execute(text("""
+                        INSERT INTO product_history (product_id, action, actor, details, created_at)
+                        VALUES (:product_id, 'ПОВНА ВТРАТА', 'system', :details, NOW())
+                    """), {
+                        "product_id": item.product_id,
+                        "details": f"Замовлення #{order_number}. Списано {item.not_returned_qty} шт. Сума відшкодування: ₴{loss_amount:.2f}"
+                    })
+                    print(f"[PartialReturn] 📜 Записано в історію декору")
+                except Exception as e:
+                    print(f"[PartialReturn] ⚠️ Помилка запису в product_history: {e}")
                 
                 # 3. Записати в product_damage_history (Кабінет шкоди)
                 import uuid

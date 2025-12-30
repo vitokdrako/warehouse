@@ -1682,3 +1682,27 @@ Based on review request requirements, all functionality confirmed working:
 - **Agent:** testing
 - **Message:** No critical issues found during comprehensive damage breakdown document testing. All specified test cases from review request completed successfully. Damage breakdown document system is fully functional and ready for user acceptance testing.
 
+
+---
+
+## UI CLEANUP & DAMAGE BREAKDOWN FIX - December 30, 2025
+
+### Changes Made:
+1. **LeftRailClient.jsx** - Removed copy phone/email buttons
+2. **IssueCardWorkspace.jsx** - Removed "Накладна" button from footer, cleaned up unused imports
+3. **ReturnOrderWorkspace.jsx** - Removed "Друк акта" button from footer, cleaned up unused imports  
+4. **ZoneItemsReturn.jsx** - Fixed mobile layout for "Прийнято" button (flex-wrap, responsive layout)
+5. **data_builders.py** - Changed damage photos to use base64 embedding instead of URLs
+6. **damage_breakdown template** - Works with base64 images now
+
+### Test Requirements:
+1. Verify LeftRailClient no longer shows copy buttons
+2. Verify IssueCardWorkspace footer only has "QR коди" button (no "Накладна")
+3. Verify ReturnOrderWorkspace footer has no "Друк акта" button
+4. Verify damage_breakdown document shows photos as embedded base64
+5. Test mobile layout in ReturnOrderWorkspace for item return section
+
+### Credentials:
+- email: vitokdrako@gmail.com
+- password: test123
+

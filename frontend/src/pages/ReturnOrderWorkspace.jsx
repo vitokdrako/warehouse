@@ -279,6 +279,46 @@ export default function ReturnOrderWorkspace() {
       return
     }
     
+    // Якщо є неповернені товари - показати модалку часткового повернення
+    if (notReturnedItems.length > 0) {
+      setPartialReturnModal({ open: true, items: notReturnedItems })
+      return
+    }
+    
+    // Повне повернення
+    await executeFullReturn()
+  }
+  
+  // Обробник підтвердження часткового повернення
+  const handlePartialReturnConfirm = async (result) => {
+    console.log('[ReturnWorkspace] Часткове повернення оброблено:', result)
+    
+    setTimeline(prev => [
+      { 
+        text: result.status === 'partial_return' 
+          ? `Часткове повернення: ${result.extensions_created} позицій в оренді` 
+          : 'Повернення завершено', 
+        at: nowISO(), 
+        tone: result.status === 'partial_return' ? 'amber' : 'green' 
+      },
+      ...prev
+    ])
+    
+    if (result.status === 'partial_return') {
+      toast({ 
+        title: '🟡 Часткове повернення', 
+        description: `${result.extensions_created} позицій залишено в оренді` 
+      })
+      // Перезавантажити дані (залишаємося на сторінці)
+      loadOrder()
+    } else {
+      toast({ title: '✅ Успіх', description: 'Повернення завершено' })
+      setTimeout(() => navigate('/manager'), 2000)
+    }
+  }
+  
+  // Повне повернення (всі товари повернуті)
+  const executeFullReturn = async () => {
     setSaving(true)
     try {
       let depositAction = 'release'

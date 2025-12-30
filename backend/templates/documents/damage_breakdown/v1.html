@@ -284,7 +284,8 @@
             <div class="damage-content">
                 <div class="damage-photo">
                     {% if damage.photo_url %}
-                    <img src="{{ damage.photo_url }}" alt="Фото пошкодження">
+                    <img src="{{ backend_url }}/{{ damage.photo_url }}" alt="Фото пошкодження" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="no-photo" style="display:none;">📷 Помилка завантаження</div>
                     {% else %}
                     <div class="no-photo">📷 Без фото</div>
                     {% endif %}

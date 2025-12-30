@@ -226,7 +226,54 @@ async def process_partial_return(
                 loss_amount = item.loss_amount or (get_product_full_price(db, item.product_id) * item.not_returned_qty)
                 total_loss_amount += loss_amount
                 
-                # Записати в лог
+                # 1. Зменшити кількість товару в products
+                db.execute(text("""
+                    UPDATE products 
+                    SET quantity = GREATEST(0, quantity - :qty),
+                        updated_at = NOW()
+                    WHERE product_id = :product_id
+                """), {
+                    "product_id": item.product_id,
+                    "qty": item.not_returned_qty
+                })
+                print(f"[PartialReturn] 📦 Зменшено кількість {item.sku} на {item.not_returned_qty}")
+                
+                # 2. Записати в product_history (Кабінет переобліку)
+                db.execute(text("""
+                    INSERT INTO product_history (product_id, event_type, event_date, notes, changed_by, qty_change)
+                    VALUES (:product_id, 'loss', NOW(), :notes, 'system', :qty_change)
+                """), {
+                    "product_id": item.product_id,
+                    "notes": f"Повна втрата. Замовлення #{order_number}. Списано {item.not_returned_qty} шт. Сума: ₴{loss_amount:.2f}",
+                    "qty_change": -item.not_returned_qty
+                })
+                print(f"[PartialReturn] 📜 Записано в історію декору")
+                
+                # 3. Записати в product_damage_history (Кабінет шкоди)
+                import uuid
+                damage_id = str(uuid.uuid4())
+                db.execute(text("""
+                    INSERT INTO product_damage_history 
+                    (id, product_id, sku, product_name, order_id, order_number, stage, 
+                     damage_type, damage_code, severity, fee, fee_per_item, qty, note, created_by)
+                    VALUES 
+                    (:id, :product_id, :sku, :name, :order_id, :order_number, 'return',
+                     'Повна втрата', 'TOTAL_LOSS', 'critical', :fee, :fee_per_item, :qty, :note, 'system')
+                """), {
+                    "id": damage_id,
+                    "product_id": item.product_id,
+                    "sku": item.sku,
+                    "name": item.name,
+                    "order_id": order_id,
+                    "order_number": order_number,
+                    "fee": loss_amount,
+                    "fee_per_item": loss_amount / item.not_returned_qty if item.not_returned_qty > 0 else loss_amount,
+                    "qty": item.not_returned_qty,
+                    "note": f"Товар не повернуто. Повна втрата. Нараховано ₴{loss_amount:.2f}"
+                })
+                print(f"[PartialReturn] ⚠️ Записано в кабінет шкоди як 'Повна втрата'")
+                
+                # 4. Записати в partial_return_log
                 db.execute(text("""
                     INSERT INTO partial_return_log 
                     (order_id, product_id, sku, action, qty, amount, notes)

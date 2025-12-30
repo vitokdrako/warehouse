@@ -199,6 +199,7 @@ function DamageItemRow({ item, onSendTo }) {
       wash: { label: "🧼 Мийка", tone: "info", bg: "bg-blue-100 text-blue-800" },
       restoration: { label: "🔧 Реставрація", tone: "warn", bg: "bg-amber-100 text-amber-800" },
       laundry: { label: "🧺 Хімчистка", tone: "ok", bg: "bg-emerald-100 text-emerald-800" },
+      returned_to_stock: { label: "📦 На складі", tone: "ok", bg: "bg-slate-100 text-slate-800" },
     };
     const m = map[item.processing_type] || { label: item.processing_type, tone: "neutral", bg: "bg-corp-bg-light" };
     return <Badge tone={m.tone}>{m.label}</Badge>;

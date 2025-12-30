@@ -2,6 +2,7 @@
 /**
  * Return Order Workspace - Приймання повернення
  * Використовує уніфіковану систему Order Workspace
+ * ✅ Підтримує часткове повернення
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
@@ -27,6 +28,7 @@ import {
 // FinanceStatusCard тепер тільки в LeftRailFinance
 
 import DamageModal from '../components/DamageModal'
+import PartialReturnModal from '../components/modals/PartialReturnModal'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

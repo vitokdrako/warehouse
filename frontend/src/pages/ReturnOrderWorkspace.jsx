@@ -71,6 +71,9 @@ export default function ReturnOrderWorkspace() {
   // Модалка пошкоджень
   const [damageModal, setDamageModal] = useState({ open: false, itemId: null })
   
+  // Модалка часткового повернення
+  const [partialReturnModal, setPartialReturnModal] = useState({ open: false, items: [] })
+  
   // Приймальники (хто приймає повернення)
   const [selectedReceivers, setSelectedReceivers] = useState([])
 

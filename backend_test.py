@@ -1,23 +1,50 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Order Lifecycle API
-Testing the enhanced order lifecycle API endpoint.
+Backend Testing Script for Partial Returns API
+Testing the new Partial Returns API functionality.
 
 **Test Scenario:**
-Test order lifecycle API endpoints for specific orders to verify complete history tracking.
+Test the new Partial Returns API endpoints for order 7219 and 7220.
 
-**Test Steps:**
-1. Login with credentials: email: `vitokdrako@gmail.com`, password: `test123`
-2. Test GET /api/orders/7222/lifecycle - Verify response contains array of events
-3. Test GET /api/orders/7219/lifecycle - Verify full lifecycle from creation to issue
-4. Test GET /api/orders/7220/lifecycle - Should show created and preparation stages only
-5. Verify lifecycle includes all key stages in chronological order
+**Login credentials:**
+- email: vitokdrako@gmail.com  
+- password: test123
 
-**Key validations:**
-- Each event should have: stage, notes, created_at, created_by
-- Events should be in chronological order (sorted by created_at)
-- API should return COMPLETE history from the beginning of the order regardless of current stage
-- Expected stages: created, preparation, ready_for_issue, issued, returned (if applicable)
+**Test 1: Get items for partial return**
+- GET /api/partial-returns/order/7219/not-returned
+- Should return list of items with: product_id, sku, name, rented_qty, full_price, daily_rate, loss_amount
+- Verify each item has daily_rate > 0
+
+**Test 2: Process partial return with EXTEND action**
+- POST /api/partial-returns/order/7220/process
+- Body: 
+```json
+{
+  "items": [{
+    "product_id": <first_item_product_id>,
+    "sku": "<first_item_sku>",
+    "name": "<first_item_name>",
+    "rented_qty": <qty>,
+    "returned_qty": 0,
+    "not_returned_qty": 1,
+    "action": "extend",
+    "daily_rate": 100,
+    "adjusted_daily_rate": 100
+  }]
+}
+```
+- Should create extension record and return success
+
+**Test 3: Get extensions for order**
+- GET /api/partial-returns/order/7220/extensions
+- Should show the extension we created
+
+**Test 4: Complete extension (return item)**
+- POST /api/partial-returns/order/7220/extensions/{extension_id}/complete
+- Body: { "days": 3, "final_amount": 300 }
+- Should calculate and charge late fee
+
+**Note:** First get the items from order 7220 to use real product IDs in tests.
 """
 
 import requests

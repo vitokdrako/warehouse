@@ -107,39 +107,41 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
       </div>
       
       {/* Лічильник повернення */}
-      <div className="flex items-center justify-between mb-4 p-3 bg-slate-100 rounded-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 p-3 bg-slate-100 rounded-xl">
         <div className="text-sm">
           <span className="text-slate-600">Оренда:</span>{' '}
           <span className="font-bold">{rentedQty}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-slate-600">Повернуто:</span>
-          <button 
-            onClick={() => !readOnly && onSetReturnedQty?.(item.id, Math.max(0, returnedQty - 1))}
-            disabled={readOnly || returnedQty === 0}
-            className="w-10 h-10 rounded-xl border-2 border-slate-300 bg-white text-lg font-bold disabled:opacity-50 active:bg-slate-100"
-          >
-            −
-          </button>
-          <div className={`
-            w-14 text-center text-xl font-bold py-1 rounded-lg
-            ${isComplete ? 'text-emerald-600 bg-emerald-100' : 'bg-white'}
-          `}>
-            {returnedQty}
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => !readOnly && onSetReturnedQty?.(item.id, Math.max(0, returnedQty - 1))}
+              disabled={readOnly || returnedQty === 0}
+              className="w-10 h-10 rounded-xl border-2 border-slate-300 bg-white text-lg font-bold disabled:opacity-50 active:bg-slate-100"
+            >
+              −
+            </button>
+            <div className={`
+              w-14 text-center text-xl font-bold py-1 rounded-lg
+              ${isComplete ? 'text-emerald-600 bg-emerald-100' : 'bg-white'}
+            `}>
+              {returnedQty}
+            </div>
+            <button 
+              onClick={() => !readOnly && onSetReturnedQty?.(item.id, Math.min(rentedQty, returnedQty + 1))}
+              disabled={readOnly || returnedQty >= rentedQty}
+              className="w-10 h-10 rounded-xl border-2 border-slate-300 bg-white text-lg font-bold disabled:opacity-50 active:bg-slate-100"
+            >
+              +
+            </button>
           </div>
-          <button 
-            onClick={() => !readOnly && onSetReturnedQty?.(item.id, Math.min(rentedQty, returnedQty + 1))}
-            disabled={readOnly || returnedQty >= rentedQty}
-            className="w-10 h-10 rounded-xl border-2 border-slate-300 bg-white text-lg font-bold disabled:opacity-50 active:bg-slate-100"
-          >
-            +
-          </button>
           
           {/* Кнопка швидкого "Прийнято" */}
           {!isComplete && !readOnly && (
             <button 
               onClick={() => onSetReturnedQty?.(item.id, rentedQty)}
-              className="ml-2 px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors"
+              className="px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors whitespace-nowrap"
             >
               Прийнято ✓
             </button>

@@ -1020,6 +1020,69 @@ async def mark_processing_failed(damage_id: str, data: dict, db: Session = Depen
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
+@router.post("/{damage_id}/return-to-stock")
+async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
+    """
+    Повернути товар на склад БЕЗ обробки.
+    Використовується коли шкода незначна або не потребує ремонту.
+    Розморожує товар і робить його доступним для оренди.
+    """
+    try:
+        # Отримати product_id з damage record
+        damage_record = db.execute(text("""
+            SELECT product_id, sku, product_name, qty 
+            FROM product_damage_history 
+            WHERE id = :damage_id
+        """), {"damage_id": damage_id}).fetchone()
+        
+        if not damage_record:
+            raise HTTPException(status_code=404, detail="Запис не знайдено")
+        
+        product_id = damage_record[0]
+        
+        # 1. Оновити запис шкоди - позначити як оброблений (просто повернуто)
+        db.execute(text("""
+            UPDATE product_damage_history
+            SET processing_type = 'returned_to_stock',
+                processing_status = 'completed',
+                returned_from_processing_at = NOW(),
+                processing_notes = :notes
+            WHERE id = :damage_id
+        """), {
+            "damage_id": damage_id,
+            "notes": data.get("notes", "Повернуто на склад без обробки")
+        })
+        
+        # 2. Розморозити товар - встановити state = 'available' або 'shelf'
+        if product_id:
+            db.execute(text("""
+                UPDATE products 
+                SET state = 'shelf'
+                WHERE product_id = :product_id
+            """), {"product_id": product_id})
+            
+            # Записати в історію
+            try:
+                db.execute(text("""
+                    INSERT INTO product_history (product_id, action, actor, details, created_at)
+                    VALUES (:product_id, 'ПОВЕРНУТО НА СКЛАД', 'system', :details, NOW())
+                """), {
+                    "product_id": product_id,
+                    "details": f"Повернуто з кабінету шкоди. Без обробки. Доступний для оренди."
+                })
+            except Exception:
+                pass  # Ігноруємо помилки запису історії
+        
+        db.commit()
+        return {"success": True, "message": "Товар повернуто на склад і доступний для оренди"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
 # ==================== ЗАВАНТАЖЕННЯ ФОТО ПОШКОДЖЕНЬ ====================
 
 import shutil

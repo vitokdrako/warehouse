@@ -366,6 +366,9 @@ export default function ReturnOrderWorkspace() {
         manager_notes: notes
       })
       
+      // Позначити що приймання завершено
+      setIsReturnCompleted(true)
+      
       setTimeline(prev => [
         { text: 'Повернення завершено', at: nowISO(), tone: 'green' },
         ...prev

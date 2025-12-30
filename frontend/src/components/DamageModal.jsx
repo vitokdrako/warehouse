@@ -133,8 +133,25 @@ export default function DamageModal({
   
   const categories = Object.keys(DAMAGE_RULES)
   const selectedCat = DAMAGE_RULES[formData.category] || {groups:[]}
-  const kinds = selectedCat.groups
+  // Додаємо "Повна втрата" на початок списку типів
+  const kinds = [TOTAL_LOSS_OPTION, ...selectedCat.groups]
   const selectedKind = kinds.find(k=>k.code===formData.kindCode)
+  
+  // Ціна купівлі товару (для повної втрати)
+  const itemPurchasePrice = item?.damage_cost || item?.price || item?.full_price || 0
+  
+  // Обробка вибору типу пошкодження
+  const handleKindChange = (code) => {
+    const k = kinds.find(x=>x.code===code)
+    let fee = defaultFeeFor(k)
+    
+    // Якщо "Повна втрата" - автоматично ставимо ціну купівлі
+    if (code === 'TOTAL_LOSS' && itemPurchasePrice > 0) {
+      fee = itemPurchasePrice
+    }
+    
+    setFormData(prev=>({...prev, kindCode: code, fee: fee, severity: code === 'TOTAL_LOSS' ? 'critical' : prev.severity}))
+  }
   
   const stageLabels = {
     'pre_issue': '📦 ДО видачі (фіксація)',

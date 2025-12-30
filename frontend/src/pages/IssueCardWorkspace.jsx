@@ -391,11 +391,6 @@ export default function IssueCardWorkspace() {
   }
 
   // === ДРУК ===
-  const printWarehouseSlip = () => {
-    window.open(`${BACKEND_URL}/api/pdf/pick-list/${order?.order_id || issueCard?.order_id}`, '_blank')
-    setDocuments(prev => ({ ...prev, waybill: true }))
-  }
-
   const printQRCodes = () => {
     // Реалізація з оригінального IssueCard
     const qrWindow = window.open('', '_blank')

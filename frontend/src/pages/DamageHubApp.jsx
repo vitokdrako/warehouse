@@ -1302,8 +1302,16 @@ export default function DamageHubApp() {
     const activeBatches = laundryBatches.filter(b => b.status !== 'completed').length;
     const partialBatches = laundryBatches.filter(b => b.status === 'partial_return').length;
     
+    // Stats for main tab (order cases)
+    const casesPending = orderCases.filter(c => (c.pending_assignment || 0) > 0 || !c.is_paid).length;
+    const casesInProgress = orderCases.filter(c => (c.pending_assignment || 0) === 0 && !c.is_paid && (c.completed_count || 0) < c.items_count).length;
+    const casesCompleted = orderCases.filter(c => c.is_paid).length;
+    
     return {
       totalCases: orderCases.length,
+      casesPending,
+      casesInProgress,
+      casesCompleted,
       unpaidCases: orderCases.filter(c => !c.is_paid).length,
       pendingAssignment: orderCases.reduce((sum, c) => sum + (c.pending_assignment || 0), 0),
       washCount: washItems.length,

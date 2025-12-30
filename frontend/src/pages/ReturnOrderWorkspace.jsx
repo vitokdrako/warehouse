@@ -473,6 +473,15 @@ export default function ReturnOrderWorkspace() {
         onSave={handleSaveDamage}
         existingHistory={currentItem?.findings || []}
       />
+      
+      {/* Модалка часткового повернення */}
+      <PartialReturnModal
+        isOpen={partialReturnModal.open}
+        onClose={() => setPartialReturnModal({ open: false, items: [] })}
+        orderId={orderId}
+        notReturnedItems={partialReturnModal.items}
+        onConfirm={handlePartialReturnConfirm}
+      />
     </>
   )
 }

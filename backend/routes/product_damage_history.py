@@ -1066,7 +1066,7 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
         if product_id:
             db.execute(text("""
                 UPDATE products 
-                SET state = 'shelf'
+                SET product_state = 'shelf'
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
             
@@ -1153,7 +1153,7 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
         if product_id:
             db.execute(text("""
                 UPDATE products 
-                SET state = 'shelf'
+                SET product_state = 'shelf'
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
             

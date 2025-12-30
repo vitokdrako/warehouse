@@ -235,6 +235,15 @@ async def create_laundry_batch(
                 "qty": item.quantity,
                 "product_id": item.product_id
             })
+            
+            # Оновити стан товару в inventory - позначити як "в хімчистці"
+            db.execute(text("""
+                UPDATE inventory 
+                SET product_state = 'in_laundry', 
+                    cleaning_status = 'sent_to_laundry',
+                    updated_at = NOW()
+                WHERE product_id = :product_id
+            """), {"product_id": item.product_id})
         
         db.commit()
         

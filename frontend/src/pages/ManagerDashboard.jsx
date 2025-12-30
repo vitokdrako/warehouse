@@ -534,6 +534,31 @@ export default function ManagerDashboard() {
               Немає повернень сьогодні
             </div>
           )}
+          
+          {/* Часткові повернення */}
+          {partialReturnCards.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-lg">
+                  ⚠️ Часткове повернення
+                </span>
+                <span className="text-sm text-slate-500">{partialReturnCards.length}</span>
+              </div>
+              {partialReturnCards.map(card => (
+                <OrderCard 
+                  key={card.id}
+                  id={card.order_number}
+                  name={card.customer_name}
+                  phone={card.customer_phone}
+                  rent={`₴ ${card.total_rental?.toFixed(0)}`}
+                  deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
+                  badge="partial"
+                  order={card}
+                  onClick={() => navigate(`/return/${card.order_id}`)}
+                />
+              ))}
+            </div>
+          )}
         </Column>
       </main>
       {/* Footer moved to global LegalFooter in App.tsx */}

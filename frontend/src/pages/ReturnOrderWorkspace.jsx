@@ -461,6 +461,7 @@ export default function ReturnOrderWorkspace() {
           onToggleSerial={handleToggleSerial}
           onOpenDamage={handleOpenDamage}
           readOnly={false}
+          isCompleted={isReturnCompleted}
         />
         
         {/* Нарахування штрафів */}

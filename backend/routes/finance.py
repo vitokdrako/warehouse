@@ -204,51 +204,33 @@ async def get_payouts_stats(db: Session = Depends(get_rh_db)):
     - Витрати по школі (шкоді) - expenses related to damage
     """
     try:
-        # Cash from rent (credit to RENT_REV via CASH/BANK)
+        # Cash from rent payments
         rent_cash = db.execute(text("""
-            SELECT COALESCE(SUM(CASE WHEN direction = 'D' AND a.code IN ('CASH', 'BANK') THEN e.amount ELSE 0 END), 0)
-            FROM fin_ledger_entries e 
-            JOIN fin_accounts a ON a.id = e.account_id 
-            JOIN fin_transactions t ON t.id = e.tx_id
-            WHERE t.tx_type = 'rent_payment' AND t.status = 'posted'
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'rent' AND method = 'cash'
         """)).fetchone()[0]
         
-        # Cash from damage
+        # Cash from damage payments
         damage_cash = db.execute(text("""
-            SELECT COALESCE(SUM(CASE WHEN direction = 'D' AND a.code IN ('CASH', 'BANK') THEN e.amount ELSE 0 END), 0)
-            FROM fin_ledger_entries e 
-            JOIN fin_accounts a ON a.id = e.account_id 
-            JOIN fin_transactions t ON t.id = e.tx_id
-            WHERE t.tx_type = 'damage_payment' AND t.status = 'posted'
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'damage' AND method = 'cash'
         """)).fetchone()[0]
         
-        # Total due to pay (unpaid orders - rent + damage)
-        # From orders table
-        due_rent = db.execute(text("""
-            SELECT COALESCE(SUM(total_rental - COALESCE(rent_paid, 0)), 0)
-            FROM orders WHERE status NOT IN ('cancelled', 'returned') AND total_rental > COALESCE(rent_paid, 0)
-        """)).fetchone()[0]
-        
+        # Total due damage from product_damage_history
         due_damage = db.execute(text("""
-            SELECT COALESCE(SUM(total_fee - COALESCE(paid_amount, 0)), 0)
-            FROM (
-                SELECT order_id, SUM(compensation) as total_fee, 0 as paid_amount
-                FROM product_damage_history
-                WHERE compensation > 0
-                GROUP BY order_id
-            ) d
+            SELECT COALESCE(SUM(compensation), 0) - COALESCE(
+                (SELECT SUM(amount) FROM fin_payments WHERE payment_type = 'damage'), 0
+            ) FROM product_damage_history WHERE compensation > 0
         """)).fetchone()[0]
         
         # Expenses paid from cash
         cash_expenses = db.execute(text("""
-            SELECT COALESCE(SUM(e.amount), 0)
-            FROM fin_expenses e
-            WHERE e.method = 'cash' AND e.status = 'posted'
+            SELECT COALESCE(SUM(amount), 0) FROM fin_expenses WHERE method = 'cash'
         """)).fetchone()[0]
         
         # Expenses related to damage (laundry, restoration)
         damage_expenses = db.execute(text("""
-            SELECT COALESCE(SUM(lb.cost), 0) FROM laundry_batches lb
+            SELECT COALESCE(SUM(cost), 0) FROM laundry_batches
         """)).fetchone()[0]
         
         # Active cash balance
@@ -258,16 +240,49 @@ async def get_payouts_stats(db: Session = Depends(get_rh_db)):
             WHERE a.code = 'CASH'
         """)).fetchone()[0]
         
+        # Bank balance
         bank_balance = db.execute(text("""
             SELECT COALESCE(SUM(CASE WHEN direction = 'D' THEN amount ELSE -amount END), 0)
             FROM fin_ledger_entries e JOIN fin_accounts a ON a.id = e.account_id 
             WHERE a.code = 'BANK'
         """)).fetchone()[0]
         
+        # Total rent revenue
+        rent_revenue = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments WHERE payment_type = 'rent'
+        """)).fetchone()[0]
+        
+        # Bank payments from rent
+        rent_bank = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'rent' AND method = 'card'
+        """)).fetchone()[0]
+        
+        # Bank payments from damage
+        damage_bank = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'damage' AND method = 'card'
+        """)).fetchone()[0]
+        
         return {
             "rent_cash_balance": float(rent_cash or 0),
             "damage_cash_balance": float(damage_cash or 0),
-            "total_due": float(due_rent or 0) + float(due_damage or 0),
+            "total_due": float(due_damage or 0) if due_damage and due_damage > 0 else 0,
+            "due_rent": 0,  # Will be calculated from orders API if needed
+            "due_damage": float(due_damage or 0) if due_damage and due_damage > 0 else 0,
+            "cash_expenses": float(cash_expenses or 0),
+            "damage_expenses": float(damage_expenses or 0),
+            "cash_balance": float(cash_balance or 0),
+            "bank_balance": float(bank_balance or 0),
+            "total_active_balance": float(cash_balance or 0) + float(bank_balance or 0),
+            "rent_bank": float(rent_bank or 0),
+            "damage_bank": float(damage_bank or 0),
+            "total_rent_revenue": float(rent_revenue or 0)
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
             "due_rent": float(due_rent or 0),
             "due_damage": float(due_damage or 0),
             "cash_expenses": float(cash_expenses or 0),

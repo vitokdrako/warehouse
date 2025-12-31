@@ -2323,3 +2323,40 @@ Based on review request requirements, all functionality confirmed working:
 - **Message:** No critical issues found during Damage Hub redesigned tabs testing. All specified test scenarios from review request completed successfully. Damage Hub tabs system is fully functional and ready for user acceptance testing. All 4 tabs with proper icons, mode-specific KPI stats, split layout, and interactive functionality working as designed.
 
 
+
+
+---
+
+## CATALOG AVAILABILITY FILTER FIX - DECEMBER 31, 2025
+
+### Test Status: IN PROGRESS
+
+### Bug Description
+- **Issue:** Catalog availability filters (on_wash, on_laundry, on_restoration, in_rent, reserved) do not work globally without selecting a category
+- **Root Cause Analysis:** The backend code in /app/backend/routes/catalog.py was analyzed. The code ALREADY has special handling for processing_filter (on_wash, on_restoration, on_laundry) and rent_filter (in_rent, reserved) at lines 117-191.
+- **Current Backend Status:** ✅ API returns correct results when tested via curl
+
+### Backend API Testing Results
+- **on_laundry filter:** ✅ PASS - Returns 1 item (TX201 Плед білий with 10 units in laundry)
+- **on_wash filter:** ✅ PASS - Returns 0 items (no items currently on wash)
+- **on_restoration filter:** ✅ PASS - Returns 1 item (LU10 Люстра with 1 unit in restoration)
+- **in_rent filter:** ✅ PASS - Returns 0 items (no items currently in rent)
+
+### Verification Steps
+1. ✅ Backend API curl test with availability=on_laundry - Returns correct data
+2. ⏳ Frontend UI filter test - Testing in progress
+3. ⏳ Full integration test - Pending
+
+### Test Credentials
+- email: vitokdrako@gmail.com
+- password: test123
+
+### Route to Test
+- /catalog - Catalog page with availability filter in sidebar
+
+### Expected Behavior
+1. Select 'В хімчистці' (on_laundry) from 'Наявність' dropdown
+2. Without selecting any category
+3. Should display TX201 (Плед білий) with 10 units in laundry
+
+

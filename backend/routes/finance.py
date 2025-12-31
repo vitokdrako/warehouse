@@ -283,18 +283,6 @@ async def get_payouts_stats(db: Session = Depends(get_rh_db)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-            "due_rent": float(due_rent or 0),
-            "due_damage": float(due_damage or 0),
-            "cash_expenses": float(cash_expenses or 0),
-            "damage_expenses": float(damage_expenses or 0),
-            "cash_balance": float(cash_balance or 0),
-            "bank_balance": float(bank_balance or 0),
-            "total_active_balance": float(cash_balance or 0) + float(bank_balance or 0)
-        }
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/dashboard")

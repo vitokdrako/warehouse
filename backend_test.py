@@ -1,50 +1,35 @@
 #!/usr/bin/env python3
 """
-Backend Testing Script for Partial Returns API
-Testing the new Partial Returns API functionality.
+Backend Testing Script for Catalog Availability Filters
+Testing the Catalog Page availability filters functionality.
 
 **Test Scenario:**
-Test the new Partial Returns API endpoints for order 7219 and 7220.
+Test the Catalog Availability Filters Without Category Selection
 
 **Login credentials:**
 - email: vitokdrako@gmail.com  
 - password: test123
 
-**Test 1: Get items for partial return**
-- GET /api/partial-returns/order/7219/not-returned
-- Should return list of items with: product_id, sku, name, rented_qty, full_price, daily_rate, loss_amount
-- Verify each item has daily_rate > 0
+**Backend API Tests (curl):**
+1. Test /api/catalog/items-by-category?availability=on_laundry&limit=50
+   - Expected: Should return at least 1 item (TX201 - Плед білий)
+   
+2. Test /api/catalog/items-by-category?availability=on_restoration&limit=50
+   - Expected: Should return at least 1 item (LU10 - Люстра)
+   
+3. Test /api/catalog/items-by-category?availability=on_wash&limit=50
+   - Verify it returns items if any exist on wash
 
-**Test 2: Process partial return with EXTEND action**
-- POST /api/partial-returns/order/7220/process
-- Body: 
-```json
-{
-  "items": [{
-    "product_id": <first_item_product_id>,
-    "sku": "<first_item_sku>",
-    "name": "<first_item_name>",
-    "rented_qty": <qty>,
-    "returned_qty": 0,
-    "not_returned_qty": 1,
-    "action": "extend",
-    "daily_rate": 100,
-    "adjusted_daily_rate": 100
-  }]
-}
-```
-- Should create extension record and return success
+4. Test /api/catalog/items-by-category?availability=in_rent&limit=50
+   - Verify filtering works for items in rent
 
-**Test 3: Get extensions for order**
-- GET /api/partial-returns/order/7220/extensions
-- Should show the extension we created
+5. Test /api/catalog/items-by-category (without availability filter)
+   - Should return items with stats showing on_wash, on_laundry, on_restoration counts
 
-**Test 4: Complete extension (return item)**
-- POST /api/partial-returns/order/7220/extensions/{extension_id}/complete
-- Body: { "days": 3, "final_amount": 300 }
-- Should calculate and charge late fee
-
-**Note:** First get the items from order 7220 to use real product IDs in tests.
+**Key Points:**
+- The issue is that availability filters were only working when a category was also selected
+- The fix should make availability filters work independently, showing ALL items matching that status across the entire catalog
+- Backend API at /app/backend/routes/catalog.py has special handling for processing filters (lines 117-191)
 """
 
 import requests

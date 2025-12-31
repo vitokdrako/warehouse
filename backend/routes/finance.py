@@ -218,9 +218,9 @@ async def get_payouts_stats(db: Session = Depends(get_rh_db)):
         
         # Total due damage from product_damage_history
         due_damage = db.execute(text("""
-            SELECT COALESCE(SUM(compensation), 0) - COALESCE(
+            SELECT COALESCE(SUM(fee), 0) - COALESCE(
                 (SELECT SUM(amount) FROM fin_payments WHERE payment_type = 'damage'), 0
-            ) FROM product_damage_history WHERE compensation > 0
+            ) FROM product_damage_history WHERE fee > 0
         """)).fetchone()[0]
         
         # Expenses paid from cash

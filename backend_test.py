@@ -48,11 +48,7 @@ TEST_CREDENTIALS = {
     "password": "test123"
 }
 
-# Company name validation - Not needed for Order Modifications testing
-# CORRECT_COMPANY_NAME = "ФОП Арсалані Олександра Ігорівна"
-# OLD_INCORRECT_NAME = "ФОП Маркін Ілля Павлович"
-
-class PartialReturnsTester:
+class CatalogAvailabilityTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
@@ -61,9 +57,6 @@ class PartialReturnsTester:
             'Accept': 'application/json'
         })
         self.auth_token = None
-        self.test_order_7219 = 7219  # For getting items
-        self.test_order_7220 = 7220  # For processing partial returns
-        self.extension_id = None  # Will be set after creating extension
         
     def log(self, message: str, level: str = "INFO"):
         """Log test messages with timestamp"""

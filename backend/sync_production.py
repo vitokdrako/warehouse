@@ -463,8 +463,8 @@ def sync_product_categories():
 
 
 def sync_product_quantities():
-    """Update quantities and prices ONLY (color/material managed locally in RentalHub)"""
-    log("📊 Updating product details (quantity, price)...")
+    """Update quantities, prices and SKU (color/material managed locally in RentalHub)"""
+    log("📊 Updating product details (sku, quantity, price)...")
     try:
         oc = mysql.connector.connect(**OC)
         rh = mysql.connector.connect(**RH)
@@ -472,7 +472,7 @@ def sync_product_quantities():
         oc_cur = oc.cursor(dictionary=True)
         rh_cur = rh.cursor()
         
-        # Get all products (limit 10000 для оновлення цін)
+        # Get all products (limit 10000 для оновлення)
         rh_cur.execute("SELECT product_id FROM products LIMIT 10000")
         product_ids = [row[0] for row in rh_cur.fetchall()]
         
@@ -486,36 +486,42 @@ def sync_product_quantities():
         
         ids_str = ','.join(map(str, product_ids))
         
-        # Get updated data from OpenCart (тільки quantity, price, ean)
+        # Get updated data from OpenCart (sku, quantity, price, ean)
         oc_cur.execute(f"""
-            SELECT p.product_id, p.quantity, p.price, p.ean
+            SELECT p.product_id, p.model as sku, p.quantity, p.price, p.ean
             FROM oc_product p
             WHERE p.product_id IN ({ids_str})
         """)
         
         count = 0
+        sku_updated = 0
         for p in oc_cur.fetchall():
             # Маппінг полів:
+            # OpenCart model → RentalHub sku (артикул)
             # OpenCart price → RentalHub rental_price (ціна оренди за день)
             # OpenCart ean → RentalHub price (вартість товару/повний збиток)
+            sku = (p['sku'] or f"SKU-{p['product_id']}")[:100]
             rental_price = float(p['price']) if p.get('price') else 0
             purchase_price = float(p['ean']) if p.get('ean') else 0
             
             # ⚠️ НЕ оновлюємо color та material - вони керуються локально в RentalHub
+            # ✅ SKU оновлюється з OpenCart
             rh_cur.execute("""
                 UPDATE products 
-                SET quantity = %s, price = %s, rental_price = %s
+                SET sku = %s, quantity = %s, price = %s, rental_price = %s
                 WHERE product_id = %s
             """, (
+                sku,             # OpenCart model → артикул
                 p['quantity'] or 0, 
                 purchase_price,  # OpenCart ean → вартість товару
                 rental_price,    # OpenCart price → ціна оренди
                 p['product_id']
             ))
-            count += 1
+            if rh_cur.rowcount > 0:
+                count += 1
         
         rh.commit()
-        log(f"  ✅ Updated {count} products (color/material preserved)")
+        log(f"  ✅ Updated {count} products (sku synced, color/material preserved)")
         
         oc_cur.close()
         rh_cur.close()

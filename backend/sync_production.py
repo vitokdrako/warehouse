@@ -463,8 +463,8 @@ def sync_product_categories():
 
 
 def sync_product_quantities():
-    """Update quantities, prices, colors and materials"""
-    log("📊 Updating product details (quantity, price, color, material)...")
+    """Update quantities and prices ONLY (color/material managed locally in RentalHub)"""
+    log("📊 Updating product details (quantity, price)...")
     try:
         oc = mysql.connector.connect(**OC)
         rh = mysql.connector.connect(**RH)
@@ -486,17 +486,11 @@ def sync_product_quantities():
         
         ids_str = ','.join(map(str, product_ids))
         
-        # Get updated data from OpenCart
+        # Get updated data from OpenCart (тільки quantity, price, ean)
         oc_cur.execute(f"""
-            SELECT 
-                p.product_id, p.quantity, p.price, p.ean,
-                MAX(CASE WHEN ad.name = 'Колір' THEN pa.text END) as color,
-                MAX(CASE WHEN ad.name = 'Матеріал' THEN pa.text END) as material
+            SELECT p.product_id, p.quantity, p.price, p.ean
             FROM oc_product p
-            LEFT JOIN oc_product_attribute pa ON p.product_id = pa.product_id
-            LEFT JOIN oc_attribute_description ad ON pa.attribute_id = ad.attribute_id AND ad.language_id = 4
             WHERE p.product_id IN ({ids_str})
-            GROUP BY p.product_id
         """)
         
         count = 0
@@ -507,22 +501,21 @@ def sync_product_quantities():
             rental_price = float(p['price']) if p.get('price') else 0
             purchase_price = float(p['ean']) if p.get('ean') else 0
             
+            # ⚠️ НЕ оновлюємо color та material - вони керуються локально в RentalHub
             rh_cur.execute("""
                 UPDATE products 
-                SET quantity = %s, price = %s, rental_price = %s, color = %s, material = %s
+                SET quantity = %s, price = %s, rental_price = %s
                 WHERE product_id = %s
             """, (
                 p['quantity'] or 0, 
                 purchase_price,  # OpenCart ean → вартість товару
                 rental_price,    # OpenCart price → ціна оренди
-                (p['color'] or '')[:100] if p.get('color') else None,
-                (p['material'] or '')[:100] if p.get('material') else None,
                 p['product_id']
             ))
             count += 1
         
         rh.commit()
-        log(f"  ✅ Updated {count} products")
+        log(f"  ✅ Updated {count} products (color/material preserved)")
         
         oc_cur.close()
         rh_cur.close()

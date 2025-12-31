@@ -2002,6 +2002,9 @@ export default function FinanceConsoleApp() {
           <TabBtn active={tab === "orders"} onClick={() => setTab("orders")}>
             Ордери
           </TabBtn>
+          <TabBtn active={tab === "payouts"} onClick={() => setTab("payouts")}>
+            💰 Виплати
+          </TabBtn>
           <TabBtn active={tab === "ledger"} onClick={() => setTab("ledger")}>
             Облік
           </TabBtn>
@@ -2034,6 +2037,8 @@ export default function FinanceConsoleApp() {
                 )
               }
             />
+          ) : tab === "payouts" ? (
+            <PayoutsTab reload={loadAll} loading={loading} />
           ) : tab === "ledger" ? (
             <LedgerTab ledger={ledger} reload={loadAll} loading={loading} />
           ) : (

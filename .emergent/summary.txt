@@ -1,133 +1,135 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to fix incorrect company details in generated documents. After that was completed, the scope expanded to several major new features and bug fixes:
-1.  **Delete Test Data:** The user requested the removal of specific test products from the database.
-2.  **Order Modification (Дозамовлення):** Implement a feature to allow staff to add, change, or remove items from an order when it is in the На зборі (assembly) or Готовий до видачі (ready) stages. This includes recalculating finances, logging all changes, and generating a Дозамовлення document.
-3.  **Damage Logic Refactor:** Change the business logic for recording damages. Damage recorded *before* an order is issued () should only be for logging purposes (description + photo) and should NOT charge the client. Damage recorded upon *return* should be compared against pre-existing damage, and only new damages should be charged.
-4.  **UI/UX for Damage:**
-    *   The  damage modal should be simplified to only accept a description and photo.
-    *   Pre-issue damage must be displayed on the Ready to Issue card and included in the Handover Act () document.
-    *   The damage modal should allow viewing previously recorded damages for an item.
-5.  **Document Management:**
-    *   The Handover Act must be saved after generation.
-    *   On the Ready to Issue card, only the Handover Act document option should be visible.
-6.  **New Document Request:** Create a new document, Damage Breakdown (), which includes photos and can be emailed.
-7.  **Data Cleanup:** The user requested a full wipe of all transactional data (orders, finances, damages, etc.) to test the complete workflow from a clean slate.
+The user's initial goal was to fix a critical JavaScript error (), complete the Deduct from Deposit feature, and then significantly overhaul the Damage Hub functionality.
+
+Over the course of the session, the scope expanded to include:
+1.  **Complete Redesign of Damage Hub:** Rebuild the UI for Wash, Restoration, and Dry Cleaning tabs based on a provided example, including a split-view layout, status filters, and detailed action panels.
+2.  **Implement Partial Processing:** Introduce logic similar to partial returns for damage processing, allowing a subset of items (e.g., 5 out of 20) to be processed and returned to stock while the rest remain in processing.
+3.  **Implement Dry Cleaning Queue:** Create a workflow where items designated for dry cleaning first go into a queue. From this queue, a user can then create a batch to be sent out.
+4.  **Display Product Images:** Show the main product gallery image in all sections of the Damage Hub to improve visual identification.
+5.  **Fix Catalog Filters:** Address a bug where global catalog filters for statuses like In Dry Cleaning or In Wash did not work unless a specific product category was also selected.
+6.  **Fix Bugs:** Resolve issues preventing items from being sent to dry cleaning and ensure the database schema is correctly handled by the backend code.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is in a stable state with significant new functionality. The Order Modification feature is fully implemented on both the backend (APIs for adding/editing/removing items, recalculating totals, syncing related records) and frontend (a dedicated component in the issue card workspace for searching and adding items). The business logic for handling damages has been completely refactored to distinguish between pre-existing damage (no charge) and new damage on return (charged). The UI/UX for recording and viewing damages has been updated accordingly. The Handover Act now correctly fetches and displays pre-existing damage. All transactional data was wiped clean per the user's request, providing a fresh state for testing.
+The application's Damage Hub () has been completely rewritten. It now features a sophisticated tabbed interface for managing damaged items, including:
+-   **Main Tab:** A list of all damage cases with newly added status filters (Потребують уваги, В обробці, Закриті).
+-   **Wash & Restoration Tabs:** A split-view layout showing a list of items in processing and a detail panel. This panel supports **partial processing**, allowing users to complete a specific quantity of items.
+-   **Dry Cleaning Tab:** A UI to manage the entire lifecycle. It includes a **Queue** for items waiting to be batched and a list of active/completed batches. It supports adding items from the queue to a new batch and processing partial returns from a batch.
+-   **Visuals:** The main product image is now displayed for items across all tabs.
+
+The backend has been extensively updated to support these features, including new APIs for the dry cleaning queue, partial processing, and correct state management () in the  and  tables.
+
+Multiple bugs have been fixed, including a critical JS error, a DB integrity error preventing items from being sent to dry cleaning, and incorrect column references in the code. The catalog API has also been improved to account for partially processed items.
 
 **Last working item**:
--   **Last item agent was working:** The agent started implementing the new Damage Breakdown document. It successfully created the Jinja2 HTML template for the document. The next step is to create the backend data builder function to populate it with data (including damage descriptions and photos).
+-   **Last item agent was working:** Fixing a bug in the Catalog where availability filters (e.g., In Dry Cleaning, In Wash) only work after a category is selected, not globally. The agent diagnosed that the backend API applies these filters *after* fetching a limited number of results, causing it to miss relevant items.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** backend testing agent
+-   **Which testing method agent to use?** Backend testing agent (to verify the API fix), followed by the Frontend testing agent (to test the Catalog UI).
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   None. All previously reported issues have been resolved.
+-   **Issue 1: (P0) Catalog availability filters do not work globally.**
+    -   **Description:** On the  page, selecting a filter like В хімчистці (In Dry Cleaning) without a category filter results in no products found. This happens because the backend API at  fetches a limited set of products (e.g., ) and *then* filters them in Python, instead of filtering at the database query level.
+    -   **Attempted fixes:** None. The issue has only been diagnosed.
+    -   **Next debug checklist:**
+        1.  Modify the main query logic in the  endpoint in .
+        2.  When an  filter (like ) is present, alter the SQL query to first select all s that match this status from .
+        3.  Use this list of s in the  clause of the main product query to ensure all relevant items are fetched, bypassing the  issue for that specific filter.
+    -   **Why fix this issue and what will be achieved with the fix?** To provide the user with a flexible tool to quickly find all items in a specific processing state across the entire inventory, which is a key requirement for managing operations.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Both.
 
 **In progress Task List**:
--   **Task 1: (P0) Complete Damage Breakdown Document Feature**
-    -   **Where to resume:** Create the data builder function in  to fetch damage data, including photo URLs, for a given order. Register this new document type in the . Add a new API endpoint to generate and email this document.
-    -   **What will be achieved with this?** Users will be able to generate and email a detailed report of all damages recorded for an order, complete with photos.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both. The backend API needs testing via , and then a button must be added to the frontend to trigger generation and emailing.
-    -   **Blocked on something:** None.
+-   None.
 
 **Upcoming and Future Tasks**
-
 -   **Upcoming Tasks:**
-    -   (P1) Add a button to the frontend UI (likely on the order details or finance page) to generate and email the new Damage Breakdown document.
+    -   (P1) Propose refactoring  into smaller, more manageable components after the P0 issue is resolved.
 -   **Future Tasks:**
     -   (P2) Telegram Bot Integration.
     -   (P3) Digital Signature Integration.
 
 **Completed work in this session**
--   **Company Details Fix (DONE):** Replaced the incorrect legal entity name in .
--   **Application Re-compilation (DONE):** Updated the distributable build in .
--   **Order Modification Feature (DONE):**
-    -   Created backend APIs () for adding, removing, and restoring items in an order.
-    -   Created  table to log all changes.
-    -   Implemented automatic recalculation of order totals.
-    -   Created a new frontend component  for searching and managing items.
--   **Damage Logic Overhaul (DONE):**
-    -   Modified  to differentiate between  (no charge) and  (charged) damage stages.
-    -   Refactored the  to show a simplified UI for  and to allow viewing of existing damages.
--   **Data Synchronization (FIXED):** Resolved a critical bug where the  JSON data would become stale. Implemented automatic synchronization logic in backend routes () and data builders () to ensure data consistency with .
--   **Document & UI Fixes (DONE):**
-    -   Ensured pre-existing damage data is correctly passed to and displayed in the Handover Act.
-    -   Filtered the documents list on the Ready to Issue card to only show the Handover Act ().
-    -   Fixed a bug preventing saved documents from being viewed by correcting the  used in API calls.
--   **Database Cleanup (DONE):** Successfully truncated all transactional tables, leaving only users and products, to allow for clean workflow testing.
+-   **Fixed Critical JS Error:** Resolved the  runtime error in .
+-   **Feature: Redesigned Damage Hub:** Completely overhauled  with a tabbed UI (Main, Wash, Restoration, Dry Clean), status filters, and a split-view layout.
+-   **Feature: Partial Processing Logic:** Implemented backend and frontend logic to allow partial completion of damaged items (e.g., washing 5 out of 10 items). This included adding a  column to the  table and a new API ().
+-   **Feature: Dry Cleaning Queue:** Implemented a full workflow for dry cleaning, where items are first added to a queue and can then be grouped into batches.
+-   **Feature: Product Images in Damage Hub:** Updated all relevant components and APIs to display the main product gallery image.
+-   **Feature: Catalog Status Accuracy:** Updated the catalog API () to correctly calculate and display items in various processing states (wash, restoration, laundry), including partially processed items.
+-   **Bug Fix:** Resolved a database integrity error () that prevented sending items to dry cleaning.
+-   **Bug Fix:** Corrected backend code that was referencing a non-existent  column, changing it to the correct .
+-   **DB Schema Verification:** Confirmed that all necessary tables (, ) and columns (, ) exist in the production database, making a separate migration script unnecessary for now.
 
 **Earlier issues found/mentioned but not fixed**
 -   None.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Data in the  JSON field becomes stale when related  are modified through a separate API. This caused items to be missing from the UI and documents.
--   **Recurrence count:** 2 times in this session.
--   **Status:** RESOLVED. The agent implemented a robust solution by adding a  function that is now called automatically during order modification and before document generation to ensure the JSON data is always fresh.
+-   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Stale JSON Blob Synchronization:** A recurring problem was that a denormalized JSON field () was not being updated when the source-of-truth table () changed. The solution was to implement explicit synchronization functions that are called after any modification or before any read operation that depends on the data being fresh.
--   **Conditional Business Logic in API:** The backend logic was enhanced to handle different business rules based on a  parameter (e.g.,  damage is not charged, while  damage is).
--   **Dynamic UI Rendering based on Props:** The  component was refactored to render a completely different, simplified UI when an  prop is true, demonstrating good component reuse.
+-   **Complex Frontend State Management:** The rewritten  manages a large and complex state using , , and  to handle different tabs, filters, selected items, and API data.
+-   **Backend State Machine:** The  in the  table is now the source of truth for an item's availability, updated by various actions in  and .
+-   **Partial Quantity Tracking:** A new pattern was established using  and  columns to manage items that are handled in parts, both in damage processing and laundry.
 
 **key DB schema**
--   **order_modifications (NEW):**  - Logs all changes to an order's items.
--   **order_items (MODIFIED):** Added columns , ,  to support item removal and restoration logic.
--   **product_damage_history (MODIFIED):** The  ('pre_issue' | 'return') and  (boolean) columns became central to the new damage handling logic.
+-   **product_damage_history (MODIFIED):** Added  (INT) to track partial completion. The  column is now used to link items to a dry cleaning batch.
+-   **products (MODIFIED):** Code updated to use the correct  column.
+-   **inventory (MODIFIED):** Code now correctly updates  and .
+-   **laundry_batches (MODIFIED):** Backend now generates a unique  on creation to prevent DB errors.
+
+**changes in tech stack**
+-   None.
 
 **All files of reference**
--    (New feature for editing orders)
--    (Frontend UI for editing orders)
--    (Core of the new damage logic)
--    (Refactored UI for damage reporting)
--    (Contains data sync logic and document data preparation)
--    (Template for the current task)
+-    (File with the current P0 bug).
+-    (UI affected by the P0 bug).
+-    (Heavily modified component, core of recent work).
+-    (Core backend logic for damage processing).
+-    (Core backend logic for dry cleaning).
 
 **Areas that need refactoring**:
--   None identified in this session.
+-   The  file is over 1500 lines long and contains the logic for all tabs and panels. It should be broken down into smaller, reusable components (e.g., , , , ) to improve readability and maintainability.
 
 **key api endpoints**
--    (Adds an item to an order, or updates quantity if it exists)
--    (Marks an item as refused)
--    (Restores a refused item)
--    (Manually syncs  from )
--    (Creates a damage report; logic now depends on the  field)
--    (Gets existing damages for an item to show in UI)
+-    (Endpoint with the P0 bug).
+-    (NEW - for partial processing).
+-    (NEW - for the dry cleaning queue).
+-    (NEW - to create a batch from the queue).
+-    (MODIFIED - to include ).
+-    (MODIFIED - to include ).
+-    (MODIFIED - to handle state updates).
 
 **Critical Info for New Agent**
--   **You MUST respond in українська (Ukrainian).**
--   The immediate task is to finish the Damage Breakdown document feature. Start by creating the data builder in .
--   **Synchronization is key:** The  JSON data can become inconsistent. The pattern to fix this is to re-sync it from the  table. The agent has already added automatic sync logic in critical places (order modification, document generation), but be aware of this pattern if similar issues arise.
--   The user is very hands-on and will test workflows thoroughly. Be prepared for detailed feedback and new requirements that build upon just-completed features.
+-   **Your immediate priority (P0) is to fix the catalog filtering bug.** The root cause has been identified in  (filtering happens after the  is applied). You need to implement a fix that filters at the database level.
+-   Be aware of the massive rewrite of . While it is functional, its size makes it difficult to modify. After fixing the P0 bug, you should propose a refactoring plan to the user.
+-   The user has confirmed that a formal SQL migration script is **not** needed at this time.
+-   Image URLs must be prefixed with the production domain () for them to display correctly on the user's end. The agent has already implemented this logic.
 
 **documents and test reports created in this job**
--   
--   
--   
+-   Agent ran a Python script to inspect the remote database schema and confirm the existence of necessary columns.
+-   Agent updated  before running the testing subagent.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **Request:** Create a separate Damage Breakdown document with photos that can be emailed. (IN PROGRESS)
-2.  **Report:** The Handover Act doesn't show the damages I recorded. (FIXED)
-3.  **Request:** Save the generated Handover Act and only show that document option on the Ready to Issue card. (DONE)
-4.  **Report:** The Handover Act doesn't account for the defects we added. (FIXED)
-5.  **Request:** Simplify the pre-issue damage modal (just description/photo) and log who recorded the damage. (DONE)
-6.  **Report:** We shouldn't charge clients for damage recorded *before* issuing the order. (DONE)
-7.  **Request:** Wipe all transactional data from the DB to test the full workflow from a clean state. (DONE)
-8.  **Report:** After accepting a deposit, the button is inactive and the deposit isn't visible. (INVESTIGATED - Backend is correct, likely a frontend refresh issue).
-9.  **Report:** After order totals are recalculated, the finance buttons are disabled. (INVESTIGATED - Backend is correct, likely a frontend refresh issue).
-10. **Report:** When I add multiple of the same item, the quantity doesn't update correctly in the assembly list. (FIXED)
+1.  **Request:** Add images from the product gallery to the Damage Hub for easier visual identification. Also, implement a queue for dry cleaning where items can be collected before being assigned to a batch. (Completed)
+2.  **Request:** Fix the catalog filters. Filters like in dry cleaning or in wash should show all items across the entire catalog, not just within the currently selected category or the first 200 results. (In Progress - This is the current P0 task)
+3.  **Clarification:** User confirmed that image URLs just need the correct path, and their production environment will handle displaying them.
+4.  **Report:** Cannot send пледи (blankets) for order 7217 to dry cleaning. (Fixed)
+5.  **Request:** Ensure the catalog correctly reads and displays all statuses (in reserve, wash, restoration, dry cleaning) so managers know exactly why an item is unavailable and can expedite if needed. (Completed)
+6.  **Request:** Add status filters (Очікують, В роботі, Виконані) to the main tab of the Damage Hub to easily find orders needing attention. (Completed)
+7.  **Request:** Implement partial processing logic for damaged items (wash, restoration, dry cleaning). For example, if 20 flasks are sent for washing, the user should be able to mark 5 as completed and return them to stock. (Completed)
+8.  **Clarification:** User confirmed that dry cleaning batches can be returned gradually, and items should become available for rent as they are returned. The catalog must reflect this. (Completed)
+9.  **Confirmation:** User agreed with the plan to implement the UI/UX improvements for the Wash, Restoration, and Dry Cleaning tabs, emphasizing adherence to the style of the main page. (Completed)
+10. **Request:** The Wash, Restoration, and Dry Cleaning tabs in the Damage Hub are visually incomplete. Implement the improvements from the provided example component. (Completed)
 
 **Project Health Check:**
--   **Broken:** None
--   **Mocked:** None
+-   **Broken:**
+    -   The global filtering functionality in the Catalog () for availability statuses (, , etc.) is non-functional.
 
 **3rd Party Integrations**
 -   
@@ -137,18 +139,18 @@ WeasyPrint could not import some external libraries. Please carefully follow the
 https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
 https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
 
------ (PDF generation)
+----- (PDF generation from HTML)
 -   Custom SMTP server ()
 
 **Testing status**
--   **Testing agent used after significant changes:** NO (Proposed but not used due to Playwright issues; agent relied on curl and screenshots)
+-   **Testing agent used after significant changes:** YES
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** None
+-   **Known regressions:** None. The catalog filter issue is a pre-existing bug that has now been targeted for a fix.
 
 **Credentials to test flow:**
 -   email: 
 -   password: 
 
 **What agent forgot to execute**
--   The agent did not fix minor, non-critical linting errors (e.g., ) in the backend code, choosing to prioritize functionality. This is acceptable.</analysis>
+-   The agent has correctly identified the final pending task (fixing the catalog filter) and has not forgotten any other requested items.</analysis>

@@ -1,979 +1,42 @@
 /* eslint-disable */
 /**
- * DamageHubApp - Уніфікований Кабінет Шкоди
- * Tabs: Головна (кейси по ордерах), Мийка, Реставрація, Хімчистка
- * Уніфікований дизайн з split layout для всіх вкладок
+ * DamageHubApp - Кабінет шкоди
+ * Refactored version using separate component files
  */
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import CorporateHeader from "../components/CorporateHeader";
+
+// Import helpers and components from separate files
+import { cls, money, fmtDate, authFetch, getPhotoUrl, Badge, GhostBtn, PrimaryBtn, ProductPhoto, MODES, modeMeta } from "../components/damage/DamageHelpers";
+import { StatusChips, ProcessingItemRow, ProcessingDetailPanel } from "../components/damage/ProcessingComponents";
+import { LaundryQueueItem, LaundryBatchCard, LaundryBatchDetailPanel } from "../components/damage/LaundryComponents";
+import { OrderCaseRow, DamageItemRow, OrderDetailPanel } from "../components/damage/MainTabComponents";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
-// ----------------------------- helpers -----------------------------
-const cls = (...a) => a.filter(Boolean).join(" ");
-
-const money = (v, currency = "₴") => {
-  if (v === null || v === undefined) return "—";
-  const n = Number(v);
-  if (Number.isNaN(n)) return "—";
-  return `${currency}${n.toLocaleString("uk-UA")}`;
-};
-
-const fmtDate = (iso) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" });
-};
-
-const authFetch = async (url, options = {}) => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-  return res;
-};
-
-// ----------------------------- constants -----------------------------
-const MODES = {
-  ALL: "all",
-  WASH: "wash",
-  RESTORE: "restore",
-  DRYCLEAN: "dryclean",
-};
-
-const modeMeta = {
-  [MODES.ALL]: { title: "Головна", hint: "Кейси шкоди по ордерах • статус оплати", color: "bg-slate-900" },
-  [MODES.WASH]: { title: "Мийка", hint: "Товари на мийці/чистці", color: "bg-blue-600" },
-  [MODES.RESTORE]: { title: "Реставрація", hint: "Товари на ремонті/відновленні", color: "bg-amber-600" },
-  [MODES.DRYCLEAN]: { title: "Хімчистка", hint: "Черга та партії відправок", color: "bg-emerald-600" },
-};
-
-const STATUS_FILTERS = {
-  all: "Всі",
-  pending: "Очікує",
-  in_progress: "В роботі",
-  completed: "Виконано"
-};
-
-// ----------------------------- UI Components -----------------------------
-const tonePill = (tone) =>
-  cls(
-    "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-    tone === "ok" && "bg-emerald-50 text-emerald-800 border-emerald-200",
-    tone === "warn" && "bg-amber-50 text-amber-900 border-amber-200",
-    tone === "danger" && "bg-rose-50 text-rose-800 border-rose-200",
-    tone === "info" && "bg-blue-50 text-blue-800 border-blue-200",
-    tone === "neutral" && "bg-corp-bg-page text-corp-text-main border-corp-border"
-  );
-
-const Badge = ({ tone = "neutral", children }) => <span className={tonePill(tone)}>{children}</span>;
-
-const GhostBtn = ({ onClick, children, disabled, className = "" }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={cls(
-      "inline-flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium transition",
-      disabled ? "border-corp-border bg-corp-bg-page text-corp-text-muted cursor-not-allowed" : "border-corp-border bg-white text-corp-text-dark hover:bg-corp-bg-page",
-      className
-    )}
-  >
-    {children}
-  </button>
-);
-
-const PrimaryBtn = ({ onClick, children, disabled, variant = "primary" }) => {
-  const variants = {
-    primary: "bg-corp-primary text-white hover:bg-corp-primary-dark",
-    dark: "bg-slate-900 text-white hover:bg-slate-800",
-    danger: "bg-rose-600 text-white hover:bg-rose-700",
-    success: "bg-emerald-600 text-white hover:bg-emerald-700",
-    blue: "bg-blue-600 text-white hover:bg-blue-700",
-    amber: "bg-amber-600 text-white hover:bg-amber-700",
-  };
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={cls(
-        "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold shadow-sm transition",
-        disabled ? "bg-corp-border text-corp-text-muted cursor-not-allowed" : variants[variant]
-      )}
-    >
-      {children}
-    </button>
-  );
-};
-
 // ----------------------------- Tabs Component -----------------------------
 function Tabs({ mode, setMode }) {
-  const tabs = [
-    { id: MODES.ALL, label: "Головна", icon: "📋" },
-    { id: MODES.WASH, label: "Мийка", icon: "🧼" },
-    { id: MODES.RESTORE, label: "Реставрація", icon: "🔧" },
-    { id: MODES.DRYCLEAN, label: "Хімчистка", icon: "🧺" },
-  ];
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          className={cls(
-            "inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition",
-            mode === t.id ? "bg-corp-primary text-white shadow-sm border-corp-primary" : "bg-white border-corp-border hover:bg-corp-bg-light"
-          )}
-          onClick={() => setMode(t.id)}
-        >
-          <span>{t.icon}</span>
-          <span>{t.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ----------------------------- Status Chips (фільтри) -----------------------------
-function StatusChips({ value, onChange, counts = {}, labels = {} }) {
-  const defaultLabels = {
-    all: "Всі",
-    pending: "Очікують",
-    in_progress: "В роботі",
-    completed: "Виконано"
-  };
-  const mergedLabels = { ...defaultLabels, ...labels };
-  
-  const chips = [
-    { id: "all", label: mergedLabels.all, count: counts.all },
-    { id: "pending", label: mergedLabels.pending, count: counts.pending },
-    { id: "in_progress", label: mergedLabels.in_progress, count: counts.in_progress },
-    { id: "completed", label: mergedLabels.completed, count: counts.completed },
-  ];
-
   return (
     <div className="flex flex-wrap gap-2">
-      {chips.map((c) => (
-        <button
-          key={c.id}
-          className={cls(
-            "rounded-xl border px-3 py-2 text-sm font-medium transition",
-            value === c.id ? "bg-slate-900 text-white border-slate-900" : "bg-white hover:bg-slate-50 border-corp-border"
-          )}
-          onClick={() => onChange(c.id)}
-        >
-          {c.label} {c.count !== undefined && <span className="ml-1 opacity-70">({c.count})</span>}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// ----------------------------- Order Case Row (for Main tab) -----------------------------
-function OrderCaseRow({ caseData, active, onClick }) {
-  const isPaid = caseData.is_paid;
-  const hasPending = (caseData.pending_assignment || 0) > 0;
-  
-  return (
-    <button
-      onClick={onClick}
-      className={cls(
-        "w-full rounded-2xl border bg-white p-4 text-left shadow-sm hover:shadow transition",
-        active && "ring-2 ring-corp-primary/30 border-corp-primary/30"
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-corp-text-dark">#{caseData.order_number}</span>
-            {isPaid ? (
-              <Badge tone="ok">✓ Сплачено</Badge>
-            ) : (
-              <Badge tone="danger">⏳ Очікує оплати</Badge>
+      {Object.keys(MODES).map((k) => {
+        const m = MODES[k];
+        const { title, color } = modeMeta[m];
+        const isActive = mode === m;
+        return (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={cls(
+              "rounded-xl px-4 py-2.5 text-sm font-semibold transition border",
+              isActive 
+                ? `${color} text-white shadow-sm border-transparent` 
+                : "bg-white text-corp-text-main border-corp-border hover:bg-corp-bg-page hover:border-corp-border"
             )}
-          </div>
-          <div className="mt-1 text-sm text-corp-text-main">{caseData.customer_name || "—"}</div>
-          <div className="mt-1 text-xs text-corp-text-muted">
-            {caseData.items_count} позиц. • {fmtDate(caseData.latest_damage)}
-          </div>
-        </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <div className="text-lg font-bold text-corp-text-dark">{money(caseData.total_fee)}</div>
-          {hasPending && (
-            <Badge tone="warn">⚡ {caseData.pending_assignment} не розподілено</Badge>
-          )}
-        </div>
-      </div>
-      {!isPaid && caseData.damage_paid > 0 && (
-        <div className="mt-3">
-          <div className="flex justify-between text-xs text-corp-text-muted mb-1">
-            <span>Сплачено: {money(caseData.damage_paid)}</span>
-            <span>Залишок: {money(caseData.damage_due)}</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-corp-border">
-            <div 
-              className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${Math.min(100, (caseData.damage_paid / caseData.total_fee) * 100)}%` }}
-            />
-          </div>
-        </div>
-      )}
-    </button>
-  );
-}
-
-// ----------------------------- Processing Item Row (Мийка/Реставрація) -----------------------------
-function ProcessingItemRow({ item, active, onClick }) {
-  const totalQty = item.qty || 1;
-  const processedQty = item.processed_qty || 0;
-  const hasMultiple = totalQty > 1;
-  const progress = totalQty > 0 ? (processedQty / totalQty) * 100 : 0;
-  
-  const statusMap = {
-    pending: { label: "Очікує", tone: "warn" },
-    in_progress: { label: hasMultiple ? `${processedQty}/${totalQty}` : "В роботі", tone: "info" },
-    completed: { label: "✓ Виконано", tone: "ok" },
-  };
-  const s = statusMap[item.processing_status] || statusMap.pending;
-  
-  // Пріоритет: фото товару з галереї > фото пошкодження
-  const rawPhoto = item.product_image || item.photo_url;
-  const photoUrl = rawPhoto && !rawPhoto.startsWith('http') ? `${BACKEND_URL}/${rawPhoto}` : rawPhoto;
-
-  return (
-    <button
-      onClick={onClick}
-      className={cls(
-        "w-full rounded-2xl border bg-white p-3 text-left shadow-sm hover:shadow transition",
-        active && "ring-2 ring-corp-primary/30 border-corp-primary/30"
-      )}
-    >
-      <div className="flex items-start gap-3">
-        {/* Photo */}
-        <div className="shrink-0">
-          {photoUrl ? (
-            <img src={photoUrl} alt={item.product_name} className="w-14 h-14 rounded-lg object-cover border border-corp-border" onError={(e) => { e.target.style.display = 'none'; }} />
-          ) : (
-            <div className="w-14 h-14 rounded-lg bg-corp-border flex items-center justify-center text-xl">📦</div>
-          )}
-        </div>
-        
-        {/* Content */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="font-semibold text-corp-text-dark truncate">{item.product_name}</div>
-              <div className="mt-0.5 text-xs text-corp-text-muted">
-                SKU: {item.sku || "—"} • {item.order_number || "—"} {hasMultiple && <span className="font-medium">• {totalQty} шт.</span>}
-              </div>
-            </div>
-            <Badge tone={s.tone}>{s.label}</Badge>
-          </div>
-          
-          {/* Progress bar for multiple items */}
-          {hasMultiple && processedQty > 0 && (
-            <div className="mt-2">
-              <div className="h-1.5 rounded-full bg-corp-border">
-                <div 
-                  className={cls("h-full rounded-full transition-all", progress >= 100 ? "bg-emerald-500" : "bg-blue-500")}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          )}
-          
-          {item.sent_to_processing_at && !hasMultiple && (
-            <div className="mt-1 text-xs text-corp-text-muted">
-              Відправлено: {fmtDate(item.sent_to_processing_at)}
-            </div>
-          )}
-        </div>
-      </div>
-    </button>
-  );
-}
-
-// ----------------------------- Processing Detail Panel (Мийка/Реставрація) -----------------------------
-function ProcessingDetailPanel({ mode, item, onComplete, onMarkFailed, onRefresh }) {
-  const [notes, setNotes] = useState("");
-  const [completedQty, setCompletedQty] = useState(1);
-  
-  // Reset completedQty when item changes
-  React.useEffect(() => {
-    if (item) {
-      const remaining = (item.qty || 1) - (item.processed_qty || 0);
-      setCompletedQty(Math.min(remaining, 1));
-    }
-  }, [item?.id]);
-  
-  if (!item) {
-    return (
-      <div className="rounded-2xl border bg-white p-8 shadow-sm text-center">
-        <span className="text-5xl mb-4 block">{mode === MODES.WASH ? "🧼" : "🔧"}</span>
-        <div className="text-corp-text-muted text-lg">Оберіть товар зі списку</div>
-        <div className="text-corp-text-muted text-sm mt-1">Тут з'являться деталі обробки</div>
-      </div>
-    );
-  }
-
-  const totalQty = item.qty || 1;
-  const processedQty = item.processed_qty || 0;
-  const remainingQty = totalQty - processedQty;
-  const progress = totalQty > 0 ? (processedQty / totalQty) * 100 : 0;
-  const hasMultiple = totalQty > 1;
-  
-  const statusMap = {
-    pending: { label: "Очікує", tone: "warn" },
-    in_progress: { label: hasMultiple ? `В роботі (${processedQty}/${totalQty})` : "В роботі", tone: "info" },
-    completed: { label: "✓ Виконано", tone: "ok" },
-    failed: { label: "Невдало", tone: "danger" },
-  };
-  const s = statusMap[item.processing_status] || statusMap.pending;
-  
-  // Пріоритет: фото товару з галереї > фото пошкодження
-  const rawPhoto = item.product_image || item.photo_url;
-  const photoUrl = rawPhoto && !rawPhoto.startsWith('http') ? `${BACKEND_URL}/${rawPhoto}` : rawPhoto;
-  const isCompleted = item.processing_status === 'completed' || remainingQty <= 0;
-
-  return (
-    <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className={cls("px-5 py-4", isCompleted ? "bg-emerald-50" : "bg-slate-50")}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-4">
-            {photoUrl ? (
-              <img src={photoUrl} alt={item.product_name} className="w-20 h-20 rounded-xl object-cover border border-corp-border" onError={(e) => { e.target.style.display = 'none'; }} />
-            ) : (
-              <div className="w-20 h-20 rounded-xl bg-corp-border flex items-center justify-center text-3xl">📦</div>
-            )}
-            <div>
-              <div className="text-xl font-bold text-corp-text-dark">{item.product_name}</div>
-              <div className="mt-1 text-sm text-corp-text-muted">SKU: {item.sku || "—"}</div>
-              <div className="mt-0.5 text-sm text-corp-text-muted">Замовлення: {item.order_number || "—"}</div>
-            </div>
-          </div>
-          <Badge tone={s.tone}>{s.label}</Badge>
-        </div>
-        
-        {/* Quantity Progress Bar */}
-        {hasMultiple && (
-          <div className="mt-4">
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-corp-text-muted">Оброблено</span>
-              <span className="font-bold">{processedQty} / {totalQty} шт.</span>
-            </div>
-            <div className="h-2.5 rounded-full bg-corp-border">
-              <div 
-                className={cls("h-full rounded-full transition-all", progress >= 100 ? "bg-emerald-500" : "bg-blue-500")}
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            {remainingQty > 0 && (
-              <div className="mt-1 text-xs text-amber-600">⏳ Залишилось: {remainingQty} шт.</div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Info Grid */}
-      <div className="p-5 border-b">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Тип пошкодження</div>
-            <div className="font-medium mt-1">{item.damage_type || item.category || "—"}</div>
-          </div>
-          <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Відправлено</div>
-            <div className="font-medium mt-1">{fmtDate(item.sent_to_processing_at)}</div>
-          </div>
-          <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Кількість</div>
-            <div className="font-medium mt-1">{totalQty} шт.</div>
-          </div>
-          <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Вартість</div>
-            <div className="font-medium mt-1">{money(item.fee)} {hasMultiple && <span className="text-xs text-corp-text-muted">({money(item.fee_per_item || (item.fee / totalQty))}/шт)</span>}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Notes */}
-      {item.note && (
-        <div className="px-5 py-3 border-b bg-amber-50">
-          <div className="text-xs text-amber-700 font-medium mb-1">Примітка</div>
-          <div className="text-sm text-amber-800">{item.note}</div>
-        </div>
-      )}
-
-      {/* Processing Notes */}
-      {item.processing_notes && (
-        <div className="px-5 py-3 border-b">
-          <div className="text-xs text-corp-text-muted font-medium mb-1">Історія обробки</div>
-          <div className="text-sm text-corp-text-main whitespace-pre-wrap max-h-32 overflow-y-auto">{item.processing_notes}</div>
-        </div>
-      )}
-
-      {/* Actions */}
-      {!isCompleted && remainingQty > 0 && (
-        <div className="p-5 bg-corp-bg-page space-y-4">
-          {/* Quantity selector for partial completion */}
-          {hasMultiple && (
-            <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-semibold text-blue-800">Скільки одиниць оброблено?</label>
-                <span className="text-xs text-blue-600">Залишилось: {remainingQty} шт.</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setCompletedQty(Math.max(1, completedQty - 1))}
-                  className="w-10 h-10 rounded-lg border bg-white text-lg font-bold hover:bg-slate-50"
-                  disabled={completedQty <= 1}
-                >−</button>
-                <input
-                  type="number"
-                  min={1}
-                  max={remainingQty}
-                  value={completedQty}
-                  onChange={(e) => setCompletedQty(Math.min(remainingQty, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className="w-20 text-center text-xl font-bold border rounded-lg py-2"
-                />
-                <button
-                  onClick={() => setCompletedQty(Math.min(remainingQty, completedQty + 1))}
-                  className="w-10 h-10 rounded-lg border bg-white text-lg font-bold hover:bg-slate-50"
-                  disabled={completedQty >= remainingQty}
-                >+</button>
-                <button
-                  onClick={() => setCompletedQty(remainingQty)}
-                  className="px-3 py-2 text-sm bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200"
-                >Всі ({remainingQty})</button>
-              </div>
-            </div>
-          )}
-          
-          <div>
-            <label className="text-sm font-medium text-corp-text-main">Коментар</label>
-            <textarea
-              className="mt-2 w-full rounded-xl border border-corp-border p-3 text-sm outline-none focus:ring-2 focus:ring-corp-primary/20"
-              placeholder="Опис виконаних робіт..."
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <PrimaryBtn variant="success" onClick={() => onComplete(item, notes, hasMultiple ? completedQty : null)}>
-              ✓ {hasMultiple ? `Оброблено ${completedQty} шт.` : "Завершити обробку"}
-            </PrimaryBtn>
-            <GhostBtn onClick={() => onMarkFailed(item, notes)}>
-              ✗ Невдало
-            </GhostBtn>
-            {mode === MODES.RESTORE && (
-              <GhostBtn onClick={() => alert("Функція оцінки в розробці")}>
-                ₴ Оцінка
-              </GhostBtn>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Completed state */}
-      {(isCompleted || remainingQty <= 0) && (
-        <div className="p-5 bg-emerald-50">
-          <div className="flex items-center gap-2 text-emerald-700">
-            <span className="text-2xl">✓</span>
-            <div>
-              <div className="font-semibold">Обробку повністю завершено</div>
-              <div className="text-sm">{fmtDate(item.returned_from_processing_at)} • {totalQty} шт. доступні для оренди</div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ----------------------------- Laundry Queue Item -----------------------------
-function LaundryQueueItem({ item, selected, onSelect, onAddToBatch }) {
-  return (
-    <div className={cls(
-      "rounded-xl border bg-white p-3 transition",
-      selected && "ring-2 ring-corp-primary border-corp-primary"
-    )}>
-      <div className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onSelect}
-          className="mt-1 h-4 w-4 rounded border-gray-300"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-corp-text-dark truncate">{item.product_name}</div>
-          <div className="mt-0.5 text-xs text-corp-text-muted">
-            SKU: {item.sku} • {item.order_number || "—"} • {item.condition_before || "dirty"}
-          </div>
-        </div>
-        <Badge tone="warn">Черга</Badge>
-      </div>
-      <div className="mt-2 flex gap-2">
-        <button
-          onClick={() => onAddToBatch(item)}
-          className="text-xs px-2 py-1 rounded-lg bg-blue-100 text-blue-800 hover:bg-blue-200"
-        >
-          + В партію
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ----------------------------- Laundry Batch Card -----------------------------
-function LaundryBatchCard({ batch, active, onClick }) {
-  const statusMap = {
-    sent: { label: "Відправлено", tone: "info" },
-    partial_return: { label: "Часткове", tone: "warn" },
-    returned: { label: "Повернуто", tone: "ok" },
-    completed: { label: "✓ Закрито", tone: "ok" },
-  };
-  const s = statusMap[batch.status] || { label: batch.status, tone: "neutral" };
-  const progress = batch.total_items > 0 ? (batch.returned_items / batch.total_items) * 100 : 0;
-
-  return (
-    <button
-      onClick={onClick}
-      className={cls(
-        "w-full rounded-2xl border bg-white p-4 text-left shadow-sm hover:shadow transition",
-        active && "ring-2 ring-corp-primary/30 border-corp-primary/30"
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="font-bold text-corp-text-dark">{batch.batch_number || batch.id}</div>
-          <div className="mt-1 text-sm text-corp-text-muted">{batch.laundry_company}</div>
-        </div>
-        <Badge tone={s.tone}>{s.label}</Badge>
-      </div>
-      
-      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-        <div>
-          <span className="text-corp-text-muted">Відправлено:</span>{" "}
-          <span className="font-medium">{fmtDate(batch.sent_date)}</span>
-        </div>
-        <div>
-          <span className="text-corp-text-muted">Очікується:</span>{" "}
-          <span className="font-medium">{fmtDate(batch.expected_return_date)}</span>
-        </div>
-      </div>
-      
-      {/* Progress */}
-      <div className="mt-3">
-        <div className="flex justify-between text-xs mb-1">
-          <span className="text-corp-text-muted">Прийнято</span>
-          <span className="font-medium">{batch.returned_items} / {batch.total_items}</span>
-        </div>
-        <div className="h-2 rounded-full bg-corp-border">
-          <div 
-            className={cls("h-full rounded-full transition-all", progress >= 100 ? "bg-emerald-500" : "bg-blue-500")}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-      
-      {batch.cost > 0 && (
-        <div className="mt-2 text-sm">
-          <span className="text-corp-text-muted">Вартість:</span>{" "}
-          <span className="font-bold">{money(batch.cost)}</span>
-        </div>
-      )}
-    </button>
-  );
-}
-
-// ----------------------------- Laundry Batch Detail Panel -----------------------------
-function LaundryBatchDetailPanel({ batch, items, onReceiveItems, onCloseBatch, onRefresh }) {
-  const [selectedItems, setSelectedItems] = useState([]);
-  
-  if (!batch) {
-    return (
-      <div className="rounded-2xl border bg-white p-8 shadow-sm text-center">
-        <span className="text-5xl mb-4 block">🧺</span>
-        <div className="text-corp-text-muted text-lg">Оберіть партію зі списку</div>
-        <div className="text-corp-text-muted text-sm mt-1">Тут з'являться деталі партії</div>
-      </div>
-    );
-  }
-
-  const statusMap = {
-    sent: { label: "Відправлено", tone: "info" },
-    partial_return: { label: "Часткове повернення", tone: "warn" },
-    returned: { label: "Повернуто", tone: "ok" },
-    completed: { label: "✓ Закрито", tone: "ok" },
-  };
-  const s = statusMap[batch.status] || { label: batch.status, tone: "neutral" };
-  const isCompleted = batch.status === 'completed';
-  const hasItems = batch.total_items > 0;
-  const allReturned = hasItems && batch.returned_items >= batch.total_items;
-
-  const toggleItem = (itemId) => {
-    setSelectedItems(prev => 
-      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
-    );
-  };
-
-  const selectAllUnreturned = () => {
-    const unreturned = items.filter(i => (i.returned_quantity || 0) < i.quantity).map(i => i.id);
-    setSelectedItems(unreturned);
-  };
-
-  const handleReceive = () => {
-    if (selectedItems.length === 0) {
-      alert("Оберіть товари для прийому");
-      return;
-    }
-    onReceiveItems(batch, selectedItems, items);
-    setSelectedItems([]);
-  };
-
-  return (
-    <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className={cls("px-5 py-4", isCompleted ? "bg-emerald-50" : allReturned ? "bg-blue-50" : "bg-slate-50")}>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-xl font-bold text-corp-text-dark">{batch.batch_number || batch.id}</div>
-            <div className="mt-1 text-sm text-corp-text-muted">{batch.laundry_company}</div>
-          </div>
-          <Badge tone={s.tone}>{s.label}</Badge>
-        </div>
-      </div>
-
-      {/* Info Grid */}
-      <div className="p-5 border-b">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Відправлено</div>
-            <div className="font-medium mt-1">{fmtDate(batch.sent_date)}</div>
-          </div>
-          <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Очікується</div>
-            <div className="font-medium mt-1">{fmtDate(batch.expected_return_date)}</div>
-          </div>
-          <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Прийнято</div>
-            <div className="font-medium mt-1">{batch.returned_items} / {batch.total_items}</div>
-          </div>
-          <div className="rounded-xl border bg-slate-50 p-3">
-            <div className="text-xs text-corp-text-muted">Вартість</div>
-            <div className="font-medium mt-1">{money(batch.cost)}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Items List */}
-      <div className="p-5 border-b">
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-semibold">Товари партії</div>
-          {!isCompleted && !allReturned && (
-            <button
-              onClick={selectAllUnreturned}
-              className="text-xs px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200"
-            >
-              ✓ Вибрати всі неприйняті
-            </button>
-          )}
-        </div>
-        
-        <div className="space-y-2 max-h-[300px] overflow-y-auto">
-          {items.map(item => {
-            const isFullyReturned = (item.returned_quantity || 0) >= item.quantity;
-            const isSelected = selectedItems.includes(item.id);
-            
-            return (
-              <div 
-                key={item.id}
-                className={cls(
-                  "rounded-xl border p-3 transition",
-                  isFullyReturned ? "bg-emerald-50 border-emerald-200" : 
-                  isSelected ? "bg-blue-50 border-blue-300 ring-2 ring-blue-200" : "bg-white"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  {!isCompleted && !isFullyReturned && (
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleItem(item.id)}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                  )}
-                  {isFullyReturned && (
-                    <span className="text-emerald-500 text-lg">✓</span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium truncate">{item.product_name}</div>
-                    <div className="text-xs text-corp-text-muted">
-                      SKU: {item.sku} • {item.condition_before || "—"} → {item.condition_after || "—"}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">
-                      {item.returned_quantity || 0} / {item.quantity}
-                    </div>
-                    <div className="text-xs text-corp-text-muted">прийнято</div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Actions */}
-      {!isCompleted && (
-        <div className="p-5 bg-corp-bg-page">
-          <div className="flex flex-wrap gap-2">
-            {!allReturned && items.length > 0 && (
-              <PrimaryBtn variant="blue" onClick={handleReceive} disabled={selectedItems.length === 0}>
-                📥 Прийняти вибрані ({selectedItems.length})
-              </PrimaryBtn>
-            )}
-            {allReturned && hasItems && (
-              <PrimaryBtn variant="success" onClick={() => onCloseBatch(batch)}>
-                ✓ Закрити партію
-              </PrimaryBtn>
-            )}
-            {!hasItems && (
-              <div className="text-sm text-amber-600">
-                ⚠️ Партія не має товарів
-              </div>
-            )}
-            <GhostBtn onClick={onRefresh}>🔄 Оновити</GhostBtn>
-          </div>
-          
-          {!allReturned && items.length > 0 && (
-            <div className="mt-3 text-sm text-corp-text-muted">
-              💡 Виберіть товари які повернулись з хімчистки та натисніть "Прийняти"
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Completed state */}
-      {isCompleted && (
-        <div className="p-5 bg-emerald-50">
-          <div className="flex items-center gap-2 text-emerald-700">
-            <span className="text-2xl">✓</span>
-            <div>
-              <div className="font-semibold">Партію закрито</div>
-              <div className="text-sm">Всі товари прийняті та доступні для оренди</div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ----------------------------- Damage Item Row (for Main tab detail) -----------------------------
-function DamageItemRow({ item, onSendTo }) {
-  const getProcessingBadge = () => {
-    if (!item.processing_type || item.processing_type === 'none') return null;
-    const map = {
-      wash: { label: "🧼 Мийка", tone: "info" },
-      restoration: { label: "🔧 Реставрація", tone: "warn" },
-      laundry: { label: "🧺 Хімчистка", tone: "ok" },
-      returned_to_stock: { label: "📦 На складі", tone: "ok" },
-    };
-    const m = map[item.processing_type] || { label: item.processing_type, tone: "neutral" };
-    return <Badge tone={m.tone}>{m.label}</Badge>;
-  };
-
-  const getStatusBadge = () => {
-    if (!item.processing_status) return null;
-    const map = {
-      pending: { label: "Очікує", tone: "warn" },
-      in_progress: { label: "В роботі", tone: "info" },
-      completed: { label: "✓ Виконано", tone: "ok" },
-    };
-    const m = map[item.processing_status] || { label: item.processing_status, tone: "neutral" };
-    return <Badge tone={m.tone}>{m.label}</Badge>;
-  };
-
-  const isAssigned = item.processing_type && item.processing_type !== 'none';
-  const isTotalLoss = item.damage_code === 'TOTAL_LOSS' || item.damage_type === 'Повна втрата';
-  
-  // Пріоритет: фото товару з галереї > фото пошкодження
-  const rawPhoto = item.product_image || item.photo_url;
-  const photoUrl = rawPhoto && !rawPhoto.startsWith('http') ? `${BACKEND_URL}/${rawPhoto}` : rawPhoto;
-
-  return (
-    <div className={cls(
-      "rounded-xl border p-3 transition",
-      isTotalLoss ? "bg-red-50 border-red-200" :
-      isAssigned ? "bg-corp-bg-page border-corp-border" : "bg-amber-50 border-amber-200"
-    )}>
-      <div className="flex items-start gap-3">
-        <div className="shrink-0">
-          {photoUrl ? (
-            <img src={photoUrl} alt={item.product_name} className={cls("w-16 h-16 rounded-lg object-cover border", isTotalLoss ? "border-red-300 grayscale" : "border-corp-border")} onError={(e) => { e.target.style.display = 'none'; }} />
-          ) : (
-            <div className={cls("w-16 h-16 rounded-lg flex items-center justify-center text-2xl", isTotalLoss ? "bg-red-200" : "bg-corp-border")}>
-              {isTotalLoss ? "❌" : "📦"}
-            </div>
-          )}
-        </div>
-        
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className={cls("font-semibold truncate", isTotalLoss ? "text-red-800" : "text-corp-text-dark")}>{item.product_name}</div>
-              <div className="mt-0.5 text-xs text-corp-text-muted">
-                SKU: {item.sku || "—"} • {item.damage_type || "Пошкодження"}
-              </div>
-            </div>
-            <div className="text-right shrink-0">
-              <div className={cls("font-bold", isTotalLoss ? "text-red-700" : "text-corp-text-dark")}>{money(item.fee)}</div>
-              <div className="text-xs text-corp-text-muted">{item.severity || "low"}</div>
-            </div>
-          </div>
-          
-          {isTotalLoss && (
-            <div className="mt-2 inline-flex items-center gap-1 rounded-lg bg-red-100 px-2.5 py-1 text-xs font-bold text-red-800">
-              🔴 ПОВНА ВТРАТА — товар списано
-            </div>
-          )}
-          
-          {item.note && (
-            <div className="mt-1 text-xs text-corp-text-main italic truncate">"{item.note}"</div>
-          )}
-          
-          {isAssigned && (
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-corp-text-muted">Відправлено:</span>
-              {getProcessingBadge()}
-              {getStatusBadge()}
-            </div>
-          )}
-          
-          {!isAssigned && !isTotalLoss && (
-            <div className="mt-2 pt-2 border-t border-amber-200 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-amber-700">Відправити на:</span>
-              <button onClick={() => onSendTo(item, "wash")} className="inline-flex items-center gap-1 rounded-lg bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-blue-200 transition">🧼 Мийку</button>
-              <button onClick={() => onSendTo(item, "restoration")} className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-200 transition">🔧 Реставрацію</button>
-              <button onClick={() => onSendTo(item, "laundry")} className="inline-flex items-center gap-1 rounded-lg bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-200 transition">🧺 Хімчистку</button>
-              <button onClick={() => onSendTo(item, "return_to_stock")} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 transition">📦 На склад</button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ----------------------------- Order Detail Panel (for Main tab) -----------------------------
-function OrderDetailPanel({ orderCase, items, loading, onSendTo, onRefresh, onDeductFromDeposit }) {
-  if (!orderCase) {
-    return (
-      <div className="rounded-2xl border bg-white p-8 shadow-sm text-center">
-        <span className="text-5xl mb-4 block">📋</span>
-        <div className="text-corp-text-muted text-lg">Оберіть кейс зі списку</div>
-        <div className="text-corp-text-muted text-sm mt-1">Тут з'являться деталі пошкоджень</div>
-      </div>
-    );
-  }
-
-  const isPaid = orderCase.is_paid;
-  const pendingCount = items.filter(i => !i.processing_type || i.processing_type === 'none').length;
-  const assignedCount = items.filter(i => i.processing_type && i.processing_type !== 'none').length;
-  
-  const amountDue = orderCase.damage_due || 0;
-  const depositAvailable = orderCase.deposit_available || 0;
-  const depositCurrency = orderCase.deposit_currency || 'UAH';
-  const canDeductFromDeposit = !isPaid && amountDue > 0 && depositAvailable > 0 && depositCurrency === 'UAH';
-
-  return (
-    <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-      <div className={cls("px-5 py-4", isPaid ? "bg-emerald-50" : "bg-rose-50")}>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-bold">#{orderCase.order_number}</span>
-              {isPaid ? <Badge tone="ok">✓ Сплачено</Badge> : <Badge tone="danger">Очікує {money(amountDue)}</Badge>}
-            </div>
-            <div className="mt-1 text-sm">{orderCase.customer_name}</div>
-            {orderCase.customer_phone && <div className="text-xs text-corp-text-muted">{orderCase.customer_phone}</div>}
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold">{money(orderCase.total_fee)}</div>
-            {orderCase.damage_paid > 0 && !isPaid && <div className="text-xs text-emerald-600">Сплачено: {money(orderCase.damage_paid)}</div>}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 divide-x border-b">
-        <div className="p-3 text-center">
-          <div className="text-2xl font-bold text-corp-text-dark">{items.length}</div>
-          <div className="text-xs text-corp-text-muted">Всього</div>
-        </div>
-        <div className="p-3 text-center">
-          <div className="text-2xl font-bold text-amber-600">{pendingCount}</div>
-          <div className="text-xs text-corp-text-muted">Не розподілено</div>
-        </div>
-        <div className="p-3 text-center">
-          <div className="text-2xl font-bold text-emerald-600">{assignedCount}</div>
-          <div className="text-xs text-corp-text-muted">В роботі</div>
-        </div>
-      </div>
-
-      <div className="p-4 max-h-[50vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-semibold text-corp-text-main">Пошкоджені позиції</span>
-          <GhostBtn onClick={onRefresh} className="text-xs py-1.5">🔄 Оновити</GhostBtn>
-        </div>
-        
-        {loading ? (
-          <div className="text-center py-8 text-corp-text-muted">Завантаження...</div>
-        ) : items.length === 0 ? (
-          <div className="text-center py-8 text-corp-text-muted">Немає позицій</div>
-        ) : (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <DamageItemRow key={item.id} item={item} onSendTo={onSendTo} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {!isPaid && (
-        <div className="px-4 py-3 bg-corp-bg-page border-t space-y-2">
-          {canDeductFromDeposit && (
-            <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-200">
-              <div>
-                <div className="text-xs text-amber-700">Доступна застава:</div>
-                <div className="font-bold text-amber-800">{money(depositAvailable)}</div>
-              </div>
-              <button onClick={() => onDeductFromDeposit(orderCase, Math.min(amountDue, depositAvailable))} className="inline-flex items-center gap-2 rounded-xl bg-amber-500 text-white px-4 py-2 text-sm font-semibold hover:bg-amber-600 transition">
-                💳 Вирахувати із застави
-              </button>
-            </div>
-          )}
-          
-          {!isPaid && depositAvailable > 0 && depositCurrency !== 'UAH' && (
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-600">
-              ⚠️ Застава в {depositCurrency} — вирахування недоступне
-            </div>
-          )}
-          
-          <a href={`/finance?order=${orderCase.order_id}`} className="inline-flex items-center justify-center w-full rounded-xl bg-corp-primary text-white px-4 py-2.5 text-sm font-semibold hover:bg-corp-primary-dark transition">
-            💰 Перейти до оплати у фінансовий кабінет
-          </a>
-        </div>
-      )}
+          >
+            {title}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1116,12 +179,12 @@ export default function DamageHubApp() {
   }, [selectedBatchId, loadBatchItems]);
 
   // Handlers
-  const handleSendTo = async (item, processingType) => {
+  const handleSendTo = async (itemId, processingType) => {
     try {
       const endpoint = { wash: "send-to-wash", restoration: "send-to-restoration", laundry: "send-to-laundry", return_to_stock: "return-to-stock" }[processingType];
       if (!endpoint) return;
       
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/${endpoint}`, {
+      await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/${endpoint}`, {
         method: "POST",
         body: JSON.stringify({ notes: processingType === "return_to_stock" ? "Повернуто на склад без обробки" : "Відправлено з кабінету шкоди" })
       });
@@ -1137,14 +200,14 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleComplete = async (item, notes, completedQty = null) => {
+  const handleComplete = async (itemId, completedQty, notes) => {
     try {
       const body = { notes: notes || "Обробку завершено" };
-      if (completedQty !== null) {
+      if (completedQty !== null && completedQty !== undefined) {
         body.completed_qty = completedQty;
       }
       
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/complete-processing`, {
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/complete-processing`, {
         method: "POST",
         body: JSON.stringify(body)
       });
@@ -1165,11 +228,11 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleMarkFailed = async (item, notes) => {
+  const handleMarkFailed = async (itemId) => {
     try {
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/mark-failed`, {
+      await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/mark-failed`, {
         method: "POST",
-        body: JSON.stringify({ notes: notes || "Обробка невдала" })
+        body: JSON.stringify({ notes: "Обробка невдала" })
       });
       await loadWashItems();
       await loadRestoreItems();
@@ -1179,12 +242,13 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleDeductFromDeposit = async (orderCase, amount) => {
+  const handleDeductFromDeposit = async (orderCase) => {
     if (!orderCase.deposit_id) {
       alert("Депозит не знайдено для цього замовлення");
       return;
     }
     
+    const amount = orderCase.damage_due;
     if (!window.confirm(`Вирахувати ${money(amount)} із застави для замовлення #${orderCase.order_number}?`)) return;
     
     try {
@@ -1203,9 +267,12 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleReceiveLaundryItems = async (batch, selectedItemIds, allItems) => {
+  const handleReceiveLaundryItems = async (batchNumber, selectedItemIds) => {
     try {
-      const itemsToReturn = allItems.filter(i => selectedItemIds.includes(i.id)).map(i => ({
+      const batch = laundryBatches.find(b => (b.batch_number || b.id) === batchNumber);
+      if (!batch) return;
+      
+      const itemsToReturn = batchItems.filter(i => selectedItemIds.includes(i.id)).map(i => ({
         item_id: i.id,
         returned_quantity: i.quantity - (i.returned_quantity || 0),
         condition_after: "clean",
@@ -1290,13 +357,10 @@ export default function DamageHubApp() {
     // Apply status filter for main tab
     if (statusFilter !== "all" && mode === MODES.ALL) {
       if (statusFilter === "pending") {
-        // Очікують - є товари без призначення або не сплачено
         result = result.filter(c => (c.pending_assignment || 0) > 0 || !c.is_paid);
       } else if (statusFilter === "in_progress") {
-        // В роботі - товари відправлені на обробку, але не все завершено
         result = result.filter(c => (c.pending_assignment || 0) === 0 && !c.is_paid && (c.completed_count || 0) < c.items_count);
       } else if (statusFilter === "completed") {
-        // Виконані - все оброблено і сплачено
         result = result.filter(c => c.is_paid);
       }
     }
@@ -1349,7 +413,6 @@ export default function DamageHubApp() {
     const activeBatches = laundryBatches.filter(b => b.status !== 'completed').length;
     const partialBatches = laundryBatches.filter(b => b.status === 'partial_return').length;
     
-    // Stats for main tab (order cases)
     const casesPending = orderCases.filter(c => (c.pending_assignment || 0) > 0 || !c.is_paid).length;
     const casesInProgress = orderCases.filter(c => (c.pending_assignment || 0) === 0 && !c.is_paid && (c.completed_count || 0) < c.items_count).length;
     const casesCompleted = orderCases.filter(c => c.is_paid).length;
@@ -1536,26 +599,15 @@ export default function DamageHubApp() {
                       </GhostBtn>
                     </div>
                     <div className="space-y-2 max-h-[30vh] overflow-y-auto">
-                      {laundryQueue.map((item) => {
-                        const rawPhoto = item.product_image;
-                        const photoUrl = rawPhoto && !rawPhoto.startsWith('http') ? `${BACKEND_URL}/${rawPhoto}` : rawPhoto;
-                        return (
-                          <div key={item.id} className="rounded-xl border border-amber-200 bg-amber-50 p-2">
-                            <div className="flex items-center gap-2">
-                              {photoUrl ? (
-                                <img src={photoUrl} alt={item.product_name} className="w-10 h-10 rounded-lg object-cover border" onError={(e) => { e.target.style.display = 'none'; }} />
-                              ) : (
-                                <div className="w-10 h-10 rounded-lg bg-amber-200 flex items-center justify-center text-sm">🧺</div>
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <div className="font-medium text-sm truncate">{item.product_name}</div>
-                                <div className="text-xs text-amber-700">{item.sku} • {item.remaining_qty || item.qty} шт.</div>
-                              </div>
-                              <Badge tone="warn">Очікує</Badge>
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {laundryQueue.map((item) => (
+                        <LaundryQueueItem 
+                          key={item.id} 
+                          item={item} 
+                          selected={false}
+                          onSelect={() => {}}
+                          onAddToBatch={() => handleAddToBatch([item.id])} 
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
@@ -1593,7 +645,7 @@ export default function DamageHubApp() {
 
             {mode === MODES.WASH && (
               <ProcessingDetailPanel
-                mode={MODES.WASH}
+                mode="wash"
                 item={selectedWashItem}
                 onComplete={handleComplete}
                 onMarkFailed={handleMarkFailed}
@@ -1603,7 +655,7 @@ export default function DamageHubApp() {
 
             {mode === MODES.RESTORE && (
               <ProcessingDetailPanel
-                mode={MODES.RESTORE}
+                mode="restore"
                 item={selectedRestoreItem}
                 onComplete={handleComplete}
                 onMarkFailed={handleMarkFailed}

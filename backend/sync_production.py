@@ -100,9 +100,12 @@ def create_thumbnail(image_path: str, size: tuple, output_subdir: str) -> str:
 
 def download_image(url: str) -> bytes:
     """Скачати зображення з URL"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
     for attempt in range(MAX_RETRIES):
         try:
-            response = requests.get(url, timeout=IMAGE_TIMEOUT, stream=True)
+            response = requests.get(url, timeout=IMAGE_TIMEOUT, headers=headers, stream=True)
             response.raise_for_status()
             return response.content
         except requests.exceptions.RequestException as e:

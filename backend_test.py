@@ -107,205 +107,127 @@ class CatalogAvailabilityTester:
             self.log(f"❌ Authentication exception: {str(e)}", "ERROR")
             return False
 
-    def test_get_not_returned_items(self, order_id: int) -> Dict[str, Any]:
-        """Test 1: Get items for partial return"""
+    def test_catalog_availability_filter(self, availability: str, expected_min_items: int = 0, expected_items: List[str] = None) -> Dict[str, Any]:
+        """Test catalog availability filter without category selection"""
         try:
-            self.log(f"🧪 Test 1: Getting not-returned items for order {order_id}...")
+            self.log(f"🧪 Testing availability filter: {availability}...")
             
-            response = self.session.get(f"{self.base_url}/partial-returns/order/{order_id}/not-returned")
+            # Test the API endpoint
+            params = {
+                "availability": availability,
+                "limit": 50
+            }
+            
+            response = self.session.get(f"{self.base_url}/catalog/items-by-category", params=params)
             
             if response.status_code == 200:
                 data = response.json()
-                items = data if isinstance(data, list) else data.get('items', [])
+                items = data.get('items', [])
+                stats = data.get('stats', {})
                 
-                self.log(f"✅ Retrieved {len(items)} not-returned items for order {order_id}")
+                self.log(f"✅ API Response successful for availability={availability}")
+                self.log(f"   Items returned: {len(items)}")
+                self.log(f"   Stats: {stats}")
                 
+                # Check if we have expected minimum items
+                has_min_items = len(items) >= expected_min_items
+                
+                # Check for specific expected items
+                found_expected_items = []
+                if expected_items:
+                    for item in items:
+                        sku = item.get('sku', '')
+                        name = item.get('name', '')
+                        for expected in expected_items:
+                            if expected in sku or expected in name:
+                                found_expected_items.append(f"{sku} - {name}")
+                
+                # Log item details
                 if items:
-                    # Validate item structure
-                    required_fields = ['product_id', 'sku', 'name', 'rented_qty', 'full_price', 'daily_rate', 'loss_amount']
-                    valid_items = []
+                    self.log(f"   📋 Items found:")
+                    for i, item in enumerate(items[:5]):  # Show first 5 items
+                        sku = item.get('sku', 'N/A')
+                        name = item.get('name', 'N/A')
+                        product_state = item.get('product_state', 'N/A')
+                        self.log(f"      {i+1}. {sku} - {name} (state: {product_state})")
                     
-                    for i, item in enumerate(items):
-                        self.log(f"   Item {i+1}:")
-                        self.log(f"      Product ID: {item.get('product_id')}")
-                        self.log(f"      SKU: {item.get('sku')}")
-                        self.log(f"      Name: {item.get('name')}")
-                        self.log(f"      Rented Qty: {item.get('rented_qty')}")
-                        self.log(f"      Daily Rate: {item.get('daily_rate')}")
-                        
-                        # Check if all required fields are present
-                        has_all_fields = all(field in item for field in required_fields)
-                        daily_rate = item.get('daily_rate', 0)
-                        has_positive_rate = daily_rate > 0
-                        
-                        if has_all_fields and has_positive_rate:
-                            valid_items.append(item)
-                            self.log(f"      ✅ Valid item with daily_rate: {daily_rate}")
-                        else:
-                            missing_fields = [field for field in required_fields if field not in item]
-                            if missing_fields:
-                                self.log(f"      ❌ Missing fields: {missing_fields}")
-                            if not has_positive_rate:
-                                self.log(f"      ❌ Invalid daily_rate: {daily_rate} (should be > 0)")
-                    
-                    return {
-                        "success": True,
-                        "order_id": order_id,
-                        "items_count": len(items),
-                        "valid_items_count": len(valid_items),
-                        "items": items,
-                        "valid_items": valid_items
-                    }
+                    if len(items) > 5:
+                        self.log(f"      ... and {len(items) - 5} more items")
                 else:
-                    self.log(f"⚠️ No not-returned items found for order {order_id}", "WARNING")
-                    return {
-                        "success": True,
-                        "order_id": order_id,
-                        "items_count": 0,
-                        "valid_items_count": 0,
-                        "items": [],
-                        "valid_items": []
-                    }
+                    self.log(f"   ⚠️ No items found for availability={availability}")
+                
+                return {
+                    "success": True,
+                    "availability": availability,
+                    "items_count": len(items),
+                    "items": items,
+                    "stats": stats,
+                    "has_min_items": has_min_items,
+                    "expected_min_items": expected_min_items,
+                    "found_expected_items": found_expected_items,
+                    "expected_items": expected_items or []
+                }
             else:
-                self.log(f"❌ Get not-returned items failed for order {order_id}: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "order_id": order_id, "status_code": response.status_code, "response_text": response.text}
+                self.log(f"❌ API failed for availability={availability}: {response.status_code} - {response.text}", "ERROR")
+                return {
+                    "success": False,
+                    "availability": availability,
+                    "status_code": response.status_code,
+                    "response_text": response.text
+                }
                 
         except Exception as e:
-            self.log(f"❌ Exception getting not-returned items for order {order_id}: {str(e)}", "ERROR")
-            return {"success": False, "order_id": order_id, "error": str(e)}
-
-    def test_process_partial_return(self, order_id: int, item_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Test 2: Process partial return with EXTEND action"""
-        try:
-            self.log(f"🧪 Test 2: Processing partial return for order {order_id}...")
-            
-            # Prepare request body
-            request_body = {
-                "items": [{
-                    "product_id": item_data.get('product_id'),
-                    "sku": item_data.get('sku'),
-                    "name": item_data.get('name'),
-                    "rented_qty": item_data.get('rented_qty', 1),
-                    "returned_qty": 0,
-                    "not_returned_qty": 1,
-                    "action": "extend",
-                    "daily_rate": 100,
-                    "adjusted_daily_rate": 100
-                }]
+            self.log(f"❌ Exception testing availability={availability}: {str(e)}", "ERROR")
+            return {
+                "success": False,
+                "availability": availability,
+                "error": str(e)
             }
+
+    def test_catalog_without_filters(self) -> Dict[str, Any]:
+        """Test catalog without any filters to get baseline stats"""
+        try:
+            self.log("🧪 Testing catalog without filters (baseline)...")
             
-            self.log(f"   Request body: {json.dumps(request_body, indent=2)}")
-            
-            response = self.session.post(
-                f"{self.base_url}/partial-returns/order/{order_id}/process",
-                json=request_body
-            )
+            params = {"limit": 50}
+            response = self.session.get(f"{self.base_url}/catalog/items-by-category", params=params)
             
             if response.status_code == 200:
                 data = response.json()
-                self.log(f"✅ Partial return processed successfully for order {order_id}")
-                self.log(f"   Response: {json.dumps(data, indent=2)}")
+                items = data.get('items', [])
+                stats = data.get('stats', {})
+                
+                self.log(f"✅ Baseline catalog API successful")
+                self.log(f"   Total items: {len(items)}")
+                self.log(f"   Stats: {stats}")
                 
                 return {
                     "success": True,
-                    "order_id": order_id,
-                    "response_data": data
+                    "items_count": len(items),
+                    "items": items,
+                    "stats": stats
                 }
             else:
-                self.log(f"❌ Process partial return failed for order {order_id}: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "order_id": order_id, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception processing partial return for order {order_id}: {str(e)}", "ERROR")
-            return {"success": False, "order_id": order_id, "error": str(e)}
-
-    def test_get_extensions(self, order_id: int) -> Dict[str, Any]:
-        """Test 3: Get extensions for order"""
-        try:
-            self.log(f"🧪 Test 3: Getting extensions for order {order_id}...")
-            
-            response = self.session.get(f"{self.base_url}/partial-returns/order/{order_id}/extensions")
-            
-            if response.status_code == 200:
-                data = response.json()
-                extensions = data if isinstance(data, list) else data.get('extensions', [])
-                
-                self.log(f"✅ Retrieved {len(extensions)} extensions for order {order_id}")
-                
-                if extensions:
-                    for i, extension in enumerate(extensions):
-                        extension_id = extension.get('id')
-                        product_id = extension.get('product_id')
-                        status = extension.get('status')
-                        daily_rate = extension.get('daily_rate')
-                        
-                        self.log(f"   Extension {i+1}:")
-                        self.log(f"      ID: {extension_id}")
-                        self.log(f"      Product ID: {product_id}")
-                        self.log(f"      Status: {status}")
-                        self.log(f"      Daily Rate: {daily_rate}")
-                        
-                        # Store the first extension ID for later use
-                        if i == 0 and extension_id:
-                            self.extension_id = extension_id
-                            self.log(f"      📝 Stored extension ID for completion test: {extension_id}")
-                
+                self.log(f"❌ Baseline catalog API failed: {response.status_code} - {response.text}", "ERROR")
                 return {
-                    "success": True,
-                    "order_id": order_id,
-                    "extensions_count": len(extensions),
-                    "extensions": extensions
+                    "success": False,
+                    "status_code": response.status_code,
+                    "response_text": response.text
                 }
-            else:
-                self.log(f"❌ Get extensions failed for order {order_id}: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "order_id": order_id, "status_code": response.status_code, "response_text": response.text}
                 
         except Exception as e:
-            self.log(f"❌ Exception getting extensions for order {order_id}: {str(e)}", "ERROR")
-            return {"success": False, "order_id": order_id, "error": str(e)}
-
-    def test_complete_extension(self, order_id: int, extension_id: int) -> Dict[str, Any]:
-        """Test 4: Complete extension (return item)"""
-        try:
-            self.log(f"🧪 Test 4: Completing extension {extension_id} for order {order_id}...")
-            
-            request_body = {
-                "days": 3,
-                "final_amount": 300
+            self.log(f"❌ Exception testing baseline catalog: {str(e)}", "ERROR")
+            return {
+                "success": False,
+                "error": str(e)
             }
-            
-            self.log(f"   Request body: {json.dumps(request_body, indent=2)}")
-            
-            response = self.session.post(
-                f"{self.base_url}/partial-returns/order/{order_id}/extensions/{extension_id}/complete",
-                json=request_body
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                self.log(f"✅ Extension completed successfully")
-                self.log(f"   Response: {json.dumps(data, indent=2)}")
-                
-                return {
-                    "success": True,
-                    "order_id": order_id,
-                    "extension_id": extension_id,
-                    "response_data": data
-                }
-            else:
-                self.log(f"❌ Complete extension failed: {response.status_code} - {response.text}", "ERROR")
-                return {"success": False, "order_id": order_id, "extension_id": extension_id, "status_code": response.status_code, "response_text": response.text}
-                
-        except Exception as e:
-            self.log(f"❌ Exception completing extension: {str(e)}", "ERROR")
-            return {"success": False, "order_id": order_id, "extension_id": extension_id, "error": str(e)}
 
-    def run_partial_returns_test(self):
-        """Run the complete Partial Returns API test as per review request"""
-        self.log("🚀 Starting Partial Returns API Test")
+    def run_catalog_availability_tests(self):
+        """Run the complete Catalog Availability Filters test as per review request"""
+        self.log("🚀 Starting Catalog Availability Filters Test")
         self.log("=" * 80)
-        self.log(f"Testing Partial Returns API functionality")
-        self.log("Test orders: 7219 (get items), 7220 (process returns)")
+        self.log("Testing Catalog Page availability filters functionality")
+        self.log("Key requirement: Filters should work WITHOUT category selection")
         self.log("=" * 80)
         
         # Step 1: Health check
@@ -322,112 +244,174 @@ class CatalogAvailabilityTester:
         all_tests_passed = True
         test_results = {}
         
-        # Test 1: Get items for partial return from order 7219
-        self.log(f"\n🔍 Test 1: Getting not-returned items from order {self.test_order_7219}...")
-        items_result = self.test_get_not_returned_items(self.test_order_7219)
-        test_results["get_items"] = items_result
+        # Test baseline (no filters)
+        self.log("\n🔍 Baseline Test: Getting catalog without filters...")
+        baseline_result = self.test_catalog_without_filters()
+        test_results["baseline"] = baseline_result
         
-        if not items_result.get("success", False):
-            self.log("❌ Failed to get not-returned items", "ERROR")
-            all_tests_passed = False
-        elif items_result.get("valid_items_count", 0) == 0:
-            self.log("❌ No valid items found for testing", "ERROR")
+        if not baseline_result.get("success", False):
+            self.log("❌ Baseline catalog test failed", "ERROR")
             all_tests_passed = False
         
-        # Get first valid item for processing
-        valid_items = items_result.get("valid_items", [])
-        first_item = valid_items[0] if valid_items else None
+        # Test 1: on_laundry filter (expected: TX201 - Плед білий)
+        self.log("\n🔍 Test 1: Testing availability=on_laundry filter...")
+        laundry_result = self.test_catalog_availability_filter(
+            availability="on_laundry",
+            expected_min_items=1,
+            expected_items=["TX201", "Плед білий"]
+        )
+        test_results["on_laundry"] = laundry_result
         
-        if not first_item:
-            self.log("❌ No valid item available for partial return processing", "ERROR")
+        if not laundry_result.get("success", False):
+            self.log("❌ on_laundry filter test failed", "ERROR")
             all_tests_passed = False
-            return False
-        
-        # Test 2: Process partial return with EXTEND action on order 7220
-        self.log(f"\n🔍 Test 2: Processing partial return for order {self.test_order_7220}...")
-        process_result = self.test_process_partial_return(self.test_order_7220, first_item)
-        test_results["process_return"] = process_result
-        
-        if not process_result.get("success", False):
-            self.log("❌ Failed to process partial return", "ERROR")
+        elif not laundry_result.get("has_min_items", False):
+            self.log("❌ on_laundry filter returned fewer items than expected", "ERROR")
             all_tests_passed = False
         
-        # Test 3: Get extensions for order 7220
-        self.log(f"\n🔍 Test 3: Getting extensions for order {self.test_order_7220}...")
-        extensions_result = self.test_get_extensions(self.test_order_7220)
-        test_results["get_extensions"] = extensions_result
+        # Test 2: on_restoration filter (expected: LU10 - Люстра)
+        self.log("\n🔍 Test 2: Testing availability=on_restoration filter...")
+        restoration_result = self.test_catalog_availability_filter(
+            availability="on_restoration",
+            expected_min_items=1,
+            expected_items=["LU10", "Люстра"]
+        )
+        test_results["on_restoration"] = restoration_result
         
-        if not extensions_result.get("success", False):
-            self.log("❌ Failed to get extensions", "ERROR")
+        if not restoration_result.get("success", False):
+            self.log("❌ on_restoration filter test failed", "ERROR")
             all_tests_passed = False
-        elif extensions_result.get("extensions_count", 0) == 0:
-            self.log("❌ No extensions found after processing", "ERROR")
+        elif not restoration_result.get("has_min_items", False):
+            self.log("❌ on_restoration filter returned fewer items than expected", "ERROR")
             all_tests_passed = False
         
-        # Test 4: Complete extension (if we have an extension ID)
-        if self.extension_id:
-            self.log(f"\n🔍 Test 4: Completing extension {self.extension_id} for order {self.test_order_7220}...")
-            complete_result = self.test_complete_extension(self.test_order_7220, self.extension_id)
-            test_results["complete_extension"] = complete_result
-            
-            if not complete_result.get("success", False):
-                self.log("❌ Failed to complete extension", "ERROR")
-                all_tests_passed = False
-        else:
-            self.log("\n⚠️ Test 4: Skipping extension completion - no extension ID available", "WARNING")
+        # Test 3: on_wash filter
+        self.log("\n🔍 Test 3: Testing availability=on_wash filter...")
+        wash_result = self.test_catalog_availability_filter(
+            availability="on_wash",
+            expected_min_items=0  # May have 0 items, that's OK
+        )
+        test_results["on_wash"] = wash_result
+        
+        if not wash_result.get("success", False):
+            self.log("❌ on_wash filter test failed", "ERROR")
+            all_tests_passed = False
+        
+        # Test 4: in_rent filter
+        self.log("\n🔍 Test 4: Testing availability=in_rent filter...")
+        rent_result = self.test_catalog_availability_filter(
+            availability="in_rent",
+            expected_min_items=0  # May have 0 items, that's OK
+        )
+        test_results["in_rent"] = rent_result
+        
+        if not rent_result.get("success", False):
+            self.log("❌ in_rent filter test failed", "ERROR")
+            all_tests_passed = False
+        
+        # Test 5: reserved filter
+        self.log("\n🔍 Test 5: Testing availability=reserved filter...")
+        reserved_result = self.test_catalog_availability_filter(
+            availability="reserved",
+            expected_min_items=0  # May have 0 items, that's OK
+        )
+        test_results["reserved"] = reserved_result
+        
+        if not reserved_result.get("success", False):
+            self.log("❌ reserved filter test failed", "ERROR")
             all_tests_passed = False
         
         # Summary
         self.log("\n" + "=" * 80)
-        self.log("📊 PARTIAL RETURNS API TEST SUMMARY:")
+        self.log("📊 CATALOG AVAILABILITY FILTERS TEST SUMMARY:")
         self.log(f"   • API Health: ✅ OK")
         self.log(f"   • Authentication: ✅ Working")
         
-        self.log(f"\n   📋 PARTIAL RETURNS TESTS:")
+        self.log(f"\n   📋 AVAILABILITY FILTER TESTS:")
+        
+        # Baseline summary
+        baseline_success = test_results.get("baseline", {}).get("success", False)
+        baseline_count = test_results.get("baseline", {}).get("items_count", 0)
+        baseline_stats = test_results.get("baseline", {}).get("stats", {})
+        self.log(f"   • Baseline (no filters): {'✅ PASS' if baseline_success else '❌ FAIL'}")
+        self.log(f"     - Items returned: {baseline_count}")
+        self.log(f"     - Stats: {baseline_stats}")
         
         # Test 1 summary
-        items_success = test_results.get("get_items", {}).get("success", False)
-        items_count = test_results.get("get_items", {}).get("valid_items_count", 0)
-        self.log(f"   • Test 1 - Get Not-Returned Items: {'✅ PASS' if items_success and items_count > 0 else '❌ FAIL'}")
-        self.log(f"     - Order: {self.test_order_7219}")
-        self.log(f"     - Valid Items Found: {items_count}")
+        laundry_success = test_results.get("on_laundry", {}).get("success", False)
+        laundry_count = test_results.get("on_laundry", {}).get("items_count", 0)
+        laundry_expected = test_results.get("on_laundry", {}).get("found_expected_items", [])
+        self.log(f"   • Test 1 - on_laundry filter: {'✅ PASS' if laundry_success and laundry_count >= 1 else '❌ FAIL'}")
+        self.log(f"     - Items found: {laundry_count}")
+        self.log(f"     - Expected items found: {laundry_expected}")
         
         # Test 2 summary
-        process_success = test_results.get("process_return", {}).get("success", False)
-        self.log(f"   • Test 2 - Process Partial Return: {'✅ PASS' if process_success else '❌ FAIL'}")
-        self.log(f"     - Order: {self.test_order_7220}")
-        self.log(f"     - Action: EXTEND")
+        restoration_success = test_results.get("on_restoration", {}).get("success", False)
+        restoration_count = test_results.get("on_restoration", {}).get("items_count", 0)
+        restoration_expected = test_results.get("on_restoration", {}).get("found_expected_items", [])
+        self.log(f"   • Test 2 - on_restoration filter: {'✅ PASS' if restoration_success and restoration_count >= 1 else '❌ FAIL'}")
+        self.log(f"     - Items found: {restoration_count}")
+        self.log(f"     - Expected items found: {restoration_expected}")
         
         # Test 3 summary
-        extensions_success = test_results.get("get_extensions", {}).get("success", False)
-        extensions_count = test_results.get("get_extensions", {}).get("extensions_count", 0)
-        self.log(f"   • Test 3 - Get Extensions: {'✅ PASS' if extensions_success and extensions_count > 0 else '❌ FAIL'}")
-        self.log(f"     - Order: {self.test_order_7220}")
-        self.log(f"     - Extensions Found: {extensions_count}")
+        wash_success = test_results.get("on_wash", {}).get("success", False)
+        wash_count = test_results.get("on_wash", {}).get("items_count", 0)
+        self.log(f"   • Test 3 - on_wash filter: {'✅ PASS' if wash_success else '❌ FAIL'}")
+        self.log(f"     - Items found: {wash_count}")
         
         # Test 4 summary
-        complete_success = test_results.get("complete_extension", {}).get("success", False)
-        self.log(f"   • Test 4 - Complete Extension: {'✅ PASS' if complete_success else '❌ FAIL'}")
-        if self.extension_id:
-            self.log(f"     - Extension ID: {self.extension_id}")
-            self.log(f"     - Days: 3, Amount: ₴300")
+        rent_success = test_results.get("in_rent", {}).get("success", False)
+        rent_count = test_results.get("in_rent", {}).get("items_count", 0)
+        self.log(f"   • Test 4 - in_rent filter: {'✅ PASS' if rent_success else '❌ FAIL'}")
+        self.log(f"     - Items found: {rent_count}")
+        
+        # Test 5 summary
+        reserved_success = test_results.get("reserved", {}).get("success", False)
+        reserved_count = test_results.get("reserved", {}).get("items_count", 0)
+        self.log(f"   • Test 5 - reserved filter: {'✅ PASS' if reserved_success else '❌ FAIL'}")
+        self.log(f"     - Items found: {reserved_count}")
+        
+        self.log(f"\n   🔍 API ENDPOINT TESTED:")
+        self.log(f"   • GET /api/catalog/items-by-category?availability={{filter}}&limit=50")
+        
+        # Check if key requirements are met
+        key_requirements_met = True
+        
+        # Requirement 1: on_laundry should return TX201
+        if laundry_success and laundry_count >= 1:
+            self.log(f"   ✅ Requirement 1: on_laundry filter works globally (found {laundry_count} items)")
         else:
-            self.log(f"     - Skipped: No extension ID available")
+            self.log(f"   ❌ Requirement 1: on_laundry filter failed or returned no items")
+            key_requirements_met = False
         
-        self.log(f"\n   🔍 API ENDPOINTS TESTED:")
-        self.log(f"   • GET /api/partial-returns/order/{{order_id}}/not-returned: {'✅ Working' if items_success else '❌ Failed'}")
-        self.log(f"   • POST /api/partial-returns/order/{{order_id}}/process: {'✅ Working' if process_success else '❌ Failed'}")
-        self.log(f"   • GET /api/partial-returns/order/{{order_id}}/extensions: {'✅ Working' if extensions_success else '❌ Failed'}")
-        self.log(f"   • POST /api/partial-returns/order/{{order_id}}/extensions/{{id}}/complete: {'✅ Working' if complete_success else '❌ Failed'}")
-        
-        if all_tests_passed:
-            self.log(f"\n✅ PARTIAL RETURNS API TEST PASSED!")
-            self.log(f"   All API endpoints working correctly with proper partial returns functionality")
+        # Requirement 2: on_restoration should return LU10
+        if restoration_success and restoration_count >= 1:
+            self.log(f"   ✅ Requirement 2: on_restoration filter works globally (found {restoration_count} items)")
         else:
-            self.log(f"\n❌ PARTIAL RETURNS API TEST FAILED!")
-            self.log(f"   Some tests failed - check individual test results above")
+            self.log(f"   ❌ Requirement 2: on_restoration filter failed or returned no items")
+            key_requirements_met = False
         
-        return all_tests_passed
+        # Requirement 3: All filters should work without category selection
+        all_filters_work = all([
+            laundry_success, restoration_success, wash_success, rent_success, reserved_success
+        ])
+        
+        if all_filters_work:
+            self.log(f"   ✅ Requirement 3: All availability filters work without category selection")
+        else:
+            self.log(f"   ❌ Requirement 3: Some availability filters failed")
+            key_requirements_met = False
+        
+        final_success = all_tests_passed and key_requirements_met
+        
+        if final_success:
+            self.log(f"\n✅ CATALOG AVAILABILITY FILTERS TEST PASSED!")
+            self.log(f"   All availability filters working correctly without category selection")
+        else:
+            self.log(f"\n❌ CATALOG AVAILABILITY FILTERS TEST FAILED!")
+            self.log(f"   Some filters failed or key requirements not met")
+        
+        return final_success, test_results
 def main():
     """Main test execution"""
     print("🧪 Backend Testing: Partial Returns API")

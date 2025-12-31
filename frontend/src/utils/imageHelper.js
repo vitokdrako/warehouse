@@ -1,15 +1,17 @@
 /**
  * 🖼️ ЄДИНЕ ДЖЕРЕЛО ПРАВДИ для зображень товарів
  * 
- * Тільки uploads/products/ - найвища якість, 3 розміри
- * Структура: /home/farforre/farforrent.com.ua/rentalhub/backend/uploads/products/
+ * Підтримувані формати:
+ * 1. uploads/products/ - нові фото (3 розміри)
+ * 2. static/images/ - старі фото (legacy)
+ * 3. catalog/ - шляхи з OpenCart
  */
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 /**
  * Перетворює шлях до зображення з БД в повний URL
- * @param {string} url - Шлях до зображення з БД (має бути uploads/products/...)
+ * @param {string} url - Шлях до зображення з БД
  * @returns {string|null} - Повний URL або null
  */
 export const getImageUrl = (url) => {
@@ -20,14 +22,23 @@ export const getImageUrl = (url) => {
     return url;
   }
   
-  // Тільки uploads/ - всі фото мають бути тут
+  // Новий формат - uploads/
   if (url.startsWith('uploads/')) {
     return `${BACKEND_URL}/${url}`;
   }
   
-  // Якщо не починається з uploads/ - це старий формат, ігноруємо
-  console.warn('[ImageHelper] ⚠️ Image path should start with "uploads/products/":', url);
-  return null;
+  // Старий формат - static/images/ (legacy фото на production)
+  if (url.startsWith('static/images/')) {
+    return `${BACKEND_URL}/${url}`;
+  }
+  
+  // OpenCart формат - catalog/
+  if (url.startsWith('catalog/')) {
+    return `https://www.farforrent.com.ua/image/${url}`;
+  }
+  
+  // Невідомий формат - спробуємо як відносний шлях
+  return `${BACKEND_URL}/${url}`;
 };
 
 // Fallback зображення для помилок завантаження

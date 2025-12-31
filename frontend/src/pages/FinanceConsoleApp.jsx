@@ -1782,6 +1782,176 @@ const TemplateModal = ({ template, categories, onClose, onSave }) => {
 
  
 
+// ----------------------------- Payouts Tab -----------------------------
+const PayoutsTab = ({ reload, loading }) => {
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      setStatsLoading(true);
+      try {
+        const res = await authFetch(`${BACKEND_URL}/api/finance/payouts-stats`);
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
+      } catch (e) {
+        console.error("Error loading payout stats:", e);
+      }
+      setStatsLoading(false);
+    };
+    loadStats();
+  }, []);
+
+  const StatCard = ({ label, value, color = "default", icon, subtitle }) => {
+    const colors = {
+      default: "bg-white border-corp-border",
+      green: "bg-emerald-50 border-emerald-200",
+      blue: "bg-blue-50 border-blue-200", 
+      amber: "bg-amber-50 border-amber-200",
+      red: "bg-rose-50 border-rose-200",
+      purple: "bg-purple-50 border-purple-200"
+    };
+    const textColors = {
+      default: "text-corp-text-dark",
+      green: "text-emerald-700",
+      blue: "text-blue-700",
+      amber: "text-amber-700", 
+      red: "text-rose-700",
+      purple: "text-purple-700"
+    };
+    return (
+      <div className={cls("rounded-2xl border p-5 shadow-sm", colors[color])}>
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="text-xs text-corp-text-muted mb-1">{label}</div>
+            <div className={cls("text-2xl font-bold", textColors[color])}>{value}</div>
+            {subtitle && <div className="text-xs text-corp-text-muted mt-1">{subtitle}</div>}
+          </div>
+          {icon && <span className="text-2xl">{icon}</span>}
+        </div>
+      </div>
+    );
+  };
+
+  if (statsLoading) {
+    return (
+      <div className="rounded-2xl border border-corp-border bg-white p-10 text-center text-corp-text-muted shadow-sm">
+        Завантаження статистики...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <Card title="💰 Фінансовий огляд" subtitle="Статистика кас та виплат">
+        <GhostBtn onClick={reload}>🔄 Оновити</GhostBtn>
+      </Card>
+
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <StatCard 
+          label="Каса з ренти" 
+          value={money(stats?.rent_cash_balance || 0)}
+          color="green"
+          icon="💵"
+          subtitle="Активний залишок"
+        />
+        <StatCard 
+          label="Каса зі шкоди"
+          value={money(stats?.damage_cash_balance || 0)}
+          color="blue"
+          icon="🔧"
+          subtitle="Активний залишок"
+        />
+        <StatCard 
+          label="До сплати"
+          value={money(stats?.total_due || 0)}
+          color="amber"
+          icon="📋"
+          subtitle={`Рента: ${money(stats?.due_rent || 0)} | Шкода: ${money(stats?.due_damage || 0)}`}
+        />
+        <StatCard 
+          label="Витрати по касі"
+          value={money(stats?.cash_expenses || 0)}
+          color="red"
+          icon="💸"
+          subtitle="Готівкові витрати"
+        />
+        <StatCard 
+          label="Витрати по шкоді"
+          value={money(stats?.damage_expenses || 0)}
+          color="purple"
+          icon="🧺"
+          subtitle="Хімчистка, ремонт"
+        />
+      </div>
+
+      {/* Balance Summary */}
+      <div className="rounded-2xl border border-corp-border bg-white p-5 shadow-sm">
+        <div className="text-sm font-semibold text-corp-text-dark mb-4">Баланс рахунків</div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+            <div className="text-xs text-emerald-600">Готівка (CASH)</div>
+            <div className="text-xl font-bold text-emerald-700">{money(stats?.cash_balance || 0)}</div>
+          </div>
+          <div className="p-4 rounded-xl bg-blue-50 border border-blue-200">
+            <div className="text-xs text-blue-600">Банк (BANK)</div>
+            <div className="text-xl font-bold text-blue-700">{money(stats?.bank_balance || 0)}</div>
+          </div>
+          <div className="p-4 rounded-xl bg-slate-100 border border-slate-300">
+            <div className="text-xs text-slate-600">Загальний баланс</div>
+            <div className="text-xl font-bold text-slate-800">{money(stats?.total_active_balance || 0)}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Financial Health */}
+      <div className="rounded-2xl border border-corp-border bg-white p-5 shadow-sm">
+        <div className="text-sm font-semibold text-corp-text-dark mb-4">📊 Фінансовий стан</div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-corp-bg-light">
+            <span className="text-sm text-corp-text-main">Надходження від ренти</span>
+            <span className="font-bold text-emerald-600">+{money(stats?.rent_cash_balance || 0)}</span>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-xl bg-corp-bg-light">
+            <span className="text-sm text-corp-text-main">Надходження від шкоди</span>
+            <span className="font-bold text-blue-600">+{money(stats?.damage_cash_balance || 0)}</span>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-xl bg-corp-bg-light">
+            <span className="text-sm text-corp-text-main">Витрати (каса)</span>
+            <span className="font-bold text-rose-600">-{money(stats?.cash_expenses || 0)}</span>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-xl bg-corp-bg-light">
+            <span className="text-sm text-corp-text-main">Витрати (шкода)</span>
+            <span className="font-bold text-purple-600">-{money(stats?.damage_expenses || 0)}</span>
+          </div>
+          <div className="border-t border-corp-border pt-3">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100">
+              <span className="text-sm font-semibold">Нетто результат</span>
+              <span className={cls(
+                "font-bold text-lg",
+                ((stats?.rent_cash_balance || 0) + (stats?.damage_cash_balance || 0) - (stats?.cash_expenses || 0) - (stats?.damage_expenses || 0)) >= 0 
+                  ? "text-emerald-600" 
+                  : "text-rose-600"
+              )}>
+                {money(
+                  (stats?.rent_cash_balance || 0) + 
+                  (stats?.damage_cash_balance || 0) - 
+                  (stats?.cash_expenses || 0) - 
+                  (stats?.damage_expenses || 0)
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ----------------------------- MAIN -----------------------------
 export default function FinanceConsoleApp() {
   const [tab, setTab] = useState("orders");

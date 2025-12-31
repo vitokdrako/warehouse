@@ -125,8 +125,8 @@ def download_product_image(product_id: int, sku: str, oc_image_path: str, rh_cur
             return False
         
         # Побудувати URL зображення в OpenCart
-        clean_path = oc_image_path.replace("catalog/", "")
-        image_url = f"{OPENCART_IMAGE_BASE}{clean_path}"
+        # НЕ видаляємо catalog/ - URL має бути повним
+        image_url = f"{OPENCART_IMAGE_BASE}{oc_image_path}"
         
         # Скачати зображення
         image_content = download_image(image_url)

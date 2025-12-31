@@ -173,6 +173,7 @@ def download_product_image(product_id: int, sku: str, oc_image_path: str, rh_cur
 def sync_product_images():
     """
     Синхронізувати зображення для товарів які ще не мають локальних фото
+    Беремо шлях зображення напряму з OpenCart БД
     """
     log("🖼️  Syncing product images...")
     
@@ -205,7 +206,7 @@ def sync_product_images():
         
         log(f"  📦 Found {len(products_without_images)} products without local images")
         
-        # Отримати image paths з OpenCart
+        # Отримати ПРАВИЛЬНІ image paths напряму з OpenCart
         product_ids = [p['product_id'] for p in products_without_images]
         ids_str = ','.join(map(str, product_ids))
         
@@ -219,6 +220,7 @@ def sync_product_images():
         
         # Скачати зображення
         success_count = 0
+        failed_count = 0
         rh_cur_update = rh.cursor()
         
         for product in products_without_images:
@@ -228,15 +230,19 @@ def sync_product_images():
             if product_id not in oc_images:
                 continue
             
+            # Беремо шлях напряму з OpenCart (не з RentalHub!)
             oc_image = oc_images[product_id]['image']
             
             if download_product_image(product_id, sku, oc_image, rh_cur_update, rh):
                 success_count += 1
-                log(f"    ✅ Downloaded: {sku}")
+                if success_count <= 10 or success_count % 20 == 0:
+                    log(f"    ✅ Downloaded: {sku}")
             else:
-                log(f"    ⚠️  Failed: {sku}")
+                failed_count += 1
+                if failed_count <= 5:
+                    log(f"    ⚠️  Failed: {sku}")
         
-        log(f"  ✅ Downloaded {success_count} images")
+        log(f"  ✅ Downloaded {success_count} images, {failed_count} failed")
         
         oc_cur.close()
         rh_cur.close()

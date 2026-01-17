@@ -664,6 +664,17 @@ async def remove_item_from_order(
         "reason": request.reason
     })
     
+    # ✅ Повернути товар в наявність (збільшити quantity)
+    product_id = item[1]
+    db.execute(text("""
+        UPDATE products 
+        SET quantity = quantity + :qty
+        WHERE product_id = :product_id
+    """), {
+        "qty": old_quantity,
+        "product_id": product_id
+    })
+    
     # Calculate changes
     price_change = -old_total
     deposit_change = -(loss_value / 2) * old_quantity

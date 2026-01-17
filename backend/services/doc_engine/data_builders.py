@@ -809,7 +809,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
             filename = photo_path.split('/')[-1]
         
         # Спробуємо знайти локально і конвертувати в base64
-        local_path = LOCAL_UPLOADS / filename
+        local_path = UPLOADS_DIR / filename
         if local_path.exists():
             try:
                 import mimetypes

@@ -542,6 +542,7 @@ setTimeout(()=>window.print(),500);
           onScan={handleScan}
           onOpenDamage={handleOpenDamage}
           onPackagingChange={handlePackagingChange}
+          onRemoveItem={handleRemoveItem}
           readOnly={isIssued}
         />
         

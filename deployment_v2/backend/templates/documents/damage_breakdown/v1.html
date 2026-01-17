@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Розшифровка пошкоджень - {{ order.order_number }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            padding: 20px;
+            background: #fff;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f59e0b;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: bold;
+            color: #d97706;
+            margin-bottom: 5px;
+        }
+        .header .subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+        .header .order-info {
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        .info-block {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 20px;
+        }
+        .info-section {
+            flex: 1;
+            padding: 12px;
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+        }
+        .info-section h3 {
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #92400e;
+            text-transform: uppercase;
+        }
+        .info-section p {
+            margin: 4px 0;
+            font-size: 11px;
+        }
+        .damage-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fef3c7;
+            border: 1px solid #fbbf24;
+            border-radius: 10px;
+            page-break-inside: avoid;
+        }
+        .damage-item.critical {
+            background: #fee2e2;
+            border-color: #ef4444;
+        }
+        .damage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #d97706;
+        }
+        .damage-header .product-info h4 {
+            font-size: 14px;
+            font-weight: bold;
+            color: #92400e;
+        }
+        .damage-header .product-info .sku {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .damage-header .severity {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .severity-low { background: #d1fae5; color: #065f46; }
+        .severity-medium { background: #fef3c7; color: #92400e; }
+        .severity-high { background: #fee2e2; color: #991b1b; }
+        .severity-critical { background: #7f1d1d; color: #fff; }
+        
+        .damage-content {
+            display: flex;
+            gap: 15px;
+        }
+        .damage-photo {
+            flex-shrink: 0;
+        }
+        .damage-photo img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #fbbf24;
+        }
+        .damage-photo .no-photo {
+            width: 150px;
+            height: 150px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-size: 11px;
+        }
+        .damage-details {
+            flex: 1;
+        }
+        .damage-type {
+            font-size: 13px;
+            font-weight: bold;
+            color: #d97706;
+            margin-bottom: 8px;
+        }
+        .damage-note {
+            font-size: 12px;
+            color: #374151;
+            padding: 8px;
+            background: #fff;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .damage-meta {
+            font-size: 10px;
+            color: #6b7280;
+            display: flex;
+            gap: 15px;
+        }
+        .damage-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .summary {
+            margin-top: 25px;
+            padding: 15px;
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            border-radius: 10px;
+        }
+        .summary h3 {
+            font-size: 14px;
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+        .summary-stats {
+            display: flex;
+            gap: 20px;
+        }
+        .summary-stat {
+            text-align: center;
+            padding: 10px 20px;
+            background: #fff;
+            border-radius: 8px;
+        }
+        .summary-stat .number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #d97706;
+        }
+        .summary-stat .label {
+            font-size: 10px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .notice {
+            margin-top: 20px;
+            padding: 12px;
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #1e40af;
+        }
+        .notice strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 10px;
+            color: #6b7280;
+            text-align: center;
+        }
+        
+        .signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+        }
+        .signature-block {
+            width: 45%;
+        }
+        .signature-line {
+            border-bottom: 1px solid #333;
+            margin-top: 30px;
+            margin-bottom: 5px;
+        }
+        .signature-label {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        @media print {
+            body { padding: 10px; }
+            .damage-item { page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚠️ РОЗШИФРОВКА ПОШКОДЖЕНЬ</h1>
+        <div class="subtitle">Акт фіксації існуючих дефектів при видачі</div>
+        <div class="order-info">
+            <strong>Замовлення {{ order.order_number }}</strong> · {{ order.rental_start_date }} — {{ order.rental_end_date }}
+        </div>
+    </div>
+
+    <div class="info-block">
+        <div class="info-section">
+            <h3>👤 Клієнт</h3>
+            <p><strong>{{ order.customer_name }}</strong></p>
+            <p>📞 {{ order.customer_phone }}</p>
+            {% if order.customer_email %}
+            <p>📧 {{ order.customer_email }}</p>
+            {% endif %}
+        </div>
+        <div class="info-section">
+            <h3>📅 Період оренди</h3>
+            <p><strong>{{ order.rental_days }} днів</strong></p>
+            <p>З: {{ order.rental_start_date }}</p>
+            <p>До: {{ order.rental_end_date }}</p>
+        </div>
+    </div>
+
+    {% if damages %}
+    <div class="damages-list">
+        {% for damage in damages %}
+        <div class="damage-item {% if damage.severity == 'critical' %}critical{% endif %}">
+            <div class="damage-header">
+                <div class="product-info">
+                    <h4>{{ damage.product_name }}</h4>
+                    <div class="sku">Артикул: {{ damage.sku or 'N/A' }}</div>
+                </div>
+                <span class="severity severity-{{ damage.severity }}">
+                    {% if damage.severity == 'low' %}незначний
+                    {% elif damage.severity == 'medium' %}середній
+                    {% elif damage.severity == 'high' %}суттєвий
+                    {% else %}критичний{% endif %}
+                </span>
+            </div>
+            
+            <div class="damage-content">
+                <div class="damage-photo">
+                    {% if damage.photo_url %}
+                    <img src="{{ damage.photo_url }}" alt="Фото пошкодження" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="no-photo" style="display:none;">📷 Фото недоступне</div>
+                    {% else %}
+                    <div class="no-photo">📷 Без фото</div>
+                    {% endif %}
+                </div>
+                <div class="damage-details">
+                    <div class="damage-type">{{ damage.damage_type }}</div>
+                    {% if damage.note %}
+                    <div class="damage-note">{{ damage.note }}</div>
+                    {% endif %}
+                    <div class="damage-meta">
+                        <span>👤 {{ damage.created_by or 'Система' }}</span>
+                        <span>📅 {{ damage.created_at }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="summary">
+        <h3>📊 Підсумок</h3>
+        <div class="summary-stats">
+            <div class="summary-stat">
+                <div class="number">{{ damages|length }}</div>
+                <div class="label">Зафіксовано дефектів</div>
+            </div>
+            <div class="summary-stat">
+                <div class="number">{{ items_with_damage }}</div>
+                <div class="label">Позицій з дефектами</div>
+            </div>
+            <div class="summary-stat">
+                <div class="number">{{ total_items }}</div>
+                <div class="label">Всього позицій</div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="notice" style="background: #d1fae5; border-color: #10b981; color: #065f46;">
+        <strong>✅ Пошкоджень не зафіксовано</strong>
+        Всі позиції замовлення видаються без дефектів.
+    </div>
+    {% endif %}
+
+    <div class="notice">
+        <strong>ℹ️ Важлива інформація</strong>
+        Дефекти, зафіксовані в цьому акті, є існуючими на момент видачі декору клієнту.
+        Клієнт НЕ несе відповідальності за ці пошкодження при поверненні.
+        При поверненні буде проведено порівняння стану декору з цим актом.
+    </div>
+
+    <div class="signatures">
+        <div class="signature-block">
+            <strong>Представник {{ company.name }}:</strong>
+            <div class="signature-line"></div>
+            <div class="signature-label">Підпис / ПІБ</div>
+        </div>
+        <div class="signature-block">
+            <strong>Клієнт:</strong>
+            <div class="signature-line"></div>
+            <div class="signature-label">Підпис / ПІБ</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>{{ company.name }}</strong> · {{ company.legal_name }}</p>
+        <p>Документ сформовано: {{ generated_at }}</p>
+    </div>
+</body>
+</html>

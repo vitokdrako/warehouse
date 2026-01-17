@@ -1270,9 +1270,22 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
 
 import shutil
 from pathlib import Path
+import os
 
 # Директорія для фото пошкоджень
-DAMAGE_PHOTOS_DIR = Path("/app/backend/uploads/damage_photos")
+# Production path
+PROD_DAMAGE_PHOTOS_DIR = "/home/farforre/farforrent.com.ua/rentalhub/backend/uploads/damage_photos"
+# Local preview path (fallback)
+LOCAL_DAMAGE_PHOTOS_DIR = "/app/backend/uploads/damage_photos"
+
+# Use production path if exists, otherwise local
+if os.path.exists(os.path.dirname(PROD_DAMAGE_PHOTOS_DIR)):
+    DAMAGE_PHOTOS_DIR = Path(PROD_DAMAGE_PHOTOS_DIR)
+else:
+    DAMAGE_PHOTOS_DIR = Path(LOCAL_DAMAGE_PHOTOS_DIR)
+
+# Create directory if it doesn't exist
+DAMAGE_PHOTOS_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/upload-photo")
 async def upload_damage_photo(

@@ -759,6 +759,20 @@ async def restore_refused_item(
     rental_days = order["rental_days"]
     price_per_day = float(item[4] or 0)
     new_total = price_per_day * original_qty * rental_days
+    product_id = item[1]
+    
+    # ✅ Перевірити наявність товару перед відновленням
+    avail_result = db.execute(text("""
+        SELECT quantity FROM products WHERE product_id = :product_id
+    """), {"product_id": product_id})
+    avail_row = avail_result.fetchone()
+    available_qty = avail_row[0] if avail_row else 0
+    
+    if available_qty < original_qty:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Недостатня кількість товару на складі. Доступно: {available_qty}, потрібно: {original_qty}"
+        )
     
     db.execute(text("""
         UPDATE order_items SET 
@@ -771,6 +785,16 @@ async def restore_refused_item(
         "item_id": item_id,
         "quantity": original_qty,
         "total_rental": new_total
+    })
+    
+    # ✅ Зменшити кількість товару (зарезервувати)
+    db.execute(text("""
+        UPDATE products 
+        SET quantity = quantity - :qty
+        WHERE product_id = :product_id
+    """), {
+        "qty": original_qty,
+        "product_id": product_id
     })
     
     # Log modification

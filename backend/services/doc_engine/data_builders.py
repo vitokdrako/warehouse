@@ -778,49 +778,35 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     damages = []
     product_ids_with_damage = set()
     
-    # Для вбудовування зображень напряму в HTML (base64)
+    # Базовий URL для фото (production)
+    # Фото зберігаються на сервері у /uploads/damage_photos/
     import os
-    import base64
-    import mimetypes
-    from pathlib import Path
-    uploads_dir = Path(__file__).parent.parent.parent / "uploads"
+    BACKEND_URL = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
     
-    def get_image_base64(file_path: Path) -> str:
-        """Конвертує зображення в base64 data URL"""
-        try:
-            if not file_path.exists():
-                return None
-            mime_type, _ = mimetypes.guess_type(str(file_path))
-            if not mime_type:
-                mime_type = 'image/jpeg'
-            with open(file_path, 'rb') as f:
-                data = base64.b64encode(f.read()).decode('utf-8')
-            return f"data:{mime_type};base64,{data}"
-        except Exception as e:
-            print(f"Error reading image {file_path}: {e}")
+    def build_photo_url(photo_path: str) -> str:
+        """Формує повний URL до фото пошкодження"""
+        if not photo_path:
             return None
+        
+        # Якщо вже повний URL - повертаємо як є
+        if photo_path.startswith('http://') or photo_path.startswith('https://'):
+            return photo_path
+        
+        # Якщо шлях вже містить uploads/
+        if photo_path.startswith('/uploads/'):
+            return f"{BACKEND_URL}{photo_path}"
+        elif photo_path.startswith('uploads/'):
+            return f"{BACKEND_URL}/{photo_path}"
+        else:
+            # Тільки ім'я файлу - додаємо шлях до damage_photos
+            return f"{BACKEND_URL}/uploads/damage_photos/{photo_path}"
     
     for row in damage_result:
         product_id = row[1]
         product_ids_with_damage.add(product_id)
         
-        # Формуємо base64 для фото (вбудовуємо напряму в HTML)
-        photo_url = row[7]
-        photo_base64 = None
-        
-        if photo_url:
-            local_path = None
-            # Визначаємо локальний шлях до файлу
-            if photo_url.startswith('/uploads/'):
-                local_path = uploads_dir / photo_url.replace('/uploads/', '')
-            elif photo_url.startswith('uploads/'):
-                local_path = uploads_dir / photo_url.replace('uploads/', '')
-            elif not photo_url.startswith('http'):
-                # Старий формат - тільки ім'я файлу
-                local_path = uploads_dir / "damage_photos" / photo_url
-            
-            if local_path:
-                photo_base64 = get_image_base64(local_path)
+        # Формуємо URL для фото
+        photo_url = build_photo_url(row[7])
         
         damages.append({
             "id": row[0],
@@ -831,7 +817,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
             "damage_type_code": row[4],
             "severity": severity_names.get(row[5], row[5] or "low"),
             "note": row[6] or "",
-            "photo_url": photo_base64,  # base64 data URL
+            "photo_url": photo_url,
             "created_by": row[8] or "Система",
             "created_at": row[9] or ""
         })

@@ -585,7 +585,8 @@ setTimeout(()=>window.print(),500);
           
           // Автоматично зберігаємо картку
           try {
-            await api.put(`/api/issue-cards/${issueCard.id}`, {
+            const token = localStorage.getItem('token')
+            await axios.put(`${BACKEND_URL}/api/issue-cards/${issueCard.id}`, {
               items: updatedItems.map(it => ({
                 id: it.id,
                 sku: it.sku,
@@ -597,7 +598,7 @@ setTimeout(()=>window.print(),500);
                 packaging: it.packaging,
                 pre_damage: it.pre_damage || []
               }))
-            })
+            }, { headers: { Authorization: `Bearer ${token}` } })
             toast({ title: '✅ Пошкодження зафіксовано та збережено', variant: 'default' })
           } catch (err) {
             console.error('Error saving damage:', err)

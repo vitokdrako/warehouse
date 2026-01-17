@@ -778,10 +778,9 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     damages = []
     product_ids_with_damage = set()
     
-    # Базовий URL для фото (production)
+    # Базовий URL для фото (через API для сумісності з production)
     import os
     import base64
-    import requests
     from pathlib import Path
     
     BACKEND_URL = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
@@ -791,7 +790,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         """
         Отримує фото для документа.
         Спочатку намагається завантажити локально (для base64),
-        якщо не знаходить - повертає URL.
+        якщо не знаходить - повертає URL через API.
         """
         if not photo_path:
             return None
@@ -819,13 +818,8 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
             except Exception as e:
                 print(f"Warning: Could not read local file {local_path}: {e}")
         
-        # Формуємо URL для зовнішнього доступу
-        if photo_path.startswith('/uploads/'):
-            return f"{BACKEND_URL}{photo_path}"
-        elif photo_path.startswith('uploads/'):
-            return f"{BACKEND_URL}/{photo_path}"
-        else:
-            return f"{BACKEND_URL}/uploads/damage_photos/{filename}"
+        # Формуємо URL через API (працює з nginx proxy)
+        return f"{BACKEND_URL}/api/uploads/damage_photos/{filename}"
     
     for row in damage_result:
         product_id = row[1]

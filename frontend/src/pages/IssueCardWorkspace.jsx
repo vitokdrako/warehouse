@@ -266,6 +266,42 @@ export default function IssueCardWorkspace() {
       item.id === itemId ? { ...item, checked: !item.checked } : item
     ))
   }
+  
+  // Видалення товару із замовлення
+  const handleRemoveItem = async (itemId, itemName) => {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await axios.delete(
+        `${BACKEND_URL}/api/orders/${order?.order_id || order?.id}/items/${itemId}`,
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          data: { reason: 'Відмова клієнта' }
+        }
+      )
+      
+      toast({
+        title: '🚫 Товар видалено',
+        description: `${itemName} видалено із замовлення. Товар повернуто в наявність.`
+      })
+      
+      // Оновлюємо локальний стан - прибираємо item
+      setItems(prev => prev.filter(item => item.id !== itemId))
+      
+      // Оновлюємо суми
+      if (res.data.totals) {
+        if (res.data.totals.total_price !== undefined) setTotalRent(res.data.totals.total_price)
+        if (res.data.totals.deposit_amount !== undefined) setTotalDeposit(res.data.totals.deposit_amount)
+      }
+      
+    } catch (err) {
+      console.error('Remove item error:', err)
+      toast({
+        title: '❌ Помилка',
+        description: err.response?.data?.detail || 'Не вдалося видалити товар',
+        variant: 'destructive'
+      })
+    }
+  }
 
   // === РОЗРАХУНКИ ===
   const allPicked = useMemo(() => items.every(it => it.picked_qty >= it.qty), [items])

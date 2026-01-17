@@ -3,6 +3,7 @@ import React from 'react'
 import ZoneCard from '../ZoneCard'
 import { getImageUrl } from '../../../utils/imageHelper'
 import { QRCodeSVG } from 'qrcode.react'
+import { Trash2 } from 'lucide-react'
 
 /**
  * Zone: Items Pickup - Комплектування товарів для видачі
@@ -14,6 +15,7 @@ export default function ZoneItemsPickup({
   onScan,           // (itemId, serial) => void
   onOpenDamage,     // (itemId) => void
   onPackagingChange, // (itemId, packType, value) => void
+  onRemoveItem,     // (itemId, itemName) => void - видалення товару
   readOnly = false,
 }) {
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
@@ -46,6 +48,7 @@ export default function ZoneItemsPickup({
               onScan={onScan}
               onOpenDamage={onOpenDamage}
               onPackagingChange={onPackagingChange}
+              onRemoveItem={onRemoveItem}
               readOnly={readOnly}
             />
           ))}
@@ -61,6 +64,7 @@ function ItemPickupCard({
   onScan, 
   onOpenDamage, 
   onPackagingChange,
+  onRemoveItem,
   readOnly 
 }) {
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })

@@ -784,7 +784,11 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     from pathlib import Path
     
     BACKEND_URL = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
+    
+    # Визначаємо шлях до папки з фото пошкоджень
+    PROD_UPLOADS = Path("/home/farforre/farforrent.com.ua/rentalhub/backend/uploads/damage_photos")
     LOCAL_UPLOADS = Path(__file__).parent.parent.parent / "uploads" / "damage_photos"
+    UPLOADS_DIR = PROD_UPLOADS if PROD_UPLOADS.exists() else LOCAL_UPLOADS
     
     def get_photo_for_document(photo_path: str) -> str:
         """

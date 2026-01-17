@@ -139,6 +139,21 @@ function ItemPickupCard({
             />
           </div>
         </div>
+        
+        {/* Кнопка видалення */}
+        {onRemoveItem && !readOnly && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Видалити "${item.name}" із замовлення?\nТовар повернеться в наявність.`)) {
+                onRemoveItem(item.id, item.name)
+              }
+            }}
+            className="flex-shrink-0 p-2 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+            title="Видалити товар із замовлення"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        )}
       </div>
       
       {/* Лічильник комплектування */}

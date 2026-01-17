@@ -779,34 +779,60 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     product_ids_with_damage = set()
     
     # Базовий URL для фото (production)
-    # Фото зберігаються на сервері у /uploads/damage_photos/
     import os
-    BACKEND_URL = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
+    import base64
+    import requests
+    from pathlib import Path
     
-    def build_photo_url(photo_path: str) -> str:
-        """Формує повний URL до фото пошкодження"""
+    BACKEND_URL = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
+    LOCAL_UPLOADS = Path(__file__).parent.parent.parent / "uploads" / "damage_photos"
+    
+    def get_photo_for_document(photo_path: str) -> str:
+        """
+        Отримує фото для документа.
+        Спочатку намагається завантажити локально (для base64),
+        якщо не знаходить - повертає URL.
+        """
         if not photo_path:
             return None
         
-        # Якщо вже повний URL - повертаємо як є
-        if photo_path.startswith('http://') or photo_path.startswith('https://'):
+        # Якщо вже повний URL або base64 - повертаємо як є
+        if photo_path.startswith('http') or photo_path.startswith('data:'):
             return photo_path
         
-        # Якщо шлях вже містить uploads/
+        # Визначаємо ім'я файлу
+        filename = photo_path
+        if '/' in photo_path:
+            filename = photo_path.split('/')[-1]
+        
+        # Спробуємо знайти локально і конвертувати в base64
+        local_path = LOCAL_UPLOADS / filename
+        if local_path.exists():
+            try:
+                import mimetypes
+                mime_type, _ = mimetypes.guess_type(str(local_path))
+                if not mime_type:
+                    mime_type = 'image/jpeg'
+                with open(local_path, 'rb') as f:
+                    data = base64.b64encode(f.read()).decode('utf-8')
+                return f"data:{mime_type};base64,{data}"
+            except Exception as e:
+                print(f"Warning: Could not read local file {local_path}: {e}")
+        
+        # Формуємо URL для зовнішнього доступу
         if photo_path.startswith('/uploads/'):
             return f"{BACKEND_URL}{photo_path}"
         elif photo_path.startswith('uploads/'):
             return f"{BACKEND_URL}/{photo_path}"
         else:
-            # Тільки ім'я файлу - додаємо шлях до damage_photos
-            return f"{BACKEND_URL}/uploads/damage_photos/{photo_path}"
+            return f"{BACKEND_URL}/uploads/damage_photos/{filename}"
     
     for row in damage_result:
         product_id = row[1]
         product_ids_with_damage.add(product_id)
         
-        # Формуємо URL для фото
-        photo_url = build_photo_url(row[7])
+        # Формуємо URL/base64 для фото
+        photo_url = get_photo_for_document(row[7])
         
         damages.append({
             "id": row[0],

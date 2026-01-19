@@ -1482,12 +1482,45 @@ export default function CatalogBoard() {
                       <div className="text-xs text-corp-text-muted">Конфліктів</div>
                     </div>
                   )}
-                  {dateFilterActive && (
-                    <div className="ml-auto">
+                  
+                  {/* Кнопка режиму вибору для набору */}
+                  <div className="ml-auto flex items-center gap-2">
+                    {dateFilterActive && (
                       <Badge variant="info">Фільтр по датах</Badge>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      onClick={() => {
+                        if (selectionMode) {
+                          clearSelection()
+                        } else {
+                          setSelectionMode(true)
+                        }
+                      }}
+                      className={cls(
+                        'px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2',
+                        selectionMode 
+                          ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' 
+                          : 'bg-corp-primary/10 text-corp-primary hover:bg-corp-primary/20'
+                      )}
+                    >
+                      {selectionMode ? (
+                        <>✕ Скасувати вибір</>
+                      ) : (
+                        <>📦 Зібрати набір</>
+                      )}
+                    </button>
+                  </div>
                 </div>
+                
+                {/* Підказка про режим вибору */}
+                {selectionMode && (
+                  <div className="mt-3 pt-3 border-t border-corp-border">
+                    <div className="flex items-center gap-2 text-sm text-corp-primary">
+                      <span>👆</span>
+                      <span>Натискайте на картки товарів, щоб додати їх до набору</span>
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Product grid */}

@@ -1814,7 +1814,10 @@ export default function CatalogBoard() {
                     </div>
                   ))}
                   {selectedForSet.length > 6 && (
-                    <div className="w-12 h-12 rounded-lg border-2 border-white bg-corp-primary text-white flex items-center justify-center text-sm font-bold shadow-md">
+                    <div className={cls(
+                      "w-12 h-12 rounded-lg border-2 border-white text-white flex items-center justify-center text-sm font-bold shadow-md",
+                      selectionTarget === 'set' ? 'bg-corp-primary' : 'bg-amber-500'
+                    )}>
                       +{selectedForSet.length - 6}
                     </div>
                   )}
@@ -1824,10 +1827,13 @@ export default function CatalogBoard() {
               {/* Інформація */}
               <div className="flex-1">
                 <div className="font-semibold text-corp-text-dark">
-                  Вибрано: {selectedForSet.length} товарів
+                  {selectionTarget === 'set' ? '🎁 Сет' : '📏 Набір'}: {selectedForSet.length} товарів
                 </div>
                 <div className="text-sm text-corp-text-muted">
-                  Сума оренди: {fmtUA(selectedForSet.reduce((s, p) => s + (p.rental_price || 0), 0))} ₴/день
+                  {selectionTarget === 'set' 
+                    ? `Сума оренди: ${fmtUA(selectedForSet.reduce((s, p) => s + (p.rental_price || 0), 0))} ₴/день`
+                    : 'Розмірна сітка / варіації товару'
+                  }
                 </div>
               </div>
               
@@ -1860,13 +1866,23 @@ export default function CatalogBoard() {
                 >
                   Скасувати
                 </button>
-                <button
-                  onClick={openCreateSetFromSelection}
-                  className="px-6 py-2 rounded-lg bg-corp-primary text-white font-medium hover:bg-corp-primary/90 transition-colors flex items-center gap-2"
-                >
-                  <span>📦</span>
-                  Створити набір
-                </button>
+                {selectionTarget === 'set' ? (
+                  <button
+                    onClick={openCreateSetFromSelection}
+                    className="px-6 py-2 rounded-lg bg-corp-primary text-white font-medium hover:bg-corp-primary/90 transition-colors flex items-center gap-2"
+                  >
+                    <span>🎁</span>
+                    Створити сет
+                  </button>
+                ) : (
+                  <button
+                    onClick={openCreateFamilyFromSelection}
+                    className="px-6 py-2 rounded-lg bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors flex items-center gap-2"
+                  >
+                    <span>📏</span>
+                    Створити набір
+                  </button>
+                )}
               </div>
             </div>
           </div>

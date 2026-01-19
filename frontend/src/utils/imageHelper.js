@@ -22,9 +22,17 @@ export const getImageUrl = (url) => {
     return url;
   }
   
-  // Новий формат - uploads/
+  // Новий формат - uploads/ → використовуємо /api/uploads/ для сумісності з nginx
   if (url.startsWith('uploads/')) {
-    return `${BACKEND_URL}/${url}`;
+    // uploads/products/file.jpg → /api/uploads/products/file.jpg
+    const path = url.replace('uploads/', '');
+    return `${BACKEND_URL}/api/uploads/${path}`;
+  }
+  
+  // Формат /uploads/ (з початковим слешем)
+  if (url.startsWith('/uploads/')) {
+    const path = url.replace('/uploads/', '');
+    return `${BACKEND_URL}/api/uploads/${path}`;
   }
   
   // Старий формат - static/images/ (legacy фото на production)

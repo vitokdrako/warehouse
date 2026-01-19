@@ -1699,41 +1699,50 @@ export default function CatalogBoard() {
                     </div>
                   )}
                   
-                  {/* Кнопка режиму вибору для набору */}
+                  {/* Кнопки режиму вибору */}
                   <div className="ml-auto flex items-center gap-2">
                     {dateFilterActive && (
                       <Badge variant="info">Фільтр по датах</Badge>
                     )}
-                    <button
-                      onClick={() => {
-                        if (selectionMode) {
-                          clearSelection()
-                        } else {
-                          setSelectionMode(true)
-                        }
-                      }}
-                      className={cls(
-                        'px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2',
-                        selectionMode 
-                          ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' 
-                          : 'bg-corp-primary/10 text-corp-primary hover:bg-corp-primary/20'
-                      )}
-                    >
-                      {selectionMode ? (
-                        <>✕ Скасувати вибір</>
-                      ) : (
-                        <>📦 Зібрати набір</>
-                      )}
-                    </button>
+                    
+                    {selectionMode ? (
+                      <button
+                        onClick={clearSelection}
+                        className="px-4 py-2 rounded-lg font-medium text-sm bg-rose-100 text-rose-700 hover:bg-rose-200 flex items-center gap-2"
+                      >
+                        ✕ Скасувати вибір
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => startSelectionMode('set')}
+                          className="px-4 py-2 rounded-lg font-medium text-sm bg-corp-primary/10 text-corp-primary hover:bg-corp-primary/20 flex items-center gap-2"
+                          title="Створити сет для оренди (комплект товарів)"
+                        >
+                          🎁 Зібрати сет
+                        </button>
+                        <button
+                          onClick={() => startSelectionMode('family')}
+                          className="px-4 py-2 rounded-lg font-medium text-sm bg-amber-100 text-amber-700 hover:bg-amber-200 flex items-center gap-2"
+                          title="Об'єднати схожі товари (розмірна сітка)"
+                        >
+                          📏 Зібрати набір
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
                 {/* Підказка про режим вибору */}
                 {selectionMode && (
                   <div className="mt-3 pt-3 border-t border-corp-border">
-                    <div className="flex items-center gap-2 text-sm text-corp-primary">
+                    <div className="flex items-center gap-2 text-sm">
                       <span>👆</span>
-                      <span>Натискайте на картки товарів, щоб додати їх до набору</span>
+                      {selectionTarget === 'set' ? (
+                        <span className="text-corp-primary">Вибирайте товари для <strong>сету</strong> (комплект для оренди разом)</span>
+                      ) : (
+                        <span className="text-amber-700">Вибирайте товари для <strong>набору</strong> (розмірна сітка / варіації)</span>
+                      )}
                     </div>
                   </div>
                 )}

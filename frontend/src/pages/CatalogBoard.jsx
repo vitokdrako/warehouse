@@ -36,23 +36,34 @@ function Badge({ children, variant = 'default' }) {
 
 // Family Card
 function FamilyCard({ family, onEdit, onDelete }) {
+  // Захист від пустих даних
+  const products = family.products || []
+  
   return (
     <div className="bg-white rounded-xl border border-corp-border p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start gap-4">
         {/* Images preview */}
-        <div className="flex -space-x-2">
-          {family.products.slice(0, 3).map((p, idx) => (
-            <div key={idx} className="w-12 h-12 rounded-lg border-2 border-white bg-corp-bg-light overflow-hidden">
-              {p.cover ? (
-                <img src={getImageUrl(p.cover)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-xs text-corp-text-muted">📦</div>
+        <div className="flex -space-x-2 flex-shrink-0">
+          {products.length > 0 ? (
+            <>
+              {products.slice(0, 3).map((p, idx) => (
+                <div key={p.product_id || idx} className="w-12 h-12 rounded-lg border-2 border-white bg-corp-bg-light overflow-hidden">
+                  {p.cover ? (
+                    <img src={getImageUrl(p.cover)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-corp-text-muted">📦</div>
+                  )}
+                </div>
+              ))}
+              {products.length > 3 && (
+                <div className="w-12 h-12 rounded-lg border-2 border-white bg-amber-100 flex items-center justify-center text-xs text-amber-700 font-medium">
+                  +{products.length - 3}
+                </div>
               )}
-            </div>
-          ))}
-          {family.products.length > 3 && (
-            <div className="w-12 h-12 rounded-lg border-2 border-white bg-corp-bg-light flex items-center justify-center text-xs text-corp-text-muted">
-              +{family.products.length - 3}
+            </>
+          ) : (
+            <div className="w-12 h-12 rounded-lg bg-corp-bg-light flex items-center justify-center">
+              <span className="text-xl">📏</span>
             </div>
           )}
         </div>
@@ -63,17 +74,25 @@ function FamilyCard({ family, onEdit, onDelete }) {
           {family.description && (
             <p className="text-sm text-corp-text-muted line-clamp-1">{family.description}</p>
           )}
-          <div className="flex flex-wrap gap-1 mt-2">
-            {family.products.map((p, idx) => (
-              <span key={idx} className="text-xs bg-corp-bg-light px-2 py-0.5 rounded">
-                {p.name.length > 25 ? p.name.slice(0, 25) + '...' : p.name}
-              </span>
-            ))}
-          </div>
+          {products.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {products.slice(0, 5).map((p, idx) => (
+                <span key={p.product_id || idx} className="text-xs bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
+                  {p.name && p.name.length > 20 ? p.name.slice(0, 20) + '...' : (p.name || p.sku)}
+                </span>
+              ))}
+              {products.length > 5 && (
+                <span className="text-xs text-corp-text-muted">+{products.length - 5}</span>
+              )}
+            </div>
+          )}
+          {products.length === 0 && (
+            <p className="text-sm text-amber-600 mt-1">⚠️ Немає товарів</p>
+          )}
         </div>
         
         {/* Actions */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-shrink-0">
           <button onClick={() => onEdit(family)} className="p-2 text-corp-text-muted hover:text-corp-primary rounded-lg hover:bg-corp-bg-light">
             ✏️
           </button>

@@ -953,25 +953,59 @@ function Sidebar({
 }
 
 // Product Card
-function ProductCard({ item, onClick, dateFilterActive }) {
+function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelected, onToggleSelect }) {
   const hasConflict = item.has_conflict
   const hasRentals = item.who_has?.length > 0
   const hasProcessing = (item.on_wash || 0) + (item.on_restoration || 0) + (item.on_laundry || 0) > 0
   
+  const handleClick = (e) => {
+    if (selectionMode) {
+      e.stopPropagation()
+      onToggleSelect?.(item)
+    } else {
+      onClick?.()
+    }
+  }
+  
+  const handleCheckboxClick = (e) => {
+    e.stopPropagation()
+    onToggleSelect?.(item)
+  }
+  
   return (
     <div 
-      onClick={onClick}
+      onClick={handleClick}
       className={cls(
-        'bg-white rounded-xl border p-3 hover:shadow-md transition-shadow cursor-pointer group',
-        hasConflict ? 'border-rose-300 bg-rose-50/30' : 'border-corp-border'
+        'bg-white rounded-xl border p-3 hover:shadow-md transition-all cursor-pointer group relative',
+        hasConflict ? 'border-rose-300 bg-rose-50/30' : 
+        isSelected ? 'border-corp-primary border-2 bg-corp-primary/5 ring-2 ring-corp-primary/20' : 
+        'border-corp-border'
       )}
     >
+      {/* Чекбокс для режиму вибору */}
+      {selectionMode && (
+        <div 
+          onClick={handleCheckboxClick}
+          className={cls(
+            'absolute top-2 left-2 z-10 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer',
+            isSelected 
+              ? 'bg-corp-primary border-corp-primary text-white' 
+              : 'bg-white border-corp-border hover:border-corp-primary'
+          )}
+        >
+          {isSelected && <span className="text-sm">✓</span>}
+        </div>
+      )}
+      
       {/* Image */}
       <div className="relative mb-3">
         <img
           src={getImageUrl(item.image)}
           alt={item.name}
-          className="w-full h-28 object-cover rounded-lg bg-corp-bg-light"
+          className={cls(
+            "w-full h-28 object-cover rounded-lg bg-corp-bg-light",
+            selectionMode && "pl-0"
+          )}
           onError={handleImageError}
         />
         {/* Status badges */}

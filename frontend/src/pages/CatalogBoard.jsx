@@ -2063,8 +2063,12 @@ export default function CatalogBoard() {
               if (!createRes.ok) throw new Error('Failed to create family')
               const created = await createRes.json()
               
+              // API повертає family_id, не id
+              const familyId = created.family_id || created.id
+              if (!familyId) throw new Error('No family ID returned')
+              
               // Присвоюємо товари
-              const assignRes = await fetch(`${BACKEND_URL}/api/catalog/families/${created.id}/assign`, {
+              const assignRes = await fetch(`${BACKEND_URL}/api/catalog/families/${familyId}/assign`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ product_ids: familyData.product_ids })

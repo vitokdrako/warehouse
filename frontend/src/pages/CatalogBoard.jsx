@@ -642,6 +642,210 @@ function SetModal({ set, products, onClose, onSave }) {
   )
 }
 
+// ============================================
+// CREATE SET FROM SELECTION MODAL
+// Модалка для швидкого створення набору з вибраних товарів
+// ============================================
+function CreateSetFromSelectionModal({ selectedProducts, onClose, onSave }) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [setPrice, setSetPrice] = useState('')
+  const [items, setItems] = useState(
+    selectedProducts.map(p => ({ 
+      product_id: p.product_id, 
+      quantity: 1, 
+      name: p.name, 
+      rental_price: p.rental_price,
+      image: p.image
+    }))
+  )
+  const [saving, setSaving] = useState(false)
+  
+  // Calculate total
+  const calculatedPrice = items.reduce((sum, i) => sum + (i.rental_price || 0) * i.quantity, 0)
+  
+  const updateQty = (productId, qty) => {
+    if (qty < 1) {
+      setItems(items.filter(i => i.product_id !== productId))
+    } else {
+      setItems(items.map(i => i.product_id === productId ? { ...i, quantity: qty } : i))
+    }
+  }
+  
+  const removeItem = (productId) => {
+    setItems(items.filter(i => i.product_id !== productId))
+  }
+  
+  const handleSave = async () => {
+    if (!name.trim()) return alert('Введіть назву набору')
+    if (items.length === 0) return alert('Додайте товари до набору')
+    
+    setSaving(true)
+    try {
+      await onSave({
+        name: name.trim(),
+        description: description.trim() || null,
+        set_price: setPrice ? parseFloat(setPrice) : null,
+        items: items.map(i => ({ product_id: i.product_id, quantity: i.quantity }))
+      })
+    } catch (err) {
+      console.error('Save error:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-corp-border bg-gradient-to-r from-corp-primary/5 to-corp-primary/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-corp-text-dark flex items-center gap-2">
+                <span>📦</span> Створити набір
+              </h2>
+              <p className="text-sm text-corp-text-muted mt-1">
+                з {selectedProducts.length} вибраних товарів
+              </p>
+            </div>
+            <button onClick={onClose} className="text-corp-text-muted hover:text-corp-text-dark text-2xl">×</button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Name */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Назва набору *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Наприклад: Весільний комплект на 50 гостей"
+              className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
+              autoFocus
+            />
+          </div>
+          
+          {/* Description */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Опис</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Короткий опис набору..."
+              rows={2}
+              className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30 resize-none"
+            />
+          </div>
+          
+          {/* Selected items */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-2">
+              Товари в наборі ({items.length})
+            </label>
+            <div className="border border-corp-border rounded-lg divide-y divide-corp-border max-h-64 overflow-y-auto">
+              {items.map(item => (
+                <div key={item.product_id} className="flex items-center gap-3 p-3 hover:bg-corp-bg-light/50">
+                  {/* Image */}
+                  <div className="w-12 h-12 rounded-lg bg-corp-bg-light overflow-hidden flex-shrink-0">
+                    {item.image ? (
+                      <img src={getImageUrl(item.image)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-corp-text-muted">📦</div>
+                    )}
+                  </div>
+                  
+                  {/* Name */}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-corp-text-dark truncate">{item.name}</div>
+                    <div className="text-xs text-corp-text-muted">{fmtUA(item.rental_price)} ₴/день</div>
+                  </div>
+                  
+                  {/* Quantity */}
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => updateQty(item.product_id, item.quantity - 1)}
+                      className="w-7 h-7 rounded-lg border border-corp-border hover:bg-corp-bg-light flex items-center justify-center text-sm"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center font-medium">{item.quantity}</span>
+                    <button 
+                      onClick={() => updateQty(item.product_id, item.quantity + 1)}
+                      className="w-7 h-7 rounded-lg border border-corp-border hover:bg-corp-bg-light flex items-center justify-center text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                  
+                  {/* Price */}
+                  <span className="text-sm text-corp-primary w-20 text-right font-medium">
+                    {fmtUA(item.rental_price * item.quantity)} ₴
+                  </span>
+                  
+                  {/* Remove */}
+                  <button 
+                    onClick={() => removeItem(item.product_id)} 
+                    className="text-rose-400 hover:text-rose-600 p-1"
+                    title="Видалити з набору"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Price */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-corp-bg-light rounded-xl">
+            <div>
+              <label className="text-sm font-medium text-corp-text-dark block mb-1">Сума товарів</label>
+              <div className="text-2xl font-bold text-corp-text-dark">{fmtUA(calculatedPrice)} ₴</div>
+              <div className="text-xs text-corp-text-muted">за день оренди</div>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-corp-text-dark block mb-1">Ціна набору (зі знижкою)</label>
+              <input
+                type="number"
+                value={setPrice}
+                onChange={(e) => setSetPrice(e.target.value)}
+                placeholder={calculatedPrice.toString()}
+                className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30 text-lg font-medium"
+              />
+              {setPrice && parseFloat(setPrice) < calculatedPrice && (
+                <div className="text-xs text-emerald-600 mt-1">
+                  Знижка: {fmtUA(calculatedPrice - parseFloat(setPrice))} ₴ ({Math.round((1 - parseFloat(setPrice) / calculatedPrice) * 100)}%)
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6 border-t border-corp-border flex gap-3 justify-end bg-corp-bg-light/50">
+          <button onClick={onClose} className="px-4 py-2 text-corp-text-muted hover:text-corp-text-dark">
+            Скасувати
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={saving || !name.trim() || items.length === 0}
+            className="px-6 py-2 bg-corp-primary text-white rounded-lg hover:bg-corp-primary/90 disabled:opacity-50 font-medium flex items-center gap-2"
+          >
+            {saving ? (
+              'Збереження...'
+            ) : (
+              <>
+                <span>✓</span>
+                Створити набір
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Sets Tab Content
 function SetsTab({ products }) {
   const [sets, setSets] = useState([])

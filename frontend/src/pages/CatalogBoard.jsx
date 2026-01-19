@@ -1908,6 +1908,43 @@ export default function CatalogBoard() {
               setShowCreateSetModal(false)
               setActiveTab('sets')
               
+              alert('✅ Сет успішно створено!')
+            } catch (err) {
+              alert('❌ Помилка: ' + err.message)
+            }
+          }}
+        />
+      )}
+      
+      {/* Модалка створення набору (family/розмірна сітка) */}
+      {showCreateFamilyModal && (
+        <CreateFamilyFromSelectionModal
+          selectedProducts={selectedForSet}
+          onClose={() => setShowCreateFamilyModal(false)}
+          onSave={async (familyData) => {
+            try {
+              // Створюємо family
+              const createRes = await fetch(`${BACKEND_URL}/api/catalog/families`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: familyData.name, description: familyData.description })
+              })
+              if (!createRes.ok) throw new Error('Failed to create family')
+              const created = await createRes.json()
+              
+              // Присвоюємо товари
+              const assignRes = await fetch(`${BACKEND_URL}/api/catalog/families/${created.id}/assign`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_ids: familyData.product_ids })
+              })
+              if (!assignRes.ok) throw new Error('Failed to assign products')
+              
+              // Успіх
+              clearSelection()
+              setShowCreateFamilyModal(false)
+              setActiveTab('families')
+              
               alert('✅ Набір успішно створено!')
             } catch (err) {
               alert('❌ Помилка: ' + err.message)

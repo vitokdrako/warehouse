@@ -1544,6 +1544,9 @@ export default function CatalogBoard() {
                       item={item}
                       onClick={() => setSelectedItem(item)}
                       dateFilterActive={dateFilterActive}
+                      selectionMode={selectionMode}
+                      isSelected={selectedForSet.some(p => p.product_id === item.product_id)}
+                      onToggleSelect={toggleProductSelection}
                     />
                   ))}
                 </div>

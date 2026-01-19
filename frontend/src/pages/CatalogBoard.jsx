@@ -1482,8 +1482,10 @@ export default function CatalogBoard() {
   
   // === МУЛЬТИВИБІР ДЛЯ СТВОРЕННЯ НАБОРІВ ===
   const [selectionMode, setSelectionMode] = useState(false)
+  const [selectionTarget, setSelectionTarget] = useState('set') // 'set' | 'family'
   const [selectedForSet, setSelectedForSet] = useState([]) // [{product_id, name, sku, rental_price, image}]
   const [showCreateSetModal, setShowCreateSetModal] = useState(false)
+  const [showCreateFamilyModal, setShowCreateFamilyModal] = useState(false)
   
   const toggleProductSelection = (product) => {
     setSelectedForSet(prev => {
@@ -1502,6 +1504,12 @@ export default function CatalogBoard() {
     })
   }
   
+  const startSelectionMode = (target) => {
+    setSelectionTarget(target)
+    setSelectionMode(true)
+    setSelectedForSet([])
+  }
+  
   const clearSelection = () => {
     setSelectedForSet([])
     setSelectionMode(false)
@@ -1509,6 +1517,10 @@ export default function CatalogBoard() {
   
   const openCreateSetFromSelection = () => {
     setShowCreateSetModal(true)
+  }
+  
+  const openCreateFamilyFromSelection = () => {
+    setShowCreateFamilyModal(true)
   }
 
   // Load categories on mount

@@ -1566,6 +1566,114 @@ export default function CatalogBoard() {
         onClose={() => setSelectedItem(null)}
         dateFilterActive={dateFilterActive}
       />
+      
+      {/* Плаваюча панель вибраних товарів */}
+      {selectionMode && selectedForSet.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-corp-primary shadow-2xl">
+          <div className="max-w-[1800px] mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              {/* Мініатюри вибраних */}
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-2">
+                  {selectedForSet.slice(0, 6).map((p, idx) => (
+                    <div 
+                      key={p.product_id}
+                      className="w-12 h-12 rounded-lg border-2 border-white bg-corp-bg-light overflow-hidden shadow-md"
+                      title={p.name}
+                    >
+                      {p.image ? (
+                        <img src={getImageUrl(p.image)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-corp-text-muted">📦</div>
+                      )}
+                    </div>
+                  ))}
+                  {selectedForSet.length > 6 && (
+                    <div className="w-12 h-12 rounded-lg border-2 border-white bg-corp-primary text-white flex items-center justify-center text-sm font-bold shadow-md">
+                      +{selectedForSet.length - 6}
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Інформація */}
+              <div className="flex-1">
+                <div className="font-semibold text-corp-text-dark">
+                  Вибрано: {selectedForSet.length} товарів
+                </div>
+                <div className="text-sm text-corp-text-muted">
+                  Сума оренди: {fmtUA(selectedForSet.reduce((s, p) => s + (p.rental_price || 0), 0))} ₴/день
+                </div>
+              </div>
+              
+              {/* Список вибраних (компактний) */}
+              <div className="hidden lg:flex flex-wrap gap-1 max-w-md">
+                {selectedForSet.slice(0, 4).map(p => (
+                  <span 
+                    key={p.product_id} 
+                    className="text-xs bg-corp-bg-light px-2 py-1 rounded flex items-center gap-1"
+                  >
+                    {p.name.slice(0, 15)}{p.name.length > 15 ? '...' : ''}
+                    <button 
+                      onClick={() => toggleProductSelection(p)}
+                      className="text-corp-text-muted hover:text-rose-500"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {selectedForSet.length > 4 && (
+                  <span className="text-xs text-corp-text-muted">+{selectedForSet.length - 4}</span>
+                )}
+              </div>
+              
+              {/* Кнопки */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={clearSelection}
+                  className="px-4 py-2 rounded-lg border border-corp-border text-corp-text-muted hover:bg-corp-bg-light transition-colors"
+                >
+                  Скасувати
+                </button>
+                <button
+                  onClick={openCreateSetFromSelection}
+                  className="px-6 py-2 rounded-lg bg-corp-primary text-white font-medium hover:bg-corp-primary/90 transition-colors flex items-center gap-2"
+                >
+                  <span>📦</span>
+                  Створити набір
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Модалка створення набору з вибраних товарів */}
+      {showCreateSetModal && (
+        <CreateSetFromSelectionModal
+          selectedProducts={selectedForSet}
+          onClose={() => setShowCreateSetModal(false)}
+          onSave={async (setData) => {
+            try {
+              const res = await fetch(`${BACKEND_URL}/api/product-sets`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(setData)
+              })
+              if (!res.ok) throw new Error('Failed to create set')
+              
+              // Успіх - очищуємо вибір і переходимо на вкладку сетів
+              clearSelection()
+              setShowCreateSetModal(false)
+              setActiveTab('sets')
+              
+              alert('✅ Набір успішно створено!')
+            } catch (err) {
+              alert('❌ Помилка: ' + err.message)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

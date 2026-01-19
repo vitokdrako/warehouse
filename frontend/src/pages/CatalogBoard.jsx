@@ -846,6 +846,137 @@ function CreateSetFromSelectionModal({ selectedProducts, onClose, onSave }) {
   )
 }
 
+// ============================================
+// CREATE FAMILY FROM SELECTION MODAL
+// Модалка для швидкого створення набору (розмірна сітка)
+// ============================================
+function CreateFamilyFromSelectionModal({ selectedProducts, onClose, onSave }) {
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [saving, setSaving] = useState(false)
+  
+  const handleSave = async () => {
+    if (!name.trim()) return alert('Введіть назву набору')
+    if (selectedProducts.length < 2) return alert('Виберіть принаймні 2 товари')
+    
+    setSaving(true)
+    try {
+      await onSave({
+        name: name.trim(),
+        description: description.trim() || null,
+        product_ids: selectedProducts.map(p => p.product_id)
+      })
+    } catch (err) {
+      console.error('Save error:', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-corp-border bg-gradient-to-r from-amber-50 to-amber-100/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-corp-text-dark flex items-center gap-2">
+                <span>📏</span> Створити набір
+              </h2>
+              <p className="text-sm text-corp-text-muted mt-1">
+                Розмірна сітка / варіації товару ({selectedProducts.length} позицій)
+              </p>
+            </div>
+            <button onClick={onClose} className="text-corp-text-muted hover:text-corp-text-dark text-2xl">×</button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Name */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Назва набору *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Наприклад: Свічник золотий (розміри)"
+              className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              autoFocus
+            />
+          </div>
+          
+          {/* Description */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-1">Опис</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Короткий опис набору..."
+              rows={2}
+              className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300 resize-none"
+            />
+          </div>
+          
+          {/* Products preview */}
+          <div>
+            <label className="text-sm font-medium text-corp-text-dark block mb-2">
+              Товари в наборі ({selectedProducts.length})
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {selectedProducts.map(p => (
+                <div key={p.product_id} className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="w-10 h-10 rounded bg-white overflow-hidden flex-shrink-0 border border-amber-100">
+                    {p.image ? (
+                      <img src={getImageUrl(p.image)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xs text-corp-text-muted">📦</div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-corp-text-dark truncate">{p.name}</div>
+                    <div className="text-xs text-corp-text-muted">{p.sku}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Info */}
+          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">💡</span>
+              <div className="text-sm text-amber-800">
+                <strong>Набір</strong> об'єднує схожі товари різних розмірів або варіацій. 
+                Це допомагає клієнтам швидше знаходити потрібний розмір, а вам — краще організувати каталог.
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-6 border-t border-corp-border flex gap-3 justify-end bg-amber-50/50">
+          <button onClick={onClose} className="px-4 py-2 text-corp-text-muted hover:text-corp-text-dark">
+            Скасувати
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={saving || !name.trim() || selectedProducts.length < 2}
+            className="px-6 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 font-medium flex items-center gap-2"
+          >
+            {saving ? (
+              'Збереження...'
+            ) : (
+              <>
+                <span>✓</span>
+                Створити набір
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Sets Tab Content
 function SetsTab({ products }) {
   const [sets, setSets] = useState([])

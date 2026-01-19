@@ -1241,6 +1241,37 @@ export default function CatalogBoard() {
   const [dateRange, setDateRange] = useState({ dateFrom: '', dateTo: '' })
   const [dateFilterActive, setDateFilterActive] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
+  
+  // === МУЛЬТИВИБІР ДЛЯ СТВОРЕННЯ НАБОРІВ ===
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedForSet, setSelectedForSet] = useState([]) // [{product_id, name, sku, rental_price, image}]
+  const [showCreateSetModal, setShowCreateSetModal] = useState(false)
+  
+  const toggleProductSelection = (product) => {
+    setSelectedForSet(prev => {
+      const exists = prev.find(p => p.product_id === product.product_id)
+      if (exists) {
+        return prev.filter(p => p.product_id !== product.product_id)
+      } else {
+        return [...prev, {
+          product_id: product.product_id,
+          name: product.name,
+          sku: product.sku,
+          rental_price: product.rental_price || 0,
+          image: product.image
+        }]
+      }
+    })
+  }
+  
+  const clearSelection = () => {
+    setSelectedForSet([])
+    setSelectionMode(false)
+  }
+  
+  const openCreateSetFromSelection = () => {
+    setShowCreateSetModal(true)
+  }
 
   // Load categories on mount
   useEffect(() => {

@@ -40,13 +40,20 @@ export default function CorporateHeader({
     <header className="corp-header sticky top-0 z-30">
       <div className="mx-auto max-w-7xl flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="h-10 w-10 rounded-full bg-corp-primary grid place-content-center text-white font-bold text-sm flex-shrink-0">
+          <button 
+            onClick={() => navigate('/manager')}
+            className="h-10 w-10 rounded-full bg-corp-primary grid place-content-center text-white font-bold text-sm flex-shrink-0 hover:bg-corp-primary/90 hover:scale-105 transition-all cursor-pointer"
+            title="На головну"
+          >
             RH
-          </div>
-          <div className="min-w-0 flex-1">
+          </button>
+          <button 
+            onClick={() => navigate('/manager')}
+            className="min-w-0 flex-1 text-left hover:opacity-80 transition-opacity cursor-pointer"
+          >
             <h1 className="text-lg font-semibold text-corp-text-dark truncate">Rental Hub</h1>
             <p className="text-xs text-corp-text-muted truncate">{cabinetName}</p>
-          </div>
+          </button>
           {/* Mobile logout button */}
           <button 
             className="sm:hidden corp-btn corp-btn-secondary text-corp-error hover:bg-corp-error hover:text-white px-3 py-1.5 text-sm flex-shrink-0"

@@ -635,7 +635,7 @@ async def update_order(
     
     # Маппінг полів frontend -> database (якщо назви різні)
     field_mapping = {
-        'discount': 'discount_percent',  # frontend discount -> db discount_percent
+        'discount': 'discount_amount',  # frontend discount -> db discount_amount
     }
     
     for field in allowed_fields:

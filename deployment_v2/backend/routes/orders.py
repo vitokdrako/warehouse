@@ -629,12 +629,19 @@ async def update_order(
         'customer_name', 'customer_phone', 'customer_email', 
         'rental_start_date', 'rental_end_date', 'issue_date', 'return_date', 
         'issue_time', 'return_time', 'status', 
-        'total_price', 'deposit_amount', 'total_loss_value', 'rental_days', 'notes'
+        'total_price', 'deposit_amount', 'total_loss_value', 'rental_days', 'notes',
+        'discount', 'manager_comment', 'manager_id'
     ]
+    
+    # Маппінг полів frontend -> database (якщо назви різні)
+    field_mapping = {
+        'discount': 'discount_amount',  # frontend discount -> db discount_amount
+    }
     
     for field in allowed_fields:
         if field in data:
-            set_clauses.append(f"{field} = :{field}")
+            db_field = field_mapping.get(field, field)
+            set_clauses.append(f"{db_field} = :{field}")
             params[field] = data[field]
     
     if set_clauses:

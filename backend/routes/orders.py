@@ -1589,6 +1589,7 @@ async def update_decor_order_items(
     """
     Оновити товари в замовленні
     ✅ MIGRATED: Using RentalHub DB + User Tracking
+    ✅ FIXED: Тепер перераховує total_price і deposit_amount в orders
     """
     from utils.user_tracking_helper import get_current_user_from_header
     
@@ -1597,34 +1598,37 @@ async def update_decor_order_items(
         current_user = get_current_user_from_header(authorization)
         user_id = current_user.get("id")
         
-        # Перевірити чи існує замовлення
-        result = db.execute(text("SELECT order_id FROM orders WHERE order_id = :id"), {"id": order_id})
-        if not result.fetchone():
+        # Перевірити чи існує замовлення та отримати rental_days
+        result = db.execute(text("SELECT order_id, rental_days FROM orders WHERE order_id = :id"), {"id": order_id})
+        order_row = result.fetchone()
+        if not order_row:
             raise HTTPException(status_code=404, detail="Order not found")
+        
+        rental_days = order_row[1] or 1
         
         items = items_data.get('items', [])
         if not items:
             raise HTTPException(status_code=400, detail="No items provided")
         
-        # Оновити updated_by_id в orders
-        if user_id:
-            db.execute(text("""
-                UPDATE orders 
-                SET updated_by_id = :user_id, updated_at = NOW()
-                WHERE order_id = :order_id
-            """), {"user_id": user_id, "order_id": order_id})
-        
         # Видалити старі items
         db.execute(text("DELETE FROM order_items WHERE order_id = :order_id"), {"order_id": order_id})
         
-        # Додати нові items
+        # Додати нові items та порахувати фінанси
+        total_rent = 0
+        total_deposit = 0
+        
         for item in items:
             inventory_id = item.get('inventory_id') or item.get('product_id')
             product_name = item.get('name') or item.get('product_name', '')
             quantity = int(item.get('quantity', 1))
             price_per_day = float(item.get('price_per_day', 0))
-            total_rental = float(item.get('total_rental', price_per_day * quantity))
+            deposit = float(item.get('deposit', 0) or item.get('damage_cost', 0) or 0)
+            total_rental = float(item.get('total_rental', price_per_day * quantity * rental_days))
             image_url = item.get('image') or item.get('photo', '')
+            
+            # Акумулювати фінанси
+            total_rent += price_per_day * quantity * rental_days
+            total_deposit += deposit * quantity
             
             db.execute(text("""
                 INSERT INTO order_items (
@@ -1644,12 +1648,30 @@ async def update_decor_order_items(
                 "image_url": image_url
             })
         
+        # ✅ КРИТИЧНО: Оновити total_price і deposit_amount в orders
+        db.execute(text("""
+            UPDATE orders 
+            SET total_price = :total_price,
+                deposit_amount = :deposit_amount,
+                total_loss_value = :deposit_amount,
+                updated_by_id = :user_id,
+                updated_at = NOW()
+            WHERE order_id = :order_id
+        """), {
+            "total_price": total_rent,
+            "deposit_amount": total_deposit,
+            "user_id": user_id,
+            "order_id": order_id
+        })
+        
         db.commit()
         
         return {
             "message": "Items updated successfully",
             "order_id": order_id,
-            "items_count": len(items)
+            "items_count": len(items),
+            "total_price": total_rent,
+            "deposit_amount": total_deposit
         }
         
     except HTTPException:

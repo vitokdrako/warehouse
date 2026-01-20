@@ -86,11 +86,11 @@ function ItemRow({
   const name = item.name || item.product_name || ''
   const image = item.image || item.photo || ''
   
-  // Локація на складі
+  // Локація на складі - Зона окремо від Полиці
   const location = item.location || {}
-  const locationStr = location.zone || location.aisle || location.shelf 
-    ? [location.zone, location.aisle, location.shelf].filter(Boolean).join('-')
-    : item.shelf || item.zone || null
+  const zoneStr = location.zone || item.zone || null
+  const shelfStr = [location.aisle, location.shelf].filter(Boolean).join(' / ') || item.shelf || null
+  const hasLocation = zoneStr || shelfStr
   
   const totalRent = pricePerDay * qty * rentalDays
   const totalDeposit = deposit * qty

@@ -388,12 +388,12 @@ export default function NewOrderViewWorkspace() {
         return_time: returnTime,
         rental_days: rentalDays,
         manager_comment: managerNotes,
-        discount: discount,
+        discount: calculations.discountAmount, // Сума знижки в грн
         manager_id: managerId,
         // Фінансові дані - ДЖЕРЕЛО ПРАВДИ
         total_price: calculations.rentAfterDiscount,
         deposit_amount: calculations.totalDeposit,
-        total_loss_value: calculations.totalDeposit // застава = повна вартість
+        total_loss_value: calculations.totalDeposit
       })
       
       toast({

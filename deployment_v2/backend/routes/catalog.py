@@ -833,16 +833,36 @@ async def assign_products_to_family(
     try:
         product_ids = data.get("product_ids", [])
         
+        # Оновлюємо family_id в products
         for product_id in product_ids:
             db.execute(text("""
                 UPDATE products SET family_id = :family_id WHERE product_id = :product_id
+            """), {"family_id": family_id, "product_id": product_id})
+        
+        # Оновлюємо колонку product_ids в product_families
+        all_products = db.execute(text("""
+            SELECT product_id FROM products WHERE family_id = :family_id ORDER BY product_id
+        """), {"family_id": family_id}).fetchall()
+        
+        product_ids_str = ','.join(str(p[0]) for p in all_products) if all_products else None
+        
+        db.execute(text("""
+            UPDATE product_families SET product_ids = :product_ids WHERE id = :family_id
+        """), {"product_ids": product_ids_str, "family_id": family_id})
+        
+        # Оновлюємо таблицю product_family_items
+        db.execute(text("DELETE FROM product_family_items WHERE family_id = :family_id"), {"family_id": family_id})
+        for product_id in product_ids:
+            db.execute(text("""
+                INSERT INTO product_family_items (family_id, product_id) VALUES (:family_id, :product_id)
             """), {"family_id": family_id, "product_id": product_id})
         
         db.commit()
         
         return {
             "success": True,
-            "message": f"Прив'язано {len(product_ids)} товарів"
+            "message": f"Прив'язано {len(product_ids)} товарів",
+            "product_ids": product_ids_str
         }
         
     except Exception as e:

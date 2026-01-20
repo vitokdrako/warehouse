@@ -200,40 +200,6 @@ export default function ManagerDashboard() {
       });
     })
     .catch(err => console.error('[Dashboard] Error loading cleaning stats:', err));
-    
-    // Перевірити чи потрібно оновити дані (після редагування замовлення)
-    const checkRefreshFlag = () => {
-      if (localStorage.getItem('dashboard_needs_refresh') === 'true') {
-        console.log('[Dashboard] 🔄 Refresh flag detected - reloading data');
-        localStorage.removeItem('dashboard_needs_refresh');
-        fetchAllData();
-      }
-    };
-    
-    // Перевіряємо прапорець при монтуванні
-    checkRefreshFlag();
-    
-    // Оновлювати дані коли вікно отримує фокус
-    const handleFocus = () => {
-      console.log('[Dashboard] 🔄 Window focused - checking refresh flag');
-      checkRefreshFlag();
-    };
-    
-    // Також перевіряємо при visibility change (коли вкладка стає активною)
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('[Dashboard] 🔄 Tab became visible - checking refresh flag');
-        checkRefreshFlag();
-      }
-    };
-    
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
   }, []);
   
   // Manual reload function - оновити ВСІ дані

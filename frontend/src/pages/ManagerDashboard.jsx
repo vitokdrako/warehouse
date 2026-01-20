@@ -287,6 +287,19 @@ export default function ManagerDashboard() {
               + Нове замовлення
             </button>
             <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
+            
+            {/* Кнопка оновлення */}
+            <button 
+              onClick={handleReload}
+              disabled={loading}
+              className="px-3 py-2 rounded-lg border border-corp-border text-corp-text-muted hover:bg-corp-bg-light hover:text-corp-text-dark transition-colors flex items-center gap-2"
+              title="Оновити всі дані"
+            >
+              <span className={loading ? 'animate-spin' : ''}>🔄</span>
+              <span className="hidden sm:inline">Оновити</span>
+            </button>
+            
+            <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
             <button 
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
               onClick={() => navigate('/calendar')}

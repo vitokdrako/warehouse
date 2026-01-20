@@ -88,8 +88,10 @@ function ItemRow({
   
   // Локація на складі - Зона окремо від Полиці
   const location = item.location || {}
-  const zoneStr = location.zone || item.zone || null
-  const shelfStr = [location.aisle, location.shelf].filter(Boolean).join(' / ') || item.shelf || null
+  const validValue = (v) => v && v !== 'None' && v !== 'null'
+  const zoneStr = validValue(location.zone) ? location.zone : (validValue(item.zone) ? item.zone : null)
+  const shelfParts = [location.aisle, location.shelf].filter(validValue)
+  const shelfStr = shelfParts.length > 0 ? shelfParts.join(' / ') : (validValue(item.shelf) ? item.shelf : null)
   const hasLocation = zoneStr || shelfStr
   
   const totalRent = pricePerDay * qty * rentalDays

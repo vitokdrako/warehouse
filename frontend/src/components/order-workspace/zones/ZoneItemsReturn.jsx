@@ -123,20 +123,19 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
           <div className={`font-semibold mb-1 line-clamp-2 ${isDisabled ? 'text-slate-400' : 'text-slate-800'}`}>{item.name}</div>
           <div className="text-xs text-slate-500">SKU: {item.sku || '—'}</div>
           {/* Локація на складі - Зона + Полиця */}
-          {(item.location?.zone || item.location?.aisle || item.location?.shelf) && (
-            <div className="text-xs text-corp-primary font-medium mt-0.5 flex items-center gap-2">
-              {item.location.zone && item.location.zone !== 'None' && item.location.zone !== 'null' && (
-                <span>📍 Зона: <b>{item.location.zone}</b></span>
-              )}
-              {(() => {
-                const parts = [item.location.aisle, item.location.shelf]
-                  .filter(v => v && v !== 'None' && v !== 'null')
-                return parts.length > 0 && (
-                  <span>Полиця: <b>{parts.join(' / ')}</b></span>
-                )
-              })()}
-            </div>
-          )}
+          {(item.location?.zone || item.location?.aisle || item.location?.shelf) && (() => {
+            const zone = item.location.zone && item.location.zone !== 'None' && item.location.zone !== 'null' ? item.location.zone : null
+            const shelfParts = [item.location.aisle, item.location.shelf].filter(v => v && v !== 'None' && v !== 'null')
+            const shelf = shelfParts.length > 0 ? shelfParts.join('/') : null
+            if (!zone && !shelf) return null
+            return (
+              <div className="text-xs text-corp-primary font-medium mt-0.5">
+                {zone && <span>📍 Зона: <b>{zone}</b></span>}
+                {zone && shelf && <span> • </span>}
+                {shelf && <span>Полиця: <b>{shelf}</b></span>}
+              </div>
+            )
+          })()}
           
           <div className="flex flex-wrap gap-1 mt-2">
             {isFullyReturned && !hasDamage && (

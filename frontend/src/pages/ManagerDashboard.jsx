@@ -200,6 +200,18 @@ export default function ManagerDashboard() {
       });
     })
     .catch(err => console.error('[Dashboard] Error loading cleaning stats:', err));
+    
+    // Оновлювати дані коли вікно отримує фокус (користувач повертається на дашборд)
+    const handleFocus = () => {
+      console.log('[Dashboard] 🔄 Window focused - refreshing data');
+      fetchAllData();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
   
   // Manual reload function

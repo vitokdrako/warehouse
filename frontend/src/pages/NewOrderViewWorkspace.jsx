@@ -391,6 +391,10 @@ export default function NewOrderViewWorkspace() {
         manager_id: managerId
       })
       
+      // Встановлюємо прапорець що дашборд потрібно оновити
+      localStorage.setItem('dashboard_needs_refresh', 'true')
+      localStorage.setItem('finance_needs_refresh', 'true')
+      
       toast({
         title: '✅ Збережено',
         description: 'Зміни успішно збережено',

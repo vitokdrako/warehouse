@@ -1531,6 +1531,7 @@ async def update_decor_order(
     """
     Оновити замовлення (спрощена версія для decor orders)
     ✅ MIGRATED: Using RentalHub DB
+    ✅ FIXED: Тепер приймає total_price, deposit_amount, total_loss_value
     """
     # Перевірити чи існує замовлення
     result = db.execute(text("SELECT order_id FROM orders WHERE order_id = :id"), {"id": order_id})
@@ -1550,6 +1551,10 @@ async def update_decor_order(
         'rental_days': 'rental_days',
         'manager_comment': 'manager_comment',
         'discount': 'discount_amount',  # Frontend: discount -> DB: discount_amount
+        # ✅ КРИТИЧНО: Фінансові поля - джерело правди
+        'total_price': 'total_price',
+        'deposit_amount': 'deposit_amount',
+        'total_loss_value': 'total_loss_value',
     }
     
     for frontend_field, db_field in field_mapping.items():

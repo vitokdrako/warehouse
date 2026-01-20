@@ -232,13 +232,33 @@ function FamilyModal({ family, products, onClose, onSave }) {
           
           {/* Add products */}
           <div>
-            <label className="text-sm font-medium text-corp-text-dark block mb-1">Додати товари</label>
+            <label className="text-sm font-medium text-corp-text-dark block mb-2">Додати товари</label>
+            
+            {/* Швидке додавання по артикулу */}
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={skuInput}
+                onChange={(e) => setSkuInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addBySku()}
+                placeholder="Введіть артикул (SKU)"
+                className="flex-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300"
+              />
+              <button
+                onClick={addBySku}
+                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-medium"
+              >
+                + Додати
+              </button>
+            </div>
+            
+            {/* Пошук по назві */}
             <div className="relative">
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Пошук по SKU або назві..."
+                placeholder="Або шукайте по назві..."
                 className="w-full rounded-lg border border-corp-border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
               />
               {filteredProducts.length > 0 && (
@@ -249,7 +269,7 @@ function FamilyModal({ family, products, onClose, onSave }) {
                       onClick={() => addProduct(p)}
                       className="w-full text-left px-3 py-2 hover:bg-corp-bg-light flex items-center gap-2"
                     >
-                      <span className="text-xs text-corp-text-muted">{p.sku}</span>
+                      <span className="text-xs font-mono bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">{p.sku}</span>
                       <span className="flex-1 truncate">{p.name}</span>
                       {p.color && <span className="text-xs bg-corp-bg-light px-1 rounded">{p.color}</span>}
                     </button>

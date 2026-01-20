@@ -380,6 +380,7 @@ export default function NewOrderViewWorkspace() {
         ? `${BACKEND_URL}/api/decor-orders/${orderId}`
         : `${BACKEND_URL}/api/orders/${orderId}`
       
+      // Відправляємо ВСІ дані включаючи фінанси
       await axios.put(endpoint, {
         rental_start_date: issueDate,
         rental_end_date: returnDate,
@@ -388,12 +389,12 @@ export default function NewOrderViewWorkspace() {
         rental_days: rentalDays,
         manager_comment: managerNotes,
         discount: discount,
-        manager_id: managerId
+        manager_id: managerId,
+        // Фінансові дані - ДЖЕРЕЛО ПРАВДИ
+        total_price: calculations.rentAfterDiscount,
+        deposit_amount: calculations.totalDeposit,
+        total_loss_value: calculations.totalDeposit // застава = повна вартість
       })
-      
-      // Встановлюємо прапорець що дашборд потрібно оновити
-      localStorage.setItem('dashboard_needs_refresh', 'true')
-      localStorage.setItem('finance_needs_refresh', 'true')
       
       toast({
         title: '✅ Збережено',

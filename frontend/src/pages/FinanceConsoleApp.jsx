@@ -1111,31 +1111,7 @@ const ExpensesTab = ({ reload, loading, dashboard }) => {
     setLoadingExp(false);
   };
 
-  useEffect(() => { 
-    loadData(); 
-    
-    // Перевірити чи потрібно оновити дані
-    const checkRefreshFlag = () => {
-      if (localStorage.getItem('finance_needs_refresh') === 'true') {
-        console.log('[Finance] 🔄 Refresh flag detected - reloading data');
-        localStorage.removeItem('finance_needs_refresh');
-        loadData();
-      }
-    };
-    
-    // Перевіряємо при монтуванні
-    checkRefreshFlag();
-    
-    // Перевіряємо при visibility change
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkRefreshFlag();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [selectedMonth]);
+  useEffect(() => { loadData(); }, [selectedMonth]);
 
   const clearMsg = () => { setMsg(null); setErr(null); };
 

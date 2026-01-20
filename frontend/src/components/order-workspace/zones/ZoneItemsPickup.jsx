@@ -106,12 +106,16 @@ function ItemPickupCard({
           {/* Локація на складі - Зона + Полиця */}
           {(item.location?.zone || item.location?.aisle || item.location?.shelf) && (
             <div className="text-xs text-corp-primary font-medium mt-0.5 flex items-center gap-2">
-              {item.location.zone && (
+              {item.location.zone && item.location.zone !== 'None' && item.location.zone !== 'null' && (
                 <span>📍 Зона: <b>{item.location.zone}</b></span>
               )}
-              {(item.location.aisle || item.location.shelf) && (
-                <span>Полиця: <b>{[item.location.aisle, item.location.shelf].filter(Boolean).join(' / ')}</b></span>
-              )}
+              {(() => {
+                const parts = [item.location.aisle, item.location.shelf]
+                  .filter(v => v && v !== 'None' && v !== 'null')
+                return parts.length > 0 && (
+                  <span>Полиця: <b>{parts.join(' / ')}</b></span>
+                )
+              })()}
             </div>
           )}
           

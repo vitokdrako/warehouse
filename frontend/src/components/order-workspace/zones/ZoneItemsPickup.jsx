@@ -103,10 +103,15 @@ function ItemPickupCard({
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-slate-800 mb-1 line-clamp-2">{item.name}</div>
           <div className="text-xs text-slate-500">SKU: {item.sku || item.article || '—'}</div>
-          {/* Локація на складі */}
+          {/* Локація на складі - Зона + Полиця */}
           {(item.location?.zone || item.location?.aisle || item.location?.shelf) && (
-            <div className="text-xs text-corp-primary font-medium mt-0.5">
-              Полиця: {[item.location.zone, item.location.aisle, item.location.shelf].filter(Boolean).join('-')}
+            <div className="text-xs text-corp-primary font-medium mt-0.5 flex items-center gap-2">
+              {item.location.zone && (
+                <span>📍 Зона: <b>{item.location.zone}</b></span>
+              )}
+              {(item.location.aisle || item.location.shelf) && (
+                <span>Полиця: <b>{[item.location.aisle, item.location.shelf].filter(Boolean).join(' / ')}</b></span>
+              )}
             </div>
           )}
           

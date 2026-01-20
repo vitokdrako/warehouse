@@ -214,19 +214,17 @@ export default function ManagerDashboard() {
     };
   }, []);
   
-  // Manual reload function
+  // Manual reload function - оновити ВСІ дані
   const handleReload = () => {
     setLoading(true);
-    setOrders([]);
+    console.log('[Dashboard] 🔄 Manual reload triggered');
+    fetchAllData();
     
-    const today = new Date().toISOString().split('T')[0];
-    const queryParams = `?limit=100&from_date=${today}&to_date=${today}`;
-    
-    authFetch(`${BACKEND_URL}/api/orders${queryParams}`)
+    // Додатково оновлюємо статистику
+    authFetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`)
     .then(res => res.json())
     .then(data => {
-      console.log('[Dashboard] Manual reload:', data.orders?.length || 0, 'orders');
-      setOrders(data.orders || []);
+      setCleaningStats({ repair: data.repair || 0 });
       setLoading(false);
     })
     .catch(err => {

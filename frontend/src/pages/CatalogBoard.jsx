@@ -109,9 +109,16 @@ function FamilyCard({ family, onEdit, onDelete }) {
 function FamilyModal({ family, products, onClose, onSave }) {
   const [name, setName] = useState(family?.name || '')
   const [description, setDescription] = useState(family?.description || '')
-  const [selectedProducts, setSelectedProducts] = useState(family?.products?.map(p => p.product_id) || [])
+  // Ініціалізуємо з товарів що вже в наборі
+  const [selectedProducts, setSelectedProducts] = useState(() => {
+    if (family?.products && family.products.length > 0) {
+      return family.products.map(p => p.product_id)
+    }
+    return []
+  })
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
+  const [skuInput, setSkuInput] = useState('')
   
   // Filter products for search
   const filteredProducts = useMemo(() => {
@@ -129,8 +136,32 @@ function FamilyModal({ family, products, onClose, onSave }) {
   }, [selectedProducts, products])
   
   const addProduct = (product) => {
-    setSelectedProducts([...selectedProducts, product.product_id])
+    if (!selectedProducts.includes(product.product_id)) {
+      setSelectedProducts([...selectedProducts, product.product_id])
+    }
     setSearch('')
+  }
+  
+  // Додати товар по артикулу
+  const addBySku = () => {
+    if (!skuInput.trim()) return
+    
+    const sku = skuInput.trim().toUpperCase()
+    const product = products.find(p => 
+      p.sku?.toUpperCase() === sku || 
+      p.sku?.toUpperCase().includes(sku)
+    )
+    
+    if (product) {
+      if (selectedProducts.includes(product.product_id)) {
+        alert(`Товар ${product.sku} вже в наборі`)
+      } else {
+        setSelectedProducts([...selectedProducts, product.product_id])
+        setSkuInput('')
+      }
+    } else {
+      alert(`Товар з артикулом "${sku}" не знайдено`)
+    }
   }
   
   const removeProduct = (productId) => {
@@ -161,9 +192,10 @@ function FamilyModal({ family, products, onClose, onSave }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-corp-border">
+        <div className="p-6 border-b border-corp-border bg-gradient-to-r from-amber-50 to-amber-100/50">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-corp-text-dark">
+            <h2 className="text-xl font-bold text-corp-text-dark flex items-center gap-2">
+              <span>📏</span>
               {family ? 'Редагувати набір' : 'Новий набір'}
             </h2>
             <button onClick={onClose} className="text-corp-text-muted hover:text-corp-text-dark text-2xl">×</button>

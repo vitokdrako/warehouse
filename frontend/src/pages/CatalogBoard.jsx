@@ -1434,6 +1434,9 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
           {item.on_laundry > 0 && (
             <Badge variant="default">{item.on_laundry} хім.</Badge>
           )}
+          {item.family_id && (
+            <Badge variant="primary">📏 Набір</Badge>
+          )}
         </div>
       </div>
       

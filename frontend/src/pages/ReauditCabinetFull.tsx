@@ -994,7 +994,9 @@ export default function ReauditCabinetFull({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-corp-text-main">📍 Місце:</span>
-                      <span className="font-medium text-corp-text-dark">{selected.zone} / {selected.location}</span>
+                      <span className="font-medium text-corp-text-dark">
+                        {selected.zoneDisplay || (selected.zone ? `Зона ${selected.zone}` : 'Склад')} / {selected.location || '—'}
+                      </span>
                     </div>
                   </div>
                 )}

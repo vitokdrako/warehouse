@@ -1452,6 +1452,158 @@ async def search_inventory(
     
     return {"products": products, "total": len(products)}
 
+
+# ============================================================
+# MERGE ORDERS - Об'єднання замовлень
+# ============================================================
+
+@router.post("/merge")
+async def merge_orders(
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Об'єднати кілька замовлень в одне.
+    Товари з source_order_ids переносяться в target_order_id.
+    Source замовлення видаляються.
+    """
+    target_order_id = data.get('target_order_id')
+    source_order_ids = data.get('source_order_ids', [])
+    
+    if not target_order_id or not source_order_ids:
+        raise HTTPException(status_code=400, detail="target_order_id та source_order_ids обов'язкові")
+    
+    if target_order_id in source_order_ids:
+        raise HTTPException(status_code=400, detail="target_order_id не може бути в source_order_ids")
+    
+    try:
+        # Перевірити що всі замовлення існують і в статусі awaiting_customer
+        all_order_ids = [target_order_id] + source_order_ids
+        result = db.execute(text("""
+            SELECT order_id, order_number, status, customer_id 
+            FROM orders WHERE order_id IN :ids
+        """), {"ids": tuple(all_order_ids)})
+        orders = {row[0]: {"order_number": row[1], "status": row[2], "customer_id": row[3]} for row in result.fetchall()}
+        
+        if len(orders) != len(all_order_ids):
+            missing = set(all_order_ids) - set(orders.keys())
+            raise HTTPException(status_code=404, detail=f"Замовлення не знайдено: {missing}")
+        
+        # Перевірити статуси
+        for oid, odata in orders.items():
+            if odata['status'] != 'awaiting_customer':
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Замовлення {odata['order_number']} має статус '{odata['status']}'. Об'єднання можливе тільки для 'awaiting_customer'"
+                )
+        
+        # Отримати rental_days з target замовлення
+        result = db.execute(text("SELECT rental_days FROM orders WHERE order_id = :id"), {"id": target_order_id})
+        target_rental_days = result.fetchone()[0] or 1
+        
+        # Перенести товари з source замовлень в target
+        for source_id in source_order_ids:
+            # Отримати товари з source
+            result = db.execute(text("""
+                SELECT product_id, product_name, quantity, price, total_rental, image_url
+                FROM order_items WHERE order_id = :id
+            """), {"id": source_id})
+            source_items = result.fetchall()
+            
+            # Додати в target
+            for item in source_items:
+                product_id, product_name, quantity, price, total_rental, image_url = item
+                # Перерахувати total_rental з новими rental_days
+                new_total_rental = float(price or 0) * int(quantity or 1) * target_rental_days
+                
+                # Перевірити чи такий товар вже є в target
+                existing = db.execute(text("""
+                    SELECT id, quantity FROM order_items 
+                    WHERE order_id = :order_id AND product_id = :product_id
+                """), {"order_id": target_order_id, "product_id": product_id}).fetchone()
+                
+                if existing:
+                    # Збільшити кількість
+                    new_qty = existing[1] + quantity
+                    new_total = float(price or 0) * new_qty * target_rental_days
+                    db.execute(text("""
+                        UPDATE order_items SET quantity = :qty, total_rental = :total
+                        WHERE id = :id
+                    """), {"qty": new_qty, "total": new_total, "id": existing[0]})
+                else:
+                    # Додати новий товар
+                    db.execute(text("""
+                        INSERT INTO order_items (order_id, product_id, product_name, quantity, price, total_rental, image_url)
+                        VALUES (:order_id, :product_id, :product_name, :quantity, :price, :total_rental, :image_url)
+                    """), {
+                        "order_id": target_order_id,
+                        "product_id": product_id,
+                        "product_name": product_name,
+                        "quantity": quantity,
+                        "price": price,
+                        "total_rental": new_total_rental,
+                        "image_url": image_url
+                    })
+            
+            # Видалити order_items з source
+            db.execute(text("DELETE FROM order_items WHERE order_id = :id"), {"id": source_id})
+            
+            # Видалити source замовлення
+            db.execute(text("DELETE FROM orders WHERE order_id = :id"), {"id": source_id})
+        
+        # Перерахувати total_price і deposit_amount для target
+        result = db.execute(text("""
+            SELECT 
+                SUM(oi.price * oi.quantity * :days) as total_price,
+                SUM(COALESCE(p.price, 0) * oi.quantity / 2) as deposit_amount
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.product_id
+            WHERE oi.order_id = :order_id
+        """), {"order_id": target_order_id, "days": target_rental_days})
+        totals = result.fetchone()
+        total_price = float(totals[0] or 0)
+        deposit_amount = float(totals[1] or 0)
+        
+        # Оновити target замовлення
+        db.execute(text("""
+            UPDATE orders 
+            SET total_price = :total_price,
+                deposit_amount = :deposit_amount,
+                total_loss_value = :deposit_amount,
+                notes = CONCAT(COALESCE(notes, ''), '\n[Об''єднано з: ', :merged_orders, ']'),
+                updated_at = NOW()
+            WHERE order_id = :order_id
+        """), {
+            "total_price": total_price,
+            "deposit_amount": deposit_amount,
+            "merged_orders": ", ".join([orders[oid]['order_number'] for oid in source_order_ids]),
+            "order_id": target_order_id
+        })
+        
+        # Отримати кількість товарів
+        result = db.execute(text("SELECT COUNT(*) FROM order_items WHERE order_id = :id"), {"id": target_order_id})
+        items_count = result.fetchone()[0]
+        
+        db.commit()
+        
+        return {
+            "message": "Замовлення успішно об'єднано",
+            "order_id": target_order_id,
+            "order_number": orders[target_order_id]['order_number'],
+            "merged_from": [orders[oid]['order_number'] for oid in source_order_ids],
+            "items_count": items_count,
+            "total_price": total_price,
+            "deposit_amount": deposit_amount
+        }
+        
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка при об'єднанні: {str(e)}")
+
+
 @router.post("/check-availability")
 async def check_availability_endpoint(
     request: dict,

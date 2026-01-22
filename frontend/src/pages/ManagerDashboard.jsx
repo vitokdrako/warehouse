@@ -103,6 +103,54 @@ export default function ManagerDashboard() {
     }
   };
 
+  // ✅ Функція для об'єднання замовлень
+  const handleMergeOrders = async () => {
+    if (selectedForMerge.length < 2) {
+      alert('Виберіть мінімум 2 замовлення для об\'єднання');
+      return;
+    }
+    
+    // Останнє вибране буде цільовим (його номер залишиться)
+    const targetOrderId = selectedForMerge[selectedForMerge.length - 1];
+    const sourceOrderIds = selectedForMerge.slice(0, -1);
+    
+    const targetOrder = awaitingOrders.find(o => o.id === targetOrderId);
+    const sourceOrders = sourceOrderIds.map(id => awaitingOrders.find(o => o.id === id)).filter(Boolean);
+    
+    const confirmMsg = `Об'єднати ${selectedForMerge.length} замовлень?\n\n` +
+      `Товари з:\n${sourceOrders.map(o => `  • ${o.order_number} (${o.client_name})`).join('\n')}\n\n` +
+      `Будуть перенесені в:\n  → ${targetOrder?.order_number} (${targetOrder?.client_name})\n\n` +
+      `⚠️ Старі замовлення будуть видалені!`;
+    
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+    
+    try {
+      const response = await authFetch(`${BACKEND_URL}/api/orders/merge`, {
+        method: 'POST',
+        body: JSON.stringify({
+          target_order_id: targetOrderId,
+          source_order_ids: sourceOrderIds
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Замовлення об'єднано!\n\nНовий номер: ${result.order_number}\nТоварів: ${result.items_count}\nСума: ₴${result.total_price}`);
+        setMergeMode(false);
+        setSelectedForMerge([]);
+        fetchAllData(); // Перезавантажити дані
+      } else {
+        const error = await response.json();
+        alert(`❌ Помилка: ${error.detail || 'Не вдалося об\'єднати замовлення'}`);
+      }
+    } catch (error) {
+      console.error('Error merging orders:', error);
+      alert(`❌ Помилка: ${error.message}`);
+    }
+  };
+
   // Функція для оновлення дат замовлення
   const handleDateUpdate = async (orderId, issueDate, returnDate) => {
     try {

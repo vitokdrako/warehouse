@@ -29,6 +29,8 @@ export default function ManagerDashboard() {
   // Стани для розгортання карток
   const [showAllAwaiting, setShowAllAwaiting] = useState(false);
   const [showAllReturns, setShowAllReturns] = useState(true);  // За замовчуванням показуємо всі
+  const [showAllPreparation, setShowAllPreparation] = useState(false);  // Комплектація
+  const [showAllReady, setShowAllReady] = useState(false);  // Готові до видачі
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Всі');
   const [user, setUser] = useState(null);

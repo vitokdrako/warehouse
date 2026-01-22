@@ -129,11 +129,10 @@ function ItemRow({
           <div>
             <div className="font-medium text-corp-text-dark text-sm truncate">{name}</div>
             <div className="text-xs text-corp-text-muted">{sku}</div>
-            {/* Локація на складі - Зона + Полиця */}
-            {hasLocation && (
+            {/* Локація - тільки zone */}
+            {zoneStr && (
               <div className="mt-1 inline-flex items-center gap-2 px-2 py-0.5 rounded bg-corp-bg-light text-xs text-corp-text-main">
-                {zoneStr && <span>📍 Зона: <b>{zoneStr}</b></span>}
-                {shelfStr && <span>Полиця: <b>{shelfStr}</b></span>}
+                📍 <b>{zoneStr}</b>
               </div>
             )}
           </div>

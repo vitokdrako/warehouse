@@ -329,6 +329,38 @@ export default function ManagerDashboard() {
             >
               + Нове замовлення
             </button>
+            
+            {/* ✅ Кнопка режиму об'єднання */}
+            <button 
+              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors flex items-center gap-2 ${
+                mergeMode 
+                  ? 'border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100' 
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+              onClick={() => {
+                setMergeMode(!mergeMode);
+                setSelectedForMerge([]);
+              }}
+            >
+              🔗 {mergeMode ? 'Скасувати' : 'Об\'єднати'}
+            </button>
+            
+            {/* Панель об'єднання */}
+            {mergeMode && selectedForMerge.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-lg">
+                <span className="text-sm text-amber-700">
+                  Вибрано: <b>{selectedForMerge.length}</b>
+                </span>
+                <button
+                  onClick={handleMergeOrders}
+                  disabled={selectedForMerge.length < 2}
+                  className="px-3 py-1 rounded bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Об'єднати →
+                </button>
+              </div>
+            )}
+            
             <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
             
             {/* Кнопка оновлення */}
@@ -357,7 +389,7 @@ export default function ManagerDashboard() {
             </button>
             <button 
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-              onClick={() => navigate('/catalog')}
+              onClick={() => navigate('/catalog')}}
             >
               Каталог
             </button>

@@ -138,8 +138,7 @@ export default function ReauditCabinetFull({
     width: '',
     height: '',
     qty: 0,
-    zone: '',
-    location: ''
+    zone: ''
   })
 
   // Стан для пошкоджень

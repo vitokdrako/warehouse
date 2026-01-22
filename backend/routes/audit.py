@@ -280,13 +280,14 @@ async def get_audit_item_details(
         
         # Extract data (updated indices after removing inventory JOIN)
         quantity = result[11] or 0
-        zone_str = f"Зона {result[12]}" if result[12] else "Склад"
-        location_parts = []
-        if result[13]:
-            location_parts.append(result[13])
-        if result[14]:
-            location_parts.append(result[14])
-        location_str = "".join(location_parts) if location_parts else "Не вказано"
+        zone_raw = result[12] or ''
+        aisle_raw = result[13] or ''
+        shelf_raw = result[14] or ''
+        
+        # ✅ FIXED: Чисті значення + display значення
+        zone_display = f"Зона {zone_raw}" if zone_raw else "Склад"
+        location_parts = [aisle_raw, shelf_raw]
+        location_display = " / ".join(filter(None, location_parts)) if any(location_parts) else "Не вказано"
         
         cat_full = result[4] or "Загальне"
         if result[5]:

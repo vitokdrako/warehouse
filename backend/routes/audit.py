@@ -162,14 +162,11 @@ async def get_audit_items(
             product_state = row[18]
             last_audit_date = row[19]
             
-            # ✅ NEW: Simplified location formatting
-            zone_str = f"Зона {zone}" if zone else "Склад"
-            location_parts = []
-            if aisle:
-                location_parts.append(aisle)
-            if shelf:
-                location_parts.append(shelf)
-            location_str = "".join(location_parts) if location_parts else "Не вказано"
+            # ✅ FIXED: Повертаємо чисті значення zone, aisle, shelf
+            # zone_str для відображення, zone_raw для редагування
+            zone_display = f"Зона {zone}" if zone else "Склад"
+            location_parts = [aisle, shelf] if aisle or shelf else []
+            location_display = " / ".join(filter(None, location_parts)) if location_parts else "Не вказано"
             
             # ✅ NEW: Category from snapshot table (already denormalized)
             cat_full = category_name or "Загальне"

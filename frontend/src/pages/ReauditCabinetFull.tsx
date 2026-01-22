@@ -677,8 +677,7 @@ export default function ReauditCabinetFull({
                       <div className="mt-0.5 text-[10px] text-corp-text-muted">
                         <span className="font-mono text-slate-700">{it.code}</span>
                         <span> · {it.category}</span>
-                        <span> · {it.zone}</span>
-                        <span> · місце: {it.location}</span>
+                        <span> · 📍 {it.zoneDisplay || it.zone || 'Склад'} / {it.location || '—'}</span>
                       </div>
                       <div className="mt-1 flex gap-2">
                         <StatusCell status={it.status} />

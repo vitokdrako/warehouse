@@ -86,13 +86,10 @@ function ItemRow({
   const name = item.name || item.product_name || ''
   const image = item.image || item.photo || ''
   
-  // Локація на складі - Зона окремо від Полиці
+  // Локація - тепер тільки zone
   const location = item.location || {}
   const validValue = (v) => v && v !== 'None' && v !== 'null'
   const zoneStr = validValue(location.zone) ? location.zone : (validValue(item.zone) ? item.zone : null)
-  const shelfParts = [location.aisle, location.shelf].filter(validValue)
-  const shelfStr = shelfParts.length > 0 ? shelfParts.join(' / ') : (validValue(item.shelf) ? item.shelf : null)
-  const hasLocation = zoneStr || shelfStr
   
   const totalRent = pricePerDay * qty * rentalDays
   const totalDeposit = deposit * qty

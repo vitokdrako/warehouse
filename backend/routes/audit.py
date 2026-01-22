@@ -387,11 +387,7 @@ async def get_audit_item_details(
             'description': product_description,
             'careInstructions': care_instructions,
             'category': cat_main,
-            'zone': zone_raw,  # ✅ FIXED: Чисте значення для редагування
-            'zoneDisplay': zone_display,  # Для відображення "Зона A"
-            'location': location_display,  # "aisle / shelf"
-            'aisle': aisle_raw,  # ✅ Чисте значення
-            'shelf': shelf_raw,  # ✅ Чисте значення
+            'zone': zone_raw or '',  # ✅ Єдине поле для локації
             'qty': int(product.quantity) if product.quantity else 0,
             'status': audit_status,
             'lastAuditDate': last_audit or '2024-01-01',

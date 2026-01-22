@@ -162,14 +162,11 @@ async def get_audit_items(
             product_state = row[18]
             last_audit_date = row[19]
             
-            # ✅ NEW: Simplified location formatting
-            zone_str = f"Зона {zone}" if zone else "Склад"
-            location_parts = []
-            if aisle:
-                location_parts.append(aisle)
-            if shelf:
-                location_parts.append(shelf)
-            location_str = "".join(location_parts) if location_parts else "Не вказано"
+            # ✅ FIXED: Повертаємо чисті значення zone, aisle, shelf
+            # zone_str для відображення, zone_raw для редагування
+            zone_display = f"Зона {zone}" if zone else "Склад"
+            location_parts = [aisle, shelf] if aisle or shelf else []
+            location_display = " / ".join(filter(None, location_parts)) if location_parts else "Не вказано"
             
             # ✅ NEW: Category from snapshot table (already denormalized)
             cat_full = category_name or "Загальне"
@@ -219,8 +216,11 @@ async def get_audit_items(
                 'description': html.unescape(description) if description else description,  # ✅ Декодувати HTML entities
                 'careInstructions': html.unescape(care_instructions) if care_instructions else None,  # ✅ Інструкція по догляду
                 'category': cat_full,
-                'zone': zone_str,
-                'location': location_str,
+                'zone': zone or '',  # ✅ FIXED: Чисте значення для редагування
+                'zoneDisplay': zone_display,  # Для відображення "Зона A"
+                'location': location_display,  # "aisle / shelf"
+                'aisle': aisle or '',  # ✅ Чисте значення
+                'shelf': shelf or '',  # ✅ Чисте значення
                 'qty': quantity,  # ✅ From products table (single source of truth)
                 'status': 'ok',
                 'lastAuditDate': last_audit or '2024-01-01',
@@ -280,13 +280,14 @@ async def get_audit_item_details(
         
         # Extract data (updated indices after removing inventory JOIN)
         quantity = result[11] or 0
-        zone_str = f"Зона {result[12]}" if result[12] else "Склад"
-        location_parts = []
-        if result[13]:
-            location_parts.append(result[13])
-        if result[14]:
-            location_parts.append(result[14])
-        location_str = "".join(location_parts) if location_parts else "Не вказано"
+        zone_raw = result[12] or ''
+        aisle_raw = result[13] or ''
+        shelf_raw = result[14] or ''
+        
+        # ✅ FIXED: Чисті значення + display значення
+        zone_display = f"Зона {zone_raw}" if zone_raw else "Склад"
+        location_parts = [aisle_raw, shelf_raw]
+        location_display = " / ".join(filter(None, location_parts)) if any(location_parts) else "Не вказано"
         
         cat_full = result[4] or "Загальне"
         if result[5]:
@@ -390,8 +391,11 @@ async def get_audit_item_details(
             'description': product_description,
             'careInstructions': care_instructions,
             'category': cat_main,
-            'zone': zone_str,
-            'location': location_str,
+            'zone': zone_raw,  # ✅ FIXED: Чисте значення для редагування
+            'zoneDisplay': zone_display,  # Для відображення "Зона A"
+            'location': location_display,  # "aisle / shelf"
+            'aisle': aisle_raw,  # ✅ Чисте значення
+            'shelf': shelf_raw,  # ✅ Чисте значення
             'qty': int(product.quantity) if product.quantity else 0,
             'status': audit_status,
             'lastAuditDate': last_audit or '2024-01-01',

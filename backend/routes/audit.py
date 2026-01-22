@@ -216,11 +216,7 @@ async def get_audit_items(
                 'description': html.unescape(description) if description else description,  # ✅ Декодувати HTML entities
                 'careInstructions': html.unescape(care_instructions) if care_instructions else None,  # ✅ Інструкція по догляду
                 'category': cat_full,
-                'zone': zone or '',  # ✅ FIXED: Чисте значення для редагування
-                'zoneDisplay': zone_display,  # Для відображення "Зона A"
-                'location': location_display,  # "aisle / shelf"
-                'aisle': aisle or '',  # ✅ Чисте значення
-                'shelf': shelf or '',  # ✅ Чисте значення
+                'zone': zone or '',  # ✅ Єдине поле для локації
                 'qty': quantity,  # ✅ From products table (single source of truth)
                 'status': 'ok',
                 'lastAuditDate': last_audit or '2024-01-01',

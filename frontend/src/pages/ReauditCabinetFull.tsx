@@ -936,7 +936,6 @@ export default function ReauditCabinetFull({
                               size: size,
                               qty: editData.qty,
                               zone: editData.zone,
-                              location: editData.location,
                               actor: 'Реквізитор'
                             })
                           })

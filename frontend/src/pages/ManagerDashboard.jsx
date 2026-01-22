@@ -489,7 +489,7 @@ export default function ManagerDashboard() {
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
           ) : readyCards.length > 0 ? (
             <>
-              {readyCards.slice(0, 4).map(card => (
+              {(showAllReady ? readyCards : readyCards.slice(0, 4)).map(card => (
                 <OrderCard 
                   key={card.id}
                   id={`#${card.order_id}`}
@@ -504,10 +504,21 @@ export default function ManagerDashboard() {
                   onClick={() => navigate(`/issue/${card.id}`)}
                 />
               ))}
-              {readyCards.length > 4 && (
-                <div className="text-center py-2 text-sm text-corp-text-muted">
-                  +{readyCards.length - 4} більше карток
-                </div>
+              {readyCards.length > 4 && !showAllReady && (
+                <button 
+                  onClick={() => setShowAllReady(true)}
+                  className="text-center py-3 text-sm text-blue-600 hover:text-blue-800 font-medium hover:bg-blue-50 rounded-lg transition-colors cursor-pointer w-full"
+                >
+                  +{readyCards.length - 4} більше карток - Показати всі
+                </button>
+              )}
+              {readyCards.length > 4 && showAllReady && (
+                <button 
+                  onClick={() => setShowAllReady(false)}
+                  className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer w-full"
+                >
+                  Згорнути ↑
+                </button>
               )}
             </>
           ) : (

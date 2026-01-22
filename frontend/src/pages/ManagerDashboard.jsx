@@ -34,6 +34,11 @@ export default function ManagerDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Всі');
   const [user, setUser] = useState(null);
+  
+  // ✅ Режим об'єднання замовлень
+  const [mergeMode, setMergeMode] = useState(false);
+  const [selectedForMerge, setSelectedForMerge] = useState([]);
+  
   const navigate = useNavigate();
 
   // Завантажити дані користувача

@@ -17,11 +17,7 @@ interface AuditItem {
   description?: string
   careInstructions?: string
   category: string
-  zone: string
-  zoneDisplay?: string  // ✅ Для відображення "Зона A"
-  aisle?: string        // ✅ Чисте значення
-  shelf?: string        // ✅ Чисте значення
-  location: string
+  zone: string  // ✅ Єдине поле для локації (напр. "6 / A / 12")
   qty: number
   status: AuditStatus
   lastAuditDate: string

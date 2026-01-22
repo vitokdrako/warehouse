@@ -779,8 +779,7 @@ export default function ReauditCabinetFull({
                         width: sizeParts[1] || '',
                         height: sizeParts[2] || '',
                         qty: selected.qty,
-                        zone: selected.zone || '',
-                        location: selected.location || ''
+                        zone: selected.zone || ''
                       })
                     }}>
                       ✏️ Редагувати

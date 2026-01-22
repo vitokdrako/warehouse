@@ -485,19 +485,40 @@ export default function ManagerDashboard() {
           ) : awaitingOrders.length > 0 ? (
             <>
               {(showAllAwaiting ? awaitingOrders : awaitingOrders.slice(0, 4)).map(order => (
-                <OrderCard 
-                  key={order.id}
-                  id={order.order_number}
-                  name={order.client_name}
-                  phone={order.client_phone}
-                  rent={`₴ ${order.total_rental?.toFixed(0)}`}
-                  deposit={`₴ ${(order.total_deposit || 0).toFixed(0)}`}
-                  badge="awaiting"
-                  order={order}
-                  onDateUpdate={null}
-                  onCancelByClient={handleCancelByClient}
-                  onClick={() => navigate(`/order/${order.id}/view`)}
-                />
+                <div key={order.id} className="relative">
+                  {/* ✅ Чекбокс для режиму об'єднання */}
+                  {mergeMode && (
+                    <label className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-8 h-8 bg-white border-2 border-amber-400 rounded-full cursor-pointer hover:bg-amber-50 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedForMerge.includes(order.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedForMerge([...selectedForMerge, order.id]);
+                          } else {
+                            setSelectedForMerge(selectedForMerge.filter(id => id !== order.id));
+                          }
+                        }}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                    </label>
+                  )}
+                  <div className={mergeMode ? 'ml-6' : ''}>
+                    <OrderCard 
+                      id={order.order_number}
+                      name={order.client_name}
+                      phone={order.client_phone}
+                      rent={`₴ ${order.total_rental?.toFixed(0)}`}
+                      deposit={`₴ ${(order.total_deposit || 0).toFixed(0)}`}
+                      badge="awaiting"
+                      order={order}
+                      onDateUpdate={null}
+                      onCancelByClient={handleCancelByClient}
+                      onClick={() => !mergeMode && navigate(`/order/${order.id}/view`)}
+                      className={selectedForMerge.includes(order.id) ? 'ring-2 ring-amber-400' : ''}
+                    />
+                  </div>
+                </div>
               ))}
               {awaitingOrders.length > 4 && !showAllAwaiting && (
                 <button 

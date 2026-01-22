@@ -387,3 +387,4 @@ frontend/node_modules/.cache/default-development/15.pack
 # Environment files
 *.env
 *.env.*
+deployment_v2_20260121.tar.gz

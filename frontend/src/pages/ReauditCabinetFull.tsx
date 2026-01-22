@@ -724,7 +724,7 @@ export default function ReauditCabinetFull({
                   <div>
                     <div className="text-sm font-semibold text-corp-text-dark">{selected.name}</div>
                     <div className="text-[10px] text-corp-text-muted">
-                      {selected.category} · 📍 {selected.zoneDisplay || selected.zone || 'Склад'} / {selected.location || '—'}
+                      {selected.category} {selected.zone && <> · 📍 {selected.zone}</>}
                     </div>
                   </div>
                 </div>

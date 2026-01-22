@@ -103,20 +103,12 @@ function ItemPickupCard({
         <div className="flex-1 min-w-0">
           <div className="font-semibold text-slate-800 mb-1 line-clamp-2">{item.name}</div>
           <div className="text-xs text-slate-500">SKU: {item.sku || item.article || '—'}</div>
-          {/* Локація на складі - Зона + Полиця */}
-          {(item.location?.zone || item.location?.aisle || item.location?.shelf) && (() => {
-            const zone = item.location.zone && item.location.zone !== 'None' && item.location.zone !== 'null' ? item.location.zone : null
-            const shelfParts = [item.location.aisle, item.location.shelf].filter(v => v && v !== 'None' && v !== 'null')
-            const shelf = shelfParts.length > 0 ? shelfParts.join('/') : null
-            if (!zone && !shelf) return null
-            return (
-              <div className="text-xs text-corp-primary font-medium mt-0.5">
-                {zone && <span>📍 Зона: <b>{zone}</b></span>}
-                {zone && shelf && <span> • </span>}
-                {shelf && <span>Полиця: <b>{shelf}</b></span>}
-              </div>
-            )
-          })()}
+          {/* Локація - тепер тільки zone */}
+          {item.location?.zone && item.location.zone !== 'None' && item.location.zone !== 'null' && (
+            <div className="text-xs text-corp-primary font-medium mt-0.5">
+              📍 <b>{item.location.zone}</b>
+            </div>
+          )}
           
           <div className="flex flex-wrap gap-1 mt-2">
             {isComplete && (

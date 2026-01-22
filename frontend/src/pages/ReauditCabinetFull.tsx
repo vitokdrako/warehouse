@@ -905,25 +905,15 @@ export default function ReauditCabinetFull({
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] text-corp-text-main mb-1">🏢 Зона складу</label>
+                        <label className="block text-[10px] text-corp-text-main mb-1">📍 Зона / Місце на складі</label>
                         <input
                           type="text"
                           value={editData.zone}
                           onChange={(e) => setEditData({...editData, zone: e.target.value})}
-                          placeholder="напр. 6"
+                          placeholder="напр. 6 / A / 12"
                           className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
                         />
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] text-corp-text-main mb-1">📍 Місце на складі</label>
-                      <input
-                        type="text"
-                        value={editData.location}
-                        onChange={(e) => setEditData({...editData, location: e.target.value})}
-                        placeholder="напр. 6A12"
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                      />
                     </div>
                     <div className="flex gap-2">
                       <PillButton tone="green" onClick={async () => {

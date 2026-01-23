@@ -1479,10 +1479,15 @@ async def merge_orders(
     try:
         # Перевірити що всі замовлення існують і в статусі awaiting_customer
         all_order_ids = [target_order_id] + source_order_ids
-        result = db.execute(text("""
+        
+        # SQLAlchemy з MySQL потребує динамічного SQL для IN clause
+        placeholders = ', '.join([f':id{i}' for i in range(len(all_order_ids))])
+        params = {f'id{i}': oid for i, oid in enumerate(all_order_ids)}
+        
+        result = db.execute(text(f"""
             SELECT order_id, order_number, status, customer_id 
-            FROM orders WHERE order_id IN :ids
-        """), {"ids": tuple(all_order_ids)})
+            FROM orders WHERE order_id IN ({placeholders})
+        """), params)
         orders = {row[0]: {"order_number": row[1], "status": row[2], "customer_id": row[3]} for row in result.fetchall()}
         
         if len(orders) != len(all_order_ids):

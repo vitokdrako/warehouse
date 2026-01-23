@@ -388,7 +388,8 @@ export default function NewOrderViewWorkspace() {
         return_time: returnTime,
         rental_days: rentalDays,
         manager_comment: managerNotes,
-        discount: calculations.discountAmount, // Сума знижки в грн
+        discount: discount, // ✅ FIXED: Відсоток знижки (%)
+        discount_amount: calculations.discountAmount, // Сума знижки в грн
         manager_id: managerId,
         // Фінансові дані - ДЖЕРЕЛО ПРАВДИ
         total_price: calculations.rentAfterDiscount,

@@ -1721,7 +1721,8 @@ async def update_decor_order(
         'return_time': 'return_time',
         'rental_days': 'rental_days',
         'manager_comment': 'manager_comment',
-        'discount': 'discount_amount',  # Frontend: discount -> DB: discount_amount
+        'discount': 'discount_percent',  # Frontend: discount (%) -> DB: discount_percent
+        'discount_amount': 'discount_amount',  # Сума знижки в грн
         'manager_id': 'manager_id',  # ✅ FIXED: Менеджер замовлення
         # ✅ КРИТИЧНО: Фінансові поля - джерело правди
         'total_price': 'total_price',

@@ -314,7 +314,7 @@ def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> d
     
     company = {
         "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "legal_name": "ФОП Николенко Наталя Станіславівна",
         "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
         "phone": "+380 XX XXX XX XX",
         "email": "rfarfordecor@gmail.com.ua",
@@ -460,7 +460,7 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
     
     company = {
         "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "legal_name": "ФОП Николенко Наталя Станіславівна",
         "phone": "+380 XX XXX XX XX"
     }
     
@@ -482,7 +482,7 @@ def build_return_data(db: Session, order_id: str, options: dict) -> dict:
     # Company data
     company = {
         "name": "FarforRent",
-        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "legal_name": "ФОП Николенко Наталя Станіславівна",
         "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
         "warehouse": "м. Харків, Військовий провулок, 1",
         "phone": "+380 XX XXX XX XX",
@@ -535,13 +535,13 @@ def build_damage_data(db: Session, damage_case_id: str, options: dict) -> dict:
     # Company data
     company = {
         "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "legal_name": "ФОП Николенко Наталя Станіславівна",
         "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
         "warehouse": "м. Харків, Військовий провулок, 1",
         "phone": "+380 XX XXX XX XX",
         "email": "rfarfordecor@gmail.com.ua",
-        "iban": "UA00 0000 0000 0000 0000 0000 00000",
-        "edrpou": "3234423422",
+        "iban": "UA043220010000026003340091618",
+        "edrpou": "3606801844",
     }
     
     # If damage_case_id is actually an order_id, get order data
@@ -571,7 +571,7 @@ def build_vendor_task_data(db: Session, vendor_task_id: str, options: dict) -> d
     """Збирає дані завдання підрядника для документа"""
     company = {
         "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "legal_name": "ФОП Николенко Наталя Станіславівна",
         "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
     }
     
@@ -695,7 +695,7 @@ def build_order_modification_data(db: Session, order_id: str, options: dict) -> 
     
     company = {
         "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "legal_name": "ФОП Николенко Наталя Станіславівна",
         "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
         "phone": "+380 XX XXX XX XX",
         "email": "rfarfordecor@gmail.com.ua",
@@ -860,7 +860,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
     
     company = {
         "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Арсалані Олександра Ігорівна",
+        "legal_name": "ФОП Николенко Наталя Станіславівна",
         "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
         "phone": "+380 XX XXX XX XX",
         "email": "rfarfordecor@gmail.com.ua",

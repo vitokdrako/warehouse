@@ -475,7 +475,8 @@ async def get_order_details(
             o.status, o.total_price, o.deposit_amount, o.total_loss_value, 
             o.rental_days, o.notes, o.created_at,
             o.discount_amount, o.manager_id, o.issue_time, o.return_time,
-            u.name as manager_name
+            u.name as manager_name,
+            o.discount_percent
         FROM orders o
         LEFT JOIN users u ON o.manager_id = u.id
         WHERE o.order_id = :order_id
@@ -488,12 +489,12 @@ async def get_order_details(
     order = parse_order_row(row, db)
     
     # Додаткові поля з розширеного запиту
-    order["discount"] = float(row[15]) if row[15] else 0  # discount_amount
     order["discount_amount"] = float(row[15]) if row[15] else 0
     order["manager_id"] = row[16]
     order["issue_time"] = row[17] or "11:30–12:00"
     order["return_time"] = row[18] or "до 17:00"
     order["manager_name"] = row[19] or ""
+    order["discount"] = float(row[20]) if row[20] else 0  # discount_percent (для UI)
     
     # Get lifecycle info
     lifecycle_result = db.execute(text("""

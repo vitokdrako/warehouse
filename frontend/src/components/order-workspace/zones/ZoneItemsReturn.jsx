@@ -123,7 +123,7 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
           <div className={`font-semibold mb-1 line-clamp-2 ${isDisabled ? 'text-slate-400' : 'text-slate-800'}`}>{item.name}</div>
           <div className="text-xs text-slate-500">SKU: {item.sku || '—'}</div>
           {/* Локація - тільки zone */}
-          {item.location?.zone && item.location.zone !== 'None' && item.location.zone !== 'null' && (
+          {item.location?.zone && item.location.zone !== 'None' && item.location.zone !== 'null' && item.location.zone !== '' && (
             <div className="text-xs text-corp-primary font-medium mt-0.5">
               📍 <b>{item.location.zone}</b>
             </div>

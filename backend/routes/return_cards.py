@@ -146,7 +146,7 @@ async def get_return_card(card_id: str, db: Session = Depends(get_rh_db)):
     if not row:
         raise HTTPException(status_code=404, detail="Return card not found")
     
-    return parse_return_card(row)
+    return parse_return_card(row, db)
 
 @router.post("")
 async def create_return_card(

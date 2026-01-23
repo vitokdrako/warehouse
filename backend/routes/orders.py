@@ -468,6 +468,12 @@ async def get_order_details(
     ✅ FIXED: Додано discount_amount та manager_id
     """
     # Order details - повний запит з усіма полями
+    # Формат: [0]order_id, [1]order_number, [2]customer_id, [3]customer_name, 
+    # [4]customer_phone, [5]customer_email, [6]rental_start_date, [7]rental_end_date,
+    # [8]status, [9]total_price, [10]deposit_amount, [11]total_loss_value, 
+    # [12]rental_days, [13]notes, [14]created_at,
+    # [15]discount_amount, [16]manager_id, [17]issue_time, [18]return_time,
+    # [19]manager_name, [20]discount_percent
     result = db.execute(text("""
         SELECT 
             o.order_id, o.order_number, o.customer_id, o.customer_name, 
@@ -475,7 +481,7 @@ async def get_order_details(
             o.status, o.total_price, o.deposit_amount, o.total_loss_value, 
             o.rental_days, o.notes, o.created_at,
             o.discount_amount, o.manager_id, o.issue_time, o.return_time,
-            CONCAT(u.firstname, ' ', u.lastname) as manager_name,
+            CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, '')) as manager_name,
             o.discount_percent
         FROM orders o
         LEFT JOIN users u ON o.manager_id = u.user_id
@@ -486,11 +492,34 @@ async def get_order_details(
     if not row:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    order = parse_order_row(row, db)
+    # Базова інформація замовлення
+    order = {
+        "id": str(row[0]),
+        "order_id": row[0],
+        "order_number": row[1],
+        "client_id": row[2],
+        "client_name": row[3],
+        "customer_name": row[3],
+        "client_phone": row[4],
+        "client_email": row[5],
+        "rental_start_date": row[6].isoformat() if row[6] else None,
+        "rental_end_date": row[7].isoformat() if row[7] else None,
+        "issue_date": row[6].isoformat() if row[6] else None,  # alias
+        "return_date": row[7].isoformat() if row[7] else None,  # alias
+        "status": row[8],
+        "total_rental": float(row[9]) if row[9] else 0.0,
+        "total_deposit": float(row[10]) if row[10] else 0.0,
+        "deposit_held": float(row[10]) if row[10] else 0.0,
+        "total_loss_value": float(row[11]) if row[11] else 0.0,
+        "rental_days": int(row[12]) if row[12] else 1,
+        "manager_comment": row[13] if row[13] else None,
+        "notes": row[13] if row[13] else None,
+        "created_at": row[14].isoformat() if row[14] else None,
+    }
     
-    # Додаткові поля з розширеного запиту
+    # Додаткові поля
     discount_amount = float(row[15]) if row[15] else 0
-    total_price = float(row[9]) if row[9] else 0  # total_price
+    total_price = float(row[9]) if row[9] else 0
     discount_percent_db = float(row[20]) if row[20] else 0
     
     # Обчислити відсоток якщо він не збережений, але є discount_amount
@@ -503,8 +532,56 @@ async def get_order_details(
     order["manager_id"] = row[16]
     order["issue_time"] = row[17] or "11:30–12:00"
     order["return_time"] = row[18] or "до 17:00"
-    order["manager_name"] = row[19] or ""
-    order["discount"] = round(discount_percent_db, 2)  # discount_percent (для UI)
+    order["manager_name"] = (row[19] or "").strip()
+    order["discount"] = round(discount_percent_db, 2)
+    
+    # Завантажити items
+    items_result = db.execute(text("""
+        SELECT oi.id, oi.order_id, oi.product_id, oi.product_name, 
+               oi.quantity, oi.price, oi.total_rental,
+               p.image_url, p.price as loss_value, p.quantity as available_qty,
+               p.sku, p.zone, p.aisle, p.shelf, p.cleaning_status, p.product_state,
+               p.category_name
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.product_id
+        WHERE oi.order_id = :order_id
+    """), {"order_id": row[0]})
+    
+    items = []
+    for item_row in items_result:
+        loss_value = float(item_row[8]) if item_row[8] else 0.0
+        quantity = item_row[4] or 1
+        available = int(item_row[9]) if item_row[9] else 0
+        deposit_per_unit = loss_value / 2
+        
+        image_url = normalize_image_url(item_row[7])
+        
+        items.append({
+            "inventory_id": str(item_row[2]) if item_row[2] else "",
+            "article": item_row[10] or str(item_row[2]),
+            "sku": item_row[10] or str(item_row[2]),
+            "name": item_row[3],
+            "category": item_row[16] or "Реквізит",
+            "quantity": quantity,
+            "qty": quantity,
+            "price_per_day": float(item_row[5]) if item_row[5] else 0.0,
+            "total_rental": float(item_row[6]) if item_row[6] else 0.0,
+            "deposit": deposit_per_unit,
+            "damage_cost": loss_value,
+            "total_deposit": deposit_per_unit * quantity,
+            "image": image_url,
+            "photo": image_url,
+            "available_qty": available,
+            "available": available,
+            "location": {
+                "zone": item_row[11] or "",
+                "aisle": item_row[12] or "",
+                "shelf": item_row[13] or "",
+                "state": item_row[15] or "shelf"
+            },
+        })
+    
+    order["items"] = items
     
     # Get lifecycle info
     lifecycle_result = db.execute(text("""

@@ -74,21 +74,18 @@ def parse_return_card(row, db=None):
     
     # ✅ Збагатити items даними про location з products
     if items_expected and db:
-        product_ids = [str(item.get('id') or item.get('product_id', '')) for item in items_expected]
-        if product_ids:
-            try:
-                result = db.execute(text("""
-                    SELECT product_id, zone FROM products 
-                    WHERE product_id IN :ids
-                """), {"ids": tuple(product_ids)})
-                locations = {str(r[0]): r[1] for r in result.fetchall()}
-                
-                for item in items_expected:
-                    pid = str(item.get('id') or item.get('product_id', ''))
-                    if pid in locations and locations[pid]:
-                        item['location'] = {'zone': locations[pid]}
-            except Exception as e:
-                print(f"Error enriching locations: {e}")
+        for item in items_expected:
+            pid = item.get('id') or item.get('product_id')
+            if pid:
+                try:
+                    result = db.execute(text("""
+                        SELECT zone FROM products WHERE product_id = :pid
+                    """), {"pid": pid})
+                    row_loc = result.fetchone()
+                    if row_loc and row_loc[0]:
+                        item['location'] = {'zone': row_loc[0]}
+                except Exception as e:
+                    print(f"Error getting location for {pid}: {e}")
     
     return {
         "id": row[0],

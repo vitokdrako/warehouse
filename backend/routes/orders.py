@@ -475,10 +475,10 @@ async def get_order_details(
             o.status, o.total_price, o.deposit_amount, o.total_loss_value, 
             o.rental_days, o.notes, o.created_at,
             o.discount_amount, o.manager_id, o.issue_time, o.return_time,
-            u.name as manager_name,
+            CONCAT(u.firstname, ' ', u.lastname) as manager_name,
             o.discount_percent
         FROM orders o
-        LEFT JOIN users u ON o.manager_id = u.id
+        LEFT JOIN users u ON o.manager_id = u.user_id
         WHERE o.order_id = :order_id
     """), {"order_id": order_id})
     

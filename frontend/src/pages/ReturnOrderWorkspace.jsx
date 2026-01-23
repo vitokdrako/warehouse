@@ -160,6 +160,8 @@ export default function ReturnOrderWorkspace() {
           rental_price: parseFloat(p.price_per_day || p.rental_price || p.daily_rate || 0),
           // Додаткова інформація для часткового повернення
           in_rent_qty: inRentQty,
+          // ✅ Локація на складі
+          location: p.location || { zone: p.zone || null },
         }
         console.log(`[ReturnWorkspace] Item ${item.sku}: rented=${rentedQty}, returned=${returnedQty}, inRent=${inRentQty}`)
         return item

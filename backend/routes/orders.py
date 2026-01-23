@@ -465,15 +465,20 @@ async def get_order_details(
     """
     Повна інформація про замовлення
     ✅ MIGRATED: Full details with lifecycle, issue cards, return cards
+    ✅ FIXED: Додано discount_amount та manager_id
     """
-    # Order details
+    # Order details - повний запит з усіма полями
     result = db.execute(text("""
         SELECT 
-            order_id, order_number, customer_id, customer_name, 
-            customer_phone, customer_email, rental_start_date, rental_end_date,
-            status, total_price, deposit_amount, total_loss_value, rental_days, notes, created_at
-        FROM orders
-        WHERE order_id = :order_id
+            o.order_id, o.order_number, o.customer_id, o.customer_name, 
+            o.customer_phone, o.customer_email, o.rental_start_date, o.rental_end_date,
+            o.status, o.total_price, o.deposit_amount, o.total_loss_value, 
+            o.rental_days, o.notes, o.created_at,
+            o.discount_amount, o.manager_id, o.issue_time, o.return_time,
+            u.name as manager_name
+        FROM orders o
+        LEFT JOIN users u ON o.manager_id = u.id
+        WHERE o.order_id = :order_id
     """), {"order_id": order_id})
     
     row = result.fetchone()
@@ -481,6 +486,14 @@ async def get_order_details(
         raise HTTPException(status_code=404, detail="Order not found")
     
     order = parse_order_row(row, db)
+    
+    # Додаткові поля з розширеного запиту
+    order["discount"] = float(row[15]) if row[15] else 0  # discount_amount
+    order["discount_amount"] = float(row[15]) if row[15] else 0
+    order["manager_id"] = row[16]
+    order["issue_time"] = row[17] or "11:30–12:00"
+    order["return_time"] = row[18] or "до 17:00"
+    order["manager_name"] = row[19] or ""
     
     # Get lifecycle info
     lifecycle_result = db.execute(text("""

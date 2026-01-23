@@ -693,9 +693,23 @@ def sync_orders_from_opencart():
                         image_url
                     ))
                 
+                # ✅ Якщо є коментар клієнта - записати у внутрішній чат
+                client_comment = order.get('comment', '').strip() if order.get('comment') else ''
+                if client_comment:
+                    rh_cur.execute("""
+                        INSERT INTO order_internal_notes 
+                        (order_id, user_id, user_name, message, created_at)
+                        VALUES (%s, %s, %s, %s, NOW())
+                    """, (
+                        order_id,
+                        None,
+                        '💬 Коментар клієнта',
+                        client_comment
+                    ))
+                
                 rh_conn.commit()
                 synced_count += 1
-                log(f"  ✅ Synced order #{order_id} ({customer_name})")
+                log(f"  ✅ Synced order #{order_id} ({customer_name})" + (f" + comment" if client_comment else ""))
                 
             except mysql.connector.IntegrityError:
                 log(f"  ⚠️  Order {order_id} already exists")

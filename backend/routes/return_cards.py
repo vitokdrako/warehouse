@@ -135,7 +135,7 @@ async def get_return_cards(
     sql += " ORDER BY created_at DESC"
     
     result = db.execute(text(sql), params)
-    return [parse_return_card(row) for row in result]
+    return [parse_return_card(row, db) for row in result]
 
 @router.get("/{card_id}")
 async def get_return_card(card_id: str, db: Session = Depends(get_rh_db)):

@@ -489,12 +489,22 @@ async def get_order_details(
     order = parse_order_row(row, db)
     
     # Додаткові поля з розширеного запиту
-    order["discount_amount"] = float(row[15]) if row[15] else 0
+    discount_amount = float(row[15]) if row[15] else 0
+    total_price = float(row[9]) if row[9] else 0  # total_price
+    discount_percent_db = float(row[20]) if row[20] else 0
+    
+    # Обчислити відсоток якщо він не збережений, але є discount_amount
+    if discount_percent_db == 0 and discount_amount > 0 and total_price > 0:
+        # total_price вже зі знижкою, тому original = total_price + discount_amount
+        original_price = total_price + discount_amount
+        discount_percent_db = (discount_amount / original_price) * 100
+    
+    order["discount_amount"] = discount_amount
     order["manager_id"] = row[16]
     order["issue_time"] = row[17] or "11:30–12:00"
     order["return_time"] = row[18] or "до 17:00"
     order["manager_name"] = row[19] or ""
-    order["discount"] = float(row[20]) if row[20] else 0  # discount_percent (для UI)
+    order["discount"] = round(discount_percent_db, 2)  # discount_percent (для UI)
     
     # Get lifecycle info
     lifecycle_result = db.execute(text("""

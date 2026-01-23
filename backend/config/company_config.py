@@ -6,8 +6,12 @@ Based on official documents from farforrent.com.ua
 
 COMPANY_INFO = {
     "name": "FarforDecorOrenda",
-    "legal_name": "ФОП Арсалані Олександра Ігорівна",
-    "tax_id": "3234423422",
+    "legal_name": "ФОП Николенко Наталя Станіславівна",
+    "tax_id": "3606801844",
+    "edrpou": "3606801844",
+    "iban": "UA043220010000026003340091618",
+    "mfo": "322001",
+    "bank_name": "АТ «УНІВЕРСАЛ БАНК»",
     "address": "61082, Харківська обл., місто Харків, ПРОСПЕКТ МОСКОВСЬКИЙ, будинок 216/3А, квартира 46",
     "warehouse_address": "Військовий провулок 1",
     "email": "rfarfordecor@gmail.com.ua",

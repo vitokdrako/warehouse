@@ -406,10 +406,14 @@ def generate_sample_data(doc_type: str) -> dict:
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "company": {
             "name": "FarforRent",
-            "legal_name": "ФОП Тестовий І.П.",
+            "legal_name": "ФОП Николенко Наталя Станіславівна",
             "phone": "+380 XX XXX XX XX",
-            "email": "info@farforrent.com",
-            "address": "м. Київ, вул. Тестова, 1"
+            "email": "rfarfordecor@gmail.com.ua",
+            "address": "м. Харків, Військовий провулок, 1",
+            "iban": "UA043220010000026003340091618",
+            "edrpou": "3606801844",
+            "mfo": "322001",
+            "bank_name": "АТ «УНІВЕРСАЛ БАНК»"
         }
     }
     

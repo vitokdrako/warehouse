@@ -44,22 +44,51 @@ class ReturnCardUpdate(BaseModel):
     items_missing: Optional[int] = None
 
 # Helper to parse return card
-def parse_return_card(row):
+def parse_return_card(row, db=None):
     """Parse return card row"""
+    # Індекси полів з SELECT * (0-based):
+    # 0: id, 1: order_id, 2: order_number, 3: issue_card_id, 4: status
+    # 5: received_by, 6: received_by_id, 7: checked_by, 8: checked_by_id
+    # 9: items_expected, 10: items_returned, 11: total_items_expected
+    # 12: total_items_returned, 13: items_ok, 14: items_dirty, 15: items_damaged
+    # 16: items_missing, 17: cleaning_fee, 18: late_fee, 19: return_notes
+    # 20: returned_at, 21: checked_at, 22: created_at, 23: updated_at
+    # 24: created_by_id, 25: items, 26: receivers, 27: notes, 28: fees
+    
     items_expected = []
     items_returned = []
     
-    if row[7]:  # items_expected
+    # Спочатку пробуємо items_expected (індекс 9), якщо порожньо - items (індекс 25)
+    raw_items = row[9] or row[25]  # items_expected або items
+    if raw_items:
         try:
-            items_expected = json.loads(row[7]) if isinstance(row[7], str) else row[7]
+            items_expected = json.loads(raw_items) if isinstance(raw_items, str) else raw_items
         except:
             pass
     
-    if row[8]:  # items_returned
+    if row[10]:  # items_returned
         try:
-            items_returned = json.loads(row[8]) if isinstance(row[8], str) else row[8]
+            items_returned = json.loads(row[10]) if isinstance(row[10], str) else row[10]
         except:
             pass
+    
+    # ✅ Збагатити items даними про location з products
+    if items_expected and db:
+        product_ids = [str(item.get('id') or item.get('product_id', '')) for item in items_expected]
+        if product_ids:
+            try:
+                result = db.execute(text("""
+                    SELECT product_id, zone FROM products 
+                    WHERE product_id IN :ids
+                """), {"ids": tuple(product_ids)})
+                locations = {str(r[0]): r[1] for r in result.fetchall()}
+                
+                for item in items_expected:
+                    pid = str(item.get('id') or item.get('product_id', ''))
+                    if pid in locations and locations[pid]:
+                        item['location'] = {'zone': locations[pid]}
+            except Exception as e:
+                print(f"Error enriching locations: {e}")
     
     return {
         "id": row[0],
@@ -68,22 +97,22 @@ def parse_return_card(row):
         "issue_card_id": row[3],
         "status": row[4],
         "received_by": row[5],
-        "checked_by": row[6],
+        "checked_by": row[7],
         "items_expected": items_expected,
         "items_returned": items_returned,
-        "total_items_expected": row[9],
-        "total_items_returned": row[10],
-        "items_ok": row[11],
-        "items_dirty": row[12],
-        "items_damaged": row[13],
-        "items_missing": row[14],
-        "cleaning_fee": float(row[15]) if row[15] else 0.0,
-        "late_fee": float(row[16]) if row[16] else 0.0,
-        "return_notes": row[17],
-        "returned_at": row[18].isoformat() if row[18] else None,
-        "checked_at": row[19].isoformat() if row[19] else None,
-        "created_at": row[20].isoformat() if row[20] else None,
-        "updated_at": row[21].isoformat() if row[21] else None
+        "total_items_expected": row[11],
+        "total_items_returned": row[12],
+        "items_ok": row[13],
+        "items_dirty": row[14],
+        "items_damaged": row[15],
+        "items_missing": row[16],
+        "cleaning_fee": float(row[17]) if row[17] else 0.0,
+        "late_fee": float(row[18]) if row[18] else 0.0,
+        "return_notes": row[19],
+        "returned_at": row[20].isoformat() if row[20] else None,
+        "checked_at": row[21].isoformat() if row[21] else None,
+        "created_at": row[22].isoformat() if row[22] else None,
+        "updated_at": row[23].isoformat() if row[23] else None
     }
 
 @router.get("")

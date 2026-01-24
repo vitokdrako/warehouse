@@ -690,18 +690,20 @@ function TaskDetailsModal({
 function CreateTaskModal({ 
   onClose, 
   onSuccess, 
-  prefilledData 
+  prefilledData,
+  staff  // ✅ Додано
 }: { 
   onClose: () => void
   onSuccess: () => void
   prefilledData?: any
+  staff: StaffMember[]  // ✅ Додано
 }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     task_type: 'general' as TaskType,
     priority: 'medium' as TaskPriority,
-    assigned_to: '',
+    assigned_to_id: null as number | null,  // ✅ user_id
     due_date: '',
     order_number: prefilledData?.orderNumber || '',
     damage_id: prefilledData?.damageId || '',

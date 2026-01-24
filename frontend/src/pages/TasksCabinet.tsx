@@ -433,6 +433,7 @@ export default function TasksCabinet({
           onAssigneeChange={handleAssigneeChange}
           onUpdate={loadTasks}
           onNavigateToDamage={onNavigateToDamage}
+          staff={staff}  // ✅ Передаємо staff
         />
       )}
 
@@ -442,6 +443,7 @@ export default function TasksCabinet({
           onClose={() => setShowCreateModal(false)} 
           onSuccess={loadTasks}
           prefilledData={prefilledData}
+          staff={staff}  // ✅ Передаємо staff
         />
       )}
       </div>

@@ -388,6 +388,7 @@ async def complete_issue_card(
     db: Session = Depends(get_rh_db)
 ):
     """Mark issue card as issued/completed"""
+    # Оновити issue_card
     db.execute(text("""
         UPDATE issue_cards 
         SET status = 'issued', 
@@ -396,6 +397,19 @@ async def complete_issue_card(
             updated_at = NOW()
         WHERE id = :id
     """), {"id": card_id, "issued_by_id": current_user["id"]})
+    
+    # ✅ FIXED: Синхронізувати статус замовлення
+    result = db.execute(text("SELECT order_id FROM issue_cards WHERE id = :id"), {"id": card_id})
+    row = result.fetchone()
+    if row:
+        order_id = row[0]
+        db.execute(text("""
+            UPDATE orders 
+            SET status = 'issued', 
+                updated_at = NOW()
+            WHERE order_id = :order_id
+        """), {"order_id": order_id})
+        print(f"[Orders] Замовлення {order_id} → статус 'issued' (complete endpoint)")
     
     db.commit()
     return {"message": "Issue card completed"}

@@ -129,21 +129,40 @@ export default function TasksCabinet({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [staff, setStaff] = useState<StaffMember[]>([])  // ✅ Список працівників
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterType, setFilterType] = useState<string>('all')
   const [filterPriority, setFilterPriority] = useState<string>('all')
+  const [filterMyTasks, setFilterMyTasks] = useState<boolean>(false)  // ✅ Фільтр "мої завдання"
+  const [filterAssignee, setFilterAssignee] = useState<number | null>(null)  // ✅ Фільтр по виконавцю
+
+  // Current user
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
 
   // Pre-fill form if coming from another cabinet
   const [prefilledData, setPrefilledData] = useState(initialContext || {})
+
+  // ✅ Load staff list
+  const loadStaff = async () => {
+    try {
+      const data = await tasksAPI.getStaff()
+      setStaff(data)
+    } catch (error) {
+      console.error('Error loading staff:', error)
+    }
+  }
 
   // Load tasks
   const loadTasks = async () => {
     try {
       setLoading(true)
-      const data = await tasksAPI.getAll()
+      const params: any = {}
+      if (filterMyTasks) params.my_tasks = true
+      if (filterAssignee) params.assigned_to_id = filterAssignee
+      const data = await tasksAPI.getAll(params)
       setTasks(data)
     } catch (error) {
       console.error('Error loading tasks:', error)
@@ -153,8 +172,12 @@ export default function TasksCabinet({
   }
 
   useEffect(() => {
-    loadTasks()
+    loadStaff()
   }, [])
+
+  useEffect(() => {
+    loadTasks()
+  }, [filterMyTasks, filterAssignee])
 
   // Filter tasks
   const filteredTasks = useMemo(() => {

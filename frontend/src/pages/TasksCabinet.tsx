@@ -509,18 +509,20 @@ function TaskDetailsModal({
   onAssigneeChange,
   onUpdate,
   onNavigateToDamage,
+  staff,  // ✅ Додано
 }: {
   task: Task
   onClose: () => void
   onStatusChange: (id: string, status: TaskStatus) => void
-  onAssigneeChange: (id: string, assignee: string) => void
+  onAssigneeChange: (id: string, assigneeId: number | null) => void  // ✅ Змінено тип
   onUpdate: () => void
   onNavigateToDamage?: (damageId: string) => void
+  staff: StaffMember[]  // ✅ Додано
 }) {
-  const [assignee, setAssignee] = useState(task.assigned_to || '')
+  const [assigneeId, setAssigneeId] = useState<number | null>(task.assigned_to_id || null)
 
   const handleSaveAssignee = () => {
-    onAssigneeChange(task.id, assignee)
+    onAssigneeChange(task.id, assigneeId)
   }
 
   return (

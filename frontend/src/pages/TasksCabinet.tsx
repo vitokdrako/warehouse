@@ -347,6 +347,42 @@ export default function TasksCabinet({
               </select>
             </div>
           </div>
+          
+          {/* ✅ Новий рядок фільтрів - Мої завдання + По виконавцю */}
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-200">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={filterMyTasks}
+                onChange={(e) => {
+                  setFilterMyTasks(e.target.checked)
+                  if (e.target.checked) setFilterAssignee(null)  // Скинути фільтр по виконавцю
+                }}
+                className="w-4 h-4 rounded border-corp-border text-corp-primary focus:ring-corp-primary"
+              />
+              <span className="text-sm text-corp-text-dark font-medium">
+                👤 Мої завдання {currentUser?.email && `(${currentUser.email})`}
+              </span>
+            </label>
+            
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-corp-text-main">Виконавець:</label>
+              <select
+                value={filterAssignee || ''}
+                onChange={(e) => {
+                  setFilterAssignee(e.target.value ? Number(e.target.value) : null)
+                  if (e.target.value) setFilterMyTasks(false)  // Скинути "мої завдання"
+                }}
+                disabled={filterMyTasks}
+                className="rounded-corp border border-corp-border px-2 py-1 text-sm disabled:opacity-50"
+              >
+                <option value="">Всі</option>
+                {staff.map(s => (
+                  <option key={s.id} value={s.id}>{s.full_name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
       {/* Kanban Board */}

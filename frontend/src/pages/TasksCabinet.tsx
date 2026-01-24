@@ -219,10 +219,10 @@ export default function TasksCabinet({
     }
   }
 
-  // Update task assignee
-  const handleAssigneeChange = async (taskId: string, assignee: string) => {
+  // Update task assignee ✅ Оновлено для user_id
+  const handleAssigneeChange = async (taskId: string, assigneeId: number | null) => {
     try {
-      const updatedTask = await tasksAPI.update(taskId, { assigned_to: assignee })
+      const updatedTask = await tasksAPI.update(taskId, { assigned_to_id: assigneeId })
       setTasks(tasks.map((t) => (t.id === taskId ? updatedTask : t)))
       if (selectedTask?.id === taskId) {
         setSelectedTask(updatedTask)

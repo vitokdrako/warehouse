@@ -1855,25 +1855,52 @@ async def update_decor_order_items(
     Оновити товари в замовленні
     ✅ MIGRATED: Using RentalHub DB + User Tracking
     ✅ FIXED: Тепер перераховує total_price і deposit_amount в orders
+    ✅ FIXED: Зберігає прогрес комплектації при оновленні items
     """
     from utils.user_tracking_helper import get_current_user_from_header
+    import json
     
     try:
         # Get current user for tracking
         current_user = get_current_user_from_header(authorization)
         user_id = current_user.get("id")
+        user_name = current_user.get("email", "System")
         
         # Перевірити чи існує замовлення та отримати rental_days
-        result = db.execute(text("SELECT order_id, rental_days FROM orders WHERE order_id = :id"), {"id": order_id})
+        result = db.execute(text("SELECT order_id, rental_days, order_number FROM orders WHERE order_id = :id"), {"id": order_id})
         order_row = result.fetchone()
         if not order_row:
             raise HTTPException(status_code=404, detail="Order not found")
         
         rental_days = order_row[1] or 1
+        order_number = order_row[2]
         
         items = items_data.get('items', [])
         if not items:
             raise HTTPException(status_code=400, detail="No items provided")
+        
+        # ✅ ОТРИМАТИ ІСНУЮЧІ ORDER_ITEMS для порівняння
+        existing_items_result = db.execute(text("""
+            SELECT id, product_id, product_name, quantity FROM order_items WHERE order_id = :order_id
+        """), {"order_id": order_id})
+        existing_items = {str(r[1]): {"id": r[0], "name": r[2], "qty": r[3]} for r in existing_items_result}
+        
+        # ✅ ОТРИМАТИ ISSUE_CARD та її items для збереження прогресу
+        issue_card_result = db.execute(text("""
+            SELECT id, items, status FROM issue_cards WHERE order_id = :order_id
+        """), {"order_id": order_id})
+        issue_card_row = issue_card_result.fetchone()
+        
+        issue_card_id = None
+        issue_card_items = {}
+        issue_card_status = None
+        if issue_card_row:
+            issue_card_id = issue_card_row[0]
+            issue_card_status = issue_card_row[2]
+            if issue_card_row[1]:
+                ic_items_list = json.loads(issue_card_row[1]) if isinstance(issue_card_row[1], str) else issue_card_row[1]
+                # Створити словник по sku для швидкого пошуку
+                issue_card_items = {it.get('sku') or it.get('id'): it for it in ic_items_list}
         
         # Видалити старі items
         db.execute(text("DELETE FROM order_items WHERE order_id = :order_id"), {"order_id": order_id})
@@ -1881,10 +1908,25 @@ async def update_decor_order_items(
         # Додати нові items та порахувати фінанси
         total_rent = 0
         total_deposit = 0
+        new_issue_card_items = []
+        added_items = []
+        removed_items = []
+        modified_items = []
+        
+        new_product_ids = set()
+        for item in items:
+            inventory_id = item.get('inventory_id') or item.get('product_id')
+            new_product_ids.add(str(inventory_id))
+        
+        # Знайти видалені items
+        for pid, old_item in existing_items.items():
+            if pid not in new_product_ids:
+                removed_items.append(old_item['name'])
         
         for item in items:
             inventory_id = item.get('inventory_id') or item.get('product_id')
             product_name = item.get('name') or item.get('product_name', '')
+            sku = item.get('sku') or item.get('article') or str(inventory_id)
             quantity = int(item.get('quantity', 1))
             price_per_day = float(item.get('price_per_day', 0))
             deposit = float(item.get('deposit', 0) or item.get('damage_cost', 0) or 0)
@@ -1912,6 +1954,48 @@ async def update_decor_order_items(
                 "total_rental": total_rental,
                 "image_url": image_url
             })
+            
+            # ✅ ЗБЕРЕГТИ ПРОГРЕС КОМПЛЕКТАЦІЇ
+            is_new_item = str(inventory_id) not in existing_items
+            old_qty = existing_items.get(str(inventory_id), {}).get('qty', 0)
+            qty_changed = not is_new_item and quantity != old_qty
+            
+            if is_new_item:
+                added_items.append(f"{product_name} x{quantity}")
+            elif qty_changed:
+                modified_items.append(f"{product_name}: {old_qty} → {quantity}")
+            
+            # Шукаємо існуючий прогрес по sku
+            existing_progress = issue_card_items.get(sku) or issue_card_items.get(str(inventory_id))
+            
+            new_ic_item = {
+                "id": str(inventory_id),
+                "sku": sku,
+                "name": product_name,
+                "qty": quantity,
+                "picked_qty": 0,
+                "scanned": [],
+                "packaging": {"stretch": False, "box": False, "cover": False, "black_case": False},
+                "pre_damage": [],
+                "is_new": is_new_item,  # ✅ Позначаємо нові items
+                "qty_changed": qty_changed,  # ✅ Позначаємо змінену кількість
+                "added_at": None
+            }
+            
+            # Якщо є існуючий прогрес - зберегти його
+            if existing_progress:
+                new_ic_item["picked_qty"] = min(existing_progress.get("picked_qty", 0), quantity)
+                new_ic_item["scanned"] = existing_progress.get("scanned", [])
+                new_ic_item["packaging"] = existing_progress.get("packaging", new_ic_item["packaging"])
+                new_ic_item["pre_damage"] = existing_progress.get("pre_damage", [])
+                new_ic_item["is_new"] = False
+                new_ic_item["qty_changed"] = qty_changed
+            
+            if is_new_item:
+                from datetime import datetime
+                new_ic_item["added_at"] = datetime.now().isoformat()
+            
+            new_issue_card_items.append(new_ic_item)
         
         # ✅ КРИТИЧНО: Оновити total_price і deposit_amount в orders
         db.execute(text("""
@@ -1929,6 +2013,38 @@ async def update_decor_order_items(
             "order_id": order_id
         })
         
+        # ✅ ОНОВИТИ ISSUE_CARD ITEMS (зберігаючи прогрес)
+        if issue_card_id:
+            db.execute(text("""
+                UPDATE issue_cards 
+                SET items = :items, updated_at = NOW()
+                WHERE id = :id
+            """), {
+                "items": json.dumps(new_issue_card_items, ensure_ascii=False),
+                "id": issue_card_id
+            })
+        
+        # ✅ ЛОГУВАННЯ ЗМІН В ORDER_LIFECYCLE
+        changes = []
+        if added_items:
+            changes.append(f"Додано: {', '.join(added_items)}")
+        if removed_items:
+            changes.append(f"Видалено: {', '.join(removed_items)}")
+        if modified_items:
+            changes.append(f"Змінено кількість: {', '.join(modified_items)}")
+        
+        if changes:
+            db.execute(text("""
+                INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at, created_by_id, created_by_name)
+                VALUES (:order_id, 'items_modified', :notes, :created_by, NOW(), :user_id, :user_name)
+            """), {
+                "order_id": order_id,
+                "notes": "; ".join(changes),
+                "created_by": user_name,
+                "user_id": user_id,
+                "user_name": user_name
+            })
+        
         db.commit()
         
         return {
@@ -1936,7 +2052,9 @@ async def update_decor_order_items(
             "order_id": order_id,
             "items_count": len(items),
             "total_price": total_rent,
-            "deposit_amount": total_deposit
+            "deposit_amount": total_deposit,
+            "packing_progress_preserved": issue_card_id is not None,
+            "changes": changes
         }
         
     except HTTPException:
@@ -1944,6 +2062,8 @@ async def update_decor_order_items(
     except Exception as e:
         db.rollback()
         print(f"[UPDATE ITEMS] Error: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

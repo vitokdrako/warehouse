@@ -115,9 +115,20 @@ export const damagesAPI = {
 
 // Tasks API
 export const tasksAPI = {
-  getAll: async (status?: string) => {
-    const params = status ? { status } : {};
+  getAll: async (params?: { status?: string; my_tasks?: boolean; assigned_to_id?: number }) => {
     const response = await apiClient.get('/tasks', { params });
+    return response.data;
+  },
+  
+  // ✅ Отримати список працівників для призначення
+  getStaff: async () => {
+    const response = await apiClient.get('/tasks/staff');
+    return response.data;
+  },
+  
+  // ✅ Статистика по користувачах
+  getStatsByUser: async () => {
+    const response = await apiClient.get('/tasks/stats/by-user');
     return response.data;
   },
   

@@ -22,11 +22,23 @@ interface Task {
   status: TaskStatus
   priority: TaskPriority
   assigned_to?: string
+  assigned_to_id?: number  // ✅ user_id
+  assignee_name?: string   // ✅ Повне ім'я
   due_date?: string
   completed_at?: string
   created_by: string
+  created_by_id?: number
   created_at: string
   updated_at: string
+}
+
+// ✅ Тип для працівника
+interface StaffMember {
+  id: number
+  user_id: number
+  username: string
+  full_name: string
+  role: string
 }
 
 /*************** small UI ***************/

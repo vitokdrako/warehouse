@@ -77,11 +77,29 @@ function ItemPickupCard({
   const hasPreDamage = (item.pre_damage?.length || 0) > 0
   const missing = Math.max(0, qty - (item.available || 0))
   
+  // ✅ Підсвічування нових та змінених items
+  const isNew = item.is_new === true
+  const qtyChanged = item.qty_changed === true
+  
   return (
     <div className={`
-      rounded-xl border bg-white p-4
-      ${isComplete ? 'border-emerald-300 bg-emerald-50' : missing > 0 ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}
+      rounded-xl border bg-white p-4 relative
+      ${isNew ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-200' : 
+        qtyChanged ? 'border-amber-400 bg-amber-50' :
+        isComplete ? 'border-emerald-300 bg-emerald-50' : 
+        missing > 0 ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}
     `}>
+      {/* ✅ Мітка для нових items */}
+      {isNew && (
+        <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+          НОВИЙ
+        </div>
+      )}
+      {qtyChanged && !isNew && (
+        <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+          К-ТЬ ЗМІН.
+        </div>
+      )}
       {/* Header з фото та інформацією */}
       <div className="flex gap-4 mb-4">
         {/* Фото */}

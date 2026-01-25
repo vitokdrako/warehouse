@@ -190,9 +190,11 @@ export default function NewOrderViewWorkspace() {
       }
       
       // Backend очікує POST з body
+      // ✅ FIXED: Передаємо exclude_order_id щоб не враховувати товари з ЦЬОГО замовлення
       const response = await axios.post(`${BACKEND_URL}/api/orders/check-availability`, {
         start_date: issueDate,
         end_date: returnDate,
+        exclude_order_id: orderId ? parseInt(orderId) : null,  // ✅ Виключити поточне замовлення
         items: items.map(item => ({
           product_id: item.inventory_id,
           quantity: item.quantity || item.qty || 1

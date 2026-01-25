@@ -82,7 +82,8 @@ export default function OrdersChatModal({ isOpen, onClose }) {
   const fetchMessages = async (orderId) => {
     setLoadingMessages(true);
     try {
-      const response = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/notes`);
+      // ✅ Правильний endpoint для internal notes
+      const response = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/internal-notes`);
       if (response.ok) {
         const data = await response.json();
         setMessages(Array.isArray(data) ? data : []);
@@ -100,10 +101,11 @@ export default function OrdersChatModal({ isOpen, onClose }) {
     if (!newMessage.trim() || !selectedOrderId) return;
 
     try {
-      const response = await authFetch(`${BACKEND_URL}/api/orders/${selectedOrderId}/notes`, {
+      // ✅ Правильний endpoint для internal notes
+      const response = await authFetch(`${BACKEND_URL}/api/orders/${selectedOrderId}/internal-notes`, {
         method: 'POST',
         body: JSON.stringify({
-          note: newMessage,
+          message: newMessage,
           user_id: user.id,
           user_name: user.name || user.email || 'Менеджер'
         })

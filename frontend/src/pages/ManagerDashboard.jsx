@@ -347,6 +347,14 @@ export default function ManagerDashboard() {
               🔗 {mergeMode ? 'Скасувати' : 'Об\'єднати'}
             </button>
             
+            {/* ✅ Кнопка чату */}
+            <button 
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center gap-1.5"
+              onClick={() => setShowChatModal(true)}
+            >
+              💬 Чат
+            </button>
+            
             {/* Панель об'єднання */}
             {mergeMode && selectedForMerge.length > 0 && (
               <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-lg">

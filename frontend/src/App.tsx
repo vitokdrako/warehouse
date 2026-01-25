@@ -83,6 +83,16 @@ function App() {
             } 
           />
           
+          {/* ✅ Новий кабінет менеджера - Менеджерська */}
+          <Route 
+            path="/manager-cabinet" 
+            element={
+              <ProtectedRoute>
+                <ManagerCabinet />
+              </ProtectedRoute>
+            } 
+          />
+          
           <Route 
             path="/orders-archive" 
             element={

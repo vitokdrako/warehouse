@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import DashboardHome from './pages/DashboardHome';
 import Dashboard from './pages/Dashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
+import ManagerCabinet from './pages/ManagerCabinet';  // ✅ Новий кабінет менеджера
 import ReauditCabinetFull from './pages/ReauditCabinetFull';
 import DamageHubApp from './pages/DamageHubApp';
 // Legacy: import DamageCabinet from './pages/DamageCabinet';

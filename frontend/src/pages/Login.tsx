@@ -1,18 +1,28 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [sessionExpired, setSessionExpired] = useState(false)
+  
+  // ✅ Перевірка чи сесія закінчилась
+  useEffect(() => {
+    if (searchParams.get('session_expired') === 'true') {
+      setSessionExpired(true)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSessionExpired(false)
     setLoading(true)
 
     try {
@@ -55,6 +65,13 @@ export default function Login() {
           <h1 className="text-3xl font-bold text-corp-text-dark">Rental Hub</h1>
           <p className="text-sm text-corp-text-muted mt-2">Увійдіть у свій акаунт</p>
         </div>
+        
+        {/* ✅ Повідомлення про закінчення сесії */}
+        {sessionExpired && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm text-center">
+            ⏰ Ваша сесія закінчилась. Будь ласка, увійдіть знову.
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">

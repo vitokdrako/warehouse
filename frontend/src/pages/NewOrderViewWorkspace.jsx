@@ -675,18 +675,8 @@ export default function NewOrderViewWorkspace() {
       }
       
       // Footer
-      // Кнопка "Відправити на збір" показується тільки для awaiting_customer
-      // Для processing/ready_for_issue - замовлення вже на зборі, кнопка не потрібна
-      onPrimaryAction={
-        decorOrderStatus === 'processing' || decorOrderStatus === 'ready_for_issue' 
-          ? null 
-          : (decorOrderStatus ? handleSendToAssembly : handleAcceptOrder)
-      }
-      primaryLabel={
-        decorOrderStatus === 'processing' || decorOrderStatus === 'ready_for_issue'
-          ? null
-          : (decorOrderStatus ? '📦 Відправити на збір' : 'Підтвердити та прийняти')
-      }
+      onPrimaryAction={decorOrderStatus ? handleSendToAssembly : handleAcceptOrder}
+      primaryLabel={decorOrderStatus ? '📦 Відправити на збір' : 'Підтвердити та прийняти'}
       primaryDisabled={saving || !canAccept}
       primaryDisabledReason={!canAccept ? 'Заповніть дати та позиції' : ''}
       onSave={handleSave}

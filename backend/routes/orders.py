@@ -242,7 +242,8 @@ def parse_order_row(row, db: Session = None):
             "manager_comment": row[11] if len(row) > 11 else None,
             "created_at": row[12].isoformat() if len(row) > 12 and row[12] else None,
             "is_archived": bool(row[13]) if len(row) > 13 else False,
-            "items": items
+            "items": items,
+            "packing_progress": packing_progress  # ✅ Прогрес комплектації
         }
     
     return order_dict

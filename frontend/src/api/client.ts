@@ -23,6 +23,31 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// ✅ Response Interceptor - редірект на логін при протухлому токені
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const errorDetail = error.response?.data?.detail || '';
+      
+      // Якщо токен протух або невалідний - редірект на логін
+      if (errorDetail.includes('expired') || errorDetail.includes('Invalid token') || errorDetail.includes('Token')) {
+        console.warn('🔒 Сесія закінчилась, перенаправлення на логін...');
+        
+        // Очищаємо localStorage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Редірект на логін (якщо ще не там)
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login?session_expired=true';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Warehouse API
 export const warehouseAPI = {
   // Dashboard

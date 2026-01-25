@@ -412,6 +412,9 @@ async def complete_issue_card(
     db: Session = Depends(get_rh_db)
 ):
     """Mark issue card as issued/completed"""
+    user_id = current_user.get("id")
+    user_name = f"{current_user.get('firstname', '')} {current_user.get('lastname', '')}".strip() or current_user.get('email', 'System')
+    
     # Оновити issue_card
     db.execute(text("""
         UPDATE issue_cards 
@@ -420,7 +423,7 @@ async def complete_issue_card(
             issued_at = NOW(), 
             updated_at = NOW()
         WHERE id = :id
-    """), {"id": card_id, "issued_by_id": current_user["id"]})
+    """), {"id": card_id, "issued_by_id": user_id})
     
     # ✅ FIXED: Синхронізувати статус замовлення
     result = db.execute(text("SELECT order_id FROM issue_cards WHERE id = :id"), {"id": card_id})
@@ -430,10 +433,23 @@ async def complete_issue_card(
         db.execute(text("""
             UPDATE orders 
             SET status = 'issued', 
+                updated_by_id = :user_id,
                 updated_at = NOW()
             WHERE order_id = :order_id
-        """), {"order_id": order_id})
-        print(f"[Orders] Замовлення {order_id} → статус 'issued' (complete endpoint)")
+        """), {"order_id": order_id, "user_id": user_id})
+        
+        # ✅ ЛОГУВАННЯ В ORDER_LIFECYCLE
+        db.execute(text("""
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at, created_by_id, created_by_name)
+            VALUES (:order_id, 'issued_to_client', '📦 Видано клієнту', :created_by, NOW(), :user_id, :user_name)
+        """), {
+            "order_id": order_id,
+            "created_by": current_user.get('email', 'System'),
+            "user_id": user_id,
+            "user_name": user_name
+        })
+        
+        print(f"[Orders] Замовлення {order_id} → статус 'issued' (complete endpoint) by {user_name}")
     
     db.commit()
     return {"message": "Issue card completed"}

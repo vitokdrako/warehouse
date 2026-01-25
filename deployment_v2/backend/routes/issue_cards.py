@@ -296,10 +296,16 @@ async def update_issue_card(
     db: Session = Depends(get_rh_db)
 ):
     """Update issue card"""
-    # Check exists
-    result = db.execute(text("SELECT id FROM issue_cards WHERE id = :id"), {"id": card_id})
-    if not result.fetchone():
+    # Check exists and get order_id
+    result = db.execute(text("SELECT id, order_id, status FROM issue_cards WHERE id = :id"), {"id": card_id})
+    card_row = result.fetchone()
+    if not card_row:
         raise HTTPException(status_code=404, detail="Issue card not found")
+    
+    order_id = card_row[1]
+    old_status = card_row[2]
+    user_id = current_user.get("id")
+    user_name = f"{current_user.get('firstname', '')} {current_user.get('lastname', '')}".strip() or current_user.get('email', 'System')
     
     # Build dynamic update
     set_clauses = []
@@ -352,32 +358,50 @@ async def update_issue_card(
         db.execute(text(sql), params)
         db.commit()
     
+    # ✅ ЛОГУВАННЯ В ORDER_LIFECYCLE при зміні статусу
+    if updates.status is not None and updates.status != old_status and order_id:
+        lifecycle_stages = {
+            'preparation': ('packing_started', f'🔧 Комплектація розпочата'),
+            'ready': ('packing_completed', f'✅ Комплектація завершена'),
+            'issued': ('issued_to_client', f'📦 Видано клієнту'),
+        }
+        
+        if updates.status in lifecycle_stages:
+            stage, notes = lifecycle_stages[updates.status]
+            db.execute(text("""
+                INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at, created_by_id, created_by_name)
+                VALUES (:order_id, :stage, :notes, :created_by, NOW(), :user_id, :user_name)
+            """), {
+                "order_id": order_id,
+                "stage": stage,
+                "notes": notes,
+                "created_by": current_user.get('email', 'System'),
+                "user_id": user_id,
+                "user_name": user_name
+            })
+            db.commit()
+            print(f"[Lifecycle] Order {order_id}: {stage} by {user_name}")
+    
     # Синхронізувати статус замовлення зі статусом issue_card
-    if updates.status is not None:
-        # Отримати order_id з issue_card
-        result = db.execute(text("SELECT order_id FROM issue_cards WHERE id = :id"), {"id": card_id})
-        row = result.fetchone()
-        if row:
-            order_id = row[0]
+    if updates.status is not None and order_id:
+        # Мапінг статусів issue_card → orders
+        status_mapping = {
+            'preparation': 'processing',        # На комплектації → В обробці
+            'ready': 'ready_for_issue',        # Готово → Готово до видачі
+            'issued': 'issued',                # Видано → Видано
+            'completed': 'completed'           # Завершено → Завершено
+        }
+        
+        order_status = status_mapping.get(updates.status)
+        if order_status:
+            db.execute(text("""
+                UPDATE orders 
+                SET status = :status, updated_by_id = :user_id, updated_at = NOW()
+                WHERE order_id = :order_id
+            """), {"status": order_status, "order_id": order_id, "user_id": user_id})
             
-            # Мапінг статусів issue_card → orders
-            status_mapping = {
-                'preparation': 'processing',        # На комплектації → В обробці
-                'ready': 'ready_for_issue',        # Готово → Готово до видачі
-                'issued': 'issued',                # Видано → Видано
-                'completed': 'completed'           # Завершено → Завершено
-            }
-            
-            order_status = status_mapping.get(updates.status)
-            if order_status:
-                db.execute(text("""
-                    UPDATE orders 
-                    SET status = :status
-                    WHERE order_id = :order_id
-                """), {"status": order_status, "order_id": order_id})
-                
-                print(f"[Orders] Замовлення {order_id} → статус '{order_status}' (з issue_card '{updates.status}')")
-                db.commit()
+            print(f"[Orders] Замовлення {order_id} → статус '{order_status}' (з issue_card '{updates.status}')")
+            db.commit()
     
     return {"message": "Issue card updated"}
 
@@ -388,6 +412,9 @@ async def complete_issue_card(
     db: Session = Depends(get_rh_db)
 ):
     """Mark issue card as issued/completed"""
+    user_id = current_user.get("id")
+    user_name = f"{current_user.get('firstname', '')} {current_user.get('lastname', '')}".strip() or current_user.get('email', 'System')
+    
     # Оновити issue_card
     db.execute(text("""
         UPDATE issue_cards 
@@ -396,7 +423,7 @@ async def complete_issue_card(
             issued_at = NOW(), 
             updated_at = NOW()
         WHERE id = :id
-    """), {"id": card_id, "issued_by_id": current_user["id"]})
+    """), {"id": card_id, "issued_by_id": user_id})
     
     # ✅ FIXED: Синхронізувати статус замовлення
     result = db.execute(text("SELECT order_id FROM issue_cards WHERE id = :id"), {"id": card_id})
@@ -406,10 +433,23 @@ async def complete_issue_card(
         db.execute(text("""
             UPDATE orders 
             SET status = 'issued', 
+                updated_by_id = :user_id,
                 updated_at = NOW()
             WHERE order_id = :order_id
-        """), {"order_id": order_id})
-        print(f"[Orders] Замовлення {order_id} → статус 'issued' (complete endpoint)")
+        """), {"order_id": order_id, "user_id": user_id})
+        
+        # ✅ ЛОГУВАННЯ В ORDER_LIFECYCLE
+        db.execute(text("""
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at, created_by_id, created_by_name)
+            VALUES (:order_id, 'issued_to_client', '📦 Видано клієнту', :created_by, NOW(), :user_id, :user_name)
+        """), {
+            "order_id": order_id,
+            "created_by": current_user.get('email', 'System'),
+            "user_id": user_id,
+            "user_name": user_name
+        })
+        
+        print(f"[Orders] Замовлення {order_id} → статус 'issued' (complete endpoint) by {user_name}")
     
     db.commit()
     return {"message": "Issue card completed"}

@@ -185,9 +185,15 @@ async def update_return_card(
     db: Session = Depends(get_rh_db)
 ):
     """Update return card"""
-    result = db.execute(text("SELECT id FROM return_cards WHERE id = :id"), {"id": card_id})
-    if not result.fetchone():
+    result = db.execute(text("SELECT id, order_id, status FROM return_cards WHERE id = :id"), {"id": card_id})
+    card_row = result.fetchone()
+    if not card_row:
         raise HTTPException(status_code=404, detail="Return card not found")
+    
+    order_id = card_row[1]
+    old_status = card_row[2]
+    user_id = current_user.get("id")
+    user_name = f"{current_user.get('firstname', '')} {current_user.get('lastname', '')}".strip() or current_user.get('email', 'System')
     
     set_clauses = []
     params = {"id": card_id}
@@ -238,6 +244,30 @@ async def update_return_card(
         sql = f"UPDATE return_cards SET {', '.join(set_clauses)} WHERE id = :id"
         db.execute(text(sql), params)
         db.commit()
+    
+    # ✅ ЛОГУВАННЯ В ORDER_LIFECYCLE при зміні статусу
+    if updates.status is not None and updates.status != old_status and order_id:
+        lifecycle_stages = {
+            'received': ('return_received', f'↩️ Товар прийнято від клієнта'),
+            'checked': ('return_checked', f'🔍 Товар перевірено'),
+            'completed': ('return_completed', f'✅ Повернення завершено'),
+        }
+        
+        if updates.status in lifecycle_stages:
+            stage, notes = lifecycle_stages[updates.status]
+            db.execute(text("""
+                INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at, created_by_id, created_by_name)
+                VALUES (:order_id, :stage, :notes, :created_by, NOW(), :user_id, :user_name)
+            """), {
+                "order_id": order_id,
+                "stage": stage,
+                "notes": notes,
+                "created_by": current_user.get('email', 'System'),
+                "user_id": user_id,
+                "user_name": user_name
+            })
+            db.commit()
+            print(f"[Lifecycle] Order {order_id}: {stage} by {user_name}")
     
     # Автоматично створити damage case якщо є брудні або пошкоджені товари
     print(f"[DEBUG] Checking damage case creation: status={updates.status}, items_returned={len(updates.items_returned) if updates.items_returned else 0}")

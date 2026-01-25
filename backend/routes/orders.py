@@ -219,7 +219,8 @@ def parse_order_row(row, db: Session = None):
             "notes": row[13] if row[13] else None,
             "created_at": row[14].isoformat() if row[14] else None,
             "is_archived": False,
-            "items": items
+            "items": items,
+            "packing_progress": packing_progress  # ✅ Прогрес комплектації
         }
     else:
         # Старий формат (без issue_date та return_date)

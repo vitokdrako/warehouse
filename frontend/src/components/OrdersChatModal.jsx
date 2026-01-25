@@ -86,7 +86,9 @@ export default function OrdersChatModal({ isOpen, onClose }) {
       const response = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/internal-notes`);
       if (response.ok) {
         const data = await response.json();
-        setMessages(Array.isArray(data) ? data : []);
+        // ✅ API повертає { success, notes, count }
+        const notesList = data.notes || data || [];
+        setMessages(Array.isArray(notesList) ? notesList : []);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);

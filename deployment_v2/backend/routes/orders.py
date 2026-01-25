@@ -1739,9 +1739,10 @@ async def check_availability_endpoint(
 ):
     """
     Перевірити доступність товарів на період
-    Request body: { start_date, end_date, items: [{product_id, quantity}] }
+    Request body: { start_date, end_date, items: [{product_id, quantity}], exclude_order_id?: int }
     ✅ MIGRATED: Using products + order_items from RentalHub DB
     ✅ USES: availability_checker utility для консистентної логіки
+    ✅ FIXED: Підтримка exclude_order_id для виключення поточного замовлення
     """
     try:
         from utils.availability_checker import check_order_availability
@@ -1749,6 +1750,7 @@ async def check_availability_endpoint(
         start_date = request.get("start_date")
         end_date = request.get("end_date")
         items = request.get("items", [])
+        exclude_order_id = request.get("exclude_order_id")  # ✅ ID замовлення для виключення
         
         if not start_date or not end_date:
             raise HTTPException(status_code=400, detail="start_date and end_date are required")
@@ -1761,7 +1763,8 @@ async def check_availability_endpoint(
             db=db,
             items=items,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            exclude_order_id=exclude_order_id  # ✅ Передаємо exclude_order_id
         )
         
         return availability_result

@@ -719,6 +719,12 @@ export default function ManagerDashboard() {
         </Column>
       </main>
       {/* Footer moved to global LegalFooter in App.tsx */}
+      
+      {/* ✅ Модалка чату */}
+      <OrdersChatModal 
+        isOpen={showChatModal} 
+        onClose={() => setShowChatModal(false)} 
+      />
     </div>
   );
 }

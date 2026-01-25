@@ -376,6 +376,12 @@ export default function ManagerDashboard() {
             
             <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
             <button 
+              className="rounded-lg border border-corp-primary bg-corp-primary/5 px-3 py-2 text-sm font-medium text-corp-primary hover:bg-corp-primary hover:text-white transition-colors"
+              onClick={() => navigate('/manager-cabinet')}
+            >
+              👔 Менеджерська
+            </button>
+            <button 
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
               onClick={() => navigate('/calendar')}
             >

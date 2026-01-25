@@ -119,7 +119,4 @@ async def health():
     return {"status": "healthy", "database": "mysql"}
 
 
-# OPTIONS handler для CORS preflight
-@app.options("/{full_path:path}")
-async def options_handler(full_path: str):
-    return {"message": "OK"}
+# OPTIONS preflight requests are now handled automatically by CORSMiddleware

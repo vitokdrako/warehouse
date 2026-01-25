@@ -79,6 +79,8 @@ def parse_order_row(row, db: Session = None):
     
     # Get items if needed
     items = []
+    packing_progress = 0  # ✅ Прогрес комплектації
+    
     if db and row[0]:  # order_id exists
         items_result = db.execute(text("""
             SELECT oi.id, oi.order_id, oi.product_id, oi.product_name, 
@@ -136,6 +138,24 @@ def parse_order_row(row, db: Session = None):
                 "pack": "",  # TODO: додати якщо є в products
                 "pre_damage": []  # TODO: завантажити з damages table
             })
+        
+        # ✅ Обчислити прогрес комплектації з issue_cards
+        try:
+            issue_card_result = db.execute(text("""
+                SELECT items FROM issue_cards WHERE order_id = :order_id
+            """), {"order_id": row[0]})
+            ic_row = issue_card_result.fetchone()
+            if ic_row and ic_row[0]:
+                import json
+                ic_items = json.loads(ic_row[0]) if isinstance(ic_row[0], str) else ic_row[0]
+                if ic_items and len(ic_items) > 0:
+                    total_qty = sum(it.get('qty', 1) for it in ic_items)
+                    picked_qty = sum(it.get('picked_qty', 0) for it in ic_items)
+                    if total_qty > 0:
+                        packing_progress = int((picked_qty / total_qty) * 100)
+        except Exception as e:
+            print(f"[parse_order_row] Error calculating packing progress: {e}")
+            packing_progress = 0
     
     # Визначимо індекси полів у row - залежить від того, скільки полів повернуто
     # Формат 1 (новий з issue_date/return_date): 16+ колонок

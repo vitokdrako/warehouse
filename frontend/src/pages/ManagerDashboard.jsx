@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CorporateHeader from '../components/CorporateHeader';
+import OrdersChatModal from '../components/OrdersChatModal';  // ✅ Чат замовлень
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -25,6 +26,7 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
   const [cleaningStats, setCleaningStats] = useState({ repair: 0 });
+  const [showChatModal, setShowChatModal] = useState(false);  // ✅ Стан для модалки чату
   
   // Стани для розгортання карток
   const [showAllAwaiting, setShowAllAwaiting] = useState(false);

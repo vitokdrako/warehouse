@@ -48,14 +48,16 @@ export default function ManagerCabinet() {
       const response = await authFetch(`${BACKEND_URL}/api/decor-orders?status=awaiting_customer,processing,ready_for_issue`);
       if (response.ok) {
         const data = await response.json();
-        setOrders(data);
+        // ✅ API повертає { orders: [...], total, limit, offset }
+        setOrders(Array.isArray(data) ? data : (data.orders || []));
       }
       
       // Завантажити список менеджерів
       const managersRes = await authFetch(`${BACKEND_URL}/api/tasks/staff`);
       if (managersRes.ok) {
         const managersData = await managersRes.json();
-        setManagers(managersData.filter(m => ['admin', 'manager', 'office_manager'].includes(m.role)));
+        const staffList = Array.isArray(managersData) ? managersData : [];
+        setManagers(staffList.filter(m => ['admin', 'manager', 'office_manager'].includes(m.role)));
       }
     } catch (error) {
       console.error('Error fetching data:', error);

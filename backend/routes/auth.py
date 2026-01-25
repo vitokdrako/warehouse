@@ -233,6 +233,78 @@ async def get_current_user(token: str, db: Session = Depends(get_db)):
     except jwt.JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+@router.post("/refresh")
+async def refresh_token(authorization: str = Header(None), db: Session = Depends(get_rh_db)):
+    """
+    Оновити access token.
+    ✅ Можна викликати навіть з протухлим токеном (до 7 днів)
+    """
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    
+    try:
+        token = authorization.replace("Bearer ", "")
+        
+        # Декодуємо без перевірки терміну дії
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
+        except jwt.JWTError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Перевіряємо що токен не старший 7 днів
+        exp = payload.get("exp")
+        if exp:
+            token_expired_at = datetime.utcfromtimestamp(exp)
+            max_refresh_time = token_expired_at + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+            if datetime.utcnow() > max_refresh_time:
+                raise HTTPException(status_code=401, detail="Token too old to refresh, please login again")
+        
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        
+        # Знаходимо користувача
+        result = db.execute(text("""
+            SELECT user_id, username, email, firstname, lastname, user_group_id
+            FROM users WHERE email = :email AND is_active = 1
+        """), {"email": email})
+        user_row = result.fetchone()
+        
+        if not user_row:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        role = determine_user_role(user_row[2], user_row[5])
+        
+        # Створюємо новий токен
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        new_token = create_access_token(
+            data={
+                "sub": user_row[2],
+                "user_id": user_row[0],
+                "role": role,
+                "firstname": user_row[3],
+                "lastname": user_row[4]
+            },
+            expires_delta=access_token_expires
+        )
+        
+        return {
+            "access_token": new_token,
+            "token_type": "bearer",
+            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # в секундах
+            "user": {
+                "id": user_row[0],
+                "email": user_row[2],
+                "name": f"{user_row[3]} {user_row[4]}".strip(),
+                "role": role
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/logout")
 async def logout():
     """Logout endpoint (client should delete token)"""

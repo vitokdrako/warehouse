@@ -19,7 +19,8 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 # JWT Secret (у продакшн треба зберігати в .env)
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 годин
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # ✅ 24 години (замість 8)
+REFRESH_TOKEN_EXPIRE_DAYS = 7  # ✅ Refresh token на 7 днів
 
 # ============================================================
 # PYDANTIC MODELS

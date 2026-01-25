@@ -245,7 +245,7 @@ export default function ManagerCabinet() {
                   <ManagerOrderCard
                     key={order.order_id}
                     order={order}
-                    onEdit={() => navigate(`/order/${order.order_id}`)}
+                    onEdit={() => navigate(`/order/${order.order_id}/view`)}
                     showProgress={true}
                   />
                 ))}

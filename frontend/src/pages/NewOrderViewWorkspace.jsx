@@ -675,8 +675,18 @@ export default function NewOrderViewWorkspace() {
       }
       
       // Footer
-      onPrimaryAction={decorOrderStatus ? handleSendToAssembly : handleAcceptOrder}
-      primaryLabel={decorOrderStatus ? '📦 Відправити на збір' : 'Підтвердити та прийняти'}
+      // Кнопка "Відправити на збір" доступна ТІЛЬКИ для статусу awaiting_customer
+      // Для processing/ready_for_issue - тільки збереження (реквізитори працюють з цими статусами)
+      onPrimaryAction={
+        !decorOrderStatus ? handleAcceptOrder : 
+        decorOrderStatus === 'awaiting_customer' ? handleSendToAssembly : 
+        null
+      }
+      primaryLabel={
+        !decorOrderStatus ? 'Підтвердити та прийняти' : 
+        decorOrderStatus === 'awaiting_customer' ? '📦 Відправити на збір' : 
+        null
+      }
       primaryDisabled={saving || !canAccept}
       primaryDisabledReason={!canAccept ? 'Заповніть дати та позиції' : ''}
       onSave={handleSave}
@@ -687,11 +697,11 @@ export default function NewOrderViewWorkspace() {
           onClick: handleSendEmail,
           disabled: sendingEmail || !clientEmail
         },
-        { 
+        ...(decorOrderStatus === 'awaiting_customer' || !decorOrderStatus ? [{ 
           label: '🚫 Відхилити', 
           onClick: () => navigate('/'), 
           variant: 'danger' 
-        }
+        }] : [])
       ]}
     >
       {/* === WORKSPACE ZONES === */}

@@ -157,6 +157,12 @@ export default function TasksCabinet({
     done: filteredTasks.filter((t) => t.status === 'done'),
   }), [filteredTasks])
 
+  // Check if overdue - defined before use
+  const isOverdue = (task: Task) => {
+    if (!task.due_date || task.status === 'done') return false
+    return new Date(task.due_date) < new Date()
+  }
+
   const overdueCount = tasks.filter(t => isOverdue(t)).length
 
   const handleStatusChange = async (taskId: string, newStatus: TaskStatus) => {
@@ -177,11 +183,6 @@ export default function TasksCabinet({
     } catch (error) {
       console.error('Error updating assignee:', error)
     }
-  }
-
-  const isOverdue = (task: Task) => {
-    if (!task.due_date || task.status === 'done') return false
-    return new Date(task.due_date) < new Date()
   }
 
   const hasActiveFilters = filterStatus !== 'all' || filterType !== 'all' || filterPriority !== 'all' || filterMyTasks || filterAssignee

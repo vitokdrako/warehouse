@@ -10,14 +10,18 @@ const TONE_STYLES = {
   violet: 'bg-violet-100 text-violet-800 border-violet-200'
 }
 
-export default function TonePill({ tone = 'neutral', children, icon, className = '' }) {
+export default function TonePill({ tone = 'neutral', children, icon, className = '', compact = false }) {
   const styles = TONE_STYLES[tone] || TONE_STYLES.neutral
   
   return (
     <span 
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${styles} ${className}`}
+      className={`
+        inline-flex items-center gap-1 rounded-full border font-semibold flex-shrink-0
+        ${compact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'}
+        ${styles} ${className}
+      `}
     >
-      {icon && <span>{icon}</span>}
+      {icon && <span className={compact ? 'text-xs' : ''}>{icon}</span>}
       {children}
     </span>
   )

@@ -1,26 +1,21 @@
 /* eslint-disable */
-import React from 'react'
+import React, { useState } from 'react'
 import ZoneCard from '../ZoneCard'
 import { getImageUrl } from '../../../utils/imageHelper'
-import { QRCodeSVG } from 'qrcode.react'
-import { Trash2 } from 'lucide-react'
+import { MoreVertical, X, Trash2, AlertTriangle, Package, Check } from 'lucide-react'
 
 /**
- * Zone: Items Pickup - Комплектування товарів для видачі
- * Для статусу: PROCESSING, READY_FOR_ISSUE
+ * Zone: Items Pickup - Компактна мобільна версія комплектування
  */
 export default function ZoneItemsPickup({
   items = [],
-  onPick,           // (itemId, newPickedQty) => void
-  onScan,           // (itemId, serial) => void
-  onOpenDamage,     // (itemId) => void
-  onPackagingChange, // (itemId, packType, value) => void
-  onRemoveItem,     // (itemId, itemName) => void - видалення товару
+  onPick,
+  onScan,
+  onOpenDamage,
+  onPackagingChange,
+  onRemoveItem,
   readOnly = false,
 }) {
-  const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
-  
-  // Підрахунки
   const totalItems = items.length
   const pickedItems = items.filter(it => it.picked_qty >= it.qty).length
   const totalQty = items.reduce((s, it) => s + (it.qty || 0), 0)
@@ -30,18 +25,19 @@ export default function ZoneItemsPickup({
   
   return (
     <ZoneCard
-      title={`Комплектування (${pickedItems}/${totalItems})`}
-      hint={`Зібрано ${pickedQty} з ${totalQty} одиниць`}
+      title={`Комплектування`}
+      hint={`${pickedItems}/${totalItems} позицій • ${pickedQty}/${totalQty} од.`}
       tone={tone}
+      compact
     >
       {items.length === 0 ? (
-        <div className="text-center py-6 text-slate-400">
-          Немає позицій для комплектування
+        <div className="text-center py-4 text-slate-400 text-sm">
+          Немає позицій
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {items.map((item) => (
-            <ItemPickupCard
+            <CompactItemCard
               key={item.id}
               item={item}
               onPick={onPick}
@@ -58,7 +54,7 @@ export default function ZoneItemsPickup({
   )
 }
 
-function ItemPickupCard({ 
+function CompactItemCard({ 
   item, 
   onPick, 
   onScan, 
@@ -67,252 +63,244 @@ function ItemPickupCard({
   onRemoveItem,
   readOnly 
 }) {
-  const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
+  const [expanded, setExpanded] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [showPackaging, setShowPackaging] = useState(false)
   
   const photoUrl = getImageUrl(item.image || item.image_url)
   const qty = item.qty || 0
   const pickedQty = item.picked_qty || 0
   const isComplete = pickedQty >= qty
-  const isOver = pickedQty > qty
-  const hasPreDamage = (item.pre_damage?.length || 0) > 0
-  const missing = Math.max(0, qty - (item.available || 0))
-  
-  // ✅ Підсвічування нових та змінених items
   const isNew = item.is_new === true
   const qtyChanged = item.qty_changed === true
   
+  // Packaging options
+  const packagingOptions = [
+    { key: 'cover', label: 'Чохол' },
+    { key: 'box', label: 'Коробка' },
+    { key: 'stretch', label: 'Стретч' },
+    { key: 'black_case', label: 'Чорний кейс' },
+    { key: 'foam', label: 'Поролон' },
+    { key: 'paper', label: 'Папір' },
+    { key: 'bubble', label: 'Бульбашка' },
+  ]
+  
+  const selectedPackaging = packagingOptions.filter(p => item.packaging?.[p.key]).map(p => p.label)
+  
   return (
     <div className={`
-      rounded-xl border bg-white p-4 relative
-      ${isNew ? 'border-blue-400 bg-blue-50 ring-2 ring-blue-200' : 
-        qtyChanged ? 'border-amber-400 bg-amber-50' :
-        isComplete ? 'border-emerald-300 bg-emerald-50' : 
-        missing > 0 ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}
+      rounded-lg border bg-white overflow-hidden transition-all
+      ${isNew ? 'border-blue-400 ring-1 ring-blue-200' : 
+        qtyChanged ? 'border-amber-400' :
+        isComplete ? 'border-emerald-300' : 'border-slate-200'}
     `}>
-      {/* ✅ Мітка для нових items */}
-      {isNew && (
-        <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-          НОВИЙ
-        </div>
-      )}
-      {qtyChanged && !isNew && (
-        <div className="absolute -top-2 -right-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-          К-ТЬ ЗМІН.
-        </div>
-      )}
-      {/* Header з фото та інформацією */}
-      <div className="flex gap-4 mb-4">
-        {/* Фото */}
-        <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+      {/* Compact Header */}
+      <div className="flex items-center gap-2 p-2" onClick={() => setExpanded(!expanded)}>
+        {/* Photo */}
+        <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
           {photoUrl ? (
-            <img 
-              src={photoUrl} 
-              alt={item.name}
-              className="w-full h-full object-cover"
-            />
+            <img src={photoUrl} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
-              Фото
-            </div>
+            <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs">📦</div>
           )}
         </div>
         
-        {/* Інформація */}
+        {/* Info */}
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-slate-800 mb-1 line-clamp-2">{item.name}</div>
-          <div className="text-xs text-slate-500">SKU: {item.sku || item.article || '—'}</div>
-          {/* Локація - тепер тільки zone */}
-          {item.location?.zone && item.location.zone !== 'None' && item.location.zone !== 'null' && (
-            <div className="text-xs text-corp-primary font-medium mt-0.5">
-              📍 <b>{item.location.zone}</b>
-            </div>
-          )}
-          
-          <div className="flex flex-wrap gap-1 mt-2">
-            {isComplete && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
-                ✓ Готово
-              </span>
-            )}
-            {hasPreDamage && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-medium">
-                {item.pre_damage.length} пошкодж.
-              </span>
-            )}
-            {missing > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 text-rose-700 px-2 py-0.5 text-xs font-medium">
-                Бракує {missing}
-              </span>
-            )}
+          <div className="flex items-center gap-1.5">
+            <span className="font-medium text-slate-800 text-sm truncate">{item.name}</span>
+            {isNew && <span className="flex-shrink-0 bg-blue-500 text-white text-[9px] px-1 py-0.5 rounded font-bold">NEW</span>}
+            {qtyChanged && !isNew && <span className="flex-shrink-0 bg-amber-500 text-white text-[9px] px-1 py-0.5 rounded font-bold">ЗМ.</span>}
           </div>
+          <div className="text-[11px] text-slate-500">{item.sku || '—'}</div>
         </div>
         
-        {/* QR код */}
-        <div className="flex-shrink-0 hidden sm:block">
-          <div className="p-1 bg-white border border-slate-200 rounded-lg">
-            <QRCodeSVG 
-              value={`${window.location.origin}/inventory/${item.sku || item.id}`}
-              size={50}
-              level="L"
-            />
-          </div>
-        </div>
-        
-        {/* Кнопка видалення */}
-        {onRemoveItem && !readOnly && (
-          <button
-            onClick={() => {
-              if (window.confirm(`Видалити "${item.name}" із замовлення?\nТовар повернеться в наявність.`)) {
-                onRemoveItem(item.id, item.name)
-              }
-            }}
-            className="flex-shrink-0 p-2 rounded-lg text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-            title="Видалити товар із замовлення"
-          >
-            <Trash2 className="h-5 w-5" />
-          </button>
-        )}
-      </div>
-      
-      {/* Лічильник комплектування */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 p-3 bg-slate-100 rounded-xl">
-        <span className="text-sm font-medium text-slate-700">Укомплектовано:</span>
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Stepper */}
+        <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
           <button 
             onClick={() => !readOnly && onPick?.(item.id, Math.max(0, pickedQty - 1))} 
             disabled={readOnly || pickedQty === 0}
-            className="w-10 h-10 rounded-xl border-2 border-slate-300 bg-white text-lg font-bold disabled:opacity-50 active:bg-slate-100"
+            className="w-8 h-8 rounded-lg border border-slate-300 bg-white text-base font-bold disabled:opacity-30 active:bg-slate-100"
           >
             −
           </button>
           <div className={`
-            w-12 text-center text-xl font-bold py-1 rounded-lg
-            ${isComplete ? 'text-emerald-600 bg-emerald-100' : isOver ? 'text-rose-600 bg-rose-100' : 'bg-white'}
+            w-8 text-center text-sm font-bold
+            ${isComplete ? 'text-emerald-600' : 'text-slate-800'}
           `}>
             {pickedQty}
           </div>
           <button 
             onClick={() => !readOnly && onPick?.(item.id, pickedQty + 1)} 
             disabled={readOnly}
-            className="w-10 h-10 rounded-xl border-2 border-slate-300 bg-white text-lg font-bold disabled:opacity-50 active:bg-slate-100"
+            className="w-8 h-8 rounded-lg border border-slate-300 bg-white text-base font-bold disabled:opacity-30 active:bg-slate-100"
           >
             +
           </button>
-          <span className="text-sm text-slate-500">/ {qty}</span>
-          
-          {/* Кнопка швидкого "Зібрано" */}
-          {!isComplete && !readOnly && (
+          <span className="text-xs text-slate-400 w-6">/{qty}</span>
+        </div>
+        
+        {/* Quick complete or status */}
+        <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
+          {isComplete ? (
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <Check className="w-5 h-5 text-emerald-600" />
+            </div>
+          ) : !readOnly ? (
             <button 
               onClick={() => onPick?.(item.id, qty)}
-              className="px-3 py-2 rounded-xl bg-emerald-500 text-white text-sm font-medium hover:bg-emerald-600 active:bg-emerald-700 transition-colors"
+              className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center active:bg-emerald-600"
             >
-              ✓
+              <Check className="w-5 h-5" />
+            </button>
+          ) : null}
+        </div>
+        
+        {/* More menu */}
+        <button 
+          onClick={(e) => { e.stopPropagation(); setShowMenu(true) }}
+          className="p-1 rounded text-slate-400 hover:bg-slate-100"
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
+      </div>
+      
+      {/* Expanded content */}
+      {expanded && (
+        <div className="px-2 pb-2 space-y-2 border-t border-slate-100 pt-2">
+          {/* Availability row */}
+          <div className="flex items-center gap-1 text-[10px] flex-wrap">
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+              Наявн: <b>{item.available || 0}</b>
+            </span>
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+              Рез: <b>{item.reserved || 0}</b>
+            </span>
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+              Оренда: <b>{item.in_rent || 0}</b>
+            </span>
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+              Рест: <b>{item.in_restore || 0}</b>
+            </span>
+          </div>
+          
+          {/* Location */}
+          {item.location?.zone && item.location.zone !== 'None' && (
+            <div className="text-xs text-corp-primary">
+              📍 {item.location.zone}
+            </div>
+          )}
+          
+          {/* Packaging button */}
+          <button
+            onClick={() => setShowPackaging(true)}
+            className="w-full flex items-center justify-between px-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs"
+          >
+            <span className="text-slate-600">
+              <Package className="w-3.5 h-3.5 inline mr-1" />
+              Пакування
+            </span>
+            <span className="text-slate-800 font-medium">
+              {selectedPackaging.length > 0 ? selectedPackaging.join(', ') : 'Не обрано'}
+            </span>
+          </button>
+          
+          {/* Damage button */}
+          {onOpenDamage && !readOnly && (
+            <button 
+              onClick={() => onOpenDamage(item.id)} 
+              className="w-full py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-medium flex items-center justify-center gap-1"
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Зафіксувати пошкодження
             </button>
           )}
         </div>
-      </div>
+      )}
       
-      {/* Серійні номери */}
-      {item.serials && item.serials.length > 0 && (
-        <div className="mb-4">
-          <div className="text-xs text-slate-500 mb-2">Серійні номери:</div>
-          <div className="flex flex-wrap gap-2">
-            {item.serials.map(serial => {
-              const isScanned = item.scanned?.includes(serial)
-              return (
-                <button 
-                  key={serial}
-                  onClick={() => !readOnly && onScan?.(item.id, serial)}
-                  disabled={readOnly}
-                  className={`
-                    rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-all
-                    ${isScanned 
-                      ? 'border-emerald-400 bg-emerald-100 text-emerald-700' 
-                      : 'border-slate-200 bg-white hover:bg-slate-50'
-                    }
-                    disabled:opacity-50
-                  `}
+      {/* Item Menu Bottom Sheet */}
+      {showMenu && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowMenu(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div 
+            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl animate-slide-up safe-area-bottom"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-slate-300 rounded-full" />
+            </div>
+            <div className="px-4 pb-2 border-b border-slate-100">
+              <div className="font-semibold text-slate-800 truncate">{item.name}</div>
+              <div className="text-xs text-slate-500">{item.sku}</div>
+            </div>
+            <div className="p-2">
+              {onOpenDamage && !readOnly && (
+                <button
+                  onClick={() => { setShowMenu(false); onOpenDamage(item.id) }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-amber-600 hover:bg-amber-50"
                 >
-                  {serial} {isScanned && '✓'}
+                  <AlertTriangle className="w-5 h-5" />
+                  Зафіксувати пошкодження
                 </button>
-              )
-            })}
+              )}
+              {onRemoveItem && !readOnly && (
+                <button
+                  onClick={() => {
+                    setShowMenu(false)
+                    if (window.confirm(`Видалити "${item.name}"?`)) {
+                      onRemoveItem(item.id, item.name)
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-600 hover:bg-rose-50"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Видалити з замовлення
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
       
-      {/* Інформація про наявність */}
-      <div className="grid grid-cols-4 gap-2 mb-4 text-xs">
-        <div className="text-center p-2 bg-slate-50 rounded-lg">
-          <div className="text-slate-500">Наявність</div>
-          <div className="font-bold mt-0.5">{item.available || 0}</div>
+      {/* Packaging Bottom Sheet */}
+      {showPackaging && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowPackaging(false)}>
+          <div className="absolute inset-0 bg-black/30" />
+          <div 
+            className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl animate-slide-up safe-area-bottom"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-slate-300 rounded-full" />
+            </div>
+            <div className="flex items-center justify-between px-4 pb-3 border-b border-slate-100">
+              <span className="font-semibold text-slate-800">Пакування</span>
+              <button onClick={() => setShowPackaging(false)} className="p-1 rounded-full hover:bg-slate-100">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="p-3 grid grid-cols-2 gap-2">
+              {packagingOptions.map(opt => (
+                <label 
+                  key={opt.key}
+                  className={`
+                    flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors
+                    ${item.packaging?.[opt.key] ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}
+                  `}
+                >
+                  <input 
+                    type="checkbox" 
+                    checked={item.packaging?.[opt.key] || false} 
+                    onChange={(e) => !readOnly && onPackagingChange?.(item.id, opt.key, e.target.checked)} 
+                    disabled={readOnly}
+                    className="w-5 h-5 rounded" 
+                  />
+                  <span className="text-sm font-medium">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="text-center p-2 bg-slate-50 rounded-lg">
-          <div className="text-slate-500">Резерв</div>
-          <div className="font-bold mt-0.5">{item.reserved || 0}</div>
-        </div>
-        <div className="text-center p-2 bg-slate-50 rounded-lg">
-          <div className="text-slate-500">В оренді</div>
-          <div className="font-bold mt-0.5">{item.in_rent || 0}</div>
-        </div>
-        <div className="text-center p-2 bg-slate-50 rounded-lg">
-          <div className="text-slate-500">Реставр.</div>
-          <div className="font-bold mt-0.5">{item.in_restore || 0}</div>
-        </div>
-      </div>
-      
-      {/* Пакування */}
-      <div className="flex flex-wrap gap-2 mb-3">
-        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[90px]">
-          <input 
-            type="checkbox" 
-            checked={item.packaging?.cover || false} 
-            onChange={(e) => !readOnly && onPackagingChange?.(item.id, 'cover', e.target.checked)} 
-            disabled={readOnly}
-            className="w-4 h-4 rounded" 
-          />
-          <span className="text-sm">Чохол</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[90px]">
-          <input 
-            type="checkbox" 
-            checked={item.packaging?.box || false} 
-            onChange={(e) => !readOnly && onPackagingChange?.(item.id, 'box', e.target.checked)} 
-            disabled={readOnly}
-            className="w-4 h-4 rounded" 
-          />
-          <span className="text-sm">Коробка</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[90px]">
-          <input 
-            type="checkbox" 
-            checked={item.packaging?.stretch || false} 
-            onChange={(e) => !readOnly && onPackagingChange?.(item.id, 'stretch', e.target.checked)} 
-            disabled={readOnly}
-            className="w-4 h-4 rounded" 
-          />
-          <span className="text-sm">Стретч</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer bg-slate-50 rounded-lg px-3 py-2 border flex-1 min-w-[90px]">
-          <input 
-            type="checkbox" 
-            checked={item.packaging?.black_case || false} 
-            onChange={(e) => !readOnly && onPackagingChange?.(item.id, 'black_case', e.target.checked)} 
-            disabled={readOnly}
-            className="w-4 h-4 rounded" 
-          />
-          <span className="text-sm">Чорний кейс</span>
-        </label>
-      </div>
-      
-      {/* Кнопка пошкодження */}
-      {onOpenDamage && !readOnly && (
-        <button 
-          onClick={() => onOpenDamage(item.id)} 
-          className="w-full py-2.5 rounded-lg bg-amber-500 text-white font-medium text-sm active:bg-amber-600"
-        >
-          Зафіксувати пошкодження
-        </button>
       )}
     </div>
   )

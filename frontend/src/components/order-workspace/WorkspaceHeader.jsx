@@ -45,45 +45,47 @@ export default function WorkspaceHeader({
   
   return (
     <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
-        {/* Top row - Back button */}
-        <div className="flex items-center gap-4 mb-3">
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 py-2 sm:py-4">
+        {/* Top row - Back button (compact on mobile) */}
+        <div className="flex items-center gap-2 sm:gap-4 mb-1 sm:mb-3">
           <button 
             onClick={() => navigate(backUrl)}
-            className="flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+            className="flex items-center gap-1 text-xs sm:text-sm text-slate-600 hover:text-slate-900 transition-colors"
           >
             <span>←</span>
             <span>Назад</span>
           </button>
-          <div className="text-sm text-slate-400">Order Workspace</div>
+          <div className="text-xs sm:text-sm text-slate-400 hidden sm:block">Order Workspace</div>
         </div>
         
-        {/* Main row */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Main row - more compact on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
           {/* Left: Title + Status */}
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              {title || `Замовлення #${orderNumber || orderId}`}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <h1 className="text-base sm:text-2xl font-bold text-slate-900">
+              {title || `#${orderNumber || orderId}`}
             </h1>
             <TonePill tone={config.tone} icon={config.icon}>
               {config.title}
             </TonePill>
           </div>
           
-          {/* Right: Dates */}
+          {/* Right: Dates - inline on mobile */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-              <div className="text-xs text-slate-500">Дати</div>
-              <div className="font-medium text-slate-800">
+            <div className="rounded-lg sm:rounded-xl border border-slate-200 bg-slate-50 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm">
+              <span className="text-slate-500 sm:hidden">Дати: </span>
+              <span className="text-slate-500 hidden sm:block text-xs">Дати</span>
+              <span className="font-medium text-slate-800">
                 {formatDate(issueDate)} — {formatDate(returnDate)}
                 {rentalDays && <span className="text-slate-500"> • {rentalDays} дн.</span>}
-              </div>
+              </span>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-              <div className="text-xs text-slate-500">Статус</div>
-              <div className="font-medium text-slate-800">
+            <div className="rounded-lg sm:rounded-xl border border-slate-200 bg-slate-50 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm">
+              <span className="text-slate-500 sm:hidden">Статус: </span>
+              <span className="text-slate-500 hidden sm:block text-xs">Статус</span>
+              <span className="font-medium text-slate-800">
                 {config.mode}
-              </div>
+              </span>
             </div>
           </div>
         </div>

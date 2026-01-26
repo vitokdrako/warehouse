@@ -495,7 +495,7 @@ setTimeout(()=>window.print(),500);
         
         // Footer
         onPrimaryAction={isProcessing ? markReady : isReadyForIssue ? markIssued : undefined}
-        primaryLabel={isProcessing ? '✅ Готово до видачі' : isReadyForIssue ? '🚚 Видати клієнту' : undefined}
+        primaryLabel={isProcessing ? '✅ Готово' : isReadyForIssue ? '🚚 Видати' : undefined}
         primaryDisabled={saving || (isProcessing && !canMarkReady)}
         primaryDisabledReason={isProcessing && !canMarkReady 
           ? (!hasRequisitors ? 'Оберіть комплектувальника' : 'Скомплектуйте всі позиції') 
@@ -504,13 +504,12 @@ setTimeout(()=>window.print(),500);
         saving={saving}
         showSave={!isIssued}
         footerActions={[
-          { label: '📱 QR коди', onClick: printQRCodes },
+          { label: '📱 QR коди', onClick: printQRCodes, icon: '📱' },
         ]}
-        footerChildren={
-          <div className="text-sm text-slate-600">
-            <span>Позицій: <b>{pickedCount}/{items.length}</b> · Одиниць: <b>{pickedQty}/{totalQty}</b></span>
-          </div>
-        }
+        progressInfo={{
+          label: `${pickedCount}/${items.length} позицій • ${pickedQty}/${totalQty} од.`,
+          percent: totalQty > 0 ? Math.round((pickedQty / totalQty) * 100) : 0
+        }}
       >
         {/* === WORKSPACE ZONES === */}
         

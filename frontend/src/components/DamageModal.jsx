@@ -115,9 +115,15 @@ export default function DamageModal({
   
   useEffect(() => {
     if (isOpen) {
+      // Автоматично визначаємо категорію на основі товару
+      const autoCategory = detectDamageCategory(
+        item?.category_name || item?.category, 
+        item?.name
+      )
+      
       // Reset form when opening
       setFormData({
-        category: 'Меблі',
+        category: autoCategory,
         kindCode: isPreIssue ? 'pre_existing' : '',
         severity: 'low',
         note: '',
@@ -127,7 +133,7 @@ export default function DamageModal({
       })
       setPhotos([])
     }
-  }, [isOpen, isPreIssue])
+  }, [isOpen, isPreIssue, item])
   
   if (!isOpen || !item) return null
   

@@ -113,3 +113,28 @@ code {
         border-bottom-color: inherit;
     }
 }
+
+
+/* Mobile optimizations */
+@layer utilities {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* Prevent footer jump when keyboard opens on mobile */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 640px) {
+  button, 
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 36px;
+  }
+}

@@ -20,8 +20,6 @@ export default function FooterActions({
   showSave = true,
   additionalActions = [],
   children,
-  // Прогрес для показу над футером
-  progressInfo,
 }) {
   const config = getStatusConfig(status)
   const effectivePrimaryLabel = primaryLabel || config.primaryAction

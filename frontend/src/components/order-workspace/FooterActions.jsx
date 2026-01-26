@@ -50,24 +50,6 @@ export default function FooterActions({
   
   return (
     <>
-      {/* Progress bar над футером */}
-      {progressInfo && (
-        <div className="fixed bottom-14 sm:bottom-16 left-0 right-0 bg-white border-t border-slate-100 px-3 py-1.5 z-20">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-slate-600">{progressInfo.label}</span>
-            <span className="font-medium text-slate-800">{progressInfo.value}</span>
-          </div>
-          {progressInfo.percent !== undefined && (
-            <div className="h-1 bg-slate-100 rounded-full mt-1 overflow-hidden">
-              <div 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                style={{ width: `${progressInfo.percent}%` }}
-              />
-            </div>
-          )}
-        </div>
-      )}
-      
       {/* Main Footer */}
       <div className={`
         fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-20 

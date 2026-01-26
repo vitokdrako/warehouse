@@ -4,36 +4,27 @@ import TonePill from './TonePill'
 
 /**
  * ZoneCard - Уніфікована картка зони в Workspace
- * 
- * Структура:
- * ┌────────────────────────────────────────┐
- * │ Title                    [TonePill]   │
- * │ hint/description                       │
- * │                                        │
- * │ {children - content}                   │
- * │                                        │
- * │ [CTA Button 1] [CTA Button 2]         │
- * └────────────────────────────────────────┘
  */
 export default function ZoneCard({ 
-  title,           // Заголовок зони
-  hint,            // Підказка / опис
-  tone = 'neutral', // Тон: neutral | info | ok | warn | danger
-  icon,            // Іконка для badge
-  children,        // Основний контент
-  actions = [],    // Масив дій: [{ label, onClick, variant, disabled }]
-  collapsible = false, // Чи можна згортати
-  defaultCollapsed = false, // Початковий стан
+  title,
+  hint,
+  tone = 'neutral',
+  icon,
+  children,
+  actions = [],
+  collapsible = false,
+  defaultCollapsed = false,
   className = '',
-  rightContent,    // Контент справа від заголовка
+  rightContent,
+  compact = false, // Компактний режим для мобільних
 }) {
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed)
   
   return (
-    <div className={`rounded-xl border bg-white p-4 shadow-sm ${className}`}>
+    <div className={`rounded-xl border bg-white shadow-sm ${compact ? 'p-2 sm:p-4' : 'p-4'} ${className}`}>
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex-1">
+      <div className={`flex items-start justify-between gap-2 ${compact ? 'mb-2' : 'mb-3'}`}>
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             {collapsible && (
               <button 
@@ -43,15 +34,15 @@ export default function ZoneCard({
                 {collapsed ? '▶' : '▼'}
               </button>
             )}
-            <h3 className="font-semibold text-slate-800">{title}</h3>
+            <h3 className={`font-semibold text-slate-800 ${compact ? 'text-sm' : ''}`}>{title}</h3>
             {tone !== 'neutral' && (
-              <TonePill tone={tone} icon={icon}>
-                {tone === 'ok' ? 'OK' : tone === 'warn' ? '!' : tone === 'danger' ? '!!' : tone}
+              <TonePill tone={tone} icon={icon} compact={compact}>
+                {tone === 'ok' ? '✓' : tone === 'warn' ? '!' : tone === 'danger' ? '!!' : ''}
               </TonePill>
             )}
           </div>
           {hint && !collapsed && (
-            <p className="mt-1 text-sm text-slate-500">{hint}</p>
+            <p className={`mt-0.5 text-slate-500 ${compact ? 'text-xs' : 'text-sm'}`}>{hint}</p>
           )}
         </div>
         {rightContent && (
@@ -63,14 +54,14 @@ export default function ZoneCard({
       
       {/* Content */}
       {!collapsed && children && (
-        <div className="mb-3">
+        <div className={compact ? 'mb-2' : 'mb-3'}>
           {children}
         </div>
       )}
       
       {/* Actions */}
       {!collapsed && actions.length > 0 && (
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+        <div className={`flex flex-wrap gap-2 pt-2 border-t border-slate-100`}>
           {actions.map((action, idx) => (
             <button
               key={idx}

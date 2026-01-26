@@ -22,11 +22,11 @@ export default function FooterActions({
   const effectivePrimaryLabel = primaryLabel || config.primaryAction
   
   return (
-    <div className="sticky bottom-0 bg-white border-t border-slate-200 shadow-lg">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          {/* Left side - status info or custom content */}
-          <div className="flex items-center gap-2 text-sm">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg z-20 safe-area-bottom">
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 py-2 sm:py-4">
+        <div className="flex flex-row items-center justify-between gap-2">
+          {/* Left side - status info or custom content (hidden on mobile for space) */}
+          <div className="hidden sm:flex items-center gap-2 text-sm">
             {children || (
               <>
                 <span className="text-slate-500">Статус:</span>
@@ -35,8 +35,8 @@ export default function FooterActions({
             )}
           </div>
           
-          {/* Right side - actions */}
-          <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          {/* Right side - actions (full width on mobile) */}
+          <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-2 w-full sm:w-auto">
             {/* Additional actions */}
             {additionalActions.map((action, idx) => (
               <button
@@ -44,7 +44,7 @@ export default function FooterActions({
                 onClick={action.onClick}
                 disabled={action.disabled}
                 className={`
-                  rounded-lg border px-4 py-2 text-sm font-medium transition-colors
+                  rounded-lg border px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed
                   ${action.variant === 'danger'
                     ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
@@ -61,9 +61,9 @@ export default function FooterActions({
               <button
                 onClick={onSave}
                 disabled={saving}
-                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                className="rounded-lg border border-slate-200 bg-white px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
-                {saving ? '⏳ Збереження...' : '💾 Зберегти'}
+                {saving ? '⏳...' : '💾 Зберегти'}
               </button>
             )}
             
@@ -74,7 +74,7 @@ export default function FooterActions({
                 disabled={primaryDisabled || saving}
                 title={primaryDisabledReason}
                 className={`
-                  rounded-lg px-4 py-2 text-sm font-medium transition-colors
+                  rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-colors
                   disabled:opacity-50 disabled:cursor-not-allowed
                   ${primaryDisabled 
                     ? 'bg-slate-400 text-white cursor-not-allowed' 

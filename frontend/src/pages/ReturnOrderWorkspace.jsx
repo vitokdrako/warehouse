@@ -162,6 +162,8 @@ export default function ReturnOrderWorkspace() {
           in_rent_qty: inRentQty,
           // ✅ Локація на складі
           location: p.location || { zone: p.zone || null },
+          // ✅ Категорія для автовизначення в DamageModal
+          category_name: p.category_name || p.category || '',
         }
         console.log(`[ReturnWorkspace] Item ${item.sku}: rented=${rentedQty}, returned=${returnedQty}, inRent=${inRentQty}`)
         return item

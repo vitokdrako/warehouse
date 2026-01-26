@@ -94,10 +94,23 @@ function CompactItemCard({
         qtyChanged ? 'border-amber-400' :
         isComplete ? 'border-emerald-300' : 'border-slate-200'}
     `}>
-      {/* Compact Header */}
-      <div className="flex items-center gap-2 p-2" onClick={() => setExpanded(!expanded)}>
+      {/* Top row: Name + SKU as badges */}
+      <div className="px-2 pt-2 pb-1">
+        <div className="flex items-center gap-1 flex-wrap text-[11px]">
+          <span className="font-medium text-slate-800 truncate max-w-[200px]">{item.name}</span>
+          <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">{item.sku || '—'}</span>
+          {isNew && <span className="px-1.5 py-0.5 rounded bg-blue-500 text-white font-bold">NEW</span>}
+          {qtyChanged && !isNew && <span className="px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold">ЗМ.</span>}
+          {item.location?.zone && item.location.zone !== 'None' && (
+            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">📍{item.location.zone}</span>
+          )}
+        </div>
+      </div>
+      
+      {/* Main row: Photo + Stepper + Actions */}
+      <div className="flex items-center gap-2 px-2 pb-2" onClick={() => setExpanded(!expanded)}>
         {/* Photo */}
-        <div className="w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+        <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
           {photoUrl ? (
             <img src={photoUrl} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -105,18 +118,8 @@ function CompactItemCard({
           )}
         </div>
         
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="font-medium text-slate-800 text-sm truncate">{item.name}</span>
-            {isNew && <span className="flex-shrink-0 bg-blue-500 text-white text-[9px] px-1 py-0.5 rounded font-bold">NEW</span>}
-            {qtyChanged && !isNew && <span className="flex-shrink-0 bg-amber-500 text-white text-[9px] px-1 py-0.5 rounded font-bold">ЗМ.</span>}
-          </div>
-          <div className="text-[11px] text-slate-500">{item.sku || '—'}</div>
-        </div>
-        
         {/* Stepper */}
-        <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1 flex-1" onClick={e => e.stopPropagation()}>
           <button 
             onClick={() => !readOnly && onPick?.(item.id, Math.max(0, pickedQty - 1))} 
             disabled={readOnly || pickedQty === 0}
@@ -137,10 +140,10 @@ function CompactItemCard({
           >
             +
           </button>
-          <span className="text-xs text-slate-400 w-6">/{qty}</span>
+          <span className="text-xs text-slate-400">/{qty}</span>
         </div>
         
-        {/* Quick complete or status */}
+        {/* Quick complete */}
         <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
           {isComplete ? (
             <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -183,13 +186,6 @@ function CompactItemCard({
               Рест: <b>{item.in_restore || 0}</b>
             </span>
           </div>
-          
-          {/* Location */}
-          {item.location?.zone && item.location.zone !== 'None' && (
-            <div className="text-xs text-corp-primary">
-              📍 {item.location.zone}
-            </div>
-          )}
           
           {/* Packaging button */}
           <button

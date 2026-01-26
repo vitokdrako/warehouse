@@ -57,7 +57,7 @@ export default function OrderWorkspaceLayout({
   }
   
   return (
-    <div className={`min-h-screen bg-slate-50 flex flex-col ${progressInfo ? 'pb-24 sm:pb-28' : 'pb-16 sm:pb-20'}`}>
+    <div className={`min-h-screen bg-slate-50 flex flex-col pb-16 sm:pb-20`}>
       {/* A. Header */}
       <WorkspaceHeader
         orderId={orderId}
@@ -68,6 +68,7 @@ export default function OrderWorkspaceLayout({
         createdAt={createdAt}
         title={headerTitle}
         backUrl={backUrl}
+        progressInfo={progressInfo}
       />
       
       {/* Main content area */}
@@ -109,7 +110,7 @@ export default function OrderWorkspaceLayout({
         </div>
       </div>
       
-      {/* D. Footer Actions */}
+      {/* D. Footer Actions - без progressInfo на mobile (він в хедері) */}
       <FooterActions
         status={status}
         onPrimaryAction={onPrimaryAction}
@@ -120,7 +121,6 @@ export default function OrderWorkspaceLayout({
         saving={saving}
         showSave={showSave}
         additionalActions={footerActions}
-        progressInfo={progressInfo}
       >
         {footerChildren}
       </FooterActions>

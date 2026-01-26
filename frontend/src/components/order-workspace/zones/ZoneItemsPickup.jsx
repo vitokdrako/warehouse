@@ -66,6 +66,7 @@ function CompactItemCard({
   const [expanded, setExpanded] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showPackaging, setShowPackaging] = useState(false)
+  const [showPhoto, setShowPhoto] = useState(false)
   
   const photoUrl = getImageUrl(item.image || item.image_url)
   const qty = item.qty || 0
@@ -86,6 +87,18 @@ function CompactItemCard({
   ]
   
   const selectedPackaging = packagingOptions.filter(p => item.packaging?.[p.key]).map(p => p.label)
+  
+  // Обробка кліку на фото
+  const handlePhotoClick = (e) => {
+    e.stopPropagation()
+    if (expanded && photoUrl) {
+      // Картка вже розгорнута - показуємо збільшене фото
+      setShowPhoto(true)
+    } else {
+      // Картка згорнута - розгортаємо її
+      setExpanded(true)
+    }
+  }
   
   return (
     <div className={`
@@ -108,9 +121,16 @@ function CompactItemCard({
       </div>
       
       {/* Main row: Photo + Stepper + Actions */}
-      <div className="flex items-center gap-2 px-2 pb-2" onClick={() => setExpanded(!expanded)}>
-        {/* Photo */}
-        <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+      <div className="flex items-center gap-2 px-2 pb-2">
+        {/* Photo - clickable */}
+        <div 
+          className={`
+            w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 cursor-pointer
+            transition-all active:scale-95
+            ${expanded && photoUrl ? 'ring-2 ring-blue-300' : ''}
+          `}
+          onClick={handlePhotoClick}
+        >
           {photoUrl ? (
             <img src={photoUrl} alt="" className="w-full h-full object-cover" />
           ) : (
@@ -158,6 +178,14 @@ function CompactItemCard({
             </button>
           ) : null}
         </div>
+        
+        {/* Expand/Collapse toggle */}
+        <button 
+          onClick={() => setExpanded(!expanded)}
+          className="p-1 rounded text-slate-400 hover:bg-slate-100"
+        >
+          {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        </button>
         
         {/* More menu */}
         <button 
@@ -211,6 +239,32 @@ function CompactItemCard({
               Зафіксувати пошкодження
             </button>
           )}
+        </div>
+      )}
+      
+      {/* Photo Modal */}
+      {showPhoto && photoUrl && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowPhoto(false)}
+        >
+          <div className="relative max-w-full max-h-full animate-scale-in">
+            <img 
+              src={photoUrl} 
+              alt={item.name}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 rounded-b-lg">
+              <div className="text-white font-medium">{item.name}</div>
+              <div className="text-white/70 text-sm">{item.sku}</div>
+            </div>
+            <button 
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center"
+              onClick={() => setShowPhoto(false)}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
       

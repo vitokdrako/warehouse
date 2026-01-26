@@ -383,3 +383,97 @@ export function defaultFeeFor(kindObj) {
   if (Array.isArray(kindObj.range)) return kindObj.range[0];
   return 0;
 }
+
+/**
+ * Автоматичне визначення категорії DAMAGE_RULES на основі категорії товару
+ * @param {string} productCategory - Назва категорії товару з БД
+ * @param {string} productName - Назва товару (для додаткового аналізу)
+ * @returns {string} - Ключ категорії з DAMAGE_RULES
+ */
+export function detectDamageCategory(productCategory, productName = '') {
+  if (!productCategory) return 'Меблі';
+  
+  const catLower = productCategory.toLowerCase();
+  const nameLower = (productName || '').toLowerCase();
+  
+  // Точні співпадіння
+  const exactMatches = {
+    'меблі': 'Меблі',
+    'столики': 'Столики',
+    'стільці': 'Стільці',
+    'текстиль': 'Текстиль',
+    'килими': 'Килими',
+    'посуд': 'Посуд',
+    'вази': 'Вази',
+    'кашпо': 'Кашпо',
+    'арки': 'Арки',
+  };
+  
+  for (const [key, value] of Object.entries(exactMatches)) {
+    if (catLower === key || catLower.includes(key)) {
+      return value;
+    }
+  }
+  
+  // Свічники - визначаємо по висоті з назви
+  if (catLower.includes('свічник') || catLower.includes('канделябр')) {
+    // Шукаємо висоту в назві
+    const heightMatch = nameLower.match(/h\s*[:=]?\s*(\d+)/i) || nameLower.match(/(\d+)\s*см/);
+    if (heightMatch) {
+      const height = parseInt(heightMatch[1]);
+      if (height <= 30) return 'Свічники (h: до 30 см)';
+      if (height <= 100) return 'Свічники / канделябри (h: 30 см – 1 м)';
+      if (height <= 180) return 'Канделябри (h: 1,2 м – 1,8 м)';
+    }
+    // За замовчуванням - середні свічники
+    return 'Свічники / канделябри (h: 30 см – 1 м)';
+  }
+  
+  // Тумби / постаменти
+  if (catLower.includes('тумб') || catLower.includes('постамент')) {
+    return 'Тумби / постаменти';
+  }
+  
+  // Пуфи
+  if (catLower.includes('пуф')) {
+    return 'Пуфи та стільці з текстилем (шкірою)';
+  }
+  
+  // Фігури
+  if (catLower.includes('фігур') || catLower.includes('бюст') || catLower.includes('голов')) {
+    return 'Фігури гіпс (бюст, голови)';
+  }
+  
+  // Світло
+  if (catLower.includes('світ') || catLower.includes('гірлянд') || catLower.includes('led')) {
+    return 'Світлові декорації';
+  }
+  
+  // Дзеркала
+  if (catLower.includes('дзеркал')) {
+    return 'Дзеркала';
+  }
+  
+  // Підноси
+  if (catLower.includes('піднос')) {
+    return 'Підноси';
+  }
+  
+  // Ширми
+  if (catLower.includes('ширм')) {
+    return 'Ширми';
+  }
+  
+  // Етажерки
+  if (catLower.includes('етажерк')) {
+    return 'Етажерки';
+  }
+  
+  // Рами
+  if (catLower.includes('рам')) {
+    return 'Рами';
+  }
+  
+  // За замовчуванням
+  return 'Меблі';
+}

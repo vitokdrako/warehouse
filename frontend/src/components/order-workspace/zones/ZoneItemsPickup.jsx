@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import ZoneCard from '../ZoneCard'
 import { getImageUrl } from '../../../utils/imageHelper'
-import { MoreVertical, X, Trash2, AlertTriangle, Package, Check } from 'lucide-react'
+import { MoreVertical, X, Trash2, AlertTriangle, Package, Check, ChevronUp, ChevronDown } from 'lucide-react'
 
 /**
  * Zone: Items Pickup - Компактна мобільна версія комплектування

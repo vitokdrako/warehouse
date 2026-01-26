@@ -19,6 +19,8 @@ export default function WorkspaceHeader({
   createdAt,
   title,
   backUrl = '/manager',
+  // Progress info
+  progressInfo, // { label, value, percent }
 }) {
   const navigate = useNavigate()
   const config = getStatusConfig(status)
@@ -93,24 +95,49 @@ export default function WorkspaceHeader({
                 {rentalDays && <span className="text-slate-500"> • {rentalDays}д</span>}
               </span>
             </div>
+            {progressInfo && (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
+                <span className="font-medium text-slate-800">{progressInfo.label}</span>
+              </div>
+            )}
           </div>
         </div>
         
         {/* Expandable details (mobile) */}
         <div className={`
           overflow-hidden transition-all duration-200 sm:hidden
-          ${expanded ? 'max-h-32 pb-3' : 'max-h-0'}
+          ${expanded ? 'max-h-40 pb-3' : 'max-h-0'}
         `}>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
-              <span className="text-slate-500">Дати: </span>
-              <span className="font-medium">{formatDate(issueDate)} — {formatDate(returnDate)}</span>
-              {rentalDays && <span className="text-slate-400"> • {rentalDays}д</span>}
+          <div className="space-y-2 pt-1">
+            {/* Дати */}
+            <div className="flex items-center gap-2 text-xs">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 flex-1">
+                <span className="text-slate-500">📅 </span>
+                <span className="font-medium">{formatDate(issueDate)} — {formatDate(returnDate)}</span>
+                {rentalDays && <span className="text-slate-400"> • {rentalDays}д</span>}
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
+                <span className="font-medium">{config.mode}</span>
+              </div>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
-              <span className="text-slate-500">Статус: </span>
-              <span className="font-medium">{config.mode}</span>
-            </div>
+            
+            {/* Progress info */}
+            {progressInfo && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2">
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-emerald-700 font-medium">📦 Прогрес збору</span>
+                  <span className="font-bold text-emerald-800">{progressInfo.label}</span>
+                </div>
+                {progressInfo.percent !== undefined && (
+                  <div className="h-1.5 bg-emerald-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                      style={{ width: `${progressInfo.percent}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

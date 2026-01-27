@@ -43,7 +43,7 @@
     </thead>
     <tbody>
         {% for item in items %}
-        {% set damages = item.get('pre_damage', []) %}
+        {% set damages = item.get('damage_history', []) or item.get('pre_damage', []) %}
         <tr>
             <td class="text-center">{{ loop.index }}</td>
             <td>{{ item.get('name', '') }}</td>
@@ -51,7 +51,7 @@
             <td class="text-center">{{ item.get('picked_qty') or item.get('quantity') or item.get('qty', 1) }}</td>
             <td>
                 {% if damages and damages|length > 0 %}
-                    <span class="has-damage">⚠️ Зафіксовано: {{ damages|length }}</span>
+                    <span class="has-damage">⚠️ {{ damages|length }} дефект(ів)</span>
                 {% else %}
                     <span class="no-damage">✓ Без дефектів</span>
                 {% endif %}

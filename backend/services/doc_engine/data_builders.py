@@ -34,9 +34,6 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
     # Damage settlement - special handling for order-based damage
     damage_settlement_docs = ["damage_settlement_act"]
     
-    # Damage breakdown - shows pre_issue damages with photos
-    damage_breakdown_docs = ["damage_breakdown"]
-    
     # Vendor task based documents
     vendor_docs = ["vendor_work_act"]
     

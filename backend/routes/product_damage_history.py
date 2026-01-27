@@ -520,10 +520,10 @@ async def get_recent_damages(
 async def get_damage_dashboard(db: Session = Depends(get_rh_db)):
     """
     Отримати загальний огляд Кабінету Шкоди
-    Повертає статистику по всіх вкладках
+    Повертає статистику ТІЛЬКИ по пошкодженнях при поверненні (stage='return')
     """
     try:
-        # Отримати статистику по обробці
+        # Отримати статистику по обробці (тільки return)
         result = db.execute(text("""
             SELECT 
                 processing_type,
@@ -532,6 +532,7 @@ async def get_damage_dashboard(db: Session = Depends(get_rh_db)):
                 SUM(fee) as total_fee
             FROM product_damage_history
             WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+              AND stage = 'return'
             GROUP BY processing_type, processing_status
         """))
         

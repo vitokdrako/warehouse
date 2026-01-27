@@ -778,8 +778,8 @@ def build_order_modification_data(db: Session, order_id: str, options: dict) -> 
 def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> dict:
     """
     Збирає дані для Розшифровки пошкоджень.
-    Включає тільки пошкодження зафіксовані при видачі (pre_issue) з фото.
-    Використовується для інформування клієнта про існуючі дефекти.
+    Включає ВСІ пошкодження товарів, що є в замовленні (з будь-яких замовлень).
+    Це єдине джерело правди про стан товару.
     """
     
     # Основні дані замовлення
@@ -807,17 +807,35 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         "status": order_row[8]
     }
     
-    # Отримуємо пошкодження зафіксовані при видачі (pre_issue)
+    # Отримуємо SKU всіх товарів у замовленні
+    items_result = db.execute(text("""
+        SELECT DISTINCT oi.sku, oi.product_id, oi.name
+        FROM order_items oi
+        WHERE oi.order_id = :order_id AND (oi.status = 'active' OR oi.status IS NULL)
+    """), {"order_id": order_id})
+    
+    order_items = []
+    order_skus = []
+    order_product_ids = []
+    for row in items_result:
+        order_items.append({"sku": row[0], "product_id": row[1], "name": row[2]})
+        if row[0]:
+            order_skus.append(row[0])
+        if row[1]:
+            order_product_ids.append(row[1])
+    
+    # Отримуємо ВСІ пошкодження для цих товарів (з будь-яких замовлень)
     damage_result = db.execute(text("""
         SELECT 
             pdh.id, pdh.product_id, pdh.sku, pdh.product_name,
             pdh.damage_type, pdh.severity, pdh.note,
             pdh.photo_url, pdh.created_by,
-            DATE_FORMAT(pdh.created_at, '%d.%m.%Y %H:%i') as created_at
+            DATE_FORMAT(pdh.created_at, '%d.%m.%Y %H:%i') as created_at,
+            pdh.order_number, pdh.stage
         FROM product_damage_history pdh
-        WHERE pdh.order_id = :order_id AND pdh.stage = 'pre_issue'
-        ORDER BY pdh.product_name, pdh.created_at
-    """), {"order_id": order_id})
+        WHERE (pdh.sku IN :skus OR pdh.product_id IN :product_ids)
+        ORDER BY pdh.product_name, pdh.created_at DESC
+    """), {"skus": tuple(order_skus) if order_skus else ('',), "product_ids": tuple(order_product_ids) if order_product_ids else (0,)})
     
     damage_type_names = {
         "broken": "Зламано",
@@ -831,11 +849,11 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         "other": "Інше"
     }
     
-    severity_names = {
-        "low": "low",
-        "medium": "medium",
-        "high": "high",
-        "critical": "critical"
+    stage_labels = {
+        "pre_issue": "До видачі",
+        "return": "При поверненні",
+        "inventory": "Аудит",
+        "audit": "Аудит"
     }
     
     damages = []
@@ -895,6 +913,8 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         # Формуємо URL/base64 для фото
         photo_url = get_photo_for_document(row[7])
         
+        stage = row[11] or "inventory"
+        
         damages.append({
             "id": row[0],
             "product_id": product_id,
@@ -902,22 +922,15 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
             "product_name": row[3] or "",
             "damage_type": damage_type_names.get(row[4], row[4] or "Інше"),
             "damage_type_code": row[4],
-            "severity": severity_names.get(row[5], row[5] or "low"),
+            "severity": row[5] or "low",
             "note": row[6] or "",
             "photo_url": photo_url,
             "created_by": row[8] or "Система",
-            "created_at": row[9] or ""
+            "created_at": row[9] or "",
+            "order_number": row[10] or "",
+            "stage": stage,
+            "stage_label": stage_labels.get(stage, stage)
         })
-    
-    # Підрахунок загальної кількості позицій в замовленні
-    items_result = db.execute(text("""
-        SELECT COUNT(DISTINCT product_id) as total_items
-        FROM order_items
-        WHERE order_id = :order_id AND (status = 'active' OR status IS NULL)
-    """), {"order_id": order_id})
-    
-    total_items_row = items_result.fetchone()
-    total_items = total_items_row[0] if total_items_row else 0
     
     company = {
         "name": "FarforDecorOrenda",
@@ -931,7 +944,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         "order": order,
         "damages": damages,
         "items_with_damage": len(product_ids_with_damage),
-        "total_items": total_items,
+        "total_items": len(order_items),
         "company": company,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options

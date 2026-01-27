@@ -126,10 +126,12 @@ export default function ProductConditionPanel({
     
     const formData = new FormData()
     formData.append('file', file)
-    formData.append('sku', product.code || 'damage')
+    formData.append('sku', product.code || product.sku || 'unknown')
+    formData.append('order_number', '') // Для переобліку - без замовлення
     
     try {
-      const response = await fetch(`${BACKEND_URL}/api/products/upload-image`, {
+      // Використовуємо правильний endpoint для damage photos
+      const response = await fetch(`${BACKEND_URL}/api/product-damage-history/upload-photo`, {
         method: 'POST',
         body: formData
       })
@@ -137,6 +139,9 @@ export default function ProductConditionPanel({
       if (response.ok) {
         const data = await response.json()
         setNewRecord(prev => ({ ...prev, photo_url: data.url || data.path }))
+      } else {
+        const error = await response.json()
+        alert(`Помилка: ${error.detail || 'Не вдалося завантажити фото'}`)
       }
     } catch (err) {
       alert('Помилка завантаження фото')

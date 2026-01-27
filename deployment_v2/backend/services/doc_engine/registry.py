@@ -334,23 +334,8 @@ DOC_REGISTRY = {
     },
     
     # ═══════════════════════════════════════════════════════════════
-    # 15. Розшифровка пошкоджень (Damage Breakdown)
+    # 15. Розшифровка пошкоджень - ВИДАЛЕНО (функціонал інтегровано в Акт передачі)
     # ═══════════════════════════════════════════════════════════════
-    "damage_breakdown": {
-        "name": "Розшифровка пошкоджень",
-        "name_en": "Damage Breakdown",
-        "entity_type": "order",
-        "series": "DBK",
-        "template": "damage_breakdown/v1.html",
-        "requirements": ["order_id"],
-        "description": "Детальний перелік пошкоджень з фото для клієнта",
-        "trigger_stage": "pre_issue",
-        "trigger_at": "issue_with_damages",
-        "print_required": False,
-        "pdf_always": True,
-        "critical_for": ["legal"],
-        "purpose": "фіксація існуючих дефектів з фото, захист від необґрунтованих претензій"
-    },
     
     # ═══════════════════════════════════════════════════════════════
     # 16. Дозамовлення (Order Modification)

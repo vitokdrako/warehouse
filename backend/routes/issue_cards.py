@@ -161,15 +161,28 @@ def parse_issue_card(row, db: Session = None):
                     
                     # Завантажуємо ПОВНУ історію пошкоджень товару (з усіх замовлень)
                     try:
-                        history_result = db.execute(text("""
-                            SELECT id, damage_type, note, severity, photo_url, created_by,
-                                   DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at,
-                                   order_number, stage, fee
-                            FROM product_damage_history
-                            WHERE product_id = :product_id
-                            ORDER BY created_at DESC
-                            LIMIT 20
-                        """), {"product_id": product_id})
+                        # Шукаємо по product_id або по sku
+                        if product_id:
+                            history_result = db.execute(text("""
+                                SELECT id, damage_type, note, severity, photo_url, created_by,
+                                       DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at,
+                                       order_number, stage, fee
+                                FROM product_damage_history
+                                WHERE product_id = :product_id
+                                ORDER BY created_at DESC
+                                LIMIT 20
+                            """), {"product_id": product_id})
+                        else:
+                            # Якщо product_id не знайдено - шукаємо по sku
+                            history_result = db.execute(text("""
+                                SELECT id, damage_type, note, severity, photo_url, created_by,
+                                       DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at,
+                                       order_number, stage, fee
+                                FROM product_damage_history
+                                WHERE sku = :sku
+                                ORDER BY created_at DESC
+                                LIMIT 20
+                            """), {"sku": item['sku']})
                         
                         damage_history = []
                         for h_row in history_result:

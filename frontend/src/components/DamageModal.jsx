@@ -60,7 +60,7 @@ function getCurrentUserName() {
 export default function DamageModal({
   isOpen,
   onClose,
-  item,  // { id, sku, name, inventory_id, pre_damage: [] }
+  item,  // { id, sku, name, inventory_id, pre_damage: [], damage_history: [] }
   order, // { order_id, order_number }
   stage, // 'pre_issue', 'return', 'audit'
   onSave, // Callback after saving
@@ -81,6 +81,9 @@ export default function DamageModal({
   const [preIssueDamages, setPreIssueDamages] = useState([])
   const [loadingDamages, setLoadingDamages] = useState(false)
   
+  // Історія пошкоджень товару (з усіх замовлень)
+  const [damageHistory, setDamageHistory] = useState([])
+  
   // Для pre_issue - спрощена форма
   const isPreIssue = stage === 'pre_issue'
   
@@ -90,6 +93,15 @@ export default function DamageModal({
       loadPreIssueDamages()
     }
   }, [isOpen, order?.order_id])
+  
+  // Завантажити історію пошкоджень з item.damage_history або з пропсів
+  useEffect(() => {
+    if (isOpen && item) {
+      // Пріоритет: item.damage_history > existingHistory
+      const history = item.damage_history || existingHistory || []
+      setDamageHistory(history)
+    }
+  }, [isOpen, item, existingHistory])
   
   const loadPreIssueDamages = async () => {
     if (!order?.order_id) return

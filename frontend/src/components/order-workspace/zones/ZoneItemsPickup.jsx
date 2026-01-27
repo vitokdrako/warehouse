@@ -219,10 +219,14 @@ function CompactItemCard({
                   <div key={d.id || idx} className="flex items-start gap-2 text-[10px] bg-white rounded p-1.5 border border-red-100">
                     {d.photo_url && (
                       <img 
-                        src={d.photo_url} 
+                        src={d.photo_url.startsWith('http') ? d.photo_url : `${process.env.REACT_APP_BACKEND_URL || ''}${d.photo_url}`} 
                         alt="" 
-                        className="w-8 h-8 rounded object-cover flex-shrink-0 cursor-pointer border"
-                        onClick={(e) => { e.stopPropagation(); window.open(d.photo_url, '_blank') }}
+                        className="w-10 h-10 rounded object-cover flex-shrink-0 cursor-pointer border-2 border-red-300 hover:border-red-500 transition-all active:scale-95"
+                        onClick={(e) => { 
+                          e.stopPropagation()
+                          const fullUrl = d.photo_url.startsWith('http') ? d.photo_url : `${process.env.REACT_APP_BACKEND_URL || ''}${d.photo_url}`
+                          setShowDamagePhoto(fullUrl)
+                        }}
                       />
                     )}
                     <div className="flex-1 min-w-0">

@@ -296,6 +296,9 @@
                     <div class="damage-note">{{ damage.note }}</div>
                     {% endif %}
                     <div class="damage-meta">
+                        {% if damage.order_number %}
+                        <span style="background: #dbeafe; padding: 2px 6px; border-radius: 4px; font-size: 10px;">{{ damage.stage_label or damage.stage }} · #{{ damage.order_number }}</span>
+                        {% endif %}
                         <span>👤 {{ damage.created_by or 'Система' }}</span>
                         <span>📅 {{ damage.created_at }}</span>
                     </div>

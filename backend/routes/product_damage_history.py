@@ -559,7 +559,8 @@ async def get_damage_dashboard(db: Session = Depends(get_rh_db)):
 async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
     """
     Отримати damage cases згруповані по замовленнях (для головної вкладки)
-    Показує всі пошкодження згруповані по order_id з інформацією про оплату
+    Показує ТІЛЬКИ пошкодження при ПОВЕРНЕННІ (stage='return') - це нова шкода від клієнтів
+    Пошкодження до видачі (pre_issue) не включаються - це відомі дефекти
     """
     try:
         result = db.execute(text("""
@@ -580,6 +581,7 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN orders o ON o.order_id = pdh.order_id
             WHERE pdh.order_id IS NOT NULL
+              AND pdh.stage = 'return'
             GROUP BY pdh.order_id, pdh.order_number, o.customer_name, o.customer_phone, o.status
             ORDER BY latest_damage DESC
         """))

@@ -155,6 +155,13 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
                 Часткове
               </span>
             )}
+            {/* Індикатор історії пошкоджень */}
+            {hasDamageHistory && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-xs font-medium">
+                <AlertTriangle className="w-3 h-3" />
+                Є історія ({damageHistory.length})
+              </span>
+            )}
           </div>
         </div>
       </div>

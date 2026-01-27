@@ -344,6 +344,40 @@ def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> d
 def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dict:
     """Збирає дані картки видачі для документа (RentalHub schema)"""
     
+    # Helper функція для формування URL фото
+    import os
+    import base64
+    from pathlib import Path
+    
+    BACKEND_URL = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
+    PROD_UPLOADS = Path("/home/farforre/farforrent.com.ua/rentalhub/backend/uploads/damage_photos")
+    LOCAL_UPLOADS = Path(__file__).parent.parent.parent / "uploads" / "damage_photos"
+    UPLOADS_DIR = PROD_UPLOADS if PROD_UPLOADS.exists() else LOCAL_UPLOADS
+    
+    def get_photo_url_for_doc(photo_path: str) -> str:
+        """Формує URL/base64 для фото в документі"""
+        if not photo_path:
+            return None
+        if photo_path.startswith('http') or photo_path.startswith('data:'):
+            return photo_path
+        
+        filename = photo_path.split('/')[-1] if '/' in photo_path else photo_path
+        local_path = UPLOADS_DIR / filename
+        
+        if local_path.exists():
+            try:
+                import mimetypes
+                mime_type, _ = mimetypes.guess_type(str(local_path))
+                if not mime_type:
+                    mime_type = 'image/jpeg'
+                with open(local_path, 'rb') as f:
+                    data = base64.b64encode(f.read()).decode('utf-8')
+                return f"data:{mime_type};base64,{data}"
+            except Exception as e:
+                print(f"Warning: Could not read {local_path}: {e}")
+        
+        return f"{BACKEND_URL}/api/uploads/damage_photos/{filename}"
+    
     result = db.execute(text("""
         SELECT 
             ic.id, ic.order_id, ic.order_number, ic.status,
@@ -472,13 +506,16 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
             damage_history = []
             if history_result:
                 for h_row in history_result:
+                    # Конвертуємо photo_url для документа
+                    photo_url = get_photo_url_for_doc(h_row[4])
+                    
                     damage_history.append({
                         "id": h_row[0],
                         "damage_type": h_row[1],
                         "type": h_row[1],
                         "note": h_row[2] or "",
                         "severity": h_row[3] or "low",
-                        "photo_url": h_row[4],
+                        "photo_url": photo_url,
                         "created_by": h_row[5],
                         "created_at": h_row[6],
                         "order_number": h_row[7],
@@ -778,8 +815,8 @@ def build_order_modification_data(db: Session, order_id: str, options: dict) -> 
 def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> dict:
     """
     Збирає дані для Розшифровки пошкоджень.
-    Включає тільки пошкодження зафіксовані при видачі (pre_issue) з фото.
-    Використовується для інформування клієнта про існуючі дефекти.
+    Включає ВСІ пошкодження товарів, що є в замовленні (з будь-яких замовлень).
+    Це єдине джерело правди про стан товару.
     """
     
     # Основні дані замовлення
@@ -807,17 +844,35 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         "status": order_row[8]
     }
     
-    # Отримуємо пошкодження зафіксовані при видачі (pre_issue)
+    # Отримуємо SKU всіх товарів у замовленні
+    items_result = db.execute(text("""
+        SELECT DISTINCT oi.sku, oi.product_id, oi.name
+        FROM order_items oi
+        WHERE oi.order_id = :order_id AND (oi.status = 'active' OR oi.status IS NULL)
+    """), {"order_id": order_id})
+    
+    order_items = []
+    order_skus = []
+    order_product_ids = []
+    for row in items_result:
+        order_items.append({"sku": row[0], "product_id": row[1], "name": row[2]})
+        if row[0]:
+            order_skus.append(row[0])
+        if row[1]:
+            order_product_ids.append(row[1])
+    
+    # Отримуємо ВСІ пошкодження для цих товарів (з будь-яких замовлень)
     damage_result = db.execute(text("""
         SELECT 
             pdh.id, pdh.product_id, pdh.sku, pdh.product_name,
             pdh.damage_type, pdh.severity, pdh.note,
             pdh.photo_url, pdh.created_by,
-            DATE_FORMAT(pdh.created_at, '%d.%m.%Y %H:%i') as created_at
+            DATE_FORMAT(pdh.created_at, '%d.%m.%Y %H:%i') as created_at,
+            pdh.order_number, pdh.stage
         FROM product_damage_history pdh
-        WHERE pdh.order_id = :order_id AND pdh.stage = 'pre_issue'
-        ORDER BY pdh.product_name, pdh.created_at
-    """), {"order_id": order_id})
+        WHERE (pdh.sku IN :skus OR pdh.product_id IN :product_ids)
+        ORDER BY pdh.product_name, pdh.created_at DESC
+    """), {"skus": tuple(order_skus) if order_skus else ('',), "product_ids": tuple(order_product_ids) if order_product_ids else (0,)})
     
     damage_type_names = {
         "broken": "Зламано",
@@ -831,11 +886,11 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         "other": "Інше"
     }
     
-    severity_names = {
-        "low": "low",
-        "medium": "medium",
-        "high": "high",
-        "critical": "critical"
+    stage_labels = {
+        "pre_issue": "До видачі",
+        "return": "При поверненні",
+        "inventory": "Аудит",
+        "audit": "Аудит"
     }
     
     damages = []
@@ -895,6 +950,8 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         # Формуємо URL/base64 для фото
         photo_url = get_photo_for_document(row[7])
         
+        stage = row[11] or "inventory"
+        
         damages.append({
             "id": row[0],
             "product_id": product_id,
@@ -902,22 +959,15 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
             "product_name": row[3] or "",
             "damage_type": damage_type_names.get(row[4], row[4] or "Інше"),
             "damage_type_code": row[4],
-            "severity": severity_names.get(row[5], row[5] or "low"),
+            "severity": row[5] or "low",
             "note": row[6] or "",
             "photo_url": photo_url,
             "created_by": row[8] or "Система",
-            "created_at": row[9] or ""
+            "created_at": row[9] or "",
+            "order_number": row[10] or "",
+            "stage": stage,
+            "stage_label": stage_labels.get(stage, stage)
         })
-    
-    # Підрахунок загальної кількості позицій в замовленні
-    items_result = db.execute(text("""
-        SELECT COUNT(DISTINCT product_id) as total_items
-        FROM order_items
-        WHERE order_id = :order_id AND (status = 'active' OR status IS NULL)
-    """), {"order_id": order_id})
-    
-    total_items_row = items_result.fetchone()
-    total_items = total_items_row[0] if total_items_row else 0
     
     company = {
         "name": "FarforDecorOrenda",
@@ -931,7 +981,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
         "order": order,
         "damages": damages,
         "items_with_damage": len(product_ids_with_damage),
-        "total_items": total_items,
+        "total_items": len(order_items),
         "company": company,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options

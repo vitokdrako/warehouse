@@ -55,11 +55,12 @@ def parse_issue_card(row, db: Session = None):
     # Enrich with images AND product statuses if db session provided
     if db:
         for item in items:
+            product_id = None
             if 'sku' in item:
                 # Завантажуємо дані товару (image, price, quantity, location)
                 product_result = db.execute(text("""
                     SELECT p.product_id, p.image_url, p.price, p.rental_price, p.quantity,
-                           p.zone, p.aisle, p.shelf
+                           p.zone, p.aisle, p.shelf, p.category_name
                     FROM products p
                     WHERE p.sku = :sku LIMIT 1
                 """), {"sku": item['sku']})
@@ -68,6 +69,10 @@ def parse_issue_card(row, db: Session = None):
                 if product_row:
                     product_id = product_row[0]
                     total_quantity = int(product_row[4]) if product_row[4] else 0
+                    
+                    # Зберігаємо product_id для використання далі
+                    item['product_id'] = product_id
+                    item['category_name'] = product_row[8] if len(product_row) > 8 else None
                     
                     # Оновлюємо image якщо немає
                     if not item.get('image') and product_row[1]:
@@ -122,7 +127,7 @@ def parse_issue_card(row, db: Session = None):
                     item['in_rent'] = in_rent_qty
                     item['in_restore'] = 0  # TODO: рахувати з damages коли буде реалізовано
                     
-                    # Завантажуємо pre_damage (шкода зафіксована при видачі)
+                    # Завантажуємо pre_damage (шкода зафіксована при видачі для ЦЬОГО замовлення)
                     try:
                         order_id = row[1]  # order_id from issue_card row
                         if order_id:
@@ -153,6 +158,56 @@ def parse_issue_card(row, db: Session = None):
                                 item['has_pre_damage'] = True
                     except Exception as e:
                         print(f"Warning: Could not load pre_damage: {e}")
+                
+                # ЗАВАНТАЖЕННЯ ІСТОРІЇ ПОШКОДЖЕНЬ - виконується для всіх товарів, не тільки тих що є в products
+                # Завантажуємо ПОВНУ історію пошкоджень товару (з усіх замовлень)
+                try:
+                    # Шукаємо по product_id або по sku
+                    if product_id:
+                        history_result = db.execute(text("""
+                            SELECT id, damage_type, note, severity, photo_url, created_by,
+                                   DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at,
+                                   order_number, stage, fee
+                            FROM product_damage_history
+                            WHERE product_id = :product_id
+                            ORDER BY created_at DESC
+                            LIMIT 20
+                        """), {"product_id": product_id})
+                    else:
+                        # Якщо product_id не знайдено - шукаємо по sku
+                        history_result = db.execute(text("""
+                            SELECT id, damage_type, note, severity, photo_url, created_by,
+                                   DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at,
+                                   order_number, stage, fee
+                            FROM product_damage_history
+                            WHERE sku = :sku
+                            ORDER BY created_at DESC
+                            LIMIT 20
+                        """), {"sku": item['sku']})
+                    
+                    damage_history = []
+                    for h_row in history_result:
+                        damage_history.append({
+                            "id": h_row[0],
+                            "damage_type": h_row[1],
+                            "type": h_row[1],
+                            "note": h_row[2] or "",
+                            "severity": h_row[3] or "low",
+                            "photo_url": h_row[4],
+                            "created_by": h_row[5],
+                            "created_at": h_row[6],
+                            "order_number": h_row[7],
+                            "stage": h_row[8],
+                            "stage_label": "До видачі" if h_row[8] == "pre_issue" else "При поверненні" if h_row[8] == "return" else "Аудит",
+                            "fee": float(h_row[9]) if h_row[9] else 0.0
+                        })
+                    
+                    if damage_history:
+                        item['damage_history'] = damage_history
+                        item['has_damage_history'] = True
+                        item['total_damages'] = len(damage_history)
+                except Exception as e:
+                    print(f"Warning: Could not load damage_history for sku {item.get('sku', '?')}: {e}")
     
     # Додати фінансові дані з таблиці orders для відображення на dashboard
     order_data = {}

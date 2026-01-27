@@ -38,6 +38,7 @@ export default function ProductConditionPanel({
   const [loading, setLoading] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState(null) // ID запису, що видаляється
   
   // Форма нового запису
   const [newRecord, setNewRecord] = useState({

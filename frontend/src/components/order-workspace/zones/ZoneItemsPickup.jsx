@@ -206,6 +206,50 @@ function CompactItemCard({
       {/* Expanded content */}
       {expanded && (
         <div className="px-2 pb-2 space-y-2 border-t border-slate-100 pt-2">
+          {/* Damage History Alert */}
+          {item.has_damage_history && item.damage_history?.length > 0 && (
+            <div className="rounded-lg bg-red-50 border border-red-200 p-2">
+              <div className="flex items-center gap-1 text-xs font-semibold text-red-700 mb-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Історія пошкоджень ({item.damage_history.length})
+              </div>
+              <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
+                {item.damage_history.slice(0, 5).map((d, idx) => (
+                  <div key={d.id || idx} className="flex items-start gap-2 text-[10px] bg-white rounded p-1.5 border border-red-100">
+                    {d.photo_url && (
+                      <img 
+                        src={d.photo_url} 
+                        alt="" 
+                        className="w-8 h-8 rounded object-cover flex-shrink-0 cursor-pointer border"
+                        onClick={(e) => { e.stopPropagation(); window.open(d.photo_url, '_blank') }}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className={`px-1 py-0.5 rounded text-[9px] ${
+                          d.stage === 'pre_issue' ? 'bg-blue-100 text-blue-700' : 
+                          d.stage === 'return' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {d.stage_label || d.stage}
+                        </span>
+                        {d.order_number && <span className="text-slate-400">#{d.order_number}</span>}
+                        {d.fee > 0 && <span className="text-red-600">₴{d.fee}</span>}
+                      </div>
+                      <div className="text-slate-700 truncate">{d.damage_type || d.type}</div>
+                      {d.note && <div className="text-slate-500 truncate">{d.note}</div>}
+                      <div className="text-slate-400">{d.created_at}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {item.damage_history.length > 5 && (
+                <div className="text-center text-[10px] text-red-600 mt-1">
+                  + ще {item.damage_history.length - 5} записів
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* Availability row */}
           <div className="flex items-center gap-1 text-[10px] flex-wrap">
             <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">

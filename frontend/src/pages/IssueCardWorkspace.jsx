@@ -161,7 +161,11 @@ export default function IssueCardWorkspace() {
         scanned: p.scanned || [],
         packaging: p.packaging || { cover: false, box: false, stretch: false, black_case: false },
         location: { zone: p.location?.zone || '', state: p.location?.state || 'shelf' },
-        pre_damage: p.pre_damage || []
+        pre_damage: p.pre_damage || [],
+        damage_history: p.damage_history || [],
+        has_damage_history: p.has_damage_history || false,
+        total_damages: p.total_damages || 0,
+        category_name: p.category_name || p.category || ''
       }))
       
       setItems(transformedItems)

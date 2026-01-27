@@ -403,8 +403,12 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
     preparation_notes = row[17] if len(row) > 17 else ""
     
     # Load pre_damage (шкода зафіксована при видачі) for each item
+    # AND full damage_history (всі пошкодження товару з будь-яких замовлень)
     for item in items:
         product_id = item.get('product_id') or item.get('inventory_id')
+        sku = item.get('sku')
+        
+        # Pre-damage for THIS order
         if product_id and order_id:
             try:
                 damage_result = db.execute(text("""
@@ -439,6 +443,63 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
                 print(f"Warning: Could not load pre_damage for product {product_id}: {e}")
                 item['pre_damage'] = []
                 item['has_pre_damage'] = False
+        
+        # Full damage_history (ALL damages for this product from any order)
+        try:
+            if product_id:
+                history_result = db.execute(text("""
+                    SELECT id, damage_type, note, severity, photo_url, created_by,
+                           DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at,
+                           order_number, stage, fee
+                    FROM product_damage_history
+                    WHERE product_id = :product_id
+                    ORDER BY created_at DESC
+                    LIMIT 20
+                """), {"product_id": product_id})
+            elif sku:
+                history_result = db.execute(text("""
+                    SELECT id, damage_type, note, severity, photo_url, created_by,
+                           DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at,
+                           order_number, stage, fee
+                    FROM product_damage_history
+                    WHERE sku = :sku
+                    ORDER BY created_at DESC
+                    LIMIT 20
+                """), {"sku": sku})
+            else:
+                history_result = None
+            
+            damage_history = []
+            if history_result:
+                for h_row in history_result:
+                    damage_history.append({
+                        "id": h_row[0],
+                        "damage_type": h_row[1],
+                        "type": h_row[1],
+                        "note": h_row[2] or "",
+                        "severity": h_row[3] or "low",
+                        "photo_url": h_row[4],
+                        "created_by": h_row[5],
+                        "created_at": h_row[6],
+                        "order_number": h_row[7],
+                        "stage": h_row[8],
+                        "stage_label": "До видачі" if h_row[8] == "pre_issue" else "При поверненні" if h_row[8] == "return" else "Аудит",
+                        "fee": float(h_row[9]) if h_row[9] else 0.0
+                    })
+            
+            if damage_history:
+                item['damage_history'] = damage_history
+                item['has_damage_history'] = True
+                item['total_damages'] = len(damage_history)
+            else:
+                item['damage_history'] = []
+                item['has_damage_history'] = False
+                item['total_damages'] = 0
+        except Exception as e:
+            print(f"Warning: Could not load damage_history for product {product_id or sku}: {e}")
+            item['damage_history'] = []
+            item['has_damage_history'] = False
+            item['total_damages'] = 0
     
     issue_card = {
         "id": row[0],

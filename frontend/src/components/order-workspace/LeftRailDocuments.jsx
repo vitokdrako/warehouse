@@ -26,28 +26,22 @@ const DOCS_BY_STATUS = {
   ],
   'ready_for_issue': [
     { type: 'issue_act', name: 'Акт передачі', icon: '📤', printRequired: true, critical: true, emailRequired: true },
-    { type: 'damage_breakdown', name: 'Розшифровка пошкоджень', icon: '⚠️', emailRequired: true },
   ],
   'issued': [
     { type: 'issue_act', name: 'Акт передачі', icon: '📤', emailRequired: true },
-    { type: 'damage_breakdown', name: 'Розшифровка пошкоджень', icon: '⚠️', emailRequired: true },
   ],
   'on_rent': [
     { type: 'issue_act', name: 'Акт передачі', icon: '📤', emailRequired: true },
-    { type: 'damage_breakdown', name: 'Розшифровка пошкоджень', icon: '⚠️', emailRequired: true },
   ],
   'returning': [
     { type: 'return_act', name: 'Акт приймання', icon: '📥', printRequired: true, critical: true, emailRequired: true },
-    { type: 'damage_breakdown', name: 'Розшифровка пошкоджень', icon: '⚠️', emailRequired: true },
   ],
   'returned': [
     { type: 'return_act', name: 'Акт приймання', icon: '📥', printRequired: true, emailRequired: true },
-    { type: 'damage_breakdown', name: 'Розшифровка пошкоджень', icon: '⚠️', emailRequired: true },
     { type: 'damage_report', name: 'Акт пошкоджень', icon: '⚠️', emailRequired: true },
   ],
   'completed': [
     { type: 'return_act', name: 'Акт приймання', icon: '📥', emailRequired: true },
-    { type: 'damage_breakdown', name: 'Розшифровка пошкоджень', icon: '⚠️', emailRequired: true },
     { type: 'deposit_refund_act', name: 'Акт поверн. застави', icon: '✅', emailRequired: true },
   ],
   'cancelled': [],

@@ -4,7 +4,7 @@
  * Показує історію стану товару та дозволяє додавати нові записи
  */
 import React, { useState, useEffect } from 'react'
-import { X, Plus, Camera, Calendar, User, FileText, AlertTriangle, Check, Loader2 } from 'lucide-react'
+import { X, Plus, Camera, Calendar, User, FileText, AlertTriangle, Check, Loader2, Trash2 } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

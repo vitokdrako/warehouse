@@ -44,8 +44,6 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
         return build_return_data(db, entity_id, options)
     elif doc_type in damage_settlement_docs:
         return build_damage_settlement_data(db, entity_id, options)
-    elif doc_type in damage_breakdown_docs:
-        return build_damage_breakdown_data(db, entity_id, options)
     elif doc_type in modification_docs:
         return build_order_modification_data(db, entity_id, options)
     elif doc_type in order_docs:

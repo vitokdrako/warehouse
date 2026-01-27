@@ -643,7 +643,8 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
 @router.get("/cases/{order_id}/details")
 async def get_damage_case_details(order_id: int, db: Session = Depends(get_rh_db)):
     """
-    Отримати детальну інформацію по damage case (всі товари з замовлення)
+    Отримати детальну інформацію по damage case (тільки товари з stage='return')
+    Пошкодження до видачі (pre_issue) не включаються
     """
     try:
         result = db.execute(text("""
@@ -657,6 +658,7 @@ async def get_damage_case_details(order_id: int, db: Session = Depends(get_rh_db
                 pdh.processing_notes, pdh.laundry_batch_id, pdh.laundry_item_id
             FROM product_damage_history pdh
             WHERE pdh.order_id = :order_id
+              AND pdh.stage = 'return'
             ORDER BY pdh.created_at DESC
         """), {"order_id": order_id})
         

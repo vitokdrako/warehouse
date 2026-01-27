@@ -371,10 +371,10 @@ export default function ProductConditionPanel({
                 
                 {record.photo_url && (
                   <img 
-                    src={record.photo_url.startsWith('http') ? record.photo_url : `${BACKEND_URL}/${record.photo_url}`}
-                    alt="Damage" 
+                    src={record.photo_url.startsWith('http') ? record.photo_url : `${BACKEND_URL}${record.photo_url.startsWith('/') ? '' : '/'}${record.photo_url}`}
+                    alt="Фото пошкодження" 
                     className="mt-2 w-full h-32 object-cover rounded-lg cursor-pointer"
-                    onClick={() => window.open(record.photo_url.startsWith('http') ? record.photo_url : `${BACKEND_URL}/${record.photo_url}`, '_blank')}
+                    onClick={() => window.open(record.photo_url.startsWith('http') ? record.photo_url : `${BACKEND_URL}${record.photo_url.startsWith('/') ? '' : '/'}${record.photo_url}`, '_blank')}
                   />
                 )}
                 

@@ -55,11 +55,12 @@ def parse_issue_card(row, db: Session = None):
     # Enrich with images AND product statuses if db session provided
     if db:
         for item in items:
+            product_id = None
             if 'sku' in item:
                 # Завантажуємо дані товару (image, price, quantity, location)
                 product_result = db.execute(text("""
                     SELECT p.product_id, p.image_url, p.price, p.rental_price, p.quantity,
-                           p.zone, p.aisle, p.shelf
+                           p.zone, p.aisle, p.shelf, p.category_name
                     FROM products p
                     WHERE p.sku = :sku LIMIT 1
                 """), {"sku": item['sku']})
@@ -68,6 +69,10 @@ def parse_issue_card(row, db: Session = None):
                 if product_row:
                     product_id = product_row[0]
                     total_quantity = int(product_row[4]) if product_row[4] else 0
+                    
+                    # Зберігаємо product_id для використання далі
+                    item['product_id'] = product_id
+                    item['category_name'] = product_row[8] if len(product_row) > 8 else None
                     
                     # Оновлюємо image якщо немає
                     if not item.get('image') and product_row[1]:

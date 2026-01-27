@@ -344,6 +344,40 @@ def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> d
 def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dict:
     """Збирає дані картки видачі для документа (RentalHub schema)"""
     
+    # Helper функція для формування URL фото
+    import os
+    import base64
+    from pathlib import Path
+    
+    BACKEND_URL = os.environ.get('BACKEND_PUBLIC_URL', 'https://backrentalhub.farforrent.com.ua')
+    PROD_UPLOADS = Path("/home/farforre/farforrent.com.ua/rentalhub/backend/uploads/damage_photos")
+    LOCAL_UPLOADS = Path(__file__).parent.parent.parent / "uploads" / "damage_photos"
+    UPLOADS_DIR = PROD_UPLOADS if PROD_UPLOADS.exists() else LOCAL_UPLOADS
+    
+    def get_photo_url_for_doc(photo_path: str) -> str:
+        """Формує URL/base64 для фото в документі"""
+        if not photo_path:
+            return None
+        if photo_path.startswith('http') or photo_path.startswith('data:'):
+            return photo_path
+        
+        filename = photo_path.split('/')[-1] if '/' in photo_path else photo_path
+        local_path = UPLOADS_DIR / filename
+        
+        if local_path.exists():
+            try:
+                import mimetypes
+                mime_type, _ = mimetypes.guess_type(str(local_path))
+                if not mime_type:
+                    mime_type = 'image/jpeg'
+                with open(local_path, 'rb') as f:
+                    data = base64.b64encode(f.read()).decode('utf-8')
+                return f"data:{mime_type};base64,{data}"
+            except Exception as e:
+                print(f"Warning: Could not read {local_path}: {e}")
+        
+        return f"{BACKEND_URL}/api/uploads/damage_photos/{filename}"
+    
     result = db.execute(text("""
         SELECT 
             ic.id, ic.order_id, ic.order_number, ic.status,

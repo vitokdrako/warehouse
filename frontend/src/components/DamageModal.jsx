@@ -348,13 +348,13 @@ export default function DamageModal({
             </div>
           </div>
           
-          {/* Перегляд вже зафіксованих пошкоджень */}
+          {/* Перегляд вже зафіксованих пошкоджень ДЛЯ ЦЬОГО ЗАМОВЛЕННЯ */}
           {preIssueDamages.length > 0 && (
             <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-amber-600">📋</span>
                 <span className="text-sm font-semibold text-amber-800">
-                  Вже зафіксовано ({preIssueDamages.length})
+                  Вже зафіксовано для цього замовлення ({preIssueDamages.length})
                 </span>
               </div>
               <div className="space-y-2 max-h-[150px] overflow-y-auto">
@@ -373,6 +373,63 @@ export default function DamageModal({
                         <div className="font-medium text-amber-900">{d.damage_type || 'Пошкодження'}</div>
                         {d.note && <div className="text-slate-600 mt-0.5">{d.note}</div>}
                         <div className="text-slate-400 mt-1 flex items-center gap-2">
+                          <span>👤 {d.created_by || 'Невідомо'}</span>
+                          <span>•</span>
+                          <span>{d.created_at}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* ІСТОРІЯ ПОШКОДЖЕНЬ ТОВАРУ (з усіх замовлень) */}
+          {damageHistory.length > 0 && (
+            <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-red-600">⚠️</span>
+                <span className="text-sm font-semibold text-red-800">
+                  Історія пошкоджень товару ({damageHistory.length})
+                </span>
+              </div>
+              <div className="text-xs text-red-600 mb-2">
+                Попередні пошкодження цього товару в інших замовленнях
+              </div>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {damageHistory.map((d, idx) => (
+                  <div key={d.id || idx} className="text-xs bg-white rounded-lg p-2 border border-red-100">
+                    <div className="flex items-start gap-2">
+                      {d.photo_url && (
+                        <img 
+                          src={d.photo_url} 
+                          alt="Фото" 
+                          className="w-14 h-14 object-cover rounded cursor-pointer border border-red-200"
+                          onClick={() => window.open(d.photo_url, '_blank')}
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            d.stage === 'pre_issue' 
+                              ? 'bg-blue-100 text-blue-700' 
+                              : d.stage === 'return' 
+                                ? 'bg-orange-100 text-orange-700'
+                                : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {d.stage_label || d.stage}
+                          </span>
+                          {d.order_number && (
+                            <span className="text-slate-500">#{d.order_number}</span>
+                          )}
+                          {d.fee > 0 && (
+                            <span className="text-red-600 font-medium">₴{d.fee}</span>
+                          )}
+                        </div>
+                        <div className="font-medium text-slate-900">{d.damage_type || d.type || 'Пошкодження'}</div>
+                        {d.note && <div className="text-slate-600 mt-0.5">{d.note}</div>}
+                        <div className="text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
                           <span>👤 {d.created_by || 'Невідомо'}</span>
                           <span>•</span>
                           <span>{d.created_at}</span>

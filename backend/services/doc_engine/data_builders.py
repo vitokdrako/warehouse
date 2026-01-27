@@ -506,13 +506,16 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
             damage_history = []
             if history_result:
                 for h_row in history_result:
+                    # Конвертуємо photo_url для документа
+                    photo_url = get_photo_url_for_doc(h_row[4])
+                    
                     damage_history.append({
                         "id": h_row[0],
                         "damage_type": h_row[1],
                         "type": h_row[1],
                         "note": h_row[2] or "",
                         "severity": h_row[3] or "low",
-                        "photo_url": h_row[4],
+                        "photo_url": photo_url,
                         "created_by": h_row[5],
                         "created_at": h_row[6],
                         "order_number": h_row[7],

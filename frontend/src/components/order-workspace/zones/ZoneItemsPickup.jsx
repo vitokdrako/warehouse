@@ -114,6 +114,13 @@ function CompactItemCard({
           <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">{item.sku || '—'}</span>
           {isNew && <span className="px-1.5 py-0.5 rounded bg-blue-500 text-white font-bold">NEW</span>}
           {qtyChanged && !isNew && <span className="px-1.5 py-0.5 rounded bg-amber-500 text-white font-bold">ЗМ.</span>}
+          {/* Індикатор історії пошкоджень */}
+          {item.has_damage_history && item.total_damages > 0 && (
+            <span className="px-1.5 py-0.5 rounded bg-red-500 text-white font-bold flex items-center gap-0.5">
+              <AlertTriangle className="w-3 h-3" />
+              {item.total_damages}
+            </span>
+          )}
           {item.location?.zone && item.location.zone !== 'None' && (
             <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">📍{item.location.zone}</span>
           )}

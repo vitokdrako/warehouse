@@ -520,10 +520,10 @@ async def get_recent_damages(
 async def get_damage_dashboard(db: Session = Depends(get_rh_db)):
     """
     Отримати загальний огляд Кабінету Шкоди
-    Повертає статистику по всіх вкладках
+    Повертає статистику ТІЛЬКИ по пошкодженнях при поверненні (stage='return')
     """
     try:
-        # Отримати статистику по обробці
+        # Отримати статистику по обробці (тільки return)
         result = db.execute(text("""
             SELECT 
                 processing_type,
@@ -532,6 +532,7 @@ async def get_damage_dashboard(db: Session = Depends(get_rh_db)):
                 SUM(fee) as total_fee
             FROM product_damage_history
             WHERE DATE(created_at) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+              AND stage = 'return'
             GROUP BY processing_type, processing_status
         """))
         
@@ -559,7 +560,8 @@ async def get_damage_dashboard(db: Session = Depends(get_rh_db)):
 async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
     """
     Отримати damage cases згруповані по замовленнях (для головної вкладки)
-    Показує всі пошкодження згруповані по order_id з інформацією про оплату
+    Показує ТІЛЬКИ пошкодження при ПОВЕРНЕННІ (stage='return') - це нова шкода від клієнтів
+    Пошкодження до видачі (pre_issue) не включаються - це відомі дефекти
     """
     try:
         result = db.execute(text("""
@@ -580,6 +582,7 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN orders o ON o.order_id = pdh.order_id
             WHERE pdh.order_id IS NOT NULL
+              AND pdh.stage = 'return'
             GROUP BY pdh.order_id, pdh.order_number, o.customer_name, o.customer_phone, o.status
             ORDER BY latest_damage DESC
         """))
@@ -641,7 +644,8 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
 @router.get("/cases/{order_id}/details")
 async def get_damage_case_details(order_id: int, db: Session = Depends(get_rh_db)):
     """
-    Отримати детальну інформацію по damage case (всі товари з замовлення)
+    Отримати детальну інформацію по damage case (тільки товари з stage='return')
+    Пошкодження до видачі (pre_issue) не включаються
     """
     try:
         result = db.execute(text("""
@@ -655,6 +659,7 @@ async def get_damage_case_details(order_id: int, db: Session = Depends(get_rh_db
                 pdh.processing_notes, pdh.laundry_batch_id, pdh.laundry_item_id
             FROM product_damage_history pdh
             WHERE pdh.order_id = :order_id
+              AND pdh.stage = 'return'
             ORDER BY pdh.created_at DESC
         """), {"order_id": order_id})
         

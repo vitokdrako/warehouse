@@ -301,6 +301,32 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
           Зафіксувати пошкодження
         </button>
       )}
+      
+      {/* Модалка фото пошкодження */}
+      {showDamagePhoto && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setShowDamagePhoto(null)}
+        >
+          <div className="relative max-w-full max-h-full">
+            <img 
+              src={showDamagePhoto} 
+              alt="Фото пошкодження"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 rounded-b-lg">
+              <div className="text-white font-medium text-center">📷 Фото пошкодження</div>
+              <div className="text-white/70 text-sm text-center">{item.name}</div>
+            </div>
+            <button 
+              className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/20 backdrop-blur text-white flex items-center justify-center hover:bg-white/30"
+              onClick={(e) => { e.stopPropagation(); setShowDamagePhoto(null) }}
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

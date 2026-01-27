@@ -23,6 +23,7 @@ UPLOAD_ROOT.mkdir(exist_ok=True)
 (UPLOAD_ROOT / "products").mkdir(exist_ok=True)
 (UPLOAD_ROOT / "photos").mkdir(exist_ok=True)
 (UPLOAD_ROOT / "qr").mkdir(exist_ok=True)
+(UPLOAD_ROOT / "damage_photos").mkdir(exist_ok=True)  # Фото пошкоджень
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_ROOT)), name="uploads")
 
 # Налаштувати статичні файли для мігрованих зображень товарів

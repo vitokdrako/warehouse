@@ -689,12 +689,46 @@ export default function DamageModal({
           </div>
         </div>
 
-        {/* History Section */}
-        {((item.pre_damage?.length > 0) || (existingHistory?.length > 0)) && (
+        {/* History Section - ПОВНА ІСТОРІЯ ПОШКОДЖЕНЬ ТОВАРУ */}
+        {(damageHistory.length > 0 || (item.pre_damage?.length > 0) || (existingHistory?.length > 0)) && (
           <div className="mt-4">
-            <Card title="Історія пошкоджень по позиції">
-              <div className="max-h-40 overflow-auto text-sm">
-                {((item.pre_damage || existingHistory || []).length > 0) ? (
+            <Card title={`📜 Історія пошкоджень товару (${damageHistory.length || (item.pre_damage?.length || 0) + (existingHistory?.length || 0)})`}>
+              <div className="max-h-48 overflow-auto text-sm space-y-2">
+                {damageHistory.length > 0 ? (
+                  damageHistory.map(d => (
+                    <div key={d.id} className="text-xs border-b pb-2 flex items-start gap-2">
+                      {d.photo_url && (
+                        <img 
+                          src={d.photo_url} 
+                          alt="Фото" 
+                          className="w-12 h-12 object-cover rounded cursor-pointer border"
+                          onClick={() => window.open(d.photo_url, '_blank')}
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <Badge tone={d.stage === 'pre_issue' ? 'blue' : d.stage === 'return' ? 'amber' : 'slate'}>
+                            {d.stage_label || d.stage}
+                          </Badge>
+                          {d.order_number && (
+                            <span className="text-slate-500 text-[10px]">#{d.order_number}</span>
+                          )}
+                          <Badge tone={d.severity==='high' || d.severity==='critical' ? 'red' : d.severity==='medium' ? 'amber' : 'slate'}>
+                            {d.severity}
+                          </Badge>
+                          {d.fee > 0 && (
+                            <span className="text-red-600 font-medium">₴{d.fee}</span>
+                          )}
+                        </div>
+                        <div className="font-medium">{d.damage_type || d.type || '—'}</div>
+                        {d.note && <div className="text-slate-600">{d.note}</div>}
+                        <div className="text-slate-400 mt-1">
+                          {d.created_at} {d.created_by && `· 👤 ${d.created_by}`}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (item.pre_damage || existingHistory || []).length > 0 ? (
                   <ul className="space-y-1">
                     {(item.pre_damage || existingHistory || []).map(d=> (
                       <li key={d.id} className="text-xs border-b pb-1">

@@ -1,7 +1,10 @@
 /* eslint-disable */
-import React from 'react'
+import React, { useState } from 'react'
 import ZoneCard from '../ZoneCard'
 import { getImageUrl } from '../../../utils/imageHelper'
+import { AlertTriangle, X } from 'lucide-react'
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 /**
  * Zone: Items Return - Приймання товарів при поверненні

@@ -67,6 +67,7 @@ function CompactItemCard({
   const [showMenu, setShowMenu] = useState(false)
   const [showPackaging, setShowPackaging] = useState(false)
   const [showPhoto, setShowPhoto] = useState(false)
+  const [showDamagePhoto, setShowDamagePhoto] = useState(null) // URL для модалки фото пошкодження
   
   const photoUrl = getImageUrl(item.image || item.image_url)
   const qty = item.qty || 0

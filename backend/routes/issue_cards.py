@@ -122,7 +122,7 @@ def parse_issue_card(row, db: Session = None):
                     item['in_rent'] = in_rent_qty
                     item['in_restore'] = 0  # TODO: рахувати з damages коли буде реалізовано
                     
-                    # Завантажуємо pre_damage (шкода зафіксована при видачі)
+                    # Завантажуємо pre_damage (шкода зафіксована при видачі для ЦЬОГО замовлення)
                     try:
                         order_id = row[1]  # order_id from issue_card row
                         if order_id:
@@ -153,6 +153,42 @@ def parse_issue_card(row, db: Session = None):
                                 item['has_pre_damage'] = True
                     except Exception as e:
                         print(f"Warning: Could not load pre_damage: {e}")
+                    
+                    # Завантажуємо ПОВНУ історію пошкоджень товару (з усіх замовлень)
+                    try:
+                        history_result = db.execute(text("""
+                            SELECT id, damage_type, note, severity, photo_url, created_by,
+                                   DATE_FORMAT(created_at, '%d.%m.%Y %H:%i') as created_at,
+                                   order_number, stage, fee
+                            FROM product_damage_history
+                            WHERE product_id = :product_id
+                            ORDER BY created_at DESC
+                            LIMIT 20
+                        """), {"product_id": product_id})
+                        
+                        damage_history = []
+                        for h_row in history_result:
+                            damage_history.append({
+                                "id": h_row[0],
+                                "damage_type": h_row[1],
+                                "type": h_row[1],
+                                "note": h_row[2] or "",
+                                "severity": h_row[3] or "low",
+                                "photo_url": h_row[4],
+                                "created_by": h_row[5],
+                                "created_at": h_row[6],
+                                "order_number": h_row[7],
+                                "stage": h_row[8],
+                                "stage_label": "До видачі" if h_row[8] == "pre_issue" else "При поверненні" if h_row[8] == "return" else "Аудит",
+                                "fee": float(h_row[9]) if h_row[9] else 0.0
+                            })
+                        
+                        if damage_history:
+                            item['damage_history'] = damage_history
+                            item['has_damage_history'] = True
+                            item['total_damages'] = len(damage_history)
+                    except Exception as e:
+                        print(f"Warning: Could not load damage_history: {e}")
     
     # Додати фінансові дані з таблиці orders для відображення на dashboard
     order_data = {}

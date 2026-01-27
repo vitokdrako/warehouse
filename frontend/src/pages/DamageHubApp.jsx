@@ -45,7 +45,7 @@ function Tabs({ mode, setMode }) {
 export default function DamageHubApp() {
   const [mode, setMode] = useState(MODES.ALL);
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
 

@@ -80,7 +80,7 @@
 
 {% set items_with_damage = [] %}
 {% for item in items %}
-    {% if item.get('pre_damage') and item.get('pre_damage')|length > 0 %}
+    {% if (item.get('pre_damage') and item.get('pre_damage')|length > 0) or (item.get('damage_history') and item.get('damage_history')|length > 0) %}
         {% set _ = items_with_damage.append(item) %}
     {% endif %}
 {% endfor %}
@@ -88,8 +88,34 @@
 {% if items_with_damage|length > 0 %}
 <div style="background: #fff3e0; border: 1px solid #ffcc80; border-radius: 8px; padding: 12px; margin-top: 15px;">
     <p class="font-bold" style="color: #e65100;">⚠️ УВАГА: Зафіксовані існуючі дефекти</p>
-    <p class="text-sm">У {{ items_with_damage|length }} позиції(ях) зафіксовано існуючі дефекти ДО передачі клієнту. 
+    <p class="text-sm">У {{ items_with_damage|length }} позиції(ях) зафіксовано існуючі дефекти. 
     Клієнт не несе відповідальності за ці пошкодження при поверненні.</p>
+    
+    <!-- Детальна історія пошкоджень -->
+    <div style="margin-top: 15px;">
+        {% for item in items_with_damage %}
+        <div style="background: #fff; border: 1px solid #ffd54f; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+            <p class="font-bold" style="margin-bottom: 5px;">{{ item.get('name', '') }} ({{ item.get('sku', '') }})</p>
+            {% set all_damages = (item.get('damage_history') or item.get('pre_damage') or []) %}
+            {% for d in all_damages %}
+            <div style="display: flex; gap: 10px; margin-bottom: 8px; padding: 8px; background: #fffde7; border-radius: 4px;">
+                {% if d.get('photo_url') %}
+                <img src="{{ d.get('photo_url') }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ffc107;" alt="Фото">
+                {% endif %}
+                <div>
+                    <p style="font-weight: 500; color: #e65100;">{{ d.get('damage_type', d.get('type', 'Дефект')) }}</p>
+                    {% if d.get('note') %}<p style="font-size: 10px; color: #666;">{{ d.get('note') }}</p>{% endif %}
+                    <p style="font-size: 9px; color: #999;">
+                        {% if d.get('order_number') %}Замовлення: {{ d.get('order_number') }} · {% endif %}
+                        {{ d.get('stage_label', d.get('stage', '')) }} · {{ d.get('created_at', '') }}
+                        {% if d.get('created_by') %} · {{ d.get('created_by') }}{% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
 </div>
 {% else %}
 <div style="background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 12px; margin-top: 15px;">

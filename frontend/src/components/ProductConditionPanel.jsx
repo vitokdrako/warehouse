@@ -149,6 +149,38 @@ export default function ProductConditionPanel({
     }
   }
 
+  // Видалення запису про пошкодження
+  const handleDeleteRecord = async (recordId) => {
+    if (!window.confirm('Видалити цей запис про пошкодження? Цю дію не можна скасувати.')) {
+      return
+    }
+    
+    setDeletingId(recordId)
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/product-damage-history/${recordId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deleted_by: localStorage.getItem('userName') || 'Користувач',
+          reason: 'Видалено вручну (відремонтовано)'
+        })
+      })
+      
+      if (response.ok) {
+        // Оновити локальний список
+        setHistory(prev => prev.filter(r => r.id !== recordId))
+        onRecordAdded?.() // Оновити батьківський компонент
+      } else {
+        const err = await response.json()
+        alert('Помилка видалення: ' + (err.detail || 'Невідома помилка'))
+      }
+    } catch (err) {
+      alert('Помилка видалення: ' + err.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   if (!isOpen) return null
 
   return (

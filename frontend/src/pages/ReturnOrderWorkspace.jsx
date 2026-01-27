@@ -171,6 +171,38 @@ export default function ReturnOrderWorkspace() {
       
       setItems(transformedItems)
       
+      // === Завантажити історію пошкоджень для кожного товару ===
+      // Це важливо, щоб приймальник бачив попередні дефекти
+      const loadDamageHistory = async () => {
+        const updatedItems = await Promise.all(transformedItems.map(async (item) => {
+          try {
+            const sku = item.sku
+            if (!sku) return item
+            
+            const response = await axios.get(`${BACKEND_URL}/api/product-damage-history/sku/${sku}`)
+            const data = response.data
+            
+            if (data.history && data.history.length > 0) {
+              return {
+                ...item,
+                damage_history: data.history,
+                has_damage_history: true,
+                total_damages: data.total_damages || data.history.length
+              }
+            }
+          } catch (err) {
+            console.warn(`[ReturnWorkspace] Could not load damage history for ${item.sku}:`, err.message)
+          }
+          return item
+        }))
+        
+        setItems(updatedItems)
+        console.log('[ReturnWorkspace] Damage history loaded for items')
+      }
+      
+      // Завантажуємо історію асинхронно (не блокуємо UI)
+      loadDamageHistory()
+      
       // Таймлайн
       if (isAlreadyPartialReturn) {
         setTimeline([

@@ -1417,3 +1417,69 @@ async def upload_multiple_damage_photos(
         "count": len([u for u in uploaded if "url" in u])
     }
 
+
+
+
+@router.delete("/{damage_id}")
+async def delete_damage_record(
+    damage_id: str,
+    delete_data: dict = None,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Видалити запис про пошкодження (наприклад, після ремонту)
+    
+    Параметри:
+    - damage_id: ID запису
+    - delete_data: 
+        - deleted_by: Хто видалив
+        - reason: Причина видалення (опціонально)
+    """
+    try:
+        # Перевірити чи існує запис
+        check_result = db.execute(text("""
+            SELECT id, product_id, sku, product_name, damage_type, photo_url
+            FROM product_damage_history
+            WHERE id = :damage_id
+        """), {"damage_id": damage_id})
+        
+        record = check_result.fetchone()
+        if not record:
+            raise HTTPException(status_code=404, detail="Запис не знайдено")
+        
+        # Логуємо видалення (можна зберігати в окрему таблицю для аудиту)
+        deleted_by = None
+        reason = None
+        if delete_data:
+            deleted_by = delete_data.get("deleted_by", "Невідомо")
+            reason = delete_data.get("reason", "Не вказано")
+        
+        print(f"[DAMAGE DELETE] ID: {damage_id}, SKU: {record[2]}, Type: {record[4]}, Deleted by: {deleted_by}, Reason: {reason}")
+        
+        # Видалити запис
+        db.execute(text("""
+            DELETE FROM product_damage_history
+            WHERE id = :damage_id
+        """), {"damage_id": damage_id})
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "Запис про пошкодження видалено",
+            "deleted_record": {
+                "id": record[0],
+                "product_id": record[1],
+                "sku": record[2],
+                "product_name": record[3],
+                "damage_type": record[4]
+            },
+            "deleted_by": deleted_by,
+            "reason": reason
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка видалення: {str(e)}")

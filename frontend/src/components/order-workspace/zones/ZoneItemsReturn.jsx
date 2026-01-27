@@ -60,6 +60,13 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
   const serials = item.serials || []
   const okSerials = item.ok_serials || []
   
+  // Історія пошкоджень
+  const damageHistory = item.damage_history || []
+  const hasDamageHistory = item.has_damage_history || damageHistory.length > 0
+  
+  // Модалка для фото пошкодження
+  const [showDamagePhoto, setShowDamagePhoto] = useState(null)
+  
   const isFullyReturned = returnedQty >= rentedQty
   const hasDamage = findings.length > 0
   const isPartialReturn = returnedQty > 0 && returnedQty < rentedQty

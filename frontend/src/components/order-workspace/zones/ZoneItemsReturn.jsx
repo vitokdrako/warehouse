@@ -250,6 +250,48 @@ function ReturnItemCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamage, 
         </div>
       )}
       
+      {/* ІСТОРІЯ ПОШКОДЖЕНЬ (з попередніх замовлень) */}
+      {hasDamageHistory && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-1 text-xs text-red-700 font-semibold mb-2">
+            <AlertTriangle className="w-4 h-4" />
+            Історія пошкоджень ({damageHistory.length})
+          </div>
+          <div className="text-[10px] text-red-600 mb-2">
+            ⚠️ Перевірте ці дефекти перед прийманням - вони зафіксовані раніше
+          </div>
+          <div className="space-y-2 max-h-[180px] overflow-y-auto">
+            {damageHistory.map((d, idx) => (
+              <div key={d.id || idx} className="flex items-start gap-2 bg-white rounded-lg p-2 border border-red-100">
+                {d.photo_url && (
+                  <img 
+                    src={d.photo_url.startsWith('http') ? d.photo_url : `${BACKEND_URL}${d.photo_url}`} 
+                    alt="Фото" 
+                    className="w-12 h-12 rounded object-cover flex-shrink-0 cursor-pointer border-2 border-red-200 hover:border-red-400 transition-colors"
+                    onClick={() => setShowDamagePhoto(d.photo_url.startsWith('http') ? d.photo_url : `${BACKEND_URL}${d.photo_url}`)}
+                  />
+                )}
+                <div className="flex-1 min-w-0 text-xs">
+                  <div className="flex items-center gap-1 flex-wrap mb-0.5">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                      d.stage === 'pre_issue' ? 'bg-blue-100 text-blue-700' : 
+                      d.stage === 'return' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {d.stage_label || (d.stage === 'pre_issue' ? 'До видачі' : d.stage === 'return' ? 'Повернення' : 'Аудит')}
+                    </span>
+                    {d.order_number && <span className="text-slate-500">#{d.order_number}</span>}
+                    {d.fee > 0 && <span className="text-red-600 font-medium">₴{d.fee}</span>}
+                  </div>
+                  <div className="font-medium text-slate-800">{d.damage_type || d.type}</div>
+                  {d.note && <div className="text-slate-500 truncate">{d.note}</div>}
+                  <div className="text-slate-400 mt-0.5">{d.created_at} {d.created_by && `· ${d.created_by}`}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       {/* Кнопка пошкодження */}
       {onOpenDamage && !readOnly && (
         <button 

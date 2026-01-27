@@ -359,9 +359,23 @@ export default function ProductConditionPanel({
             history.map((record) => (
               <div 
                 key={record.id}
-                className="p-3 rounded-xl border border-slate-200 bg-white hover:shadow-sm transition-shadow"
+                className="p-3 rounded-xl border border-slate-200 bg-white hover:shadow-sm transition-shadow relative group"
               >
-                <div className="flex items-start justify-between">
+                {/* Кнопка видалення */}
+                <button
+                  onClick={() => handleDeleteRecord(record.id)}
+                  disabled={deletingId === record.id}
+                  className="absolute top-2 right-2 p-1.5 rounded-lg bg-red-50 text-red-500 opacity-0 group-hover:opacity-100 hover:bg-red-100 transition-all disabled:opacity-50"
+                  title="Видалити запис (відремонтовано)"
+                >
+                  {deletingId === record.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </button>
+                
+                <div className="flex items-start justify-between pr-8">
                   <div className="flex items-center gap-2">
                     <span className={`px-2 py-0.5 text-xs rounded-full ${SEVERITY_LABELS[record.severity]?.color || 'bg-slate-100'}`}>
                       {record.damage_type}

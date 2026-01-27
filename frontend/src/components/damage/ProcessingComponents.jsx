@@ -9,7 +9,8 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
 // ----------------------------- Status Chips -----------------------------
 export function StatusChips({ value, onChange, counts = {}, labels = {} }) {
-  const statuses = ["all", "pending", "in_progress", "completed"];
+  // Порядок: Потребують уваги -> В обробці -> Закриті -> Всі
+  const statuses = ["pending", "in_progress", "completed", "all"];
   const icons = { all: "📋", pending: "⏳", in_progress: "🔄", completed: "✅" };
   const tones = { all: "neutral", pending: "warn", in_progress: "info", completed: "ok" };
   

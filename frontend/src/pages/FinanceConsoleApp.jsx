@@ -299,6 +299,11 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   const [damageMethod, setDamageMethod] = useState("cash");
   const [loadingDamage, setLoadingDamage] = useState(false);
 
+  // Additional charge state
+  const [additionalDescription, setAdditionalDescription] = useState("");
+  const [additionalAmount, setAdditionalAmount] = useState("");
+  const [additionalMethod, setAdditionalMethod] = useState("cash");
+
   // Find deposit for this order
   const deposit = deposits.find(d => d.order_id === order.order_id);
   

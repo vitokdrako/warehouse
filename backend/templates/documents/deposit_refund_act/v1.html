@@ -71,8 +71,8 @@
 
 {% if finance.deposit_currency != 'UAH' %}
 <div class="info-box" style="padding: 15px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; margin-top: 15px;">
-    <p><strong>⚠️ Увага:</strong> Застава була прийнята у валюті {{ finance.deposit_currency }}.</p>
-    <p>Повернення здійснюється у тій самій валюті: <strong>{{ (finance.deposit_actual - (finance.deposit_used / (deposit_data.exchange_rate or 1)) - (finance.deposit_refunded / (deposit_data.exchange_rate or 1)))|round(2) }} {{ finance.deposit_currency }}</strong></p>
+    <p><strong>ℹ️ Інформація:</strong> Застава була прийнята у валюті {{ finance.deposit_currency }}.</p>
+    <p>Повернення здійснюється у тій самій валюті.</p>
 </div>
 {% endif %}
 

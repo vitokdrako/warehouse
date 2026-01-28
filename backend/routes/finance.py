@@ -392,6 +392,7 @@ async def create_payment(data: PaymentCreate):
         
         mapping = {
             "rent": ("CASH" if data.method == "cash" else "BANK", "RENT_REV"),
+            "additional": ("CASH" if data.method == "cash" else "BANK", "RENT_REV"),  # Донарахування → дохід
             "deposit": ("CASH" if data.method == "cash" else "BANK", "DEP_LIAB"),
             "damage": ("CASH" if data.method == "cash" else "BANK", "DMG_COMP"),
             "refund": ("DEP_LIAB", "CASH" if data.method == "cash" else "BANK"),

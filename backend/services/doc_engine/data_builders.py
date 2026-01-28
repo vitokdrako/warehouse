@@ -339,6 +339,8 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         "payments": payments,
         "deposit_data": deposit_data,
         "company": company,
+        "payer": payer,
+        "item_type": item_type,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options
     }

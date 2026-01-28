@@ -648,7 +648,7 @@ function MonthView({ baseDate, items, onDateClick }) {
                 {week.dates.map((date) => {
                   const dateItems = getDateItems(date)
                   const isCurrentMonth = date.getMonth() === currentMonth
-                  const isToday = toISO(date) === toISO(new Date())
+                  const isToday = toKyivISO(date) === toKyivISO(getKyivToday())
                   const isExpanded = expandedDates.has(toISO(date))
 
                   return (

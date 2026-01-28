@@ -1098,34 +1098,97 @@ export default function FinanceHub() {
             )}
 
             <Card title="⚡ Швидкі дії">
-              <div className="grid grid-cols-1 gap-2">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => {
-                    setExpenseType("rent");
-                    setShowExpenseModal(true);
-                  }}
-                >
-                  💵 Витрата (оренда)
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => {
-                    setExpenseType("damage");
-                    setShowExpenseModal(true);
-                  }}
-                >
-                  🔧 Витрата (шкода)
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={() => {
-                    loadAllExpenses();
-                    setShowOperationsModal(true);
-                  }}
-                >
-                  📋 Всі операції
-                </Button>
+              <div className="space-y-2">
+                <div className="text-xs font-semibold text-slate-500">💵 Витрати готівка</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="ghost" 
+                    className="text-xs !h-9"
+                    onClick={() => {
+                      setExpenseType("rent_cash");
+                      setOperationType("expense");
+                      setShowExpenseModal(true);
+                    }}
+                  >
+                    Оренда
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="text-xs !h-9"
+                    onClick={() => {
+                      setExpenseType("damage_cash");
+                      setOperationType("expense");
+                      setShowExpenseModal(true);
+                    }}
+                  >
+                    Шкода
+                  </Button>
+                </div>
+                
+                <div className="text-xs font-semibold text-slate-500 mt-3">🏦 Витрати безготівка</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="ghost" 
+                    className="text-xs !h-9"
+                    onClick={() => {
+                      setExpenseType("rent_bank");
+                      setOperationType("expense");
+                      setShowExpenseModal(true);
+                    }}
+                  >
+                    Оренда
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="text-xs !h-9"
+                    onClick={() => {
+                      setExpenseType("damage_bank");
+                      setOperationType("expense");
+                      setShowExpenseModal(true);
+                    }}
+                  >
+                    Шкода
+                  </Button>
+                </div>
+                
+                <div className="text-xs font-semibold text-slate-500 mt-3">📥 Внесення коштів</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="ghost" 
+                    className="text-xs !h-9 !text-emerald-600 !border-emerald-200"
+                    onClick={() => {
+                      setExpenseType("rent_cash");
+                      setOperationType("deposit");
+                      setShowExpenseModal(true);
+                    }}
+                  >
+                    + Оренда
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="text-xs !h-9 !text-emerald-600 !border-emerald-200"
+                    onClick={() => {
+                      setExpenseType("damage_cash");
+                      setOperationType("deposit");
+                      setShowExpenseModal(true);
+                    }}
+                  >
+                    + Шкода
+                  </Button>
+                </div>
+                
+                <div className="pt-2 mt-2 border-t border-slate-100">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full"
+                    onClick={() => {
+                      loadAllExpenses();
+                      setShowOperationsModal(true);
+                    }}
+                  >
+                    📋 Всі операції
+                  </Button>
+                </div>
               </div>
             </Card>
           </div>

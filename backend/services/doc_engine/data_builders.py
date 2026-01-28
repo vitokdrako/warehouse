@@ -265,14 +265,20 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
     if not payer_profile_id:
         # Перевіримо чи є payer_profile_id в замовленні
         try:
-            payer_result = db.execute(text("""
-                SELECT payer_profile_id FROM orders WHERE order_id = :order_id
-            """), {"order_id": order_id_int})
-            payer_row = payer_result.fetchone()
-            if payer_row and payer_row[0]:
-                payer_profile_id = payer_row[0]
-        except:
-            pass
+            # Спочатку перевіримо чи існує колонка
+            check_col = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_NAME = 'orders' AND COLUMN_NAME = 'payer_profile_id'
+            """))
+            if check_col.fetchone()[0] > 0:
+                payer_result = db.execute(text("""
+                    SELECT payer_profile_id FROM orders WHERE order_id = :order_id
+                """), {"order_id": order_id_int})
+                payer_row = payer_result.fetchone()
+                if payer_row and payer_row[0]:
+                    payer_profile_id = payer_row[0]
+        except Exception as e:
+            print(f"Warning: Could not check payer_profile_id: {e}")
     
     if payer_profile_id:
         try:

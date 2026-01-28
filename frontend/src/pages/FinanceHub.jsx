@@ -1203,39 +1203,126 @@ export default function FinanceHub() {
 
             {selectedOrder && (
               <Card title="📄 Документи">
-                <div className="space-y-2">
-                  {DOC_TYPES.map((dt) => {
-                    const existing = documents.find(d => d.doc_type === dt.type);
-                    return (
-                      <div
-                        key={dt.type}
-                        className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2"
+                <div className="space-y-4">
+                  {/* Payer Profile Section */}
+                  <div className="rounded-xl border border-slate-200 p-3 bg-slate-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-slate-600">ТИП ПЛАТНИКА</span>
+                      <button
+                        onClick={() => setShowPayerModal(true)}
+                        className="text-xs text-blue-600 hover:underline"
                       >
-                        <div>
-                          <div className="text-sm font-medium text-slate-900">{dt.title}</div>
-                          {existing && (
-                            <div className="text-xs text-emerald-600">✓ {existing.doc_number}</div>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          {existing && (
-                            <button
-                              onClick={() => viewDocument(existing)}
-                              className="px-2 py-1 text-xs rounded-lg hover:bg-slate-100"
-                            >
-                              👁
-                            </button>
-                          )}
-                          <button
-                            onClick={() => generateDocument(dt.type)}
-                            className="px-2 py-1 text-xs rounded-lg bg-slate-100 hover:bg-slate-200"
-                          >
-                            🔄
-                          </button>
+                        {selectedPayerProfile ? "Змінити" : "+ Додати"}
+                      </button>
+                    </div>
+                    {selectedPayerProfile ? (
+                      <div className="text-sm">
+                        <div className="font-semibold text-slate-900">{selectedPayerProfile.company_name}</div>
+                        <div className="text-xs text-slate-500">
+                          {PAYER_TYPE_LABELS[selectedPayerProfile.payer_type] || selectedPayerProfile.payer_type}
+                          {selectedPayerProfile.edrpou && ` · ${selectedPayerProfile.edrpou}`}
                         </div>
                       </div>
-                    );
-                  })}
+                    ) : (
+                      <div className="text-sm text-slate-500">Фізична особа (за замовчуванням)</div>
+                    )}
+                  </div>
+                  
+                  {/* Documents for Individuals */}
+                  <div>
+                    <div className="text-xs font-semibold text-slate-500 mb-2">Документи (фіз. особа)</div>
+                    <div className="space-y-2">
+                      {DOC_TYPES.map((dt) => {
+                        const existing = documents.find(d => d.doc_type === dt.type);
+                        return (
+                          <div
+                            key={dt.type}
+                            className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2"
+                          >
+                            <div>
+                              <div className="text-sm font-medium text-slate-900">{dt.title}</div>
+                              {existing && (
+                                <div className="text-xs text-emerald-600">✓ {existing.doc_number}</div>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              {existing && (
+                                <button
+                                  onClick={() => viewDocument(existing)}
+                                  className="px-2 py-1 text-xs rounded-lg hover:bg-slate-100"
+                                >
+                                  👁
+                                </button>
+                              )}
+                              <button
+                                onClick={() => generateDocument(dt.type)}
+                                className="px-2 py-1 text-xs rounded-lg bg-slate-100 hover:bg-slate-200"
+                              >
+                                🔄
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  
+                  {/* Documents for Legal Entities */}
+                  <div>
+                    <div className="text-xs font-semibold text-slate-500 mb-2">Документи (юр. особа)</div>
+                    <div className="space-y-2">
+                      {LEGAL_DOC_TYPES.map((dt) => {
+                        const existing = documents.find(d => d.doc_type === dt.type);
+                        const isApplicable = selectedPayerProfile && (
+                          dt.forLegal ||
+                          (dt.forSimplified && ["fop_simple", "llc_simple"].includes(selectedPayerProfile.payer_type)) ||
+                          (dt.forGeneral && ["fop_general", "llc_general"].includes(selectedPayerProfile.payer_type))
+                        );
+                        
+                        return (
+                          <div
+                            key={dt.type}
+                            className={cn(
+                              "flex items-center justify-between rounded-xl border px-3 py-2",
+                              isApplicable 
+                                ? "border-blue-200 bg-blue-50" 
+                                : "border-slate-200 bg-slate-50 opacity-50"
+                            )}
+                          >
+                            <div>
+                              <div className="text-sm font-medium text-slate-900">{dt.title}</div>
+                              {existing && (
+                                <div className="text-xs text-emerald-600">✓ {existing.doc_number}</div>
+                              )}
+                              {!selectedPayerProfile && (
+                                <div className="text-xs text-slate-400">Вкажіть платника</div>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              {existing && (
+                                <button
+                                  onClick={() => viewDocument(existing)}
+                                  className="px-2 py-1 text-xs rounded-lg hover:bg-slate-100"
+                                >
+                                  👁
+                                </button>
+                              )}
+                              <button
+                                onClick={() => generateLegalDocument(dt.type)}
+                                disabled={!isApplicable}
+                                className={cn(
+                                  "px-2 py-1 text-xs rounded-lg",
+                                  isApplicable ? "bg-blue-100 hover:bg-blue-200" : "bg-slate-100 cursor-not-allowed"
+                                )}
+                              >
+                                🔄
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </Card>
             )}

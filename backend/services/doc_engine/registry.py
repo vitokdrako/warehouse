@@ -334,6 +334,58 @@ DOC_REGISTRY = {
     },
     
     # ═══════════════════════════════════════════════════════════════
+    # ДОКУМЕНТИ ДЛЯ ЮРИДИЧНИХ ОСІБ (ФОП / ТОВ)
+    # ═══════════════════════════════════════════════════════════════
+    "invoice_legal": {
+        "name": "Рахунок (юр. особа)",
+        "name_en": "Legal Entity Invoice",
+        "entity_type": "order",
+        "series": "INV",
+        "template": "invoice_legal/v1.html",
+        "requirements": ["order_id"],
+        "description": "Рахунок на оплату для ФОП/ТОВ",
+        "trigger_stage": "draft_to_confirm",
+        "trigger_before": "payment",
+        "print_required": False,
+        "pdf_always": True,
+        "critical_for": ["legal", "finance"],
+        "purpose": "Офіційний рахунок для юр. осіб з реквізитами сторін",
+        "payer_types": ["fop_simple", "fop_general", "llc_simple", "llc_general"]
+    },
+    "service_act": {
+        "name": "Акт виконаних робіт",
+        "name_en": "Service Completion Act",
+        "entity_type": "order",
+        "series": "ACT",
+        "template": "service_act/v1.html",
+        "requirements": ["order_id"],
+        "description": "Акт виконаних робіт для спрощеної системи (послуга)",
+        "trigger_stage": "after_return",
+        "trigger_at": "settlement",
+        "print_required": True,
+        "pdf_always": True,
+        "critical_for": ["legal", "finance"],
+        "purpose": "Підтвердження надання послуг для ФОП/ТОВ на спрощеній системі",
+        "payer_types": ["fop_simple", "llc_simple"]
+    },
+    "goods_invoice": {
+        "name": "Видаткова накладна",
+        "name_en": "Goods Invoice / Delivery Note",
+        "entity_type": "order",
+        "series": "VN",
+        "template": "goods_invoice/v1.html",
+        "requirements": ["order_id"],
+        "description": "Видаткова накладна для загальної системи (товар)",
+        "trigger_stage": "issue",
+        "trigger_at": "issue",
+        "print_required": True,
+        "pdf_always": True,
+        "critical_for": ["legal", "finance"],
+        "purpose": "Документ відпуску товару для ФОП/ТОВ на загальній системі",
+        "payer_types": ["fop_general", "llc_general"]
+    },
+    
+    # ═══════════════════════════════════════════════════════════════
     # 15. Розшифровка пошкоджень - ВИДАЛЕНО (функціонал інтегровано в Акт передачі)
     # ═══════════════════════════════════════════════════════════════
     

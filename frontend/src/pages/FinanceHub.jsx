@@ -712,7 +712,6 @@ export default function FinanceHub() {
                             { value: "additional", label: "Донарахування" },
                             { value: "damage", label: "Шкода" },
                             { value: "deposit_in", label: "Прийом застави" },
-                            { value: "deposit_out", label: "Повернення застави" },
                             { value: "deposit_use", label: "Утримання із застави" },
                           ]}
                         />

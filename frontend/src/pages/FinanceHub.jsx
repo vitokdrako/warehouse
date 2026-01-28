@@ -574,12 +574,148 @@ export default function FinanceHub() {
   
   // Document types
   const DOC_TYPES = [
-    { type: "invoice_offer", title: "Рахунок-оферта" },
-    { type: "contract_rent", title: "Договір оренди" },
-    { type: "deposit_settlement_act", title: "Акт взаєморозрахунків" },
-    { type: "deposit_refund_act", title: "Акт повернення застави" },
-    { type: "invoice_additional", title: "Рахунок на доплату" },
+    { type: "invoice_offer", title: "Рахунок-оферта", forIndividual: true },
+    { type: "contract_rent", title: "Договір оренди", forIndividual: true },
+    { type: "deposit_settlement_act", title: "Акт взаєморозрахунків", forIndividual: true },
+    { type: "deposit_refund_act", title: "Акт повернення застави", forIndividual: true },
+    { type: "invoice_additional", title: "Рахунок на доплату", forIndividual: true },
   ];
+  
+  // Legal entity document types
+  const LEGAL_DOC_TYPES = [
+    { type: "invoice_legal", title: "Рахунок (юр. особа)", forLegal: true },
+    { type: "service_act", title: "Акт виконаних робіт", forSimplified: true },
+    { type: "goods_invoice", title: "Видаткова накладна", forGeneral: true },
+  ];
+  
+  // Payer profile state
+  const [showPayerModal, setShowPayerModal] = useState(false);
+  const [payerProfiles, setPayerProfiles] = useState([]);
+  const [selectedPayerProfile, setSelectedPayerProfile] = useState(null);
+  const [payerForm, setPayerForm] = useState({
+    payer_type: "fop_simple",
+    company_name: "",
+    edrpou: "",
+    iban: "",
+    bank_name: "",
+    director_name: "",
+    address: "",
+    is_vat_payer: false
+  });
+  
+  // Load payer profiles
+  const loadPayerProfiles = useCallback(async () => {
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/payer-profiles`);
+      const data = await res.json();
+      setPayerProfiles(data.profiles || []);
+    } catch (e) {
+      console.error("Load payer profiles error:", e);
+    }
+  }, []);
+  
+  // Load order payer
+  const loadOrderPayer = useCallback(async (orderId) => {
+    if (!orderId) return;
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/payer-profiles/order/${orderId}`);
+      const data = await res.json();
+      setSelectedPayerProfile(data.profile || null);
+    } catch (e) {
+      console.error("Load order payer error:", e);
+      setSelectedPayerProfile(null);
+    }
+  }, []);
+  
+  // Save payer profile
+  const handleSavePayerProfile = async () => {
+    if (!payerForm.company_name.trim()) return;
+    
+    setSaving(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/payer-profiles`, {
+        method: "POST",
+        body: JSON.stringify(payerForm)
+      });
+      const data = await res.json();
+      
+      if (data.success && selectedOrderId) {
+        // Assign to order
+        await authFetch(`${BACKEND_URL}/api/payer-profiles/order/${selectedOrderId}/assign/${data.profile_id}`, {
+          method: "POST"
+        });
+        await loadPayerProfiles();
+        await loadOrderPayer(selectedOrderId);
+      }
+      
+      setShowPayerModal(false);
+      setPayerForm({
+        payer_type: "fop_simple",
+        company_name: "",
+        edrpou: "",
+        iban: "",
+        bank_name: "",
+        director_name: "",
+        address: "",
+        is_vat_payer: false
+      });
+    } catch (e) {
+      console.error("Save payer profile error:", e);
+      alert("Помилка: " + e.message);
+    }
+    setSaving(false);
+  };
+  
+  // Assign existing payer profile to order
+  const handleAssignPayerProfile = async (profileId) => {
+    if (!selectedOrderId) return;
+    
+    setSaving(true);
+    try {
+      await authFetch(`${BACKEND_URL}/api/payer-profiles/order/${selectedOrderId}/assign/${profileId}`, {
+        method: "POST"
+      });
+      await loadOrderPayer(selectedOrderId);
+    } catch (e) {
+      console.error("Assign payer error:", e);
+    }
+    setSaving(false);
+  };
+  
+  // Generate document with payer profile
+  const generateLegalDocument = async (docType) => {
+    if (!selectedOrderId) return;
+    try {
+      const options = selectedPayerProfile ? { payer_profile_id: selectedPayerProfile.id } : {};
+      const res = await authFetch(`${BACKEND_URL}/api/documents/generate`, {
+        method: "POST",
+        body: JSON.stringify({
+          doc_type: docType,
+          entity_id: String(selectedOrderId),
+          format: "html",
+          options
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.html_content) {
+        const win = window.open("", "_blank");
+        win.document.write(data.html_content);
+        win.document.close();
+        await loadDocuments(selectedOrderId);
+      }
+    } catch (e) {
+      console.error("Generate doc error:", e);
+    }
+  };
+  
+  // Payer type labels
+  const PAYER_TYPE_LABELS = {
+    individual: "Фіз. особа",
+    fop_simple: "ФОП (спрощена)",
+    fop_general: "ФОП (загальна)",
+    llc_simple: "ТОВ (спрощена)",
+    llc_general: "ТОВ (загальна)"
+  };
   
   if (loading) {
     return (

@@ -67,17 +67,17 @@
 <h2>3. Застава</h2>
 <table>
     <tr><td style="width:300px">Застава отримана:</td><td class="text-right">
-        {% if finance.deposit_currency != 'UAH' %}
-            {{ finance.deposit_actual|money }} {{ finance.deposit_currency }} (≈{{ finance.deposit_held|money }} ₴)
-        {% else %}
-            {{ finance.deposit_held|money }} ₴
-        {% endif %}
+        {% if finance.deposit_currency == 'USD' %}${% elif finance.deposit_currency == 'EUR' %}€{% else %}₴{% endif %}{{ finance.deposit_actual|money }}
     </td></tr>
     {% if finance.deposit_used > 0 %}
-    <tr><td class="warning">Утримано із застави (шкода):</td><td class="text-right warning">-{{ finance.deposit_used|money }} ₴</td></tr>
+    <tr><td class="warning">Утримано із застави (шкода):</td><td class="text-right warning">
+        -{% if finance.deposit_currency == 'USD' %}${% elif finance.deposit_currency == 'EUR' %}€{% else %}₴{% endif %}{{ (finance.deposit_used / (deposit_data.exchange_rate or 1))|round(2) if finance.deposit_currency != 'UAH' else finance.deposit_used|money }}
+    </td></tr>
     {% endif %}
     {% if finance.deposit_refunded > 0 %}
-    <tr><td>Вже повернено:</td><td class="text-right">{{ finance.deposit_refunded|money }} ₴</td></tr>
+    <tr><td>Вже повернено:</td><td class="text-right">
+        {% if finance.deposit_currency == 'USD' %}${% elif finance.deposit_currency == 'EUR' %}€{% else %}₴{% endif %}{{ (finance.deposit_refunded / (deposit_data.exchange_rate or 1))|round(2) if finance.deposit_currency != 'UAH' else finance.deposit_refunded|money }}
+    </td></tr>
     {% endif %}
 </table>
 

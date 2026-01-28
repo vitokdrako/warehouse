@@ -4,10 +4,10 @@
 <style>
     body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
     h1 { font-size: 16pt; font-weight: bold; margin-bottom: 20px; }
-    .header-info { margin-bottom: 25px; line-height: 1.6; }
+    .header-info { margin-bottom: 20px; line-height: 1.6; }
     .header-info p { margin: 5px 0; }
     .label { font-weight: normal; }
-    .value { font-weight: normal; }
+    .buyer-details { font-size: 11pt; margin-left: 95px; line-height: 1.4; }
     .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
     .items-table th, .items-table td { border: 1px solid #000; padding: 8px; }
     .items-table th { background: #f5f5f5; font-weight: bold; text-align: center; }
@@ -24,6 +24,9 @@
     .separator { border-top: 1px solid #000; margin: 30px 0; }
 </style>
 
+{% set is_general = payer.payer_type in ['fop_general', 'llc_general'] %}
+{% set item_name = 'Квіткова композиція' if is_general else 'Прокат декору' %}
+
 <h1>Рахунок на оплату № {{ doc_number.split('-')[-1] if doc_number and '-' in doc_number else (doc_number or order.order_number) }} від {{ generated_at.split(' ')[0] if ' ' in generated_at else generated_at }} р.</h1>
 
 <div class="header-info">
@@ -33,7 +36,16 @@
 </div>
 
 <div class="header-info">
-    <p><span class="label">Покупець:</span> <strong>{{ payer.company_name or order.customer_name }}</strong></p>
+    <p><span class="label">Покупець:</span> <strong>{% if payer.payer_type in ['fop_simple', 'fop_general'] %}ФОП {% endif %}{{ payer.company_name or order.customer_name }}</strong></p>
+    {% if is_general and (payer.address or payer.edrpou or payer.iban) %}
+    <div class="buyer-details">
+        {% if payer.address %}{{ payer.address }}{% endif %}
+        {% if payer.edrpou %} ЄДРПОУ {{ payer.edrpou }}{% endif %}
+        {% if payer.tax_number %} ІПН {{ payer.tax_number }}{% endif %}
+        {% if payer.iban %}<br>{{ payer.iban }}{% endif %}
+        {% if payer.bank_name %} в {{ payer.bank_name }}{% endif %}
+    </div>
+    {% endif %}
 </div>
 
 <p style="margin: 20px 0;"><span class="label">Договір:</span> Основний</p>
@@ -52,7 +64,7 @@
     <tbody>
         <tr>
             <td>1</td>
-            <td style="text-align: left;">Прокат декору</td>
+            <td style="text-align: left;">{{ item_name }}</td>
             <td>1</td>
             <td>шт</td>
             <td style="text-align: right;">{{ "{:,.2f}".format(totals.rent).replace(",", " ") }}</td>

@@ -1202,17 +1202,26 @@ export default function FinanceHub() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
               <h3 className="font-semibold">
-                {expenseType === "rent" ? "💵 Витрата з каси оренди" : "🔧 Витрата з каси шкоди"}
+                {operationType === "deposit" ? "📥 Внесення коштів" : "📉 Витрата"}
+                {" • "}
+                {expenseType.includes("rent") ? "Оренда" : "Шкода"}
+                {" • "}
+                {expenseType.includes("bank") ? "Безготівка" : "Готівка"}
               </h3>
               <button onClick={() => setShowExpenseModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Опис витрати *</label>
+                <label className="text-xs text-slate-500 mb-1 block">Опис *</label>
                 <Input
                   value={expenseDescription}
                   onChange={(e) => setExpenseDescription(e.target.value)}
-                  placeholder={expenseType === "rent" ? "Оплата приміщення, комунальні..." : "Фарба, реставрація, расходники..."}
+                  placeholder={operationType === "deposit" 
+                    ? "Джерело внесення..." 
+                    : expenseType.includes("rent") 
+                      ? "Оплата приміщення, комунальні..." 
+                      : "Фарба, реставрація, расходники..."
+                  }
                 />
               </div>
               <div>
@@ -1229,11 +1238,11 @@ export default function FinanceHub() {
                   Скасувати
                 </Button>
                 <Button 
-                  className="flex-1" 
+                  className={cn("flex-1", operationType === "deposit" && "!bg-emerald-600 hover:!bg-emerald-700")}
                   disabled={saving || !expenseAmount || !expenseDescription.trim()}
                   onClick={handleAddExpense}
                 >
-                  {saving ? "..." : "Додати витрату"}
+                  {saving ? "..." : operationType === "deposit" ? "Внести" : "Додати витрату"}
                 </Button>
               </div>
             </div>
@@ -1251,10 +1260,12 @@ export default function FinanceHub() {
             </div>
             <div className="p-4 overflow-y-auto flex-1">
               {allExpenses.length === 0 ? (
-                <div className="text-center text-slate-500 py-8">Немає витрат</div>
+                <div className="text-center text-slate-500 py-8">Немає операцій</div>
               ) : (
                 <div className="space-y-2">
-                  {allExpenses.map((exp) => (
+                  {allExpenses.map((exp) => {
+                    const isDeposit = exp.expense_type === "income" || exp.category?.includes("DEPOSIT");
+                    return (
                     <div key={exp.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
                       <div>
                         <div className="text-sm font-medium text-slate-900">{exp.description}</div>

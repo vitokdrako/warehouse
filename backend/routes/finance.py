@@ -234,18 +234,19 @@ async def get_payouts_stats(db: Session = Depends(get_rh_db)):
             SELECT COALESCE(SUM(cost), 0) FROM laundry_batches
         """)).fetchone()[0]
         
-        # Active cash balance
+        # Active cash balance - сума готівкових платежів мінус витрати
+        # (не використовуємо ledger, бо там застави теж враховуються)
         cash_balance = db.execute(text("""
-            SELECT COALESCE(SUM(CASE WHEN direction = 'D' THEN amount ELSE -amount END), 0)
-            FROM fin_ledger_entries e JOIN fin_accounts a ON a.id = e.account_id 
-            WHERE a.code = 'CASH'
+            SELECT 
+                COALESCE((SELECT SUM(amount) FROM fin_payments WHERE method = 'cash' AND status IN ('completed', 'confirmed')), 0)
+                - COALESCE((SELECT SUM(amount) FROM fin_expenses WHERE method = 'cash'), 0)
+                - COALESCE((SELECT SUM(amount) FROM fin_encashments WHERE status = 'done'), 0)
         """)).fetchone()[0]
         
-        # Bank balance
+        # Bank balance - сума безготівкових платежів
         bank_balance = db.execute(text("""
-            SELECT COALESCE(SUM(CASE WHEN direction = 'D' THEN amount ELSE -amount END), 0)
-            FROM fin_ledger_entries e JOIN fin_accounts a ON a.id = e.account_id 
-            WHERE a.code = 'BANK'
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE method IN ('card', 'bank') AND status IN ('completed', 'confirmed')
         """)).fetchone()[0]
         
         # Total rent revenue

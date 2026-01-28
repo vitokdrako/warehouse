@@ -152,11 +152,11 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         total_deposit = order["deposit_amount"]
     
     # === ФІНАНСОВІ ДАНІ (платежі, шкода, застава) ===
-    # Платежі по ордеру
+    # Платежі по ордеру (status може бути 'completed' або 'confirmed')
     payments_result = db.execute(text("""
         SELECT payment_type, method, amount, note, occurred_at
         FROM fin_payments
-        WHERE order_id = :order_id AND status = 'completed'
+        WHERE order_id = :order_id AND status IN ('completed', 'confirmed')
         ORDER BY occurred_at
     """), {"order_id": order_id})
     

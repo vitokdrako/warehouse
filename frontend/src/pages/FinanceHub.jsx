@@ -308,8 +308,8 @@ export default function FinanceHub() {
         body: JSON.stringify({
           amount: Number(expenseAmount),
           description: expenseDescription,
-          category: expenseType, // "rent" або "damage"
-          method: "cash",
+          category: expenseType, // "rent_cash", "damage_cash", "rent_bank", "damage_bank"
+          operation_type: operationType, // "expense" or "deposit"
           created_by_id: user.id,
           created_by_name: user.email,
         }),

@@ -522,19 +522,22 @@ async def create_simple_expense(data: SimpleExpenseCreate, db: Session = Depends
         if data.category == "rent":
             expense_type = "expense"
             category_code = "RENT_EXPENSE"  # Витрати на оренду приміщення
+            category_name = "Витрати на оренду"
         else:  # damage
             expense_type = "expense"
             category_code = "DAMAGE_EXPENSE"  # Витрати на реставрацію/шкоду
+            category_name = "Витрати на реставрацію"
         
         # Check if categories exist, if not create them
         cat = db.execute(text("SELECT id FROM fin_categories WHERE code = :code"), {"code": category_code}).fetchone()
         if not cat:
+            # Insert without 'direction' column which doesn't exist in this table
             db.execute(text("""
-                INSERT INTO fin_categories (code, name, type, direction) 
-                VALUES (:code, :name, 'expense', 'out')
+                INSERT INTO fin_categories (code, name, type) 
+                VALUES (:code, :name, 'expense')
             """), {
                 "code": category_code, 
-                "name": "Витрати на оренду" if data.category == "rent" else "Витрати на реставрацію"
+                "name": category_name
             })
             db.commit()
             cat = db.execute(text("SELECT id FROM fin_categories WHERE code = :code"), {"code": category_code}).fetchone()

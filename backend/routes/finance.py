@@ -1257,7 +1257,7 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
     Finance Hub 2.0 - Головний огляд (спрощена версія)
     """
     try:
-        # Один запит для всієї статистики
+        # Один запит для платежів та витрат
         result = db.execute(text("""
             SELECT 
                 -- Готівка
@@ -1275,9 +1275,7 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_expenses 
                  WHERE status = 'posted' AND MONTH(occurred_at) = MONTH(CURRENT_DATE()) AND YEAR(occurred_at) = YEAR(CURRENT_DATE())) as month_expenses,
                 -- Кількість ордерів
-                (SELECT COUNT(*) FROM orders WHERE status NOT IN ('cancelled', 'archived') AND is_archived = FALSE) as total_orders,
-                -- Оплачені ордери
-                (SELECT COUNT(*) FROM orders WHERE rent_paid >= total_price AND total_price > 0 AND is_archived = FALSE) as paid_orders
+                (SELECT COUNT(*) FROM orders WHERE status NOT IN ('cancelled', 'archived')) as total_orders
         """))
         
         row = result.fetchone()
@@ -1311,7 +1309,6 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
         revenue = float(row[2] or 0) if row else 0
         expenses = float(row[3] or 0) if row else 0
         total_orders = int(row[4] or 0) if row else 0
-        paid_orders = int(row[5] or 0) if row else 0
         
         return {
             "cash": {"balance": cash, "currency": "UAH"},
@@ -1324,8 +1321,8 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
             },
             "orders": {
                 "total": total_orders,
-                "fully_paid": paid_orders,
-                "with_debt": total_orders - paid_orders
+                "fully_paid": 0,
+                "with_debt": 0
             }
         }
     except Exception as e:

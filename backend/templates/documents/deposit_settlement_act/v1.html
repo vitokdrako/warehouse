@@ -90,11 +90,7 @@
     <tr class="warning"><td></td><td>Борг за шкоду:</td><td class="text-right">{{ finance.damage_due|money }} ₴</td></tr>
     {% endif %}
     <tr class="total-row"><td></td><td>ЗАСТАВА ДО ПОВЕРНЕННЯ:</td><td class="text-right success">
-        {% if finance.deposit_currency != 'UAH' and finance.deposit_to_refund > 0 %}
-            ≈{{ finance.deposit_to_refund|money }} ₴
-        {% else %}
-            {{ finance.deposit_to_refund|money }} ₴
-        {% endif %}
+        {% if finance.deposit_currency == 'USD' %}${% elif finance.deposit_currency == 'EUR' %}€{% else %}₴{% endif %}{{ ((finance.deposit_actual - (finance.deposit_used + finance.deposit_refunded) / (deposit_data.exchange_rate or 1)) if finance.deposit_currency != 'UAH' else finance.deposit_to_refund)|round(2) }}
     </td></tr>
 </table>
 

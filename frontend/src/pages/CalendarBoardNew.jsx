@@ -292,7 +292,7 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
       const weekDates = Array.from({ length: 7 }, (_, dayIdx) => addDays(weekStart, dayIdx))
       
       // Визначаємо чи це поточний тиждень
-      const currentWeekStart = startOfWeek(new Date())
+      const currentWeekStart = startOfWeek(getKyivToday())
       const isCurrentWeek = toISO(weekStart) === toISO(currentWeekStart)
       
       weeks.push({

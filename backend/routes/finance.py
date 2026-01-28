@@ -224,14 +224,18 @@ async def get_payouts_stats(db: Session = Depends(get_rh_db)):
             ) FROM product_damage_history WHERE fee > 0
         """)).fetchone()[0]
         
-        # Expenses paid from cash
-        cash_expenses = db.execute(text("""
-            SELECT COALESCE(SUM(amount), 0) FROM fin_expenses WHERE method = 'cash'
+        # Expenses from rent cash (приміщення, комунальні)
+        rent_expenses = db.execute(text("""
+            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE e.method = 'cash' AND (c.code = 'RENT_EXPENSE' OR c.code IS NULL OR c.code NOT LIKE 'DAMAGE%')
         """)).fetchone()[0]
         
-        # Expenses related to damage (laundry, restoration)
+        # Expenses from damage cash (реставрація, фарба)
         damage_expenses = db.execute(text("""
-            SELECT COALESCE(SUM(cost), 0) FROM laundry_batches
+            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE e.method = 'cash' AND c.code = 'DAMAGE_EXPENSE'
         """)).fetchone()[0]
         
         # Active cash balance - сума готівкових платежів мінус витрати
@@ -257,13 +261,13 @@ async def get_payouts_stats(db: Session = Depends(get_rh_db)):
         # Bank payments from rent
         rent_bank = db.execute(text("""
             SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-            WHERE payment_type = 'rent' AND method = 'card'
+            WHERE payment_type = 'rent' AND method IN ('card', 'bank')
         """)).fetchone()[0]
         
         # Bank payments from damage
         damage_bank = db.execute(text("""
             SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-            WHERE payment_type = 'damage' AND method = 'card'
+            WHERE payment_type = 'damage' AND method IN ('card', 'bank')
         """)).fetchone()[0]
         
         return {
@@ -272,7 +276,7 @@ async def get_payouts_stats(db: Session = Depends(get_rh_db)):
             "total_due": float(due_damage or 0) if due_damage and due_damage > 0 else 0,
             "due_rent": 0,  # Will be calculated from orders API if needed
             "due_damage": float(due_damage or 0) if due_damage and due_damage > 0 else 0,
-            "cash_expenses": float(cash_expenses or 0),
+            "rent_expenses": float(rent_expenses or 0),
             "damage_expenses": float(damage_expenses or 0),
             "cash_balance": float(cash_balance or 0),
             "bank_balance": float(bank_balance or 0),

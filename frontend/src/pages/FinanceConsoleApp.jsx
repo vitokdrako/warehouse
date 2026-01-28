@@ -590,6 +590,37 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
           </div>
         </Card>
 
+        {/* Additional Charge (Донарахування) */}
+        <Card title="Донарахування" subtitle="Доставка, упаковка, тощо" right={<Pill tone="info" label="additional" />}>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="md:col-span-3">
+              <label className="text-xs text-corp-text-muted">Назва нарахування *</label>
+              <input 
+                className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" 
+                value={additionalDescription} 
+                onChange={(e) => setAdditionalDescription(e.target.value)} 
+                placeholder="Доставка, упаковка, додаткові послуги..."
+              />
+            </div>
+            <div>
+              <label className="text-xs text-corp-text-muted">Метод</label>
+              <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={additionalMethod} onChange={(e) => setAdditionalMethod(e.target.value)}>
+                <option value="cash">Готівка</option>
+                <option value="bank">Безготівка</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-corp-text-muted">Сума (₴)</label>
+              <input className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" value={additionalAmount} onChange={(e) => setAdditionalAmount(e.target.value)} type="number" placeholder="0" />
+            </div>
+            <div className="flex items-end">
+              <PrimaryBtn disabled={!additionalDescription || Number(additionalAmount) <= 0 || saving} onClick={acceptAdditional}>
+                {saving ? "..." : "Зарахувати"}
+              </PrimaryBtn>
+            </div>
+          </div>
+        </Card>
+
         {/* Damage Payment */}
         <Card 
           title="Оплата шкоди" 

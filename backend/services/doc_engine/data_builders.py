@@ -218,17 +218,18 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
     # Реальні дані з офіційних документів farforrent.com.ua
     company = {
         "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Николенко Наталя Станіславівна",
+        "legal_name": "ФОП Трофімова Вікторія Сергіївна",
         "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
         "warehouse": "м. Харків, Військовий провулок, 1",
         "phone": "+380 XX XXX XX XX",  # TODO: додати реальний номер
         "email": "rfarfordecor@gmail.com.ua",
         "website": "https://www.farforrent.com.ua",
-        "tax_id": "3606801844",
-        "edrpou": "3606801844",
-        "iban": "UA043220010000026003340091618",
+        "tax_id": "3505100720",
+        "edrpou": "3505100720",
+        "iban": "UA653220010000026003340152018",
         "mfo": "322001",
         "bank_name": "АТ «УНІВЕРСАЛ БАНК»",
+        "director_name": "Трофімова Вікторія Сергіївна",
         # Правові документи
         "terms_url": "https://www.farforrent.com.ua/terms",
         "privacy_url": "https://www.farforrent.com.ua/privacy",
@@ -246,6 +247,64 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         "working_hours": "пн-пт 10:00-18:00",
         "issue_hours": "пн-сб 10:00-17:00",
     }
+    
+    # === ДАНІ ПЛАТНИКА (PAYER PROFILE) ===
+    payer = {
+        "payer_type": "individual",
+        "company_name": order["customer_name"],
+        "director_name": order["customer_name"],
+        "edrpou": None,
+        "iban": None,
+        "bank_name": None,
+        "address": None,
+        "is_vat_payer": False
+    }
+    
+    # Спробуємо отримати профіль платника якщо вказано в options або прив'язано до замовлення
+    payer_profile_id = options.get("payer_profile_id")
+    if not payer_profile_id:
+        # Перевіримо чи є payer_profile_id в замовленні
+        try:
+            payer_result = db.execute(text("""
+                SELECT payer_profile_id FROM orders WHERE order_id = :order_id
+            """), {"order_id": order_id_int})
+            payer_row = payer_result.fetchone()
+            if payer_row and payer_row[0]:
+                payer_profile_id = payer_row[0]
+        except:
+            pass
+    
+    if payer_profile_id:
+        try:
+            profile_result = db.execute(text("""
+                SELECT payer_type, company_name, edrpou, iban, bank_name, 
+                       director_name, address, tax_number, is_vat_payer
+                FROM payer_profiles WHERE id = :id
+            """), {"id": payer_profile_id})
+            profile_row = profile_result.fetchone()
+            if profile_row:
+                payer = {
+                    "payer_type": profile_row[0] or "individual",
+                    "company_name": profile_row[1] or order["customer_name"],
+                    "edrpou": profile_row[2],
+                    "iban": profile_row[3],
+                    "bank_name": profile_row[4],
+                    "director_name": profile_row[5] or order["customer_name"],
+                    "address": profile_row[6],
+                    "tax_number": profile_row[7],
+                    "is_vat_payer": bool(profile_row[8])
+                }
+        except Exception as e:
+            print(f"Warning: Could not load payer profile {payer_profile_id}: {e}")
+    
+    # Визначення типу товару/послуги на основі типу платника
+    payer_type = payer.get("payer_type", "individual")
+    if payer_type in ["fop_simple", "llc_simple"]:
+        item_type = "service"  # Послуга "Прокат декору"
+    elif payer_type in ["fop_general", "llc_general"]:
+        item_type = "goods"  # Товар "Декор"
+    else:
+        item_type = "service"  # За замовчуванням для фіз. осіб
     
     # Розрахунок балансу
     rent_due = max(0, total_rent - rent_paid)

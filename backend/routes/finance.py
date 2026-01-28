@@ -24,8 +24,8 @@ manager_router = APIRouter(prefix="/api/manager/finance", tags=["finance-manager
 # ============================================================
 
 class PaymentCreate(BaseModel):
-    payment_type: str  # rent | deposit | damage | refund
-    method: str  # cash | card | iban | online | p2p
+    payment_type: str  # rent | additional | deposit | damage | refund
+    method: str  # cash | card | iban | online | p2p | bank
     amount: float
     order_id: Optional[int] = None
     damage_case_id: Optional[int] = None
@@ -33,6 +33,7 @@ class PaymentCreate(BaseModel):
     payer_contact: Optional[str] = None
     occurred_at: Optional[str] = None
     note: Optional[str] = None
+    description: Optional[str] = None  # Назва донарахування (для additional)
     accepted_by_id: Optional[int] = None  # ID користувача який прийняв
     accepted_by_name: Optional[str] = None  # Ім'я користувача
 

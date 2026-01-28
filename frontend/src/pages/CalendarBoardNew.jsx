@@ -30,15 +30,16 @@ const addDays = (d, offset) => {
   return copy
 }
 
-const toISO = (d) => d.toISOString().slice(0, 10)
-
-// toISO для київського часу
-const toKyivISO = (d) => {
+const toISO = (d) => {
+  // Використовуємо локальний час замість UTC
   const year = d.getFullYear()
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
+
+// toISO для київського часу (alias)
+const toKyivISO = toISO
 
 const startOfWeek = (d) => {
   const copy = new Date(d)

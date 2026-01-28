@@ -649,7 +649,7 @@ export default function FinanceHub() {
                     </div>
                     <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
                       <span className="text-slate-700 font-medium">Разом</span>
-                      <span className="font-bold">{money((payoutsStats?.rent_cash_balance || 0) + (payoutsStats?.damage_cash_balance || 0))}</span>
+                      <span className="font-bold">{money(payoutsStats?.total_cash_balance || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -659,11 +659,11 @@ export default function FinanceHub() {
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-600">Оренда</span>
-                      <span className="font-semibold">{money(payoutsStats?.rent_bank || 0)}</span>
+                      <span className="font-semibold">{money(payoutsStats?.rent_bank_balance || 0)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-600">Шкода</span>
-                      <span className="font-semibold">{money(payoutsStats?.damage_bank || 0)}</span>
+                      <span className="font-semibold">{money(payoutsStats?.damage_bank_balance || 0)}</span>
                     </div>
                     <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
                       <span className="text-slate-700 font-medium">Разом</span>

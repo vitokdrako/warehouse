@@ -102,6 +102,7 @@ app.include_router(order_internal_notes.router)
 app.include_router(order_sync.router)
 app.include_router(partial_returns.router)
 app.include_router(uploads.router)
+app.include_router(payer_profiles.router)
 
 # Configure logging
 logging.basicConfig(

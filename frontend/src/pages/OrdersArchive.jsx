@@ -1,494 +1,438 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react';
+/**
+ * Orders Archive - Архів замовлень з повною історією
+ * Корпоративний дизайн + таймлайн всіх операцій
+ */
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CorporateHeader from '../components/CorporateHeader';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
+// Helpers
+const cn = (...xs) => xs.filter(Boolean).join(' ');
+const money = (v) => v ? `₴${Number(v).toLocaleString('uk-UA')}` : '₴0';
+const fmtDate = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+// UI Components
+const Badge = ({ kind, children }) => (
+  <span className={cn(
+    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+    kind === "ok" && "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    kind === "pending" && "bg-amber-50 text-amber-700 border border-amber-200",
+    kind === "warn" && "bg-rose-50 text-rose-700 border border-rose-200",
+    kind === "info" && "bg-blue-50 text-blue-700 border border-blue-200",
+    kind === "neutral" && "bg-slate-100 text-slate-700 border border-slate-200"
+  )}>
+    {children}
+  </span>
+);
+
+const Card = ({ title, children, className }) => (
+  <div className={cn("rounded-2xl border border-slate-200 bg-white shadow-sm", className)}>
+    {title && (
+      <div className="px-4 py-3 border-b border-slate-100">
+        <div className="text-sm font-semibold text-slate-800">{title}</div>
+      </div>
+    )}
+    <div className="p-4">{children}</div>
+  </div>
+);
+
+const Input = (props) => (
+  <input
+    {...props}
+    className={cn(
+      "h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200",
+      props.className
+    )}
+  />
+);
+
+const Select = ({ value, onChange, options, className }) => (
+  <select
+    className={cn("h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-slate-200", className)}
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+  >
+    {options.map((o) => (
+      <option key={o.value} value={o.value}>{o.label}</option>
+    ))}
+  </select>
+);
+
+const Button = ({ children, variant = "primary", ...props }) => (
+  <button
+    {...props}
+    className={cn(
+      "h-10 rounded-xl px-4 text-sm font-semibold transition active:scale-[0.99] disabled:opacity-50",
+      variant === "primary" && "bg-slate-900 text-white hover:bg-slate-800",
+      variant === "ghost" && "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50",
+      props.className
+    )}
+  >
+    {children}
+  </button>
+);
+
+// Timeline Component
+const Timeline = ({ items }) => {
+  const typeIcons = {
+    order: '🛒',
+    issue: '📦',
+    return: '📥',
+    payment: '💰',
+    deposit: '🔒',
+    damage: '🔴',
+    document: '📄'
+  };
+  
+  const typeColors = {
+    order: 'bg-blue-500',
+    issue: 'bg-emerald-500',
+    return: 'bg-purple-500',
+    payment: 'bg-green-500',
+    deposit: 'bg-amber-500',
+    damage: 'bg-rose-500',
+    document: 'bg-slate-500'
+  };
+  
+  return (
+    <div className="relative">
+      <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+      <div className="space-y-4">
+        {items.map((item, idx) => (
+          <div key={idx} className="relative flex gap-4 pl-8">
+            <div className={cn(
+              "absolute left-1.5 w-3 h-3 rounded-full border-2 border-white shadow",
+              typeColors[item.type] || 'bg-slate-400'
+            )}></div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm">{typeIcons[item.type] || '•'}</span>
+                <span className="text-sm font-medium text-slate-900">{item.title}</span>
+                <span className="text-xs text-slate-500">{fmtDate(item.timestamp)}</span>
+              </div>
+              {item.details && (
+                <div className="text-xs text-slate-600 mt-0.5">{item.details}</div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function OrdersArchive() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
-  const [lifecycle, setLifecycle] = useState({});
-  const [financeHistory, setFinanceHistory] = useState({});
-  const navigate = useNavigate();
+  const [orderHistory, setOrderHistory] = useState({});
+  const [historyLoading, setHistoryLoading] = useState({});
   
-  // Фільтри
+  // Filters
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [archiveFilter, setArchiveFilter] = useState('archived'); // archived, active, all
-  const [sortBy, setSortBy] = useState('date_desc'); // date_desc, date_asc, amount_desc, amount_asc
+  const [archiveFilter, setArchiveFilter] = useState('archived');
+  const [sortBy, setSortBy] = useState('date_desc');
+  
+  const statusLabels = {
+    awaiting_customer: 'Очікує',
+    processing: 'В обробці',
+    ready_for_issue: 'Готово',
+    issued: 'Видано',
+    on_rent: 'В оренді',
+    returned: 'Повернуто',
+    completed: 'Завершено',
+    cancelled: 'Скасовано',
+    declined: 'Відхилено'
+  };
+  
+  const statusKinds = {
+    awaiting_customer: 'pending',
+    processing: 'info',
+    ready_for_issue: 'ok',
+    issued: 'ok',
+    on_rent: 'ok',
+    returned: 'neutral',
+    completed: 'neutral',
+    cancelled: 'warn',
+    declined: 'warn'
+  };
+  
+  // Fetch orders
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const archiveParam = archiveFilter === 'archived' ? 'true' : archiveFilter === 'active' ? 'false' : 'all';
+      const res = await fetch(`${BACKEND_URL}/api/decor-orders?status=all&archived=${archiveParam}&limit=500`);
+      const data = await res.json();
+      setOrders(data.orders || data || []);
+    } catch (e) {
+      console.error('Fetch orders error:', e);
+    }
+    setLoading(false);
+  }, [archiveFilter]);
   
   useEffect(() => {
     fetchOrders();
-  }, [archiveFilter]);
+  }, [fetchOrders]);
   
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const archiveParam = archiveFilter === 'archived' ? 'true' : archiveFilter === 'active' ? 'false' : 'all';
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders?status=all&archived=${archiveParam}&limit=1000`, {
-        mode: 'cors'
-      });
-      const data = await response.json();
-      // API повертає {orders: [...], total: X}
-      setOrders(data.orders || data);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      alert('Помилка завантаження замовлень. Перевірте консоль.');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleArchive = async (orderId, orderNumber) => {
-    if (!confirm(`Архівувати замовлення ${orderNumber}?`)) {
-      return;
-    }
+  // Fetch full history for order
+  const fetchHistory = async (orderId) => {
+    if (orderHistory[orderId]) return;
     
+    setHistoryLoading(prev => ({ ...prev, [orderId]: true }));
     try {
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/archive`, {
-        method: 'POST',
-        mode: 'cors'
-      });
-      
-      if (response.ok) {
-        alert('✅ Замовлення архівовано');
-        fetchOrders();
-      } else {
-        const error = await response.json();
-        alert(`❌ Помилка: ${error.detail}`);
-      }
-    } catch (error) {
-      console.error('Error archiving order:', error);
-      alert(`❌ Помилка: ${error.message}`);
+      const res = await fetch(`${BACKEND_URL}/api/archive/${orderId}/full-history`);
+      const data = await res.json();
+      setOrderHistory(prev => ({ ...prev, [orderId]: data }));
+    } catch (e) {
+      console.error('Fetch history error:', e);
     }
+    setHistoryLoading(prev => ({ ...prev, [orderId]: false }));
   };
   
-  const handleUnarchive = async (orderId, orderNumber) => {
-    if (!confirm(`Розархівувати замовлення ${orderNumber}?`)) {
-      return;
-    }
-    
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/unarchive`, {
-        method: 'POST',
-        mode: 'cors'
-      });
-      
-      if (response.ok) {
-        alert('✅ Замовлення розархівовано');
-        fetchOrders();
-      } else {
-        const error = await response.json();
-        alert(`❌ Помилка: ${error.detail}`);
-      }
-    } catch (error) {
-      console.error('Error unarchiving order:', error);
-      alert(`❌ Помилка: ${error.message}`);
-    }
-  };
-  
-  const fetchLifecycle = async (orderId) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/orders/${orderId}/lifecycle`, {
-        mode: 'cors'
-      });
-      const data = await response.json();
-      setLifecycle(prev => ({ ...prev, [orderId]: data }));
-    } catch (error) {
-      console.error('Error fetching lifecycle:', error);
-    }
-  };
-  
-  const fetchFinanceHistory = async (orderId) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/manager/finance/ledger?order_id=${orderId}`, {
-        mode: 'cors'
-      });
-      const data = await response.json();
-      setFinanceHistory(prev => ({ ...prev, [orderId]: data }));
-    } catch (error) {
-      console.error('Error fetching finance history:', error);
-    }
-  };
-  
+  // Toggle expanded order
   const toggleExpand = (order) => {
-    const orderId = order.order_id || parseInt(order.id);
+    const orderId = order.order_id || order.id;
     if (expandedOrder === orderId) {
       setExpandedOrder(null);
     } else {
       setExpandedOrder(orderId);
-      if (!lifecycle[orderId]) {
-        fetchLifecycle(orderId);
-      }
-      if (!financeHistory[orderId]) {
-        fetchFinanceHistory(orderId);
-      }
+      fetchHistory(orderId);
     }
   };
   
-  // Фільтрація
+  // Archive/Unarchive
+  const handleArchive = async (orderId, orderNumber) => {
+    if (!window.confirm(`Архівувати замовлення ${orderNumber}?`)) return;
+    try {
+      await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/archive`, { method: 'POST' });
+      fetchOrders();
+    } catch (e) {
+      alert('Помилка: ' + e.message);
+    }
+  };
+  
+  const handleUnarchive = async (orderId, orderNumber) => {
+    if (!window.confirm(`Розархівувати замовлення ${orderNumber}?`)) return;
+    try {
+      await fetch(`${BACKEND_URL}/api/decor-orders/${orderId}/unarchive`, { method: 'POST' });
+      fetchOrders();
+    } catch (e) {
+      alert('Помилка: ' + e.message);
+    }
+  };
+  
+  // Filter & Sort
   const filteredOrders = orders.filter(order => {
-    // Пошук
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matches = 
-        order.order_number?.toLowerCase().includes(query) ||
-        order.client_name?.toLowerCase().includes(query) ||
-        order.client_phone?.includes(query);
-      if (!matches) return false;
-    }
-    
-    // Фільтр за статусом
-    if (statusFilter !== 'all' && order.status !== statusFilter) {
-      return false;
-    }
-    
-    return true;
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      order.order_number?.toLowerCase().includes(q) ||
+      order.client_name?.toLowerCase().includes(q) ||
+      order.customer_name?.toLowerCase().includes(q) ||
+      order.client_phone?.includes(q) ||
+      order.customer_phone?.includes(q)
+    );
   });
   
-  // Сортування
   const sortedOrders = [...filteredOrders].sort((a, b) => {
     switch (sortBy) {
-      case 'date_desc':
-        return new Date(b.created_at) - new Date(a.created_at);
-      case 'date_asc':
-        return new Date(a.created_at) - new Date(b.created_at);
-      case 'amount_desc':
-        return (b.total_rental || 0) - (a.total_rental || 0);
-      case 'amount_asc':
-        return (a.total_rental || 0) - (b.total_rental || 0);
-      default:
-        return 0;
+      case 'date_asc': return new Date(a.created_at) - new Date(b.created_at);
+      case 'amount_desc': return (b.total_rental || b.total_price || 0) - (a.total_rental || a.total_price || 0);
+      case 'amount_asc': return (a.total_rental || a.total_price || 0) - (b.total_rental || b.total_price || 0);
+      default: return new Date(b.created_at) - new Date(a.created_at);
     }
   });
   
-  const statusLabels = {
-    awaiting_customer: '⏳ Очікує підтвердження',
-    processing: '📦 В обробці',
-    ready_for_issue: '✅ Готово до видачі',
-    issued: '🚚 Видано',
-    on_rent: '🏠 В оренді',
-    returned: '✓ Повернуто',
-    completed: '✓ Завершено',
-    cancelled: '❌ Скасовано',
-    declined: '❌ Відхилено'
-  };
-  
-  const statusColors = {
-    awaiting_customer: 'bg-yellow-100 text-yellow-800',
-    processing: 'bg-blue-100 text-blue-800',
-    ready_for_issue: 'bg-emerald-100 text-emerald-800',
-    issued: 'bg-green-100 text-green-800',
-    on_rent: 'bg-green-100 text-green-800',
-    returned: 'bg-slate-100 text-slate-700',
-    completed: 'bg-slate-100 text-slate-700',
-    cancelled: 'bg-rose-100 text-rose-800',
-    declined: 'bg-rose-100 text-rose-800'
-  };
+  const totalAmount = sortedOrders.reduce((sum, o) => sum + (o.total_rental || o.total_price || 0), 0);
   
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate('/manager')}
-                className="text-corp-text-main hover:text-corp-text-dark"
-              >
+      <CorporateHeader />
+      
+      {/* Sub Header */}
+      <div className="sticky top-[60px] z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="flex items-center gap-3">
+              <button onClick={() => navigate('/manager')} className="text-slate-500 hover:text-slate-700">
                 ← Назад
               </button>
-              <h1 className="text-2xl font-bold text-corp-text-dark">📂 Архів замовлень</h1>
-              <span className="text-sm text-corp-text-muted">
-                {sortedOrders.length} з {orders.length} замовлень
-              </span>
+              <h1 className="text-lg font-bold">📂 Архів замовлень</h1>
+              <span className="text-sm text-slate-500">{sortedOrders.length} з {orders.length}</span>
             </div>
-            <button
-              onClick={fetchOrders}
-              className="px-4 py-2 text-sm bg-white border border-slate-300 rounded-lg hover:bg-slate-50"
-            >
-              🔄 Оновити
-            </button>
+            <Button variant="ghost" onClick={fetchOrders}>🔄</Button>
           </div>
           
-          {/* Фільтри */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <select
+          {/* Filters */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <Select
               value={archiveFilter}
-              onChange={(e) => setArchiveFilter(e.target.value)}
-              className="px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-blue-50 font-semibold"
-            >
-              <option value="archived">📂 Архівні</option>
-              <option value="active">📋 Активні</option>
-              <option value="all">📊 Всі</option>
-            </select>
-            
-            <input
-              type="text"
-              placeholder="Пошук (номер, клієнт, телефон)..."
+              onChange={setArchiveFilter}
+              options={[
+                { value: 'archived', label: '📂 Архівні' },
+                { value: 'active', label: '📋 Активні' },
+                { value: 'all', label: '📊 Всі' }
+              ]}
+              className="border-2 border-blue-200 bg-blue-50"
+            />
+            <Input
+              placeholder="Пошук..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">Всі статуси</option>
-              <option value="awaiting_customer">Очікує підтвердження</option>
-              <option value="processing">В обробці</option>
-              <option value="ready_for_issue">Готово до видачі</option>
-              <option value="issued">Видано</option>
-              <option value="on_rent">В оренді</option>
-              <option value="returned">Повернуто</option>
-              <option value="completed">Завершено</option>
-              <option value="cancelled">Скасовано</option>
-              <option value="declined">Відхилено</option>
-            </select>
-            
-            <select
+            <Select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="date_desc">Дата ↓ (нові спочатку)</option>
-              <option value="date_asc">Дата ↑ (старі спочатку)</option>
-              <option value="amount_desc">Сума ↓ (більші спочатку)</option>
-              <option value="amount_asc">Сума ↑ (менші спочатку)</option>
-            </select>
-            
-            <div className="text-sm text-corp-text-main flex items-center">
-              <span className="mr-2">📊</span>
-              Всього: ₴{sortedOrders.reduce((sum, o) => sum + (o.total_rental || 0), 0).toFixed(0)}
+              onChange={setSortBy}
+              options={[
+                { value: 'date_desc', label: 'Дата ↓' },
+                { value: 'date_asc', label: 'Дата ↑' },
+                { value: 'amount_desc', label: 'Сума ↓' },
+                { value: 'amount_asc', label: 'Сума ↑' }
+              ]}
+            />
+            <div className="flex items-center text-sm text-slate-600">
+              📊 Всього: {money(totalAmount)}
             </div>
           </div>
         </div>
       </div>
       
       {/* Orders List */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-4">
         {loading ? (
-          <div className="text-center py-12 text-corp-text-muted">Завантаження...</div>
+          <div className="text-center py-12 text-slate-500">Завантаження...</div>
         ) : sortedOrders.length === 0 ? (
-          <div className="text-center py-12 text-corp-text-muted">
-            {searchQuery || statusFilter !== 'all' ? 'Немає замовлень за обраними фільтрами' : 'Немає замовлень'}
-          </div>
+          <div className="text-center py-12 text-slate-500">Немає замовлень</div>
         ) : (
           <div className="space-y-3">
-            {sortedOrders.map(order => (
-              <div key={order.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                {/* Order Header */}
-                <div 
-                  onClick={() => toggleExpand(order)}
-                  className="p-4 cursor-pointer hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <span className="text-lg font-semibold text-corp-text-dark">
-                        {order.order_number}
-                      </span>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[order.status] || 'bg-slate-100 text-slate-700'}`}>
+            {sortedOrders.map(order => {
+              const orderId = order.order_id || order.id;
+              const isExpanded = expandedOrder === orderId;
+              const history = orderHistory[orderId];
+              const isLoadingHistory = historyLoading[orderId];
+              
+              return (
+                <Card key={orderId} className="overflow-hidden">
+                  {/* Order Header */}
+                  <div 
+                    onClick={() => toggleExpand(order)}
+                    className="flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50 transition -m-4 p-4"
+                  >
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="font-bold text-slate-900">{order.order_number}</span>
+                      <Badge kind={statusKinds[order.status] || 'neutral'}>
                         {statusLabels[order.status] || order.status}
-                      </span>
-                      {order.is_archived && (
-                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 text-slate-700">
-                          📂 Архів
-                        </span>
-                      )}
-                      <span className="text-sm text-corp-text-main">
-                        {new Date(order.created_at).toLocaleDateString('uk-UA')}
-                      </span>
+                      </Badge>
+                      {order.is_archived && <Badge kind="neutral">📂 Архів</Badge>}
                     </div>
-                    
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <div className="text-sm text-corp-text-muted">Клієнт</div>
-                        <div className="font-medium text-corp-text-dark">{order.client_name}</div>
+                        <div className="font-semibold text-slate-900">{money(order.total_rental || order.total_price)}</div>
+                        <div className="text-xs text-slate-500">{order.client_name || order.customer_name}</div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm text-corp-text-muted">Сума</div>
-                        <div className="font-semibold text-corp-text-dark">₴{(order.total_rental || 0).toFixed(0)}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-corp-text-muted">Дати</div>
-                        <div className="text-sm text-corp-text-dark">
-                          {order.issue_date || order.rental_start_date} → {order.return_date || order.rental_end_date}
-                        </div>
-                      </div>
-                      <span className="text-slate-400">
-                        {expandedOrder === (order.order_id || parseInt(order.id)) ? '▼' : '▶'}
-                      </span>
+                      <span className="text-slate-400">{isExpanded ? '▼' : '▶'}</span>
                     </div>
                   </div>
-                </div>
-                
-                {/* Expanded Details */}
-                {expandedOrder === (order.order_id || parseInt(order.id)) && (
-                  <div className="border-t border-slate-200 bg-slate-50 p-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* Left: Order Info */}
-                      <div>
-                        <h3 className="font-semibold text-corp-text-dark mb-3">Інформація про замовлення</h3>
-                        <div className="space-y-2 text-sm">
-                          <div className="grid grid-cols-2">
-                            <span className="text-corp-text-main">Телефон:</span>
-                            <span className="font-medium">{order.client_phone}</span>
-                          </div>
-                          <div className="grid grid-cols-2">
-                            <span className="text-corp-text-main">Email:</span>
-                            <span className="font-medium">{order.client_email || '—'}</span>
-                          </div>
-                          <div className="grid grid-cols-2">
-                            <span className="text-corp-text-main">Застава:</span>
-                            <span className="font-medium">₴{(order.total_deposit || 0).toFixed(0)}</span>
-                          </div>
-                          <div className="grid grid-cols-2">
-                            <span className="text-corp-text-main">Знижка:</span>
-                            <span className="font-medium">{order.discount || 0}%</span>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-4 flex gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/archived-order/${order.order_id || order.id}`);
-                            }}
-                            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                          >
-                            Відкрити замовлення
-                          </button>
-                          
-                          {order.is_archived ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUnarchive(order.order_id || parseInt(order.id), order.order_number);
-                              }}
-                              className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-700"
-                            >
-                              ↩️ Розархівувати
-                            </button>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleArchive(order.order_id || parseInt(order.id), order.order_number);
-                              }}
-                              className="px-3 py-1.5 text-sm bg-slate-600 text-white rounded hover:bg-slate-700"
-                            >
-                              📂 Архівувати
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Middle: Lifecycle History */}
-                      <div>
-                        <h3 className="font-semibold text-corp-text-dark mb-3">🕐 Історія статусів</h3>
-                        {lifecycle[order.order_id || parseInt(order.id)] ? (
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {lifecycle[order.order_id || parseInt(order.id)].map((event, idx) => (
-                              <div key={idx} className="flex gap-3 text-sm border-l-2 border-blue-200 pl-3 py-1">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-corp-text-dark">{event.stage}</span>
-                                    {event.created_by && (
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                        {event.created_by}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-corp-text-muted mt-0.5">
-                                    {new Date(event.created_at).toLocaleString('uk-UA', {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      hour: '2-digit',
-                                      minute: '2-digit'
-                                    })}
-                                  </div>
-                                  {event.notes && (
-                                    <div className="text-xs text-corp-text-main mt-1">{event.notes}</div>
-                                  )}
+                  
+                  {/* Expanded Content */}
+                  {isExpanded && (
+                    <div className="border-t border-slate-100 mt-4 pt-4">
+                      {isLoadingHistory ? (
+                        <div className="text-center py-8 text-slate-500">Завантаження історії...</div>
+                      ) : history ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {/* Order Info */}
+                          <div className="space-y-4">
+                            <div className="rounded-xl bg-slate-50 p-4">
+                              <div className="text-xs font-semibold text-slate-500 mb-3">ІНФОРМАЦІЯ</div>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-slate-600">Клієнт:</span>
+                                  <span className="font-medium">{history.order.customer_name}</span>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-corp-text-muted">Завантаження...</div>
-                        )}
-                      </div>
-                      
-                      {/* Right: Finance History */}
-                      <div>
-                        <h3 className="font-semibold text-corp-text-dark mb-3">💰 Фінансова історія</h3>
-                        {Array.isArray(financeHistory[order.order_id || parseInt(order.id)]) && financeHistory[order.order_id || parseInt(order.id)].length > 0 ? (
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {financeHistory[order.order_id || parseInt(order.id)].map((transaction, idx) => (
-                              <div key={idx} className="flex gap-3 text-sm border-l-2 border-emerald-200 pl-3 py-1">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-corp-text-dark">
-                                      {transaction.type === 'payment' && '💵 Оплата'}
-                                      {transaction.type === 'deposit_hold' && '🔒 Застава'}
-                                      {transaction.type === 'deposit_release' && '↩️ Повернення застави'}
-                                      {transaction.type === 'damage' && '⚠️ Збитки'}
-                                      {!['payment', 'deposit_hold', 'deposit_release', 'damage'].includes(transaction.type) && transaction.type}
-                                    </span>
-                                    <span className={`text-sm font-semibold ${
-                                      transaction.credit > 0 ? 'text-emerald-600' : 'text-rose-600'
-                                    }`}>
-                                      {transaction.credit > 0 ? '+' : '-'}₴{Math.abs(transaction.credit || transaction.debit || 0).toFixed(0)}
-                                    </span>
-                                  </div>
-                                  <div className="text-xs text-corp-text-muted mt-0.5 flex items-center gap-2">
-                                    <span>
-                                      {new Date(transaction.date).toLocaleString('uk-UA', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </span>
-                                    {transaction.payment_method && <span>• {transaction.payment_method}</span>}
-                                    {transaction.created_by && (
-                                      <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-xs">
-                                        {transaction.created_by}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {transaction.notes && (
-                                    <div className="text-xs text-corp-text-main mt-1">{transaction.notes}</div>
-                                  )}
+                                <div className="flex justify-between">
+                                  <span className="text-slate-600">Телефон:</span>
+                                  <span>{history.order.customer_phone}</span>
                                 </div>
-                              </div>
-                            ))}
-                            
-                            {/* Підсумок */}
-                            <div className="border-t border-slate-300 pt-2 mt-3">
-                              <div className="flex justify-between text-sm font-semibold">
-                                <span>Всього оплачено:</span>
-                                <span className="text-emerald-600">
-                                  ₴{financeHistory[order.order_id || parseInt(order.id)]
-                                    .filter(t => t.type === 'payment')
-                                    .reduce((sum, t) => sum + (t.credit || 0), 0).toFixed(0)}
-                                </span>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-600">Період:</span>
+                                  <span>{history.order.rental_start_date?.slice(0,10)} — {history.order.rental_end_date?.slice(0,10)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-600">Сума оренди:</span>
+                                  <span className="font-semibold">{money(history.order.total_price)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-600">Застава:</span>
+                                  <span className="font-semibold">{money(history.order.deposit_amount)}</span>
+                                </div>
                               </div>
                             </div>
+                            
+                            {/* Summary */}
+                            <div className="rounded-xl bg-slate-50 p-4">
+                              <div className="text-xs font-semibold text-slate-500 mb-3">ПІДСУМОК</div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="text-center p-2 rounded-lg bg-white border border-slate-200">
+                                  <div className="text-lg font-bold text-emerald-600">{history.payments?.length || 0}</div>
+                                  <div className="text-xs text-slate-500">Платежів</div>
+                                </div>
+                                <div className="text-center p-2 rounded-lg bg-white border border-slate-200">
+                                  <div className="text-lg font-bold text-blue-600">{history.documents?.length || 0}</div>
+                                  <div className="text-xs text-slate-500">Документів</div>
+                                </div>
+                                <div className="text-center p-2 rounded-lg bg-white border border-slate-200">
+                                  <div className="text-lg font-bold text-amber-600">{history.deposits?.length || 0}</div>
+                                  <div className="text-xs text-slate-500">Застав</div>
+                                </div>
+                                <div className="text-center p-2 rounded-lg bg-white border border-slate-200">
+                                  <div className="text-lg font-bold text-rose-600">{history.damages?.length || 0}</div>
+                                  <div className="text-xs text-slate-500">Шкод</div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Actions */}
+                            <div className="flex gap-2">
+                              {order.is_archived ? (
+                                <Button variant="ghost" className="flex-1" onClick={() => handleUnarchive(orderId, order.order_number)}>
+                                  📤 Розархівувати
+                                </Button>
+                              ) : (
+                                <Button variant="ghost" className="flex-1" onClick={() => handleArchive(orderId, order.order_number)}>
+                                  📂 Архівувати
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        ) : (
-                          <div className="text-sm text-corp-text-muted">Завантаження...</div>
-                        )}
-                      </div>
+                          
+                          {/* Timeline */}
+                          <div className="rounded-xl bg-slate-50 p-4 max-h-[500px] overflow-y-auto">
+                            <div className="text-xs font-semibold text-slate-500 mb-4">ПОВНА ІСТОРІЯ ({history.timeline?.length || 0} подій)</div>
+                            {history.timeline && history.timeline.length > 0 ? (
+                              <Timeline items={history.timeline} />
+                            ) : (
+                              <div className="text-center text-slate-500 py-4">Немає подій</div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-slate-500">Не вдалося завантажити історію</div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

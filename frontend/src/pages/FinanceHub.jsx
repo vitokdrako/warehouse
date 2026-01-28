@@ -1516,6 +1516,158 @@ export default function FinanceHub() {
           </div>
         </div>
       )}
+      
+      {/* Payer Profile Modal */}
+      {showPayerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+              <h3 className="font-semibold">🏢 Профіль платника</h3>
+              <button onClick={() => setShowPayerModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div className="p-4 space-y-4">
+              {/* Existing profiles */}
+              {payerProfiles.length > 0 && (
+                <div>
+                  <div className="text-xs font-semibold text-slate-500 mb-2">ІСНУЮЧІ ПРОФІЛІ</div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {payerProfiles.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          handleAssignPayerProfile(p.id);
+                          setShowPayerModal(false);
+                        }}
+                        className={cn(
+                          "w-full text-left rounded-xl border px-3 py-2 transition",
+                          selectedPayerProfile?.id === p.id
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-slate-200 hover:bg-slate-50"
+                        )}
+                      >
+                        <div className="text-sm font-semibold">{p.company_name}</div>
+                        <div className="text-xs text-slate-500">
+                          {PAYER_TYPE_LABELS[p.payer_type]} · {p.edrpou || "—"}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* New profile form */}
+              <div className="border-t border-slate-200 pt-4">
+                <div className="text-xs font-semibold text-slate-500 mb-3">НОВИЙ ПРОФІЛЬ</div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">Тип платника *</label>
+                    <Select
+                      value={payerForm.payer_type}
+                      onChange={(v) => setPayerForm(prev => ({ ...prev, payer_type: v }))}
+                      options={[
+                        { value: "fop_simple", label: "ФОП (спрощена система)" },
+                        { value: "fop_general", label: "ФОП (загальна система)" },
+                        { value: "llc_simple", label: "ТОВ (спрощена система)" },
+                        { value: "llc_general", label: "ТОВ (загальна система)" },
+                      ]}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">
+                      {payerForm.payer_type.startsWith("llc") ? "Назва компанії *" : "ПІБ ФОП *"}
+                    </label>
+                    <Input
+                      value={payerForm.company_name}
+                      onChange={(e) => setPayerForm(prev => ({ ...prev, company_name: e.target.value }))}
+                      placeholder={payerForm.payer_type.startsWith("llc") ? "ТОВ «Назва»" : "Трофімова Вікторія Сергіївна"}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">
+                        {payerForm.payer_type.startsWith("llc") ? "ЄДРПОУ" : "ДРФО (ІПН)"}
+                      </label>
+                      <Input
+                        value={payerForm.edrpou}
+                        onChange={(e) => setPayerForm(prev => ({ ...prev, edrpou: e.target.value }))}
+                        placeholder={payerForm.payer_type.startsWith("llc") ? "12345678" : "3505100720"}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">Платник ПДВ</label>
+                      <button
+                        onClick={() => setPayerForm(prev => ({ ...prev, is_vat_payer: !prev.is_vat_payer }))}
+                        className={cn(
+                          "h-10 w-full rounded-xl border text-sm font-medium transition",
+                          payerForm.is_vat_payer
+                            ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                            : "border-slate-200 bg-white text-slate-600"
+                        )}
+                      >
+                        {payerForm.is_vat_payer ? "✓ Так" : "Ні"}
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">IBAN</label>
+                    <Input
+                      value={payerForm.iban}
+                      onChange={(e) => setPayerForm(prev => ({ ...prev, iban: e.target.value }))}
+                      placeholder="UA65..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">Банк</label>
+                    <Input
+                      value={payerForm.bank_name}
+                      onChange={(e) => setPayerForm(prev => ({ ...prev, bank_name: e.target.value }))}
+                      placeholder="АТ «УНІВЕРСАЛ БАНК»"
+                    />
+                  </div>
+                  
+                  {payerForm.payer_type.startsWith("llc") && (
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">ПІБ директора</label>
+                      <Input
+                        value={payerForm.director_name}
+                        onChange={(e) => setPayerForm(prev => ({ ...prev, director_name: e.target.value }))}
+                        placeholder="Іванов Іван Іванович"
+                      />
+                    </div>
+                  )}
+                  
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">Юридична адреса</label>
+                    <Input
+                      value={payerForm.address}
+                      onChange={(e) => setPayerForm(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="м. Харків, вул. ..."
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 mt-4">
+                  <Button variant="ghost" className="flex-1" onClick={() => setShowPayerModal(false)}>
+                    Скасувати
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    disabled={saving || !payerForm.company_name.trim()}
+                    onClick={handleSavePayerProfile}
+                  >
+                    {saving ? "..." : "Зберегти"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

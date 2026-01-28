@@ -292,7 +292,7 @@ export default function FinanceHub() {
         rent: "Оренда",
         additional: "Донарахування",
         damage: "Шкода",
-        deposit: "Застава"
+        deposit: "Застава прийнята"
       };
       const methodLabels = { cash: "готівка", bank: "безготівка" };
       
@@ -305,6 +305,37 @@ export default function FinanceHub() {
         meta: `${methodLabels[p.method] || p.method}${p.accepted_by_name ? ` · ${p.accepted_by_name}` : ""}`
       });
     });
+    
+    // Add deposit operations to timeline
+    if (orderDeposit) {
+      const currencySymbol = orderDeposit.currency === "USD" ? "$" : orderDeposit.currency === "EUR" ? "€" : "₴";
+      
+      // Утримання із застави
+      if (orderDeposit.used_amount > 0 || orderDeposit.used_amount_original > 0) {
+        const usedAmount = orderDeposit.used_amount_original || orderDeposit.used_amount;
+        items.push({
+          id: "deposit_used",
+          at: fmtDate(orderDeposit.closed_at || new Date().toISOString()),
+          status: "warn",
+          label: "Утримано із застави",
+          amount: `-${currencySymbol}${usedAmount.toLocaleString("uk-UA")}`,
+          meta: "компенсація шкоди"
+        });
+      }
+      
+      // Повернення застави
+      if (orderDeposit.refunded_amount > 0 || orderDeposit.refunded_amount_original > 0) {
+        const refundedAmount = orderDeposit.refunded_amount_original || orderDeposit.refunded_amount;
+        items.push({
+          id: "deposit_refunded",
+          at: fmtDate(orderDeposit.closed_at || new Date().toISOString()),
+          status: "done",
+          label: "Застава повернута",
+          amount: `${currencySymbol}${refundedAmount.toLocaleString("uk-UA")}`,
+          meta: orderDeposit.status === "refunded" ? "закрито" : ""
+        });
+      }
+    }
     
     // Add pending damage
     if (damageFees.due > 0) {
@@ -324,7 +355,7 @@ export default function FinanceHub() {
       if (b.at === "Очікує") return 1;
       return 0;
     });
-  }, [payments, damageFees]);
+  }, [payments, damageFees, orderDeposit]);
   
   // Filter orders by search
   const filteredOrders = useMemo(() => {

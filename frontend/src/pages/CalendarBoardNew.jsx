@@ -420,7 +420,7 @@ function WeekView({ baseDate, items, onOpen, onUpdateItem }) {
                 <div className="text-[8px] md:text-[10px] font-semibold uppercase tracking-wide text-corp-text-muted">Потік</div>
                 <div className="grid grid-cols-7 gap-0.5 md:gap-1 min-w-[280px] md:min-w-0">
                   {week.dates.map((d) => {
-                    const isToday = toISO(d) === toISO(new Date())
+                    const isToday = toKyivISO(d) === toKyivISO(getKyivToday())
                     return (
                       <div 
                         key={toISO(d)} 

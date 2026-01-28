@@ -1,0 +1,214 @@
+{% extends '_base.html' %}
+{% block title %}Видаткова накладна {{ doc_number }}{% endblock %}
+{% block content %}
+<style>
+    .header-section { margin-bottom: 25px; }
+    .company-row { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .company-block { width: 48%; }
+    .company-block .label { font-size: 8pt; color: #666; text-transform: uppercase; margin-bottom: 3px; }
+    .company-block .name { font-weight: bold; font-size: 11pt; margin-bottom: 5px; }
+    .company-block .details { font-size: 9pt; line-height: 1.5; }
+    .doc-header { text-align: center; margin: 30px 0 25px; }
+    .doc-header .title { font-size: 16pt; font-weight: bold; }
+    .doc-header .number { font-size: 12pt; margin-top: 5px; }
+    .doc-header .date { font-size: 10pt; color: #666; margin-top: 3px; }
+    .meta-table { width: 100%; margin: 20px 0; font-size: 9pt; }
+    .meta-table td { padding: 5px 10px; }
+    .meta-table .label { width: 150px; color: #666; }
+    .meta-table .value { font-weight: 500; }
+    .goods-table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 9pt; }
+    .goods-table th { background: #1e3a5f; color: white; padding: 10px 8px; text-align: center; font-weight: 500; }
+    .goods-table th:first-child { text-align: center; }
+    .goods-table th:nth-child(2) { text-align: left; }
+    .goods-table td { padding: 10px 8px; border: 1px solid #ddd; vertical-align: middle; }
+    .goods-table td:first-child { text-align: center; width: 35px; }
+    .goods-table .name-cell { text-align: left; }
+    .goods-table .name-cell .sku { font-size: 8pt; color: #888; }
+    .goods-table .center { text-align: center; }
+    .goods-table .right { text-align: right; }
+    .goods-table .bold { font-weight: 600; }
+    .goods-table tfoot td { background: #f8f9fa; font-weight: 600; }
+    .totals-wrapper { display: flex; justify-content: flex-end; margin: 25px 0; }
+    .totals-box { width: 350px; }
+    .totals-box .row { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 10pt; }
+    .totals-box .row:last-child { border-bottom: none; }
+    .totals-box .row.grand { background: #1e3a5f; color: white; font-weight: bold; font-size: 12pt; margin-top: 5px; }
+    .totals-box .row .label { }
+    .totals-box .row .value { font-weight: 600; }
+    .sum-text { margin: 20px 0; padding: 12px 15px; background: #e8f4f8; border-radius: 5px; font-size: 10pt; }
+    .sum-text strong { color: #1e3a5f; }
+    .footer-section { margin-top: 40px; }
+    .footer-row { display: flex; justify-content: space-between; margin-bottom: 50px; }
+    .footer-col { width: 45%; }
+    .footer-col .title { font-weight: bold; font-size: 10pt; margin-bottom: 15px; border-bottom: 2px solid #1e3a5f; padding-bottom: 5px; }
+    .sig-line { display: flex; margin-bottom: 12px; align-items: flex-end; }
+    .sig-line .label { width: 80px; font-size: 9pt; color: #666; }
+    .sig-line .underline { flex: 1; border-bottom: 1px solid #333; margin: 0 10px; min-height: 25px; }
+    .sig-line .value { font-size: 9pt; }
+    .stamp-placeholder { width: 100px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #999; font-size: 8pt; margin-top: 15px; }
+    .notes-section { margin-top: 30px; padding: 15px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 5px; font-size: 9pt; }
+    .notes-section .title { font-weight: bold; margin-bottom: 8px; color: #92400e; }
+</style>
+
+<div class="header-section">
+    <div class="company-row">
+        <div class="company-block">
+            <div class="label">Постачальник</div>
+            <div class="name">{{ company.legal_name }}</div>
+            <div class="details">
+                п/р {{ company.iban }}<br>
+                {{ company.bank_name }}<br>
+                Код ДРФО {{ company.edrpou }}<br>
+                {% if company.address %}{{ company.address }}{% endif %}
+            </div>
+        </div>
+        <div class="company-block">
+            <div class="label">Покупець</div>
+            <div class="name">{{ payer.company_name or order.customer_name }}</div>
+            <div class="details">
+                {% if payer.iban %}п/р {{ payer.iban }}<br>{% endif %}
+                {% if payer.bank_name %}{{ payer.bank_name }}<br>{% endif %}
+                {% if payer.edrpou %}Код {{ 'ЄДРПОУ' if payer.payer_type in ['llc_simple', 'llc_general'] else 'ДРФО' }} {{ payer.edrpou }}<br>{% endif %}
+                {% if payer.address %}{{ payer.address }}{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="doc-header">
+    <div class="title">ВИДАТКОВА НАКЛАДНА</div>
+    <div class="number">№ {{ doc_number.split('-')[-1] if doc_number else order.order_number }}</div>
+    <div class="date">від {{ generated_at.split(' ')[0] }}</div>
+</div>
+
+<table class="meta-table">
+    <tr>
+        <td class="label">Підстава:</td>
+        <td class="value">Замовлення {{ order.order_number }} від {{ order.created_at.split(' ')[0] if order.created_at else generated_at.split(' ')[0] }}</td>
+    </tr>
+    <tr>
+        <td class="label">Період оренди:</td>
+        <td class="value">{{ order.rental_start_date }} — {{ order.rental_end_date }} ({{ order.rental_days }} дн.)</td>
+    </tr>
+</table>
+
+<!-- Таблиця товарів -->
+<table class="goods-table">
+    <thead>
+        <tr>
+            <th>№</th>
+            <th>Найменування товару</th>
+            <th style="width: 50px;">Од.</th>
+            <th style="width: 50px;">К-сть</th>
+            <th style="width: 90px;">Ціна без ПДВ</th>
+            {% if payer.is_vat_payer %}
+            <th style="width: 70px;">ПДВ</th>
+            <th style="width: 90px;">Ціна з ПДВ</th>
+            {% endif %}
+            <th style="width: 100px;">Сума</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        {% set item_total = item.total_rent %}
+        {% set item_vat = item_total * 0.2 if payer.is_vat_payer else 0 %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td class="name-cell">
+                {{ item.get('name', 'Декор') }}
+                {% if item.get('sku') %}<br><span class="sku">Арт: {{ item.sku }}</span>{% endif %}
+            </td>
+            <td class="center">шт.</td>
+            <td class="center">{{ item.get('quantity') or item.get('qty', 1) }}</td>
+            <td class="right">{{ "%.2f"|format(item.price_per_day * order.rental_days) }}</td>
+            {% if payer.is_vat_payer %}
+            <td class="right">{{ "%.2f"|format(item_vat) }}</td>
+            <td class="right">{{ "%.2f"|format(item_total + item_vat) }}</td>
+            {% endif %}
+            <td class="right bold">{{ "%.2f"|format(item_total + item_vat) }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="{% if payer.is_vat_payer %}7{% else %}4{% endif %}" style="text-align: right;">Всього:</td>
+            <td class="right bold">{{ "%.2f"|format(totals.rent * (1.2 if payer.is_vat_payer else 1)) }}</td>
+        </tr>
+    </tfoot>
+</table>
+
+<!-- Застава (якщо є) -->
+{% if totals.deposit > 0 %}
+<div class="notes-section">
+    <div class="title">Застава</div>
+    Заставна вартість: <strong>{{ "%.2f"|format(totals.deposit) }} грн</strong> — повертається після повернення товару в належному стані.
+</div>
+{% endif %}
+
+<!-- Підсумки -->
+<div class="totals-wrapper">
+    <div class="totals-box">
+        <div class="row">
+            <span class="label">Вартість товарів:</span>
+            <span class="value">{{ "%.2f"|format(totals.rent) }} грн</span>
+        </div>
+        {% if payer.is_vat_payer %}
+        <div class="row">
+            <span class="label">ПДВ (20%):</span>
+            <span class="value">{{ "%.2f"|format(totals.rent * 0.2) }} грн</span>
+        </div>
+        <div class="row grand">
+            <span class="label">Всього з ПДВ:</span>
+            <span class="value">{{ "%.2f"|format(totals.rent * 1.2) }} грн</span>
+        </div>
+        {% else %}
+        <div class="row grand">
+            <span class="label">Всього до сплати:</span>
+            <span class="value">{{ "%.2f"|format(totals.rent) }} грн</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="sum-text">
+    <strong>Всього відпущено на суму:</strong> {{ total_words or '' }} гривень 00 копійок {% if payer.is_vat_payer %}(в т.ч. ПДВ {{ "%.2f"|format(totals.rent * 0.2) }} грн){% else %}(без ПДВ){% endif %}
+</div>
+
+<!-- Підписи -->
+<div class="footer-section">
+    <div class="footer-row">
+        <div class="footer-col">
+            <div class="title">Відпустив (Постачальник)</div>
+            <div class="sig-line">
+                <span class="label">Посада:</span>
+                <span class="underline"></span>
+            </div>
+            <div class="sig-line">
+                <span class="label">Підпис:</span>
+                <span class="underline"></span>
+            </div>
+            <div class="sig-line">
+                <span class="label">П.І.Б.:</span>
+                <span class="value">{{ company.director_name or company.legal_name.replace('ФОП ', '') }}</span>
+            </div>
+            <div class="stamp-placeholder">М.П.</div>
+        </div>
+        <div class="footer-col">
+            <div class="title">Отримав (Покупець)</div>
+            <div class="sig-line">
+                <span class="label">Посада:</span>
+                <span class="underline"></span>
+            </div>
+            <div class="sig-line">
+                <span class="label">Підпис:</span>
+                <span class="underline"></span>
+            </div>
+            <div class="sig-line">
+                <span class="label">П.І.Б.:</span>
+                <span class="value">{{ payer.director_name or payer.company_name or order.customer_name }}</span>
+            </div>
+            <div class="stamp-placeholder">М.П.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

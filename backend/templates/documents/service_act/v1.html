@@ -1,0 +1,196 @@
+{% extends '_base.html' %}
+{% block title %}Акт виконаних робіт {{ doc_number }}{% endblock %}
+{% block content %}
+<style>
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .company-info { font-size: 9pt; line-height: 1.6; }
+    .company-name { font-weight: bold; font-size: 11pt; margin-bottom: 5px; }
+    .doc-title { font-size: 14pt; font-weight: bold; text-align: center; margin: 30px 0 20px; }
+    .doc-subtitle { font-size: 10pt; text-align: center; margin-bottom: 30px; color: #666; }
+    .parties-table { width: 100%; margin: 20px 0; }
+    .parties-table td { width: 50%; vertical-align: top; padding: 10px; }
+    .party-block { background: #f8f9fa; padding: 15px; border-radius: 8px; }
+    .party-label { font-size: 9pt; color: #666; margin-bottom: 5px; text-transform: uppercase; }
+    .party-name { font-weight: bold; font-size: 11pt; margin-bottom: 8px; }
+    .party-details { font-size: 9pt; line-height: 1.6; }
+    .services-table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+    .services-table th { background: #2d3748; color: white; padding: 12px 10px; text-align: left; font-size: 9pt; }
+    .services-table td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 9pt; }
+    .services-table .num { width: 40px; text-align: center; }
+    .services-table .sum { width: 120px; text-align: right; font-weight: 600; }
+    .totals-section { margin: 30px 0; }
+    .totals-row { display: flex; justify-content: flex-end; padding: 8px 0; font-size: 10pt; }
+    .totals-row .label { width: 200px; text-align: right; padding-right: 20px; }
+    .totals-row .value { width: 150px; text-align: right; font-weight: 600; }
+    .totals-row.grand { background: #2d3748; color: white; padding: 15px; margin-top: 10px; font-size: 12pt; }
+    .totals-row.grand .label, .totals-row.grand .value { color: white; }
+    .sum-words { margin: 20px 0; padding: 15px; background: #f0fff4; border-left: 4px solid #48bb78; font-size: 10pt; }
+    .conclusion-text { margin: 30px 0; font-size: 10pt; line-height: 1.8; text-align: justify; }
+    .signatures-block { margin-top: 50px; }
+    .signatures-row { display: flex; justify-content: space-between; margin-bottom: 40px; }
+    .signature-box { width: 45%; }
+    .signature-box .title { font-weight: bold; font-size: 10pt; margin-bottom: 15px; text-transform: uppercase; }
+    .signature-line { display: flex; align-items: flex-end; margin-bottom: 8px; }
+    .signature-line .label { width: 80px; font-size: 9pt; color: #666; }
+    .signature-line .line { flex: 1; border-bottom: 1px solid #333; margin-left: 10px; }
+    .signature-line .value { font-size: 9pt; margin-left: 10px; }
+    .stamp-area { width: 100px; height: 100px; border: 1px dashed #ccc; margin-top: 10px; display: flex; align-items: center; justify-content: center; font-size: 8pt; color: #999; }
+</style>
+
+<div class="header-row">
+    <div class="company-info">
+        <div class="company-name">{{ company.legal_name }}</div>
+        <div>п/р {{ company.iban }}</div>
+        <div>{{ company.bank_name }}</div>
+        <div>код ДРФО {{ company.edrpou }}</div>
+    </div>
+    <div style="text-align: right; font-size: 9pt;">
+        <div>{{ generated_at.split(' ')[0] }}</div>
+        <div>{{ doc_number }}</div>
+    </div>
+</div>
+
+<div class="doc-title">АКТ</div>
+<div class="doc-subtitle">
+    здачі-прийняття наданих послуг<br>
+    до замовлення {{ order.order_number }} від {{ order.created_at.split(' ')[0] if order.created_at else generated_at.split(' ')[0] }}
+</div>
+
+<!-- Сторони -->
+<table class="parties-table">
+    <tr>
+        <td>
+            <div class="party-block">
+                <div class="party-label">Виконавець</div>
+                <div class="party-name">{{ company.legal_name }}</div>
+                <div class="party-details">
+                    п/р {{ company.iban }}<br>
+                    у банку {{ company.bank_name }}<br>
+                    код за ДРФО {{ company.edrpou }}<br>
+                    {% if company.address %}Адреса: {{ company.address }}{% endif %}
+                </div>
+            </div>
+        </td>
+        <td>
+            <div class="party-block">
+                <div class="party-label">Замовник</div>
+                <div class="party-name">{{ payer.company_name or order.customer_name }}</div>
+                <div class="party-details">
+                    {% if payer.iban %}п/р {{ payer.iban }}<br>{% endif %}
+                    {% if payer.bank_name %}у банку {{ payer.bank_name }}<br>{% endif %}
+                    {% if payer.edrpou %}код за {{ 'ЄДРПОУ' if payer.payer_type in ['llc_simple', 'llc_general'] else 'ДРФО' }} {{ payer.edrpou }}<br>{% endif %}
+                    {% if payer.address %}Адреса: {{ payer.address }}{% endif %}
+                </div>
+            </div>
+        </td>
+    </tr>
+</table>
+
+<!-- Таблиця послуг -->
+<table class="services-table">
+    <thead>
+        <tr>
+            <th class="num">№</th>
+            <th>Найменування послуги</th>
+            <th style="width: 60px; text-align: center;">К-сть</th>
+            <th style="width: 50px;">Од.</th>
+            <th class="sum">Вартість, грн</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td class="num">1</td>
+            <td>
+                Послуга "Прокат декору"<br>
+                <span style="font-size: 8pt; color: #666;">
+                    Період: {{ order.rental_start_date }} — {{ order.rental_end_date }} ({{ order.rental_days }} дн.)
+                </span>
+            </td>
+            <td style="text-align: center;">1</td>
+            <td>посл.</td>
+            <td class="sum">{{ "%.2f"|format(totals.rent) }}</td>
+        </tr>
+        {% if finance and finance.additional_paid > 0 %}
+        <tr>
+            <td class="num">2</td>
+            <td>Додаткові послуги (доставка, упаковка тощо)</td>
+            <td style="text-align: center;">1</td>
+            <td>посл.</td>
+            <td class="sum">{{ "%.2f"|format(finance.additional_paid) }}</td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+
+<!-- Підсумки -->
+<div class="totals-section">
+    <div class="totals-row">
+        <div class="label">Всього без ПДВ:</div>
+        <div class="value">{{ "%.2f"|format(totals.rent + (finance.additional_paid if finance else 0)) }} грн</div>
+    </div>
+    {% if payer.is_vat_payer %}
+    <div class="totals-row">
+        <div class="label">ПДВ (20%):</div>
+        <div class="value">{{ "%.2f"|format((totals.rent + (finance.additional_paid if finance else 0)) * 0.2) }} грн</div>
+    </div>
+    <div class="totals-row grand">
+        <div class="label">Всього з ПДВ:</div>
+        <div class="value">{{ "%.2f"|format((totals.rent + (finance.additional_paid if finance else 0)) * 1.2) }} грн</div>
+    </div>
+    {% else %}
+    <div class="totals-row grand">
+        <div class="label">Всього до сплати:</div>
+        <div class="value">{{ "%.2f"|format(totals.rent + (finance.additional_paid if finance else 0)) }} грн</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="sum-words">
+    <strong>Всього:</strong> {{ total_words or '' }} гривень 00 копійок
+</div>
+
+<!-- Заключний текст -->
+<div class="conclusion-text">
+    Вищевказані послуги виконані повністю та в строк. Замовник претензій до обсягу, якості та строків надання послуг не має.
+    <br><br>
+    Цей Акт складено у двох примірниках, що мають однакову юридичну силу, по одному для кожної із сторін.
+</div>
+
+<!-- Підписи -->
+<div class="signatures-block">
+    <div class="signatures-row">
+        <div class="signature-box">
+            <div class="title">Від Виконавця:</div>
+            <div class="signature-line">
+                <span class="label">Посада:</span>
+                <span class="line"></span>
+            </div>
+            <div class="signature-line">
+                <span class="label">Підпис:</span>
+                <span class="line"></span>
+            </div>
+            <div class="signature-line">
+                <span class="label">П.І.Б.:</span>
+                <span class="value">{{ company.director_name or company.legal_name.replace('ФОП ', '') }}</span>
+            </div>
+            <div class="stamp-area">М.П.</div>
+        </div>
+        <div class="signature-box">
+            <div class="title">Від Замовника:</div>
+            <div class="signature-line">
+                <span class="label">Посада:</span>
+                <span class="line"></span>
+            </div>
+            <div class="signature-line">
+                <span class="label">Підпис:</span>
+                <span class="line"></span>
+            </div>
+            <div class="signature-line">
+                <span class="label">П.І.Б.:</span>
+                <span class="value">{{ payer.director_name or payer.company_name or order.customer_name }}</span>
+            </div>
+            <div class="stamp-area">М.П.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

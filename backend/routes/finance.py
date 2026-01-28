@@ -1135,68 +1135,48 @@ async def create_deposit_with_currency(data: DepositCreate):
 async def get_manager_finance_summary(db: Session = Depends(get_rh_db)):
     """
     Фінансовий підсумок для ManagerDashboard KPI.
-    Агрегує дані з реальних фінансових записів (ledger).
+    Використовує ту саму логіку що й Finance Hub для консистентності.
     """
     try:
-        # 1. Отримати виручку з ledger (RENT_REV account)
-        try:
-            rent_revenue = db.execute(text("""
-                SELECT COALESCE(SUM(e.amount), 0) FROM fin_ledger_entries e
-                JOIN fin_accounts a ON a.id = e.account_id 
-                JOIN fin_transactions t ON t.id = e.tx_id
-                WHERE a.code = 'RENT_REV' AND e.direction = 'C' AND t.status = 'posted'
-            """)).fetchone()[0]
-        except:
-            rent_revenue = 0
+        # 1. Виручка з оренди (готівка + безготівка)
+        rent_revenue = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'rent' AND status IN ('completed', 'confirmed')
+        """)).fetchone()[0]
         
-        # 2. Отримати компенсації за шкоду
-        try:
-            damage_revenue = db.execute(text("""
-                SELECT COALESCE(SUM(e.amount), 0) FROM fin_ledger_entries e
-                JOIN fin_accounts a ON a.id = e.account_id 
-                JOIN fin_transactions t ON t.id = e.tx_id
-                WHERE a.code = 'DMG_COMP' AND e.direction = 'C' AND t.status = 'posted'
-            """)).fetchone()[0]
-        except:
-            damage_revenue = 0
+        # 2. Компенсації за шкоду
+        damage_revenue = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'damage' AND status IN ('completed', 'confirmed')
+        """)).fetchone()[0]
         
-        # 3. Підрахувати застави в холді
-        try:
-            deposits_held = db.execute(text("""
-                SELECT COALESCE(SUM(held_amount - used_amount - refunded_amount), 0)
-                FROM fin_deposit_holds 
-                WHERE status IN ('holding', 'partially_used')
-            """)).fetchone()[0]
-        except:
-            deposits_held = 0
+        # 3. Застави в холді (сума по валютах в грн еквіваленті)
+        deposits_held = db.execute(text("""
+            SELECT COALESCE(SUM(held_amount - used_amount - refunded_amount), 0)
+            FROM fin_deposit_holds 
+            WHERE status IN ('holding', 'partially_used')
+        """)).fetchone()[0]
         
-        # 4. Підрахувати кількість замовлень з активними заставами
-        try:
-            deposits_count = db.execute(text("""
-                SELECT COUNT(*) FROM fin_deposit_holds 
-                WHERE status IN ('holding', 'partially_used')
-            """)).fetchone()[0]
-        except:
-            deposits_count = 0
+        # 4. Кількість активних застав
+        deposits_count = db.execute(text("""
+            SELECT COUNT(*) FROM fin_deposit_holds 
+            WHERE status IN ('holding', 'partially_used')
+        """)).fetchone()[0]
         
-        # Загальна виручка = оренда + шкода
+        # 5. Готівка в касі (оренда)
+        rent_cash = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'rent' AND method = 'cash' AND status IN ('completed', 'confirmed')
+        """)).fetchone()[0]
+        
+        # 6. Готівка в касі (шкода)
+        damage_cash = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'damage' AND method = 'cash' AND status IN ('completed', 'confirmed')
+        """)).fetchone()[0]
+        
+        # Загальна виручка
         total_revenue = float(rent_revenue or 0) + float(damage_revenue or 0)
-        
-        # 5. Альтернативно: дані з orders таблиці якщо fin_* пусті
-        if float(deposits_held or 0) == 0:
-            try:
-                # Застави з issue_cards (видані замовлення)
-                deposits_held = db.execute(text("""
-                    SELECT COALESCE(SUM(deposit_amount), 0) 
-                    FROM issue_cards 
-                    WHERE status = 'issued'
-                """)).fetchone()[0]
-                
-                deposits_count = db.execute(text("""
-                    SELECT COUNT(*) FROM issue_cards WHERE status = 'issued' AND deposit_amount > 0
-                """)).fetchone()[0]
-            except:
-                pass
         
         return {
             "total_revenue": total_revenue,
@@ -1205,7 +1185,9 @@ async def get_manager_finance_summary(db: Session = Depends(get_rh_db)):
             "rent_paid": total_revenue,
             "unpaid_balance": 0,
             "rent_revenue": float(rent_revenue or 0),
-            "damage_revenue": float(damage_revenue or 0)
+            "damage_revenue": float(damage_revenue or 0),
+            "rent_cash": float(rent_cash or 0),
+            "damage_cash": float(damage_cash or 0)
         }
         
     except Exception as e:

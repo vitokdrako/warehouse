@@ -499,6 +499,96 @@ async def create_expense(data: ExpenseCreate, db: Session = Depends(get_rh_db)):
 
 
 # ============================================================
+# SIMPLE EXPENSES (for Finance Hub quick actions)
+# ============================================================
+
+class SimpleExpenseCreate(BaseModel):
+    amount: float
+    description: str
+    category: str  # "rent" or "damage"
+    method: str = "cash"
+    created_by_id: Optional[int] = None
+    created_by_name: Optional[str] = None
+
+@router.post("/expenses/simple")
+async def create_simple_expense(data: SimpleExpenseCreate, db: Session = Depends(get_rh_db)):
+    """Simple expense creation for Finance Hub - rent or damage category."""
+    try:
+        # Map category to expense_type and category_code
+        if data.category == "rent":
+            expense_type = "expense"
+            category_code = "RENT_EXPENSE"  # Витрати на оренду приміщення
+        else:  # damage
+            expense_type = "expense"
+            category_code = "DAMAGE_EXPENSE"  # Витрати на реставрацію/шкоду
+        
+        # Check if categories exist, if not create them
+        cat = db.execute(text("SELECT id FROM fin_categories WHERE code = :code"), {"code": category_code}).fetchone()
+        if not cat:
+            db.execute(text("""
+                INSERT INTO fin_categories (code, name, type, direction) 
+                VALUES (:code, :name, 'expense', 'out')
+            """), {
+                "code": category_code, 
+                "name": "Витрати на оренду" if data.category == "rent" else "Витрати на реставрацію"
+            })
+            db.commit()
+            cat = db.execute(text("SELECT id FROM fin_categories WHERE code = :code"), {"code": category_code}).fetchone()
+        
+        category_id = cat[0]
+        
+        # Insert expense
+        db.execute(text("""
+            INSERT INTO fin_expenses (expense_type, category_id, amount, method, occurred_at, note, status)
+            VALUES (:expense_type, :category_id, :amount, :method, NOW(), :note, 'posted')
+        """), {
+            "expense_type": expense_type,
+            "category_id": category_id,
+            "amount": data.amount,
+            "method": data.method,
+            "note": f"{data.description} (by {data.created_by_name or 'system'})"
+        })
+        expense_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        
+        db.commit()
+        return {"success": True, "expense_id": expense_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/expenses/all")
+async def list_all_expenses(limit: int = 100, db: Session = Depends(get_rh_db)):
+    """List all expenses for Finance Hub operations view."""
+    try:
+        result = db.execute(text("""
+            SELECT e.id, e.expense_type, c.code as category, c.name as category_name,
+                   e.amount, e.method, e.occurred_at, e.note, e.status
+            FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            ORDER BY e.occurred_at DESC
+            LIMIT :limit
+        """), {"limit": limit})
+        
+        expenses = []
+        for r in result:
+            expenses.append({
+                "id": r[0],
+                "expense_type": r[1],
+                "category": r[2] or "OTHER",
+                "category_name": r[3] or "Інше",
+                "amount": float(r[4] or 0),
+                "method": r[5],
+                "created_at": r[6].isoformat() if r[6] else None,
+                "description": r[7] or "",
+                "status": r[8]
+            })
+        
+        return {"expenses": expenses}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
 # DEPOSITS
 # ============================================================
 

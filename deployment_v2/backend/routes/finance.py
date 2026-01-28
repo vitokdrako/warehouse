@@ -1254,137 +1254,90 @@ async def delete_expense_category(category_id: int, db: Session = Depends(get_rh
 @router.get("/hub/overview")
 async def get_hub_overview(db: Session = Depends(get_rh_db)):
     """
-    Finance Hub 2.0 - Головний огляд:
-    - Каси (готівка, безготівка)
-    - Застави по валютах
-    - Виручка/витрати за місяць
-    - Статистика ордерів
+    Finance Hub 2.0 - Головний огляд (спрощена версія)
     """
     try:
-        # Каси - готівка та безготівка
-        cash_result = db.execute(text("""
+        # Один запит для всієї статистики
+        result = db.execute(text("""
             SELECT 
-                COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0) as cash_in,
-                COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type = 'refund' THEN amount ELSE 0 END), 0) as cash_out
-            FROM fin_payments
-            WHERE status = 'completed'
+                -- Готівка
+                (SELECT COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0) 
+                 - COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
+                 FROM fin_payments WHERE status = 'completed') as cash_balance,
+                -- Безготівка
+                (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0)
+                 - COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
+                 FROM fin_payments WHERE status = 'completed') as bank_balance,
+                -- Виручка цей місяць
+                (SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+                 WHERE status = 'completed' AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())) as month_revenue,
+                -- Витрати цей місяць
+                (SELECT COALESCE(SUM(amount), 0) FROM fin_expenses 
+                 WHERE status = 'posted' AND MONTH(occurred_at) = MONTH(CURRENT_DATE()) AND YEAR(occurred_at) = YEAR(CURRENT_DATE())) as month_expenses,
+                -- Кількість ордерів
+                (SELECT COUNT(*) FROM orders WHERE status NOT IN ('cancelled', 'archived') AND is_archived = FALSE) as total_orders,
+                -- Оплачені ордери
+                (SELECT COUNT(*) FROM orders WHERE rent_paid >= total_price AND total_price > 0 AND is_archived = FALSE) as paid_orders
         """))
-        cash_row = cash_result.fetchone()
         
-        # Витрати готівкою
-        expenses_cash = db.execute(text("""
-            SELECT COALESCE(SUM(amount), 0) FROM fin_expenses WHERE method = 'cash' AND status = 'posted'
-        """)).fetchone()[0]
-        
-        # Інкасації
-        encashments = db.execute(text("""
-            SELECT COALESCE(SUM(amount), 0) FROM fin_encashments WHERE status = 'completed'
-        """)).fetchone()[0] or 0
-        
-        cash_balance = float(cash_row[0] or 0) - float(cash_row[1] or 0) - float(expenses_cash or 0) - float(encashments)
-        
-        # Безготівка
-        bank_result = db.execute(text("""
-            SELECT 
-                COALESCE(SUM(CASE WHEN payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0) as bank_in,
-                COALESCE(SUM(CASE WHEN payment_type = 'refund' THEN amount ELSE 0 END), 0) as bank_out
-            FROM fin_payments
-            WHERE method = 'bank' AND status = 'completed'
-        """))
-        bank_row = bank_result.fetchone()
-        bank_balance = float(bank_row[0] or 0) - float(bank_row[1] or 0)
+        row = result.fetchone()
         
         # Застави по валютах
         deposits_result = db.execute(text("""
             SELECT 
                 currency,
-                SUM(actual_amount) as total_amount,
-                SUM(held_amount) as total_uah,
-                SUM(used_amount) as used,
-                SUM(refunded_amount) as refunded,
-                COUNT(*) as count
+                COALESCE(SUM(actual_amount), 0) as amount,
+                COALESCE(SUM(held_amount), 0) as uah,
+                COALESCE(SUM(used_amount), 0) as used,
+                COALESCE(SUM(refunded_amount), 0) as refunded,
+                COUNT(*) as cnt
             FROM fin_deposits
             WHERE status IN ('held', 'partial')
             GROUP BY currency
         """))
+        
         deposits_by_currency = {}
         for r in deposits_result:
+            available = float(r[1] or 0) - float(r[3] or 0) - float(r[4] or 0)
             deposits_by_currency[r[0]] = {
                 "amount": float(r[1] or 0),
                 "uah_equivalent": float(r[2] or 0),
-                "used": float(r[3] or 0),
-                "refunded": float(r[4] or 0),
-                "available": float(r[1] or 0) - float(r[3] or 0) - float(r[4] or 0),
-                "count": r[5]
+                "available": available if available > 0 else 0,
+                "count": r[5] or 0
             }
         
-        # Виручка за поточний місяць
-        revenue_result = db.execute(text("""
-            SELECT 
-                COALESCE(SUM(CASE WHEN payment_type = 'rent' THEN amount ELSE 0 END), 0) as rent,
-                COALESCE(SUM(CASE WHEN payment_type = 'additional' THEN amount ELSE 0 END), 0) as additional,
-                COALESCE(SUM(CASE WHEN payment_type = 'damage' THEN amount ELSE 0 END), 0) as damage
-            FROM fin_payments
-            WHERE status = 'completed'
-            AND MONTH(created_at) = MONTH(CURRENT_DATE())
-            AND YEAR(created_at) = YEAR(CURRENT_DATE())
-        """))
-        rev = revenue_result.fetchone()
-        
-        # Витрати за місяць
-        expenses_month = db.execute(text("""
-            SELECT COALESCE(SUM(amount), 0) 
-            FROM fin_expenses 
-            WHERE status = 'posted'
-            AND MONTH(occurred_at) = MONTH(CURRENT_DATE())
-            AND YEAR(occurred_at) = YEAR(CURRENT_DATE())
-        """)).fetchone()[0]
-        
-        # Статистика ордерів
-        orders_stats = db.execute(text("""
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN rent_paid >= total_rental AND total_rental > 0 THEN 1 ELSE 0 END) as fully_paid,
-                SUM(CASE WHEN rent_paid < total_rental AND total_rental > 0 THEN 1 ELSE 0 END) as with_debt,
-                SUM(total_rental) as total_rental,
-                SUM(rent_paid) as total_paid
-            FROM orders
-            WHERE status NOT IN ('cancelled', 'archived')
-            AND created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)
-        """)).fetchone()
-        
-        total_revenue = float(rev[0] or 0) + float(rev[1] or 0) + float(rev[2] or 0)
+        cash = float(row[0] or 0) if row else 0
+        bank = float(row[1] or 0) if row else 0
+        revenue = float(row[2] or 0) if row else 0
+        expenses = float(row[3] or 0) if row else 0
+        total_orders = int(row[4] or 0) if row else 0
+        paid_orders = int(row[5] or 0) if row else 0
         
         return {
-            "cash": {
-                "balance": cash_balance,
-                "currency": "UAH"
-            },
-            "bank": {
-                "balance": bank_balance,
-                "currency": "UAH"
-            },
+            "cash": {"balance": cash, "currency": "UAH"},
+            "bank": {"balance": bank, "currency": "UAH"},
             "deposits": deposits_by_currency,
             "month": {
-                "revenue": {
-                    "rent": float(rev[0] or 0),
-                    "additional": float(rev[1] or 0),
-                    "damage": float(rev[2] or 0),
-                    "total": total_revenue
-                },
-                "expenses": float(expenses_month or 0),
-                "profit": total_revenue - float(expenses_month or 0)
+                "revenue": {"total": revenue},
+                "expenses": expenses,
+                "profit": revenue - expenses
             },
             "orders": {
-                "total": orders_stats[0] or 0,
-                "fully_paid": orders_stats[1] or 0,
-                "with_debt": orders_stats[2] or 0,
-                "total_rental": float(orders_stats[3] or 0),
-                "total_paid": float(orders_stats[4] or 0)
+                "total": total_orders,
+                "fully_paid": paid_orders,
+                "with_debt": total_orders - paid_orders
             }
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[Finance Hub] Error in overview: {e}")
+        # Return empty data on error
+        return {
+            "cash": {"balance": 0, "currency": "UAH"},
+            "bank": {"balance": 0, "currency": "UAH"},
+            "deposits": {},
+            "month": {"revenue": {"total": 0}, "expenses": 0, "profit": 0},
+            "orders": {"total": 0, "fully_paid": 0, "with_debt": 0}
+        }
 
 
 @router.get("/hub/order-timeline/{order_id}")

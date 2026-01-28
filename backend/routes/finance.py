@@ -197,93 +197,134 @@ async def list_categories(type: Optional[str] = None, db: Session = Depends(get_
 
 @router.get("/payouts-stats")
 async def get_payouts_stats(db: Session = Depends(get_rh_db)):
-    """Payout statistics for Виплати tab:
-    - Каса з ренти (активний залишок) - cash received from rent
-    - Каса зі шкоди (активний залишок) - cash received from damage compensation
-    - До сплати - total amounts due to be paid out
-    - Витрати по касі - expenses paid from cash
-    - Витрати по школі (шкоді) - expenses related to damage
+    """Payout statistics for Finance Hub:
+    - Каса з ренти (з врахуванням витрат)
+    - Каса зі шкоди (з врахуванням витрат)
+    - Безготівка з ренти (з врахуванням витрат)
+    - Безготівка зі шкоди (з врахуванням витрат)
     """
     try:
-        # Cash from rent payments
-        rent_cash = db.execute(text("""
+        # === ГОТІВКА ===
+        # Cash income from rent
+        rent_cash_income = db.execute(text("""
             SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-            WHERE payment_type = 'rent' AND method = 'cash'
+            WHERE payment_type = 'rent' AND method = 'cash' AND status IN ('completed', 'confirmed')
         """)).fetchone()[0]
         
-        # Cash from damage payments
-        damage_cash = db.execute(text("""
+        # Cash income from damage
+        damage_cash_income = db.execute(text("""
             SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-            WHERE payment_type = 'damage' AND method = 'cash'
+            WHERE payment_type = 'damage' AND method = 'cash' AND status IN ('completed', 'confirmed')
         """)).fetchone()[0]
         
-        # Total due damage from product_damage_history
+        # Cash expenses from rent budget
+        rent_cash_expenses = db.execute(text("""
+            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE e.method = 'cash' AND (c.code = 'RENT_EXPENSE' OR c.code = 'RENT_CASH_EXPENSE')
+        """)).fetchone()[0]
+        
+        # Cash expenses from damage budget
+        damage_cash_expenses = db.execute(text("""
+            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE e.method = 'cash' AND c.code = 'DAMAGE_EXPENSE'
+        """)).fetchone()[0]
+        
+        # Cash deposits (внесення готівки)
+        rent_cash_deposits = db.execute(text("""
+            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE c.code = 'RENT_CASH_DEPOSIT'
+        """)).fetchone()[0]
+        
+        damage_cash_deposits = db.execute(text("""
+            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE c.code = 'DAMAGE_CASH_DEPOSIT'
+        """)).fetchone()[0]
+        
+        # === БЕЗГОТІВКА ===
+        # Bank income from rent
+        rent_bank_income = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'rent' AND method IN ('card', 'bank') AND status IN ('completed', 'confirmed')
+        """)).fetchone()[0]
+        
+        # Bank income from damage
+        damage_bank_income = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE payment_type = 'damage' AND method IN ('card', 'bank') AND status IN ('completed', 'confirmed')
+        """)).fetchone()[0]
+        
+        # Bank expenses from rent budget
+        rent_bank_expenses = db.execute(text("""
+            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE e.method = 'bank' AND (c.code = 'RENT_BANK_EXPENSE')
+        """)).fetchone()[0]
+        
+        # Bank expenses from damage budget
+        damage_bank_expenses = db.execute(text("""
+            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE e.method = 'bank' AND c.code = 'DAMAGE_BANK_EXPENSE'
+        """)).fetchone()[0]
+        
+        # === DUE AMOUNTS ===
         due_damage = db.execute(text("""
             SELECT COALESCE(SUM(fee), 0) - COALESCE(
                 (SELECT SUM(amount) FROM fin_payments WHERE payment_type = 'damage'), 0
             ) FROM product_damage_history WHERE fee > 0
         """)).fetchone()[0]
         
-        # Expenses from rent cash (приміщення, комунальні)
-        rent_expenses = db.execute(text("""
-            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
-            LEFT JOIN fin_categories c ON c.id = e.category_id
-            WHERE e.method = 'cash' AND (c.code = 'RENT_EXPENSE' OR c.code IS NULL OR c.code NOT LIKE 'DAMAGE%')
-        """)).fetchone()[0]
+        # === CALCULATE BALANCES ===
+        # Готівка = доходи - витрати + внесення
+        rent_cash_balance = float(rent_cash_income or 0) - float(rent_cash_expenses or 0) + float(rent_cash_deposits or 0)
+        damage_cash_balance = float(damage_cash_income or 0) - float(damage_cash_expenses or 0) + float(damage_cash_deposits or 0)
         
-        # Expenses from damage cash (реставрація, фарба)
-        damage_expenses = db.execute(text("""
-            SELECT COALESCE(SUM(e.amount), 0) FROM fin_expenses e 
-            LEFT JOIN fin_categories c ON c.id = e.category_id
-            WHERE e.method = 'cash' AND c.code = 'DAMAGE_EXPENSE'
-        """)).fetchone()[0]
-        
-        # Active cash balance - сума готівкових платежів мінус витрати
-        # (не використовуємо ledger, бо там застави теж враховуються)
-        cash_balance = db.execute(text("""
-            SELECT 
-                COALESCE((SELECT SUM(amount) FROM fin_payments WHERE method = 'cash' AND status IN ('completed', 'confirmed')), 0)
-                - COALESCE((SELECT SUM(amount) FROM fin_expenses WHERE method = 'cash'), 0)
-                - COALESCE((SELECT SUM(amount) FROM fin_encashments WHERE status = 'done'), 0)
-        """)).fetchone()[0]
-        
-        # Bank balance - сума безготівкових платежів
-        bank_balance = db.execute(text("""
-            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-            WHERE method IN ('card', 'bank') AND status IN ('completed', 'confirmed')
-        """)).fetchone()[0]
+        # Безготівка = доходи - витрати
+        rent_bank_balance = float(rent_bank_income or 0) - float(rent_bank_expenses or 0)
+        damage_bank_balance = float(damage_bank_income or 0) - float(damage_bank_expenses or 0)
         
         # Total rent revenue
         rent_revenue = db.execute(text("""
             SELECT COALESCE(SUM(amount), 0) FROM fin_payments WHERE payment_type = 'rent'
         """)).fetchone()[0]
         
-        # Bank payments from rent
-        rent_bank = db.execute(text("""
-            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-            WHERE payment_type = 'rent' AND method IN ('card', 'bank')
-        """)).fetchone()[0]
-        
-        # Bank payments from damage
-        damage_bank = db.execute(text("""
-            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-            WHERE payment_type = 'damage' AND method IN ('card', 'bank')
-        """)).fetchone()[0]
-        
         return {
-            "rent_cash_balance": float(rent_cash or 0),
-            "damage_cash_balance": float(damage_cash or 0),
+            # Готівка балансі (з врахуванням витрат)
+            "rent_cash_balance": rent_cash_balance,
+            "damage_cash_balance": damage_cash_balance,
+            "total_cash_balance": rent_cash_balance + damage_cash_balance,
+            
+            # Безготівка балансі (з врахуванням витрат)
+            "rent_bank_balance": rent_bank_balance,
+            "damage_bank_balance": damage_bank_balance,
+            "bank_balance": rent_bank_balance + damage_bank_balance,
+            
+            # Витрати окремо
+            "rent_cash_expenses": float(rent_cash_expenses or 0),
+            "damage_cash_expenses": float(damage_cash_expenses or 0),
+            "rent_bank_expenses": float(rent_bank_expenses or 0),
+            "damage_bank_expenses": float(damage_bank_expenses or 0),
+            
+            # Внесення
+            "rent_cash_deposits": float(rent_cash_deposits or 0),
+            "damage_cash_deposits": float(damage_cash_deposits or 0),
+            
+            # Due
             "total_due": float(due_damage or 0) if due_damage and due_damage > 0 else 0,
-            "due_rent": 0,  # Will be calculated from orders API if needed
             "due_damage": float(due_damage or 0) if due_damage and due_damage > 0 else 0,
-            "rent_expenses": float(rent_expenses or 0),
-            "damage_expenses": float(damage_expenses or 0),
-            "cash_balance": float(cash_balance or 0),
-            "bank_balance": float(bank_balance or 0),
-            "total_active_balance": float(cash_balance or 0) + float(bank_balance or 0),
-            "rent_bank": float(rent_bank or 0),
-            "damage_bank": float(damage_bank or 0),
-            "total_rent_revenue": float(rent_revenue or 0)
+            
+            # Legacy fields for compatibility
+            "rent_expenses": float(rent_cash_expenses or 0),
+            "damage_expenses": float(damage_cash_expenses or 0),
+            "rent_bank": float(rent_bank_income or 0),
+            "damage_bank": float(damage_bank_income or 0),
+            "total_rent_revenue": float(rent_revenue or 0),
+            "cash_balance": rent_cash_balance + damage_cash_balance,
+            "total_active_balance": rent_cash_balance + damage_cash_balance + rent_bank_balance + damage_bank_balance
         }
     except Exception as e:
         import traceback

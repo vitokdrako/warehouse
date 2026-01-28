@@ -282,6 +282,49 @@ export default function FinanceHub() {
     ]);
   }, [selectedOrderId]);
   
+  // Load all expenses for modal
+  const loadAllExpenses = useCallback(async () => {
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/expenses?limit=100`);
+      const data = await res.json();
+      setAllExpenses(data.expenses || []);
+    } catch (e) {
+      console.error("Load expenses error:", e);
+      setAllExpenses([]);
+    }
+  }, []);
+  
+  // Add expense
+  const handleAddExpense = async () => {
+    if (!expenseAmount || Number(expenseAmount) <= 0 || !expenseDescription.trim()) return;
+    
+    setSaving(true);
+    const user = getUser();
+    
+    try {
+      await authFetch(`${BACKEND_URL}/api/finance/expenses`, {
+        method: "POST",
+        body: JSON.stringify({
+          amount: Number(expenseAmount),
+          description: expenseDescription,
+          category: expenseType, // "rent" або "damage"
+          method: "cash",
+          created_by_id: user.id,
+          created_by_name: user.email,
+        }),
+      });
+      
+      setExpenseAmount("");
+      setExpenseDescription("");
+      setShowExpenseModal(false);
+      await loadPayoutsStats();
+    } catch (e) {
+      console.error("Add expense error:", e);
+      alert("Помилка: " + e.message);
+    }
+    setSaving(false);
+  };
+  
   // ===== SELECTED ORDER DATA =====
   const selectedOrder = useMemo(() => {
     return orders.find(o => o.order_id === selectedOrderId) || null;

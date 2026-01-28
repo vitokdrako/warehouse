@@ -1270,12 +1270,17 @@ export default function FinanceHub() {
                       <div>
                         <div className="text-sm font-medium text-slate-900">{exp.description}</div>
                         <div className="text-xs text-slate-500">
-                          {exp.category === "rent" ? "💵 Каса оренди" : "🔧 Каса шкоди"} · {fmtDate(exp.created_at)}
+                          {exp.category?.includes("RENT") ? "Оренда" : "Шкода"} · 
+                          {exp.category?.includes("BANK") ? " 🏦" : " 💵"} · 
+                          {isDeposit ? "внесення" : "витрата"} · {fmtDate(exp.created_at)}
                         </div>
                       </div>
-                      <div className="text-sm font-bold text-rose-600">-{money(exp.amount)}</div>
+                      <div className={cn("text-sm font-bold", isDeposit ? "text-emerald-600" : "text-rose-600")}>
+                        {isDeposit ? "+" : "-"}{money(exp.amount)}
+                      </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </div>

@@ -790,12 +790,21 @@ export default function FinanceHub() {
                           {orderDeposit.currency === "USD" ? "$" : orderDeposit.currency === "EUR" ? "€" : "₴"}
                           {(orderDeposit.actual_amount || orderDeposit.held_amount).toLocaleString("uk-UA")}
                         </span>
-                        {orderDeposit.currency !== "UAH" && (
-                          <span className="text-xs text-slate-500"> (≈{money(orderDeposit.held_amount)})</span>
-                        )}
                       </div>
                       <div className="text-sm text-slate-700">
-                        Доступно: <span className="font-semibold">
+                        Використано: <span className="font-semibold">
+                          {orderDeposit.currency === "USD" ? "$" : orderDeposit.currency === "EUR" ? "€" : "₴"}
+                          {(orderDeposit.used_amount_original || orderDeposit.used_amount || 0).toLocaleString("uk-UA")}
+                        </span>
+                      </div>
+                      <div className="text-sm text-slate-700">
+                        Повернуто: <span className="font-semibold">
+                          {orderDeposit.currency === "USD" ? "$" : orderDeposit.currency === "EUR" ? "€" : "₴"}
+                          {(orderDeposit.refunded_amount_original || orderDeposit.refunded_amount || 0).toLocaleString("uk-UA")}
+                        </span>
+                      </div>
+                      <div className="text-sm text-slate-700 mt-2 pt-2 border-t border-slate-200">
+                        <strong>Доступно:</strong> <span className="font-bold text-emerald-600">
                           {orderDeposit.currency === "USD" ? "$" : orderDeposit.currency === "EUR" ? "€" : "₴"}
                           {Math.max(0, (orderDeposit.actual_amount || orderDeposit.held_amount) - 
                             (orderDeposit.used_amount_original || orderDeposit.used_amount || 0) - 
@@ -803,6 +812,37 @@ export default function FinanceHub() {
                           ).toLocaleString("uk-UA")}
                         </span>
                       </div>
+                      
+                      {/* Кнопка повернення застави */}
+                      {(() => {
+                        const available = (orderDeposit.actual_amount || orderDeposit.held_amount) - 
+                          (orderDeposit.used_amount_original || orderDeposit.used_amount || 0) - 
+                          (orderDeposit.refunded_amount_original || orderDeposit.refunded_amount || 0);
+                        return available > 0 ? (
+                          <div className="mt-3 pt-3 border-t border-slate-200">
+                            <Button
+                              variant="primary"
+                              className="w-full"
+                              disabled={saving}
+                              onClick={async () => {
+                                if (!window.confirm(`Повернути заставу: ${orderDeposit.currency === "USD" ? "$" : orderDeposit.currency === "EUR" ? "€" : "₴"}${available}?`)) return;
+                                setSaving(true);
+                                try {
+                                  await authFetch(`${BACKEND_URL}/api/finance/deposits/${orderDeposit.id}/refund?amount=${available}&method=cash`, {
+                                    method: "POST",
+                                  });
+                                  await refreshAll();
+                                } catch (e) {
+                                  alert("Помилка: " + e.message);
+                                }
+                                setSaving(false);
+                              }}
+                            >
+                              💸 Повернути заставу
+                            </Button>
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                   )}
                 </div>

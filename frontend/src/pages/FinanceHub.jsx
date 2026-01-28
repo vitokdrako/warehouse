@@ -165,6 +165,16 @@ export default function FinanceHub() {
   const [additionalName, setAdditionalName] = useState("");
   const [depositCurrency, setDepositCurrency] = useState("UAH");
   
+  // Expense modals
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [expenseType, setExpenseType] = useState("rent"); // "rent" or "damage"
+  const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseDescription, setExpenseDescription] = useState("");
+  
+  // All operations modal
+  const [showOperationsModal, setShowOperationsModal] = useState(false);
+  const [allExpenses, setAllExpenses] = useState([]);
+  
   // Get current user
   const getUser = () => JSON.parse(localStorage.getItem("user") || "{}");
   

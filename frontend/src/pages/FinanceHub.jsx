@@ -171,10 +171,23 @@ export default function FinanceHub() {
   // Load orders
   const loadOrders = useCallback(async () => {
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/finance/orders`);
+      // Use existing orders endpoint with finance data
+      const res = await authFetch(`${BACKEND_URL}/api/orders?include_finance=true&limit=100`);
       if (res.ok) {
         const data = await res.json();
-        setOrders(data.orders || []);
+        // Transform to expected format
+        const ordersData = (data.orders || data || []).map(o => ({
+          order_id: o.order_id,
+          order_number: o.order_number,
+          customer_name: o.customer_name,
+          customer_phone: o.customer_phone,
+          status: o.status,
+          total_rental: o.total_price || o.total_rental || 0,
+          rent_paid: o.rent_paid || 0,
+          total_deposit: o.deposit_amount || o.total_deposit || 0,
+          deposit_held: o.deposit_held || 0,
+        }));
+        setOrders(ordersData);
       }
     } catch (e) {
       console.error("Error loading orders:", e);

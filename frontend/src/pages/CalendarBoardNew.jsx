@@ -836,7 +836,7 @@ function MonthView({ baseDate, items, onDateClick }) {
 /************* Main Component *************/
 export default function CalendarBoardNew() {
   const [view, setView] = useState('week')
-  const [baseDate, setBaseDate] = useState(new Date())
+  const [baseDate, setBaseDate] = useState(getKyivToday())
   const [laneFilter, setLaneFilter] = useState('all')
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)

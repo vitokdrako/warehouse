@@ -460,6 +460,32 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
     setSaving(false);
   };
 
+  const acceptAdditional = async () => {
+    if (!additionalDescription || Number(additionalAmount) <= 0) return;
+    setSaving(true);
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      await authFetch(`${BACKEND_URL}/api/finance/payments`, {
+        method: "POST",
+        body: JSON.stringify({
+          payment_type: "additional",
+          method: additionalMethod,
+          amount: Number(additionalAmount),
+          order_id: order.order_id,
+          accepted_by_id: user.id,
+          accepted_by_name: user.email,
+          note: additionalDescription,
+        }),
+      });
+      setAdditionalDescription("");
+      setAdditionalAmount("");
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+    }
+    setSaving(false);
+  };
+
   const archiveOrder = async () => {
     if (!confirm("Архівувати замовлення? Воно зникне з активних ордерів.")) return;
     setSaving(true);

@@ -1346,114 +1346,124 @@ async def get_order_timeline(order_id: int, db: Session = Depends(get_rh_db)):
         events = []
         
         # Платежі
-        payments = db.execute(text("""
-            SELECT id, payment_type, method, amount, description, accepted_by_name, created_at, status
-            FROM fin_payments
-            WHERE order_id = :order_id
-            ORDER BY created_at DESC
-        """), {"order_id": order_id})
-        
-        type_labels = {
-            "rent": "Оплата оренди",
-            "additional": "Донарахування",
-            "damage": "Оплата шкоди",
-            "refund": "Повернення"
-        }
-        
-        for p in payments:
-            events.append({
-                "id": f"payment_{p[0]}",
-                "type": "payment",
-                "subtype": p[1],
-                "icon": "✓" if p[7] == "completed" else "⏳",
-                "title": type_labels.get(p[1], p[1]),
-                "description": p[4] if p[4] else None,
-                "amount": float(p[3]),
-                "method": p[2],
-                "user": p[5],
-                "timestamp": p[6].isoformat() if p[6] else None,
-                "status": p[7],
-                "tone": "ok" if p[7] == "completed" else "warn"
-            })
+        try:
+            payments = db.execute(text("""
+                SELECT id, payment_type, method, amount, description, accepted_by_name, created_at, status
+                FROM fin_payments
+                WHERE order_id = :order_id
+                ORDER BY created_at DESC
+            """), {"order_id": order_id})
+            
+            type_labels = {
+                "rent": "Оплата оренди",
+                "additional": "Донарахування",
+                "damage": "Оплата шкоди",
+                "refund": "Повернення"
+            }
+            
+            for p in payments:
+                events.append({
+                    "id": f"payment_{p[0]}",
+                    "type": "payment",
+                    "subtype": p[1],
+                    "icon": "✓" if p[7] == "completed" else "⏳",
+                    "title": type_labels.get(p[1], p[1] or "Оплата"),
+                    "description": p[4] if p[4] else None,
+                    "amount": float(p[3]) if p[3] else 0,
+                    "method": p[2],
+                    "user": p[5],
+                    "timestamp": p[6].isoformat() if p[6] else None,
+                    "status": p[7],
+                    "tone": "ok" if p[7] == "completed" else "warn"
+                })
+        except Exception as e:
+            print(f"[Timeline] Error loading payments: {e}")
         
         # Застави
-        deposits = db.execute(text("""
-            SELECT id, actual_amount, currency, held_amount, used_amount, refunded_amount, 
-                   method, accepted_by_name, created_at, status
-            FROM fin_deposits
-            WHERE order_id = :order_id
-            ORDER BY created_at DESC
-        """), {"order_id": order_id})
-        
-        for d in deposits:
-            # Прийом застави
-            events.append({
-                "id": f"deposit_{d[0]}",
-                "type": "deposit_in",
-                "icon": "🔒",
-                "title": "Застава прийнята",
-                "amount": float(d[1]),
-                "currency": d[2],
-                "uah_amount": float(d[3]),
-                "method": d[6],
-                "user": d[7],
-                "timestamp": d[8].isoformat() if d[8] else None,
-                "status": d[9],
-                "tone": "info"
-            })
+        try:
+            deposits = db.execute(text("""
+                SELECT id, actual_amount, currency, held_amount, used_amount, refunded_amount, 
+                       method, accepted_by_name, created_at, status
+                FROM fin_deposits
+                WHERE order_id = :order_id
+                ORDER BY created_at DESC
+            """), {"order_id": order_id})
             
-            # Утримання
-            if d[4] and float(d[4]) > 0:
+            for d in deposits:
+                # Прийом застави
                 events.append({
-                    "id": f"deposit_use_{d[0]}",
-                    "type": "deposit_use",
-                    "icon": "⚠️",
-                    "title": "Утримано із застави",
-                    "amount": float(d[4]),
-                    "currency": "UAH",
+                    "id": f"deposit_{d[0]}",
+                    "type": "deposit_in",
+                    "icon": "🔒",
+                    "title": "Застава прийнята",
+                    "amount": float(d[1]) if d[1] else 0,
+                    "currency": d[2] or "UAH",
+                    "uah_amount": float(d[3]) if d[3] else 0,
+                    "method": d[6],
+                    "user": d[7],
                     "timestamp": d[8].isoformat() if d[8] else None,
-                    "tone": "warn"
+                    "status": d[9],
+                    "tone": "info"
                 })
+                
+                # Утримання
+                if d[4] and float(d[4]) > 0:
+                    events.append({
+                        "id": f"deposit_use_{d[0]}",
+                        "type": "deposit_use",
+                        "icon": "⚠️",
+                        "title": "Утримано із застави",
+                        "amount": float(d[4]),
+                        "currency": "UAH",
+                        "timestamp": d[8].isoformat() if d[8] else None,
+                        "tone": "warn"
+                    })
+                
+                # Повернення
+                if d[5] and float(d[5]) > 0:
+                    events.append({
+                        "id": f"deposit_refund_{d[0]}",
+                        "type": "deposit_out",
+                        "icon": "💰",
+                        "title": "Застава повернута",
+                        "amount": float(d[5]),
+                        "currency": "UAH",
+                        "timestamp": d[8].isoformat() if d[8] else None,
+                        "tone": "ok"
+                    })
+        except Exception as e:
+            print(f"[Timeline] Error loading deposits: {e}")
+        
+        # Шкода (не оплачена) - тільки якщо таблиця існує
+        try:
+            damages = db.execute(text("""
+                SELECT id, product_name, damage_type, fee, created_at
+                FROM product_damage_history
+                WHERE order_id = :order_id AND fee > 0 AND stage = 'return'
+                ORDER BY created_at DESC
+            """), {"order_id": order_id})
             
-            # Повернення
-            if d[5] and float(d[5]) > 0:
+            for dm in damages:
                 events.append({
-                    "id": f"deposit_refund_{d[0]}",
-                    "type": "deposit_out",
-                    "icon": "💰",
-                    "title": "Застава повернута",
-                    "amount": float(d[5]),
-                    "currency": "UAH",
-                    "timestamp": d[8].isoformat() if d[8] else None,
-                    "tone": "ok"
+                    "id": f"damage_{dm[0]}",
+                    "type": "damage",
+                    "icon": "🔧",
+                    "title": f"Шкода: {dm[2] or 'дефект'}",
+                    "description": dm[1],
+                    "amount": float(dm[3]) if dm[3] else 0,
+                    "timestamp": dm[4].isoformat() if dm[4] else None,
+                    "tone": "danger"
                 })
-        
-        # Шкода (не оплачена)
-        damages = db.execute(text("""
-            SELECT id, product_name, damage_type, fee, created_at
-            FROM product_damage_history
-            WHERE order_id = :order_id AND fee > 0 AND stage = 'return'
-            ORDER BY created_at DESC
-        """), {"order_id": order_id})
-        
-        for dm in damages:
-            events.append({
-                "id": f"damage_{dm[0]}",
-                "type": "damage",
-                "icon": "🔧",
-                "title": f"Шкода: {dm[2]}",
-                "description": dm[1],
-                "amount": float(dm[3]),
-                "timestamp": dm[4].isoformat() if dm[4] else None,
-                "tone": "danger"
-            })
+        except Exception as e:
+            print(f"[Timeline] Error loading damages: {e}")
         
         # Сортуємо по часу (новіші зверху)
         events.sort(key=lambda x: x.get("timestamp") or "", reverse=True)
         
         return {"order_id": order_id, "events": events}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[Timeline] Fatal error: {e}")
+        return {"order_id": order_id, "events": []}
 
 
 @router.get("/hub/monthly-report")

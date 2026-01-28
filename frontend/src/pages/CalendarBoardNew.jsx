@@ -1021,7 +1021,7 @@ export default function CalendarBoardNew() {
         
         cleaningTasks.forEach((task) => {
           // Показуємо ВСІ завдання, не тільки активні
-          const updatedDate = task.updated_at ? task.updated_at.slice(0, 10) : toISO(new Date())
+          const updatedDate = task.updated_at ? task.updated_at.slice(0, 10) : toISO(getKyivToday())
           
           const statusLabels = {
             wash: 'Мийка',
@@ -1038,7 +1038,7 @@ export default function CalendarBoardNew() {
             timeSlot: task.status === 'wash' ? 'morning' : task.status === 'dry' ? 'day' : 'evening',
             orderCode: null,
             title: `${statusLabels[task.status] || task.status}: ${task.sku}`,
-            client: `Оновлено: ${new Date(task.updated_at || new Date()).toLocaleDateString('uk-UA')}`,
+            client: `Оновлено: ${new Date(task.updated_at || getKyivDate()).toLocaleDateString('uk-UA')}`,
             badge: task.status === 'repair' ? 'Критично' : task.status === 'clean' ? 'Завершено' : 'В процесі',
             status: task.status,
             orderData: task,
@@ -1056,7 +1056,7 @@ export default function CalendarBoardNew() {
         const damages = damageRes.data || []
         
         damages.forEach((d) => {
-          const damageDate = d.created_at ? d.created_at.slice(0, 10) : toISO(new Date())
+          const damageDate = d.created_at ? d.created_at.slice(0, 10) : toISO(getKyivToday())
           
           calendarItems.push({
             id: `damage-${d.id}`,

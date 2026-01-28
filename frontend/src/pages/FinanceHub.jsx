@@ -167,7 +167,8 @@ export default function FinanceHub() {
   
   // Expense modals
   const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [expenseType, setExpenseType] = useState("rent"); // "rent" or "damage"
+  const [expenseType, setExpenseType] = useState("rent_cash"); // "rent_cash", "damage_cash", "rent_bank", "damage_bank"
+  const [operationType, setOperationType] = useState("expense"); // "expense" or "deposit"
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");
   

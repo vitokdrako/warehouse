@@ -425,6 +425,7 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         "company": company,
         "payer": payer,
         "item_type": item_type,
+        "total_words": number_to_words_ua(total_rent),
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options
     }

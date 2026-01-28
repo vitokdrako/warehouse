@@ -1023,17 +1023,114 @@ export default function FinanceHub() {
 
             <Card title="⚡ Швидкі дії">
               <div className="grid grid-cols-1 gap-2">
-                <Button variant="ghost" onClick={() => window.location.href = "/expenses"}>
-                  + Витрата
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setExpenseType("rent");
+                    setShowExpenseModal(true);
+                  }}
+                >
+                  💵 Витрата (оренда)
                 </Button>
-                <Button variant="ghost" onClick={() => window.location.href = "/payroll"}>
-                  + Зарплата
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setExpenseType("damage");
+                    setShowExpenseModal(true);
+                  }}
+                >
+                  🔧 Витрата (шкода)
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    loadAllExpenses();
+                    setShowOperationsModal(true);
+                  }}
+                >
+                  📋 Всі операції
                 </Button>
               </div>
             </Card>
           </div>
         </div>
       </div>
+      
+      {/* Expense Modal */}
+      {showExpenseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+              <h3 className="font-semibold">
+                {expenseType === "rent" ? "💵 Витрата з каси оренди" : "🔧 Витрата з каси шкоди"}
+              </h3>
+              <button onClick={() => setShowExpenseModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Опис витрати *</label>
+                <Input
+                  value={expenseDescription}
+                  onChange={(e) => setExpenseDescription(e.target.value)}
+                  placeholder={expenseType === "rent" ? "Оплата приміщення, комунальні..." : "Фарба, реставрація, расходники..."}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Сума (₴) *</label>
+                <Input
+                  value={expenseAmount}
+                  onChange={(e) => setExpenseAmount(e.target.value)}
+                  placeholder="0"
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" className="flex-1" onClick={() => setShowExpenseModal(false)}>
+                  Скасувати
+                </Button>
+                <Button 
+                  className="flex-1" 
+                  disabled={saving || !expenseAmount || !expenseDescription.trim()}
+                  onClick={handleAddExpense}
+                >
+                  {saving ? "..." : "Додати витрату"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* All Operations Modal */}
+      {showOperationsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
+              <h3 className="font-semibold">📋 Всі фінансові операції</h3>
+              <button onClick={() => setShowOperationsModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1">
+              {allExpenses.length === 0 ? (
+                <div className="text-center text-slate-500 py-8">Немає витрат</div>
+              ) : (
+                <div className="space-y-2">
+                  {allExpenses.map((exp) => (
+                    <div key={exp.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
+                      <div>
+                        <div className="text-sm font-medium text-slate-900">{exp.description}</div>
+                        <div className="text-xs text-slate-500">
+                          {exp.category === "rent" ? "💵 Каса оренди" : "🔧 Каса шкоди"} · {fmtDate(exp.created_at)}
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-rose-600">-{money(exp.amount)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

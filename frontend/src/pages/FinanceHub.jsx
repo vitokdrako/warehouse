@@ -583,11 +583,44 @@ export default function FinanceHub() {
           <div className={cn("sm:col-span-3 space-y-4", activeTabMobile !== "kasy" && "hidden sm:block")}>
             <Card title="📊 Каси">
               <div className="divide-y divide-slate-100">
-                <StatRow label="💵 Готівка" value={money(payoutsStats?.cash_balance || 0)} />
-                <StatRow label="🏦 Безготівка" value={money(payoutsStats?.bank_balance || 0)} />
+                <div className="pb-2">
+                  <div className="text-xs font-semibold text-slate-500 mb-2">💵 Готівка</div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Оренда</span>
+                      <span className="font-semibold text-emerald-600">{money(payoutsStats?.rent_cash_balance || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Шкода</span>
+                      <span className="font-semibold text-amber-600">{money(payoutsStats?.damage_cash_balance || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
+                      <span className="text-slate-700 font-medium">Разом</span>
+                      <span className="font-bold">{money((payoutsStats?.rent_cash_balance || 0) + (payoutsStats?.damage_cash_balance || 0))}</span>
+                    </div>
+                  </div>
+                </div>
                 
-                <div className="pt-2">
-                  <div className="text-xs font-semibold text-slate-500 mb-2">🔒 Застави</div>
+                <div className="py-2">
+                  <div className="text-xs font-semibold text-slate-500 mb-2">🏦 Безготівка</div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Оренда</span>
+                      <span className="font-semibold">{money(payoutsStats?.rent_bank || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Шкода</span>
+                      <span className="font-semibold">{money(payoutsStats?.damage_bank || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm pt-1 border-t border-slate-100">
+                      <span className="text-slate-700 font-medium">Разом</span>
+                      <span className="font-bold">{money(payoutsStats?.bank_balance || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="py-2">
+                  <div className="text-xs font-semibold text-slate-500 mb-2">🔒 Застави (холд)</div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-600">₴</span>
@@ -608,16 +641,16 @@ export default function FinanceHub() {
                   </div>
                 </div>
 
-                <div className="pt-3">
-                  <div className="text-xs font-semibold text-slate-500 mb-2">📈 Всього</div>
+                <div className="pt-2">
+                  <div className="text-xs font-semibold text-slate-500 mb-2">📉 Витрати</div>
                   <div className="space-y-1">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">Виручка (оренда)</span>
-                      <span className="font-semibold">{money(payoutsStats?.total_rent_revenue || 0)}</span>
+                      <span className="text-slate-600">З каси оренди</span>
+                      <span className="font-semibold text-rose-600">-{money(payoutsStats?.rent_expenses || 0)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">Витрати</span>
-                      <span className="font-semibold">{money(payoutsStats?.cash_expenses || 0)}</span>
+                      <span className="text-slate-600">З каси шкоди</span>
+                      <span className="font-semibold text-rose-600">-{money(payoutsStats?.damage_expenses || 0)}</span>
                     </div>
                   </div>
                 </div>

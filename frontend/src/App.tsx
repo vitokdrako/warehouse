@@ -20,8 +20,9 @@ import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
 import UniversalOpsCalendar from './pages/UniversalOpsCalendar';
 import CatalogBoard from './pages/CatalogBoard';
-import FinanceConsoleApp from './pages/FinanceConsoleApp';
-// Legacy imports (replaced by FinanceConsoleApp)
+import FinanceHub from './pages/FinanceHub';
+// Legacy: import FinanceConsoleApp from './pages/FinanceConsoleApp';
+// Legacy imports (replaced by FinanceHub)
 // import FinanceCabinet from './pages/FinanceCabinet';
 // import FinanceDashboard from './pages/FinanceDashboard';
 // New unified workspace components

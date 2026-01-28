@@ -188,7 +188,7 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         SELECT SUM(fee) as total_fee
         FROM product_damage_history
         WHERE order_id = :order_id
-    """), {"order_id": order_id})
+    """), {"order_id": order_id_int})
     damage_row = damage_result.fetchone()
     total_damage = float(damage_row[0]) if damage_row and damage_row[0] else 0
     

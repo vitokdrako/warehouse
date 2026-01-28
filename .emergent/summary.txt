@@ -1,147 +1,129 @@
 <analysis>**original_problem_statement:**
-The initial problem was a critical, production-breaking CORS error that made the entire application unusable. After fixing that, the user requested a series of significant mobile UI optimizations for various parts of the application, including the order workspace, main dashboard, chat, and tasks cabinet. The user also requested a fix for duplicate product SKUs, which were being overwritten by a cron job. The latest request is to improve the damage tracking system to ensure that existing damage history for a product is visible when processing an order.
+The initial problem was a critical, production-breaking CORS error. Following the fix, the user requested a series of significant mobile UI optimizations for the application. The user also requested a fix for duplicate product SKUs and a major improvement to the damage tracking system. The most recent tasks involved a complete, user-guided redesign of the finance management system into a single unified Finance Hub, fixing a series of follow-up bugs related to financial calculations and document generation, correcting a timezone issue in the calendar, and implementing an order archiving system. The latest interaction was a planning discussion for a major new feature to handle different legal entities (FOP, LLC) for invoicing and document generation.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is functional again after a critical CORS issue was resolved. The backend  and  files were updated to handle CORS correctly. A one-time script was run to fix duplicate product SKUs in the OpenCart database. A significant portion of the frontend has been refactored for a better mobile experience, including the main dashboard, tasks cabinet, order workspace (issue card), and chat modal. The damage tracking system has been partially refactored to use a dedicated endpoint and storage directory for photos, but it currently fails to display pre-existing damage records to the user during order processing.
+The application is stable. The old finance tabs have been successfully consolidated into a new, single-page  based on a user-provided mock-up. This new hub is fully functional and connected to backend APIs. It correctly displays cash/bank balances broken down by Rent and Damage budgets, tracks held deposits, and allows for categorized expense and income entries. All known calculation bugs in the finance module and dashboard have been fixed.
+
+The document generation system has been updated to correctly populate financial data in the Акт взаєморозрахунків and Акт повернення застави. The calendar now correctly reflects the Kyiv timezone. A redesigned Orders Archive page displays a full, detailed event timeline for each archived order.
 
 **Last working item**:
--   **Last item agent was working:** Fixing the logic to display existing damage history for products within an order. The user reported that for order #7273, an item known to have damage does not show its history when opening the Issue Card or the Fix Damage modal. The agent identified that the backend API endpoint for retrieving issue card data does not include the damage history for the items. The agent was about to modify the backend to include this data.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **User Testing Done:** N
--   **Which testing method agent to use?** Backend testing agent to verify the  endpoint response now contains a  array for each item. Then, use the frontend testing agent to confirm this history is displayed in the UI when viewing an order.
+-   **Last item agent was working:** The agent was in a discussion and analysis phase with the user to plan a major new feature: expanding the finance module to support different types of legal entities (Фіз особа, ФОП, ТОВ) with varying tax systems. The agent analyzed several document examples provided by the user and outlined a potential architecture and a list of required data fields.
+-   **Status:** NONE (This was a planning/discussion phase. No code has been implemented for this feature yet.)
+-   **Agent Testing Done:** N/A
+-   **User Testing Done:** N/A
+-   **Which testing method agent to use?** N/A
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Existing Damage History is Not Displayed (P0)**
-    -   **Description:** When a user opens an order for issuing (), the system does not show the pre-existing damage history for the items in that order. This prevents requisitioners from knowing if a defect is new or was previously recorded.
-    -   **Attempted fixes:** None yet on the backend.
-    -   **Next debug checklist:**
-        1.  **Backend:** Modify the  function in .
-        2.  For each item fetched for the issue card, query the  table using the .
-        3.  Attach the resulting list of damage records to the item object returned in the API response (e.g., as a  array).
-        4.  **Frontend:** In , ensure the  state now includes the  array.
-        5.  Pass this  array as a prop to the  component.
-        6.  **Frontend:** Update  to render the received  in a read-only section, so users can see existing damages before adding a new one.
-    -   **Why fix this issue and what will be achieved with the fix?** This is critical for the damage tracking workflow. It will provide a single source of truth for an item's condition, preventing redundant damage reports and clarifying liability.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** None.
--   **Issue 2: Product Sub-category Data is Empty (P1)**
-    -   **Description:** In the Re-audit Cabinet, selecting a main category like Свічники (Candlesticks) and then a sub-category like Фігури (Figures) shows no data. The investigation revealed that products are linked to the parent category (ID 76) but not the specific sub-category (ID 220), which has 0 products.
-    -   **Attempted fixes:** Agent identified the root cause in the database but did not get user confirmation on how to proceed.
-    -   **Next debug checklist:**
-        1.  Ask the user to choose a solution:
-            -   **A) Data Fix:** Create a script to re-assign products from parent categories to the correct sub-categories in the  table.
-            -   **B) Logic Fix:** Modify the Re-audit Cabinet's filtering logic to also show products from the parent category if the selected sub-category contains no products.
-        2.  Implement the chosen solution.
-    -   **Why fix this issue and what will be achieved with the fix?** It will make product navigation and auditing in the Re-audit Cabinet functional and intuitive.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend (for logic fix) or Backend (for data fix).
-    -   **Blocked on other issue:** User decision.
+There are no pending bugs or issues. The previously reported problems with financial calculations, document data, and API errors have all been resolved. The focus has shifted to the implementation of a new feature.
 
 **In progress Task List**:
--   None.
+There are no tasks currently in progress.
 
 **Upcoming and Future Tasks**
--   **Future Tasks:**
-    -   **(P0) Implement Full Role-Based Access Control (RBAC):** As per the , the application lacks proper permission enforcement on both frontend routes and backend APIs. This is a major security and architectural task.
-    -   (P1) Further develop the Personal Cabinet concept for all user roles.
-    -   (P2) Telegram Bot Integration.
-    -   (P3) Digital Signature Integration.
+-   **(P0) Implement Document Packages for Different Legal Entities:** This is the next major task stemming directly from the last user conversation.
+    -   **UI:** Create a UI switcher in the Finance Hub to select the payer type (e.g., Фіз особа, ФОП спрощена, ФОП загальна, ТОВ). Based on the selection, show a form to input the payer's legal details (Company Name, EDRPOU, IBAN, Director's Name, etc.).
+    -   **Database:** Update the database schema to store these new payer details, likely linked to the client or the order.
+    -   **Backend:**
+        -   Modify the document generation logic () to be conditional. Based on the , it must select the correct document template and determine whether to list the transaction as a service () or a good ().
+        -   Create new Jinja2 templates for  (for general tax systems) and variations of  and  for FOP/LLC.
+-   **(P1) Implement Full Role-Based Access Control (RBAC):** (From previous handoff).
+-   **(P1) Implement Monthly Financial Report:** A modal view accessible from the finance cabinet. (From previous handoff).
+-   **(P2) Product Sub-category Data is Empty:** The user asked to deprioritize this, but it remains a known data issue. (From previous handoff).
+-   **(P2) Telegram Bot Integration.** (From previous handoff).
+-   **(P3) Digital Signature Integration.** (From previous handoff).
 
 **Completed work in this session**
--   **Critical Bugfix - Production CORS Failure:** Resolved the site-wide CORS error by correctly configuring  in  and updating the  file. Also fixed a related  in .
--   **Data Integrity - Unique SKUs:** Found and fixed 131 duplicate product SKUs in the OpenCart database by running a script to append unique suffixes. This prevents data overwrites during cron synchronization.
--   **Feature - Damage Category Auto-Selection:** The Damage Modal now automatically determines the damage category based on the item's , simplifying the process for users.
--   **Refactor - Damage Photo Handling:** Centralized damage photo uploads to a single endpoint () and a dedicated directory (). Corrected historical data paths in the database.
--   **Feature - Extensive Mobile UI Overhaul:**
-    -   **Tasks Cabinet ():** Complete redesign for mobile, featuring a tabbed Kanban view, filters in a bottom-sheet, and compact task cards.
-    -   **Order/Issue Workspace ():** Redesigned with a compact sticky header, a footer that hides on scroll, redesigned item cards, and an image zoom-in modal.
-    -   **Dashboard Header ():** Made responsive with a compact user avatar and a logout dropdown menu.
-    -   **Chat ():** Adapted to be a full-screen experience on mobile devices.
+-   **Feature - Unified Finance Hub:** Replaced four separate finance tabs with a single, comprehensive , implementing the user's mock-up.
+-   **Feature - Advanced Expense/Income Tracking:** Implemented a system for adding categorized expenses and income (Rent/Damage, Cash/Bank) via modals in the Finance Hub.
+-   **Feature - Order Archiving System:**
+    -   Added a conditional Send to Archive button in the Finance Hub, which activates only after the order's deposit is fully settled.
+    -   Completely redesigned the  page with corporate styles and a detailed event timeline (creation, payments, damages, documents) for each order.
+-   **Bugfix - Financial Calculation & Consistency:**
+    -   Corrected cash balance calculations to properly subtract expenses and handle income.
+    -   Synchronized the data logic between the main Dashboard and the Finance Hub by refactoring the  endpoint.
+-   **Bugfix - Document Generation:** Fixed a critical bug in  where paid amounts were not appearing in generated documents due to incorrect status filters and a data type mismatch for  (string vs. int).
+-   **Bugfix - Calendar Timezone:** Fixed  to correctly display the current date based on the Kyiv timezone (Europe/Kiev), resolving an off-by-one-day error.
+-   **Bugfix - Expense API 500 Error:** Resolved a server error on  caused by an incorrect SQL INSERT statement.
+-   **Refactor - UI & Backend Logic:**
+    -   Re-added the standard  to the Finance Hub.
+    -   Updated backend endpoints (, ) to support the new UI features.
 
 **Earlier issues found/mentioned but not fixed**
--   The product sub-category data issue (listed as Issue 2 in All Pending/In progress Issue list).
-
-**Known issue recurrence from previous fork**
--   None.
+-   **Product Sub-category Data is Empty:** User mentioned this but deprioritized it. It's listed in Future Tasks.
 
 **Code Architecture**
-
+full-historydeposit_settlement_actdeposit_refund_act
 
 **Key Technical Concepts**
--   **FastAPI CORS:** The  was the key to fixing the main blocker. The configuration now uses  from the  file.
--   **Responsive Frontend Design (Mobile-First):** The session involved a massive effort to make the UI mobile-friendly using TailwindCSS responsive prefixes (, ) and adapting components for smaller screens (e.g., using bottom-sheets for filters, tabbed views for Kanban).
--   **Backend/Frontend Data Flow:** The current core task revolves around ensuring the backend API provides all necessary data (like damage history) so the frontend can display a complete view to the user.
--   **Database Interaction & Scripts:** Python scripts using  were used for bulk data correction (fixing duplicate SKUs and updating photo paths), demonstrating direct database manipulation as a problem-solving tool.
+-   **Single-Page Application UI:** Consolidated multiple complex views into a single component () using state management for modals, forms, and data display.
+-   **Backend Data Aggregation:** Extensive work on backend endpoints (, , ) to aggregate and compute data from multiple tables (, , , , ).
+-   **Frontend Timezone Handling:** Resolved a critical UI bug by creating timezone-aware helper functions (, ) and replacing all instances of  and  for display and comparison logic in the Calendar.
+-   **Conditional UI/Logic:** Implemented UI elements that change based on application state, such as the Send to Archive button being disabled until the deposit is returned.
+-   **User-Guided Design:** Successfully followed a user-provided mock-up to build a complex feature, demonstrating a collaborative development process.
 
 **key DB schema**
--   **product_damage_history:** The central source of truth for an item's condition. Contains , , , etc., linked to a .  paths were standardized to .
--   **products:** Contains  and . Used to link items to their metadata.
--   **oc_product (OpenCart DB):**  field (which corresponds to SKU) was updated via a script to ensure uniqueness.
-
-**changes in tech stack**
--   None.
+-   ****:  column is now queried for both  and .
+-   ****: A new table used to track income and expenses. It contains  ('rent_cash', 'damage_cash', etc.),  ('expense', 'income'), , and .
+-   ****: Used as the primary source for the detailed, step-by-step timeline in the new Orders Archive view.
 
 **All files of reference**
--   : The next file to be modified for the current P0 task.
--   : The frontend page that needs to display the damage history.
--   : The modal that needs to show existing damages.
--   : Heavily refactored for mobile UI.
--   : Contains the primary CORS fix.
--   : Contains the backend logic for handling damage records.
+-    **(Primary new component)**
+-    **(Primary backend logic file)**
+-    **(Primary document logic file)**
+-    **(Rewritten component)**
+-    **(Timezone fix file)**
+-   
+-   
+-   
 
 **Areas that need refactoring**:
--   **Role-Based Access Control (RBAC):** The system audit in  highlights a critical need to implement proper permission checks on backend APIs and frontend routes.
--   **Product Categorization:** The data linking products to sub-categories is inconsistent and needs to be fixed either via a data migration script or by altering the sync logic from OpenCart.
+-   : This file has been modified heavily. It may contain dead code from the very first failed Finance Hub attempt. A review and cleanup would be beneficial, though not critical.
 
 **key api endpoints**
--   : The primary endpoint for fetching order data for the issuing process. **It needs to be modified to include damage history for each product.**
--   : The standardized endpoint for uploading photos of damaged items.
+-   : Adds a new expense or income record.
+-   : Retrieves all expense/income records.
+-   : Provides aggregated financial data for the Finance Hub.
+-   : Provides aggregated financial data for the main Dashboard.
+-   : Archives an order.
+-   : Retrieves the complete event timeline for an archived order.
 
 **Critical Info for New Agent**
--   Your immediate priority is to implement the display of existing damage history. This involves modifying the  endpoint and the corresponding frontend components (, ).
--   The user is highly engaged but often provides new high-priority tasks. It is crucial to complete the current task (displaying damage history) before moving on to the next request.
--   The user confirmed that all mobile UI changes are positive and should be kept. The  folder contains the latest working build with all these changes.
-
-**documents and test reports created in this job**
--    (created/updated)
+-   **Next Task is Planning:** Your immediate task is NOT to write code. It is to synthesize the recent discussion about supporting different legal entities (FOP/LLC) into a concrete implementation plan.
+-   **Confirm Plan with User:** Present this plan to the user for approval before you begin implementation. The plan should detail the required UI changes, database schema modifications, and backend logic for handling different document packages.
+-   **Follow User's Lead:** The user has provided detailed mock-ups and document examples in the past. Continue this collaborative approach. Wait for their input and approval at each major step of the new feature.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests auto-detection of damage category in the damage modal. (Implemented)
-2.  **User:** Reports that auto-detection doesn't work during the return process. (Fixed,  was not being passed)
-3.  **User:** Requests a complete mobile UI overhaul for the Tasks Cabinet. (Implemented)
-4.  **User:** Reports a JavaScript  on the new Tasks Cabinet UI. (Fixed)
-5.  **User:** Asks about damage photo storage and requests a unified system where all damage history is the single source of truth. (Partially implemented, storage unified)
-6.  **User:** Reports that photos are not showing up. (Diagnosed as a static file serving issue and incorrect storage path, which was then fixed)
-7.  **User:** Confirms the new damage photo system works and saves photos.
-8.  **User:** Reports the main issue: existing damage history is not shown when preparing an order (e.g., order #7273).
-9.  **Agent:** Confirms the damage exists in the database for the item in order #7273.
-10. **Agent:** Identifies that the backend API for issue cards needs to be updated to include this history. (Current state)
+1.  **User:** Reports a 500 error when adding an expense and that dashboard counters don't match the Finance Hub. (Agent fixed both issues).
+2.  **User:** Questions why Total Revenue seems to include deposits. (Agent clarified that it correctly does not, and the formula is ).
+3.  **User:** Requests an Archive button that is inactive until the deposit is returned and a redesigned Archive page with full order history and better styling. (Agent implemented this).
+4.  **User:** Reports that the cash balance in the Finance Hub doesn't decrease after adding an expense. Also requests 4 types of expenses (cash/bank for rent/damage) and a way to add funds. (Agent implemented all requests).
+5.  **User:** Initiates a discussion about expanding the finance system for different legal entities (FOP, LLC) with different document requirements.
+6.  **User (Image):** Provides an image of an invoice and service act for a FOP simplified entity.
+7.  **User (Image):** Provides an image of an invoice and service act for an LLC simplified entity.
+8.  **User (Image):** Provides an image of an invoice and a bill of lading for a FOP general entity.
+9.  **User (Image):** Provides an image of an invoice and a bill of lading for an LLC general entity.
+10. **Agent:** Summarizes all the requirements for the new legal entity feature and asks for further clarification, ending the current work session. This is where the next agent should pick up.
 
 **Project Health Check:**
--   **Functional:** The application is no longer in a Broken state. The critical CORS error is resolved. However, there are known bugs and incomplete features.
--   **Mocked:** None.
+-   **Broken:** None. All known bugs have been resolved.
+-   **Mocked:** None. All UI components are connected to live backend data.
 
 **3rd Party Integrations**
--   **weasyprint:** For PDF generation.
--   **Custom SMTP Server ():** For sending emails.
--   **OpenCart Database ():** Direct MySQL connection for data synchronization.
+-   **weasyprint:** Used for PDF document generation.
+-   **Custom SMTP Server ():** Used for sending emails.
+-   **OpenCart Database ():** Direct MySQL connection used for auth and data synchronization.
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
--   **Known regressions:** None from this session.
+-   **Test files created:** None.
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
--   **Email:** 
--   **Password:** 
--   **Database credentials:** Available in .
+-   email: 
+-   password: 
 
 **What agent forgot to execute**
--   The agent did not resolve the product sub-category data issue, as they were blocked on a decision from the user and a new, higher-priority task (damage history) was requested.</analysis>
+-   The agent may have forgotten to perform the code cleanup in  that was suggested in the previous handoff. This is a low-priority technical debt item.</analysis>

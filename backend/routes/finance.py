@@ -427,12 +427,12 @@ async def create_payment(data: PaymentCreate):
             VALUES (%s, %s, 'C', %s, %s)
         """, (tx_id, credit_acc_id, data.amount, data.order_id))
         
-        # Create payment record with user info
+        # Create payment record with user info and description
         cursor.execute("""
-            INSERT INTO fin_payments (payment_type, method, amount, payer_name, occurred_at, order_id, damage_case_id, tx_id, note, accepted_by_id, accepted_by_name)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO fin_payments (payment_type, method, amount, payer_name, occurred_at, order_id, damage_case_id, tx_id, note, accepted_by_id, accepted_by_name, description)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (data.payment_type, data.method, data.amount, data.payer_name, occurred_at,
-              data.order_id, data.damage_case_id, tx_id, data.note, data.accepted_by_id, data.accepted_by_name))
+              data.order_id, data.damage_case_id, tx_id, data.note, data.accepted_by_id, data.accepted_by_name, data.description))
         payment_id = cursor.lastrowid
         
         conn.commit()

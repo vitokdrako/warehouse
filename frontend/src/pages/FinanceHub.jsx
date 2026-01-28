@@ -697,16 +697,46 @@ export default function FinanceHub() {
                 <div className="pt-2">
                   <div className="text-xs font-semibold text-slate-500 mb-2">📉 Витрати</div>
                   <div className="space-y-1">
+                    <div className="text-xs text-slate-400 mb-1">Готівка:</div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">З каси оренди</span>
-                      <span className="font-semibold text-rose-600">-{money(payoutsStats?.rent_expenses || 0)}</span>
+                      <span className="text-slate-600 pl-2">Оренда</span>
+                      <span className="font-semibold text-rose-600">-{money(payoutsStats?.rent_cash_expenses || 0)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-600">З каси шкоди</span>
-                      <span className="font-semibold text-rose-600">-{money(payoutsStats?.damage_expenses || 0)}</span>
+                      <span className="text-slate-600 pl-2">Шкода</span>
+                      <span className="font-semibold text-rose-600">-{money(payoutsStats?.damage_cash_expenses || 0)}</span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-2 mb-1">Безготівка:</div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600 pl-2">Оренда</span>
+                      <span className="font-semibold text-rose-600">-{money(payoutsStats?.rent_bank_expenses || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600 pl-2">Шкода</span>
+                      <span className="font-semibold text-rose-600">-{money(payoutsStats?.damage_bank_expenses || 0)}</span>
                     </div>
                   </div>
                 </div>
+                
+                {(payoutsStats?.rent_cash_deposits > 0 || payoutsStats?.damage_cash_deposits > 0) && (
+                  <div className="pt-2">
+                    <div className="text-xs font-semibold text-slate-500 mb-2">📥 Внесення</div>
+                    <div className="space-y-1">
+                      {payoutsStats?.rent_cash_deposits > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Оренда</span>
+                          <span className="font-semibold text-emerald-600">+{money(payoutsStats.rent_cash_deposits)}</span>
+                        </div>
+                      )}
+                      {payoutsStats?.damage_cash_deposits > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-slate-600">Шкода</span>
+                          <span className="font-semibold text-emerald-600">+{money(payoutsStats.damage_cash_deposits)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
 

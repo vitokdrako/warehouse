@@ -16,25 +16,99 @@
 <table class="mb-4">
     <tr><td style="width:150px">Замовлення:</td><td class="font-bold">{{ order.order_number }}</td></tr>
     <tr><td>Клієнт:</td><td class="font-bold">{{ order.customer_name }}</td></tr>
+    <tr><td>Телефон:</td><td>{{ order.customer_phone }}</td></tr>
     <tr><td>Період:</td><td>{{ order.rental_start_date }} — {{ order.rental_end_date }}</td></tr>
 </table>
 
-<h2>Розрахунок</h2>
+<h2>1. Нарахування</h2>
 <table>
-    <tr><td style="width:250px">Вартість оренди:</td><td class="text-right">{{ totals.rent|money }} ₴</td></tr>
-    <tr><td>Застава отримана:</td><td class="text-right">{{ totals.deposit|money }} ₴</td></tr>
-    {% if options.damage_amount %}<tr><td>Пошкодження:</td><td class="text-right warning">-{{ options.damage_amount|money }} ₴</td></tr>{% endif %}
-    {% if options.cleaning_fee %}<tr><td>Хімчистка:</td><td class="text-right">-{{ options.cleaning_fee|money }} ₴</td></tr>{% endif %}
-    {% if options.late_fee %}<tr><td>Прострочення:</td><td class="text-right">-{{ options.late_fee|money }} ₴</td></tr>{% endif %}
+    <tr><td style="width:300px">Вартість оренди:</td><td class="text-right">{{ totals.rent|money }} ₴</td></tr>
+    {% if finance.additional_paid > 0 %}
+    <tr><td>Додаткові послуги (доставка тощо):</td><td class="text-right">{{ finance.additional_paid|money }} ₴</td></tr>
+    {% endif %}
+    {% if finance.damage_total > 0 %}
+    <tr><td class="warning">Шкода / пошкодження:</td><td class="text-right warning">{{ finance.damage_total|money }} ₴</td></tr>
+    {% endif %}
+    <tr class="font-bold"><td>ВСЬОГО НАРАХОВАНО:</td><td class="text-right">{{ (totals.rent + finance.additional_paid + finance.damage_total)|money }} ₴</td></tr>
 </table>
 
-<table class="totals">
-    <tr class="total-row"><td style="width:60%"></td><td>ЗАСТАВА ДО ПОВЕРНЕННЯ:</td><td class="text-right success">{{ options.refund_amount|money if options.refund_amount else totals.deposit|money }} ₴</td></tr>
+<h2>2. Оплати</h2>
+<table>
+    <tr><td style="width:300px">Оплачено за оренду:</td><td class="text-right success">{{ finance.rent_paid|money }} ₴</td></tr>
+    {% if finance.additional_paid > 0 %}
+    <tr><td>Оплачено додаткові послуги:</td><td class="text-right success">{{ finance.additional_paid|money }} ₴</td></tr>
+    {% endif %}
+    {% if finance.damage_paid > 0 %}
+    <tr><td>Оплачено за шкоду:</td><td class="text-right success">{{ finance.damage_paid|money }} ₴</td></tr>
+    {% endif %}
+    <tr class="font-bold"><td>ВСЬОГО ОПЛАЧЕНО:</td><td class="text-right success">{{ (finance.rent_paid + finance.additional_paid + finance.damage_paid)|money }} ₴</td></tr>
 </table>
+
+{% if payments and payments|length > 0 %}
+<h3>Деталі оплат:</h3>
+<table class="text-sm">
+    <thead>
+        <tr><th>Дата</th><th>Тип</th><th>Метод</th><th>Сума</th><th>Примітка</th></tr>
+    </thead>
+    <tbody>
+    {% for p in payments %}
+        <tr>
+            <td>{{ p.date }}</td>
+            <td>{% if p.type == 'rent' %}Оренда{% elif p.type == 'damage' %}Шкода{% elif p.type == 'additional' %}Додатково{% else %}{{ p.type }}{% endif %}</td>
+            <td>{% if p.method == 'cash' %}Готівка{% elif p.method == 'bank' %}Безготівка{% else %}{{ p.method }}{% endif %}</td>
+            <td class="text-right">{{ p.amount|money }} ₴</td>
+            <td>{{ p.note }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<h2>3. Застава</h2>
+<table>
+    <tr><td style="width:300px">Застава отримана:</td><td class="text-right">
+        {% if finance.deposit_currency != 'UAH' %}
+            {{ finance.deposit_actual|money }} {{ finance.deposit_currency }} (≈{{ finance.deposit_held|money }} ₴)
+        {% else %}
+            {{ finance.deposit_held|money }} ₴
+        {% endif %}
+    </td></tr>
+    {% if finance.deposit_used > 0 %}
+    <tr><td class="warning">Утримано із застави (шкода):</td><td class="text-right warning">-{{ finance.deposit_used|money }} ₴</td></tr>
+    {% endif %}
+    {% if finance.deposit_refunded > 0 %}
+    <tr><td>Вже повернено:</td><td class="text-right">{{ finance.deposit_refunded|money }} ₴</td></tr>
+    {% endif %}
+</table>
+
+<h2>4. Підсумок</h2>
+<table class="totals">
+    {% if finance.rent_due > 0 %}
+    <tr class="warning"><td style="width:60%"></td><td>Борг за оренду:</td><td class="text-right">{{ finance.rent_due|money }} ₴</td></tr>
+    {% endif %}
+    {% if finance.damage_due > 0 %}
+    <tr class="warning"><td></td><td>Борг за шкоду:</td><td class="text-right">{{ finance.damage_due|money }} ₴</td></tr>
+    {% endif %}
+    <tr class="total-row"><td></td><td>ЗАСТАВА ДО ПОВЕРНЕННЯ:</td><td class="text-right success">
+        {% if finance.deposit_currency != 'UAH' and finance.deposit_to_refund > 0 %}
+            ≈{{ finance.deposit_to_refund|money }} ₴
+        {% else %}
+            {{ finance.deposit_to_refund|money }} ₴
+        {% endif %}
+    </td></tr>
+</table>
+
+{% if finance.rent_due == 0 and finance.damage_due == 0 %}
+<div class="success-box" style="margin-top: 20px; padding: 15px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px;">
+    <strong>✓ Взаєморозрахунки завершено</strong><br>
+    Орендар не має заборгованості перед Орендодавцем.
+</div>
+{% endif %}
 
 <div class="signatures">
     <div class="signature-block">
         <p class="font-bold">ОРЕНДОДАВЕЦЬ:</p>
+        <p class="text-sm">{{ company.legal_name }}</p>
         <div class="signature-line"></div>
     </div>
     <div class="signature-block">

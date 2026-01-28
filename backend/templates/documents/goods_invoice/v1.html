@@ -26,7 +26,8 @@
     .dovirenost-line { display: inline-block; width: 60px; border-bottom: 1px solid #000; margin: 0 10px; }
 </style>
 
-{% set is_llc = payer.payer_type in ['llc_general'] %}
+{% set is_fop = payer.payer_type == 'fop_general' %}
+{% set is_llc = payer.payer_type == 'llc_general' %}
 
 <h1>Видаткова накладна № {{ doc_number.split('-')[-1] if doc_number and '-' in doc_number else (doc_number or order.order_number) }} від {{ generated_at.split(' ')[0] if ' ' in generated_at else generated_at }} р.</h1>
 
@@ -37,13 +38,13 @@
 </div>
 
 <div class="header-info">
-    <p><span style="display: inline-block; width: 80px;">Покупець:</span> <strong>{% if payer.payer_type == 'fop_general' %}ФОП {% endif %}{{ payer.company_name or order.customer_name }}</strong></p>
+    <p><span style="display: inline-block; width: 80px;">Покупець:</span> <strong>{% if is_fop %}ФОП {% elif is_llc %}ТОВ {% endif %}{{ payer.company_name or order.customer_name }}</strong></p>
     {% if payer.address or payer.edrpou or payer.iban %}
     <div class="buyer-details">
         {% if payer.address %}{{ payer.address }}{% endif %}
         {% if payer.edrpou %} ЄДРПОУ {{ payer.edrpou }}{% endif %}
         {% if payer.tax_number %} ІПН {{ payer.tax_number }}{% endif %}
-        {% if payer.iban %}<br>{{ payer.iban }}{% endif %}
+        {% if payer.iban %}<br>IBAN {{ payer.iban }}{% endif %}
         {% if payer.bank_name %} в {{ payer.bank_name }}{% endif %}
     </div>
     {% endif %}

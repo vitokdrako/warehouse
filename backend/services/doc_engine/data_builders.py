@@ -198,7 +198,7 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         FROM fin_deposit_holds
         WHERE order_id = :order_id
         LIMIT 1
-    """), {"order_id": order_id})
+    """), {"order_id": order_id_int})
     deposit_row = deposit_result.fetchone()
     
     deposit_data = None

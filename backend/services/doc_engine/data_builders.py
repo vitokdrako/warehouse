@@ -151,6 +151,65 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
     if not total_deposit:
         total_deposit = order["deposit_amount"]
     
+    # === ФІНАНСОВІ ДАНІ (платежі, шкода, застава) ===
+    # Платежі по ордеру
+    payments_result = db.execute(text("""
+        SELECT payment_type, method, amount, note, occurred_at
+        FROM fin_payments
+        WHERE order_id = :order_id AND status = 'completed'
+        ORDER BY occurred_at
+    """), {"order_id": order_id})
+    
+    payments = []
+    rent_paid = 0
+    damage_paid = 0
+    additional_paid = 0
+    
+    for p in payments_result:
+        payments.append({
+            "type": p[0],
+            "method": p[1],
+            "amount": float(p[2] or 0),
+            "note": p[3] or "",
+            "date": p[4].strftime("%d.%m.%Y") if p[4] else ""
+        })
+        if p[0] == "rent":
+            rent_paid += float(p[2] or 0)
+        elif p[0] == "damage":
+            damage_paid += float(p[2] or 0)
+        elif p[0] == "additional":
+            additional_paid += float(p[2] or 0)
+    
+    # Шкода по ордеру
+    damage_result = db.execute(text("""
+        SELECT SUM(fee) as total_fee
+        FROM product_damage_history
+        WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    damage_row = damage_result.fetchone()
+    total_damage = float(damage_row[0]) if damage_row and damage_row[0] else 0
+    
+    # Застава
+    deposit_result = db.execute(text("""
+        SELECT held_amount, used_amount, refunded_amount, actual_amount, currency, exchange_rate
+        FROM fin_deposit_holds
+        WHERE order_id = :order_id
+        LIMIT 1
+    """), {"order_id": order_id})
+    deposit_row = deposit_result.fetchone()
+    
+    deposit_data = None
+    if deposit_row:
+        deposit_data = {
+            "held": float(deposit_row[0] or 0),
+            "used": float(deposit_row[1] or 0),
+            "refunded": float(deposit_row[2] or 0),
+            "actual_amount": float(deposit_row[3] or 0),
+            "currency": deposit_row[4] or "UAH",
+            "exchange_rate": float(deposit_row[5] or 1),
+            "available": float(deposit_row[0] or 0) - float(deposit_row[1] or 0) - float(deposit_row[2] or 0)
+        }
+    
     # Компанія - FarforDecorOrenda
     # © FarforDecorOrenda 2025
     # Реальні дані з офіційних документів farforrent.com.ua

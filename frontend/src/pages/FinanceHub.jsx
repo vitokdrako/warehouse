@@ -961,6 +961,52 @@ export default function FinanceHub() {
                       })()}
                     </div>
                   )}
+                  
+                  {/* Кнопка архівування - активна тільки якщо застава повернена */}
+                  {selectedOrder && (
+                    <div className="rounded-2xl border border-slate-200 p-4 mt-4">
+                      <div className="text-sm font-semibold mb-3">📂 Архівування</div>
+                      {(() => {
+                        const depositAvailable = orderDeposit ? 
+                          (orderDeposit.actual_amount || orderDeposit.held_amount) - 
+                          (orderDeposit.used_amount_original || orderDeposit.used_amount || 0) - 
+                          (orderDeposit.refunded_amount_original || orderDeposit.refunded_amount || 0) : 0;
+                        const canArchive = !orderDeposit || depositAvailable <= 0;
+                        
+                        return (
+                          <>
+                            {!canArchive && (
+                              <div className="text-xs text-amber-600 mb-2">
+                                ⚠️ Спочатку поверніть заставу
+                              </div>
+                            )}
+                            <Button
+                              variant={canArchive ? "primary" : "ghost"}
+                              className="w-full"
+                              disabled={!canArchive || saving}
+                              onClick={async () => {
+                                if (!window.confirm(`Відправити замовлення #${selectedOrder.order_number} в архів?`)) return;
+                                setSaving(true);
+                                try {
+                                  await authFetch(`${BACKEND_URL}/api/decor-orders/${selectedOrderId}/archive`, {
+                                    method: "POST",
+                                  });
+                                  alert("✅ Замовлення архівовано");
+                                  await loadOrders();
+                                  setSelectedOrderId(null);
+                                } catch (e) {
+                                  alert("Помилка: " + e.message);
+                                }
+                                setSaving(false);
+                              }}
+                            >
+                              📂 Відправити в архів
+                            </Button>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
               </Card>
             ) : (

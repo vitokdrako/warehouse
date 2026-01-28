@@ -550,42 +550,56 @@ async def create_expense(data: ExpenseCreate, db: Session = Depends(get_rh_db)):
 class SimpleExpenseCreate(BaseModel):
     amount: float
     description: str
-    category: str  # "rent" or "damage"
-    method: str = "cash"
+    category: str  # "rent_cash", "damage_cash", "rent_bank", "damage_bank"
+    operation_type: str = "expense"  # "expense" or "deposit" (внесення)
     created_by_id: Optional[int] = None
     created_by_name: Optional[str] = None
 
 @router.post("/expenses/simple")
 async def create_simple_expense(data: SimpleExpenseCreate, db: Session = Depends(get_rh_db)):
-    """Simple expense creation for Finance Hub - rent or damage category."""
+    """Simple expense/deposit creation for Finance Hub."""
     try:
-        # Map category to expense_type and category_code
-        if data.category == "rent":
-            expense_type = "expense"
-            category_code = "RENT_EXPENSE"  # Витрати на оренду приміщення
-            category_name = "Витрати на оренду"
-        else:  # damage
-            expense_type = "expense"
-            category_code = "DAMAGE_EXPENSE"  # Витрати на реставрацію/шкоду
-            category_name = "Витрати на реставрацію"
+        # Map category to codes
+        category_map = {
+            # Витрати готівка
+            "rent_cash": ("RENT_CASH_EXPENSE", "Витрати готівка (оренда)", "cash"),
+            "damage_cash": ("DAMAGE_EXPENSE", "Витрати готівка (шкода)", "cash"),
+            # Витрати безготівка
+            "rent_bank": ("RENT_BANK_EXPENSE", "Витрати безготівка (оренда)", "bank"),
+            "damage_bank": ("DAMAGE_BANK_EXPENSE", "Витрати безготівка (шкода)", "bank"),
+            # Внесення готівка
+            "rent_cash_deposit": ("RENT_CASH_DEPOSIT", "Внесення готівка (оренда)", "cash"),
+            "damage_cash_deposit": ("DAMAGE_CASH_DEPOSIT", "Внесення готівка (шкода)", "cash"),
+        }
         
-        # Check if categories exist, if not create them
+        # Determine actual category based on operation_type
+        actual_category = data.category
+        if data.operation_type == "deposit" and data.category in ["rent_cash", "damage_cash"]:
+            actual_category = f"{data.category}_deposit"
+        
+        if actual_category not in category_map:
+            raise HTTPException(status_code=400, detail=f"Invalid category: {actual_category}")
+        
+        category_code, category_name, method = category_map[actual_category]
+        
+        # Check if category exists, if not create it
         cat = db.execute(text("SELECT id FROM fin_categories WHERE code = :code"), {"code": category_code}).fetchone()
         if not cat:
-            # Insert without 'direction' column which doesn't exist in this table
             db.execute(text("""
                 INSERT INTO fin_categories (code, name, type) 
-                VALUES (:code, :name, 'expense')
+                VALUES (:code, :name, :type)
             """), {
                 "code": category_code, 
-                "name": category_name
+                "name": category_name,
+                "type": "income" if data.operation_type == "deposit" else "expense"
             })
             db.commit()
             cat = db.execute(text("SELECT id FROM fin_categories WHERE code = :code"), {"code": category_code}).fetchone()
         
         category_id = cat[0]
+        expense_type = "income" if data.operation_type == "deposit" else "expense"
         
-        # Insert expense
+        # Insert record
         db.execute(text("""
             INSERT INTO fin_expenses (expense_type, category_id, amount, method, occurred_at, note, status)
             VALUES (:expense_type, :category_id, :amount, :method, NOW(), :note, 'posted')
@@ -593,13 +607,13 @@ async def create_simple_expense(data: SimpleExpenseCreate, db: Session = Depends
             "expense_type": expense_type,
             "category_id": category_id,
             "amount": data.amount,
-            "method": data.method,
+            "method": method,
             "note": f"{data.description} (by {data.created_by_name or 'system'})"
         })
         expense_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
         
         db.commit()
-        return {"success": True, "expense_id": expense_id}
+        return {"success": True, "expense_id": expense_id, "operation_type": expense_type}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

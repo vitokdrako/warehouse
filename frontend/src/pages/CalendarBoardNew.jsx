@@ -7,6 +7,20 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL
 /************* helpers *************/
 const cls = (...a) => a.filter(Boolean).join(' ')
 
+// Отримати поточну дату по Києву
+const getKyivDate = () => {
+  const now = new Date()
+  // Конвертуємо в київський час
+  const kyivTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Kiev' }))
+  return kyivTime
+}
+
+// Отримати сьогоднішню дату по Києву (без часу)
+const getKyivToday = () => {
+  const kyiv = getKyivDate()
+  return new Date(kyiv.getFullYear(), kyiv.getMonth(), kyiv.getDate())
+}
+
 const formatUA = (d) =>
   d.toLocaleDateString('uk-UA', { weekday: 'short', day: '2-digit', month: 'short' })
 
@@ -17,6 +31,14 @@ const addDays = (d, offset) => {
 }
 
 const toISO = (d) => d.toISOString().slice(0, 10)
+
+// toISO для київського часу
+const toKyivISO = (d) => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 const startOfWeek = (d) => {
   const copy = new Date(d)

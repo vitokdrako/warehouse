@@ -73,15 +73,17 @@ async def get_order_full_history(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Повна історія замовлення
+    Повна історія замовлення - всі операції step-by-step
     ✅ MIGRATED: Using RentalHub DB
     """
+    timeline = []  # Хронологічний список всіх подій
+    
     # Order details
     order_result = db.execute(text("""
         SELECT 
             order_id, order_number, customer_name, customer_phone, customer_email,
             rental_start_date, rental_end_date, status, total_price, deposit_amount,
-            created_at
+            created_at, updated_at
         FROM orders
         WHERE order_id = :order_id
     """), {"order_id": order_id})
@@ -90,17 +92,40 @@ async def get_order_full_history(
     if not order_row:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Issue cards
+    order = {
+        "order_id": order_row[0],
+        "order_number": order_row[1],
+        "customer_name": order_row[2],
+        "customer_phone": order_row[3],
+        "customer_email": order_row[4],
+        "rental_start_date": order_row[5].isoformat() if order_row[5] else None,
+        "rental_end_date": order_row[6].isoformat() if order_row[6] else None,
+        "status": order_row[7],
+        "total_price": float(order_row[8]) if order_row[8] else 0.0,
+        "deposit_amount": float(order_row[9]) if order_row[9] else 0.0,
+        "created_at": order_row[10].isoformat() if order_row[10] else None
+    }
+    
+    # Add order creation to timeline
+    timeline.append({
+        "timestamp": order["created_at"],
+        "type": "order",
+        "action": "created",
+        "title": "🛒 Замовлення створено",
+        "details": f"Клієнт: {order['customer_name']}, Сума: ₴{order['total_price']}"
+    })
+    
+    # Issue cards (збірка та видача)
     issue_result = db.execute(text("""
         SELECT id, status, prepared_by, issued_by, prepared_at, issued_at, created_at
         FROM issue_cards
         WHERE order_id = :order_id
-        ORDER BY created_at DESC
+        ORDER BY created_at
     """), {"order_id": order_id})
     
     issue_cards = []
     for i_row in issue_result:
-        issue_cards.append({
+        card = {
             "id": i_row[0],
             "status": i_row[1],
             "prepared_by": i_row[2],
@@ -108,20 +133,38 @@ async def get_order_full_history(
             "prepared_at": i_row[4].isoformat() if i_row[4] else None,
             "issued_at": i_row[5].isoformat() if i_row[5] else None,
             "created_at": i_row[6].isoformat() if i_row[6] else None
-        })
+        }
+        issue_cards.append(card)
+        
+        if card["prepared_at"] and card["prepared_by"]:
+            timeline.append({
+                "timestamp": card["prepared_at"],
+                "type": "issue",
+                "action": "prepared",
+                "title": "📦 Замовлення зібрано",
+                "details": f"Зібрав: {card['prepared_by']}"
+            })
+        if card["issued_at"] and card["issued_by"]:
+            timeline.append({
+                "timestamp": card["issued_at"],
+                "type": "issue",
+                "action": "issued",
+                "title": "🚚 Замовлення видано",
+                "details": f"Видав: {card['issued_by']}"
+            })
     
-    # Return cards
+    # Return cards (повернення)
     return_result = db.execute(text("""
         SELECT id, status, received_by, checked_by, items_ok, items_damaged, 
                items_missing, cleaning_fee, late_fee, returned_at, checked_at, created_at
         FROM return_cards
         WHERE order_id = :order_id
-        ORDER BY created_at DESC
+        ORDER BY created_at
     """), {"order_id": order_id})
     
     return_cards = []
     for r_row in return_result:
-        return_cards.append({
+        card = {
             "id": r_row[0],
             "status": r_row[1],
             "received_by": r_row[2],
@@ -134,66 +177,193 @@ async def get_order_full_history(
             "returned_at": r_row[9].isoformat() if r_row[9] else None,
             "checked_at": r_row[10].isoformat() if r_row[10] else None,
             "created_at": r_row[11].isoformat() if r_row[11] else None
+        }
+        return_cards.append(card)
+        
+        if card["returned_at"]:
+            details = f"Прийняв: {card['received_by'] or '—'}"
+            if card["items_damaged"]:
+                details += f", Пошкоджено: {card['items_damaged']}"
+            timeline.append({
+                "timestamp": card["returned_at"],
+                "type": "return",
+                "action": "returned",
+                "title": "📥 Товар повернено",
+                "details": details
+            })
+        if card["checked_at"] and card["checked_by"]:
+            timeline.append({
+                "timestamp": card["checked_at"],
+                "type": "return",
+                "action": "checked",
+                "title": "✅ Перевірка завершена",
+                "details": f"Перевірив: {card['checked_by']}"
+            })
+    
+    # Payments (фінанси)
+    payments_result = db.execute(text("""
+        SELECT id, payment_type, method, amount, note, status, occurred_at, accepted_by_name
+        FROM fin_payments
+        WHERE order_id = :order_id
+        ORDER BY occurred_at
+    """), {"order_id": order_id})
+    
+    payments = []
+    for p_row in payments_result:
+        payment = {
+            "id": p_row[0],
+            "payment_type": p_row[1],
+            "method": p_row[2],
+            "amount": float(p_row[3]) if p_row[3] else 0.0,
+            "note": p_row[4],
+            "status": p_row[5],
+            "occurred_at": p_row[6].isoformat() if p_row[6] else None,
+            "accepted_by": p_row[7]
+        }
+        payments.append(payment)
+        
+        type_labels = {"rent": "Оренда", "damage": "Шкода", "additional": "Донарахування", "deposit": "Застава"}
+        method_labels = {"cash": "готівка", "bank": "безготівка", "card": "картка"}
+        
+        timeline.append({
+            "timestamp": payment["occurred_at"],
+            "type": "payment",
+            "action": payment["payment_type"],
+            "title": f"💰 {type_labels.get(payment['payment_type'], payment['payment_type'])}",
+            "details": f"₴{payment['amount']} ({method_labels.get(payment['method'], payment['method'])}) · {payment['accepted_by'] or '—'}" + (f" · {payment['note']}" if payment['note'] else "")
         })
     
-    # Damages
-    damages_result = db.execute(text("""
-        SELECT id, case_status, severity, claimed_total, paid_total, created_at
-        FROM damages
+    # Deposits (застави)
+    deposit_result = db.execute(text("""
+        SELECT id, held_amount, used_amount, refunded_amount, actual_amount, currency, 
+               status, accepted_by_name, created_at, closed_at
+        FROM fin_deposit_holds
         WHERE order_id = :order_id
-        ORDER BY created_at DESC
+        ORDER BY created_at
+    """), {"order_id": order_id})
+    
+    deposits = []
+    for d_row in deposit_result:
+        deposit = {
+            "id": d_row[0],
+            "held_amount": float(d_row[1]) if d_row[1] else 0.0,
+            "used_amount": float(d_row[2]) if d_row[2] else 0.0,
+            "refunded_amount": float(d_row[3]) if d_row[3] else 0.0,
+            "actual_amount": float(d_row[4]) if d_row[4] else 0.0,
+            "currency": d_row[5] or "UAH",
+            "status": d_row[6],
+            "accepted_by": d_row[7],
+            "created_at": d_row[8].isoformat() if d_row[8] else None,
+            "closed_at": d_row[9].isoformat() if d_row[9] else None
+        }
+        deposits.append(deposit)
+        
+        symbol = {"USD": "$", "EUR": "€"}.get(deposit["currency"], "₴")
+        
+        timeline.append({
+            "timestamp": deposit["created_at"],
+            "type": "deposit",
+            "action": "accepted",
+            "title": "🔒 Застава прийнята",
+            "details": f"{symbol}{deposit['actual_amount']} · {deposit['accepted_by'] or '—'}"
+        })
+        
+        if deposit["used_amount"] > 0:
+            timeline.append({
+                "timestamp": deposit["closed_at"] or deposit["created_at"],
+                "type": "deposit",
+                "action": "used",
+                "title": "⚠️ Утримано із застави",
+                "details": f"₴{deposit['used_amount']} (компенсація шкоди)"
+            })
+        
+        if deposit["refunded_amount"] > 0:
+            timeline.append({
+                "timestamp": deposit["closed_at"],
+                "type": "deposit",
+                "action": "refunded",
+                "title": "💸 Застава повернена",
+                "details": f"{symbol}{deposit['refunded_amount']}"
+            })
+    
+    # Damage history
+    damage_result = db.execute(text("""
+        SELECT damage_id, sku, note, severity, fee, stage, created_at
+        FROM product_damage_history
+        WHERE order_id = :order_id
+        ORDER BY created_at
     """), {"order_id": order_id})
     
     damages = []
-    for d_row in damages_result:
-        damages.append({
-            "id": d_row[0],
-            "case_status": d_row[1],
-            "severity": d_row[2],
-            "claimed_total": float(d_row[3]) if d_row[3] else 0.0,
-            "paid_total": float(d_row[4]) if d_row[4] else 0.0,
-            "created_at": d_row[5].isoformat() if d_row[5] else None
+    for dm_row in damage_result:
+        damage = {
+            "id": dm_row[0],
+            "sku": dm_row[1],
+            "note": dm_row[2],
+            "severity": dm_row[3],
+            "fee": float(dm_row[4]) if dm_row[4] else 0.0,
+            "stage": dm_row[5],
+            "created_at": dm_row[6].isoformat() if dm_row[6] else None
+        }
+        damages.append(damage)
+        
+        timeline.append({
+            "timestamp": damage["created_at"],
+            "type": "damage",
+            "action": damage["stage"],
+            "title": f"🔴 Шкода зафіксована",
+            "details": f"SKU: {damage['sku']}, {damage['note'] or '—'}, Fee: ₴{damage['fee']}"
         })
     
-    # Tasks
-    tasks_result = db.execute(text("""
-        SELECT id, title, status, priority, assigned_to, due_date, completed_at, created_at
-        FROM tasks
-        WHERE order_id = :order_id
-        ORDER BY created_at DESC
-    """), {"order_id": order_id})
+    # Documents
+    docs_result = db.execute(text("""
+        SELECT id, doc_type, doc_number, format, generated_by_name, created_at
+        FROM documents
+        WHERE entity_type = 'order' AND entity_id = :order_id
+        ORDER BY created_at
+    """), {"order_id": str(order_id)})
     
-    tasks = []
-    for t_row in tasks_result:
-        tasks.append({
-            "id": t_row[0],
-            "title": t_row[1],
-            "status": t_row[2],
-            "priority": t_row[3],
-            "assigned_to": t_row[4],
-            "due_date": t_row[5].isoformat() if t_row[5] else None,
-            "completed_at": t_row[6].isoformat() if t_row[6] else None,
-            "created_at": t_row[7].isoformat() if t_row[7] else None
+    documents = []
+    for doc_row in docs_result:
+        doc = {
+            "id": doc_row[0],
+            "doc_type": doc_row[1],
+            "doc_number": doc_row[2],
+            "format": doc_row[3],
+            "generated_by": doc_row[4],
+            "created_at": doc_row[5].isoformat() if doc_row[5] else None
+        }
+        documents.append(doc)
+        
+        type_labels = {
+            "invoice_offer": "Рахунок-оферта",
+            "contract_rent": "Договір оренди", 
+            "issue_act": "Акт видачі",
+            "return_act": "Акт повернення",
+            "deposit_settlement_act": "Акт взаєморозрахунків",
+            "deposit_refund_act": "Акт повернення застави"
+        }
+        
+        timeline.append({
+            "timestamp": doc["created_at"],
+            "type": "document",
+            "action": "generated",
+            "title": f"📄 {type_labels.get(doc['doc_type'], doc['doc_type'])}",
+            "details": f"#{doc['doc_number']} · {doc['generated_by'] or '—'}"
         })
+    
+    # Sort timeline by timestamp
+    timeline.sort(key=lambda x: x["timestamp"] or "")
     
     return {
-        "order": {
-            "order_id": order_row[0],
-            "order_number": order_row[1],
-            "customer_name": order_row[2],
-            "customer_phone": order_row[3],
-            "customer_email": order_row[4],
-            "rental_start_date": order_row[5].isoformat() if order_row[5] else None,
-            "rental_end_date": order_row[6].isoformat() if order_row[6] else None,
-            "status": order_row[7],
-            "total_price": float(order_row[8]) if order_row[8] else 0.0,
-            "deposit_amount": float(order_row[9]) if order_row[9] else 0.0,
-            "created_at": order_row[10].isoformat() if order_row[10] else None
-        },
+        "order": order,
         "issue_cards": issue_cards,
         "return_cards": return_cards,
+        "payments": payments,
+        "deposits": deposits,
         "damages": damages,
-        "tasks": tasks
+        "documents": documents,
+        "timeline": timeline
     }
 
 @router.get("/stats")

@@ -60,7 +60,7 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
 def build_order_data(db: Session, order_id: str, options: dict) -> dict:
     """Збирає дані замовлення для документа (RentalHub schema)"""
     
-    # Основні дані замовлення
+    # Основні дані замовлення + payer_profile_id
     result = db.execute(text("""
         SELECT 
             o.order_id, o.order_number, o.status,

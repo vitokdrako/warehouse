@@ -244,6 +244,12 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         "issue_hours": "пн-сб 10:00-17:00",
     }
     
+    # Розрахунок балансу
+    rent_due = max(0, total_rent - rent_paid)
+    damage_due = max(0, total_damage - damage_paid)
+    deposit_available = deposit_data["available"] if deposit_data else 0
+    deposit_to_refund = max(0, deposit_available - damage_due) if deposit_data else 0
+    
     return {
         "order": order,
         "items": items,
@@ -253,6 +259,23 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
             "discount": order["discount_amount"],
             "grand_total": total_rent + total_deposit - order["discount_amount"]
         },
+        "finance": {
+            "rent_paid": rent_paid,
+            "rent_due": rent_due,
+            "damage_total": total_damage,
+            "damage_paid": damage_paid,
+            "damage_due": damage_due,
+            "additional_paid": additional_paid,
+            "deposit_held": deposit_data["held"] if deposit_data else 0,
+            "deposit_used": deposit_data["used"] if deposit_data else 0,
+            "deposit_refunded": deposit_data["refunded"] if deposit_data else 0,
+            "deposit_available": deposit_available,
+            "deposit_to_refund": deposit_to_refund,
+            "deposit_currency": deposit_data["currency"] if deposit_data else "UAH",
+            "deposit_actual": deposit_data["actual_amount"] if deposit_data else 0,
+        },
+        "payments": payments,
+        "deposit_data": deposit_data,
         "company": company,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options

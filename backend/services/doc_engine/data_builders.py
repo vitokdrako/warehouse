@@ -19,7 +19,9 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
         "invoice_offer", "contract_rent", "deposit_settlement_act", 
         "invoice_additional", "return_intake_checklist", "delivery_note", 
         "rental_extension", "partial_return_act", "damage_settlement_act",
-        "deposit_refund_act"
+        "deposit_refund_act",
+        # Документи для юр. осіб
+        "invoice_legal", "service_act", "goods_invoice"
     ]
     
     # Return act - окремо, бо читає з return_cards

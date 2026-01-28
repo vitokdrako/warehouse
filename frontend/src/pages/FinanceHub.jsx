@@ -269,8 +269,14 @@ export default function FinanceHub() {
       loadPayments(selectedOrderId);
       loadDocuments(selectedOrderId);
       loadDamageFees(selectedOrderId);
+      loadOrderPayer(selectedOrderId);
     }
   }, [selectedOrderId]);
+  
+  // Load payer profiles on mount
+  useEffect(() => {
+    loadPayerProfiles();
+  }, []);
   
   // Refresh all data
   const refreshAll = useCallback(async () => {

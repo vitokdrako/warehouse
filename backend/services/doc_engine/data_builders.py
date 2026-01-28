@@ -7,6 +7,82 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 import json
 
+# ============================================================
+# КОНВЕРТАЦІЯ СУМИ В СЛОВА (УКРАЇНСЬКА)
+# ============================================================
+
+def number_to_words_ua(number):
+    """Конвертує число в українські слова"""
+    if number == 0:
+        return "Нуль"
+    
+    units = ['', 'один', 'два', 'три', 'чотири', "п'ять", 'шість', 'сім', 'вісім', "дев'ять"]
+    units_fem = ['', 'одна', 'дві', 'три', 'чотири', "п'ять", 'шість', 'сім', 'вісім', "дев'ять"]
+    teens = ['десять', 'одинадцять', 'дванадцять', 'тринадцять', 'чотирнадцять', 
+             "п'ятнадцять", 'шістнадцять', 'сімнадцять', 'вісімнадцять', "дев'ятнадцять"]
+    tens = ['', '', 'двадцять', 'тридцять', 'сорок', "п'ятдесят", 
+            'шістдесят', 'сімдесят', 'вісімдесят', "дев'яносто"]
+    hundreds = ['', 'сто', 'двісті', 'триста', 'чотириста', "п'ятсот", 
+                'шістсот', 'сімсот', 'вісімсот', "дев'ятсот"]
+    
+    def get_form(n, forms):
+        """Вибір форми слова залежно від числа"""
+        if 11 <= n % 100 <= 19:
+            return forms[2]
+        elif n % 10 == 1:
+            return forms[0]
+        elif 2 <= n % 10 <= 4:
+            return forms[1]
+        else:
+            return forms[2]
+    
+    def convert_group(n, feminine=False):
+        """Конвертує групу з трьох цифр"""
+        result = []
+        u = units_fem if feminine else units
+        
+        if n >= 100:
+            result.append(hundreds[n // 100])
+            n %= 100
+        
+        if 10 <= n <= 19:
+            result.append(teens[n - 10])
+        else:
+            if n >= 20:
+                result.append(tens[n // 10])
+                n %= 10
+            if n > 0:
+                result.append(u[n])
+        
+        return ' '.join(filter(None, result))
+    
+    num = int(number)
+    if num == 0:
+        return "Нуль"
+    
+    parts = []
+    
+    # Мільйони
+    millions = num // 1000000
+    if millions > 0:
+        parts.append(convert_group(millions))
+        parts.append(get_form(millions, ['мільйон', 'мільйони', 'мільйонів']))
+        num %= 1000000
+    
+    # Тисячі (feminine)
+    thousands = num // 1000
+    if thousands > 0:
+        parts.append(convert_group(thousands, feminine=True))
+        parts.append(get_form(thousands, ['тисяча', 'тисячі', 'тисяч']))
+        num %= 1000
+    
+    # Одиниці
+    if num > 0:
+        parts.append(convert_group(num, feminine=True))
+    
+    result = ' '.join(filter(None, parts))
+    return result.capitalize() if result else "Нуль"
+
 def build_document_data(db: Session, doc_type: str, entity_id: str, options: dict = None) -> dict:
     """
     Збирає всі дані для генерації документа.

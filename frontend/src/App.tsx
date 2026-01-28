@@ -20,7 +20,7 @@ import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
 import UniversalOpsCalendar from './pages/UniversalOpsCalendar';
 import CatalogBoard from './pages/CatalogBoard';
-import FinanceConsoleApp from './pages/FinanceConsoleApp';
+import FinanceHub from './pages/FinanceHub';
 // New unified workspace components
 import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';

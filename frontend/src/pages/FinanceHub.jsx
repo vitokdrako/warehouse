@@ -506,8 +506,11 @@ export default function FinanceHub() {
   
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+      {/* Corporate Header */}
+      <CorporateHeader />
+      
+      {/* Finance Controls */}
+      <div className="sticky top-[60px] z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="text-lg font-extrabold">💰 Фінанси</span>

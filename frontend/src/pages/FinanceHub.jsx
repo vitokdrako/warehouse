@@ -285,7 +285,7 @@ export default function FinanceHub() {
   // Load all expenses for modal
   const loadAllExpenses = useCallback(async () => {
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/finance/expenses?limit=100`);
+      const res = await authFetch(`${BACKEND_URL}/api/finance/expenses/all?limit=100`);
       const data = await res.json();
       setAllExpenses(data.expenses || []);
     } catch (e) {
@@ -302,7 +302,7 @@ export default function FinanceHub() {
     const user = getUser();
     
     try {
-      await authFetch(`${BACKEND_URL}/api/finance/expenses`, {
+      await authFetch(`${BACKEND_URL}/api/finance/expenses/simple`, {
         method: "POST",
         body: JSON.stringify({
           amount: Number(expenseAmount),

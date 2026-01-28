@@ -2,225 +2,78 @@
 {% block title %}Рахунок на оплату {{ doc_number }}{% endblock %}
 {% block content %}
 <style>
-    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    .header-table td { vertical-align: top; padding: 5px; }
-    .header-left { width: 60%; }
-    .header-right { width: 40%; text-align: right; }
-    .company-block { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-    .company-block .name { font-size: 14pt; font-weight: bold; margin-bottom: 8px; }
-    .company-block .details { font-size: 9pt; line-height: 1.6; }
-    .doc-title { font-size: 16pt; font-weight: bold; text-align: center; margin: 25px 0; color: #1a365d; }
-    .payer-block { background: #fff; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-    .payer-block .label { font-size: 9pt; color: #666; margin-bottom: 3px; }
-    .payer-block .value { font-size: 10pt; font-weight: 600; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; }
+    h1 { font-size: 16pt; font-weight: bold; margin-bottom: 20px; }
+    .header-info { margin-bottom: 25px; line-height: 1.6; }
+    .header-info p { margin: 5px 0; }
+    .label { font-weight: normal; }
+    .value { font-weight: normal; }
     .items-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    .items-table th { background: #1a365d; color: white; padding: 10px 8px; text-align: left; font-size: 9pt; }
-    .items-table td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; font-size: 9pt; }
-    .items-table tr:hover { background: #f7fafc; }
-    .items-table .num { width: 30px; text-align: center; }
-    .items-table .qty { width: 50px; text-align: center; }
-    .items-table .price { width: 80px; text-align: right; }
-    .items-table .sum { width: 100px; text-align: right; font-weight: 600; }
-    .totals-block { float: right; width: 300px; margin-top: 20px; }
-    .totals-block table { width: 100%; }
-    .totals-block td { padding: 8px; font-size: 10pt; }
-    .totals-block .label { text-align: left; }
-    .totals-block .value { text-align: right; font-weight: 600; }
-    .totals-block .grand-total { background: #1a365d; color: white; font-size: 12pt; }
-    .totals-block .grand-total td { padding: 12px; }
-    .payment-block { clear: both; margin-top: 40px; padding: 15px; background: #f0fff4; border: 1px solid #9ae6b4; border-radius: 8px; }
-    .payment-block .title { font-weight: bold; margin-bottom: 10px; color: #22543d; }
-    .signature-block { margin-top: 40px; display: flex; justify-content: space-between; }
-    .signature-line { width: 45%; }
-    .signature-line .label { font-size: 9pt; color: #666; margin-bottom: 5px; }
-    .signature-line .line { border-bottom: 1px solid #333; height: 40px; }
-    .signature-line .name { font-size: 9pt; margin-top: 5px; }
-    .footer-note { margin-top: 30px; font-size: 8pt; color: #666; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+    .items-table th, .items-table td { border: 1px solid #000; padding: 8px; }
+    .items-table th { background: #f5f5f5; font-weight: bold; text-align: center; }
+    .items-table td { text-align: center; }
+    .items-table td:nth-child(2) { text-align: left; }
+    .total-row { margin: 15px 0; text-align: right; font-size: 14pt; }
+    .total-row strong { font-weight: bold; }
+    .sum-words { margin: 20px 0; line-height: 1.6; }
+    .sum-words p { margin: 5px 0; }
+    .sum-bold { font-weight: bold; font-size: 13pt; }
+    .signature-line { margin-top: 40px; display: flex; align-items: flex-end; }
+    .signature-label { font-weight: bold; margin-right: 20px; }
+    .signature-underline { flex: 1; max-width: 300px; border-bottom: 1px solid #000; }
+    .separator { border-top: 1px solid #000; margin: 30px 0; }
 </style>
 
-<!-- Шапка з реквізитами виконавця -->
-<table class="header-table">
-    <tr>
-        <td class="header-left">
-            <div class="company-block">
-                <div class="name">{{ company.legal_name }}</div>
-                <div class="details">
-                    п/р {{ company.iban }}<br>
-                    у банку {{ company.bank_name }}<br>
-                    код за ДРФО {{ company.edrpou }}
-                </div>
-            </div>
-        </td>
-        <td class="header-right">
-            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjZjBmMGYwIiByeD0iOCIvPjx0ZXh0IHg9IjQwIiB5PSI0NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5MT0dPPC90ZXh0Pjwvc3ZnPg==" alt="Logo" style="width: 80px; height: 80px;" />
-        </td>
-    </tr>
-</table>
+<h1>Рахунок на оплату № {{ doc_number.split('-')[-1] if doc_number and '-' in doc_number else (doc_number or order.order_number) }} від {{ generated_at.split(' ')[0] if ' ' in generated_at else generated_at }} р.</h1>
 
-<!-- Заголовок документа -->
-<div class="doc-title">
-    Рахунок на оплату № {{ doc_number.split('-')[-1] if doc_number else order.order_number }} від {{ generated_at.split(' ')[0] }}
+<div class="header-info">
+    <p><span class="label">Постачальник:</span> <strong>{{ company.legal_name }}</strong></p>
+    <p style="padding-left: 95px;">п/р {{ company.iban }} у банку {{ company.bank_name }},</p>
+    <p style="padding-left: 95px;">код за ДРФО {{ company.edrpou }}</p>
 </div>
 
-<!-- Блок платника -->
-<div class="payer-block">
-    <table style="width: 100%;">
-        <tr>
-            <td style="width: 50%; vertical-align: top;">
-                <div class="label">Платник:</div>
-                <div class="value">{{ payer.company_name or order.customer_name }}</div>
-                {% if payer.edrpou %}
-                <div style="font-size: 9pt; margin-top: 5px;">
-                    п/р {{ payer.iban or '—' }}<br>
-                    у банку {{ payer.bank_name or '—' }}<br>
-                    код за {{ 'ЄДРПОУ' if payer.payer_type in ['llc_simple', 'llc_general'] else 'ДРФО' }} {{ payer.edrpou }}
-                </div>
-                {% endif %}
-            </td>
-            <td style="width: 50%; vertical-align: top;">
-                <div class="label">Підстава:</div>
-                <div class="value">Замовлення {{ order.order_number }}</div>
-                <div style="font-size: 9pt; margin-top: 5px;">
-                    Період: {{ order.rental_start_date }} — {{ order.rental_end_date }} ({{ order.rental_days }} дн.)
-                </div>
-            </td>
-        </tr>
-    </table>
+<div class="header-info">
+    <p><span class="label">Покупець:</span> <strong>{{ payer.company_name or order.customer_name }}</strong></p>
 </div>
 
-<!-- Таблиця товарів/послуг -->
+<p style="margin: 20px 0;"><span class="label">Договір:</span> Основний</p>
+
 <table class="items-table">
     <thead>
         <tr>
-            <th class="num">№</th>
-            <th>Найменування {{ 'послуги' if item_type == 'service' else 'товару' }}</th>
-            <th class="qty">К-сть</th>
-            <th>Од.</th>
-            <th class="price">Ціна</th>
-            <th class="sum">Сума</th>
+            <th style="width: 40px;">№</th>
+            <th>Товари (роботи, послуги)</th>
+            <th style="width: 60px;">Кіл-сть</th>
+            <th style="width: 40px;">Од.</th>
+            <th style="width: 80px;">Ціна</th>
+            <th style="width: 90px;">Сума</th>
         </tr>
     </thead>
     <tbody>
-        {% if item_type == 'service' %}
-        <!-- Послуга - прокат декору -->
         <tr>
-            <td class="num">1</td>
-            <td>Послуга "Прокат декору" згідно замовлення {{ order.order_number }}</td>
-            <td class="qty">1</td>
-            <td>посл.</td>
-            <td class="price">{{ "%.2f"|format(totals.rent) }}</td>
-            <td class="sum">{{ "%.2f"|format(totals.rent) }}</td>
+            <td>1</td>
+            <td style="text-align: left;">Прокат декору</td>
+            <td>1</td>
+            <td>шт</td>
+            <td style="text-align: right;">{{ "{:,.2f}".format(totals.rent).replace(",", " ") }}</td>
+            <td style="text-align: right;">{{ "{:,.2f}".format(totals.rent).replace(",", " ") }}</td>
         </tr>
-        {% if totals.deposit > 0 %}
-        <tr>
-            <td class="num">2</td>
-            <td>Заставна вартість (повертається)</td>
-            <td class="qty">1</td>
-            <td>посл.</td>
-            <td class="price">{{ "%.2f"|format(totals.deposit) }}</td>
-            <td class="sum">{{ "%.2f"|format(totals.deposit) }}</td>
-        </tr>
-        {% endif %}
-        {% else %}
-        <!-- Товар - деталізація по позиціях -->
-        {% for item in items %}
-        <tr>
-            <td class="num">{{ loop.index }}</td>
-            <td>{{ item.get('name', 'Декор') }}{% if item.get('sku') %} (арт. {{ item.sku }}){% endif %}</td>
-            <td class="qty">{{ item.get('quantity') or item.get('qty', 1) }}</td>
-            <td>шт.</td>
-            <td class="price">{{ "%.2f"|format(item.price_per_day * order.rental_days) }}</td>
-            <td class="sum">{{ "%.2f"|format(item.total_rent) }}</td>
-        </tr>
-        {% endfor %}
-        {% if totals.deposit > 0 %}
-        <tr>
-            <td class="num">{{ items|length + 1 }}</td>
-            <td>Заставна вартість (повертається)</td>
-            <td class="qty">1</td>
-            <td>посл.</td>
-            <td class="price">{{ "%.2f"|format(totals.deposit) }}</td>
-            <td class="sum">{{ "%.2f"|format(totals.deposit) }}</td>
-        </tr>
-        {% endif %}
-        {% endif %}
     </tbody>
 </table>
 
-<!-- Блок підсумків -->
-<div class="totals-block">
-    <table>
-        <tr>
-            <td class="label">Всього без ПДВ:</td>
-            <td class="value">{{ "%.2f"|format(totals.grand_total) }} грн</td>
-        </tr>
-        {% if payer.is_vat_payer %}
-        <tr>
-            <td class="label">ПДВ (20%):</td>
-            <td class="value">{{ "%.2f"|format(totals.grand_total * 0.2) }} грн</td>
-        </tr>
-        <tr class="grand-total">
-            <td class="label">Разом з ПДВ:</td>
-            <td class="value">{{ "%.2f"|format(totals.grand_total * 1.2) }} грн</td>
-        </tr>
-        {% else %}
-        <tr class="grand-total">
-            <td class="label">Всього до сплати:</td>
-            <td class="value">{{ "%.2f"|format(totals.grand_total) }} грн</td>
-        </tr>
-        {% endif %}
-    </table>
+<div class="total-row">
+    <strong>Всього:</strong> {{ "{:,.2f}".format(totals.rent).replace(",", " ") }}
 </div>
 
-<div style="clear: both;"></div>
-
-<!-- Сума прописом -->
-<div style="margin-top: 20px; font-size: 10pt;">
-    <strong>Всього до сплати:</strong> {{ total_words or '' }} грн
+<div class="sum-words">
+    <p>Всього найменувань 1, на суму {{ "{:,.2f}".format(totals.rent).replace(",", " ") }} грн.</p>
+    <p class="sum-bold">{{ total_words or '' }} гривень 00 копійок</p>
 </div>
 
-<!-- Блок оплати -->
-<div class="payment-block">
-    <div class="title">Реквізити для оплати:</div>
-    <table style="width: 100%; font-size: 9pt;">
-        <tr>
-            <td style="width: 120px;">Отримувач:</td>
-            <td><strong>{{ company.legal_name }}</strong></td>
-        </tr>
-        <tr>
-            <td>IBAN:</td>
-            <td><strong>{{ company.iban }}</strong></td>
-        </tr>
-        <tr>
-            <td>Банк:</td>
-            <td>{{ company.bank_name }}</td>
-        </tr>
-        <tr>
-            <td>Код ДРФО:</td>
-            <td>{{ company.edrpou }}</td>
-        </tr>
-        <tr>
-            <td>Призначення:</td>
-            <td>Оплата за {{ 'послуги прокату декору' if item_type == 'service' else 'товар (декор)' }}, зам. {{ order.order_number }}</td>
-        </tr>
-    </table>
-</div>
+<div class="separator"></div>
 
-<!-- Підписи -->
-<div class="signature-block">
-    <div class="signature-line">
-        <div class="label">Виконавець:</div>
-        <div class="line"></div>
-        <div class="name">{{ company.director_name or company.legal_name.replace('ФОП ', '') }}</div>
-    </div>
-    <div class="signature-line">
-        <div class="label">Платник:</div>
-        <div class="line"></div>
-        <div class="name">{{ payer.director_name or payer.company_name or order.customer_name }}</div>
-    </div>
-</div>
-
-<div class="footer-note">
-    Рахунок дійсний протягом 3 банківських днів. Оплата рахунку означає згоду з умовами оренди.
+<div class="signature-line">
+    <span class="signature-label">Виписав(ла):</span>
+    <span class="signature-underline"></span>
 </div>
 {% endblock %}

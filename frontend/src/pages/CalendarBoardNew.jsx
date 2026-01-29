@@ -7,57 +7,59 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL
 /************* helpers *************/
 const cls = (...a) => a.filter(Boolean).join(' ')
 
-// Отримати поточну дату по Києву
-const getKyivDate = () => {
-  // Отримуємо поточний час в Києві
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Kiev',
+// Часовий пояс Києва
+const KYIV_TZ = 'Europe/Kyiv'
+
+// Отримати сьогоднішню дату по Києву як ISO рядок (YYYY-MM-DD)
+const getKyivTodayISO = () => {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: KYIV_TZ,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false
   })
-  const parts = formatter.formatToParts(new Date())
-  const get = (type) => parts.find(p => p.type === type)?.value || '0'
-  
-  return new Date(
-    parseInt(get('year')),
-    parseInt(get('month')) - 1,
-    parseInt(get('day')),
-    parseInt(get('hour')),
-    parseInt(get('minute')),
-    parseInt(get('second'))
-  )
+  return fmt.format(new Date()) // "YYYY-MM-DD"
 }
 
-// Отримати сьогоднішню дату по Києву (без часу)
-const getKyivToday = () => {
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Kiev',
+// Конвертувати Date в ISO рядок по Києву
+const toKyivISO = (d) => {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: KYIV_TZ,
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
+    day: '2-digit',
   })
-  const parts = formatter.formatToParts(new Date())
-  const get = (type) => parts.find(p => p.type === type)?.value || '0'
-  
-  return new Date(
-    parseInt(get('year')),
-    parseInt(get('month')) - 1,
-    parseInt(get('day'))
-  )
+  return fmt.format(d)
 }
 
+// Створити "безпечний" Date з ISO рядка (в UTC на полудень)
+const isoToSafeDate = (iso) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0))
+}
+
+// Конвертувати "безпечний" Date назад в ISO рядок
+const safeDateToISO = (date) => {
+  const y = date.getUTCFullYear()
+  const m = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(date.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+// Legacy функції для сумісності
+const getKyivDate = () => isoToSafeDate(getKyivTodayISO())
+const getKyivToday = () => isoToSafeDate(getKyivTodayISO())
+const toISO = (d) => toKyivISO(d)
+
 const formatUA = (d) =>
-  d.toLocaleDateString('uk-UA', { weekday: 'short', day: '2-digit', month: 'short' })
+  d.toLocaleDateString('uk-UA', { weekday: 'short', day: '2-digit', month: 'short', timeZone: KYIV_TZ })
 
 const addDays = (d, offset) => {
-  const copy = new Date(d)
-  copy.setDate(copy.getDate() + offset)
-  return copy
+  // Працюємо через ISO для уникнення timezone проблем
+  const iso = safeDateToISO(d)
+  const safeDate = isoToSafeDate(iso)
+  safeDate.setUTCDate(safeDate.getUTCDate() + offset)
+  return safeDate
 }
 
 const toISO = (d) => {

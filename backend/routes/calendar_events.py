@@ -197,19 +197,9 @@ async def get_calendar_events(
                         "priority": 1 if is_overdue else 2,
                     })
             
-            # В оренді (діапазон)
-            if status == "issued" and start_date and end_date and should_include("on_rent"):
-                events.append({
-                    **base_event,
-                    "id": f"order-rent-{order_id}",
-                    "type": "on_rent",
-                    "date": str(start_date),
-                    "date_end": str(end_date),
-                    "title": f"#{order_number} {customer_name}",
-                    "subtitle": f"В оренді · {rental_days or '?'} дн.",
-                    "is_range": True,
-                    "priority": 5,
-                })
+            # В оренді (діапазон) - ПРИБРАНО: дублює повернення
+            # if status == "issued" and start_date and end_date and should_include("on_rent"):
+            #     events.append({...})
                 
     except Exception as e:
         print(f"[Calendar] Error loading orders: {e}")

@@ -72,8 +72,7 @@ async def get_audit_items(
     ✅ MIGRATED: Using RentalHub DB (products + inventory tables)
     """
     try:
-        # ✅ UPDATED: Using only products table (single source of truth)
-        # Build SQL query dynamically based on filters
+        # ✅ UPDATED: Using products + audit_records for status
         sql_parts = ["""
             SELECT 
                 p.product_id,
@@ -96,22 +95,28 @@ async def get_audit_items(
                 p.cleaning_status,
                 p.product_state,
                 p.last_audit_date,
-                irs.status as recount_status
+                ar.status as audit_status
             FROM products p
-            LEFT JOIN inventory_recount_status irs ON p.product_id = irs.inventory_id
+            LEFT JOIN (
+                SELECT product_id, status 
+                FROM audit_records ar1
+                WHERE ar1.audit_date = (
+                    SELECT MAX(ar2.audit_date) FROM audit_records ar2 WHERE ar2.product_id = ar1.product_id
+                )
+            ) ar ON p.product_id = ar.product_id
             WHERE p.status = 1
         """]
         
         params = {}
         
-        # ✅ NEW: Status filter (critical, needs_recount, etc)
+        # Status filter (ok, minor/needs_recount, critical)
         if status_filter and status_filter != 'all':
             if status_filter == 'critical':
-                sql_parts.append("AND irs.status = 'critical'")
-            elif status_filter == 'needs_recount':
-                sql_parts.append("AND (irs.status = 'needs_recount' OR irs.status = 'pending')")
+                sql_parts.append("AND ar.status = 'critical'")
+            elif status_filter == 'needs_recount' or status_filter == 'minor':
+                sql_parts.append("AND ar.status = 'needs_recount'")
             elif status_filter == 'ok':
-                sql_parts.append("AND (irs.status = 'satisfactory' OR irs.status IS NULL)")
+                sql_parts.append("AND (ar.status = 'ok' OR ar.status IS NULL)")
         
         # Category filter
         if category and category != 'all':

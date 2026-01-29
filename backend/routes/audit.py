@@ -148,7 +148,11 @@ async def get_audit_items(
         else:
             sql_parts.append("ORDER BY p.name")
         
-        sql_parts.append(f"LIMIT {limit}")
+        # Limit - якщо є фільтр по статусу, показуємо всі
+        if status_filter and status_filter != 'all':
+            sql_parts.append(f"LIMIT 1000")  # Без обмеження для фільтрованих
+        else:
+            sql_parts.append(f"LIMIT {limit}")
         
         final_sql = " ".join(sql_parts)
         results = db.execute(text(final_sql), params).fetchall()

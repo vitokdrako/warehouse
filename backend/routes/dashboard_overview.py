@@ -6,10 +6,61 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime, timedelta
+import json
 
 from database_rentalhub import get_rh_db
 
 router = APIRouter(prefix="/api/manager/dashboard", tags=["dashboard"])
+
+
+def parse_issue_card_simple(row, db: Session):
+    """Спрощений парсер issue card для дашборду"""
+    items = []
+    if row[6]:  # items JSON column
+        try:
+            items = json.loads(row[6]) if isinstance(row[6], str) else row[6]
+        except:
+            items = []
+    
+    # Отримати дані замовлення
+    order_data = {}
+    if row[1]:  # order_id
+        order_result = db.execute(text("""
+            SELECT customer_name, customer_phone, customer_email,
+                   total_price, deposit_amount, rental_days,
+                   rental_start_date, rental_end_date, status
+            FROM orders WHERE order_id = :order_id
+        """), {"order_id": row[1]})
+        order_row = order_result.fetchone()
+        if order_row:
+            order_data = {
+                "customer_name": order_row[0],
+                "customer_phone": order_row[1],
+                "customer_email": order_row[2],
+                "total_rental": float(order_row[3]) if order_row[3] else 0.0,
+                "deposit_amount": float(order_row[4]) if order_row[4] else 0.0,
+                "rental_days": order_row[5] or 0,
+                "rental_start_date": order_row[6].strftime('%Y-%m-%d') if order_row[6] else None,
+                "rental_end_date": order_row[7].strftime('%Y-%m-%d') if order_row[7] else None,
+                "order_status": order_row[8]
+            }
+    
+    return {
+        "id": row[0],
+        "order_id": row[1],
+        "order_number": row[2],
+        "status": row[3],
+        "prepared_by": row[4],
+        "issued_by": row[5],
+        "items": items,
+        "items_count": len(items),
+        "preparation_notes": row[7] if len(row) > 7 else None,
+        "issue_notes": row[8] if len(row) > 8 else None,
+        "prepared_at": row[9].isoformat() if len(row) > 9 and row[9] else None,
+        "issued_at": row[10].isoformat() if len(row) > 10 and row[10] else None,
+        "created_at": row[11].isoformat() if len(row) > 11 and row[11] else None,
+        **order_data
+    }
 
 
 @router.get("/overview")
@@ -109,44 +160,20 @@ async def get_dashboard_overview(
         except Exception as e:
             print(f"[Dashboard] Error loading decor orders: {e}")
         
-        # 3. Issue cards
+        # 3. Issue cards (з повними даними замовлення)
         try:
             cards_result = db.execute(text("""
-                SELECT ic.id, ic.order_id, ic.order_number, ic.status,
-                       ic.prepared_by, ic.issued_by, ic.prepared_at, ic.issued_at,
-                       o.customer_name, o.customer_phone, o.rental_start_date, 
-                       o.rental_end_date, o.total_price, o.status as order_status
+                SELECT ic.* 
                 FROM issue_cards ic
-                LEFT JOIN orders o ON ic.order_id = o.order_id
-                WHERE ic.status IN ('pending', 'preparing', 'ready', 'issued')
-                ORDER BY 
-                    CASE ic.status 
-                        WHEN 'issued' THEN 1
-                        WHEN 'ready' THEN 2
-                        WHEN 'preparing' THEN 3
-                        ELSE 4
-                    END,
-                    ic.created_at DESC
+                JOIN orders o ON ic.order_id = o.order_id
+                WHERE o.status != 'cancelled' 
+                AND o.is_archived = 0
+                ORDER BY ic.created_at DESC
                 LIMIT 100
             """))
             
             for row in cards_result:
-                result["issue_cards"].append({
-                    "id": row[0],
-                    "order_id": row[1],
-                    "order_number": row[2],
-                    "status": row[3],
-                    "prepared_by": row[4],
-                    "issued_by": row[5],
-                    "prepared_at": row[6].isoformat() if row[6] else None,
-                    "issued_at": row[7].isoformat() if row[7] else None,
-                    "customer_name": row[8],
-                    "customer_phone": row[9],
-                    "rental_start_date": str(row[10]) if row[10] else None,
-                    "rental_end_date": str(row[11]) if row[11] else None,
-                    "total_price": float(row[12] or 0),
-                    "order_status": row[13]
-                })
+                result["issue_cards"].append(parse_issue_card_simple(row, db))
         except Exception as e:
             print(f"[Dashboard] Error loading issue cards: {e}")
         

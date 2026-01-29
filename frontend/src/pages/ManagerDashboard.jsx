@@ -310,18 +310,6 @@ export default function ManagerDashboard() {
     setLoading(true);
     console.log('[Dashboard] 🔄 Manual reload triggered');
     fetchAllData();
-    
-    // Додатково оновлюємо статистику
-    authFetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`)
-    .then(res => res.json())
-    .then(data => {
-      setCleaningStats({ repair: data.repair || 0 });
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error('[Dashboard] Manual reload error:', err);
-      setLoading(false);
-    });
   };
 
   // Логіка розподілу замовлень БЕЗ ФІЛЬТРАЦІЇ ПО ДАТІ:

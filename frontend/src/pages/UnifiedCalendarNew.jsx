@@ -345,8 +345,8 @@ function MonthView({ baseDate, events, todayISO, onEventClick, onDayClick }) {
                   {dateObj.getUTCDate()}
                 </div>
                 
-                <div className="space-y-0.5">
-                  {dayEvents.slice(0, 3).map(event => (
+                <div className="space-y-0.5 max-h-[85px] overflow-y-auto">
+                  {dayEvents.map(event => (
                     <div
                       key={event.id}
                       onClick={(e) => { e.stopPropagation(); onEventClick?.(event) }}
@@ -359,11 +359,6 @@ function MonthView({ baseDate, events, todayISO, onEventClick, onDayClick }) {
                       {event._meta?.icon} {event.title}
                     </div>
                   ))}
-                  {dayEvents.length > 3 && (
-                    <div className="text-[9px] text-slate-500 pl-1">
-                      +{dayEvents.length - 3} ще
-                    </div>
-                  )}
                 </div>
               </div>
             )

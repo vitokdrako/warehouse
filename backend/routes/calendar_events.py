@@ -219,51 +219,7 @@ async def get_calendar_events(
         print(f"[Calendar] Error loading orders: {e}")
     
     # ============================================================
-    # 2. ISSUE CARDS - Комплектація
-    # ============================================================
-    if should_include("packing") or should_include("ready_issue"):
-        try:
-            cards_query = """
-                SELECT 
-                    ic.id, ic.order_id, ic.order_number, ic.status,
-                    ic.prepared_at, ic.issued_at, ic.created_at,
-                    o.customer_name, o.rental_start_date
-                FROM issue_cards ic
-                LEFT JOIN orders o ON ic.order_id = o.order_id
-                WHERE ic.status IN ('pending', 'preparing', 'ready')
-                AND (
-                    DATE(ic.created_at) BETWEEN :date_from AND :date_to
-                    OR DATE(o.rental_start_date) BETWEEN :date_from AND :date_to
-                )
-            """
-            
-            cards_result = db.execute(text(cards_query), {
-                "date_from": date_from,
-                "date_to": date_to
-            })
-            
-            for row in cards_result:
-                card_date = row[8] or row[6]  # rental_start_date or created_at
-                if card_date:
-                    event_type = "ready_issue" if row[3] == "ready" else "packing"
-                    if should_include(event_type):
-                        events.append({
-                            "id": f"card-{row[0]}",
-                            "type": event_type,
-                            "date": str(card_date)[:10],
-                            "title": f"#{row[2]} {row[7] or ''}",
-                            "subtitle": f"Комплектація · {row[3]}",
-                            "order_id": row[1],
-                            "order_number": row[2],
-                            "card_id": row[0],
-                            "card_status": row[3],
-                            "priority": 2,
-                        })
-        except Exception as e:
-            print(f"[Calendar] Error loading issue cards: {e}")
-    
-    # ============================================================
-    # 3. CLEANING / LAUNDRY - Мийка, Прання, Реставрація
+    # 2. CLEANING / LAUNDRY - Мийка, Прання, Реставрація
     # ============================================================
     if should_include("cleaning") or should_include("laundry") or should_include("repair"):
         try:

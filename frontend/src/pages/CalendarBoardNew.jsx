@@ -74,15 +74,26 @@ const toISO = (d) => {
 const toKyivISO = toISO
 
 const startOfWeek = (d) => {
-  const copy = new Date(d)
-  const day = copy.getDay()
+  const iso = safeDateToISO(d)
+  const safeDate = isoToSafeDate(iso)
+  const day = safeDate.getUTCDay()
   const diff = day === 0 ? -6 : 1 - day
-  copy.setDate(copy.getDate() + diff)
-  return copy
+  safeDate.setUTCDate(safeDate.getUTCDate() + diff)
+  return safeDate
 }
 
-const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1)
-const endOfMonth = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0)
+const startOfMonth = (d) => {
+  const iso = safeDateToISO(d)
+  const [y, m] = iso.split('-').map(Number)
+  return isoToSafeDate(`${y}-${String(m).padStart(2, '0')}-01`)
+}
+
+const endOfMonth = (d) => {
+  const iso = safeDateToISO(d)
+  const [y, m] = iso.split('-').map(Number)
+  const lastDay = new Date(Date.UTC(y, m, 0)).getUTCDate()
+  return isoToSafeDate(`${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`)
+}
 
 /************* UI components *************/
 function Badge({ children, tone = 'slate' }) {

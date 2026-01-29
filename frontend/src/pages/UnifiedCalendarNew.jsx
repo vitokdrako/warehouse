@@ -125,17 +125,14 @@ const authFetch = async (url, options = {}) => {
 // EVENT TYPE CONFIG
 // ============================================================
 const EVENT_COLORS = {
-  // Видача - колір по статусу
+  // Видача - показується тільки для НЕ виданих ордерів
   issue_awaiting: { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-700', dot: 'bg-violet-500' },
   issue_processing: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', dot: 'bg-orange-500' },
   issue_ready: { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  issue_issued: { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700', dot: 'bg-blue-500' },
   
-  // Повернення - колір по статусу
-  return_awaiting: { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-700', dot: 'bg-violet-500' },
-  return_processing: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', dot: 'bg-orange-500' },
-  return_ready: { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  // Повернення - показується тільки для ВИДАНИХ ордерів
   return_issued: { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-700', dot: 'bg-amber-500' },
+  return_processing: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', dot: 'bg-orange-500' },
   return_overdue: { bg: 'bg-red-200', border: 'border-red-400', text: 'text-red-800', dot: 'bg-red-600' },
   
   // Обслуговування
@@ -151,7 +148,7 @@ const EVENT_COLORS = {
 }
 
 const EVENT_GROUPS = {
-  orders: { label: 'Замовлення', icon: '📦', types: ['issue_awaiting', 'issue_processing', 'issue_ready', 'issue_issued', 'return_awaiting', 'return_processing', 'return_ready', 'return_issued', 'return_overdue'] },
+  orders: { label: 'Замовлення', icon: '📦', types: ['issue_awaiting', 'issue_processing', 'issue_ready', 'return_issued', 'return_processing', 'return_overdue'] },
   maintenance: { label: 'Обслуговування', icon: '🔧', types: ['cleaning', 'laundry', 'repair'] },
   issues: { label: 'Проблеми', icon: '⚠️', types: ['damage'] },
   finance: { label: 'Фінанси', icon: '💰', types: ['payment_due', 'deposit_return'] },

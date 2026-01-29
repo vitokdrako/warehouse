@@ -31,7 +31,7 @@ export default function InventoryRecount() {
     
     try {
       setLoadingHistory(true)
-      const res = await axios.get(`${BACKEND_URL}/api/product-damage-history/sku/${sku}`)
+      const res = await axios.get(`${BACKEND_URL}/api/product-damage-history/by-sku?sku=${encodeURIComponent(sku)}`)
       setDamageHistory(res.data.history || [])
     } catch (err) {
       console.error('Error loading damage history:', err)

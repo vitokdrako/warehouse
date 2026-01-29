@@ -283,6 +283,9 @@ export default function ReauditCabinetFull({
       } else if (sortByAudit === 'notAudited') {
         // Не переоблікований = немає дати або більше 180 днів
         okAudit = Boolean(!it.lastAuditDate || it.daysFromLastAudit > 180)
+      } else if (sortByAudit === 'critical') {
+        // Критичний - статус critical з бази
+        okAudit = it.status === 'critical'
       }
       
       return okCategory && okSubcategory && okAudit

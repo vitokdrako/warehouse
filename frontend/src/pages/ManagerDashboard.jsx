@@ -190,12 +190,17 @@ export default function ManagerDashboard() {
   // AbortController для скасування запитів при unmount
   const abortControllerRef = React.useRef(null);
   
-  // Retry fetch з exponential backoff
+  // Retry fetch з exponential backoff та більшими затримками
   const fetchWithRetry = async (url, options = {}, retries = 3) => {
-    const delays = [500, 1500, 4000];
+    const delays = [1000, 3000, 6000]; // Більші затримки для production
     
     for (let i = 0; i <= retries; i++) {
       try {
+        // Додаємо випадкову затримку 0-500ms для уникнення "thundering herd"
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 500));
+        }
+        
         const response = await authFetch(url, options);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();

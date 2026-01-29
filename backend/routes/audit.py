@@ -178,7 +178,7 @@ async def get_audit_items(
             cleaning_status = row[17]
             product_state = row[18]
             last_audit_date = row[19]
-            recount_status_db = row[20]  # ✅ NEW: from JOIN
+            audit_status_db = row[20]  # ✅ from audit_records JOIN
             
             # ✅ FIXED: Повертаємо чисті значення zone, aisle, shelf
             # zone_str для відображення, zone_raw для редагування

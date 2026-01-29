@@ -258,6 +258,15 @@ export default function ReauditCabinetFull({
     loadCategories()
   }, [q, categoryFilter, subcategoryFilter])
 
+  // Перезавантажити при зміні фільтра статусу
+  useEffect(() => {
+    if (sortByAudit === 'critical' || sortByAudit === 'notAudited') {
+      loadItems({ statusFilter: sortByAudit })
+    } else {
+      loadItems()
+    }
+  }, [sortByAudit])
+
   useEffect(() => {
     if (selectedId) {
       loadRentalHistory(selectedId)

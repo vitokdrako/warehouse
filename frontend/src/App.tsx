@@ -33,6 +33,7 @@ import InventoryRecount from './pages/InventoryRecount';
 import OrdersArchive from './pages/OrdersArchive';
 import SyncPanel from './pages/SyncPanel';
 import DocumentTemplatesAdmin from './pages/DocumentTemplatesAdmin';
+import UnifiedCalendar from './pages/UnifiedCalendarNew';
 
 // Protected Route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -163,6 +164,16 @@ function App() {
           
           <Route 
             path="/calendar" 
+            element={
+              <ProtectedRoute>
+                <UnifiedCalendar />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Legacy calendar - залишаємо для сумісності */}
+          <Route 
+            path="/calendar-old" 
             element={
               <ProtectedRoute>
                 <UniversalOpsCalendar />

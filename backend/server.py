@@ -104,6 +104,7 @@ app.include_router(partial_returns.router)
 app.include_router(uploads.router)
 app.include_router(payer_profiles.router)
 app.include_router(dashboard_overview.router)
+app.include_router(calendar_events.router)
 
 # Configure logging
 logging.basicConfig(

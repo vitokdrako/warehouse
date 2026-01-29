@@ -262,23 +262,30 @@ export default function ManagerDashboard() {
     }
   };
   
-  // Legacy fallback (старі окремі запити) - послідовно, не паралельно
+  // Legacy fallback (старі окремі запити) - ПОСЛІДОВНО з затримками
   const fetchAllDataLegacy = async () => {
+    console.log('[Dashboard] 🔄 Legacy fallback: sequential requests with delays...');
+    
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    
     try {
       // 1. Критичні дані - orders
       const ordersRes = await authFetch(`${BACKEND_URL}/api/orders?status=awaiting_customer`);
       const ordersData = await ordersRes.json();
       setOrders(ordersData.orders || []);
+      await delay(300); // Пауза між запитами
       
       // 2. Decor orders
       const decorRes = await authFetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`);
       const decorData = await decorRes.json();
       setDecorOrders(decorData.orders || []);
+      await delay(300);
       
       // 3. Issue cards
       const cardsRes = await authFetch(`${BACKEND_URL}/api/issue-cards`);
       const cardsData = await cardsRes.json();
       setIssueCards(cardsData || []);
+      await delay(300);
       
       // 4. Finance (не критичне)
       try {
@@ -293,6 +300,7 @@ export default function ManagerDashboard() {
       }
       
       setLoading(false);
+      console.log('[Dashboard] ✅ Legacy fallback completed');
     } catch (err) {
       console.error('[Dashboard] Legacy fallback error:', err);
       setLoading(false);

@@ -142,7 +142,7 @@ const EVENT_COLORS = {
 }
 
 const EVENT_GROUPS = {
-  orders: { label: 'Замовлення', icon: '📦', types: ['issue', 'return', 'on_rent', 'awaiting'] },
+  orders: { label: 'Замовлення', icon: '📦', types: ['issue', 'return', 'awaiting'] },
   operations: { label: 'Операції', icon: '⚙️', types: ['packing', 'ready_issue'] },
   maintenance: { label: 'Обслуговування', icon: '🔧', types: ['cleaning', 'laundry', 'repair'] },
   issues: { label: 'Проблеми', icon: '⚠️', types: ['damage', 'overdue'] },
@@ -606,7 +606,7 @@ export default function UnifiedCalendar() {
   
   return (
     <div className="min-h-screen bg-slate-50">
-      <CorporateHeader />
+      <CorporateHeader cabinetName="Календар подій" />
       
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Header */}

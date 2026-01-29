@@ -647,6 +647,7 @@ export default function ReauditCabinetFull({
                   <option value="all">Усі</option>
                   <option value="audited">✅ Переоблікований</option>
                   <option value="notAudited">⏰ Не переоблікований</option>
+                  <option value="critical">🔴 Критичний</option>
                 </select>
               </div>
             </div>

@@ -179,7 +179,7 @@ export default function ReturnOrderWorkspace() {
             const sku = item.sku
             if (!sku) return item
             
-            const response = await axios.get(`${BACKEND_URL}/api/product-damage-history/sku/${sku}`)
+            const response = await axios.get(`${BACKEND_URL}/api/product-damage-history/by-sku?sku=${encodeURIComponent(sku)}`)
             const data = response.data
             
             if (data.history && data.history.length > 0) {

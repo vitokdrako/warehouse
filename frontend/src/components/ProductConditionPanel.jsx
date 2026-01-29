@@ -57,7 +57,7 @@ export default function ProductConditionPanel({
     try {
       const endpoint = product.product_id 
         ? `/api/product-damage-history/product/${product.product_id}`
-        : `/api/product-damage-history/sku/${product.code}`
+        : `/api/product-damage-history/by-sku?sku=${encodeURIComponent(product.code)}`
       
       const response = await fetch(`${BACKEND_URL}${endpoint}`)
       if (response.ok) {

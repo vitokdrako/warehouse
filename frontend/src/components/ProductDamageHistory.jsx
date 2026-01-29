@@ -19,7 +19,7 @@ export function ProductDamageHistory({ productId, sku }) {
       setLoading(true);
       const endpoint = productId 
         ? `${BACKEND_URL}/api/product-damage-history/product/${productId}`
-        : `${BACKEND_URL}/api/product-damage-history/sku/${sku}`;
+        : `${BACKEND_URL}/api/product-damage-history/by-sku?sku=${encodeURIComponent(sku)}`;
       
       const { data } = await axios.get(endpoint);
       setHistory(data.history || []);

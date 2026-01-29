@@ -115,7 +115,7 @@ export default function ReauditCabinetFull({
   const [categoryFilter, setCategoryFilter] = useState<'all' | string>('all')
   const [subcategoryFilter, setSubcategoryFilter] = useState<'all' | string>('all')
   const [stats, setStats] = useState({ total: 0, ok: 0, minor: 0, crit: 0, lost: 0, overdueCnt: 0 })
-  const [sortByAudit, setSortByAudit] = useState<'all' | 'audited' | 'notAudited'>('all')
+  const [sortByAudit, setSortByAudit] = useState<'all' | 'audited' | 'notAudited' | 'critical'>('all')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [uploadedImage, setUploadedImage] = useState<{path: string; url: string} | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)

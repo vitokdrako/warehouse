@@ -92,7 +92,8 @@ async def get_calendar_events(
         return True
     
     # ============================================================
-    # 1. ЗАМОВЛЕННЯ - Видача, Повернення (без повернених!)
+    # 1. ЗАМОВЛЕННЯ - Видача + Повернення (2 події на ордер)
+    # Колір визначається статусом ордера
     # ============================================================
     try:
         orders_query = """
@@ -104,7 +105,7 @@ async def get_calendar_events(
                 o.event_type as order_event_type, o.created_at
             FROM orders o
             WHERE o.is_archived = 0
-            AND o.status NOT IN ('returned', 'completed', 'cancelled')
+            AND o.status NOT IN ('returned', 'completed', 'cancelled', 'rejected')
             AND (
                 (o.rental_start_date BETWEEN :date_from AND :date_to)
                 OR (o.rental_end_date BETWEEN :date_from AND :date_to)
@@ -119,6 +120,34 @@ async def get_calendar_events(
             "date_from": date_from,
             "date_to": date_to
         })
+        
+        # Мапінг статусу на тип події
+        def get_issue_type(status):
+            if status in ('awaiting_customer', 'awaiting', 'pending'):
+                return 'issue_awaiting'
+            elif status in ('processing', 'packing'):
+                return 'issue_processing'
+            elif status in ('ready_for_issue', 'ready'):
+                return 'issue_ready'
+            elif status in ('issued', 'on_rent', 'shipped', 'delivered'):
+                return 'issue_issued'
+            return 'issue_processing'
+        
+        def get_return_type(status, return_date_str, today_str):
+            if status in ('awaiting_customer', 'awaiting', 'pending'):
+                return 'return_awaiting'
+            elif status in ('processing', 'packing'):
+                return 'return_processing'
+            elif status in ('ready_for_issue', 'ready'):
+                return 'return_ready'
+            elif status in ('issued', 'on_rent', 'shipped', 'delivered'):
+                # Перевірка на прострочення
+                if return_date_str and return_date_str < today_str:
+                    return 'return_overdue'
+                return 'return_issued'
+            return 'return_processing'
+        
+        today_str = date_from  # Приблизно сьогодні
         
         for row in orders_result:
             order_id = row[0]
@@ -152,53 +181,39 @@ async def get_calendar_events(
                 "order_event_type": event_type,
             }
             
-            # Очікує підтвердження
-            if status == "awaiting_customer" and should_include("awaiting"):
-                events.append({
-                    **base_event,
-                    "id": f"order-awaiting-{order_id}",
-                    "type": "awaiting",
-                    "date": str(start_date) if start_date else str(created_at)[:10],
-                    "date_end": str(end_date) if end_date else None,
-                    "title": f"#{order_number} {customer_name}",
-                    "subtitle": f"Очікує підтвердження · ₴{total_price:,.0f}",
-                    "priority": 1,
-                })
-            
-            # Видача
+            # ВИДАЧА - дата видачі
             issue_dt = issue_date or start_date
-            if issue_dt and should_include("issue"):
-                issue_str = str(issue_dt)
+            if issue_dt:
+                issue_str = str(issue_dt)[:10]
                 if date_from <= issue_str <= date_to:
-                    events.append({
-                        **base_event,
-                        "id": f"order-issue-{order_id}",
-                        "type": "issue" if status in ("ready_for_issue", "processing") else "ready_issue",
-                        "date": issue_str,
-                        "title": f"#{order_number} {customer_name}",
-                        "subtitle": f"Видача · {delivery_type or 'самовивіз'}",
-                        "priority": 2 if status == "ready_for_issue" else 3,
-                    })
+                    issue_type = get_issue_type(status)
+                    if should_include(issue_type) or group_filter is None:
+                        events.append({
+                            **base_event,
+                            "id": f"order-issue-{order_id}",
+                            "type": issue_type,
+                            "date": issue_str,
+                            "title": f"#{order_number} {customer_name}",
+                            "subtitle": f"Видача · {delivery_type or 'самовивіз'}",
+                            "priority": 2,
+                        })
             
-            # Повернення
+            # ПОВЕРНЕННЯ - дата повернення
             return_dt = return_date or end_date
-            if return_dt and should_include("return"):
-                return_str = str(return_dt)
+            if return_dt:
+                return_str = str(return_dt)[:10]
                 if date_from <= return_str <= date_to:
-                    is_overdue = return_str < date_from and status == "issued"
-                    events.append({
-                        **base_event,
-                        "id": f"order-return-{order_id}",
-                        "type": "overdue" if is_overdue else "return",
-                        "date": return_str,
-                        "title": f"#{order_number} {customer_name}",
-                        "subtitle": f"Повернення · {rental_days or '?'} дн.",
-                        "priority": 1 if is_overdue else 2,
-                    })
-            
-            # В оренді (діапазон) - ПРИБРАНО: дублює повернення
-            # if status == "issued" and start_date and end_date and should_include("on_rent"):
-            #     events.append({...})
+                    return_type = get_return_type(status, return_str, today_str)
+                    if should_include(return_type) or group_filter is None:
+                        events.append({
+                            **base_event,
+                            "id": f"order-return-{order_id}",
+                            "type": return_type,
+                            "date": return_str,
+                            "title": f"#{order_number} {customer_name}",
+                            "subtitle": f"Повернення · {rental_days or '?'} дн.",
+                            "priority": 2 if return_type != 'return_overdue' else 1,
+                        })
                 
     except Exception as e:
         print(f"[Calendar] Error loading orders: {e}")

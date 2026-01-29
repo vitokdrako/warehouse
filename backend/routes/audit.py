@@ -225,14 +225,14 @@ async def get_audit_items(
             # ✅ NEW: Image URL
             photo_url = normalize_image_url(image_url)
             
-            # ✅ Map DB status to frontend status (from JOIN, not separate query)
+            # ✅ Map DB status to frontend status (from audit_records)
+            # ok = задовільний, needs_recount/minor = потребує переобліку, critical = критичний
             status_map = {
-                'pending': 'minor',
-                'satisfactory': 'ok',
+                'ok': 'ok',
                 'needs_recount': 'minor', 
                 'critical': 'critical'
             }
-            item_status = status_map.get(recount_status_db, 'ok') if recount_status_db else 'ok'
+            item_status = status_map.get(audit_status_db, 'ok') if audit_status_db else 'ok'
             
             # ✅ ENHANCED: Complete response object with all fields
             audit_items.append({

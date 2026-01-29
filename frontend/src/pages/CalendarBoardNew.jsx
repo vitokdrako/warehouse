@@ -9,16 +9,46 @@ const cls = (...a) => a.filter(Boolean).join(' ')
 
 // Отримати поточну дату по Києву
 const getKyivDate = () => {
-  const now = new Date()
-  // Конвертуємо в київський час
-  const kyivTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Kiev' }))
-  return kyivTime
+  // Отримуємо поточний час в Києві
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kiev',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+  const parts = formatter.formatToParts(new Date())
+  const get = (type) => parts.find(p => p.type === type)?.value || '0'
+  
+  return new Date(
+    parseInt(get('year')),
+    parseInt(get('month')) - 1,
+    parseInt(get('day')),
+    parseInt(get('hour')),
+    parseInt(get('minute')),
+    parseInt(get('second'))
+  )
 }
 
 // Отримати сьогоднішню дату по Києву (без часу)
 const getKyivToday = () => {
-  const kyiv = getKyivDate()
-  return new Date(kyiv.getFullYear(), kyiv.getMonth(), kyiv.getDate())
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Kiev',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+  const parts = formatter.formatToParts(new Date())
+  const get = (type) => parts.find(p => p.type === type)?.value || '0'
+  
+  return new Date(
+    parseInt(get('year')),
+    parseInt(get('month')) - 1,
+    parseInt(get('day'))
+  )
 }
 
 const formatUA = (d) =>

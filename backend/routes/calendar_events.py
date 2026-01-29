@@ -149,6 +149,10 @@ async def get_calendar_events(
         
         today_str = date_from  # Приблизно сьогодні
         
+        # Статуси для логіки відображення
+        NOT_ISSUED_STATUSES = ('awaiting_customer', 'awaiting', 'pending', 'processing', 'packing', 'ready_for_issue', 'ready')
+        ISSUED_STATUSES = ('issued', 'on_rent', 'shipped', 'delivered', 'returning', 'partial_return')
+        
         for row in orders_result:
             order_id = row[0]
             order_number = row[1]
@@ -181,39 +185,49 @@ async def get_calendar_events(
                 "order_event_type": event_type,
             }
             
-            # ВИДАЧА - дата видачі
-            issue_dt = issue_date or start_date
-            if issue_dt:
-                issue_str = str(issue_dt)[:10]
-                if date_from <= issue_str <= date_to:
-                    issue_type = get_issue_type(status)
-                    if should_include(issue_type) or group_filter is None:
-                        events.append({
-                            **base_event,
-                            "id": f"order-issue-{order_id}",
-                            "type": issue_type,
-                            "date": issue_str,
-                            "title": f"#{order_number} {customer_name}",
-                            "subtitle": f"Видача · {delivery_type or 'самовивіз'}",
-                            "priority": 2,
-                        })
+            # ВИДАЧА - показуємо ТІЛЬКИ якщо ордер ще НЕ виданий
+            # Якщо ордер вже на поверненні - не показуємо видачу
+            if status in NOT_ISSUED_STATUSES:
+                issue_dt = issue_date or start_date
+                if issue_dt:
+                    issue_str = str(issue_dt)[:10]
+                    if date_from <= issue_str <= date_to:
+                        issue_type = get_issue_type(status)
+                        if should_include(issue_type) or group_filter is None:
+                            events.append({
+                                **base_event,
+                                "id": f"order-issue-{order_id}",
+                                "type": issue_type,
+                                "date": issue_str,
+                                "title": f"#{order_number} {customer_name}",
+                                "subtitle": f"Видача · {delivery_type or 'самовивіз'}",
+                                "priority": 2,
+                            })
             
-            # ПОВЕРНЕННЯ - дата повернення
-            return_dt = return_date or end_date
-            if return_dt:
-                return_str = str(return_dt)[:10]
-                if date_from <= return_str <= date_to:
-                    return_type = get_return_type(status, return_str, today_str)
-                    if should_include(return_type) or group_filter is None:
-                        events.append({
-                            **base_event,
-                            "id": f"order-return-{order_id}",
-                            "type": return_type,
-                            "date": return_str,
-                            "title": f"#{order_number} {customer_name}",
-                            "subtitle": f"Повернення · {rental_days or '?'} дн.",
-                            "priority": 2 if return_type != 'return_overdue' else 1,
-                        })
+            # ПОВЕРНЕННЯ - показуємо ТІЛЬКИ якщо ордер ВЖЕ виданий
+            if status in ISSUED_STATUSES:
+                return_dt = return_date or end_date
+                if return_dt:
+                    return_str = str(return_dt)[:10]
+                    if date_from <= return_str <= date_to:
+                        # Визначаємо тип повернення
+                        if status in ('returning', 'partial_return'):
+                            return_type = 'return_processing'
+                        elif return_str < today_str:
+                            return_type = 'return_overdue'
+                        else:
+                            return_type = 'return_issued'
+                        
+                        if should_include(return_type) or group_filter is None:
+                            events.append({
+                                **base_event,
+                                "id": f"order-return-{order_id}",
+                                "type": return_type,
+                                "date": return_str,
+                                "title": f"#{order_number} {customer_name}",
+                                "subtitle": f"Повернення · {rental_days or '?'} дн.",
+                                "priority": 2 if return_type != 'return_overdue' else 1,
+                            })
                 
     except Exception as e:
         print(f"[Calendar] Error loading orders: {e}")

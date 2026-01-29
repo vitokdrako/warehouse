@@ -96,7 +96,7 @@ class TestCalendarEvents:
             params={
                 "date_from": "2024-01-01", 
                 "date_to": "2026-12-31",
-                "groups": "orders"
+                "groups": "tasks"
             }
         )
         
@@ -105,12 +105,12 @@ class TestCalendarEvents:
         
         # Verify filters are applied
         assert data["filters"]["groups"] is not None
-        assert "orders" in data["filters"]["groups"]
+        assert "tasks" in data["filters"]["groups"]
         
-        # Verify all events belong to orders group
+        # Verify all events belong to tasks group
         for event in data["events"]:
             if "_meta" in event:
-                assert event["_meta"]["group"] == "orders", f"Event {event['id']} has wrong group"
+                assert event["_meta"]["group"] == "tasks", f"Event {event['id']} has wrong group: {event['_meta']['group']}"
     
     def test_get_events_with_type_filter(self):
         """Test filtering events by type"""

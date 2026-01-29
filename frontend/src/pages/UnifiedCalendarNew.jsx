@@ -609,13 +609,8 @@ export default function UnifiedCalendar() {
       <CorporateHeader cabinetName="Календар подій" />
       
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Header */}
+        {/* Header - View Switcher only */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">📅 Календар подій</h1>
-            <p className="text-sm text-slate-500">Дзеркало всіх операцій системи</p>
-          </div>
-          
           {/* View Switcher */}
           <div className="flex items-center gap-2 bg-white rounded-full p-1 border border-slate-200">
             {[

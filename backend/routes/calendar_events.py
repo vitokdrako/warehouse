@@ -93,7 +93,7 @@ async def get_calendar_events(
         return True
     
     # ============================================================
-    # 1. ЗАМОВЛЕННЯ - Видача, Повернення, В оренді
+    # 1. ЗАМОВЛЕННЯ - Видача, Повернення (без повернених!)
     # ============================================================
     try:
         orders_query = """
@@ -105,6 +105,7 @@ async def get_calendar_events(
                 o.event_type as order_event_type, o.created_at
             FROM orders o
             WHERE o.is_archived = 0
+            AND o.status NOT IN ('returned', 'completed', 'cancelled')
             AND (
                 (o.rental_start_date BETWEEN :date_from AND :date_to)
                 OR (o.rental_end_date BETWEEN :date_from AND :date_to)

@@ -95,12 +95,23 @@ async def get_audit_items(
                 p.shelf,
                 p.cleaning_status,
                 p.product_state,
-                p.last_audit_date
+                p.last_audit_date,
+                irs.status as recount_status
             FROM products p
+            LEFT JOIN inventory_recount_status irs ON p.product_id = irs.inventory_id
             WHERE p.status = 1
         """]
         
         params = {}
+        
+        # ✅ NEW: Status filter (critical, needs_recount, etc)
+        if status_filter and status_filter != 'all':
+            if status_filter == 'critical':
+                sql_parts.append("AND irs.status = 'critical'")
+            elif status_filter == 'needs_recount':
+                sql_parts.append("AND (irs.status = 'needs_recount' OR irs.status = 'pending')")
+            elif status_filter == 'ok':
+                sql_parts.append("AND (irs.status = 'satisfactory' OR irs.status IS NULL)")
         
         # Category filter
         if category and category != 'all':

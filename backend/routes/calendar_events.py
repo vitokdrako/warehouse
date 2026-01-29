@@ -47,7 +47,6 @@ EVENT_TYPES = {
 
 EVENT_GROUPS = {
     "orders": {"label": "Замовлення", "icon": "📦"},
-    "operations": {"label": "Операції", "icon": "⚙️"},
     "maintenance": {"label": "Обслуговування", "icon": "🔧"},
     "issues": {"label": "Проблеми", "icon": "⚠️"},
     "finance": {"label": "Фінанси", "icon": "💰"},

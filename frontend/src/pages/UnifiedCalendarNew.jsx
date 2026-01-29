@@ -125,27 +125,35 @@ const authFetch = async (url, options = {}) => {
 // EVENT TYPE CONFIG
 // ============================================================
 const EVENT_COLORS = {
-  issue: { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  return: { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-700', dot: 'bg-amber-500' },
-  on_rent: { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700', dot: 'bg-blue-500' },
-  awaiting: { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-700', dot: 'bg-violet-500' },
-  packing: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', dot: 'bg-orange-500' },
-  ready_issue: { bg: 'bg-teal-100', border: 'border-teal-300', text: 'text-teal-700', dot: 'bg-teal-500' },
+  // Видача - колір по статусу
+  issue_awaiting: { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-700', dot: 'bg-violet-500' },
+  issue_processing: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', dot: 'bg-orange-500' },
+  issue_ready: { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  issue_issued: { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700', dot: 'bg-blue-500' },
+  
+  // Повернення - колір по статусу
+  return_awaiting: { bg: 'bg-violet-100', border: 'border-violet-300', text: 'text-violet-700', dot: 'bg-violet-500' },
+  return_processing: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', dot: 'bg-orange-500' },
+  return_ready: { bg: 'bg-emerald-100', border: 'border-emerald-300', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  return_issued: { bg: 'bg-amber-100', border: 'border-amber-300', text: 'text-amber-700', dot: 'bg-amber-500' },
+  return_overdue: { bg: 'bg-red-200', border: 'border-red-400', text: 'text-red-800', dot: 'bg-red-600' },
+  
+  // Обслуговування
   cleaning: { bg: 'bg-cyan-100', border: 'border-cyan-300', text: 'text-cyan-700', dot: 'bg-cyan-500' },
   laundry: { bg: 'bg-sky-100', border: 'border-sky-300', text: 'text-sky-700', dot: 'bg-sky-500' },
   repair: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-700', dot: 'bg-orange-500' },
+  
+  // Інше
   damage: { bg: 'bg-red-100', border: 'border-red-300', text: 'text-red-700', dot: 'bg-red-500' },
-  overdue: { bg: 'bg-red-200', border: 'border-red-400', text: 'text-red-800', dot: 'bg-red-600' },
   payment_due: { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-700', dot: 'bg-purple-500' },
   deposit_return: { bg: 'bg-teal-100', border: 'border-teal-300', text: 'text-teal-700', dot: 'bg-teal-500' },
   task: { bg: 'bg-indigo-100', border: 'border-indigo-300', text: 'text-indigo-700', dot: 'bg-indigo-500' },
 }
 
 const EVENT_GROUPS = {
-  orders: { label: 'Замовлення', icon: '📦', types: ['issue', 'return', 'awaiting'] },
-  operations: { label: 'Операції', icon: '⚙️', types: ['packing', 'ready_issue'] },
+  orders: { label: 'Замовлення', icon: '📦', types: ['issue_awaiting', 'issue_processing', 'issue_ready', 'issue_issued', 'return_awaiting', 'return_processing', 'return_ready', 'return_issued', 'return_overdue'] },
   maintenance: { label: 'Обслуговування', icon: '🔧', types: ['cleaning', 'laundry', 'repair'] },
-  issues: { label: 'Проблеми', icon: '⚠️', types: ['damage', 'overdue'] },
+  issues: { label: 'Проблеми', icon: '⚠️', types: ['damage'] },
   finance: { label: 'Фінанси', icon: '💰', types: ['payment_due', 'deposit_return'] },
   tasks: { label: 'Завдання', icon: '📝', types: ['task'] },
 }

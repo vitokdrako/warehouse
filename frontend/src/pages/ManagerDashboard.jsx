@@ -116,12 +116,12 @@ export default function ManagerDashboard() {
     const targetOrderId = selectedForMerge[selectedForMerge.length - 1];
     const sourceOrderIds = selectedForMerge.slice(0, -1);
     
-    const targetOrder = awaitingOrders.find(o => o.id === targetOrderId);
-    const sourceOrders = sourceOrderIds.map(id => awaitingOrders.find(o => o.id === id)).filter(Boolean);
+    const targetOrder = awaitingOrders.find(o => (o.order_id || o.id) === targetOrderId);
+    const sourceOrders = sourceOrderIds.map(id => awaitingOrders.find(o => (o.order_id || o.id) === id)).filter(Boolean);
     
     const confirmMsg = `Об'єднати ${selectedForMerge.length} замовлень?\n\n` +
-      `Товари з:\n${sourceOrders.map(o => `  • ${o.order_number} (${o.client_name})`).join('\n')}\n\n` +
-      `Будуть перенесені в:\n  → ${targetOrder?.order_number} (${targetOrder?.client_name})\n\n` +
+      `Товари з:\n${sourceOrders.map(o => `  • ${o.order_number} (${o.customer_name || o.client_name})`).join('\n')}\n\n` +
+      `Будуть перенесені в:\n  → ${targetOrder?.order_number} (${targetOrder?.customer_name || targetOrder?.client_name})\n\n` +
       `⚠️ Старі замовлення будуть видалені!`;
     
     if (!confirm(confirmMsg)) {

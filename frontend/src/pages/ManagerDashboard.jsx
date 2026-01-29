@@ -183,80 +183,126 @@ export default function ManagerDashboard() {
     }
   };
 
-  // Функція для завантаження всіх даних
-  const fetchAllData = () => {
-    console.log('[Dashboard] 📊 Loading orders for today...');
+  // ============================================================
+  // ОПТИМІЗОВАНИЙ ЗАВАНТАЖУВАЧ ДАНИХ - ОДИН ЗАПИТ ЗАМІСТЬ 6-8
+  // ============================================================
+  
+  // AbortController для скасування запитів при unmount
+  const abortControllerRef = React.useRef(null);
+  
+  // Retry fetch з exponential backoff
+  const fetchWithRetry = async (url, options = {}, retries = 3) => {
+    const delays = [500, 1500, 4000];
     
-    // Завантажити ВСІ замовлення що очікують підтвердження (вони одразу синхронізуються з OpenCart)
-    authFetch(`${BACKEND_URL}/api/orders?status=awaiting_customer`)
-    .then(res => res.json())
-    .then(data => {
-      console.log('[Dashboard] Orders awaiting confirmation:', data.orders?.length || 0);
-      setOrders(data.orders || []);
-    })
-    .catch(err => console.error('[Dashboard] Error loading orders:', err));
+    for (let i = 0; i <= retries; i++) {
+      try {
+        const response = await authFetch(url, options);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+      } catch (error) {
+        if (error.name === 'AbortError') throw error; // Не retry при abort
+        if (i === retries) throw error;
+        console.log(`[Dashboard] Retry ${i + 1}/${retries} after ${delays[i]}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delays[i]));
+      }
+    }
+  };
+
+  // Функція для завантаження всіх даних ОДНИМ ЗАПИТОМ
+  const fetchAllData = async () => {
+    console.log('[Dashboard] 📊 Loading dashboard overview (single request)...');
     
-    // Завантажити ВСІ замовлення на комплектації та поверненні
-    authFetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`)
-    .then(res => res.json())
-    .then(data => {
-      setDecorOrders(data.orders || []);
-      setLoading(false);
-    })
-    .catch(err => {
-      console.error('[Dashboard] Error loading decor orders:', err);
-      setLoading(false);
-    });
+    // Скасовуємо попередній запит якщо є
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
     
-    // Завантажити Issue Cards (картки видачі)
-    authFetch(`${BACKEND_URL}/api/issue-cards`)
-    .then(res => res.json())
-    .then(data => {
-      console.log('[Dashboard] Issue cards:', data.length);
-      setIssueCards(data);
-    })
-    .catch(err => console.error('[Dashboard] Error loading issue cards:', err));
-    
-    // Завантажити фінанси (виручка і застави) з нового API
-    authFetch(`${BACKEND_URL}/api/manager/finance/summary`)
-    .then(res => res.json())
-    .then(data => {
-      console.log('[Dashboard] Finance summary:', data);
-      setFinanceData({
-        revenue: data.total_revenue || data.rent_paid || 0,  // ОПЛАЧЕНІ (payment completed)
-        deposits: data.deposits_count || 0  // КІЛЬКІСТЬ застав у холді (не сума!)
+    try {
+      const data = await fetchWithRetry(
+        `${BACKEND_URL}/api/manager/dashboard/overview`,
+        { signal: abortControllerRef.current.signal }
+      );
+      
+      console.log('[Dashboard] ✅ Overview loaded:', {
+        awaiting: data.orders_awaiting?.length || 0,
+        decor: data.decor_orders?.length || 0,
+        cards: data.issue_cards?.length || 0
       });
-    })
-    .catch(err => {
-      console.error('[Dashboard] Error loading finance:', err);
-      // Fallback - спробувати новий finance API
-      authFetch(`${BACKEND_URL}/api/finance/deposits`)
-      .then(res => res.json())
-      .then(data => {
-        console.log('[Dashboard] Deposits fallback:', data);
-        const activeDeposits = data.filter(d => d.status === 'holding' || d.status === 'partially_used');
+      
+      // Оновлюємо всі стани одночасно
+      setOrders(data.orders_awaiting || []);
+      setDecorOrders(data.decor_orders || []);
+      setIssueCards(data.issue_cards || []);
+      setFinanceData({
+        revenue: data.finance_summary?.total_revenue || data.finance_summary?.rent_paid || 0,
+        deposits: data.finance_summary?.deposits_count || 0
+      });
+      setCleaningStats({
+        repair: data.cleaning_stats?.repair || 0
+      });
+      setLoading(false);
+      
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('[Dashboard] Request aborted');
+        return;
+      }
+      console.error('[Dashboard] ❌ Error loading overview:', error);
+      setLoading(false);
+      
+      // Fallback до старих endpoints якщо overview не працює
+      console.log('[Dashboard] Falling back to individual requests...');
+      fetchAllDataLegacy();
+    }
+  };
+  
+  // Legacy fallback (старі окремі запити) - послідовно, не паралельно
+  const fetchAllDataLegacy = async () => {
+    try {
+      // 1. Критичні дані - orders
+      const ordersRes = await authFetch(`${BACKEND_URL}/api/orders?status=awaiting_customer`);
+      const ordersData = await ordersRes.json();
+      setOrders(ordersData.orders || []);
+      
+      // 2. Decor orders
+      const decorRes = await authFetch(`${BACKEND_URL}/api/decor-orders?status=processing,ready_for_issue,issued,on_rent,shipped,delivered,returning`);
+      const decorData = await decorRes.json();
+      setDecorOrders(decorData.orders || []);
+      
+      // 3. Issue cards
+      const cardsRes = await authFetch(`${BACKEND_URL}/api/issue-cards`);
+      const cardsData = await cardsRes.json();
+      setIssueCards(cardsData || []);
+      
+      // 4. Finance (не критичне)
+      try {
+        const finRes = await authFetch(`${BACKEND_URL}/api/manager/finance/summary`);
+        const finData = await finRes.json();
         setFinanceData({
-          revenue: 0,
-          deposits: activeDeposits.length  // Кількість активних застав
+          revenue: finData.total_revenue || finData.rent_paid || 0,
+          deposits: finData.deposits_count || 0
         });
-      })
-      .catch(err2 => console.error('[Dashboard] Finance fallback error:', err2));
-    });
+      } catch (e) {
+        console.log('[Dashboard] Finance fallback skipped');
+      }
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('[Dashboard] Legacy fallback error:', err);
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchAllData();
     
-    // Завантажити статистику товарів на реставрації
-    authFetch(`${BACKEND_URL}/api/product-cleaning/stats/summary`)
-    .then(res => res.json())
-    .then(data => {
-      console.log('[Dashboard] Cleaning stats:', data);
-      setCleaningStats({
-        repair: data.repair || 0
-      });
-    })
-    .catch(err => console.error('[Dashboard] Error loading cleaning stats:', err));
+    // Cleanup - скасовуємо запит при unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
   
   // Manual reload function - оновити ВСІ дані

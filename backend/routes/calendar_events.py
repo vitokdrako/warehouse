@@ -462,7 +462,7 @@ async def get_calendar_events(
         ]
     
     # Сортування по даті та пріоритету
-    events.sort(key=lambda e: (e.get("date", ""), e.get("priority", 5)))
+    events.sort(key=lambda e: (str(e.get("date", "") or ""), int(e.get("priority", 5) or 5)))
     
     # Додаємо метадані до кожної події
     for event in events:

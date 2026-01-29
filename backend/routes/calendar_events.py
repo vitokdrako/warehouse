@@ -17,14 +17,17 @@ router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 # ТИПИ ПОДІЙ
 # ============================================================
 EVENT_TYPES = {
-    # Замовлення
-    "issue": {"label": "Видача", "color": "#22c55e", "icon": "📤", "group": "orders"},
-    "return": {"label": "Повернення", "color": "#eab308", "icon": "📥", "group": "orders"},
-    "awaiting": {"label": "Очікує підтвердження", "color": "#8b5cf6", "icon": "⏳", "group": "orders"},
+    # Замовлення - статуси визначають колір
+    "issue_awaiting": {"label": "Видача (очікує)", "color": "#8b5cf6", "icon": "📤", "group": "orders"},
+    "issue_processing": {"label": "Видача (комплектація)", "color": "#f59e0b", "icon": "📤", "group": "orders"},
+    "issue_ready": {"label": "Видача (готово)", "color": "#22c55e", "icon": "📤", "group": "orders"},
+    "issue_issued": {"label": "Видача (видано)", "color": "#3b82f6", "icon": "📤", "group": "orders"},
     
-    # Операції
-    "packing": {"label": "Комплектація", "color": "#f59e0b", "icon": "📋", "group": "operations"},
-    "ready_issue": {"label": "Готово до видачі", "color": "#10b981", "icon": "✅", "group": "operations"},
+    "return_awaiting": {"label": "Повернення (очікує)", "color": "#8b5cf6", "icon": "📥", "group": "orders"},
+    "return_processing": {"label": "Повернення (комплектація)", "color": "#f59e0b", "icon": "📥", "group": "orders"},
+    "return_ready": {"label": "Повернення (готово)", "color": "#22c55e", "icon": "📥", "group": "orders"},
+    "return_issued": {"label": "Повернення (в оренді)", "color": "#eab308", "icon": "📥", "group": "orders"},
+    "return_overdue": {"label": "Повернення (прострочено)", "color": "#ef4444", "icon": "🚨", "group": "orders"},
     
     # Обслуговування
     "cleaning": {"label": "Мийка", "color": "#06b6d4", "icon": "🧹", "group": "maintenance"},
@@ -33,12 +36,9 @@ EVENT_TYPES = {
     
     # Проблеми
     "damage": {"label": "Шкода", "color": "#ef4444", "icon": "⚠️", "group": "issues"},
-    "overdue": {"label": "Прострочено", "color": "#dc2626", "icon": "🚨", "group": "issues"},
     
     # Фінанси
     "payment_due": {"label": "Очікується оплата", "color": "#a855f7", "icon": "💰", "group": "finance"},
-    "payment_received": {"label": "Оплата отримана", "color": "#22c55e", "icon": "💵", "group": "finance"},
-    "deposit_hold": {"label": "Застава утримана", "color": "#6366f1", "icon": "🔒", "group": "finance"},
     "deposit_return": {"label": "Повернення застави", "color": "#14b8a6", "icon": "🔓", "group": "finance"},
     
     # Завдання

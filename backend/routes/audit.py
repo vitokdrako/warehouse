@@ -62,6 +62,7 @@ async def get_audit_items(
     q: Optional[str] = None,
     category: Optional[str] = None,
     subcategory: Optional[str] = None,
+    status_filter: Optional[str] = None,  # ✅ NEW: Filter by recount status
     sort_by: Optional[str] = 'category',
     limit: int = 100,  # За замовчуванням тільки 100 товарів
     db: Session = Depends(get_rh_db)  # ✅ MIGRATED: Using RentalHub DB

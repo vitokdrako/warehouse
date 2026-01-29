@@ -535,18 +535,19 @@ export default function ManagerDashboard() {
           ) : awaitingOrders.length > 0 ? (
             <>
               {(showAllAwaiting ? awaitingOrders : awaitingOrders.slice(0, 4)).map(order => (
-                <div key={order.id} className="relative">
+                <div key={order.order_id || order.id} className="relative">
                   {/* ✅ Чекбокс для режиму об'єднання */}
                   {mergeMode && (
                     <label className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-8 h-8 bg-white border-2 border-amber-400 rounded-full cursor-pointer hover:bg-amber-50 transition-colors">
                       <input
                         type="checkbox"
-                        checked={selectedForMerge.includes(order.id)}
+                        checked={selectedForMerge.includes(order.order_id || order.id)}
                         onChange={(e) => {
+                          const oid = order.order_id || order.id;
                           if (e.target.checked) {
-                            setSelectedForMerge([...selectedForMerge, order.id]);
+                            setSelectedForMerge([...selectedForMerge, oid]);
                           } else {
-                            setSelectedForMerge(selectedForMerge.filter(id => id !== order.id));
+                            setSelectedForMerge(selectedForMerge.filter(id => id !== oid));
                           }
                         }}
                         className="w-4 h-4 accent-amber-500"
@@ -556,16 +557,16 @@ export default function ManagerDashboard() {
                   <div className={mergeMode ? 'ml-6' : ''}>
                     <OrderCard 
                       id={order.order_number}
-                      name={order.client_name}
-                      phone={order.client_phone}
-                      rent={`₴ ${order.total_rental?.toFixed(0)}`}
-                      deposit={`₴ ${(order.total_deposit || 0).toFixed(0)}`}
+                      name={order.customer_name || order.client_name}
+                      phone={order.customer_phone || order.client_phone}
+                      rent={`₴ ${(order.total_price || order.total_rental || 0).toFixed(0)}`}
+                      deposit={`₴ ${(order.deposit_amount || order.total_deposit || 0).toFixed(0)}`}
                       badge="awaiting"
                       order={order}
                       onDateUpdate={null}
                       onCancelByClient={handleCancelByClient}
-                      onClick={() => !mergeMode && navigate(`/order/${order.id}/view`)}
-                      className={selectedForMerge.includes(order.id) ? 'ring-2 ring-amber-400' : ''}
+                      onClick={() => !mergeMode && navigate(`/order/${order.order_id || order.id}/view`)}
+                      className={selectedForMerge.includes(order.order_id || order.id) ? 'ring-2 ring-amber-400' : ''}
                     />
                   </div>
                 </div>

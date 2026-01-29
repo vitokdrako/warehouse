@@ -164,7 +164,7 @@ export default function ReauditCabinetFull({
   // Use backend URL from environment
   const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
-  const loadItems = async (overrideFilters?: { category?: string; subcategory?: string; search?: string }) => {
+  const loadItems = async (overrideFilters?: { category?: string; subcategory?: string; search?: string; statusFilter?: string }) => {
     console.log('[ReauditCabinet] BACKEND_URL:', BACKEND_URL)
     setLoading(true)
     try {
@@ -172,10 +172,18 @@ export default function ReauditCabinetFull({
       const searchQuery = overrideFilters?.search !== undefined ? overrideFilters.search : q
       const catFilter = overrideFilters?.category !== undefined ? overrideFilters.category : categoryFilter
       const subcatFilter = overrideFilters?.subcategory !== undefined ? overrideFilters.subcategory : subcategoryFilter
+      const statFilter = overrideFilters?.statusFilter !== undefined ? overrideFilters.statusFilter : sortByAudit
       
       if (searchQuery) params.append('q', searchQuery)
       if (catFilter !== 'all') params.append('category', catFilter)
       if (subcatFilter !== 'all') params.append('subcategory', subcatFilter)
+      
+      // Передаємо статус фільтр на бекенд
+      if (statFilter === 'critical') {
+        params.append('status_filter', 'critical')
+      } else if (statFilter === 'notAudited') {
+        params.append('status_filter', 'needs_recount')
+      }
       
       const response = await fetch(`${BACKEND_URL}/api/audit/items?${params}`)
       const data = await response.json()

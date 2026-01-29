@@ -20,7 +20,6 @@ EVENT_TYPES = {
     # Замовлення
     "issue": {"label": "Видача", "color": "#22c55e", "icon": "📤", "group": "orders"},
     "return": {"label": "Повернення", "color": "#eab308", "icon": "📥", "group": "orders"},
-    "on_rent": {"label": "В оренді", "color": "#3b82f6", "icon": "📦", "group": "orders"},
     "awaiting": {"label": "Очікує підтвердження", "color": "#8b5cf6", "icon": "⏳", "group": "orders"},
     
     # Операції

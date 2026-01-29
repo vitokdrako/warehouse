@@ -220,21 +220,14 @@ async def get_audit_items(
             # ✅ NEW: Image URL
             photo_url = normalize_image_url(image_url)
             
-            # ✅ NEW: Get recount status from inventory_recount_status table
-            recount_status_query = text("""
-                SELECT status FROM inventory_recount_status WHERE inventory_id = :pid
-            """)
-            recount_status_result = db.execute(recount_status_query, {"pid": product_id}).fetchone()
-            recount_status = recount_status_result[0] if recount_status_result else 'ok'
-            
-            # Map DB status to frontend status
+            # ✅ Map DB status to frontend status (from JOIN, not separate query)
             status_map = {
                 'pending': 'minor',
                 'satisfactory': 'ok',
                 'needs_recount': 'minor', 
                 'critical': 'critical'
             }
-            item_status = status_map.get(recount_status, 'ok')
+            item_status = status_map.get(recount_status_db, 'ok') if recount_status_db else 'ok'
             
             # ✅ ENHANCED: Complete response object with all fields
             audit_items.append({

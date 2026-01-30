@@ -406,6 +406,10 @@ export default function OrdersArchive() {
   const [orderHistory, setOrderHistory] = useState({});
   const [historyLoading, setHistoryLoading] = useState({});
   
+  // View modal state
+  const [viewOrder, setViewOrder] = useState(null);
+  const [viewHistory, setViewHistory] = useState(null);
+  
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [archiveFilter, setArchiveFilter] = useState('archived');

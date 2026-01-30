@@ -50,8 +50,8 @@ const Card = ({ title, children, className }) => (
 
 // Modal for viewing archived order
 const OrderViewModal = ({ order, history, onClose }) => {
-  const [activeTab, setActiveTab] = useState('info');
-  const [documentPreview, setDocumentPreview] = useState(null);
+  const [activeTab, setActiveTab] = useState('items');
+  const [enlargedImage, setEnlargedImage] = useState(null);
   
   if (!order || !history) return null;
   

@@ -379,8 +379,16 @@ export default function IssueCardWorkspace() {
         requisitors: selectedRequisitors
       })
       
-      // Повідомляємо інших користувачів про зміни
+      // Повідомляємо інших користувачів про зміни (polling)
       await markMyUpdate()
+      
+      // Повідомляємо через WebSocket (real-time)
+      if (order?.order_id) {
+        await updateSection(order.order_id, 'progress', {
+          changesSummary: 'Оновлено прогрес комплектації',
+          changedFields: ['items', 'checklist']
+        })
+      }
       
       toast({ title: '✅ Успіх', description: 'Прогрес збережено' })
     } catch (err) {

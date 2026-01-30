@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TonePill from './TonePill'
 import { getStatusConfig } from './statusConfig'
-import { Info, ChevronDown, ChevronUp } from 'lucide-react'
+import { Info, ChevronDown, ChevronUp, Volume2, VolumeX } from 'lucide-react'
+import { isSoundEnabled, toggleSound, playNotificationSound } from '../../utils/notificationSound'
 
 /**
  * WorkspaceHeader - Компактний sticky хедер з collapse функціоналом
@@ -30,6 +31,18 @@ export default function WorkspaceHeader({
   const config = getStatusConfig(status)
   const [expanded, setExpanded] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [soundOn, setSoundOn] = useState(isSoundEnabled())
+  
+  // Перемикач звуку
+  const handleToggleSound = () => {
+    const newState = !soundOn
+    setSoundOn(newState)
+    toggleSound(newState)
+    // Демо-звук при увімкненні
+    if (newState) {
+      playNotificationSound('update')
+    }
+  }
   
   // Відстеження скролу для компактного хедера
   useEffect(() => {

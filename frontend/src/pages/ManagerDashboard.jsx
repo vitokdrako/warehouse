@@ -3,20 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CorporateHeader from '../components/CorporateHeader';
 import OrdersChatModal from '../components/OrdersChatModal';  // ✅ Чат замовлень
+import { limitedAuthFetch } from '../utils/requestLimiter';  // ✅ Request limiter
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
-// Utility function for authenticated fetch
+// Utility function for authenticated fetch - тепер з лімітером
 const authFetch = (url, options = {}) => {
-  const token = localStorage.getItem('token');
-  return fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  return limitedAuthFetch(url, options);
 };
 
 export default function ManagerDashboard() {

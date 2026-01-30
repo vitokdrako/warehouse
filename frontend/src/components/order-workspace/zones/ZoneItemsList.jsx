@@ -114,7 +114,7 @@ function ItemRow({
   
   return (
     <div className={`
-      rounded-lg border bg-white p-3 flex gap-3 transition-all duration-500
+      relative rounded-lg border bg-white p-3 flex gap-3 transition-all duration-500
       ${canPick && isFullyPicked ? 'border-corp-primary bg-corp-primary/5' : 'border-corp-border'}
       ${canReturn && hasFindings ? 'border-amber-300 bg-amber-50' : ''}
       ${isHighlighted ? 'ring-2 ring-green-400 border-green-400 bg-green-50 animate-pulse' : ''}

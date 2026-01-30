@@ -507,6 +507,15 @@ export default function ReturnOrderWorkspace() {
         backUrl="/manager"
         loading={loading}
         
+        // Real-time sync
+        activeUsers={activeUsers}
+        hasUpdates={wsHasUpdates || hasNewChanges}
+        onRefresh={async () => {
+          await loadOrder()
+          dismissAllUpdates()
+          dismissChanges()
+        }}
+        
         // Left Rail
         leftRail={
           <>

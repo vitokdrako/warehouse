@@ -375,8 +375,16 @@ export default function ReturnOrderWorkspace() {
         }
       })
       
-      // Повідомляємо інших користувачів про зміни
+      // Повідомляємо інших користувачів про зміни (polling)
       await markMyUpdate()
+      
+      // Повідомляємо через WebSocket (real-time)
+      if (orderId) {
+        await updateSection(orderId, 'progress', {
+          changesSummary: 'Оновлено прогрес повернення',
+          changedFields: ['items', 'fees']
+        })
+      }
       
       toast({ title: '✅ Збережено', description: 'Прогрес повернення збережено' })
     } catch (err) {

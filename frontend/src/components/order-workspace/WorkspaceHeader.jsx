@@ -151,6 +151,19 @@ export default function WorkspaceHeader({
               </button>
             )}
             
+            {/* Кнопка звуку */}
+            <button
+              onClick={handleToggleSound}
+              className={`p-1.5 rounded-lg transition-colors ${
+                soundOn 
+                  ? 'text-blue-600 hover:bg-blue-50' 
+                  : 'text-slate-400 hover:bg-slate-100'
+              }`}
+              title={soundOn ? 'Вимкнути звук' : 'Увімкнути звук'}
+            >
+              {soundOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            </button>
+            
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
               <span className="text-slate-500">Дати: </span>
               <span className="font-medium text-slate-800">

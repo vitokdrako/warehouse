@@ -677,15 +677,16 @@ export default function OrdersArchive() {
                             
                             {/* Actions */}
                             <div className="flex gap-2">
-                              {order.is_archived ? (
-                                <Button variant="ghost" className="flex-1" onClick={() => handleUnarchive(orderId, order.order_number)}>
-                                  📤 Розархівувати
-                                </Button>
-                              ) : (
-                                <Button variant="ghost" className="flex-1" onClick={() => handleArchive(orderId, order.order_number)}>
-                                  📂 Архівувати
-                                </Button>
-                              )}
+                              <Button 
+                                variant="primary" 
+                                className="flex-1" 
+                                onClick={() => {
+                                  setViewOrder(order);
+                                  setViewHistory(history);
+                                }}
+                              >
+                                👁️ Переглянути повністю
+                              </Button>
                             </div>
                           </div>
                           

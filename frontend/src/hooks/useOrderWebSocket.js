@@ -186,10 +186,12 @@ export function useOrderWebSocket(orderId, options = {}) {
             timestamp: message.timestamp
           }
         }))
+        playIfEnabled('update')  // 🔊 Звук оновлення
         onSectionUpdate?.(message)
         break
 
       case 'order.comment.added':
+        playIfEnabled('update')  // 🔊 Звук нового коментаря
         onCommentAdded?.(message)
         break
 

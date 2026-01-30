@@ -101,6 +101,43 @@ export default function WorkspaceHeader({
           
           {/* Desktop: показуємо дати inline */}
           <div className="hidden sm:flex items-center gap-2">
+            {/* Активні користувачі */}
+            {otherUsers.length > 0 && (
+              <div className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs">
+                <div className="flex -space-x-1.5">
+                  {otherUsers.slice(0, 3).map((user) => (
+                    <div 
+                      key={user.user_id}
+                      className="w-5 h-5 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-[10px] text-white font-medium"
+                      title={user.user_name}
+                    >
+                      {user.user_name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  ))}
+                  {otherUsers.length > 3 && (
+                    <div className="w-5 h-5 rounded-full bg-slate-400 border-2 border-white flex items-center justify-center text-[10px] text-white">
+                      +{otherUsers.length - 3}
+                    </div>
+                  )}
+                </div>
+                <span className="text-blue-700">Також тут</span>
+              </div>
+            )}
+            
+            {/* Індикатор оновлень */}
+            {hasUpdates && (
+              <button
+                onClick={onRefresh}
+                className="flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700 hover:bg-amber-100 active:bg-amber-200 transition-colors"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                Оновити
+              </button>
+            )}
+            
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs">
               <span className="text-slate-500">Дати: </span>
               <span className="font-medium text-slate-800">

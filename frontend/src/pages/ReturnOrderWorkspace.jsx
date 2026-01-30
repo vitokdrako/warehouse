@@ -238,6 +238,33 @@ export default function ReturnOrderWorkspace() {
     10000,
     !loading && !!orderId
   )
+  
+  // WebSocket синхронізація (real-time)
+  const {
+    connected: wsConnected,
+    activeUsers,
+    pendingUpdates,
+    hasUpdates: wsHasUpdates,
+    dismissAllUpdates,
+  } = useOrderWebSocket(orderId, {
+    enabled: !loading && !!orderId,
+    onSectionUpdate: (data) => {
+      toast({
+        title: '🔄 Зміни від іншого користувача',
+        description: `${data.updated_by_name} оновив ${data.section}`,
+      })
+    },
+    onUserJoined: (data) => {
+      toast({
+        title: '👋',
+        description: `${data.user_name} відкрив це замовлення`,
+        duration: 2000,
+      })
+    },
+  })
+  
+  // Хук для повідомлення про збереження
+  const { updateSection } = useOrderSectionUpdate()
 
   useEffect(() => {
     if (!orderId) return

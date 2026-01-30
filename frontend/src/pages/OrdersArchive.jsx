@@ -101,8 +101,9 @@ const OrderViewModal = ({ order, history, onClose }) => {
         </div>
         
         {/* Tabs */}
-        <div className="flex border-b border-slate-200 px-6">
+        <div className="flex border-b border-slate-200 px-6 overflow-x-auto">
           {[
+            { id: 'items', label: `📦 Товари (${history.items?.length || 0})` },
             { id: 'info', label: '📋 Інформація' },
             { id: 'documents', label: `📄 Документи (${history.documents?.length || 0})` },
             { id: 'timeline', label: `🕐 Історія (${history.timeline?.length || 0})` },

@@ -56,6 +56,15 @@ export default function WorkspaceHeader({
   
   const rentalDays = calculateDays()
   
+  // Отримати поточного користувача для фільтрації
+  const currentUser = (() => {
+    try {
+      const userData = localStorage.getItem('user')
+      return userData ? JSON.parse(userData) : {}
+    } catch { return {} }
+  })()
+  const otherUsers = activeUsers.filter(u => u.user_id !== (currentUser.id || currentUser.user_id))
+  
   return (
     <div className={`
       bg-white border-b border-slate-200 sticky top-0 z-30 transition-all duration-200

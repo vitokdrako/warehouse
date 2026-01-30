@@ -188,6 +188,8 @@ export default function UnifiedOrderCard({
   showFinance = true,    // Показувати фінансовий блок
   showTimeline = true,   // Показувати підказку таймлайну
   compact = false,       // Компактний режим (менше інформації)
+  hasUpdate = false,     // Індикатор що є нові зміни
+  updatedBy = null,      // Хто оновив
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editIssueDate, setEditIssueDate] = useState(issueDate || '');

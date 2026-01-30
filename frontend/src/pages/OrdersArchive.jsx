@@ -369,6 +369,28 @@ const OrderViewModal = ({ order, history, onClose }) => {
             </div>
           )}
         </div>
+        
+        {/* Enlarged Image Modal */}
+        {enlargedImage && (
+          <div 
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setEnlargedImage(null)}
+          >
+            <div className="relative max-w-3xl max-h-[85vh]">
+              <img 
+                src={enlargedImage} 
+                alt="Enlarged" 
+                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              />
+              <button 
+                onClick={() => setEnlargedImage(null)}
+                className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center text-slate-500 hover:text-slate-700 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

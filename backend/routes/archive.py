@@ -288,7 +288,7 @@ async def get_order_full_history(
     
     # Damage history
     damage_result = db.execute(text("""
-        SELECT damage_id, sku, note, severity, fee, stage, created_at
+        SELECT id, sku, note, severity, fee, stage, created_at, damage_type, product_name
         FROM product_damage_history
         WHERE order_id = :order_id
         ORDER BY created_at
@@ -303,16 +303,19 @@ async def get_order_full_history(
             "severity": dm_row[3],
             "fee": float(dm_row[4]) if dm_row[4] else 0.0,
             "stage": dm_row[5],
-            "created_at": dm_row[6].isoformat() if dm_row[6] else None
+            "created_at": dm_row[6].isoformat() if dm_row[6] else None,
+            "damage_type": dm_row[7],
+            "product_name": dm_row[8]
         }
         damages.append(damage)
         
+        stage_label = "при видачі" if damage["stage"] == "pre_issue" else "при поверненні"
         timeline.append({
             "timestamp": damage["created_at"],
             "type": "damage",
             "action": damage["stage"],
-            "title": f"🔴 Шкода зафіксована",
-            "details": f"SKU: {damage['sku']}, {damage['note'] or '—'}, Fee: ₴{damage['fee']}"
+            "title": f"🔴 Шкода ({stage_label})",
+            "details": f"{damage['sku']} · {damage['damage_type'] or damage['note'] or '—'}, Fee: ₴{damage['fee']}"
         })
     
     # Documents

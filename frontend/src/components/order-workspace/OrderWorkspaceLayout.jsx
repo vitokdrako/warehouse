@@ -74,6 +74,9 @@ export default function OrderWorkspaceLayout({
         title={headerTitle}
         backUrl={backUrl}
         progressInfo={progressInfo}
+        activeUsers={activeUsers}
+        hasUpdates={hasUpdates}
+        onRefresh={onRefresh}
       />
       
       {/* Main content area */}

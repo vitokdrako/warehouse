@@ -199,7 +199,6 @@ export default function NewOrderViewWorkspace() {
           { text: 'Замовлення прийнято', at: formatDateTime(decorOrder.created_at), tone: 'green', user: 'Система' },
           ...(decorOrder.status === 'processing' ? [{ text: 'В обробці', at: 'Зараз', tone: 'blue' }] : [])
         ])
-        ])
         
       } else {
         // Замовлення ще не прийнято - з OpenCart

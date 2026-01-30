@@ -45,6 +45,11 @@ export default function OrderWorkspaceLayout({
   
   // Loading state
   loading,
+  
+  // Real-time sync props
+  activeUsers = [],
+  hasUpdates = false,
+  onRefresh,
 }) {
   const config = getStatusConfig(status)
   

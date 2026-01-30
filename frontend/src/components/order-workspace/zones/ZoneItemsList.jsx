@@ -15,6 +15,7 @@ export default function ZoneItemsList({
   onRemoveItem,
   onTogglePicked,
   onOpenDamage,
+  highlightedItems = new Set(), // IDs нових позицій для підсвітки
 }) {
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
   
@@ -46,20 +47,28 @@ export default function ZoneItemsList({
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((item, idx) => (
-            <ItemRow 
-              key={item.id || idx}
-              item={item}
-              rentalDays={rentalDays}
-              canEdit={canEdit}
-              canPick={canPick}
-              canReturn={canReturn}
-              onUpdateQuantity={onUpdateQuantity}
-              onRemoveItem={onRemoveItem}
-              onTogglePicked={onTogglePicked}
-              onOpenDamage={onOpenDamage}
-            />
-          ))}
+          {items.map((item, idx) => {
+            const itemId = item.inventory_id || item.id
+            const isHighlighted = highlightedItems instanceof Set 
+              ? highlightedItems.has(itemId) 
+              : false
+            
+            return (
+              <ItemRow 
+                key={item.id || idx}
+                item={item}
+                rentalDays={rentalDays}
+                canEdit={canEdit}
+                canPick={canPick}
+                canReturn={canReturn}
+                onUpdateQuantity={onUpdateQuantity}
+                onRemoveItem={onRemoveItem}
+                onTogglePicked={onTogglePicked}
+                onOpenDamage={onOpenDamage}
+                isHighlighted={isHighlighted}
+              />
+            )
+          })}
         </div>
       )}
     </ZoneCard>
@@ -76,6 +85,7 @@ function ItemRow({
   onRemoveItem,
   onTogglePicked,
   onOpenDamage,
+  isHighlighted = false,
 }) {
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
   

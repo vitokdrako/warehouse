@@ -17,6 +17,11 @@ const fmtDate = (iso) => {
   const d = new Date(iso);
   return d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
+const fmtDateShort = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
 
 // UI Components
 const Badge = ({ kind, children }) => (
@@ -42,6 +47,269 @@ const Card = ({ title, children, className }) => (
     <div className="p-4">{children}</div>
   </div>
 );
+
+// Modal for viewing archived order
+const OrderViewModal = ({ order, history, onClose }) => {
+  const [activeTab, setActiveTab] = useState('info');
+  const [documentPreview, setDocumentPreview] = useState(null);
+  
+  if (!order || !history) return null;
+  
+  const docTypeLabels = {
+    invoice_offer: '📋 Рахунок-оферта',
+    picking_list: '📦 Лист комплектації',
+    issue_act: '📤 Акт видачі',
+    return_act: '📥 Акт повернення',
+    damage_report: '🔴 Акт шкоди',
+    service_act: '📝 Акт виконаних робіт',
+    invoice_legal: '💼 Рахунок',
+    goods_invoice: '🚚 Накладна'
+  };
+  
+  const viewDocument = async (doc) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/documents/${doc.id}/preview`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } else {
+        // Fallback to download
+        window.open(`${BACKEND_URL}/api/documents/${doc.id}/download`, '_blank');
+      }
+    } catch (e) {
+      console.error('Document preview error:', e);
+      window.open(`${BACKEND_URL}/api/documents/${doc.id}/download`, '_blank');
+    }
+  };
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div 
+        className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">📂 {order.order_number}</h2>
+            <p className="text-sm text-slate-500">{history.order?.customer_name} · {fmtDateShort(history.order?.rental_start_date)} — {fmtDateShort(history.order?.rental_end_date)}</p>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-500 text-xl">
+            ✕
+          </button>
+        </div>
+        
+        {/* Tabs */}
+        <div className="flex border-b border-slate-200 px-6">
+          {[
+            { id: 'info', label: '📋 Інформація' },
+            { id: 'documents', label: `📄 Документи (${history.documents?.length || 0})` },
+            { id: 'timeline', label: `🕐 Історія (${history.timeline?.length || 0})` },
+            { id: 'finance', label: '💰 Фінанси' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "px-4 py-3 text-sm font-medium transition border-b-2 -mb-px",
+                activeTab === tab.id 
+                  ? "border-slate-900 text-slate-900" 
+                  : "border-transparent text-slate-500 hover:text-slate-700"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === 'info' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Order Info */}
+              <div className="space-y-4">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase">Замовлення</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-slate-600">Номер:</span><span className="font-bold">{history.order?.order_number}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Статус:</span><Badge kind="ok">{history.order?.status}</Badge></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Тип події:</span><span>{history.order?.event_type || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Доставка:</span><span>{history.order?.delivery_type || 'Самовивіз'}</span></div>
+                    {history.order?.city && <div className="flex justify-between"><span className="text-slate-600">Місто:</span><span>{history.order?.city}</span></div>}
+                  </div>
+                </div>
+                
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase">Клієнт</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-slate-600">Ім'я:</span><span className="font-medium">{history.order?.customer_name}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Телефон:</span><span>{history.order?.customer_phone}</span></div>
+                    {history.order?.customer_email && <div className="flex justify-between"><span className="text-slate-600">Email:</span><span>{history.order?.customer_email}</span></div>}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Dates & Amounts */}
+              <div className="space-y-4">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase">Період оренди</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-slate-600">Початок:</span><span className="font-medium">{fmtDateShort(history.order?.rental_start_date)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Кінець:</span><span className="font-medium">{fmtDateShort(history.order?.rental_end_date)}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Днів:</span><span className="font-bold">{history.order?.rental_days || '—'}</span></div>
+                    {history.order?.issue_date && <div className="flex justify-between"><span className="text-slate-600">Видано:</span><span>{fmtDateShort(history.order?.issue_date)}</span></div>}
+                    {history.order?.return_date && <div className="flex justify-between"><span className="text-slate-600">Повернено:</span><span>{fmtDateShort(history.order?.return_date)}</span></div>}
+                  </div>
+                </div>
+                
+                <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-200">
+                  <h3 className="text-xs font-semibold text-emerald-600 mb-3 uppercase">Фінанси</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-emerald-700">Сума оренди:</span><span className="font-bold text-emerald-800 text-lg">{money(history.order?.total_price)}</span></div>
+                    <div className="flex justify-between"><span className="text-emerald-700">Застава:</span><span className="font-bold text-emerald-800">{money(history.order?.deposit_amount)}</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === 'documents' && (
+            <div className="space-y-3">
+              {history.documents && history.documents.length > 0 ? (
+                history.documents.map((doc, idx) => (
+                  <div 
+                    key={doc.id || idx}
+                    className="flex items-center justify-between p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition cursor-pointer group"
+                    onClick={() => viewDocument(doc)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{docTypeLabels[doc.doc_type]?.split(' ')[0] || '📄'}</span>
+                      <div>
+                        <div className="font-medium text-slate-900">{docTypeLabels[doc.doc_type]?.slice(2) || doc.doc_type}</div>
+                        <div className="text-xs text-slate-500">#{doc.doc_number} · {fmtDate(doc.created_at)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge kind={doc.status === 'signed' ? 'ok' : 'neutral'}>{doc.status === 'signed' ? '✅ Підписано' : 'Чернетка'}</Badge>
+                      <span className="text-slate-400 group-hover:text-slate-600 transition">👁️ Переглянути</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 text-slate-500">
+                  <div className="text-4xl mb-2">📭</div>
+                  <div>Немає документів</div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {activeTab === 'timeline' && (
+            <div className="space-y-3">
+              {history.timeline && history.timeline.length > 0 ? (
+                <div className="relative">
+                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-200"></div>
+                  {history.timeline.map((item, idx) => (
+                    <div key={idx} className="relative flex gap-4 pl-10 py-2">
+                      <div className={cn(
+                        "absolute left-2.5 w-4 h-4 rounded-full border-2 border-white shadow",
+                        item.type === 'lifecycle' && 'bg-indigo-500',
+                        item.type === 'payment' && 'bg-green-500',
+                        item.type === 'deposit' && 'bg-amber-500',
+                        item.type === 'damage' && 'bg-rose-500',
+                        item.type === 'document' && 'bg-slate-500',
+                        item.type === 'issue' && 'bg-emerald-500',
+                        item.type === 'return' && 'bg-purple-500',
+                        !['lifecycle','payment','deposit','damage','document','issue','return'].includes(item.type) && 'bg-blue-500'
+                      )}></div>
+                      <div className="flex-1 bg-slate-50 rounded-xl p-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-slate-900">{item.title}</span>
+                          <span className="text-xs text-slate-400">{fmtDate(item.timestamp)}</span>
+                        </div>
+                        {item.details && <div className="text-sm text-slate-600 mt-1">{item.details}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-500">
+                  <div className="text-4xl mb-2">📜</div>
+                  <div>Немає подій</div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {activeTab === 'finance' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Payments */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">💰 Платежі ({history.payments?.length || 0})</h3>
+                {history.payments && history.payments.length > 0 ? (
+                  <div className="space-y-2">
+                    {history.payments.map((p, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-emerald-800">{money(p.amount)}</span>
+                          <Badge kind="ok">{p.payment_type}</Badge>
+                        </div>
+                        <div className="text-xs text-emerald-600 mt-1">{fmtDate(p.created_at)}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl">Немає платежів</div>
+                )}
+              </div>
+              
+              {/* Deposits */}
+              <div>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">🔒 Застави ({history.deposits?.length || 0})</h3>
+                {history.deposits && history.deposits.length > 0 ? (
+                  <div className="space-y-2">
+                    {history.deposits.map((d, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-amber-800">{money(d.actual_amount || d.held_amount)}</span>
+                          <Badge kind={d.status === 'closed' ? 'ok' : 'pending'}>{d.status}</Badge>
+                        </div>
+                        <div className="text-xs text-amber-600 mt-1">
+                          Утримано: {money(d.used_amount)} · Повернено: {money(d.refunded_amount)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl">Немає застав</div>
+                )}
+              </div>
+              
+              {/* Damages */}
+              {history.damages && history.damages.length > 0 && (
+                <div className="md:col-span-2">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">🔴 Шкоди ({history.damages.length})</h3>
+                  <div className="space-y-2">
+                    {history.damages.map((dm, idx) => (
+                      <div key={idx} className="p-3 rounded-xl bg-rose-50 border border-rose-200">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-rose-800">{dm.sku} - {dm.product_name || dm.damage_type}</span>
+                          <span className="font-bold text-rose-800">{money(dm.fee)}</span>
+                        </div>
+                        <div className="text-xs text-rose-600 mt-1">{dm.note}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Input = (props) => (
   <input

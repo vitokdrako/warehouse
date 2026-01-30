@@ -508,6 +508,15 @@ setTimeout(()=>window.print(),500);
         backUrl="/manager"
         loading={loading}
         
+        // Real-time sync
+        activeUsers={activeUsers}
+        hasUpdates={wsHasUpdates || hasNewChanges}
+        onRefresh={async () => {
+          await loadIssueCard()
+          dismissAllUpdates()
+          dismissChanges()
+        }}
+        
         // Left Rail
         leftRail={
           <>

@@ -9,6 +9,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../hooks/use-toast'
 import { useOrderSync } from '../hooks/useAutoRefresh'
+import { useOrderWebSocket, useOrderSectionUpdate } from '../hooks/useOrderWebSocket'
 import axios from 'axios'
 
 import {

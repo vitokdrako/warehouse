@@ -352,6 +352,56 @@ async def get_order_full_history(
             "details": f"#{doc['doc_number']} · {doc['generated_by'] or '—'}"
         })
     
+    # Order Lifecycle (повна історія всіх змін)
+    lifecycle_result = db.execute(text("""
+        SELECT id, stage, notes, created_by_name, created_at
+        FROM order_lifecycle
+        WHERE order_id = :order_id
+        ORDER BY created_at
+    """), {"order_id": order_id})
+    
+    lifecycle = []
+    stage_labels = {
+        "created": "🛒 Замовлення створено",
+        "awaiting_customer": "⏳ Очікує підтвердження клієнта",
+        "confirmed": "✅ Підтверджено клієнтом",
+        "processing": "📋 В обробці",
+        "packing": "📦 Комплектація",
+        "ready_for_issue": "✅ Готово до видачі",
+        "shipped": "🚚 Відправлено",
+        "delivered": "📍 Доставлено",
+        "issued": "📤 Видано",
+        "on_rent": "🔄 В оренді",
+        "returning": "📥 Повернення",
+        "partial_return": "📦 Часткове повернення",
+        "returned": "✅ Повернено",
+        "completed": "🎉 Завершено",
+        "cancelled": "❌ Скасовано",
+        "payment_received": "💰 Оплата отримана",
+        "deposit_accepted": "🔒 Застава прийнята",
+        "deposit_returned": "💸 Застава повернена",
+        "note_added": "📝 Додано нотатку",
+        "modified": "✏️ Змінено",
+    }
+    
+    for lc_row in lifecycle_result:
+        lc = {
+            "id": lc_row[0],
+            "stage": lc_row[1],
+            "notes": lc_row[2],
+            "created_by": lc_row[3],
+            "created_at": lc_row[4].isoformat() if lc_row[4] else None
+        }
+        lifecycle.append(lc)
+        
+        timeline.append({
+            "timestamp": lc["created_at"],
+            "type": "lifecycle",
+            "action": lc["stage"],
+            "title": stage_labels.get(lc["stage"], f"📌 {lc['stage']}"),
+            "details": f"{lc['notes'] or ''}" + (f" · {lc['created_by']}" if lc['created_by'] else "")
+        })
+    
     # Sort timeline by timestamp
     timeline.sort(key=lambda x: x["timestamp"] or "")
     
@@ -363,6 +413,7 @@ async def get_order_full_history(
         "deposits": deposits,
         "damages": damages,
         "documents": documents,
+        "lifecycle": lifecycle,
         "timeline": timeline
     }
 

@@ -254,13 +254,24 @@ export default function UnifiedOrderCard({
   return (
     <article 
       className={`
-        rounded-xl border bg-white p-4 
+        relative rounded-xl border bg-white p-4 
         transition-all duration-200
         ${onClick ? 'cursor-pointer hover:shadow-md hover:border-slate-300 active:bg-slate-50' : ''}
         ${compact ? 'p-3' : 'p-4'}
+        ${hasUpdate ? 'ring-2 ring-red-200' : ''}
       `}
       onClick={isEditing ? undefined : onClick}
     >
+      {/* Індикатор оновлень (червона крапка) */}
+      {hasUpdate && (
+        <span 
+          className="absolute top-2 right-2 flex h-3 w-3"
+          title={updatedBy ? `Оновлено: ${updatedBy}` : 'Є нові зміни'}
+        >
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+        </span>
+      )}
       {/* === HEADER: Статус + Номер замовлення === */}
       <div className="flex items-center justify-between mb-3">
         <StatusBadge status={status} />

@@ -81,6 +81,75 @@ export default function NewOrderViewWorkspace() {
   // Таймлайн
   const [timeline, setTimeline] = useState([])
   
+  // === REAL-TIME SYNC STATE ===
+  const [issueCardId, setIssueCardId] = useState(null)
+  const [assemblyProgress, setAssemblyProgress] = useState({ picked: 0, total: 0, percent: 0 })
+  const [newlyAddedItems, setNewlyAddedItems] = useState(new Set()) // IDs of recently added items
+  
+  // Callback для перезавантаження
+  const loadOrderCallback = useCallback(() => loadOrder(), [orderId])
+  
+  // WebSocket синхронізація
+  const {
+    connected: wsConnected,
+    activeUsers,
+    pendingUpdates,
+    hasUpdates: wsHasUpdates,
+    dismissAllUpdates,
+  } = useOrderWebSocket(orderId, {
+    enabled: !loading && !!orderId,
+    onSectionUpdate: (data) => {
+      // Якщо оновлено прогрес - перезавантажити дані прогресу
+      if (data.section === 'progress') {
+        loadAssemblyProgress()
+      }
+      toast({
+        title: '🔄 Оновлення від складу',
+        description: `${data.updated_by_name} оновив прогрес комплектації`,
+      })
+    },
+    onUserJoined: (data) => {
+      toast({
+        title: '👋',
+        description: `${data.user_name} відкрив це замовлення`,
+        duration: 2000,
+      })
+    },
+  })
+  
+  // Хук для оновлення секцій
+  const { updateSection } = useOrderSectionUpdate()
+  
+  // Завантаження прогресу комплектації
+  const loadAssemblyProgress = async () => {
+    if (!issueCardId) return
+    
+    try {
+      const response = await axios.get(`${BACKEND_URL}/api/issue-cards/${issueCardId}`)
+      const card = response.data
+      
+      if (card?.items) {
+        const total = card.items.reduce((sum, i) => sum + (i.qty || 1), 0)
+        const picked = card.items.reduce((sum, i) => sum + (i.picked_qty || 0), 0)
+        const percent = total > 0 ? Math.round((picked / total) * 100) : 0
+        
+        setAssemblyProgress({ picked, total, percent })
+      }
+    } catch (e) {
+      console.log('[Progress] Could not load assembly progress:', e.message)
+    }
+  }
+  
+  // Завантажити прогрес коли є issue card
+  useEffect(() => {
+    if (issueCardId) {
+      loadAssemblyProgress()
+      // Оновлювати кожні 30 секунд як fallback
+      const interval = setInterval(loadAssemblyProgress, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [issueCardId])
+  
   // === ЗАВАНТАЖЕННЯ ЗАМОВЛЕННЯ ===
   useEffect(() => {
     if (!orderId) return

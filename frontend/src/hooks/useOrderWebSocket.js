@@ -324,6 +324,7 @@ export function useOrderSectionUpdate() {
 
       if (result.conflict) {
         // Конфлікт версій!
+        playIfEnabled('conflict')  // 🔊 Звук конфлікту
         return {
           success: false,
           conflict: true,

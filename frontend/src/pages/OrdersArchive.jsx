@@ -126,6 +126,68 @@ const OrderViewModal = ({ order, history, onClose }) => {
         
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === 'items' && (
+            <div className="space-y-2">
+              {history.items && history.items.length > 0 ? (
+                <>
+                  <div className="text-xs text-slate-500 mb-3">
+                    Всього позицій: {history.items.length} · Товарів: {history.items.reduce((sum, i) => sum + (i.quantity || 1), 0)}
+                  </div>
+                  {history.items.map((item, idx) => (
+                    <div 
+                      key={item.id || idx}
+                      className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition"
+                    >
+                      {/* Photo */}
+                      <div 
+                        className="w-16 h-16 rounded-lg bg-white border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg transition flex-shrink-0"
+                        onClick={() => setEnlargedImage(item.image_url ? `${BACKEND_URL}${item.image_url}` : null)}
+                      >
+                        {item.image_url ? (
+                          <img 
+                            src={`${BACKEND_URL}${item.image_url}`} 
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400 text-2xl">📦</div>'; }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400 text-2xl">📦</div>
+                        )}
+                      </div>
+                      
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-slate-900 truncate">{item.name}</div>
+                        <div className="text-sm text-slate-500">SKU: <span className="font-mono">{item.sku}</span></div>
+                        {item.category && <div className="text-xs text-slate-400 mt-0.5">{item.category}</div>}
+                      </div>
+                      
+                      {/* Quantity & Price */}
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-2xl font-bold text-slate-900">×{item.quantity || 1}</div>
+                        <div className="text-sm text-slate-500">{money(item.rental_price || item.price)}/шт</div>
+                        <div className="text-xs text-emerald-600 font-medium">{money(item.subtotal)}</div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Total */}
+                  <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-emerald-700 font-medium">Загальна сума:</span>
+                      <span className="text-2xl font-bold text-emerald-800">{money(history.order?.total_price)}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 text-slate-500">
+                  <div className="text-4xl mb-2">📦</div>
+                  <div>Немає товарів</div>
+                </div>
+              )}
+            </div>
+          )}
+          
           {activeTab === 'info' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Order Info */}

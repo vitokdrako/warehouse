@@ -444,6 +444,7 @@ async def get_order_full_history(
     
     return {
         "order": order,
+        "items": items,
         "issue_cards": issue_cards,
         "return_cards": return_cards,
         "payments": payments,

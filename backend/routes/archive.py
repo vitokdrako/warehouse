@@ -118,18 +118,18 @@ async def get_order_full_history(
     # Order items (товари в замовленні)
     items_result = db.execute(text("""
         SELECT 
-            oi.id, oi.product_id, oi.sku, oi.name, oi.quantity,
-            oi.price, oi.rental_price, oi.subtotal,
-            p.image_url, p.category_name
+            oi.id, oi.product_id, oi.product_name, oi.quantity,
+            oi.price, oi.total_rental, oi.image_url,
+            p.sku, p.category_name
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.product_id
-        WHERE oi.order_id = :order_id
+        WHERE oi.order_id = :order_id AND oi.status = 'active'
         ORDER BY oi.id
     """), {"order_id": order_id})
     
     items = []
     for item_row in items_result:
-        image_url = item_row[8]
+        image_url = item_row[6]  # from order_items
         # Normalize image URL
         if image_url:
             if not image_url.startswith('http') and not image_url.startswith('/api'):
@@ -138,14 +138,13 @@ async def get_order_full_history(
         items.append({
             "id": item_row[0],
             "product_id": item_row[1],
-            "sku": item_row[2],
-            "name": item_row[3],
-            "quantity": item_row[4],
-            "price": float(item_row[5]) if item_row[5] else 0.0,
-            "rental_price": float(item_row[6]) if item_row[6] else 0.0,
-            "subtotal": float(item_row[7]) if item_row[7] else 0.0,
+            "name": item_row[2],
+            "quantity": item_row[3],
+            "price": float(item_row[4]) if item_row[4] else 0.0,
+            "subtotal": float(item_row[5]) if item_row[5] else 0.0,
             "image_url": image_url,
-            "category": item_row[9]
+            "sku": item_row[7] or f"P-{item_row[1]}",
+            "category": item_row[8]
         })
     
     # Issue cards (збірка та видача)

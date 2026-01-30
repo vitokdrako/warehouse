@@ -189,10 +189,16 @@ export default function NewOrderViewWorkspace() {
         setClientComment(decorOrder.client_comment || '')
         setDecorOrderStatus(decorOrder.status)
         
+        // Встановити issue card ID для завантаження прогресу
+        if (decorOrder.issue_card_id) {
+          setIssueCardId(decorOrder.issue_card_id)
+        }
+        
         // Таймлайн
         setTimeline([
           { text: 'Замовлення прийнято', at: formatDateTime(decorOrder.created_at), tone: 'green', user: 'Система' },
           ...(decorOrder.status === 'processing' ? [{ text: 'В обробці', at: 'Зараз', tone: 'blue' }] : [])
+        ])
         ])
         
       } else {

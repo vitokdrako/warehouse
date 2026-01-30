@@ -41,8 +41,8 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://rentalhub-cal.preview.emergentagent.com/api"
-FRONTEND_URL = "https://rentalhub-cal.preview.emergentagent.com"
+BASE_URL = "https://syncorders-app.preview.emergentagent.com/api"
+FRONTEND_URL = "https://syncorders-app.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"

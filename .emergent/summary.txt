@@ -1,165 +1,169 @@
 <analysis>**original_problem_statement:**
-The initial problem was a critical, production-breaking CORS error. Following the fix, the user requested a series of significant mobile UI optimizations, a fix for duplicate product SKUs, and a major improvement to the damage tracking system. The subsequent tasks involved a complete redesign of the finance management system into a single unified Finance Hub, fixing follow-up bugs related to financial calculations and document generation, correcting a recurring timezone issue in the calendar, and implementing an order archiving system.
+The initial problem was a critical, production-breaking CORS error. Subsequent requests included mobile UI optimizations, fixing duplicate SKUs, a major redesign of the finance management system, correcting a recurring calendar timezone bug, and implementing an order archiving system.
 
-The latest requests included:
-1.  Implementing a system to generate different document packages (invoices, acts) for various legal entities (Фіз особа, ФОП, ТОВ) with different tax systems.
-2.  Resolving a recurring calendar bug where the date was off by one day.
-3.  Investigating and creating a large inventory check order by consolidating items from dozens of past orders.
-4.  Fixing a critical  error on the dashboard caused by too many parallel API requests.
-5.  A new major feature request to merge all calendar-related functionalities into a single, unified, and flexible Unified Calendar Hub that displays all system events.
+The latest requests during this session were:
+1.  **Unified Calendar Hub:** A major feature to merge all system events (orders, issues, finance, etc.) into a single, filterable calendar view. This was completed and went through multiple rounds of iterative refinement based on user feedback.
+2.  **Critical App Crash ():** A production app crash was caused by a single large order (#7281) with 261 items overwhelming the server. The user requested the complete deletion of this order.
+3.  **Inventory Recount Status:** After deleting the problematic order, the user asked to mark its 261 items with a new critical status in the inventory re-audit system.
+4.  **Archive Feature Overhaul:** The user reported that the archive page was broken (CORS and 500 errors). They requested a fix and several enhancements, including a full order history timeline and a modal to view final order details with items and documents instead of un-archiving.
+5.  **Real-time Order Synchronization:** A major new architectural request to implement a real-time update system (likely using WebSockets) to prevent data conflicts when multiple users (e.g., a manager and a warehouse worker) edit the same order simultaneously.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is stable. The finance module now supports generating documents for different legal entities (FOP, LLC) using conditional Jinja2 templates. A major performance issue on the Manager Dashboard has been addressed by consolidating eight API calls into a single  endpoint, which has resolved the  errors. A recurring calendar timezone bug has been addressed with a more robust implementation using ISO strings and UTC-based date objects. A large, temporary inventory check order was created and later deleted at the user's request, with the item list saved to a file. The agent has just begun work on the new Unified Calendar Hub.
+The Unified Calendar Hub feature has been fully implemented, tested, and iteratively refined based on extensive user feedback. The app-crashing bug caused by order #7281 was resolved by deleting the order from all related database tables. The inventory re-audit system was updated to support a critical status for items, using the existing  table. The Archive page is now functional, with a backend fix for 500 errors and a new frontend modal that displays a complete, detailed history and item list for any archived order. The agent has just begun the initial planning and setup for the new real-time order synchronization feature.
 
 **Last working item**:
--   **Last item agent was working:** The agent began the implementation of the new **Unified Calendar Hub**. This involved creating a new backend route  in a new file  to aggregate all system events, registering this route in , and creating a placeholder frontend component at .
+-   **Last item agent was working:** The agent was beginning the implementation of the **Real-time Order Synchronization** feature. After receiving detailed requirements from the user, the agent proposed an architecture using WebSockets and a versioning table (). The user approved this approach (manual safe updates, no auto-merge for now). The agent then started creating the necessary backend file () and was exploring the existing frontend code () to plan the integration.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
 -   **User Testing Done:** N
--   **Which testing method agent to use?** both (frontend and backend testing agents should be used once the feature is more developed to ensure all event types are fetched and displayed correctly).
+-   **Which testing method agent to use?** both (This is a complex feature requiring backend WebSocket testing and frontend integration testing to ensure real-time updates work correctly across different user roles).
 
 **All Pending/In progress Issue list**:
 -   **Issue 1: (P0) Recurring Calendar Timezone Bug**
-    -   **Description:** A persistent and recurring bug where the calendar UI incorrectly highlights tomorrow as today. This is likely due to inconsistencies between the server's timezone, the browser's local timezone, and the target Europe/Kyiv timezone.
-    -   **Attempted fixes:** The agent has made multiple attempts to fix this. The latest fix (in ) involved a significant refactor to use ISO date strings () and create safe  objects at UTC noon to prevent timezone-related date shifts. The timezone name was also corrected from  to .
-    -   **Next debug checklist:**
-        1.  Verify if the latest fix in  has resolved the issue for the user across different times of day (especially near midnight).
-        2.  If the issue persists, scrutinize every  creation and every date comparison in the entire component to ensure no local timezone logic is leaking in.
-        3.  Ensure the new  component reuses the robust date logic from the start to avoid repeating this bug.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a critical user-facing bug that makes the calendar unreliable for scheduling. Fixing it will restore user trust in a core application feature.
+    -   **Description:** A persistent and recurring bug where the calendar UI incorrectly highlights tomorrow as today due to timezone inconsistencies.
     -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** Y
+    -   **Next debug checklist:** The last fix was implemented in the previous session in . The user needs to verify if this fix has held up. The new  was built with similar robust date logic, but this core issue remains a high-priority concern.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical user-facing bug that undermines trust in the application's scheduling features.
+    -   **Should Test frontend/backend/both after fix?** frontend
+
+-   **Issue 2: (P1) Potential for  Recurrence**
+    -   **Description:** The application crashes when too many parallel requests are made, as seen with the oversized order #7281. While deleting the order fixed the immediate problem, the underlying vulnerability to request overload remains.
+    -   **Attempted fixes:** The agent identified the root cause and started creating a global request queue utility at  but was sidetracked by the urgent task to delete the order and never finished or integrated it.
+    -   **Next debug checklist:**
+        1.  Complete the implementation of .
+        2.  Integrate the limiter into high-traffic components like  to queue outgoing API requests instead of firing them all at once.
+        3.  Test with a high volume of requests to see if the issue is mitigated.
+    -   **Why fix this issue and what will be achieved with the fix?** This will improve application stability and prevent production crashes, making the system more resilient to heavy loads or large orders.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** frontend
 
 **In progress Task List**:
--   **Task 1: (P0) Complete the Unified Calendar Hub**
+-   **Task 1: (P0) Implement Real-time Order Synchronization**
     -   **Where to resume:**
-        1.  **Backend:** Flesh out the  endpoint. It currently has placeholder logic. It needs to be implemented to query and aggregate data from multiple tables (, , , , , ) to generate a unified list of events.
-        2.  **Frontend:** Develop the  component. This includes building the UI with Day/Week/Month views, adding chip filters for different event types, fetching data from the new  endpoint, and rendering the various event types on the calendar.
-        3.  **Routing:** Add a new route in  to make the new calendar page accessible.
-    -   **What will be achieved with this?** This will create a central, flexible mirror of events as requested by the user, providing a complete operational overview in one place.
+        1.  **Backend:** Flesh out the WebSocket connection manager and event broadcasting logic in .
+        2.  **Database:** Create the  table to track changes to different sections of an order (e.g., , , ).
+        3.  **Backend (Core Logic):** Integrate version-checking into existing order update endpoints. On a version mismatch, the API should return a .
+        4.  **Frontend:** Replace the polling mechanism in  (or create a new  hook) with a WebSocket client that listens for update events.
+        5.  **Frontend (UI):** Implement UI indicators (e.g., small red dots) on order cards and within order workspaces to signal that an update is available, along with a Refresh button for manual, safe updates.
+    -   **What will be achieved with this?** It will prevent data loss and conflicts when multiple users work on the same order, a critical requirement for collaborative workflows.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** both
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
--   **(P1) Implement Full Role-Based Access Control (RBAC):** (From previous handoff).
--   **(P1) Implement Monthly Financial Report:** A modal view accessible from the finance cabinet. (From previous handoff).
--   **(P2) Product Sub-category Data is Empty:** The user asked to deprioritize this, but it remains a known data issue. (From previous handoff).
--   **(P2) Telegram Bot Integration.** (From previous handoff).
--   **(P3) Digital Signature Integration.** (From previous handoff).
--   **(P3) Refactor :** The file may contain dead code and could benefit from a cleanup.
+-   **(P1) Implement Full Role-Based Access Control (RBAC)**
+-   **(P1) Implement Monthly Financial Report**
+-   **(P2) Product Sub-category Data is Empty**
+-   **(P2) Telegram Bot Integration**
+-   **(P3) Digital Signature Integration**
+-   **(P3) Refactor ** (Low-priority technical debt)
 
 **Completed work in this session**
--   **Feature - Document Generation for Legal Entities:**
-    -   Created backend API and DB schema ( table) to store legal entity details.
-    -   Implemented dynamic Jinja2 templates (, , ) that change content based on the payer's legal type (FOP, LLC) and tax system (simplified, general).
-    -   Added a number-to-words conversion function in Ukrainian for document totals.
-    -   Integrated this functionality into the  UI.
--   **Feature - Large-Scale Inventory Check Order:**
-    -   Successfully queried the OpenCart database directly to aggregate 2895 items from 51 historical orders.
-    -   Created a new order (#9999) in RentalHub via backend scripts with all aggregated items, grouped by category.
-    -   Debugged and fixed its visibility on the dashboard by creating a corresponding .
-    -   At the user's request, successfully deleted the order and saved the complete item list to  and .
--   **Optimization - Dashboard Performance:**
-    -   Resolved a critical  error by creating a single backend endpoint .
-    -   Refactored  to use this single endpoint, reducing 6-8 initial API calls to just one.
-    -   Implemented  and a retry-with-backoff mechanism for the dashboard fetch.
--   **Bugfix - Dashboard Data Integrity:** Fixed follow-up bugs where the new  endpoint was missing data fields, causing empty cards and broken navigation for awaiting confirmation orders.
--   **Bugfix - Document Generation Errors:** Fixed a 500 server error and a 400 bad request error related to document generation logic in .
--   **Bugfix - Recurring Calendar Timezone:** Implemented a major refactor in  to handle dates using ISO strings and UTC to prevent timezone-related display errors.
--   **Task Started - Unified Calendar Hub:** Created the initial files and backend route for the new unified calendar feature.
+-   **Feature: Unified Calendar Hub:** Fully implemented and deployed. The feature went through multiple major revisions based on user feedback, including changes to event display logic (issue/return dates), status-based color coding, and UI tweaks.
+-   **Critical Bugfix: App Crash due to Order #7281:** Identified the large order causing  errors and completely deleted it and its related data from the database via a backend script.
+-   **Feature: Inventory Recount Critical Status:** Added a critical status to the re-audit system. Correctly used the existing  table after an initial mistake of creating a new table.
+-   **API Fix: Re-audit Limit Removal:** Modified the  endpoint to remove the  when filtering by status, allowing the user to view all critical items.
+-   **Feature: Archive Overhaul:**
+    -   Fixed a 500 internal server error on the  endpoint by correcting multiple invalid column names in the SQL queries.
+    -   Enriched the archive history by including data from the  table.
+    -   Replaced the Unarchive button with a View button that opens a modal.
+    -   The view modal now shows a complete order history timeline, documents, and a full list of items with photos.
+-   **Bugfix: SKU with Slashes:** Fixed a 404 error for product SKUs containing a  by creating a new query-param-based endpoint () and updating all frontend calls to use .
+-   **Bugfix: Missing  table:** Created the empty table to resolve recurring errors in the backend logs from the dashboard overview endpoint.
+-   **Deployment: Frontend Build:** Compiled the frontend with the correct production backend URL and copied the build artifacts to the  directory as requested.
 
 **Earlier issues found/mentioned but not fixed**
--   **Refactor :** A potential cleanup of  was mentioned in a previous handoff but not addressed. This is a low-priority technical debt item.
+-   **Refactor :** Low-priority technical debt.
+-   **Global Request Limiter:** The agent created  to solve the  issue globally but was interrupted and never integrated it.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** Calendar Timezone Bug.
--   **Recurrence count:** At least 2 (once in a previous session, once in this session).
--   **Status:** USER VERIFICATION PENDING (A new fix has been implemented).
+-   **Calendar Timezone Bug:**
+    -   Recurrence count: 3+
+    -   Status: USER VERIFICATION PENDING
+-   **Dashboard Performance ():**
+    -   Recurrence count: 2+
+    -   Status: IN PROGRESS (A temporary fix was applied by deleting the offending data, but the underlying architectural vulnerability is not yet resolved).
 
 **Code Architecture**
-
+audit_records
 
 **Key Technical Concepts**
--   **Backend API Optimization:** Consolidated multiple (6-8) data-fetching endpoints into a single  endpoint to resolve HTTP/2 stream refusal errors and improve dashboard load times.
--   **Dynamic Document Generation:** Used Jinja2 templates with conditional logic () to generate different document layouts (e.g., Invoice vs. Service Act vs. Goods Invoice) and content based on the client's legal status ().
--   **Robust Date/Time Handling:** Refactored a critical UI component to work with timezone-agnostic ISO date strings () and safe  objects created in UTC to prevent bugs caused by browser/server timezone differences.
--   **Direct DB Interaction:** Wrote and executed complex SQL queries against both the primary  database and a secondary  database to perform data aggregation and ad-hoc tasks. Noted that direct DB access from the agent's environment is blocked by a proxy, requiring SQL scripts to be run by the user.
+-   **Iterative Feature Development:** The Unified Calendar Hub was built through rapid, successive feedback loops with the user, demonstrating the ability to pivot and completely refactor logic based on evolving requirements.
+-   **Database Debugging:** Resolved multiple 500 errors by inspecting backend logs, identifying Unknown column SQL errors, checking table schemas, and correcting queries in .
+-   **Defensive Programming (Backend):** Created a new API endpoint to handle problematic URL characters ( in SKU) instead of relying on URL path variables.
+-   **Agent Mistake & Correction:** Initially created a new DB table () where one was not needed. After user feedback, correctly identified the mistake, removed the new table, and refactored the code to use the existing  table, demonstrating the ability to self-correct.
+-   **Real-time Architecture Planning:** Proposed a robust architecture for real-time collaboration using WebSockets and a sectional versioning database table.
 
 **key DB schema**
--   ** (NEW):**
-    -   uid=0(root) gid=0(root) groups=0(root),  (individual, fop_simple, etc.), , , , , , , , , etc. Stores all legal details for a client.
--   ** (MODIFIED):**
-    -    (INT, NULL): New foreign key column linking an order to a record in .
+-   ** (CREATED):** An empty table was created to resolve a recurring  error in the backend logs.
+    -   uid=0(root) gid=0(root) groups=0(root), , , , , , , 
+-   ** (MODIFIED):** This existing table is now used to store the  status for re-audit items, in addition to its previous statuses.
 
 **All files of reference**
--    (Performance optimization)
--    (Performance optimization)
--    (Timezone bug fix)
--    (Document generation logic)
--    (Document generation UI)
--    (New API for legal entities)
--    (New API for Unified Calendar)
--    (New UI for Unified Calendar)
--    (New template)
--    (New template)
--    (New template)
--    (Saved list of inventory items)
+-    (New focus for real-time sync)
+-    (Completed calendar logic)
+-    (Completed calendar UI)
+-    (Fixed archive backend)
+-    (New archive UI/modal)
+-    (Fixed re-audit backend)
+-    (New re-audit UI filter)
+-    (Unfinished utility for app stability)
 
 **Areas that need refactoring**:
--   : This file may contain dead code from previous development attempts and could be reviewed for cleanup (low priority).
+-   : Needs to be refactored to use a request queue () to prevent future  crashes.
+-   : This file may contain dead code and could be reviewed for cleanup (low priority).
 
 **key api endpoints**
--   : Create a new legal entity profile.
--   : Get all legal entity profiles.
--   : Generate a document (modified to handle new types).
--   : **(NEW)** Unified endpoint that returns all data needed for the manager dashboard, replacing 6-8 separate calls.
--   : **(NEW & IN PROGRESS)** Endpoint for the new Unified Calendar.
+-   : (Heavily Modified) Returns all events for the Unified Calendar.
+-   : (Fixed) Returns a complete history for an archived order, including items and lifecycle events.
+-   : (Modified) Now accepts a  and removes the  clause when the filter is used.
+-   : (New) Safely retrieves damage history for SKUs with special characters.
+-   : (Temporary/Used) Endpoint created and used to delete order #7281.
 
 **Critical Info for New Agent**
--   **Main Task:** Your primary focus is to build the **Unified Calendar Hub**. Start by implementing the backend logic in  and then build the UI in .
--   **Recurring Bug:** The calendar timezone bug is persistent. The latest fix in  needs user verification. Be extremely careful with date/time logic in the new Unified Calendar to avoid reintroducing this bug. Use the new ISO string and UTC-based patterns.
--   **DB Access:** You cannot connect directly to the user's production MySQL database () due to a proxy/firewall. For any required schema changes (like creating tables or adding columns), you must provide the user with the exact SQL commands to execute manually.
+-   **Main Task:** Your primary focus is the **Real-time Order Synchronization** feature. The user has approved a plan involving WebSockets and a versioning table for manual, safe updates. Start by implementing the backend WebSocket handler and the  DB table.
+-   **Agent's Previous Mistake:** Be aware that the previous agent incorrectly created a new table () before being corrected by the user. **Always investigate the existing DB schema and code patterns thoroughly** before adding new tables or major structures. The user wants to enhance the existing system, not build new ones from scratch.
+-   **Unresolved Stability Risk:** The  crash was fixed by deleting one large order, but the application is still vulnerable. The utility at  was started to solve this but was never finished or integrated. This should be addressed to ensure production stability.
+-   **Pending User Verification:** The recurring calendar timezone bug has a fix pending verification. Do not touch the calendar code unless the user reports the bug again.
 
 **documents and test reports created in this job**
--   
--   
--    (updated multiple times)
+-    (Successful test report for the initial Unified Calendar Hub)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks to improve the calendar by unifying all events into one tool and making it flexible. (COMPLETED - Agent proposed a plan)
-2.  **User:** Agrees, stating it should be a mirror of events. (COMPLETED - Agent started implementation)
-3.  **User:** Asks if the changes can be pushed. (PENDING - User needs to test the calendar fix)
-4.  **User:** Points out that  was not updated recently. (COMPLETED - Agent rebuilt it)
-5.  **User:** Confirms the rebuild and says they will push. (COMPLETED)
-6.  **User:** Asks for a Unified Calendar and ideas on how to improve it. (COMPLETED - Agent analyzed the system and provided a detailed proposal)
-7.  **User:** Asks to start implementation of the unified calendar. (COMPLETED - Agent started)
-8.  **User:** Says it needs to be very flexible, a mirror of all events. (COMPLETED - Agent confirmed and started backend)
-9.  **User:** Asks to push changes for the calendar timezone fix. (PENDING - User needs to test this)
-10. **User:** Corrects the agent's logic for the timezone fix, providing a detailed technical explanation and recommended approach. (COMPLETED - Agent implemented the user's recommended fix)
+1.  **User:** Asks to add a list of items (with photos, SKU, quantity) to the archive view modal. (COMPLETED)
+2.  **User:** Praises the new archive modal. (COMPLETED)
+3.  **User:** Provides a very detailed feature request for real-time order synchronization to prevent conflicts between managers and warehouse staff. (IN PROGRESS)
+4.  **User:** Approves the agent's proposed architecture (WebSockets, versioning, manual updates) and provides more context on which pages need syncing and how updates should be visualized (e.g., a red dot). (IN PROGRESS)
+5.  **User:** Asks agent to begin work on the real-time sync feature. (IN PROGRESS - Agent started)
+6.  **User:** Asks agent to create a build in  for production URLs and reports a critical crash () with screenshots. (COMPLETED)
+7.  **User:** Identifies the crashing order (#7281) and requests its complete deletion. Also requests adding a critical status for its 261 items in the re-audit system. (COMPLETED)
+8.  **User:** Angrily corrects the agent for creating a new database table instead of using the existing  table for the critical status. (COMPLETED - Agent fixed its mistake)
+9.  **User:** Reports a recurring error in the logs ( table doesn't exist). (COMPLETED - Agent created the table)
+10. **User:** Asks to remove the 100-item limit in the re-audit cabinet when filtering by status. (COMPLETED)
 
 **Project Health Check:**
 -   **Broken:** None.
--   **Mocked:** None.
+-   **Mocked:** None. The agent correctly created a missing DB table () to resolve log errors.
 
 **3rd Party Integrations**
--   **weasyprint:** Used for PDF document generation.
--   **Custom SMTP Server ():** Used for sending emails.
--   **OpenCart Database ():** Direct MySQL connection used for auth and ad-hoc data synchronization.
+-   **weasyprint:** PDF generation.
+-   **Custom SMTP Server:** Email sending.
+-   **OpenCart Database:** Direct MySQL connection for auth/sync.
+-   **fastapi.WebSocket:** Planned for the new real-time sync feature.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES, for the initial implementation of the Unified Calendar Hub.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None.
--   **Known regressions:** The calendar timezone bug has regressed in this session and a new fix was attempted.
+-   **Known regressions:** The  is a recurring issue, though the immediate trigger was removed. The calendar timezone bug is also a known recurring issue pending user verification.
 
 **Credentials to test flow:**
 -   email: 
 -   password: 
 
 **What agent forgot to execute**
--   The low-priority refactoring of  was not performed.
--   The agent did not add a route for the new  page in , which will be necessary for it to be accessible.</analysis>
+-   The agent created the utility file  as a solution for the  bug but was then sidetracked by the user's request to delete the problematic order and **never completed or integrated this global fix**. This leaves the application vulnerable to the same type of crash in the future.</analysis>

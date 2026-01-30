@@ -725,6 +725,22 @@ export default function NewOrderViewWorkspace() {
       backUrl="/manager"
       loading={loading}
       
+      // Real-time sync
+      activeUsers={activeUsers}
+      hasUpdates={wsHasUpdates}
+      onRefresh={async () => {
+        await loadOrder()
+        await loadAssemblyProgress()
+        dismissAllUpdates()
+      }}
+      
+      // Progress info (для відображення в хедері)
+      progressInfo={assemblyProgress.total > 0 ? {
+        label: `Комплектація: ${assemblyProgress.picked}/${assemblyProgress.total} (${assemblyProgress.percent}%)`,
+        value: assemblyProgress.picked,
+        percent: assemblyProgress.percent
+      } : null}
+      
       // Left Rail
       leftRail={
         <>

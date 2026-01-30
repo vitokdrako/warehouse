@@ -711,6 +711,18 @@ export default function OrdersArchive() {
           </div>
         )}
       </div>
+      
+      {/* View Order Modal */}
+      {viewOrder && viewHistory && (
+        <OrderViewModal 
+          order={viewOrder} 
+          history={viewHistory} 
+          onClose={() => {
+            setViewOrder(null);
+            setViewHistory(null);
+          }}
+        />
+      )}
     </div>
   );
 }

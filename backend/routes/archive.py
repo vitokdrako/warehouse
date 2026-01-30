@@ -319,32 +319,33 @@ async def get_order_full_history(
         })
     
     # Documents
-    docs_result = db.execute(text("""
-        SELECT id, doc_type, doc_number, format, generated_by_name, created_at
+    doc_result = db.execute(text("""
+        SELECT id, doc_type, doc_number, status, created_at
         FROM documents
         WHERE entity_type = 'order' AND entity_id = :order_id
         ORDER BY created_at
     """), {"order_id": str(order_id)})
     
     documents = []
-    for doc_row in docs_result:
+    for doc_row in doc_result:
         doc = {
             "id": doc_row[0],
             "doc_type": doc_row[1],
             "doc_number": doc_row[2],
-            "format": doc_row[3],
-            "generated_by": doc_row[4],
-            "created_at": doc_row[5].isoformat() if doc_row[5] else None
+            "status": doc_row[3],
+            "created_at": doc_row[4].isoformat() if doc_row[4] else None
         }
         documents.append(doc)
         
         type_labels = {
             "invoice_offer": "Рахунок-оферта",
-            "contract_rent": "Договір оренди", 
+            "picking_list": "Лист комплектації",
             "issue_act": "Акт видачі",
             "return_act": "Акт повернення",
-            "deposit_settlement_act": "Акт взаєморозрахунків",
-            "deposit_refund_act": "Акт повернення застави"
+            "damage_report": "Акт шкоди",
+            "service_act": "Акт виконаних робіт",
+            "invoice_legal": "Рахунок",
+            "goods_invoice": "Накладна"
         }
         
         timeline.append({
@@ -352,7 +353,7 @@ async def get_order_full_history(
             "type": "document",
             "action": "generated",
             "title": f"📄 {type_labels.get(doc['doc_type'], doc['doc_type'])}",
-            "details": f"#{doc['doc_number']} · {doc['generated_by'] or '—'}"
+            "details": f"#{doc['doc_number']}"
         })
     
     # Order Lifecycle (повна історія всіх змін)

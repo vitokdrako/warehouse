@@ -24,6 +24,9 @@
   - Backend: WebSocket handler, REST API для версій, конфлікт-детекція
   - Frontend: useOrderWebSocket хук, індикатори активних юзерів, кнопка оновлення
   - Таблиця `order_section_versions` для версіонування секцій замовлення
+- ✅ **Звукові сповіщення** - Web Audio API нотифікації при змінах
+  - Різні звуки для: оновлення, приєднання користувача, конфлікту версій
+  - Кнопка вмикання/вимикання звуку в хедері
 - ✅ **Request Limiter Integration** - захист від ERR_HTTP2_SERVER_REFUSED_STREAM
   - Інтегровано в ManagerDashboard через limitedAuthFetch
 

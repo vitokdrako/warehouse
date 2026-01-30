@@ -1,178 +1,100 @@
-# RentalHub - Warehouse Management System
+# Rental Hub - Product Requirements Document
 
-## Оригінальна задача
-Система управління складом та орендою декору для FarforRent. Включає управління замовленнями, інвентаризацію, видачу/повернення товарів, фінансовий облік.
+## Original Problem Statement
+Система управління орендою реквізиту для івентів з повним lifecycle замовлень: від створення до повернення. Інтеграція з OpenCart для синхронізації товарів та клієнтів.
 
-## Поточний стан: ✅ ГОТОВО ДО ДЕПЛОЮ
+## User Personas
+1. **Manager** - обробка замовлень, комунікація з клієнтами, фінанси
+2. **Warehouse Staff** - комплектація, видача, приймання повернень
+3. **Admin** - системні налаштування, користувачі, звіти
 
-### Реквізити компанії (ОНОВЛЕНО)
-**Виконавець:**
-- ФОП Трофімова Вікторія Сергіївна
-- п/р UA653220010000026003340152018 у банку АТ «УНІВЕРСАЛ БАНК»
-- код за ДРФО 3505100720
-
----
-
-## ✅ Виконано в цій сесії (29.01.2026)
-
-### 🔴 P0: Unified Calendar Hub - РЕАЛІЗОВАНО ✅
-
-**Опис:** Єдиний гнучкий календар що агрегує всі події системи - "дзеркало операцій"
-
-#### Backend:
-1. **Новий роутер** `/app/backend/routes/calendar_events.py`:
-   - `GET /api/calendar/event-types` - типи подій з кольорами та іконками
-   - `GET /api/calendar/events` - агреговані події з усіх джерел
-   - `GET /api/calendar/stats` - статистика подій на дату
-   
-2. **Типи подій:**
-   - **Замовлення:** issue, return, on_rent, awaiting
-   - **Операції:** packing, ready_issue
-   - **Обслуговування:** cleaning, laundry, repair
-   - **Проблеми:** damage, overdue
-   - **Фінанси:** payment_due, deposit_return
-   - **Завдання:** task
-
-3. **Джерела даних:**
-   - `orders` - замовлення (видача/повернення/в оренді)
-   - `issue_cards` - картки комплектації
-   - `product_cleaning` - мийка/прання/реставрація
-   - `damage_cases` - кейси пошкоджень
-   - `fin_payments` - очікувані платежі
-   - `fin_deposit_holds` - застави
-   - `tasks` - завдання
-
-#### Frontend:
-1. **Новий компонент** `/app/frontend/src/pages/UnifiedCalendarNew.jsx`:
-   - День/Тиждень/Місяць views
-   - Фільтри по групах подій (чіпи)
-   - Пошук по подіях
-   - Модалка з деталями події
-   - Навігація (стрілки, "Сьогодні")
-   - Кольорове кодування типів подій
-   - Статистика по типах
-
-2. **Роутинг:** `/calendar` → UnifiedCalendar (App.tsx)
-
-#### Тестування:
-- ✅ Backend: 100% (12/12 тестів)
-- ✅ Frontend: 100% (всі views та інтеракції)
-- ✅ Виправлено баг сортування по priority (string vs int)
+## Core Requirements
+- Управління замовленнями з повним lifecycle
+- Інвентаризація та відстеження товарів
+- Фінансовий облік (оренда, застава, пошкодження)
+- Документообіг (накладні, акти, QR коди)
+- Синхронізація з OpenCart
 
 ---
 
-## ✅ Виконано раніше (28.01.2026)
+## What's Been Implemented
 
-### 🔴 P0: Документи для юридичних осіб - РЕАЛІЗОВАНО
+### Latest Session (2026-01-30)
+- ✅ **Real-time Order Synchronization** - WebSocket система для синхронізації змін між користувачами
+  - Backend: WebSocket handler, REST API для версій, конфлікт-детекція
+  - Frontend: useOrderWebSocket хук, індикатори активних юзерів, кнопка оновлення
+  - Таблиця `order_section_versions` для версіонування секцій замовлення
+- ✅ **Request Limiter Integration** - захист від ERR_HTTP2_SERVER_REFUSED_STREAM
+  - Інтегровано в ManagerDashboard через limitedAuthFetch
 
-#### Backend:
-1. **Новий роутер** `/app/backend/routes/payer_profiles.py`:
-   - `GET /api/payer-profiles/types` - список типів платників
-   - `GET /api/payer-profiles` - список профілів
-   - `POST /api/payer-profiles` - створення профілю
-   - `PUT /api/payer-profiles/{id}` - оновлення
-   - `DELETE /api/payer-profiles/{id}` - видалення
-   - `POST /api/payer-profiles/order/{order_id}/assign/{profile_id}` - прив'язка до замовлення
-   - `GET /api/payer-profiles/order/{order_id}` - отримати платника замовлення
-
-2. **Нові шаблони документів**:
-   - `/app/backend/templates/documents/invoice_legal/v1.html` - Рахунок для юр. осіб
-   - `/app/backend/templates/documents/service_act/v1.html` - Акт виконаних робіт (для спрощеної системи)
-   - `/app/backend/templates/documents/goods_invoice/v1.html` - Видаткова накладна (для загальної системи)
-
-3. **Оновлені файли**:
-   - `registry.py` - додано нові типи документів
-   - `data_builders.py` - підтримка payer profiles, оновлені реквізити компанії
-   - `server.py` - підключено новий роутер
-
-#### Frontend:
-1. **Оновлено** `/app/frontend/src/pages/FinanceHub.jsx`:
-   - Секція вибору типу платника
-   - Модальне вікно для створення/вибору профілю платника
-   - Окрема секція документів для юр. осіб
-   - Автоматичне визначення доступних документів залежно від типу платника
-
-### Типи платників:
-| Тип | Система | Документи |
-|-----|---------|-----------|
-| `individual` | - | Рахунок-оферта, Договір |
-| `fop_simple` | Спрощена | Рахунок (юр.), Акт виконаних робіт |
-| `fop_general` | Загальна | Рахунок (юр.), Видаткова накладна |
-| `llc_simple` | Спрощена | Рахунок (юр.), Акт виконаних робіт |
-| `llc_general` | Загальна | Рахунок (юр.), Видаткова накладна |
-
-### Логіка документів:
-- **Спрощена система** → Послуга "Прокат декору" (без ПДВ)
-- **Загальна система** → Товар "Декор" (з ПДВ 20%)
+### Previous Sessions
+- ✅ Unified Calendar Hub - об'єднаний календар всіх подій
+- ✅ Archive System Overhaul - модальне вікно з повною історією
+- ✅ Inventory Re-audit "Critical" Status
+- ✅ SKU with slashes fix (URL encoding)
+- ✅ Order #7281 deletion (crash fix)
+- ✅ CORS configuration fixes
 
 ---
 
-## Файли для деплою
+## Prioritized Backlog
 
-### Backend (backrentalhub.farforrent.com.ua):
-```
-/app/backend/routes/payer_profiles.py          # НОВИЙ
-/app/backend/server.py                         # ЗМІНЕНО - додано import та router
-/app/backend/services/doc_engine/registry.py   # ЗМІНЕНО - нові типи документів
-/app/backend/services/doc_engine/data_builders.py # ЗМІНЕНО - payer profiles, реквізити
-/app/backend/templates/documents/invoice_legal/v1.html    # НОВИЙ
-/app/backend/templates/documents/service_act/v1.html      # НОВИЙ
-/app/backend/templates/documents/goods_invoice/v1.html    # НОВИЙ
-```
+### P0 (Critical)
+- [ ] Full RBAC (Role-Based Access Control)
+- [x] Real-time Order Synchronization ← COMPLETED
 
-### Frontend (rentalhub.farforrent.com.ua):
-```
-/app/frontend/src/pages/FinanceHub.jsx         # ЗМІНЕНО - UI для юр. осіб
-```
+### P1 (High Priority)
+- [ ] Monthly Financial Report
+- [x] ERR_HTTP2_SERVER_REFUSED_STREAM protection ← COMPLETED
+- [ ] Product Sub-category Data (empty)
 
----
+### P2 (Medium Priority)  
+- [ ] Telegram Bot Integration
+- [ ] Digital Signature Integration
 
-## База даних
-При першому запиті до `/api/payer-profiles` автоматично створюється таблиця:
-```sql
-CREATE TABLE payer_profiles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    payer_type VARCHAR(50) NOT NULL DEFAULT 'individual',
-    company_name VARCHAR(255),
-    edrpou VARCHAR(20),
-    iban VARCHAR(34),
-    bank_name VARCHAR(255),
-    director_name VARCHAR(255),
-    address TEXT,
-    tax_number VARCHAR(20),
-    is_vat_payer BOOLEAN DEFAULT FALSE,
-    phone VARCHAR(50),
-    email VARCHAR(100),
-    note TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
--- Також додається поле до orders:
-ALTER TABLE orders ADD COLUMN payer_profile_id INT NULL;
-```
+### P3 (Low Priority / Tech Debt)
+- [ ] Refactor `/app/backend/routes/finance.py`
+- [ ] Clean up unused imports/variables in TypeScript files
 
 ---
 
-## Backlog
+## Architecture
 
-### P1 (Важливо)
-- [ ] Повна система RBAC (Role-Based Access Control)
-- [ ] Місячний фінансовий звіт (модальне вікно)
-- [ ] Telegram-бот інтеграція
+### Backend Stack
+- FastAPI + SQLAlchemy
+- MySQL (RentalHub DB)
+- WebSocket for real-time sync
+- PDF generation (weasyprint)
 
-### P2 (Бажано)
-- [ ] Виправити пусті підкатегорії продуктів
-- [ ] Інтеграція цифрового підпису
+### Frontend Stack
+- React 18 + TypeScript
+- Shadcn/UI components
+- TailwindCSS
+- React Router
+
+### Key Files (Real-time Sync)
+- `/app/backend/routes/order_sync.py` - WebSocket handler + REST API
+- `/app/frontend/src/hooks/useOrderWebSocket.js` - WebSocket client hook
+- `/app/frontend/src/hooks/useAutoRefresh.js` - Polling fallback
+- `/app/frontend/src/utils/requestLimiter.js` - Request queue utility
+
+### Database Tables (New)
+- `order_section_versions` - tracks version per section (header, items, progress, comments)
 
 ---
 
-## Креденшіали для тестування
-- Email: vitokdrako@gmail.com
-- Password: test123
+## API Endpoints (Real-time Sync)
 
-## Технічні нотатки
-- JWT токен: 8 годин, refresh до 7 днів
-- WeasyPrint для генерації PDF документів
-- Реквізити компанії оновлені: ФОП Трофімова В.С.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/orders/{id}/versions` | Get current versions of all sections |
+| POST | `/api/orders/{id}/sections/{section}/update` | Update section version (returns conflict if outdated) |
+| GET | `/api/orders/{id}/active-users` | Get users currently viewing the order |
+| GET | `/api/orders/{id}/last-modified` | Get last modification timestamp |
+| WS | `/api/orders/{id}/ws` | WebSocket connection for real-time updates |
+
+---
+
+## Test Credentials
+- Email: `vitokdrako@gmail.com`
+- Password: `test123`

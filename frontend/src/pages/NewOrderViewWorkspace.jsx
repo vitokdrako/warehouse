@@ -387,27 +387,50 @@ export default function NewOrderViewWorkspace() {
     const existing = items.find(i => i.inventory_id === product.product_id?.toString())
     
     let updatedItems
+    const itemId = product.product_id?.toString()
+    
     if (existing) {
       updatedItems = items.map(i => 
-        i.inventory_id === product.product_id?.toString()
+        i.inventory_id === itemId
           ? { ...i, quantity: (i.quantity || 1) + 1 }
           : i
       )
     } else {
-      updatedItems = [...items, {
-        inventory_id: product.product_id?.toString(),
+      // Нова позиція - додаємо на початок списку і позначаємо як нову
+      const newItem = {
+        inventory_id: itemId,
         article: product.sku,
         name: product.name,
         quantity: 1,
         price_per_day: product.price_per_day,
         deposit: product.deposit || 0,
-        damage_cost: product.deposit || 0
-      }]
+        damage_cost: product.deposit || 0,
+        _isNew: true  // Позначка для підсвітки
+      }
+      updatedItems = [newItem, ...items]  // Додаємо ЗВЕРХУ
+      
+      // Позначити як нову на 30 секунд
+      setNewlyAddedItems(prev => new Set([...prev, itemId]))
+      setTimeout(() => {
+        setNewlyAddedItems(prev => {
+          const next = new Set(prev)
+          next.delete(itemId)
+          return next
+        })
+      }, 30000)
     }
     
     setItems(updatedItems)
     setSearchResults([])
     await saveItems(updatedItems)
+    
+    // Повідомити інших користувачів про зміни
+    if (orderId) {
+      await updateSection(orderId, 'items', {
+        changesSummary: `Додано: ${product.name}`,
+        changedFields: ['items']
+      })
+    }
   }
   
   const handleUpdateQuantity = async (itemId, newQty) => {

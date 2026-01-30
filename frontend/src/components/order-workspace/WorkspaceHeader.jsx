@@ -21,6 +21,10 @@ export default function WorkspaceHeader({
   backUrl = '/manager',
   // Progress info
   progressInfo, // { label, value, percent }
+  // Real-time sync
+  activeUsers = [],    // Список активних користувачів
+  hasUpdates = false,  // Є непрочитані оновлення
+  onRefresh,           // Callback для оновлення
 }) {
   const navigate = useNavigate()
   const config = getStatusConfig(status)

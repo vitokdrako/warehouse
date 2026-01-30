@@ -872,6 +872,7 @@ export default function NewOrderViewWorkspace() {
         mode="edit"
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
+        highlightedItems={newlyAddedItems}  // Підсвітка нових позицій
       />
       
       {/* Документи переміщено в LeftRailDocuments */}

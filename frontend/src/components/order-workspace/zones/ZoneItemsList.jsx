@@ -114,10 +114,18 @@ function ItemRow({
   
   return (
     <div className={`
-      rounded-lg border bg-white p-3 flex gap-3
+      rounded-lg border bg-white p-3 flex gap-3 transition-all duration-500
       ${canPick && isFullyPicked ? 'border-corp-primary bg-corp-primary/5' : 'border-corp-border'}
       ${canReturn && hasFindings ? 'border-amber-300 bg-amber-50' : ''}
+      ${isHighlighted ? 'ring-2 ring-green-400 border-green-400 bg-green-50 animate-pulse' : ''}
     `}>
+      {/* Позначка NEW для нових */}
+      {isHighlighted && (
+        <div className="absolute -top-2 -right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+          NEW
+        </div>
+      )}
+      
       {/* Зображення */}
       <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-corp-bg-light">
         {image ? (

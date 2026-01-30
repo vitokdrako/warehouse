@@ -236,10 +236,10 @@ async def get_order_full_history(
     # Deposits (застави)
     deposit_result = db.execute(text("""
         SELECT id, held_amount, used_amount, refunded_amount, actual_amount, currency, 
-               status, accepted_by_name, created_at, closed_at
+               status, opened_at, closed_at, note
         FROM fin_deposit_holds
         WHERE order_id = :order_id
-        ORDER BY created_at
+        ORDER BY opened_at
     """), {"order_id": order_id})
     
     deposits = []
@@ -252,9 +252,9 @@ async def get_order_full_history(
             "actual_amount": float(d_row[4]) if d_row[4] else 0.0,
             "currency": d_row[5] or "UAH",
             "status": d_row[6],
-            "accepted_by": d_row[7],
-            "created_at": d_row[8].isoformat() if d_row[8] else None,
-            "closed_at": d_row[9].isoformat() if d_row[9] else None
+            "created_at": d_row[7].isoformat() if d_row[7] else None,
+            "closed_at": d_row[8].isoformat() if d_row[8] else None,
+            "note": d_row[9]
         }
         deposits.append(deposit)
         

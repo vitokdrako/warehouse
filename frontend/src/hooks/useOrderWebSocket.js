@@ -147,6 +147,7 @@ export function useOrderWebSocket(orderId, options = {}) {
 
       case 'user.joined':
         setActiveUsers(message.users || [])
+        playIfEnabled('join')  // 🔊 Звук приєднання
         onUserJoined?.(message)
         break
 

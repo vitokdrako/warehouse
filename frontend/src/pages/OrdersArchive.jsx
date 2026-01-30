@@ -88,7 +88,8 @@ const Timeline = ({ items }) => {
     payment: '💰',
     deposit: '🔒',
     damage: '🔴',
-    document: '📄'
+    document: '📄',
+    lifecycle: '📌'
   };
   
   const typeColors = {
@@ -98,7 +99,8 @@ const Timeline = ({ items }) => {
     payment: 'bg-green-500',
     deposit: 'bg-amber-500',
     damage: 'bg-rose-500',
-    document: 'bg-slate-500'
+    document: 'bg-slate-500',
+    lifecycle: 'bg-indigo-500'
   };
   
   return (

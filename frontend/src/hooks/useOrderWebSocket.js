@@ -7,9 +7,11 @@
  * - Отримання сповіщень про зміни від інших користувачів
  * - Показ активних користувачів в замовленні
  * - Індикатор "хтось друкує"
+ * - Звукові сповіщення
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { playIfEnabled } from '../utils/notificationSound'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

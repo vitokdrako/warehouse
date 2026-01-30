@@ -211,13 +211,40 @@ export default function IssueCardWorkspace() {
   // Обгортаємо в useCallback для синхронізації
   const loadIssueCardCallback = useCallback(loadIssueCard, [id])
 
-  // Синхронізація змін з іншими користувачами
+  // Синхронізація змін з іншими користувачами (polling fallback)
   const { hasNewChanges, lastModifiedBy, markMyUpdate, dismissChanges } = useOrderSync(
     order?.order_id,
     loadIssueCardCallback,
     10000, // перевірка кожні 10 секунд
     !loading && !!order?.order_id
   )
+  
+  // WebSocket синхронізація (real-time)
+  const {
+    connected: wsConnected,
+    activeUsers,
+    pendingUpdates,
+    hasUpdates: wsHasUpdates,
+    dismissAllUpdates,
+  } = useOrderWebSocket(order?.order_id, {
+    enabled: !loading && !!order?.order_id,
+    onSectionUpdate: (data) => {
+      toast({
+        title: '🔄 Зміни від іншого користувача',
+        description: `${data.updated_by_name} оновив ${data.section}`,
+      })
+    },
+    onUserJoined: (data) => {
+      toast({
+        title: '👋',
+        description: `${data.user_name} відкрив це замовлення`,
+        duration: 2000,
+      })
+    },
+  })
+  
+  // Хук для повідомлення про збереження
+  const { updateSection } = useOrderSectionUpdate()
 
   useEffect(() => {
     if (!id) return

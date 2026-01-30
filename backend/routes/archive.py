@@ -265,7 +265,7 @@ async def get_order_full_history(
             "type": "deposit",
             "action": "accepted",
             "title": "🔒 Застава прийнята",
-            "details": f"{symbol}{deposit['actual_amount']} · {deposit['accepted_by'] or '—'}"
+            "details": f"{symbol}{deposit['actual_amount']}"
         })
         
         if deposit["used_amount"] > 0:

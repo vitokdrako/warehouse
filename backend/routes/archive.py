@@ -115,6 +115,39 @@ async def get_order_full_history(
         "details": f"Клієнт: {order['customer_name']}, Сума: ₴{order['total_price']}"
     })
     
+    # Order items (товари в замовленні)
+    items_result = db.execute(text("""
+        SELECT 
+            oi.id, oi.product_id, oi.sku, oi.name, oi.quantity,
+            oi.price, oi.rental_price, oi.subtotal,
+            p.image_url, p.category_name
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.product_id
+        WHERE oi.order_id = :order_id
+        ORDER BY oi.id
+    """), {"order_id": order_id})
+    
+    items = []
+    for item_row in items_result:
+        image_url = item_row[8]
+        # Normalize image URL
+        if image_url:
+            if not image_url.startswith('http') and not image_url.startswith('/api'):
+                image_url = f"/api/{image_url}" if not image_url.startswith('uploads') else f"/api/{image_url}"
+        
+        items.append({
+            "id": item_row[0],
+            "product_id": item_row[1],
+            "sku": item_row[2],
+            "name": item_row[3],
+            "quantity": item_row[4],
+            "price": float(item_row[5]) if item_row[5] else 0.0,
+            "rental_price": float(item_row[6]) if item_row[6] else 0.0,
+            "subtotal": float(item_row[7]) if item_row[7] else 0.0,
+            "image_url": image_url,
+            "category": item_row[9]
+        })
+    
     # Issue cards (збірка та видача)
     issue_result = db.execute(text("""
         SELECT id, status, prepared_by, issued_by, prepared_at, issued_at, created_at

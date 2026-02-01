@@ -364,6 +364,9 @@ export default function DocumentTemplatesAdmin() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [filter, setFilter] = useState('all');
   const [expandedTypes, setExpandedTypes] = useState({});
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [previewHtml, setPreviewHtml] = useState('');
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const getToken = () => localStorage.getItem('token');
 

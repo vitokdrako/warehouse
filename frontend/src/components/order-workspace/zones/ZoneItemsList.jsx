@@ -260,3 +260,113 @@ function ItemRow({
     </div>
   )
 }
+
+/**
+ * QuantityInput - Компонент для редагування кількості
+ * - Кнопки +/- для швидкого редагування
+ * - Можливість ввести число вручну
+ * - Debounce 800ms перед збереженням
+ */
+function QuantityInput({ value, onChange, min = 1, max = 999 }) {
+  const [localValue, setLocalValue] = useState(value)
+  const [isEditing, setIsEditing] = useState(false)
+  const inputRef = useRef(null)
+  
+  // Синхронізація з зовнішнім значенням
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalValue(value)
+    }
+  }, [value, isEditing])
+  
+  // Debounced save - зберігати через 800ms після останньої зміни
+  const debouncedSave = useDebounce((newValue) => {
+    const numValue = parseInt(newValue) || min
+    const clampedValue = Math.min(Math.max(numValue, min), max)
+    if (clampedValue !== value) {
+      onChange(clampedValue)
+    }
+  }, 800)
+  
+  // Обробник зміни input
+  const handleInputChange = (e) => {
+    const newValue = e.target.value
+    // Дозволити тільки цифри
+    if (/^\d*$/.test(newValue)) {
+      setLocalValue(newValue)
+      if (newValue !== '') {
+        debouncedSave(newValue)
+      }
+    }
+  }
+  
+  // Обробник кнопок +/-
+  const handleButtonClick = (delta) => {
+    const newValue = Math.min(Math.max((parseInt(localValue) || min) + delta, min), max)
+    setLocalValue(newValue)
+    debouncedSave(newValue)
+  }
+  
+  // При фокусі - виділити весь текст
+  const handleFocus = () => {
+    setIsEditing(true)
+    setTimeout(() => {
+      inputRef.current?.select()
+    }, 0)
+  }
+  
+  // При втраті фокусу - зберегти одразу
+  const handleBlur = () => {
+    setIsEditing(false)
+    const numValue = parseInt(localValue) || min
+    const clampedValue = Math.min(Math.max(numValue, min), max)
+    setLocalValue(clampedValue)
+    if (clampedValue !== value) {
+      onChange(clampedValue)
+    }
+  }
+  
+  // Enter - зберегти і зняти фокус
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      inputRef.current?.blur()
+    }
+    if (e.key === 'Escape') {
+      setLocalValue(value)
+      inputRef.current?.blur()
+    }
+  }
+  
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => handleButtonClick(-1)}
+        disabled={parseInt(localValue) <= min}
+        className="w-7 h-7 rounded bg-corp-bg-light hover:bg-corp-border text-corp-text-main disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        −
+      </button>
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        value={localValue}
+        onChange={handleInputChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        className="w-12 h-7 text-center font-medium text-corp-text-dark bg-white border border-corp-border rounded focus:outline-none focus:ring-2 focus:ring-corp-primary focus:border-transparent"
+      />
+      <button
+        type="button"
+        onClick={() => handleButtonClick(1)}
+        disabled={parseInt(localValue) >= max}
+        className="w-7 h-7 rounded bg-corp-bg-light hover:bg-corp-border text-corp-text-main disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+

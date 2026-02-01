@@ -611,6 +611,74 @@ export default function DocumentTemplatesAdmin() {
           onSave={loadTemplates}
         />
       )}
+
+      {/* Quick Preview Modal */}
+      {previewTemplate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-amber-500" />
+                  {previewTemplate.name}
+                </h2>
+                <p className="text-sm text-gray-500">{previewTemplate.doc_type} • Превью з тестовими даними</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <GhostBtn onClick={() => setSelectedTemplate(previewTemplate)}>
+                  <Code className="w-4 h-4 mr-1" /> Редагувати
+                </GhostBtn>
+                <button 
+                  onClick={() => { setPreviewTemplate(null); setPreviewHtml(''); }}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Preview Content */}
+            <div className="flex-1 overflow-auto bg-gray-100 p-4">
+              {previewLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500 mx-auto mb-3"></div>
+                    <p className="text-gray-500">Генерація превью...</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg shadow-lg mx-auto" style={{ maxWidth: '210mm' }}>
+                  <iframe
+                    srcDoc={previewHtml}
+                    className="w-full border-0"
+                    style={{ minHeight: '800px' }}
+                    title="Document Preview"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Footer with print button */}
+            <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+              <p className="text-sm text-gray-500">
+                ℹ️ Це превью з тестовими даними. Реальні документи генеруються з актуальними даними замовлення.
+              </p>
+              <div className="flex gap-2">
+                <GhostBtn onClick={() => {
+                  const printWindow = window.open('', '_blank');
+                  printWindow.document.write(previewHtml);
+                  printWindow.document.close();
+                  printWindow.focus();
+                  setTimeout(() => printWindow.print(), 500);
+                }}>
+                  🖨️ Друк
+                </GhostBtn>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

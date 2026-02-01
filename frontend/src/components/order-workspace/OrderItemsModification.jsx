@@ -4,7 +4,7 @@
  * Дозволяє додавати, змінювати кількість та видаляти товари на етапі комплектації
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
 import { Plus, Minus, X, RotateCcw, Search, Package, AlertTriangle, History, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -13,6 +13,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useToast } from '../../hooks/use-toast'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
+
+// Debounce хук для відкладеного збереження
+function useDebounce(callback, delay) {
+  const timeoutRef = useRef(null)
+  
+  const debouncedCallback = useCallback((...args) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => {
+      callback(...args)
+    }, delay)
+  }, [callback, delay])
+  
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+  
+  return debouncedCallback
+}
 
 export default function OrderItemsModification({ 
   orderId, 

@@ -182,21 +182,10 @@ function ItemRow({
           
           {/* Кількість */}
           {canEdit ? (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => onUpdateQuantity?.(item.inventory_id || item.id, Math.max(1, qty - 1))}
-                className="w-7 h-7 rounded bg-corp-bg-light hover:bg-corp-border text-corp-text-main"
-              >
-                −
-              </button>
-              <span className="w-8 text-center font-medium text-corp-text-dark">{qty}</span>
-              <button
-                onClick={() => onUpdateQuantity?.(item.inventory_id || item.id, qty + 1)}
-                className="w-7 h-7 rounded bg-corp-bg-light hover:bg-corp-border text-corp-text-main"
-              >
-                +
-              </button>
-            </div>
+            <QuantityInput
+              value={qty}
+              onChange={(newQty) => onUpdateQuantity?.(item.inventory_id || item.id, newQty)}
+            />
           ) : (
             <div className="text-sm font-medium text-corp-text-dark">
               {qty} шт.

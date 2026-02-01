@@ -1,7 +1,32 @@
 /* eslint-disable */
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import ZoneCard from '../ZoneCard'
 import { getImageUrl } from '../../../utils/imageHelper'
+
+// Debounce хук для відкладеного збереження
+function useDebounce(callback, delay) {
+  const timeoutRef = useRef(null)
+  
+  const debouncedCallback = useCallback((...args) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+    }
+    timeoutRef.current = setTimeout(() => {
+      callback(...args)
+    }, delay)
+  }, [callback, delay])
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+  
+  return debouncedCallback
+}
 
 /**
  * Zone: Items List - Список позицій

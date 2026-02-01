@@ -415,6 +415,46 @@ export default function DocumentTemplatesAdmin() {
     setExpandedTypes(prev => ({ ...prev, [type]: !prev[type] }));
   };
 
+  // Quick preview function
+  const handleQuickPreview = async (template) => {
+    setPreviewTemplate(template);
+    setPreviewLoading(true);
+    setPreviewHtml('');
+    
+    try {
+      // Get template content
+      const contentResponse = await fetch(
+        `${BACKEND_URL}/api/admin/templates/${template.doc_type}`,
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+      const contentData = await contentResponse.json();
+      
+      // Generate preview
+      const previewResponse = await fetch(
+        `${BACKEND_URL}/api/admin/templates/${template.doc_type}/preview`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({ content: contentData.content })
+        }
+      );
+      const previewData = await previewResponse.json();
+      
+      if (previewData.success) {
+        setPreviewHtml(previewData.html);
+      } else {
+        setPreviewHtml(`<div style="padding: 20px; color: red;">Помилка: ${previewData.error}</div>`);
+      }
+    } catch (e) {
+      setPreviewHtml(`<div style="padding: 20px; color: red;">Помилка завантаження: ${e.message}</div>`);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   const filteredTemplates = (list) => {
     if (filter === 'all') return list;
     if (filter === 'print') return list.filter(t => t.print_required);

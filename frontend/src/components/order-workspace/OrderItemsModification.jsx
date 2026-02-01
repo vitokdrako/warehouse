@@ -580,15 +580,25 @@ export default function OrderItemsModification({
 export function ItemModificationControls({ item, orderId, orderStatus, onUpdate }) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [localQty, setLocalQty] = useState(item.qty || 0)
+  const [isEditing, setIsEditing] = useState(false)
+  const inputRef = useRef(null)
   
   const allowedStatuses = ['processing', 'ready_for_issue', 'preparation', 'ready']
   const canModify = allowedStatuses.includes(orderStatus)
   
+  // Синхронізація з зовнішнім значенням
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalQty(item.qty || 0)
+    }
+  }, [item.qty, isEditing])
+  
   if (!canModify) return null
   
-  const handleQuantityChange = async (delta) => {
-    const newQty = (item.qty || 0) + delta
-    if (newQty < 0) return
+  // API виклик для збереження
+  const saveQuantity = async (newQty) => {
+    if (newQty < 0 || newQty === item.qty) return
     
     setLoading(true)
     try {
@@ -597,7 +607,7 @@ export function ItemModificationControls({ item, orderId, orderStatus, onUpdate 
         `${BACKEND_URL}/api/orders/${orderId}/items/${item.id}`,
         {
           quantity: newQty,
-          note: delta > 0 ? 'Збільшення кількості' : 'Зменшення кількості'
+          note: `Зміна кількості: ${item.qty} → ${newQty}`
         },
         { headers: { Authorization: `Bearer ${token}` } }
       )
@@ -615,8 +625,54 @@ export function ItemModificationControls({ item, orderId, orderStatus, onUpdate 
         description: err.response?.data?.detail || 'Не вдалося оновити',
         variant: 'destructive'
       })
+      // Повернути попереднє значення
+      setLocalQty(item.qty || 0)
     } finally {
       setLoading(false)
+    }
+  }
+  
+  // Debounced save - зберігати через 800ms після останньої зміни
+  const debouncedSave = useDebounce(saveQuantity, 800)
+  
+  // Кнопки +/-
+  const handleButtonClick = (delta) => {
+    const newQty = Math.max(0, localQty + delta)
+    setLocalQty(newQty)
+    debouncedSave(newQty)
+  }
+  
+  // Ручний ввід
+  const handleInputChange = (e) => {
+    const value = e.target.value
+    if (/^\d*$/.test(value)) {
+      const numValue = value === '' ? 0 : parseInt(value)
+      setLocalQty(numValue)
+      if (value !== '') {
+        debouncedSave(numValue)
+      }
+    }
+  }
+  
+  const handleFocus = () => {
+    setIsEditing(true)
+    setTimeout(() => inputRef.current?.select(), 0)
+  }
+  
+  const handleBlur = () => {
+    setIsEditing(false)
+    const numValue = Math.max(0, parseInt(localQty) || 0)
+    setLocalQty(numValue)
+    if (numValue !== item.qty) {
+      saveQuantity(numValue)
+    }
+  }
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') inputRef.current?.blur()
+    if (e.key === 'Escape') {
+      setLocalQty(item.qty || 0)
+      inputRef.current?.blur()
     }
   }
   
@@ -657,19 +713,30 @@ export function ItemModificationControls({ item, orderId, orderStatus, onUpdate 
       <Button
         size="sm"
         variant="ghost"
-        onClick={() => handleQuantityChange(-1)}
-        disabled={loading || (item.qty || 0) <= 0}
+        onClick={() => handleButtonClick(-1)}
+        disabled={loading || localQty <= 0}
         className="h-6 w-6 p-0"
       >
         <Minus className="h-3 w-3" />
       </Button>
       
-      <span className="w-6 text-center text-sm font-medium">{item.qty || 0}</span>
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="numeric"
+        value={localQty}
+        onChange={handleInputChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        disabled={loading}
+        className="w-10 h-6 text-center text-sm font-medium border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+      />
       
       <Button
         size="sm"
         variant="ghost"
-        onClick={() => handleQuantityChange(1)}
+        onClick={() => handleButtonClick(1)}
         disabled={loading}
         className="h-6 w-6 p-0"
       >

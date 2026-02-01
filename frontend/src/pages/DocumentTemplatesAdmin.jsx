@@ -506,6 +506,11 @@ export default function DocumentTemplatesAdmin() {
                             {t.critical_for?.includes('finance') && <Badge tone="success">💰</Badge>}
                             {!t.template_exists && <Badge tone="danger">Немає шаблону</Badge>}
                             
+                            {t.template_exists && (
+                              <GhostBtn onClick={() => handleQuickPreview(t)}>
+                                <Eye className="w-4 h-4 mr-1" /> Перегляд
+                              </GhostBtn>
+                            )}
                             <GhostBtn onClick={() => setSelectedTemplate(t)}>
                               <Code className="w-4 h-4 mr-1" /> Редагувати
                             </GhostBtn>

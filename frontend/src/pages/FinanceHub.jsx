@@ -1180,6 +1180,204 @@ export default function FinanceHub() {
                       })()}
                     </div>
                   )}
+
+                  {/* ============ БЛОК ШКОДИ (Damage) ============ */}
+                  {damageFees && (damageFees.total_fee > 0 || damageFees.items?.length > 0) && (
+                    <div className="rounded-2xl border-2 border-rose-200 bg-rose-50 p-4 mt-4">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="text-sm font-semibold text-rose-900">💔 Шкода / Пошкодження</div>
+                        <span className="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full">
+                          {damageFees.due_amount > 0 ? `До сплати: ${money(damageFees.due_amount)}` : 'Оплачено'}
+                        </span>
+                      </div>
+                      
+                      {/* Зафіксована шкода */}
+                      {damageFees.items?.length > 0 && (
+                        <div className="mb-3">
+                          <div className="text-xs text-rose-700 mb-2 uppercase font-medium">📋 Зафіксовано:</div>
+                          <div className="space-y-1 max-h-24 overflow-y-auto">
+                            {damageFees.items.map((d, i) => (
+                              <div key={i} className="flex items-center justify-between text-sm bg-white rounded-lg p-2">
+                                <span className="text-rose-800">{d.product_name} • {d.damage_type}</span>
+                                <span className="font-semibold text-rose-600">{money(d.fee)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Статистика */}
+                      <div className="grid grid-cols-3 gap-2 mb-3 text-center text-sm">
+                        <div className="bg-white rounded-lg p-2">
+                          <div className="text-xs text-slate-500">Всього</div>
+                          <div className="font-semibold">{money(damageFees.total_fee || 0)}</div>
+                        </div>
+                        <div className="bg-emerald-100 rounded-lg p-2">
+                          <div className="text-xs text-slate-500">Оплачено</div>
+                          <div className="font-semibold text-emerald-600">{money(damageFees.paid_amount || 0)}</div>
+                        </div>
+                        <div className="bg-rose-100 rounded-lg p-2">
+                          <div className="text-xs text-slate-500">До сплати</div>
+                          <div className="font-semibold text-rose-600">{money(damageFees.due_amount || 0)}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Форма оплати шкоди */}
+                      {damageFees.due_amount > 0 && (
+                        <div className="border-t border-rose-200 pt-3">
+                          <div className="flex gap-2">
+                            <Input 
+                              type="number"
+                              className="flex-1"
+                              placeholder={`Сума (макс ${damageFees.due_amount})`}
+                              value={damagePayAmount}
+                              onChange={(e) => setDamagePayAmount(e.target.value)}
+                            />
+                            <Button
+                              variant="danger"
+                              disabled={!damagePayAmount || Number(damagePayAmount) <= 0 || saving}
+                              onClick={async () => {
+                                setSaving(true);
+                                try {
+                                  await authFetch(`${BACKEND_URL}/api/finance/payments`, {
+                                    method: "POST",
+                                    body: JSON.stringify({
+                                      payment_type: "damage",
+                                      method: "cash",
+                                      amount: Number(damagePayAmount),
+                                      order_id: selectedOrderId,
+                                    })
+                                  });
+                                  setDamagePayAmount("");
+                                  await refreshAll();
+                                } catch (e) {
+                                  alert("Помилка: " + e.message);
+                                }
+                                setSaving(false);
+                              }}
+                            >
+                              Оплатити
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ============ БЛОК ПРОСТРОЧЕННЯ (Late fees) ============ */}
+                  {lateFeeData && (lateFeeData.total > 0 || lateFeeData.items?.length > 0) && (
+                    <div className="rounded-2xl border-2 border-amber-200 bg-amber-50 p-4 mt-4">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <div className="text-sm font-semibold text-amber-900">⏰ Прострочення</div>
+                        <span className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
+                          {lateFeeData.due > 0 ? `До сплати: ${money(lateFeeData.due)}` : lateFeeData.total > 0 ? 'Оплачено' : 'Немає'}
+                        </span>
+                      </div>
+                      
+                      {/* Записи прострочення */}
+                      {lateFeeData.items?.length > 0 && (
+                        <div className="mb-3 space-y-1 max-h-24 overflow-y-auto">
+                          {lateFeeData.items.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between text-sm bg-white rounded-lg p-2">
+                              <span className="text-amber-800 flex-1 truncate">{item.note || 'Прострочення'}</span>
+                              <div className="flex items-center gap-2 ml-2">
+                                <span className={item.status === 'pending' ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
+                                  {money(item.amount)}
+                                </span>
+                                {item.status === 'pending' && (
+                                  <button
+                                    className="text-xs text-emerald-600 hover:text-emerald-800"
+                                    onClick={async () => {
+                                      const method = prompt("Метод оплати: cash або bank", "cash");
+                                      if (!method) return;
+                                      setSaving(true);
+                                      try {
+                                        await authFetch(`${BACKEND_URL}/api/finance/order/${selectedOrderId}/charges/${item.id}/pay`, {
+                                          method: "POST",
+                                          body: JSON.stringify({ method })
+                                        });
+                                        await refreshAll();
+                                      } catch (e) {
+                                        alert("Помилка: " + e.message);
+                                      }
+                                      setSaving(false);
+                                    }}
+                                  >
+                                    💵 Оплатити
+                                  </button>
+                                )}
+                                {item.status !== 'pending' && (
+                                  <span className="text-xs text-emerald-600">✓</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Статистика */}
+                      <div className="grid grid-cols-3 gap-2 mb-3 text-center text-sm">
+                        <div className="bg-white rounded-lg p-2">
+                          <div className="text-xs text-slate-500">Всього</div>
+                          <div className="font-semibold">{money(lateFeeData.total || 0)}</div>
+                        </div>
+                        <div className="bg-emerald-100 rounded-lg p-2">
+                          <div className="text-xs text-slate-500">Оплачено</div>
+                          <div className="font-semibold text-emerald-600">{money(lateFeeData.paid || 0)}</div>
+                        </div>
+                        <div className="bg-amber-100 rounded-lg p-2">
+                          <div className="text-xs text-slate-500">До сплати</div>
+                          <div className="font-semibold text-amber-600">{money(lateFeeData.due || 0)}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Додати прострочення вручну */}
+                      <details className="border border-amber-200 rounded-xl bg-white">
+                        <summary className="px-3 py-2 text-sm font-medium cursor-pointer hover:bg-amber-50">➕ Додати прострочення вручну</summary>
+                        <div className="p-3 border-t border-amber-200 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input 
+                              type="number" 
+                              placeholder="Сума ₴" 
+                              value={newLateAmount}
+                              onChange={(e) => setNewLateAmount(e.target.value)}
+                            />
+                            <Input 
+                              placeholder="Опис (напр., 3 дні × ₴100)" 
+                              value={newLateNote}
+                              onChange={(e) => setNewLateNote(e.target.value)}
+                            />
+                          </div>
+                          <Button
+                            className="w-full"
+                            disabled={saving || Number(newLateAmount) <= 0}
+                            onClick={async () => {
+                              if (Number(newLateAmount) <= 0) return;
+                              setSaving(true);
+                              try {
+                                await authFetch(`${BACKEND_URL}/api/finance/order/${selectedOrderId}/charges/add`, {
+                                  method: "POST",
+                                  body: JSON.stringify({
+                                    type: "late",
+                                    amount: Number(newLateAmount),
+                                    note: newLateNote || "Ручне донарахування прострочення"
+                                  })
+                                });
+                                setNewLateAmount("");
+                                setNewLateNote("");
+                                await refreshAll();
+                              } catch (e) {
+                                alert("Помилка: " + e.message);
+                              }
+                              setSaving(false);
+                            }}
+                          >
+                            {saving ? "..." : "Додати"}
+                          </Button>
+                        </div>
+                      </details>
+                    </div>
+                  )}
                 </div>
               </Card>
             ) : (

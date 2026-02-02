@@ -248,14 +248,32 @@ export default function FinanceHub() {
       const res = await authFetch(`${BACKEND_URL}/api/analytics/order-damage-fee/${orderId}`);
       const data = await res.json();
       setDamageFees({
-        total: data.total_damage_fee || 0,
-        paid: data.paid_damage || 0,
-        due: data.due_amount || 0,
+        total_fee: data.total_damage_fee || 0,
+        paid_amount: data.paid_damage || 0,
+        due_amount: data.due_amount || 0,
         items: data.damage_items || []
       });
     } catch (e) {
       console.error("Load damage fees error:", e);
-      setDamageFees({ total: 0, paid: 0, due: 0, items: [] });
+      setDamageFees({ total_fee: 0, paid_amount: 0, due_amount: 0, items: [] });
+    }
+  }, []);
+  
+  // Load late fees (прострочення) for order
+  const loadLateFees = useCallback(async (orderId) => {
+    if (!orderId) return;
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/order/${orderId}/charges`);
+      const data = await res.json();
+      setLateFeeData({
+        total: (data.late?.due || 0) + (data.late?.paid || 0),
+        paid: data.late?.paid || 0,
+        due: data.late?.due || 0,
+        items: data.late?.items || []
+      });
+    } catch (e) {
+      console.error("Load late fees error:", e);
+      setLateFeeData({ total: 0, paid: 0, due: 0, items: [] });
     }
   }, []);
   

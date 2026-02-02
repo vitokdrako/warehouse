@@ -373,9 +373,85 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
     setLoadingDamage(false);
   };
 
+  // Load late fees (прострочення)
+  const loadLateFees = async () => {
+    setLoadingLate(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/order/${order.order_id}/charges`);
+      const data = await res.json();
+      setLateFees(data.late?.items || []);
+      setLateTotalDue(data.late?.due || 0);
+      setLatePaid(data.late?.paid || 0);
+    } catch (e) {
+      console.error("Error loading late fees:", e);
+      setLateFees([]);
+      setLateTotalDue(0);
+      setLatePaid(0);
+    }
+    setLoadingLate(false);
+  };
+
+  // Add new late fee
+  const addLateFee = async () => {
+    if (Number(newLateAmount) <= 0) return;
+    setSaving(true);
+    try {
+      await authFetch(`${BACKEND_URL}/api/finance/order/${order.order_id}/charges/add`, {
+        method: "POST",
+        body: JSON.stringify({
+          type: "late",
+          amount: Number(newLateAmount),
+          note: newLateNote || "Ручне донарахування прострочення"
+        })
+      });
+      setNewLateAmount("");
+      setNewLateNote("");
+      loadLateFees();
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+    }
+    setSaving(false);
+  };
+
+  // Pay late fee
+  const payLateFee = async (feeId) => {
+    const method = prompt("Метод оплати: cash або bank", "cash");
+    if (!method) return;
+    setSaving(true);
+    try {
+      await authFetch(`${BACKEND_URL}/api/finance/order/${order.order_id}/charges/${feeId}/pay`, {
+        method: "POST",
+        body: JSON.stringify({ method })
+      });
+      loadLateFees();
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+    }
+    setSaving(false);
+  };
+
+  // Delete late fee
+  const deleteLateFee = async (feeId) => {
+    if (!confirm("Видалити донарахування?")) return;
+    setSaving(true);
+    try {
+      await authFetch(`${BACKEND_URL}/api/finance/order/${order.order_id}/charges/${feeId}?charge_type=late`, {
+        method: "DELETE"
+      });
+      loadLateFees();
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+    }
+    setSaving(false);
+  };
+
   useEffect(() => {
     setRentAmount(rentDue);
     loadDamageFees();
+    loadLateFees();
   }, [order.order_id, rentDue]);
 
   const acceptRent = async () => {

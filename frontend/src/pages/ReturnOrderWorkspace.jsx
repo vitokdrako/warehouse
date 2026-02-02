@@ -406,6 +406,15 @@ export default function ReturnOrderWorkspace() {
       return
     }
     
+    // Перевірити чи це повернення товарів з продовження (partial_return статус)
+    const isFromExtension = order?.status === 'partial_return'
+    
+    if (isFromExtension) {
+      // Приймання товарів з продовження оренди
+      await acceptFromExtension()
+      return
+    }
+    
     // Якщо є неповернені товари - показати модалку часткового повернення
     if (notReturnedItems.length > 0) {
       setPartialReturnModal({ open: true, items: notReturnedItems })
@@ -414,6 +423,84 @@ export default function ReturnOrderWorkspace() {
     
     // Повне повернення
     await executeFullReturn()
+  }
+  
+  // Прийняти товари з продовження оренди
+  const acceptFromExtension = async () => {
+    setSaving(true)
+    try {
+      // Знайти товари які потрібно прийняти (returned_qty > 0 та ще в оренді)
+      const itemsToAccept = items
+        .filter(item => {
+          // Товар в оренді якщо rented_qty > 0 та повністю ще не повернуто
+          const wasInExtension = item.rented_qty > 0
+          const hasReturned = item.returned_qty > 0
+          return wasInExtension && hasReturned
+        })
+        .map(item => ({
+          sku: item.sku,
+          qty: item.rented_qty,
+          returned_qty: item.returned_qty
+        }))
+      
+      if (itemsToAccept.length === 0) {
+        toast({
+          title: '⚠️ Увага',
+          description: 'Відмітьте товари які повернено',
+          variant: 'destructive'
+        })
+        setSaving(false)
+        return
+      }
+      
+      console.log('[ReturnWorkspace] Accepting from extension:', itemsToAccept)
+      
+      const res = await axios.post(`${BACKEND_URL}/api/partial-returns/order/${orderId}/accept-from-extension`, {
+        items: itemsToAccept,
+        notes: notes
+      })
+      
+      const result = res.data
+      console.log('[ReturnWorkspace] Accept result:', result)
+      
+      // Оновити timeline
+      setTimeline(prev => [
+        { 
+          text: result.all_completed 
+            ? `Всі товари повернуто. Нараховано прострочення: ₴${result.total_late_fee?.toFixed(2) || '0.00'}` 
+            : `Прийнято ${result.items_accepted} позицій. Залишилось ${result.active_extensions_remaining} на продовженні`,
+          at: nowISO(), 
+          tone: result.all_completed ? 'green' : 'amber' 
+        },
+        ...prev
+      ])
+      
+      if (result.all_completed) {
+        setIsReturnCompleted(true)
+        toast({ 
+          title: '✅ Замовлення закрито', 
+          description: `Нараховано прострочення: ₴${result.total_late_fee?.toFixed(2) || '0.00'}` 
+        })
+        setTimeout(() => navigate('/manager'), 2000)
+      } else {
+        toast({ 
+          title: '📦 Товари прийнято', 
+          description: result.message
+        })
+        // Перезавантажити дані
+        loadOrder()
+      }
+      
+    } catch (err) {
+      console.error('Error accepting from extension:', err)
+      toast({
+        title: '❌ Помилка',
+        description: err.response?.data?.detail || 'Не вдалося прийняти товари',
+        variant: 'destructive'
+      })
+    } finally {
+      setSaving(false)
+    }
   }
   
   // Обробник підтвердження часткового повернення

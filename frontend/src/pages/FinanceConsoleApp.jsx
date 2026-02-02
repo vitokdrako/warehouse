@@ -708,54 +708,123 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
           </div>
         </Card>
 
-        {/* Damage Payment */}
+        {/* ============ ШКОДА (Damage) - Нова логіка ============ */}
         <Card 
-          title="Оплата шкоди" 
-          subtitle="Доплата за пошкодження" 
-          right={hasDamage ? <Pill tone={damageDue > 0 ? "danger" : "ok"} label="damage" /> : <Pill tone="neutral" label="—" />}
+          title="💔 Шкода / Пошкодження" 
+          subtitle="Зафіксовано → Нараховано → Оплачено" 
+          right={
+            chargesData.damage?.due > 0 ? (
+              <Pill tone="danger" label={`До сплати: ${money(chargesData.damage.due)}`} />
+            ) : damageFees.length > 0 ? (
+              <Pill tone="warn" label={`Зафіксовано: ${money(totalDamageFee)}`} />
+            ) : (
+              <Pill tone="ok" label="—" />
+            )
+          }
         >
           {loadingDamage ? (
             <div className="text-center text-corp-text-muted py-4">Завантаження...</div>
-          ) : hasDamage ? (
-            <>
-              <div className="rounded-xl bg-corp-bg-page border border-corp-border p-3 mb-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-corp-text-main">Всього шкоди:</span>
-                  <span className="font-semibold">{money(totalDamageFee)}</span>
-                </div>
-                <div className="flex justify-between text-sm mt-1">
-                  <span className="text-corp-text-main">Сплачено:</span>
-                  <span className="font-medium text-emerald-600">{money(damagePaid)}</span>
-                </div>
-                <div className="flex justify-between text-sm mt-1 pt-1 border-t border-corp-border">
-                  <span className="text-corp-text-main font-medium">До сплати:</span>
-                  <span className="font-bold text-rose-600">{money(damageDue)}</span>
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="text-xs text-corp-text-muted">Метод</label>
-                  <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={damageMethod} onChange={(e) => setDamageMethod(e.target.value)}>
-                    <option value="cash">Готівка</option>
-                    <option value="bank">Безготівка</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-corp-text-muted">Сума (₴)</label>
-                  <input className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" value={damageAmount} onChange={(e) => setDamageAmount(e.target.value)} type="number" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <PrimaryBtn variant="danger" disabled={Number(damageAmount) <= 0 || damageDue <= 0 || saving} onClick={acceptDamagePayment}>
-                  {saving ? "..." : "Прийняти оплату шкоди"}
-                </PrimaryBtn>
-              </div>
-            </>
           ) : (
-            <div className="text-center text-corp-text-muted py-4">
-              <span className="text-2xl block mb-2">✓</span>
-              Пошкоджень не зафіксовано
-            </div>
+            <>
+              {/* Зафіксована шкода (з product_damage_history) */}
+              {damageFees.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-xs font-medium text-corp-text-muted mb-2 uppercase tracking-wide">📋 Зафіксовано (з повернення)</div>
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2 max-h-32 overflow-y-auto">
+                    {damageFees.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium">{item.product_name}</span>
+                          <span className="text-amber-700 ml-2">• {item.damage_type}</span>
+                          {item.qty > 1 && <span className="text-amber-500 ml-1">×{item.qty}</span>}
+                        </div>
+                        <span className="font-semibold text-amber-800 ml-2">{money(item.fee)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex justify-between items-center">
+                    <span className="text-sm text-corp-text-muted">Всього зафіксовано:</span>
+                    <span className="font-bold text-amber-800">{money(totalDamageFee)}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Нараховані позиції шкоди (з fin_payments type='damage') */}
+              {chargesData.damage?.items?.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-xs font-medium text-corp-text-muted mb-2 uppercase tracking-wide">💰 Нараховано (очікує оплати)</div>
+                  <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 space-y-2 max-h-32 overflow-y-auto">
+                    {chargesData.damage.items.filter(item => item.fee > 0).map((item, i) => (
+                      <div key={item.id || i} className="flex items-center justify-between text-sm p-2 bg-white rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <span className="text-rose-700">{item.note || item.damage_type || 'Шкода'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className="font-semibold text-rose-600">{money(item.fee)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Статистика */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="rounded-xl border bg-amber-50 p-2 text-center">
+                  <div className="text-xs text-corp-text-muted">Зафіксовано</div>
+                  <div className="font-semibold text-amber-700">{money(totalDamageFee)}</div>
+                </div>
+                <div className="rounded-xl border bg-emerald-50 p-2 text-center">
+                  <div className="text-xs text-corp-text-muted">Оплачено</div>
+                  <div className="font-semibold text-emerald-600">{money(damagePaid)}</div>
+                </div>
+                <div className="rounded-xl border bg-rose-50 p-2 text-center">
+                  <div className="text-xs text-corp-text-muted">До сплати</div>
+                  <div className="font-semibold text-rose-600">{money(damageDue)}</div>
+                </div>
+              </div>
+
+              {/* Форма нарахування та оплати */}
+              {damageDue > 0 && (
+                <div className="border-t border-corp-border pt-3 mt-3">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div>
+                      <label className="text-xs text-corp-text-muted">Метод оплати</label>
+                      <select className="mt-1 h-10 w-full rounded-xl border border-corp-border bg-white px-3 text-sm" value={damageMethod} onChange={(e) => setDamageMethod(e.target.value)}>
+                        <option value="cash">Готівка</option>
+                        <option value="bank">Безготівка</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-corp-text-muted">Сума (₴)</label>
+                      <input 
+                        className="mt-1 h-10 w-full rounded-xl border border-corp-border px-3 text-sm" 
+                        value={damageAmount} 
+                        onChange={(e) => setDamageAmount(e.target.value)} 
+                        type="number" 
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <PrimaryBtn 
+                        variant="danger" 
+                        disabled={Number(damageAmount) <= 0 || saving} 
+                        onClick={acceptDamagePayment}
+                      >
+                        {saving ? "..." : "Прийняти оплату"}
+                      </PrimaryBtn>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Якщо немає шкоди */}
+              {damageFees.length === 0 && chargesData.damage?.items?.length === 0 && (
+                <div className="text-center text-corp-text-muted py-4">
+                  <span className="text-2xl block mb-2">✓</span>
+                  Пошкоджень не зафіксовано
+                </div>
+              )}
+            </>
           )}
         </Card>
 

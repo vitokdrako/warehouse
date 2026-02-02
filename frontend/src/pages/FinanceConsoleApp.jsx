@@ -601,12 +601,15 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
             {awaitingAdditionalPayment && (
               <Badge tone="danger">⚠️ Очікує доплати</Badge>
             )}
-            {isFullyPaid && (
+            {isFullyPaid && lateTotalDue <= 0 && (
               <Badge tone="ok">✓ Повністю сплачено</Badge>
             )}
             <Pill tone={rentDue > 0 ? "warn" : "ok"} icon={rentDue > 0 ? "⏳" : "✓"} label={rentDue > 0 ? `Оренда ${money(rentDue)}` : "Оренда OK"} />
             {hasDamage && (
               <Pill tone={damageDue > 0 ? "danger" : "ok"} icon="🔧" label={damageDue > 0 ? `Шкода ${money(damageDue)}` : "Шкода OK"} />
+            )}
+            {(lateTotalDue > 0 || lateFees.length > 0) && (
+              <Pill tone={lateTotalDue > 0 ? "warn" : "ok"} icon="⏰" label={lateTotalDue > 0 ? `Прострочення ${money(lateTotalDue)}` : "Прострочення OK"} />
             )}
             <Badge tone="neutral">{order.status}</Badge>
           </div>

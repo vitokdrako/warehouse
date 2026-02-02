@@ -274,9 +274,21 @@ export default function FinanceHub() {
         due: data.late?.due || 0,
         items: data.late?.items || []
       });
+      
+      // Завантажуємо орієнтовну суму прострочення з order_extensions
+      try {
+        const extRes = await authFetch(`${BACKEND_URL}/api/partial-returns/order/${orderId}/extension-summary`);
+        const extData = await extRes.json();
+        // Сума = active.total_charged + completed.total_charged (якщо ще не оплачено)
+        const estimated = (extData.active?.total_charged || 0) + (extData.completed?.total_charged || 0);
+        setEstimatedLateFee(estimated);
+      } catch (e) {
+        setEstimatedLateFee(0);
+      }
     } catch (e) {
       console.error("Load late fees error:", e);
       setLateFeeData({ total: 0, paid: 0, due: 0, items: [] });
+      setEstimatedLateFee(0);
     }
   }, []);
   

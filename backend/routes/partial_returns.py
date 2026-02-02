@@ -749,3 +749,295 @@ async def process_loss_from_damage_modal(
         print(f"[ProcessLoss] ❌ Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+# === НОВИЙ ENDPOINT: Прийняти товари з продовження ===
+
+class AcceptExtensionItem(BaseModel):
+    """Один товар для приймання з продовження"""
+    extension_id: Optional[int] = None
+    sku: str
+    qty: int
+    returned_qty: int  # скільки реально повернули
+
+
+class AcceptExtensionsRequest(BaseModel):
+    """Запит на приймання товарів з продовження"""
+    items: List[AcceptExtensionItem]
+    notes: Optional[str] = None
+
+
+@router.post("/order/{order_id}/accept-from-extension")
+async def accept_items_from_extension(
+    order_id: int,
+    data: AcceptExtensionsRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Прийняти товари які були на продовженні оренди.
+    
+    Логіка:
+    1. Для кожного товару знайти активне продовження
+    2. Розрахувати дні прострочення (від original_end_date до сьогодні)
+    3. Створити запис fin_payments з типом 'late' (менеджер може потім скоригувати)
+    4. Розморозити товари (повернути в доступні)
+    5. Записати в історію (partial_return_log та order_lifecycle)
+    6. Якщо всі товари повернуто - закрити замовлення
+    """
+    ensure_tables_exist(db)
+    
+    try:
+        from datetime import datetime
+        today = datetime.now().date()
+        
+        results = []
+        total_late_fee = 0
+        items_accepted = 0
+        
+        for item in data.items:
+            # Знайти активне продовження для цього SKU
+            ext = db.execute(text("""
+                SELECT id, product_id, sku, name, qty, original_end_date, daily_rate, adjusted_daily_rate
+                FROM order_extensions 
+                WHERE order_id = :order_id 
+                  AND sku = :sku 
+                  AND status = 'active'
+                LIMIT 1
+            """), {"order_id": order_id, "sku": item.sku}).fetchone()
+            
+            if not ext:
+                print(f"[AcceptExt] ⚠️ Продовження для {item.sku} не знайдено")
+                continue
+            
+            ext_id, product_id, sku, name, qty, original_end, daily_rate, adj_rate = ext
+            
+            # Розрахувати дні прострочення
+            if original_end:
+                days = (today - original_end).days
+                if days < 0:
+                    days = 0
+            else:
+                days = 0
+            
+            # Використати скориговану ставку якщо є
+            rate = float(adj_rate or daily_rate or 0)
+            returned_qty = item.returned_qty or qty
+            
+            # Розрахувати суму прострочення
+            late_fee = days * rate * returned_qty
+            total_late_fee += late_fee
+            
+            print(f"[AcceptExt] 📦 {sku}: {returned_qty} шт, {days} днів × ₴{rate:.2f} = ₴{late_fee:.2f}")
+            
+            # Оновити статус продовження
+            if returned_qty >= qty:
+                # Повністю повернуто - закрити продовження
+                db.execute(text("""
+                    UPDATE order_extensions
+                    SET status = 'completed',
+                        days_extended = :days,
+                        total_charged = :total,
+                        completed_at = NOW()
+                    WHERE id = :ext_id
+                """), {"ext_id": ext_id, "days": days, "total": late_fee})
+            else:
+                # Частково повернуто - зменшити кількість
+                new_qty = qty - returned_qty
+                db.execute(text("""
+                    UPDATE order_extensions
+                    SET qty = :new_qty
+                    WHERE id = :ext_id
+                """), {"ext_id": ext_id, "new_qty": new_qty})
+            
+            # Створити фінансову транзакцію (тип 'late' - прострочення)
+            if late_fee > 0:
+                db.execute(text("""
+                    INSERT INTO fin_payments 
+                    (order_id, payment_type, amount, currency, status, note, occurred_at)
+                    VALUES (:order_id, 'late', :amount, 'UAH', 'pending', :description, NOW())
+                """), {
+                    "order_id": order_id,
+                    "amount": late_fee,
+                    "description": f"Прострочення: {sku} x{returned_qty}: {days} днів × ₴{rate:.2f} = ₴{late_fee:.2f}"
+                })
+            
+            # Записати в лог часткового повернення
+            db.execute(text("""
+                INSERT INTO partial_return_log 
+                (order_id, product_id, sku, action, qty, amount, notes)
+                VALUES (:order_id, :product_id, :sku, 'returned', :qty, :amount, :notes)
+            """), {
+                "order_id": order_id,
+                "product_id": product_id,
+                "sku": sku,
+                "qty": returned_qty,
+                "amount": late_fee,
+                "notes": f"Повернено після {days} днів прострочення"
+            })
+            
+            # Розморозити товари (повернути в доступні)
+            db.execute(text("""
+                UPDATE products 
+                SET quantity = quantity + :qty
+                WHERE product_id = :product_id
+            """), {"product_id": product_id, "qty": returned_qty})
+            
+            items_accepted += 1
+            results.append({
+                "sku": sku,
+                "name": name,
+                "qty": returned_qty,
+                "days": days,
+                "rate": rate,
+                "late_fee": late_fee,
+                "status": "completed" if returned_qty >= qty else "partial"
+            })
+        
+        # Перевірити чи залишились активні продовження
+        active_count = db.execute(text("""
+            SELECT COUNT(*) FROM order_extensions 
+            WHERE order_id = :order_id AND status = 'active'
+        """), {"order_id": order_id}).scalar()
+        
+        all_completed = active_count == 0
+        
+        # Записати в lifecycle
+        items_list = ", ".join([f"{r['sku']} x{r['qty']}" for r in results])
+        db.execute(text("""
+            INSERT INTO order_lifecycle 
+            (order_id, stage, notes, created_by_name, created_at)
+            VALUES (:order_id, :stage, :notes, 'system', NOW())
+        """), {
+            "order_id": order_id,
+            "stage": "items_returned_from_extension",
+            "notes": f"Прийнято з продовження: {items_list}. Нараховано прострочення: ₴{total_late_fee:.2f}"
+        })
+        
+        # Якщо всі товари повернуто - можна закривати замовлення
+        if all_completed:
+            db.execute(text("""
+                UPDATE orders 
+                SET status = 'returned',
+                    has_partial_return = 0,
+                    updated_at = NOW()
+                WHERE order_id = :order_id
+            """), {"order_id": order_id})
+            
+            db.execute(text("""
+                INSERT INTO order_lifecycle 
+                (order_id, stage, notes, created_by_name, created_at)
+                VALUES (:order_id, 'returned', 'Всі товари повернуто (завершено часткове повернення)', 'system', NOW())
+            """), {"order_id": order_id})
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "items_accepted": items_accepted,
+            "total_late_fee": total_late_fee,
+            "results": results,
+            "active_extensions_remaining": active_count,
+            "all_completed": all_completed,
+            "message": "Всі товари повернуто!" if all_completed else f"Прийнято {items_accepted} позицій. Залишилось {active_count} на продовженні."
+        }
+        
+    except Exception as e:
+        db.rollback()
+        print(f"[AcceptExt] ❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/order/{order_id}/extension-summary")
+async def get_extension_summary(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати підсумок по продовженнях для замовлення.
+    Показує активні та завершені продовження з нарахуваннями.
+    """
+    ensure_tables_exist(db)
+    
+    from datetime import datetime
+    today = datetime.now().date()
+    
+    # Активні продовження
+    active = db.execute(text("""
+        SELECT id, sku, name, qty, original_end_date, daily_rate, adjusted_daily_rate
+        FROM order_extensions 
+        WHERE order_id = :order_id AND status = 'active'
+        ORDER BY sku
+    """), {"order_id": order_id}).fetchall()
+    
+    active_items = []
+    total_pending = 0
+    
+    for row in active:
+        ext_id, sku, name, qty, original_end, daily_rate, adj_rate = row
+        
+        # Розрахувати поточне прострочення
+        if original_end:
+            days = (today - original_end).days
+            if days < 0:
+                days = 0
+        else:
+            days = 0
+        
+        rate = float(adj_rate or daily_rate or 0)
+        pending = days * rate * qty
+        total_pending += pending
+        
+        active_items.append({
+            "extension_id": ext_id,
+            "sku": sku,
+            "name": name,
+            "qty": qty,
+            "original_end_date": str(original_end) if original_end else None,
+            "days_overdue": days,
+            "daily_rate": rate,
+            "pending_amount": pending
+        })
+    
+    # Завершені продовження
+    completed = db.execute(text("""
+        SELECT id, sku, name, qty, days_extended, total_charged, completed_at, status
+        FROM order_extensions 
+        WHERE order_id = :order_id AND status IN ('completed', 'lost')
+        ORDER BY completed_at DESC
+    """), {"order_id": order_id}).fetchall()
+    
+    completed_items = []
+    total_charged = 0
+    
+    for row in completed:
+        ext_id, sku, name, qty, days, charged, completed_at, status = row
+        charged = float(charged or 0)
+        total_charged += charged
+        
+        completed_items.append({
+            "extension_id": ext_id,
+            "sku": sku,
+            "name": name,
+            "qty": qty,
+            "days_extended": days,
+            "amount_charged": charged,
+            "completed_at": str(completed_at) if completed_at else None,
+            "status": status
+        })
+    
+    return {
+        "order_id": order_id,
+        "active": {
+            "count": len(active_items),
+            "items": active_items,
+            "total_pending": total_pending
+        },
+        "completed": {
+            "count": len(completed_items),
+            "items": completed_items,
+            "total_charged": total_charged
+        },
+        "grand_total": total_pending + total_charged
+    }

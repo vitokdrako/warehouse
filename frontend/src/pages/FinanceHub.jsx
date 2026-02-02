@@ -151,9 +151,12 @@ export default function FinanceHub() {
   const [documents, setDocuments] = useState([]);
   const [damageFees, setDamageFees] = useState({ total_fee: 0, paid_amount: 0, due_amount: 0, items: [] });
   const [lateFeeData, setLateFeeData] = useState({ total: 0, paid: 0, due: 0, items: [] });
+  const [estimatedLateFee, setEstimatedLateFee] = useState(0); // Орієнтовна сума прострочення
   
   // Damage and late fee payment form states
   const [damagePayAmount, setDamagePayAmount] = useState("");
+  const [newDamageAmount, setNewDamageAmount] = useState("");
+  const [newDamageNote, setNewDamageNote] = useState("");
   const [newLateAmount, setNewLateAmount] = useState("");
   const [newLateNote, setNewLateNote] = useState("");
   

@@ -233,11 +233,49 @@ async def get_calendar_events(
     # ============================================================
     # 2. CLEANING / LAUNDRY - Мийка, Прання, Реставрація
     # ============================================================
-    # Пропускаємо - таблиця product_cleaning не існує в поточній схемі БД
-    # Якщо потрібно - можна додати підтримку product_service таблиці
+    if should_include("cleaning") or should_include("laundry") or should_include("repair"):
+        try:
+            cleaning_query = """
+                SELECT 
+                    id, product_id, sku, cleaning_type, status,
+                    started_at, completed_at, notes
+                FROM product_cleaning
+                WHERE status IN ('pending', 'in_progress')
+                AND (
+                    DATE(started_at) BETWEEN :date_from AND :date_to
+                    OR DATE(created_at) BETWEEN :date_from AND :date_to
+                )
+            """
+            
+            cleaning_result = db.execute(text(cleaning_query), {
+                "date_from": date_from,
+                "date_to": date_to
+            })
+            
+            for row in cleaning_result:
+                cleaning_type = row[3]
+                event_type = "repair" if cleaning_type == "repair" else (
+                    "laundry" if cleaning_type == "laundry" else "cleaning"
+                )
+                
+                if should_include(event_type):
+                    events.append({
+                        "id": f"cleaning-{row[0]}",
+                        "type": event_type,
+                        "date": str(row[5])[:10] if row[5] else date_from,
+                        "title": f"{row[2] or row[1]} · {cleaning_type}",
+                        "subtitle": f"{row[4]} · {row[7] or ''}",
+                        "cleaning_id": row[0],
+                        "product_id": row[1],
+                        "sku": row[2],
+                        "status": row[4],
+                        "priority": 3,
+                    })
+        except Exception as e:
+            print(f"[Calendar] Error loading cleaning: {e}")
     
     # ============================================================
-    # 4. DAMAGE CASES - Шкода (з product_damage_history)
+    # 4. DAMAGE - Шкода (з product_damage_history)
     # ============================================================
     if should_include("damage"):
         try:

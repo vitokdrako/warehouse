@@ -934,6 +934,14 @@ async def accept_items_from_extension(
                 WHERE order_id = :order_id
             """), {"order_id": order_id})
             
+            # ✅ ВАЖЛИВО: Оновити issue_card теж!
+            db.execute(text("""
+                UPDATE issue_cards 
+                SET status = 'returned',
+                    updated_at = NOW()
+                WHERE order_id = :order_id
+            """), {"order_id": order_id})
+            
             db.execute(text("""
                 INSERT INTO order_lifecycle 
                 (order_id, stage, notes, created_by_name, created_at)

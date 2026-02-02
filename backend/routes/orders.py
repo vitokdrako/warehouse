@@ -567,6 +567,7 @@ async def get_order_details(
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.product_id
         WHERE oi.order_id = :order_id
+          AND (oi.status IS NULL OR oi.status != 'refused')
     """), {"order_id": row[0]})
     
     items = []

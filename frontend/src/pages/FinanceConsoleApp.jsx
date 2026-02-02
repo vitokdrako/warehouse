@@ -756,6 +756,92 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
           )}
         </Card>
 
+        {/* Late Fees (Прострочення) */}
+        <Card 
+          title="⏰ Прострочення" 
+          subtitle="Часткове повернення" 
+          right={lateTotalDue > 0 ? <Pill tone="warn" label={`${money(lateTotalDue)}`} /> : lateFees.length > 0 ? <Pill tone="ok" label="Оплачено" /> : <Pill tone="neutral" label="—" />}
+        >
+          {loadingLate ? (
+            <div className="text-center text-corp-text-muted py-4">Завантаження...</div>
+          ) : (
+            <>
+              {/* Existing late fees list */}
+              {lateFees.length > 0 && (
+                <div className="rounded-xl bg-corp-bg-page border border-corp-border p-3 mb-3 max-h-40 overflow-y-auto">
+                  <div className="space-y-2">
+                    {lateFees.map((fee) => (
+                      <div key={fee.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-white border">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs text-corp-text-muted truncate">{fee.note}</div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                          <span className={fee.status === 'pending' ? "font-medium text-amber-600" : "font-medium text-emerald-600"}>
+                            {money(fee.amount)}
+                          </span>
+                          {fee.status === 'pending' ? (
+                            <>
+                              <button onClick={() => payLateFee(fee.id)} className="text-emerald-600 hover:text-emerald-800 text-xs px-1" title="Оплатити">💵</button>
+                              <button onClick={() => deleteLateFee(fee.id)} className="text-rose-500 hover:text-rose-700 text-xs px-1" title="Видалити">🗑️</button>
+                            </>
+                          ) : (
+                            <span className="text-xs text-emerald-600">✓</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="rounded-xl border bg-corp-bg-page p-2 text-center">
+                  <div className="text-xs text-corp-text-muted">Всього</div>
+                  <div className="font-semibold">{money(lateTotalDue + latePaid)}</div>
+                </div>
+                <div className="rounded-xl border bg-emerald-50 p-2 text-center">
+                  <div className="text-xs text-corp-text-muted">Оплачено</div>
+                  <div className="font-semibold text-emerald-600">{money(latePaid)}</div>
+                </div>
+                <div className="rounded-xl border bg-amber-50 p-2 text-center">
+                  <div className="text-xs text-corp-text-muted">До сплати</div>
+                  <div className="font-semibold text-amber-600">{money(lateTotalDue)}</div>
+                </div>
+              </div>
+              
+              {/* Add new late fee */}
+              <details className="border border-corp-border rounded-xl">
+                <summary className="px-3 py-2 text-sm font-medium cursor-pointer hover:bg-corp-bg-page">➕ Додати прострочення вручну</summary>
+                <div className="p-3 border-t border-corp-border space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input 
+                      type="number" 
+                      placeholder="Сума ₴" 
+                      className="rounded-lg border border-corp-border px-3 py-2 text-sm"
+                      value={newLateAmount}
+                      onChange={(e) => setNewLateAmount(e.target.value)}
+                    />
+                    <input 
+                      placeholder="Опис (напр., 3 дні × ₴100)" 
+                      className="rounded-lg border border-corp-border px-3 py-2 text-sm"
+                      value={newLateNote}
+                      onChange={(e) => setNewLateNote(e.target.value)}
+                    />
+                  </div>
+                  <PrimaryBtn 
+                    className="w-full"
+                    onClick={addLateFee}
+                    disabled={saving || Number(newLateAmount) <= 0}
+                  >
+                    {saving ? "..." : "Додати"}
+                  </PrimaryBtn>
+                </div>
+              </details>
+            </>
+          )}
+        </Card>
+
         {/* Deposit */}
         <Card title="Прийом застави" subtitle="CASH/BANK → DEP_LIAB" right={<Pill tone="info" label="hold" />}>
           <div className="grid gap-3 md:grid-cols-3">

@@ -1176,6 +1176,71 @@ async def accept_order(
         "status": "processing"
     }
 
+
+@router.delete("/{order_id}/items/{item_id}")
+async def delete_order_item(
+    order_id: int,
+    item_id: int,
+    current_user: dict = Depends(get_current_user_dependency),
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Видалити позицію з замовлення
+    Використовується для видалення позицій під час комплектації
+    """
+    try:
+        # Перевіряємо, що позиція існує і належить цьому замовленню
+        item = db.execute(text("""
+            SELECT oi.id, oi.product_id, oi.quantity, p.sku, p.name
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.product_id
+            WHERE oi.id = :item_id AND oi.order_id = :order_id
+        """), {"item_id": item_id, "order_id": order_id}).fetchone()
+        
+        if not item:
+            raise HTTPException(status_code=404, detail="Позицію не знайдено")
+        
+        # Видаляємо позицію
+        db.execute(text("""
+            DELETE FROM order_items WHERE id = :item_id
+        """), {"item_id": item_id})
+        
+        # Логуємо видалення
+        product_info = f"{item[3] or ''} {item[4] or ''} x{item[2]}"
+        db.execute(text("""
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_by_id, created_by_name, created_at)
+            VALUES (:order_id, 'item_removed', :notes, :created_by, :created_by_id, :created_by_name, NOW())
+        """), {
+            "order_id": order_id,
+            "notes": f"Видалено позицію: {product_info}",
+            "created_by": current_user.get("email", "system"),
+            "created_by_id": current_user.get("id"),
+            "created_by_name": current_user.get("name", current_user.get("email", "system"))
+        })
+        
+        # Перераховуємо total_price замовлення
+        db.execute(text("""
+            UPDATE orders 
+            SET total_price = (
+                SELECT COALESCE(SUM(price * quantity), 0) 
+                FROM order_items 
+                WHERE order_id = :order_id
+            ),
+            updated_at = NOW()
+            WHERE order_id = :order_id
+        """), {"order_id": order_id})
+        
+        db.commit()
+        
+        return {"success": True, "message": f"Позицію {product_info} видалено"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.delete("/{order_id}")
 async def delete_order(
     order_id: int,

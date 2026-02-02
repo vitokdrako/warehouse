@@ -295,6 +295,17 @@ async def process_partial_return(
                 # === ПРОДОВЖЕННЯ ОРЕНДИ ===
                 daily_rate = item.adjusted_daily_rate or item.daily_rate or get_product_daily_rate(db, item.product_id)
                 
+                # ✅ ВИПРАВЛЕННЯ: Перевірити чи продовження вже існує
+                existing = db.execute(text("""
+                    SELECT id FROM order_extensions 
+                    WHERE order_id = :order_id AND sku = :sku AND status = 'active'
+                """), {"order_id": order_id, "sku": item.sku}).fetchone()
+                
+                if existing:
+                    # Продовження вже існує - оновити кількість якщо потрібно
+                    print(f"[PartialReturn] ℹ️ Продовження для {item.sku} вже існує (ID: {existing[0]}), пропускаємо")
+                    continue
+                
                 db.execute(text("""
                     INSERT INTO order_extensions 
                     (order_id, product_id, sku, name, qty, original_end_date, daily_rate, adjusted_daily_rate, status, notes)

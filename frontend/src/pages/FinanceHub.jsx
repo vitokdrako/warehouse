@@ -293,6 +293,7 @@ export default function FinanceHub() {
       loadPayments(selectedOrderId);
       loadDocuments(selectedOrderId);
       loadDamageFees(selectedOrderId);
+      loadLateFees(selectedOrderId);
       loadOrderPayer(selectedOrderId);
     }
   }, [selectedOrderId]);
@@ -309,7 +310,8 @@ export default function FinanceHub() {
       loadDeposits(),
       loadPayoutsStats(),
       selectedOrderId && loadPayments(selectedOrderId),
-      selectedOrderId && loadDamageFees(selectedOrderId)
+      selectedOrderId && loadDamageFees(selectedOrderId),
+      selectedOrderId && loadLateFees(selectedOrderId)
     ]);
   }, [selectedOrderId]);
   

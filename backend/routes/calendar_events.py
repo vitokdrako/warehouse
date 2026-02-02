@@ -353,31 +353,36 @@ async def get_calendar_events(
             if should_include("deposit_return"):
                 deposits_query = """
                     SELECT 
-                        dh.id, dh.order_id, dh.amount, dh.status,
-                        dh.created_at, o.order_number, o.customer_name, o.return_date
+                        dh.id, dh.order_id, dh.held_amount, dh.status,
+                        dh.opened_at, o.order_number, o.customer_name, o.return_date,
+                        dh.currency, dh.used_amount, dh.refunded_amount
                     FROM fin_deposit_holds dh
                     LEFT JOIN orders o ON dh.order_id = o.order_id
                     WHERE dh.status = 'holding'
                     AND o.status = 'returned'
                 """
                 
-                deposits_result = db.execute(text(deposits_query), {
-                    "date_from": date_from,
-                    "date_to": date_to
-                })
+                deposits_result = db.execute(text(deposits_query))
                 
                 for row in deposits_result:
-                    event_date = row[7] or row[4]  # return_date or created_at
-                    if event_date:
+                    event_date = row[7] or row[4]  # return_date or opened_at
+                    held = float(row[2] or 0)
+                    used = float(row[9] or 0)
+                    refunded = float(row[10] or 0)
+                    available = held - used - refunded
+                    
+                    if event_date and available > 0:
+                        currency_symbol = "$" if row[8] == "USD" else ("€" if row[8] == "EUR" else "₴")
                         events.append({
                             "id": f"deposit-{row[0]}",
                             "type": "deposit_return",
                             "date": str(event_date)[:10],
                             "title": f"#{row[5]} {row[6] or ''}",
-                            "subtitle": f"Повернути заставу ₴{float(row[2] or 0):,.0f}",
+                            "subtitle": f"Повернути заставу {currency_symbol}{available:,.0f}",
                             "deposit_id": row[0],
                             "order_id": row[1],
-                            "amount": float(row[2] or 0),
+                            "amount": available,
+                            "currency": row[8],
                             "priority": 2,
                         })
         except Exception as e:

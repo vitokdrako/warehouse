@@ -441,6 +441,7 @@ async def create_payment(data: PaymentCreate):
             "additional": ("CASH" if data.method == "cash" else "BANK", "RENT_REV"),  # Донарахування → дохід
             "deposit": ("CASH" if data.method == "cash" else "BANK", "DEP_LIAB"),
             "damage": ("CASH" if data.method == "cash" else "BANK", "DMG_COMP"),
+            "late": ("CASH" if data.method == "cash" else "BANK", "RENT_REV"),  # Прострочення → дохід
             "refund": ("DEP_LIAB", "CASH" if data.method == "cash" else "BANK"),
         }
         if data.payment_type not in mapping:

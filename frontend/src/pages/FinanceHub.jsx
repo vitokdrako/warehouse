@@ -149,7 +149,13 @@ export default function FinanceHub() {
   const [payoutsStats, setPayoutsStats] = useState(null);
   const [payments, setPayments] = useState([]);
   const [documents, setDocuments] = useState([]);
-  const [damageFees, setDamageFees] = useState({ total: 0, paid: 0, due: 0, items: [] });
+  const [damageFees, setDamageFees] = useState({ total_fee: 0, paid_amount: 0, due_amount: 0, items: [] });
+  const [lateFeeData, setLateFeeData] = useState({ total: 0, paid: 0, due: 0, items: [] });
+  
+  // Damage and late fee payment form states
+  const [damagePayAmount, setDamagePayAmount] = useState("");
+  const [newLateAmount, setNewLateAmount] = useState("");
+  const [newLateNote, setNewLateNote] = useState("");
   
   // Loading states
   const [loading, setLoading] = useState(true);

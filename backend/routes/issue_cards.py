@@ -456,6 +456,11 @@ async def update_issue_card(
             """), {"status": order_status, "order_id": order_id, "user_id": user_id})
             
             print(f"[Orders] Замовлення {order_id} → статус '{order_status}' (з issue_card '{updates.status}')")
+            
+            # ✅ При видачі - записуємо знижку у фін кабінет
+            if updates.status == 'issued':
+                _record_discount_to_finance(db, order_id, user_id, user_name)
+            
             db.commit()
     
     return {"message": "Issue card updated"}

@@ -2516,12 +2516,13 @@ async def complete_return(
         # Обгорнуто в try-except щоб помилка не блокувала основну логіку
         tasks_created = 0
         try:
-            # Отримати всі товари з замовлення
+            # Отримати всі товари з замовлення (тільки активні)
             order_items_result = db.execute(text("""
                 SELECT oi.product_id, p.sku, p.name, oi.quantity
                 FROM order_items oi
                 LEFT JOIN products p ON oi.product_id = p.product_id
                 WHERE oi.order_id = :order_id
+                  AND (oi.status IS NULL OR oi.status != 'refused')
             """), {"order_id": order_id})
             
             order_items = [dict(row._mapping) for row in order_items_result]

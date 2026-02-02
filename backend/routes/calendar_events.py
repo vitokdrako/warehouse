@@ -233,60 +233,23 @@ async def get_calendar_events(
     # ============================================================
     # 2. CLEANING / LAUNDRY - Мийка, Прання, Реставрація
     # ============================================================
-    if should_include("cleaning") or should_include("laundry") or should_include("repair"):
-        try:
-            cleaning_query = """
-                SELECT 
-                    id, product_id, cleaning_type, status,
-                    started_at, completed_at, notes, priority
-                FROM product_cleaning
-                WHERE status IN ('pending', 'in_progress')
-                AND (
-                    DATE(started_at) BETWEEN :date_from AND :date_to
-                    OR DATE(created_at) BETWEEN :date_from AND :date_to
-                )
-            """
-            
-            cleaning_result = db.execute(text(cleaning_query), {
-                "date_from": date_from,
-                "date_to": date_to
-            })
-            
-            for row in cleaning_result:
-                cleaning_type = row[2]
-                event_type = "repair" if cleaning_type == "repair" else (
-                    "laundry" if cleaning_type == "laundry" else "cleaning"
-                )
-                
-                if should_include(event_type):
-                    events.append({
-                        "id": f"cleaning-{row[0]}",
-                        "type": event_type,
-                        "date": str(row[4])[:10] if row[4] else date_from,
-                        "title": f"#{row[1]} {cleaning_type}",
-                        "subtitle": f"{row[3]} · {row[6] or ''}",
-                        "cleaning_id": row[0],
-                        "product_id": row[1],
-                        "status": row[3],
-                        "priority": row[7] or 3,
-                    })
-        except Exception as e:
-            print(f"[Calendar] Error loading cleaning: {e}")
+    # Пропускаємо - таблиця product_cleaning не існує в поточній схемі БД
+    # Якщо потрібно - можна додати підтримку product_service таблиці
     
     # ============================================================
-    # 4. DAMAGE CASES - Шкода
+    # 4. DAMAGE CASES - Шкода (з product_damage_history)
     # ============================================================
     if should_include("damage"):
         try:
             damage_query = """
                 SELECT 
-                    dc.id, dc.order_id, dc.status, dc.total_damage_amount,
-                    dc.created_at, dc.resolved_at,
+                    pdh.id, pdh.order_id, pdh.damage_type, pdh.fee,
+                    pdh.created_at, pdh.note,
                     o.order_number, o.customer_name
-                FROM damage_cases dc
-                LEFT JOIN orders o ON dc.order_id = o.order_id
-                WHERE dc.status IN ('open', 'pending_payment', 'in_review')
-                AND DATE(dc.created_at) BETWEEN :date_from AND :date_to
+                FROM product_damage_history pdh
+                LEFT JOIN orders o ON pdh.order_id = o.order_id
+                WHERE pdh.fee > 0
+                AND DATE(pdh.created_at) BETWEEN :date_from AND :date_to
             """
             
             damage_result = db.execute(text(damage_query), {
@@ -299,18 +262,18 @@ async def get_calendar_events(
                     "id": f"damage-{row[0]}",
                     "type": "damage",
                     "date": str(row[4])[:10] if row[4] else date_from,
-                    "title": f"DMG #{row[6] or row[1]}",
-                    "subtitle": f"Шкода ₴{float(row[3] or 0):,.0f} · {row[2]}",
+                    "title": f"Шкода #{row[6] or row[1]}",
+                    "subtitle": f"₴{float(row[3] or 0):,.0f} · {row[2]}",
                     "damage_id": row[0],
                     "order_id": row[1],
                     "order_number": row[6],
                     "customer_name": row[7],
                     "amount": float(row[3] or 0),
-                    "status": row[2],
+                    "damage_type": row[2],
                     "priority": 1,
                 })
         except Exception as e:
-            print(f"[Calendar] Error loading damage cases: {e}")
+            print(f"[Calendar] Error loading damage: {e}")
     
     # ============================================================
     # 5. FINANCE - Платежі, Застави

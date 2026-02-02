@@ -983,13 +983,6 @@ export default function FinanceHub() {
                     <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                       <div className="text-xs text-slate-500">Нараховано</div>
                       <div className="text-lg font-bold">{money(selectedOrder.total_rental)}</div>
-                      {/* Показуємо знижку якщо є */}
-                      {(selectedOrder.discount_amount > 0 || selectedOrder.discount_percent > 0) && (
-                        <div className="text-xs text-emerald-600 mt-1">
-                          Знижка: {selectedOrder.discount_percent > 0 ? `${selectedOrder.discount_percent}%` : ''} 
-                          {selectedOrder.discount_amount > 0 ? ` (${money(selectedOrder.discount_amount)})` : ''}
-                        </div>
-                      )}
                     </div>
                     <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                       <div className="text-xs text-slate-500">Оплачено</div>
@@ -1008,6 +1001,47 @@ export default function FinanceHub() {
                         {money(Math.max(0, selectedOrder.total_rental - selectedOrder.rent_paid))}
                       </div>
                     </div>
+                  </div>
+                  
+                  {/* Знижка - редагована */}
+                  {(selectedOrder.discount_amount > 0 || selectedOrder.discount_percent > 0) && (
+                    <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-xs text-emerald-700 font-medium">🏷️ ЗНИЖКА</div>
+                          <div className="text-lg font-bold text-emerald-700">
+                            {selectedOrder.discount_percent > 0 && `${selectedOrder.discount_percent}% = `}
+                            {money(selectedOrder.discount_amount)}
+                          </div>
+                        </div>
+                        <button
+                          className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200"
+                          onClick={async () => {
+                            const newAmount = prompt("Введіть нову суму знижки:", selectedOrder.discount_amount);
+                            if (newAmount === null) return;
+                            const amount = parseFloat(newAmount);
+                            if (isNaN(amount) || amount < 0) {
+                              alert("Невірна сума");
+                              return;
+                            }
+                            setSaving(true);
+                            try {
+                              await authFetch(`${BACKEND_URL}/api/finance/order/${selectedOrderId}/discount`, {
+                                method: "PUT",
+                                body: JSON.stringify({ amount, note: `Знижка (редаговано)` })
+                              });
+                              await refreshAll();
+                            } catch (e) {
+                              alert("Помилка: " + e.message);
+                            }
+                            setSaving(false);
+                          }}
+                        >
+                          ✏️ Редагувати
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   </div>
 
                   {/* Timeline */}

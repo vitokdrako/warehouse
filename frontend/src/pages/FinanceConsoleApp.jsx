@@ -382,6 +382,7 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
     try {
       const res = await authFetch(`${BACKEND_URL}/api/finance/order/${order.order_id}/charges`);
       const data = await res.json();
+      setChargesData(data); // Save full charges data
       setLateFees(data.late?.items || []);
       setLateTotalDue(data.late?.due || 0);
       setLatePaid(data.late?.paid || 0);

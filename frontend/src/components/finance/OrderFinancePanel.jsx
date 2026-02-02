@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { financeApi } from '../../services/financeApi.js';
 import DocumentsPanel from './DocumentsPanel';
 import eventBus, { EVENTS } from '../../utils/eventBus';
@@ -8,13 +8,15 @@ const cls = (...a) => a.filter(Boolean).join(' ');
 const money = (v, cur = '₴') => `${cur} ${(v || 0).toLocaleString('uk-UA', { maximumFractionDigits: 2 })}`;
 
 const Pill = ({ t = 'neutral', children }) => {
-  const tones = { ok: 'bg-emerald-50 text-emerald-800 border-emerald-200', warn: 'bg-amber-50 text-amber-800 border-amber-200', info: 'bg-sky-50 text-sky-800 border-sky-200', neutral: 'bg-slate-50 text-slate-800 border-slate-200' };
+  const tones = { ok: 'bg-emerald-50 text-emerald-800 border-emerald-200', warn: 'bg-amber-50 text-amber-800 border-amber-200', info: 'bg-sky-50 text-sky-800 border-sky-200', neutral: 'bg-slate-50 text-slate-800 border-slate-200', danger: 'bg-rose-50 text-rose-800 border-rose-200' };
   return <span className={cls('inline-flex items-center rounded-full border px-2 py-0.5 text-xs', tones[t] || tones.neutral)}>{children}</span>;
 };
 
 const Btn = ({ variant = 'outline', className = '', children, ...props }) => {
   const base = 'inline-flex items-center justify-center rounded-xl px-3 py-2 text-sm transition disabled:opacity-50';
-  const v = variant === 'primary' ? 'bg-lime-600 text-white hover:bg-lime-700' : 'border bg-white hover:bg-slate-50';
+  const v = variant === 'primary' ? 'bg-lime-600 text-white hover:bg-lime-700' 
+    : variant === 'danger' ? 'bg-rose-600 text-white hover:bg-rose-700'
+    : 'border bg-white hover:bg-slate-50';
   return <button className={cls(base, v, className)} {...props}>{children}</button>;
 };
 
@@ -29,6 +31,62 @@ const CardBd = ({ className, children }) => <div className={cls('p-4', className
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
+// Компонент для редагування рядка донарахування
+const ChargeRow = ({ item, type, onUpdate, onDelete, onPay }) => {
+  const [editing, setEditing] = useState(false);
+  const [amount, setAmount] = useState(item.amount || item.fee || 0);
+  const [saving, setSaving] = useState(false);
+  
+  const handleSave = async () => {
+    setSaving(true);
+    await onUpdate(item.id, type, amount);
+    setEditing(false);
+    setSaving(false);
+  };
+  
+  const isPending = item.status === 'pending';
+  const isPaid = item.status === 'confirmed' || item.status === 'completed';
+  
+  return (
+    <div className={cls(
+      "flex items-center justify-between gap-2 p-2 rounded-lg text-sm",
+      isPaid ? "bg-emerald-50" : "bg-slate-50"
+    )}>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-slate-500 truncate">{item.note || (type === 'damage' ? item.damage_type : 'Прострочення')}</div>
+        {item.sku && <span className="text-xs text-slate-400">{item.sku}</span>}
+      </div>
+      
+      {editing ? (
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(Number(e.target.value))}
+            className="w-24 rounded border px-2 py-1 text-sm"
+          />
+          <button onClick={handleSave} disabled={saving} className="text-emerald-600 hover:text-emerald-800 px-1">✓</button>
+          <button onClick={() => setEditing(false)} className="text-slate-400 hover:text-slate-600 px-1">✕</button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <span className={cls("font-medium", isPaid ? "text-emerald-600" : "text-rose-600")}>
+            {money(item.amount || item.fee)}
+          </span>
+          {isPaid && <Pill t="ok">Оплачено</Pill>}
+          {isPending && (
+            <>
+              <button onClick={() => setEditing(true)} className="text-slate-400 hover:text-slate-600 text-xs">✏️</button>
+              <button onClick={() => onPay(item.id)} className="text-emerald-600 hover:text-emerald-800 text-xs">💵</button>
+              <button onClick={() => onDelete(item.id, type)} className="text-rose-400 hover:text-rose-600 text-xs">🗑️</button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function OrderFinancePanel({ order, onUpdate }) {
   const [rentAmount, setRentAmount] = useState(order.rent.due);
   const [rentMethod, setRentMethod] = useState('cash');
@@ -38,12 +96,36 @@ export default function OrderFinancePanel({ order, onUpdate }) {
   const [exchangeRate, setExchangeRate] = useState(1);
   const [loading, setLoading] = useState(null);
   
-  // Damage data from product_damage_history
+  // Charges data (damage + late)
+  const [chargesData, setChargesData] = useState({ damage: { items: [], due: 0 }, late: { items: [], due: 0 } });
+  const [newDamageAmount, setNewDamageAmount] = useState(0);
+  const [newDamageNote, setNewDamageNote] = useState('');
+  const [newLateAmount, setNewLateAmount] = useState(0);
+  const [newLateNote, setNewLateNote] = useState('');
+  
+  // Load charges data
+  const loadCharges = useCallback(async () => {
+    if (!order.id) return;
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/finance/order/${order.id}/charges`);
+      if (res.ok) {
+        const data = await res.json();
+        setChargesData(data);
+      }
+    } catch (e) {
+      console.error('Error loading charges:', e);
+    }
+  }, [order.id]);
+  
+  useEffect(() => {
+    loadCharges();
+  }, [loadCharges]);
+  
+  // Legacy damage data support
   const [damageData, setDamageData] = useState(null);
   const [damageAmount, setDamageAmount] = useState(0);
   
-  // Load damage data from API
-  React.useEffect(() => {
+  useEffect(() => {
     const loadDamageData = async () => {
       try {
         const res = await fetch(`${BACKEND_URL}/api/analytics/order-damage-fee/${order.id}`);
@@ -58,6 +140,77 @@ export default function OrderFinancePanel({ order, onUpdate }) {
     };
     if (order.id) loadDamageData();
   }, [order.id]);
+  
+  // Add new charge
+  const handleAddCharge = async (type) => {
+    const amount = type === 'damage' ? newDamageAmount : newLateAmount;
+    const note = type === 'damage' ? newDamageNote : newLateNote;
+    if (amount <= 0) return alert('Сума має бути більше 0');
+    
+    setLoading(`add_${type}`);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/finance/order/${order.id}/charges/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, amount, note })
+      });
+      if (res.ok) {
+        if (type === 'damage') { setNewDamageAmount(0); setNewDamageNote(''); }
+        else { setNewLateAmount(0); setNewLateNote(''); }
+        loadCharges();
+        onUpdate?.();
+      }
+    } finally {
+      setLoading(null);
+    }
+  };
+  
+  // Update charge
+  const handleUpdateCharge = async (id, type, amount) => {
+    try {
+      await fetch(`${BACKEND_URL}/api/finance/order/${order.id}/charges/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, amount })
+      });
+      loadCharges();
+      onUpdate?.();
+    } catch (e) {
+      console.error('Error updating charge:', e);
+    }
+  };
+  
+  // Delete charge
+  const handleDeleteCharge = async (id, type) => {
+    if (!confirm('Видалити донарахування?')) return;
+    try {
+      await fetch(`${BACKEND_URL}/api/finance/order/${order.id}/charges/${id}?charge_type=${type}`, {
+        method: 'DELETE'
+      });
+      loadCharges();
+      onUpdate?.();
+    } catch (e) {
+      console.error('Error deleting charge:', e);
+    }
+  };
+  
+  // Pay late fee
+  const handlePayLateFee = async (id) => {
+    const method = prompt('Метод оплати: cash, card, bank', 'cash');
+    if (!method) return;
+    try {
+      await fetch(`${BACKEND_URL}/api/finance/order/${order.id}/charges/${id}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method })
+      });
+      loadCharges();
+      onUpdate?.();
+      eventBus.emit(EVENTS.FINANCE_UPDATED, { orderId: order.id });
+    } catch (e) {
+      console.error('Error paying charge:', e);
+    }
+  };
 
   // Exchange rates (can be fetched from API)
   const RATES = { UAH: 1, USD: 41.5, EUR: 45.2 };

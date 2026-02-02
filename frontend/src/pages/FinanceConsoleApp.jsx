@@ -299,6 +299,14 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   const [damageMethod, setDamageMethod] = useState("cash");
   const [loadingDamage, setLoadingDamage] = useState(false);
 
+  // Late fees state (прострочення)
+  const [lateFees, setLateFees] = useState([]);
+  const [lateTotalDue, setLateTotalDue] = useState(0);
+  const [latePaid, setLatePaid] = useState(0);
+  const [newLateAmount, setNewLateAmount] = useState("");
+  const [newLateNote, setNewLateNote] = useState("");
+  const [loadingLate, setLoadingLate] = useState(false);
+
   // Additional charge state
   const [additionalDescription, setAdditionalDescription] = useState("");
   const [additionalAmount, setAdditionalAmount] = useState("");

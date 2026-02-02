@@ -1458,12 +1458,6 @@ export default function FinanceHub() {
                       </div>
                     </div>
                   </div>
-                            {saving ? "..." : "Додати"}
-                          </Button>
-                        </div>
-                      </details>
-                    </div>
-                  )}
                 </div>
               </Card>
             ) : (

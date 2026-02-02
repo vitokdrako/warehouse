@@ -509,6 +509,9 @@ async def complete_issue_card(
             "user_name": user_name
         })
         
+        # ✅ При видачі - записуємо знижку у фін кабінет
+        _record_discount_to_finance(db, order_id, user_id, user_name)
+        
         print(f"[Orders] Замовлення {order_id} → статус 'issued' (complete endpoint) by {user_name}")
     
     db.commit()

@@ -1527,6 +1527,112 @@ async def pay_order_charge(order_id: int, charge_id: int, data: dict, db: Sessio
 
 
 # ============================================================
+# DISCOUNT MANAGEMENT (Управління знижкою)
+# ============================================================
+
+@router.get("/order/{order_id}/discount")
+async def get_order_discount(order_id: int, db: Session = Depends(get_rh_db)):
+    """
+    Отримати знижку замовлення з фін кабінету.
+    Якщо запису немає - повертає дані з orders.
+    """
+    try:
+        # Спочатку шукаємо в fin_payments
+        fin_discount = db.execute(text("""
+            SELECT id, amount, note, status, occurred_at, accepted_by_name
+            FROM fin_payments 
+            WHERE order_id = :order_id AND payment_type = 'discount'
+            ORDER BY occurred_at DESC LIMIT 1
+        """), {"order_id": order_id}).fetchone()
+        
+        if fin_discount:
+            return {
+                "source": "finance",
+                "id": fin_discount[0],
+                "amount": float(fin_discount[1] or 0),
+                "note": fin_discount[2],
+                "status": fin_discount[3],
+                "recorded_at": fin_discount[4].isoformat() if fin_discount[4] else None,
+                "recorded_by": fin_discount[5]
+            }
+        
+        # Якщо немає в fin_payments - беремо з orders
+        order_discount = db.execute(text("""
+            SELECT discount_amount, discount_percent FROM orders WHERE order_id = :order_id
+        """), {"order_id": order_id}).fetchone()
+        
+        if order_discount:
+            amount = float(order_discount[0] or 0)
+            percent = float(order_discount[1] or 0)
+            return {
+                "source": "order",
+                "id": None,
+                "amount": amount,
+                "percent": percent,
+                "note": f"Знижка {percent}%" if percent > 0 else "Знижка",
+                "status": "pending"  # Ще не записана у фін кабінет
+            }
+        
+        return {"source": None, "amount": 0, "note": None}
+        
+    except Exception as e:
+        return {"error": str(e), "amount": 0}
+
+
+@router.put("/order/{order_id}/discount")
+async def update_order_discount(order_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """
+    Оновити знижку замовлення у фін кабінеті.
+    Якщо запису немає - створює новий.
+    data: { amount: float, note: str }
+    """
+    amount = float(data.get("amount", 0))
+    note = data.get("note", "Знижка")
+    user_name = data.get("user_name", "System")
+    user_id = data.get("user_id")
+    
+    try:
+        # Перевіряємо чи є існуючий запис
+        existing = db.execute(text("""
+            SELECT id FROM fin_payments 
+            WHERE order_id = :order_id AND payment_type = 'discount'
+            LIMIT 1
+        """), {"order_id": order_id}).fetchone()
+        
+        if existing:
+            # Оновлюємо існуючий
+            db.execute(text("""
+                UPDATE fin_payments 
+                SET amount = :amount, note = :note, occurred_at = NOW()
+                WHERE id = :id
+            """), {"id": existing[0], "amount": amount, "note": note})
+        else:
+            # Створюємо новий
+            db.execute(text("""
+                INSERT INTO fin_payments (order_id, payment_type, amount, currency, status, note, occurred_at, accepted_by_id, accepted_by_name)
+                VALUES (:order_id, 'discount', :amount, 'UAH', 'confirmed', :note, NOW(), :user_id, :user_name)
+            """), {
+                "order_id": order_id,
+                "amount": amount,
+                "note": note,
+                "user_id": user_id,
+                "user_name": user_name
+            })
+        
+        # Також оновлюємо в orders для синхронізації
+        db.execute(text("""
+            UPDATE orders SET discount_amount = :amount WHERE order_id = :order_id
+        """), {"order_id": order_id, "amount": amount})
+        
+        db.commit()
+        return {"success": True, "amount": amount}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
 # ADMIN FINANCE MANAGEMENT ENDPOINTS
 # ============================================================
 

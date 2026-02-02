@@ -1326,6 +1326,201 @@ async def get_orders_with_finance(
 
 
 # ============================================================
+# ORDER CHARGES SUMMARY (Damage + Late fees)
+# ============================================================
+
+@router.get("/order/{order_id}/charges")
+async def get_order_charges(order_id: int, db: Session = Depends(get_rh_db)):
+    """
+    Отримати підсумок донарахувань для замовлення:
+    - Шкода (damage) - з product_damage_history + оплати
+    - Прострочення (late) - з fin_payments типу 'late'
+    """
+    try:
+        # === ШКОДА ===
+        # Загальна сума шкоди з product_damage_history
+        damage_total = db.execute(text("""
+            SELECT COALESCE(SUM(fee), 0) FROM product_damage_history WHERE order_id = :order_id
+        """), {"order_id": order_id}).scalar() or 0
+        
+        # Оплачено за шкоду
+        damage_paid = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
+            WHERE order_id = :order_id AND payment_type = 'damage' AND status IN ('completed', 'confirmed', 'pending')
+        """), {"order_id": order_id}).scalar() or 0
+        
+        # Деталі шкоди
+        damage_items = db.execute(text("""
+            SELECT pdh.id, pdh.product_id, p.sku, p.name, pdh.damage_type, pdh.qty, pdh.fee, pdh.note, pdh.created_at
+            FROM product_damage_history pdh
+            LEFT JOIN products p ON p.product_id = pdh.product_id
+            WHERE pdh.order_id = :order_id
+            ORDER BY pdh.created_at DESC
+        """), {"order_id": order_id})
+        
+        damage_list = [{
+            "id": r[0], "product_id": r[1], "sku": r[2], "name": r[3],
+            "damage_type": r[4], "qty": r[5], "fee": float(r[6] or 0),
+            "note": r[7], "created_at": r[8].isoformat() if r[8] else None
+        } for r in damage_items]
+        
+        # === ПРОСТРОЧЕННЯ ===
+        # Записи прострочення (pending - ще не оплачені, completed/confirmed - оплачені)
+        late_payments = db.execute(text("""
+            SELECT id, amount, status, note, occurred_at, accepted_by_name
+            FROM fin_payments 
+            WHERE order_id = :order_id AND payment_type = 'late'
+            ORDER BY occurred_at DESC
+        """), {"order_id": order_id})
+        
+        late_list = [{
+            "id": r[0], "amount": float(r[1] or 0), "status": r[2],
+            "note": r[3], "occurred_at": r[4].isoformat() if r[4] else None,
+            "accepted_by": r[5]
+        } for r in late_payments]
+        
+        late_total = sum(l["amount"] for l in late_list if l["status"] == "pending")
+        late_paid = sum(l["amount"] for l in late_list if l["status"] in ("completed", "confirmed"))
+        
+        return {
+            "order_id": order_id,
+            "damage": {
+                "total": float(damage_total),
+                "paid": float(damage_paid),
+                "due": max(0, float(damage_total) - float(damage_paid)),
+                "items": damage_list
+            },
+            "late": {
+                "total": late_total + late_paid,
+                "paid": late_paid,
+                "due": late_total,
+                "items": late_list
+            },
+            "grand_total_due": max(0, float(damage_total) - float(damage_paid)) + late_total
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e), "damage": {"total": 0, "paid": 0, "due": 0, "items": []}, 
+                "late": {"total": 0, "paid": 0, "due": 0, "items": []}, "grand_total_due": 0}
+
+
+@router.post("/order/{order_id}/charges/add")
+async def add_order_charge(order_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """
+    Додати ручне донарахування для замовлення
+    data: { type: 'damage' | 'late', amount: float, note: str }
+    """
+    charge_type = data.get("type", "late")
+    amount = float(data.get("amount", 0))
+    note = data.get("note", "")
+    
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Сума має бути більше 0")
+    
+    try:
+        if charge_type == "damage":
+            # Для шкоди - додаємо в product_damage_history (без прив'язки до товару)
+            db.execute(text("""
+                INSERT INTO product_damage_history (order_id, product_id, damage_type, qty, fee, note, created_at)
+                VALUES (:order_id, 0, 'manual_charge', 1, :fee, :note, NOW())
+            """), {"order_id": order_id, "fee": amount, "note": note or "Ручне донарахування шкоди"})
+        else:
+            # Для прострочення - додаємо в fin_payments з типом 'late'
+            db.execute(text("""
+                INSERT INTO fin_payments (order_id, payment_type, amount, currency, status, note, occurred_at)
+                VALUES (:order_id, 'late', :amount, 'UAH', 'pending', :note, NOW())
+            """), {"order_id": order_id, "amount": amount, "note": note or "Ручне донарахування прострочення"})
+        
+        db.commit()
+        return {"success": True, "type": charge_type, "amount": amount}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/order/{order_id}/charges/{charge_id}")
+async def update_order_charge(order_id: int, charge_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """
+    Оновити суму донарахування
+    data: { type: 'damage' | 'late', amount: float, note: str }
+    """
+    charge_type = data.get("type", "late")
+    amount = float(data.get("amount", 0))
+    note = data.get("note")
+    
+    try:
+        if charge_type == "damage":
+            db.execute(text("""
+                UPDATE product_damage_history SET fee = :fee, note = COALESCE(:note, note) WHERE id = :id
+            """), {"id": charge_id, "fee": amount, "note": note})
+        else:
+            db.execute(text("""
+                UPDATE fin_payments SET amount = :amount, note = COALESCE(:note, note) WHERE id = :id AND payment_type = 'late'
+            """), {"id": charge_id, "amount": amount, "note": note})
+        
+        db.commit()
+        return {"success": True}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/order/{order_id}/charges/{charge_id}")
+async def delete_order_charge(order_id: int, charge_id: int, charge_type: str = "late", db: Session = Depends(get_rh_db)):
+    """
+    Видалити донарахування
+    """
+    try:
+        if charge_type == "damage":
+            db.execute(text("DELETE FROM product_damage_history WHERE id = :id"), {"id": charge_id})
+        else:
+            db.execute(text("DELETE FROM fin_payments WHERE id = :id AND payment_type = 'late'"), {"id": charge_id})
+        
+        db.commit()
+        return {"success": True}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/order/{order_id}/charges/{charge_id}/pay")
+async def pay_order_charge(order_id: int, charge_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """
+    Оплатити донарахування (late fee)
+    data: { method: 'cash' | 'card' | 'bank' }
+    """
+    method = data.get("method", "cash")
+    
+    try:
+        # Отримати запис
+        charge = db.execute(text("""
+            SELECT amount, note FROM fin_payments WHERE id = :id AND payment_type = 'late' AND status = 'pending'
+        """), {"id": charge_id}).fetchone()
+        
+        if not charge:
+            raise HTTPException(status_code=404, detail="Донарахування не знайдено або вже оплачено")
+        
+        # Оновити статус на оплачено
+        db.execute(text("""
+            UPDATE fin_payments SET status = 'confirmed', method = :method WHERE id = :id
+        """), {"id": charge_id, "method": method})
+        
+        db.commit()
+        return {"success": True, "amount": float(charge[0])}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
 # ADMIN FINANCE MANAGEMENT ENDPOINTS
 # ============================================================
 

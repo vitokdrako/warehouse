@@ -1042,7 +1042,6 @@ export default function FinanceHub() {
                       </div>
                     </div>
                   )}
-                  </div>
 
                   {/* Timeline */}
                   {timeline.length > 0 && (

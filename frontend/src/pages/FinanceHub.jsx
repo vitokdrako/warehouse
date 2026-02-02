@@ -983,6 +983,13 @@ export default function FinanceHub() {
                     <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                       <div className="text-xs text-slate-500">Нараховано</div>
                       <div className="text-lg font-bold">{money(selectedOrder.total_rental)}</div>
+                      {/* Показуємо знижку якщо є */}
+                      {(selectedOrder.discount_amount > 0 || selectedOrder.discount_percent > 0) && (
+                        <div className="text-xs text-emerald-600 mt-1">
+                          Знижка: {selectedOrder.discount_percent > 0 ? `${selectedOrder.discount_percent}%` : ''} 
+                          {selectedOrder.discount_amount > 0 ? ` (${money(selectedOrder.discount_amount)})` : ''}
+                        </div>
+                      )}
                     </div>
                     <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                       <div className="text-xs text-slate-500">Оплачено</div>

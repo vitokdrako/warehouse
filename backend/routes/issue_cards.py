@@ -16,6 +16,59 @@ from utils.user_tracking_helper import get_current_user_dependency
 
 router = APIRouter(prefix="/api/issue-cards", tags=["issue-cards"])
 
+
+def _record_discount_to_finance(db: Session, order_id: int, user_id: int, user_name: str):
+    """
+    Записати знижку замовлення у фін кабінет при видачі.
+    Якщо запис вже існує - не дублювати.
+    """
+    try:
+        # Отримуємо знижку з замовлення
+        order_row = db.execute(text("""
+            SELECT discount_amount, discount_percent, order_number 
+            FROM orders WHERE order_id = :order_id
+        """), {"order_id": order_id}).fetchone()
+        
+        if not order_row:
+            return
+        
+        discount_amount = float(order_row[0] or 0)
+        discount_percent = float(order_row[1] or 0)
+        
+        if discount_amount <= 0:
+            return  # Немає знижки - нічого записувати
+        
+        # Перевіряємо чи вже є запис знижки для цього замовлення
+        existing = db.execute(text("""
+            SELECT id FROM fin_payments 
+            WHERE order_id = :order_id AND payment_type = 'discount'
+            LIMIT 1
+        """), {"order_id": order_id}).fetchone()
+        
+        if existing:
+            print(f"[Finance] Знижка для замовлення {order_id} вже записана")
+            return
+        
+        # Записуємо знижку
+        note = f"Знижка {discount_percent}%" if discount_percent > 0 else "Знижка"
+        
+        db.execute(text("""
+            INSERT INTO fin_payments (order_id, payment_type, amount, currency, status, note, occurred_at, accepted_by_id, accepted_by_name)
+            VALUES (:order_id, 'discount', :amount, 'UAH', 'confirmed', :note, NOW(), :user_id, :user_name)
+        """), {
+            "order_id": order_id,
+            "amount": discount_amount,
+            "note": note,
+            "user_id": user_id,
+            "user_name": user_name
+        })
+        
+        print(f"[Finance] Записано знижку ₴{discount_amount} для замовлення {order_id}")
+        
+    except Exception as e:
+        print(f"[Finance] Помилка запису знижки для {order_id}: {e}")
+
+
 # Pydantic Models
 class IssueItem(BaseModel):
     sku: str

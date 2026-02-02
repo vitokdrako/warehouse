@@ -306,7 +306,7 @@ export default function OrderFinancePanel({ order, onUpdate }) {
         </div>
       </div>
 
-      {/* Left: Rent + Damage */}
+      {/* Left: Rent + Charges */}
       <div className="col-span-12 md:col-span-7 space-y-3">
         <Card>
           <CardHd title="Прийом оплати (оренда)" subtitle="CASH/BANK → RENT_REV" right={<Pill t="info">rent</Pill>} />
@@ -330,72 +330,170 @@ export default function OrderFinancePanel({ order, onUpdate }) {
           </CardBd>
         </Card>
 
+        {/* === ШКОДА (Damage) === */}
         <Card>
           <CardHd 
-            title="Пошкодження" 
-            subtitle={damageData?.damage_count > 0 ? `${damageData.damage_count} позицій` : 'Немає'} 
+            title="💔 Шкода / Пошкодження" 
+            subtitle={`${chargesData.damage?.items?.length || 0} позицій`}
             right={
-              damageData?.needs_payment ? (
-                <Pill t="warn">⚠️ Потребує доплати</Pill>
+              chargesData.damage?.due > 0 ? (
+                <Pill t="danger">До сплати: {money(chargesData.damage.due)}</Pill>
               ) : (
-                <Pill t="neutral">damage</Pill>
+                <Pill t="ok">Оплачено</Pill>
               )
             } 
           />
           <CardBd>
-            {/* Alert if needs payment */}
-            {damageData?.needs_payment && (
-              <div className="mb-3 rounded-xl bg-amber-50 border border-amber-200 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-amber-800 font-medium">
-                    💰 Потребує доплати за пошкодження
-                  </div>
-                  <div className="text-lg font-bold text-amber-900">
-                    {money(damageData.due_amount)}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Damage items list */}
-            {damageData?.damage_items?.length > 0 && (
-              <div className="mb-3 space-y-2 max-h-40 overflow-y-auto">
-                {damageData.damage_items.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-slate-50">
-                    <div>
-                      <span className="font-medium">{item.product_name}</span>
-                      <span className="text-slate-500 ml-2">• {item.damage_type}</span>
-                      {item.qty > 1 && <span className="text-slate-400 ml-1">×{item.qty}</span>}
-                    </div>
-                    <span className="font-medium text-rose-600">{money(item.fee)}</span>
-                  </div>
+            {/* Існуючі записи шкоди */}
+            {chargesData.damage?.items?.length > 0 && (
+              <div className="mb-3 space-y-1 max-h-32 overflow-y-auto">
+                {chargesData.damage.items.map((item, i) => (
+                  <ChargeRow 
+                    key={item.id || i} 
+                    item={{...item, amount: item.fee, status: 'pending'}} 
+                    type="damage"
+                    onUpdate={handleUpdateCharge}
+                    onDelete={handleDeleteCharge}
+                    onPay={() => {}}
+                  />
                 ))}
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <label className="text-sm"><div className="text-xs text-slate-500 mb-1">Оцінка збитків</div>
-                <input 
-                  type="number" 
-                  className="w-full rounded-xl border px-3 py-2 text-sm" 
-                  value={damageAmount} 
-                  onChange={(e) => setDamageAmount(Number(e.target.value))}
-                />
-              </label>
-              <div className="rounded-2xl border bg-slate-50 p-3">
-                <div className="text-xs text-slate-500">Загалом шкод</div>
-                <div className="mt-1 text-lg font-semibold">{money(damageData?.total_damage_fee || 0)}</div>
+            {/* Статистика */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="rounded-xl border bg-slate-50 p-2 text-center">
+                <div className="text-xs text-slate-500">Всього</div>
+                <div className="font-semibold">{money(chargesData.damage?.total || 0)}</div>
               </div>
-              <div className="rounded-2xl border bg-slate-50 p-3">
+              <div className="rounded-xl border bg-emerald-50 p-2 text-center">
                 <div className="text-xs text-slate-500">Оплачено</div>
-                <div className="mt-1 text-lg font-semibold text-emerald-600">{money(damageData?.paid_damage || 0)}</div>
+                <div className="font-semibold text-emerald-600">{money(chargesData.damage?.paid || 0)}</div>
+              </div>
+              <div className="rounded-xl border bg-rose-50 p-2 text-center">
+                <div className="text-xs text-slate-500">До сплати</div>
+                <div className="font-semibold text-rose-600">{money(chargesData.damage?.due || 0)}</div>
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Btn variant="primary" onClick={() => handlePayment('damage')} disabled={loading === 'damage' || damageAmount <= 0}>
-                {loading === 'damage' ? '...' : 'Прийняти оплату'}
-              </Btn>
+            
+            {/* Додати нову шкоду */}
+            <details className="border rounded-xl">
+              <summary className="px-3 py-2 text-sm font-medium cursor-pointer hover:bg-slate-50">➕ Додати шкоду вручну</summary>
+              <div className="p-3 border-t space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <input 
+                    type="number" 
+                    placeholder="Сума ₴" 
+                    className="rounded-lg border px-3 py-2 text-sm"
+                    value={newDamageAmount || ''}
+                    onChange={(e) => setNewDamageAmount(Number(e.target.value))}
+                  />
+                  <input 
+                    placeholder="Опис" 
+                    className="rounded-lg border px-3 py-2 text-sm"
+                    value={newDamageNote}
+                    onChange={(e) => setNewDamageNote(e.target.value)}
+                  />
+                </div>
+                <Btn 
+                  variant="primary" 
+                  className="w-full"
+                  onClick={() => handleAddCharge('damage')}
+                  disabled={loading === 'add_damage' || newDamageAmount <= 0}
+                >
+                  {loading === 'add_damage' ? '...' : 'Додати'}
+                </Btn>
+              </div>
+            </details>
+            
+            {/* Прийняти оплату за шкоду */}
+            {chargesData.damage?.due > 0 && (
+              <div className="mt-3">
+                <Btn variant="primary" onClick={() => handlePayment('damage')} disabled={loading === 'damage'}>
+                  {loading === 'damage' ? '...' : `Прийняти оплату ${money(chargesData.damage.due)}`}
+                </Btn>
+              </div>
+            )}
+          </CardBd>
+        </Card>
+
+        {/* === ПРОСТРОЧЕННЯ (Late fees) === */}
+        <Card>
+          <CardHd 
+            title="⏰ Прострочення / Часткове повернення" 
+            subtitle={`${chargesData.late?.items?.length || 0} записів`}
+            right={
+              chargesData.late?.due > 0 ? (
+                <Pill t="warn">До сплати: {money(chargesData.late.due)}</Pill>
+              ) : chargesData.late?.total > 0 ? (
+                <Pill t="ok">Оплачено</Pill>
+              ) : (
+                <Pill t="neutral">Немає</Pill>
+              )
+            } 
+          />
+          <CardBd>
+            {/* Існуючі записи прострочення */}
+            {chargesData.late?.items?.length > 0 && (
+              <div className="mb-3 space-y-1 max-h-40 overflow-y-auto">
+                {chargesData.late.items.map((item, i) => (
+                  <ChargeRow 
+                    key={item.id || i} 
+                    item={item} 
+                    type="late"
+                    onUpdate={handleUpdateCharge}
+                    onDelete={handleDeleteCharge}
+                    onPay={handlePayLateFee}
+                  />
+                ))}
+              </div>
+            )}
+            
+            {/* Статистика */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="rounded-xl border bg-slate-50 p-2 text-center">
+                <div className="text-xs text-slate-500">Всього</div>
+                <div className="font-semibold">{money(chargesData.late?.total || 0)}</div>
+              </div>
+              <div className="rounded-xl border bg-emerald-50 p-2 text-center">
+                <div className="text-xs text-slate-500">Оплачено</div>
+                <div className="font-semibold text-emerald-600">{money(chargesData.late?.paid || 0)}</div>
+              </div>
+              <div className="rounded-xl border bg-amber-50 p-2 text-center">
+                <div className="text-xs text-slate-500">До сплати</div>
+                <div className="font-semibold text-amber-600">{money(chargesData.late?.due || 0)}</div>
+              </div>
             </div>
+            
+            {/* Додати нове прострочення */}
+            <details className="border rounded-xl">
+              <summary className="px-3 py-2 text-sm font-medium cursor-pointer hover:bg-slate-50">➕ Додати прострочення вручну</summary>
+              <div className="p-3 border-t space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <input 
+                    type="number" 
+                    placeholder="Сума ₴" 
+                    className="rounded-lg border px-3 py-2 text-sm"
+                    value={newLateAmount || ''}
+                    onChange={(e) => setNewLateAmount(Number(e.target.value))}
+                  />
+                  <input 
+                    placeholder="Опис (напр., 3 дні × ₴100)" 
+                    className="rounded-lg border px-3 py-2 text-sm"
+                    value={newLateNote}
+                    onChange={(e) => setNewLateNote(e.target.value)}
+                  />
+                </div>
+                <Btn 
+                  variant="primary" 
+                  className="w-full"
+                  onClick={() => handleAddCharge('late')}
+                  disabled={loading === 'add_late' || newLateAmount <= 0}
+                >
+                  {loading === 'add_late' ? '...' : 'Додати'}
+                </Btn>
+              </div>
+            </details>
           </CardBd>
         </Card>
       </div>

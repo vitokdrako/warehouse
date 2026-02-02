@@ -2458,6 +2458,78 @@ async def complete_return(
         damage_fee = float(return_data.get('damage_fee', 0))
         total_fees = late_fee + cleaning_fee + damage_fee
         
+        # ✅ ВИПРАВЛЕННЯ: Перевірити та завершити активні продовження оренди
+        # Якщо замовлення було в partial_return, потрібно закрити всі extensions
+        try:
+            active_extensions = db.execute(text("""
+                SELECT id, product_id, sku, name, qty, original_end_date, daily_rate, adjusted_daily_rate
+                FROM order_extensions 
+                WHERE order_id = :order_id AND status = 'active'
+            """), {"order_id": order_id}).fetchall()
+            
+            if active_extensions:
+                print(f"[Orders] Знайдено {len(active_extensions)} активних продовжень для замовлення {order_id}")
+                
+                for ext in active_extensions:
+                    ext_id, product_id, sku, name, qty, original_end, daily_rate, adj_rate = ext
+                    
+                    # Розрахувати дні прострочення
+                    if original_end:
+                        from datetime import datetime
+                        days = (datetime.now().date() - original_end).days
+                        if days < 0:
+                            days = 0
+                    else:
+                        days = 0
+                    
+                    rate = float(adj_rate or daily_rate or 0)
+                    total = days * rate * int(qty or 1)
+                    
+                    # Завершити продовження
+                    db.execute(text("""
+                        UPDATE order_extensions
+                        SET status = 'completed',
+                            days_extended = :days,
+                            total_charged = :total,
+                            completed_at = NOW()
+                        WHERE id = :ext_id
+                    """), {"ext_id": ext_id, "days": days, "total": total})
+                    
+                    # Додати фінансову транзакцію якщо є нарахування
+                    if total > 0:
+                        db.execute(text("""
+                            INSERT INTO fin_payments 
+                            (order_id, payment_type, amount, currency, note, occurred_at)
+                            VALUES (:order_id, 'late', :amount, 'UAH', :description, NOW())
+                        """), {
+                            "order_id": order_id,
+                            "amount": total,
+                            "description": f"Прострочення: {sku} x{qty}: {days} днів × ₴{rate:.2f} = ₴{total:.2f}"
+                        })
+                    
+                    # Записати в лог
+                    db.execute(text("""
+                        INSERT INTO partial_return_log 
+                        (order_id, product_id, sku, action, qty, amount, notes)
+                        VALUES (:order_id, :product_id, :sku, 'returned', :qty, :amount, :notes)
+                    """), {
+                        "order_id": order_id,
+                        "product_id": product_id,
+                        "sku": sku,
+                        "qty": qty,
+                        "amount": total,
+                        "notes": f"Повернено після {days} днів прострочення"
+                    })
+                    
+                    print(f"[Orders] ✅ Продовження {sku} завершено: {days} днів, ₴{total:.2f}")
+                
+                # Очистити флаг partial_return
+                db.execute(text("""
+                    UPDATE orders SET has_partial_return = 0 WHERE order_id = :order_id
+                """), {"order_id": order_id})
+        except Exception as e:
+            print(f"[Orders] ⚠️ Помилка при обробці продовжень: {e}")
+        
         # Оновити статус замовлення та зберегти damage_fee
         # ВАЖЛИВО: НЕ перезаписуємо manager_comment (там коментар клієнта!)
         manager_notes = return_data.get('manager_notes', '')

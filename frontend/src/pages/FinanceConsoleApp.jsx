@@ -307,6 +307,9 @@ const OrderFinancePanel = ({ order, onRefresh, deposits }) => {
   const [newLateNote, setNewLateNote] = useState("");
   const [loadingLate, setLoadingLate] = useState(false);
 
+  // Charges data (combined damage + late from API)
+  const [chargesData, setChargesData] = useState({ damage: { items: [], due: 0 }, late: { items: [], due: 0 } });
+
   // Additional charge state
   const [additionalDescription, setAdditionalDescription] = useState("");
   const [additionalAmount, setAdditionalAmount] = useState("");

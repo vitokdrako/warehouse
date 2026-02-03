@@ -9,7 +9,7 @@ import axios from 'axios'
 import { Plus, Minus, X, RotateCcw, Search, Package, AlertTriangle, History, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog'
 import { useToast } from '../../hooks/use-toast'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''

@@ -1,18 +1,37 @@
 /* eslint-disable */
 /**
- * PartialReturnVersionWorkspace - Робочий простір для версій часткового повернення
+ * PartialReturnVersionWorkspace - Робочий простір версії часткового повернення
  * 
- * Показує деталі версії (OC-7266(1), OC-7266(2), тощо) з товарами що залишились у клієнта.
- * Дозволяє:
- * - Переглянути товари що залишились
- * - Прийняти товари (позначити як повернені)
- * - Створити нову версію (ще одне часткове повернення)
- * - Переглянути історію версій
+ * ВАЖЛИВО: Використовує ті ж компоненти що і ReturnOrderWorkspace:
+ * - ZoneItemsReturn - приймання товарів з +/- та фіксацією шкоди
+ * - ZoneReturnFees - нарахування (пеня, чистка, шкода)
+ * - ZoneRequisitors - вибір приймальників
+ * - DamageModal - модалка шкоди
+ * - InternalNotesChat - внутрішній чат
+ * 
+ * Дані беруться з partial_return_versions + partial_return_version_items
+ * Шкода синхронізується через parent_order_id
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Package, Clock, User, Phone, Mail, Calendar, History, Check, AlertTriangle, ChevronDown } from 'lucide-react'
+import { useToast } from '../hooks/use-toast'
+import axios from 'axios'
+
+import {
+  OrderWorkspaceLayout,
+  LeftRailClient,
+  InternalNotesChat,
+} from '../components/order-workspace'
+
+import {
+  ZoneItemsReturn,
+  ZoneReturnFees,
+  ZoneRequisitors,
+} from '../components/order-workspace/zones'
+
+import DamageModal from '../components/DamageModal'
+import { ArrowLeft, History, ChevronDown, Package } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
@@ -31,95 +50,245 @@ const authFetch = async (url, options = {}) => {
 export default function PartialReturnVersionWorkspace() {
   const { versionId } = useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
   
+  // === СТАН ===
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [version, setVersion] = useState(null)
-  const [error, setError] = useState(null)
+  const [items, setItems] = useState([])
+  const [isCompleted, setIsCompleted] = useState(false)
+  
+  // Нарахування
+  const [lateFee, setLateFee] = useState(0)
+  const [cleaningFee, setCleaningFee] = useState(0)
+  const [damageFee, setDamageFee] = useState(0)
+  
+  // Приймальники
+  const [selectedRequisitors, setSelectedRequisitors] = useState([])
+  
+  // Модалка шкоди
+  const [damageModal, setDamageModal] = useState({ open: false, item: null })
+  
+  // Історія версій
   const [showHistory, setShowHistory] = useState(false)
-  const [returning, setReturning] = useState({})  // { item_id: true } для індикатора завантаження
   
-  // Завантажити дані версії
-  useEffect(() => {
-    const fetchVersion = async () => {
-      try {
-        const response = await authFetch(`${BACKEND_URL}/api/return-versions/version/${versionId}`)
-        if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.detail || 'Помилка завантаження')
-        }
-        const data = await response.json()
-        setVersion(data)
-        setLoading(false)
-      } catch (err) {
-        setError(err.message)
-        setLoading(false)
-      }
-    }
-    
-    fetchVersion()
-  }, [versionId])
-  
-  // Позначити товар як повернений
-  const handleReturnItem = async (itemId, sku) => {
-    setReturning(prev => ({ ...prev, [itemId]: true }))
-    
+  // === ЗАВАНТАЖЕННЯ ДАНИХ ===
+  const loadVersion = useCallback(async () => {
     try {
-      const response = await authFetch(`${BACKEND_URL}/api/return-versions/version/${versionId}/return-item`, {
-        method: 'POST',
-        body: JSON.stringify({ item_id: itemId, sku })
-      })
-      
+      const response = await authFetch(`${BACKEND_URL}/api/return-versions/version/${versionId}`)
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || 'Помилка')
+        throw new Error(data.detail || 'Помилка завантаження')
       }
       
-      const result = await response.json()
+      const data = await response.json()
+      setVersion(data)
       
-      // Оновити локальний стан
-      setVersion(prev => ({
-        ...prev,
-        items: prev.items.map(item => 
-          item.item_id === itemId 
-            ? { ...item, status: 'returned', returned_at: new Date().toISOString() }
-            : item
-        ),
-        status: result.all_returned ? 'returned' : prev.status
+      // Конвертуємо items до формату ZoneItemsReturn
+      const formattedItems = (data.items || []).map(item => ({
+        id: item.item_id,
+        item_id: item.item_id,
+        product_id: item.product_id,
+        sku: item.sku,
+        name: item.name,
+        rented_qty: item.qty,
+        returned_qty: item.status === 'returned' ? item.qty : 0,
+        daily_rate: item.daily_rate,
+        status: item.status,
+        findings: [],  // Завантажити з damage_records через parent_order_id
+        ok_serials: [],
+        serials: [],
+        image: null,  // TODO: додати фото товару
+        damage_history: []
       }))
       
-      if (result.all_returned) {
-        alert('✅ Всі товари повернено! Версія закрита.')
-        navigate('/manager')
+      setItems(formattedItems)
+      setIsCompleted(data.status === 'returned')
+      
+      // Рахуємо пеню за прострочення
+      if (data.days_overdue > 0) {
+        setLateFee(data.total_price * data.days_overdue)
       }
       
+      setLoading(false)
+      
     } catch (err) {
-      alert(`❌ Помилка: ${err.message}`)
-    } finally {
-      setReturning(prev => ({ ...prev, [itemId]: false }))
+      console.error('[VersionWorkspace] Error loading version:', err)
+      toast({
+        title: '❌ Помилка',
+        description: err.message,
+        variant: 'destructive'
+      })
+      setLoading(false)
+    }
+  }, [versionId, toast])
+  
+  useEffect(() => {
+    loadVersion()
+  }, [loadVersion])
+  
+  // === ОБРОБНИКИ ТОВАРІВ ===
+  
+  // Змінити кількість повернених
+  const handleSetReturnedQty = useCallback(async (itemId, qty) => {
+    setItems(prev => prev.map(item => 
+      item.id === itemId ? { ...item, returned_qty: qty } : item
+    ))
+    
+    // Зберегти на сервер
+    try {
+      const item = items.find(i => i.id === itemId)
+      if (qty >= item.rented_qty) {
+        // Товар повністю повернено
+        await authFetch(`${BACKEND_URL}/api/return-versions/version/${versionId}/return-item`, {
+          method: 'POST',
+          body: JSON.stringify({ item_id: itemId, qty })
+        })
+      }
+    } catch (err) {
+      console.error('[VersionWorkspace] Error updating qty:', err)
+    }
+  }, [items, versionId])
+  
+  // Відкрити модалку шкоди
+  const handleOpenDamage = useCallback((itemId) => {
+    const item = items.find(i => i.id === itemId)
+    if (item) {
+      setDamageModal({ open: true, item })
+    }
+  }, [items])
+  
+  // Зберегти шкоду
+  const handleSaveDamage = async (damageData) => {
+    try {
+      // Зберігаємо шкоду через parent_order_id (синхронізація з основним замовленням)
+      await axios.post(`${BACKEND_URL}/api/orders/${version.parent_order_id}/damage`, {
+        ...damageData,
+        source: 'partial_return_version',
+        version_id: versionId
+      })
+      
+      // Оновлюємо локальний стан
+      setItems(prev => prev.map(item => {
+        if (item.id === damageModal.item?.id) {
+          return {
+            ...item,
+            findings: [...(item.findings || []), damageData],
+            has_damage_history: true
+          }
+        }
+        return item
+      }))
+      
+      // Оновлюємо суму шкоди
+      setDamageFee(prev => prev + (damageData.amount || 0))
+      
+      setDamageModal({ open: false, item: null })
+      toast({ title: '✅ Шкоду зафіксовано' })
+      
+    } catch (err) {
+      console.error('[VersionWorkspace] Error saving damage:', err)
+      toast({
+        title: '❌ Помилка',
+        description: 'Не вдалося зберегти шкоду',
+        variant: 'destructive'
+      })
     }
   }
   
-  // Завершити версію (всі товари повернено)
-  const handleCompleteVersion = async () => {
-    if (!confirm('Підтвердити що всі товари повернено?')) return
+  // === ЗАВЕРШЕННЯ ПРИЙМАННЯ ===
+  const handleComplete = async () => {
+    // Перевірити чи всі товари повернуто
+    const allReturned = items.every(item => item.returned_qty >= item.rented_qty)
     
+    if (!allReturned) {
+      // Є неповернені товари - запитати підтвердження
+      const notReturned = items.filter(i => i.returned_qty < i.rented_qty)
+      if (!confirm(`Не всі товари повернено (${notReturned.length} позицій). Створити нову версію?`)) {
+        return
+      }
+      
+      // Створити нову версію з неповерненими товарами
+      setSaving(true)
+      try {
+        const response = await authFetch(`${BACKEND_URL}/api/return-versions/order/${version.parent_order_id}/create-version`, {
+          method: 'POST',
+          body: JSON.stringify({
+            not_returned_items: notReturned.map(item => ({
+              product_id: item.product_id,
+              sku: item.sku,
+              name: item.name,
+              qty: item.rented_qty - item.returned_qty,
+              daily_rate: item.daily_rate
+            }))
+          })
+        })
+        
+        if (!response.ok) {
+          const err = await response.json()
+          throw new Error(err.detail || 'Помилка')
+        }
+        
+        const result = await response.json()
+        toast({ 
+          title: '✅ Створено нову версію', 
+          description: result.display_number 
+        })
+        
+        // Перейти на нову версію
+        navigate(result.redirect_url)
+        
+      } catch (err) {
+        toast({
+          title: '❌ Помилка',
+          description: err.message,
+          variant: 'destructive'
+        })
+      } finally {
+        setSaving(false)
+      }
+      return
+    }
+    
+    // Всі товари повернено - закрити версію
+    setSaving(true)
     try {
       const response = await authFetch(`${BACKEND_URL}/api/return-versions/version/${versionId}/complete`, {
-        method: 'POST'
+        method: 'POST',
+        body: JSON.stringify({
+          late_fee: lateFee,
+          cleaning_fee: cleaningFee,
+          damage_fee: damageFee,
+          requisitors: selectedRequisitors
+        })
       })
       
       if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.detail || 'Помилка')
+        const err = await response.json()
+        throw new Error(err.detail || 'Помилка')
       }
       
-      alert('✅ Версія закрита. Всі товари повернено!')
-      navigate('/manager')
+      setIsCompleted(true)
+      toast({ 
+        title: '✅ Версію закрито', 
+        description: 'Всі товари прийнято' 
+      })
+      
+      setTimeout(() => navigate('/manager'), 2000)
       
     } catch (err) {
-      alert(`❌ Помилка: ${err.message}`)
+      toast({
+        title: '❌ Помилка',
+        description: err.message,
+        variant: 'destructive'
+      })
+    } finally {
+      setSaving(false)
     }
   }
+  
+  // === РЕНДЕР ===
   
   if (loading) {
     return (
@@ -129,32 +298,16 @@ export default function PartialReturnVersionWorkspace() {
     )
   }
   
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Помилка</h2>
-          <p className="text-slate-600 mb-4">{error}</p>
-          <button 
-            onClick={() => navigate('/manager')}
-            className="px-4 py-2 bg-corp-primary text-white rounded-lg hover:bg-corp-primary/90"
-          >
-            На дашборд
-          </button>
-        </div>
-      </div>
-    )
-  }
-  
-  const pendingItems = version?.items?.filter(i => i.status === 'pending') || []
-  const returnedItems = version?.items?.filter(i => i.status === 'returned') || []
+  const totalFees = lateFee + cleaningFee + damageFee
+  const totalReturned = items.reduce((s, i) => s + i.returned_qty, 0)
+  const totalRented = items.reduce((s, i) => s + i.rented_qty, 0)
+  const canComplete = totalReturned > 0
   
   return (
-    <div className="min-h-screen bg-slate-50 font-montserrat">
+    <div className="min-h-screen bg-slate-100">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 px-6 py-3">
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/manager')}
@@ -163,26 +316,29 @@ export default function PartialReturnVersionWorkspace() {
               <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-slate-800">
+              <h1 className="text-lg font-bold text-slate-800">
                 {version?.display_number}
               </h1>
               <p className="text-sm text-slate-500">
-                Часткове повернення • Версія {version?.version_number}
+                Часткове повернення • {version?.version_number > 1 ? `Версія ${version.version_number}` : 'Перша версія'}
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
-            {version?.status === 'active' && pendingItems.length === 0 && (
+            {/* Історія версій */}
+            {version?.version_history?.length > 1 && (
               <button
-                onClick={handleCompleteVersion}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                onClick={() => setShowHistory(!showHistory)}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg"
               >
-                <Check className="w-4 h-4" />
-                Закрити версію
+                <History className="w-4 h-4" />
+                Версії ({version.version_history.length})
+                <ChevronDown className={`w-4 h-4 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
               </button>
             )}
             
+            {/* Статус */}
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${
               version?.status === 'active' ? 'bg-amber-100 text-amber-800' :
               version?.status === 'returned' ? 'bg-green-100 text-green-800' :
@@ -192,47 +348,79 @@ export default function PartialReturnVersionWorkspace() {
                version?.status === 'returned' ? '✓ Закрита' :
                '📦 Архів'}
             </span>
+            
+            {/* Кнопка завершення */}
+            {!isCompleted && (
+              <button
+                onClick={handleComplete}
+                disabled={saving || !canComplete}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  saving || !canComplete
+                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {saving ? 'Обробка...' : 'Завершити приймання'}
+              </button>
+            )}
           </div>
         </div>
+        
+        {/* Dropdown історії версій */}
+        {showHistory && version?.version_history && (
+          <div className="absolute top-full right-6 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg py-2 z-30 w-64">
+            {version.version_history.map(v => (
+              <button
+                key={v.version_id}
+                onClick={() => {
+                  if (v.version_id !== parseInt(versionId)) {
+                    navigate(`/partial-return/${v.version_id}`)
+                  }
+                  setShowHistory(false)
+                }}
+                className={`w-full px-4 py-2 text-left hover:bg-slate-50 flex justify-between items-center ${
+                  v.version_id === parseInt(versionId) ? 'bg-blue-50' : ''
+                }`}
+              >
+                <span className="font-medium text-slate-800">{v.display_number}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  v.status === 'active' ? 'bg-amber-100 text-amber-800' :
+                  v.status === 'returned' ? 'bg-green-100 text-green-800' :
+                  'bg-slate-100 text-slate-600'
+                }`}>
+                  {v.status === 'active' ? 'Активна' : v.status === 'returned' ? 'Закрита' : 'Архів'}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </header>
       
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <main className="max-w-7xl mx-auto p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
-          {/* Ліва колонка - Інформація */}
-          <div className="space-y-6">
+          {/* Ліва колонка - Інфо та чат */}
+          <div className="lg:col-span-3 space-y-4">
             {/* Клієнт */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-corp-primary" />
-                Клієнт
-              </h3>
-              <div className="space-y-3">
-                <div className="font-medium text-slate-800">{version?.customer?.name}</div>
-                <div className="flex items-center gap-2 text-slate-600">
-                  <Phone className="w-4 h-4" />
-                  <a href={`tel:${version?.customer?.phone}`} className="hover:text-corp-primary">
-                    {version?.customer?.phone}
-                  </a>
-                </div>
-                {version?.customer?.email && (
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Mail className="w-4 h-4" />
-                    <a href={`mailto:${version?.customer?.email}`} className="hover:text-corp-primary">
-                      {version?.customer?.email}
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
+            <LeftRailClient
+              name={version?.customer?.name || '—'}
+              phone={version?.customer?.phone || '—'}
+              email={version?.customer?.email}
+            />
             
-            {/* Дати та прострочення */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-corp-primary" />
-                Період оренди
-              </h3>
-              <div className="space-y-3 text-sm">
+            {/* Інфо про замовлення */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <h3 className="font-semibold text-slate-800 mb-3">📋 Інформація</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Оригінал:</span>
+                  <button 
+                    onClick={() => navigate(`/return/${version?.parent_order_id}`)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    #{version?.parent_order_number}
+                  </button>
+                </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Початок:</span>
                   <span className="text-slate-800">{version?.rental_start_date || '—'}</span>
@@ -244,159 +432,89 @@ export default function PartialReturnVersionWorkspace() {
                 {version?.days_overdue > 0 && (
                   <div className="flex justify-between pt-2 border-t border-slate-100">
                     <span className="text-red-600 font-medium">Прострочення:</span>
-                    <span className="text-red-600 font-bold">+{version.days_overdue} днів</span>
+                    <span className="text-red-600 font-bold">+{version.days_overdue} дн.</span>
                   </div>
                 )}
               </div>
             </div>
             
-            {/* Історія версій */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <button 
-                onClick={() => setShowHistory(!showHistory)}
-                className="w-full flex items-center justify-between font-semibold text-slate-800"
-              >
-                <span className="flex items-center gap-2">
-                  <History className="w-5 h-5 text-corp-primary" />
-                  Історія версій ({version?.version_history?.length || 0})
-                </span>
-                <ChevronDown className={`w-5 h-5 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
-              </button>
-              
-              {showHistory && (
-                <div className="mt-4 space-y-2">
-                  {version?.version_history?.map(v => (
-                    <div 
-                      key={v.version_id}
-                      onClick={() => v.version_id !== parseInt(versionId) && navigate(`/partial-return/${v.version_id}`)}
-                      className={`p-3 rounded-lg border transition-colors ${
-                        v.version_id === parseInt(versionId) 
-                          ? 'bg-corp-primary/5 border-corp-primary' 
-                          : 'bg-slate-50 border-slate-200 hover:bg-slate-100 cursor-pointer'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-slate-800">{v.display_number}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          v.status === 'active' ? 'bg-amber-100 text-amber-800' :
-                          v.status === 'returned' ? 'bg-green-100 text-green-800' :
-                          'bg-slate-100 text-slate-600'
-                        }`}>
-                          {v.status === 'active' ? 'Активна' : v.status === 'returned' ? 'Закрита' : 'Архів'}
-                        </span>
-                      </div>
-                      <div className="text-xs text-slate-500 mt-1">
-                        {v.created_at ? new Date(v.created_at).toLocaleString('uk-UA') : ''}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Посилання на батьківське замовлення */}
-            <button
-              onClick={() => navigate(`/return/${version?.parent_order_id}`)}
-              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl p-4 text-sm transition-colors"
-            >
-              Переглянути оригінальне замовлення #{version?.parent_order_number}
-            </button>
+            {/* Внутрішній чат */}
+            <InternalNotesChat
+              orderId={version?.parent_order_id}
+              notes={[]}
+              onSendNote={() => {}}
+            />
           </div>
           
-          {/* Права колонка - Товари */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Товари що залишились */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Package className="w-5 h-5 text-amber-600" />
-                Товари у клієнта ({pendingItems.length})
-              </h3>
-              
-              {pendingItems.length > 0 ? (
-                <div className="space-y-3">
-                  {pendingItems.map(item => (
-                    <div 
-                      key={item.item_id}
-                      className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-xl"
-                    >
-                      <div className="flex-1">
-                        <div className="font-medium text-slate-800">{item.name}</div>
-                        <div className="text-sm text-slate-500">
-                          SKU: {item.sku} • {item.qty} шт • ₴{item.daily_rate?.toFixed(2)}/день
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => handleReturnItem(item.item_id, item.sku)}
-                        disabled={returning[item.item_id]}
-                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                          returning[item.item_id]
-                            ? 'bg-slate-200 text-slate-500 cursor-wait'
-                            : 'bg-green-600 text-white hover:bg-green-700'
-                        }`}
-                      >
-                        {returning[item.item_id] ? 'Обробка...' : '✓ Прийняти'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-400">
-                  <Check className="w-12 h-12 mx-auto mb-2 text-green-500" />
-                  <p>Всі товари прийнято</p>
-                </div>
-              )}
-            </div>
+          {/* Центр - Товари */}
+          <div className="lg:col-span-6 space-y-4">
+            {/* Приймальники */}
+            <ZoneRequisitors
+              selectedIds={selectedRequisitors}
+              onSelectionChange={setSelectedRequisitors}
+              readOnly={isCompleted}
+              title="Приймальники"
+              hint="Оберіть хто приймає повернення"
+            />
             
-            {/* Вже повернені товари */}
-            {returnedItems.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                  <Check className="w-5 h-5 text-green-600" />
-                  Прийнято ({returnedItems.length})
-                </h3>
-                
-                <div className="space-y-2">
-                  {returnedItems.map(item => (
-                    <div 
-                      key={item.item_id}
-                      className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg opacity-75"
-                    >
-                      <div>
-                        <div className="font-medium text-slate-700">{item.name}</div>
-                        <div className="text-sm text-slate-500">
-                          SKU: {item.sku} • {item.qty} шт
-                        </div>
-                      </div>
-                      <span className="text-green-600 text-sm">
-                        ✓ {item.returned_at ? new Date(item.returned_at).toLocaleDateString('uk-UA') : 'Повернено'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Товари */}
+            <ZoneItemsReturn
+              items={items}
+              onSetReturnedQty={handleSetReturnedQty}
+              onToggleSerial={() => {}}
+              onOpenDamage={handleOpenDamage}
+              readOnly={isCompleted}
+              isCompleted={isCompleted}
+            />
+          </div>
+          
+          {/* Права колонка - Нарахування */}
+          <div className="lg:col-span-3 space-y-4">
+            {/* Нарахування */}
+            <ZoneReturnFees
+              lateFee={lateFee}
+              cleaningFee={cleaningFee}
+              damageFee={damageFee}
+              onSetLateFee={setLateFee}
+              onSetCleaningFee={setCleaningFee}
+              onSetDamageFee={setDamageFee}
+              readOnly={isCompleted}
+            />
             
-            {/* Сума */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-600">Очікувана добова ставка:</span>
-                <span className="text-2xl font-bold text-slate-800">
-                  ₴ {version?.total_price?.toFixed(2) || '0.00'}
-                </span>
-              </div>
-              {version?.days_overdue > 0 && (
-                <div className="flex justify-between items-center mt-2 pt-2 border-t border-slate-100">
-                  <span className="text-red-600">Прострочення ({version.days_overdue} дн.):</span>
-                  <span className="text-xl font-bold text-red-600">
-                    ₴ {(version.total_price * version.days_overdue).toFixed(2)}
-                  </span>
+            {/* Підсумок */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <h3 className="font-semibold text-slate-800 mb-3">💵 Підсумок</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Добова ставка:</span>
+                  <span className="text-slate-800">₴{version?.total_price?.toFixed(2) || '0.00'}</span>
                 </div>
-              )}
+                {version?.days_overdue > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">× {version.days_overdue} дн.:</span>
+                    <span className="text-red-600">₴{(version.total_price * version.days_overdue).toFixed(2)}</span>
+                  </div>
+                )}
+                {totalFees > 0 && (
+                  <div className="flex justify-between pt-2 border-t border-slate-100">
+                    <span className="text-slate-700 font-medium">До оплати:</span>
+                    <span className="text-lg font-bold text-slate-800">₴{totalFees.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </main>
+      
+      {/* Модалка шкоди */}
+      <DamageModal
+        isOpen={damageModal.open}
+        onClose={() => setDamageModal({ open: false, item: null })}
+        item={damageModal.item}
+        orderId={version?.parent_order_id}
+        onSave={handleSaveDamage}
+      />
     </div>
   )
 }

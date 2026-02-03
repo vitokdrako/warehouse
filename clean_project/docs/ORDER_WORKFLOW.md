@@ -108,29 +108,51 @@ pending → awaiting_customer → processing → ready_for_issue → issued → 
 - Записується в `fin_payments`
 - Статус → `returned`
 
-### 6.2 Часткове повернення
+### 6.2 Часткове повернення (НОВА СИСТЕМА ВЕРСІЙ)
 
-**Модалка:** `PartialReturnModal.jsx`
+**Замість "заморожування" товарів - створюємо версії замовлення!**
 
-**Endpoint:** `POST /api/partial-returns/order/{id}/process`
+**UI:** Колонка "⚠️ Часткове повернення" на Dashboard
 
-**Коли використовується:**
-- Клієнт повернув НЕ всі товари
-- Частина товарів втрачена/пошкоджена
+**Воркфлоу:**
 
-**Для кожного неповерненого товару два варіанти:**
+1. **При частковому поверненні:**
+   - Повернуті товари → назад на склад (доступні для оренди)
+   - Неповернені товари → створюється версія `#OC-7280(1)`
+   - Батьківське замовлення → статус `returned`
 
-#### Варіант A: Продовження оренди (`action: 'extend'`)
-- Створюється запис в `order_extensions`
-- Статус замовлення → `partial_return`
-- Щодня нараховується добова ставка
-- Товар залишається "в оренді"
+2. **Версія має:**
+   - `order_number`: OC-7280(1), OC-7280(2), ...
+   - `original_return_date`: дата коли мало бути повернуто
+   - `daily_fee`: сума прострочення за день
+   - `days_overdue`: автоматично розраховується
+   - `fee_status`: pending → charged/waived
 
-#### Варіант B: Повна втрата (`action: 'loss'`)
-- Списується товар з `products.quantity`
-- Записується в `product_damage_history`
-- Створюється `fin_payments` з типом `loss`
-- Якщо всі товари втрачені → статус `returned`
+3. **Прийняття товарів з версії:**
+   - Якщо все повернуто → версія закривається
+   - Якщо не все → можна створити наступну версію `(2)`
+
+4. **Нарахування прострочення:**
+   - Система показує: "Розрахунок: 5 днів × ₴150 = ₴750"
+   - Менеджер вводить суму вручну (може бути знижка)
+   - Записується в `fin_payments` тип `late`
+
+**Таблиці:**
+- `order_return_versions` - основна інформація версії
+- `order_return_version_items` - товари версії
+
+**API:**
+```
+GET  /api/return-versions                      - Список активних версій
+GET  /api/return-versions/{id}                 - Деталі версії
+POST /api/return-versions/order/{id}/create    - Створити версію
+POST /api/return-versions/{id}/accept-items    - Прийняти товари
+POST /api/return-versions/{id}/create-next     - Створити наступну версію
+POST /api/return-versions/{id}/charge-fee      - Нарахувати прострочення
+POST /api/return-versions/{id}/waive-fee       - Списати прострочення
+GET  /api/return-versions/order/{id}/versions  - Всі версії замовлення
+POST /api/return-versions/migrate-from-extensions - Міграція старих даних
+```
 
 ---
 

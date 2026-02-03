@@ -82,7 +82,7 @@ export default function PartialReturnModal({
 
     try {
       // Збираємо товари що НЕ повернулись (action='extend')
-      const notReturnedItems = notReturnedItems
+      const itemsToKeep = notReturnedItems
         .filter(item => {
           const decision = itemDecisions[item.product_id] || { action: 'extend' }
           return decision.action === 'extend'
@@ -105,7 +105,7 @@ export default function PartialReturnModal({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ not_returned_items: notReturnedItems })
+        body: JSON.stringify({ not_returned_items: itemsToKeep })
       })
 
       if (!response.ok) {

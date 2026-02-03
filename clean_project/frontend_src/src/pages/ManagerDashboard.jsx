@@ -241,6 +241,17 @@ export default function ManagerDashboard() {
       setCleaningStats({
         repair: data.cleaning_stats?.repair || 0
       });
+      
+      // ✅ Завантажити версії повернення окремим запитом
+      try {
+        const versionsData = await fetchWithRetry(`${BACKEND_URL}/api/return-versions`);
+        setReturnVersions(versionsData.versions || []);
+        console.log('[Dashboard] ✅ Return versions loaded:', versionsData.count || 0);
+      } catch (vErr) {
+        console.warn('[Dashboard] ⚠️ Could not load return versions:', vErr);
+        setReturnVersions([]);
+      }
+      
       setLoading(false);
       
     } catch (error) {

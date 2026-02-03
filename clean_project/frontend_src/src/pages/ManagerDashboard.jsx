@@ -565,7 +565,7 @@ export default function ManagerDashboard() {
                       id={order.order_number}
                       name={order.customer_name || order.client_name}
                       phone={order.customer_phone || order.client_phone}
-                      rent={`₴ ${(order.total_price || order.total_rental || 0).toFixed(0)}`}
+                      rent={`₴ ${(order.total_after_discount || order.total_price || order.total_rental || 0).toFixed(0)}`}
                       deposit={`₴ ${(order.deposit_amount || order.total_deposit || 0).toFixed(0)}`}
                       badge="awaiting"
                       order={order}

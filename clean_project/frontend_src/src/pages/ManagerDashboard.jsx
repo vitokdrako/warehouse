@@ -242,6 +242,18 @@ export default function ManagerDashboard() {
         repair: data.cleaning_stats?.repair || 0
       });
       
+      // ✅ Завантажуємо версії часткових повернень окремо
+      try {
+        const versionsRes = await authFetch(`${BACKEND_URL}/api/return-versions/active`);
+        if (versionsRes.ok) {
+          const versionsData = await versionsRes.json();
+          setPartialReturnVersions(versionsData.versions || []);
+          console.log('[Dashboard] ✅ Partial return versions loaded:', versionsData.count);
+        }
+      } catch (e) {
+        console.log('[Dashboard] Partial return versions not available');
+      }
+      
       setLoading(false);
       
     } catch (error) {

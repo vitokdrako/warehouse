@@ -1474,11 +1474,35 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
           )}
         </div>
         
-        {/* Who has it */}
+        {/* Who has it - показуємо номер замовлення та статус */}
         {hasRentals && (
-          <div className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 truncate">
-            {item.who_has[0].customer}
-            {item.who_has.length > 1 && ` +${item.who_has.length - 1}`}
+          <div className={cls(
+            "text-xs rounded px-2 py-1.5 mt-1",
+            hasConflict ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+          )}>
+            <div className="flex items-center gap-1">
+              <span className="font-medium">#{item.who_has[0].order_number}</span>
+              <span className="text-[10px] px-1 py-0.5 rounded bg-white/60">
+                {item.who_has[0].status === 'issued' || item.who_has[0].status === 'on_rent' ? 'В оренді' :
+                 item.who_has[0].status === 'processing' ? 'В обробці' :
+                 item.who_has[0].status === 'ready_for_issue' ? 'До видачі' : 
+                 item.who_has[0].status}
+              </span>
+            </div>
+            {item.who_has.length > 1 && (
+              <div className="text-[10px] mt-0.5 opacity-75">
+                +{item.who_has.length - 1} замовл.
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Processing status (cleaning, repair) */}
+        {hasProcessing && !hasRentals && (
+          <div className="text-xs rounded px-2 py-1.5 mt-1 bg-cyan-50 text-cyan-700 border border-cyan-200">
+            {item.on_wash > 0 && <span>🧹 На мийці: {item.on_wash}</span>}
+            {item.on_restoration > 0 && <span>{item.on_wash > 0 ? ' · ' : ''}🔧 Ремонт: {item.on_restoration}</span>}
+            {item.on_laundry > 0 && <span>{(item.on_wash > 0 || item.on_restoration > 0) ? ' · ' : ''}👕 Хімчистка: {item.on_laundry}</span>}
           </div>
         )}
       </div>

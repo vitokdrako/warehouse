@@ -86,14 +86,15 @@ cp -r build/* /app/clean_project/frontend_build/
 ## Останні зміни (03.02.2026)
 
 ### Виконано:
-- ✅ **НОВА СИСТЕМА ВЕРСІЙ ПОВЕРНЕННЯ:**
-  - Замість "заморожування" товарів - версії `#OC-7280(1), (2)...`
-  - Нова колонка на Dashboard "Часткове повернення"
-  - Окрема сторінка `/return-version/{id}` для обробки
-  - API: create, accept-items, charge-fee, create-next
-  - Міграція існуючих order_extensions → versions
-  - Інтеграція з Finance Hub
-- ✅ **Dashboard:** Прибрано колонку "Очікують підтвердження" (є в Менеджерській)
+- ✅ **НОВА АРХІТЕКТУРА ВЕРСІЙ ЧАСТКОВИХ ПОВЕРНЕНЬ (v2):**
+  - **ВАЖЛИВО:** Не створюємо записи в таблиці `orders` (це OpenCart!)
+  - Нові таблиці: `partial_return_versions`, `partial_return_version_items`
+  - Версіонування: OC-7266 → OC-7266(1) → OC-7266(2) і т.д.
+  - API endpoints: `/api/return-versions/*`
+  - Нова сторінка: `/partial-return/{versionId}`
+  - Дашборд показує тільки останню активну версію
+  - Історія версій доступна в архіві
+- ✅ **Dashboard:** Колонка "Часткове повернення" тепер завантажує з `partial_return_versions`
 - ✅ **Покращений Conflict Checker** - показує деталі конфліктів
 - ✅ **Покращений каталог** - деталі доступності
 - ✅ Виправлено accessibility warning (DialogDescription)
@@ -104,8 +105,31 @@ cp -r build/* /app/clean_project/frontend_build/
 - ✅ Виправлено помилки календаря
 - ✅ Створено чистий проект без застарілих файлів
 
+### Архітектура часткових повернень:
+```
+Оригінальне замовлення (OpenCart):
+  orders.order_id = 7266
+  orders.order_number = "OC-7266"
+  
+При частковому поверненні:
+  1. orders.status → "returned" (архів)
+  2. partial_return_versions:
+     - version_id = 1
+     - parent_order_id = 7266
+     - display_number = "OC-7266(1)"
+     - status = "active"
+  
+При повторному частковому поверненні:
+  3. partial_return_versions[1].status → "archived"
+  4. partial_return_versions:
+     - version_id = 2
+     - display_number = "OC-7266(2)"
+     - status = "active"
+```
+
 ### В роботі:
-- [ ] Тестування нової системи версій на production
+- [ ] Інтеграція з фін кабінетом для нарахування прострочення
+- [ ] Створення версії з ReturnOrderWorkspace (модалка)
 
 ### Backlog:
 - [ ] Баг часового поясу в календарі (очікує перевірки)

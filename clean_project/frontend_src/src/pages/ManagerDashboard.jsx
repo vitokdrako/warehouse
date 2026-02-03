@@ -688,9 +688,9 @@ export default function ManagerDashboard() {
             <>
               {(showAllVersions ? returnVersions : returnVersions.slice(0, 4)).map(version => (
                 <VersionCard 
-                  key={version.id}
+                  key={version.order_id}
                   version={version}
-                  onClick={() => navigate(`/return-version/${version.id}`)}
+                  onClick={() => navigate(`/return/${version.order_id}`)}
                 />
               ))}
               {returnVersions.length > 4 && !showAllVersions && (

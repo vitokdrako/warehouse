@@ -127,7 +127,7 @@ async def create_child_order(
         total_price = sum(item.get('qty', 0) * item.get('daily_rate', 0) for item in data.items)
         
         # Створити нове замовлення
-        db.execute(text("""
+        result = db.execute(text("""
             INSERT INTO orders (
                 order_number, customer_name, customer_phone, customer_email,
                 rental_start_date, rental_end_date,
@@ -153,7 +153,10 @@ async def create_child_order(
         })
         
         # Отримати ID нового замовлення
-        new_order_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        new_order_id = result.lastrowid
+        if not new_order_id:
+            # Fallback
+            new_order_id = db.execute(text("SELECT MAX(order_id) FROM orders")).scalar()
         
         # Додати товари до нового замовлення
         for item in data.items:

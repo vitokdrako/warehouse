@@ -748,7 +748,7 @@ export default function ManagerDashboard() {
                   id={card.order_number}
                   name={card.customer_name}
                   phone={card.customer_phone}
-                  rent={`₴ ${card.total_rental?.toFixed(0)}`}
+                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
                   deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
                   badge="partial"
                   order={card}

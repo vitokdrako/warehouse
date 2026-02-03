@@ -709,8 +709,17 @@ export default function ReturnOrderWorkspace() {
         isOpen={partialReturnModal.open}
         onClose={() => setPartialReturnModal({ open: false, items: [] })}
         orderId={orderId}
+        orderNumber={order?.order_number}
         notReturnedItems={partialReturnModal.items}
         onConfirm={handlePartialReturnConfirm}
+        onVersionCreated={(newOrderId, redirectUrl) => {
+          // Редірект на нове замовлення (версію)
+          toast({
+            title: '✅ Створено часткове повернення',
+            description: `Перенаправлення на нове замовлення...`
+          })
+          navigate(redirectUrl || `/return/${newOrderId}`)
+        }}
       />
     </>
   )

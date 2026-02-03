@@ -74,44 +74,95 @@ export default function PartialReturnModal({
     return { totalLoss, extendedItems, lostItems }
   }, [notReturnedItems, itemDecisions])
 
-  // Підтвердження
+  // Підтвердження - створює дочірнє замовлення з неповерненими товарами
   const handleConfirm = async () => {
     setLoading(true)
     setError(null)
 
     try {
-      const items = notReturnedItems.map(item => {
-        const decision = itemDecisions[item.product_id] || { action: 'extend' }
-        return {
-          product_id: item.product_id,
-          sku: item.sku,
-          name: item.name,
-          rented_qty: item.rented_qty,
-          returned_qty: item.returned_qty,
-          not_returned_qty: item.not_returned_qty,
-          action: decision.action,
-          daily_rate: item.daily_rate,
-          adjusted_daily_rate: decision.action === 'extend' ? decision.adjustedRate : null,
-          loss_amount: decision.action === 'loss' ? decision.lossAmount : null
+      // Готуємо дані для дочірнього замовлення
+      // Тільки товари з action='extend' (продовження оренди)
+      const itemsForChild = notReturnedItems
+        .filter(item => {
+          const decision = itemDecisions[item.product_id] || { action: 'extend' }
+          return decision.action === 'extend'
+        })
+        .map(item => {
+          const decision = itemDecisions[item.product_id] || { action: 'extend' }
+          return {
+            product_id: item.product_id,
+            sku: item.sku,
+            name: item.name,
+            qty: item.not_returned_qty,
+            daily_rate: decision.adjustedRate || item.daily_rate
+          }
+        })
+
+      // Якщо є товари на продовження - створити дочірнє замовлення
+      if (itemsForChild.length > 0) {
+        const response = await fetch(`${BACKEND_URL}/api/return-versions/order/${orderId}/create-child`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ 
+            items: itemsForChild,
+            notes: `Часткове повернення: ${itemsForChild.length} позицій`
+          })
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.detail || 'Помилка створення замовлення')
         }
-      })
 
-      const response = await fetch(`${BACKEND_URL}/api/partial-returns/order/${orderId}/process`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ items })
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.detail || 'Помилка обробки')
+        const result = await response.json()
+        
+        // Викликаємо callback з URL для редіректу
+        onVersionCreated?.(result.new_order_id, result.redirect_url)
+        onConfirm?.(result)
+        onClose()
+        return
       }
 
-      const result = await response.json()
-      onConfirm?.(result)
+      // Якщо всі товари - втрата, обробляємо через старий API
+      const lossItems = notReturnedItems.filter(item => {
+        const decision = itemDecisions[item.product_id] || { action: 'extend' }
+        return decision.action === 'loss'
+      })
+
+      if (lossItems.length > 0) {
+        const items = lossItems.map(item => {
+          const decision = itemDecisions[item.product_id] || {}
+          return {
+            product_id: item.product_id,
+            sku: item.sku,
+            name: item.name,
+            not_returned_qty: item.not_returned_qty,
+            action: 'loss',
+            loss_amount: decision.lossAmount || item.loss_amount
+          }
+        })
+
+        const response = await fetch(`${BACKEND_URL}/api/partial-returns/order/${orderId}/process`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ items })
+        })
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.detail || 'Помилка обробки')
+        }
+
+        const result = await response.json()
+        onConfirm?.(result)
+      }
+
       onClose()
     } catch (err) {
       setError(err.message)

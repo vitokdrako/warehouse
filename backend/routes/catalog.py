@@ -295,16 +295,14 @@ async def get_items_by_category(
                 SELECT 
                     oi.product_id, 
                     o.order_number, 
-                    c.firstname, 
-                    c.lastname, 
-                    c.telephone,
+                    o.client_name,
+                    o.client_phone,
                     o.rental_start_date,
                     o.rental_end_date,
                     oi.quantity,
                     o.status
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.order_id
-                JOIN customers c ON o.customer_id = c.customer_id
                 WHERE oi.product_id IN :product_ids
                 AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent', 'awaiting_customer', 'pending')
                 AND o.rental_start_date <= :date_to
@@ -340,16 +338,14 @@ async def get_items_by_category(
                 SELECT 
                     oi.product_id, 
                     o.order_number, 
-                    c.firstname, 
-                    c.lastname, 
-                    c.telephone,
+                    o.client_name,
+                    o.client_phone,
                     o.rental_start_date,
                     o.rental_end_date,
                     oi.quantity,
                     o.status
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.order_id
-                JOIN customers c ON o.customer_id = c.customer_id
                 WHERE oi.product_id IN :product_ids
                 AND o.status IN ('issued', 'on_rent')
                 ORDER BY o.rental_end_date
@@ -362,12 +358,12 @@ async def get_items_by_category(
                 who_has_dict[pid] = []
             who_has_dict[pid].append({
                 "order_number": row[1],
-                "customer": f"{row[2] or ''} {row[3] or ''}".strip(),
-                "phone": row[4],
-                "start_date": str(row[5]) if row[5] else None,
-                "return_date": str(row[6]) if row[6] else None,
-                "qty": row[7],
-                "status": row[8]
+                "customer": row[2] or '',  # client_name
+                "phone": row[3],  # client_phone
+                "start_date": str(row[4]) if row[4] else None,
+                "return_date": str(row[5]) if row[5] else None,
+                "qty": row[6],
+                "status": row[7]
             })
         
         # Отримати товари на обробці (мийка, реставрація, хімчистка) з product_damage_history

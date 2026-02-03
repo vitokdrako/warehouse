@@ -16,6 +16,7 @@ export default function ManagerDashboard() {
   const [orders, setOrders] = useState([]);
   const [decorOrders, setDecorOrders] = useState([]);  // Наші замовлення
   const [issueCards, setIssueCards] = useState([]);  // Картки видачі
+  const [returnVersions, setReturnVersions] = useState([]);  // ✅ Версії повернення
   const [loading, setLoading] = useState(true);
   const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
   const [cleaningStats, setCleaningStats] = useState({ repair: 0 });
@@ -26,6 +27,7 @@ export default function ManagerDashboard() {
   const [showAllReturns, setShowAllReturns] = useState(true);  // За замовчуванням показуємо всі
   const [showAllPreparation, setShowAllPreparation] = useState(false);  // Комплектація
   const [showAllReady, setShowAllReady] = useState(false);  // Готові до видачі
+  const [showAllVersions, setShowAllVersions] = useState(false);  // ✅ Версії повернення
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Всі');
   const [user, setUser] = useState(null);

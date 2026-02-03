@@ -295,8 +295,8 @@ async def get_items_by_category(
                 SELECT 
                     oi.product_id, 
                     o.order_number, 
-                    o.client_name,
-                    o.client_phone,
+                    o.customer_name,
+                    o.customer_phone,
                     o.rental_start_date,
                     o.rental_end_date,
                     oi.quantity,

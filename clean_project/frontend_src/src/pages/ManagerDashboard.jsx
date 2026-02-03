@@ -658,8 +658,8 @@ export default function ManagerDashboard() {
                   id={`#${card.order_id}`}
                   name={card.customer_name || '—'}
                   phone={card.customer_phone || '—'}
-                  rent={`₴ ${card.total_rental?.toFixed(0) || 0}`}
-                  deposit={`₴ ${card.deposit_amount?.toFixed(0) || 0}`}
+                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
+                  deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
                   badge="ready"
                   order={card}
                   onDateUpdate={null}

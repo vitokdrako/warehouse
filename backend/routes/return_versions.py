@@ -258,20 +258,53 @@ async def get_partial_return_orders(
     """
     Отримати всі замовлення зі статусом partial_return (для дашборду)
     """
+    # Переконатись що колонка parent_order_id існує
+    ensure_parent_order_column(db)
+    
     try:
-        result = db.execute(text("""
-            SELECT 
-                o.order_id, o.order_number, o.customer_name, o.customer_phone,
-                o.rental_start_date, o.rental_end_date,
-                o.total_price, o.deposit_amount,
-                o.parent_order_id, o.status, o.created_at,
-                ic.id as issue_card_id,
-                DATEDIFF(CURDATE(), o.rental_end_date) as days_overdue
-            FROM orders o
-            LEFT JOIN issue_cards ic ON o.order_id = ic.order_id
-            WHERE o.status = 'partial_return'
-            ORDER BY o.created_at DESC
-        """))
+        # Спочатку перевіримо чи колонка існує
+        has_parent_col = False
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.columns 
+                WHERE table_schema = DATABASE() 
+                AND table_name = 'orders' 
+                AND column_name = 'parent_order_id'
+            """)).scalar()
+            has_parent_col = check > 0
+        except:
+            pass
+        
+        if has_parent_col:
+            query = """
+                SELECT 
+                    o.order_id, o.order_number, o.customer_name, o.customer_phone,
+                    o.rental_start_date, o.rental_end_date,
+                    o.total_price, o.deposit_amount,
+                    o.parent_order_id, o.status, o.created_at,
+                    ic.id as issue_card_id,
+                    DATEDIFF(CURDATE(), o.rental_end_date) as days_overdue
+                FROM orders o
+                LEFT JOIN issue_cards ic ON o.order_id = ic.order_id
+                WHERE o.status = 'partial_return'
+                ORDER BY o.created_at DESC
+            """
+        else:
+            query = """
+                SELECT 
+                    o.order_id, o.order_number, o.customer_name, o.customer_phone,
+                    o.rental_start_date, o.rental_end_date,
+                    o.total_price, o.deposit_amount,
+                    NULL as parent_order_id, o.status, o.created_at,
+                    ic.id as issue_card_id,
+                    DATEDIFF(CURDATE(), o.rental_end_date) as days_overdue
+                FROM orders o
+                LEFT JOIN issue_cards ic ON o.order_id = ic.order_id
+                WHERE o.status = 'partial_return'
+                ORDER BY o.created_at DESC
+            """
+        
+        result = db.execute(text(query))
         
         orders = []
         for row in result:

@@ -74,21 +74,21 @@ export default function PartialReturnModal({
     return { totalLoss, extendedItems, lostItems }
   }, [notReturnedItems, itemDecisions])
 
-  // Підтвердження - створює дочірнє замовлення з неповерненими товарами
+  // Підтвердження - фіналізує часткове повернення
+  // Додає суфікс (1) до номера і залишає тільки неповернені товари
   const handleConfirm = async () => {
     setLoading(true)
     setError(null)
 
     try {
-      // Готуємо дані для дочірнього замовлення
-      // Тільки товари з action='extend' (продовження оренди)
-      const itemsForChild = notReturnedItems
+      // Збираємо товари що ЗАЛИШАЮТЬСЯ у клієнта (action='extend')
+      const keptItems = notReturnedItems
         .filter(item => {
           const decision = itemDecisions[item.product_id] || { action: 'extend' }
           return decision.action === 'extend'
         })
         .map(item => {
-          const decision = itemDecisions[item.product_id] || { action: 'extend' }
+          const decision = itemDecisions[item.product_id] || {}
           return {
             product_id: item.product_id,
             sku: item.sku,
@@ -98,71 +98,32 @@ export default function PartialReturnModal({
           }
         })
 
-      // Якщо є товари на продовження - створити дочірнє замовлення
-      if (itemsForChild.length > 0) {
-        const response = await fetch(`${BACKEND_URL}/api/return-versions/order/${orderId}/create-child`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ 
-            items: itemsForChild,
-            notes: `Часткове повернення: ${itemsForChild.length} позицій`
-          })
-        })
-
-        if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.detail || 'Помилка створення замовлення')
-        }
-
-        const result = await response.json()
-        
-        // Викликаємо callback з URL для редіректу
-        onVersionCreated?.(result.new_order_id, result.redirect_url)
-        onConfirm?.(result)
-        onClose()
-        return
-      }
-
-      // Якщо всі товари - втрата, обробляємо через старий API
-      const lossItems = notReturnedItems.filter(item => {
-        const decision = itemDecisions[item.product_id] || { action: 'extend' }
-        return decision.action === 'loss'
+      // Фіналізуємо часткове повернення - додаємо суфікс і залишаємо тільки ці товари
+      const response = await fetch(`${BACKEND_URL}/api/return-versions/order/${orderId}/finalize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ kept_items: keptItems })
       })
 
-      if (lossItems.length > 0) {
-        const items = lossItems.map(item => {
-          const decision = itemDecisions[item.product_id] || {}
-          return {
-            product_id: item.product_id,
-            sku: item.sku,
-            name: item.name,
-            not_returned_qty: item.not_returned_qty,
-            action: 'loss',
-            loss_amount: decision.lossAmount || item.loss_amount
-          }
-        })
-
-        const response = await fetch(`${BACKEND_URL}/api/partial-returns/order/${orderId}/process`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ items })
-        })
-
-        if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.detail || 'Помилка обробки')
-        }
-
-        const result = await response.json()
-        onConfirm?.(result)
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.detail || 'Помилка обробки')
       }
 
+      const result = await response.json()
+      
+      // Callback з новим номером замовлення
+      onConfirm?.({
+        ...result,
+        message: `Створено ${result.new_order_number} з ${keptItems.length} позиціями`
+      })
+      
+      // Редірект на те саме замовлення (воно тепер має новий номер)
+      onVersionCreated?.(orderId, `/return/${orderId}`)
+      
       onClose()
     } catch (err) {
       setError(err.message)

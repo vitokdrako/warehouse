@@ -978,70 +978,93 @@ export default function FinanceHub() {
                 right={<Badge kind={getOrderBadge(selectedOrder).kind}>{selectedOrder.status}</Badge>}
               >
                 <div className="space-y-4">
-                  {/* KPI Row */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                      <div className="text-xs text-slate-500">Нараховано</div>
-                      <div className="text-lg font-bold">{money(selectedOrder.total_rental)}</div>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                      <div className="text-xs text-slate-500">Оплачено</div>
-                      <div className="text-lg font-bold text-emerald-600">{money(selectedOrder.rent_paid)}</div>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                      <div className="text-xs text-slate-500">Застава</div>
-                      <div className="text-lg font-bold">{money(selectedOrder.deposit_held)}</div>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                      <div className="text-xs text-slate-500">До сплати</div>
-                      <div className={cn(
-                        "text-lg font-bold",
-                        (selectedOrder.total_rental - selectedOrder.rent_paid) > 0 ? "text-amber-600" : "text-emerald-600"
-                      )}>
-                        {money(Math.max(0, selectedOrder.total_rental - selectedOrder.rent_paid))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Знижка - редагована */}
-                  {(selectedOrder.discount_amount > 0 || selectedOrder.discount_percent > 0) && (
-                    <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-xs text-emerald-700 font-medium">🏷️ ЗНИЖКА</div>
-                          <div className="text-lg font-bold text-emerald-700">
-                            {selectedOrder.discount_percent > 0 && `${selectedOrder.discount_percent}% = `}
-                            {money(selectedOrder.discount_amount)}
+                  {/* KPI Row - з урахуванням знижки */}
+                  {(() => {
+                    const discount = selectedOrder.discount_amount || 0;
+                    const totalAfterDiscount = selectedOrder.total_rental - discount;
+                    const toPay = Math.max(0, totalAfterDiscount - selectedOrder.rent_paid);
+                    
+                    return (
+                      <>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                            <div className="text-xs text-slate-500">Нараховано</div>
+                            <div className="text-lg font-bold">{money(selectedOrder.total_rental)}</div>
+                            {discount > 0 && (
+                              <div className="text-xs text-emerald-600 mt-1">
+                                − знижка {money(discount)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                            <div className="text-xs text-slate-500">Оплачено</div>
+                            <div className="text-lg font-bold text-emerald-600">{money(selectedOrder.rent_paid)}</div>
+                          </div>
+                          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                            <div className="text-xs text-slate-500">Застава</div>
+                            <div className="text-lg font-bold">{money(selectedOrder.deposit_held)}</div>
+                          </div>
+                          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                            <div className="text-xs text-slate-500">До сплати</div>
+                            <div className={cn(
+                              "text-lg font-bold",
+                              toPay > 0 ? "text-amber-600" : "text-emerald-600"
+                            )}>
+                              {money(toPay)}
+                            </div>
+                            {discount > 0 && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                {money(totalAfterDiscount)} після знижки
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <button
-                          className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200"
-                          onClick={async () => {
-                            const newAmount = prompt("Введіть нову суму знижки:", selectedOrder.discount_amount);
-                            if (newAmount === null) return;
-                            const amount = parseFloat(newAmount);
-                            if (isNaN(amount) || amount < 0) {
-                              alert("Невірна сума");
-                              return;
-                            }
-                            setSaving(true);
-                            try {
-                              await authFetch(`${BACKEND_URL}/api/finance/order/${selectedOrderId}/discount`, {
-                                method: "PUT",
-                                body: JSON.stringify({ amount, note: `Знижка (редаговано)` })
-                              });
-                              await refreshAll();
-                            } catch (e) {
-                              alert("Помилка: " + e.message);
-                            }
-                            setSaving(false);
-                          }}
-                        >
-                          ✏️ Редагувати
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                        
+                        {/* Знижка - редагована */}
+                        {discount > 0 && (
+                          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-xs text-emerald-700 font-medium">🏷️ ЗНИЖКА</div>
+                                <div className="text-lg font-bold text-emerald-700">
+                                  {selectedOrder.discount_percent > 0 && `${selectedOrder.discount_percent}% = `}
+                                  {money(discount)}
+                                </div>
+                                <div className="text-xs text-emerald-600 mt-1">
+                                  Фінальна сума: {money(totalAfterDiscount)}
+                                </div>
+                              </div>
+                              <button
+                                className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded hover:bg-emerald-200"
+                                onClick={async () => {
+                                  const newAmount = prompt("Введіть нову суму знижки:", discount);
+                                  if (newAmount === null) return;
+                                  const amount = parseFloat(newAmount);
+                                  if (isNaN(amount) || amount < 0) {
+                                    alert("Невірна сума");
+                                    return;
+                                  }
+                                  setSaving(true);
+                                  try {
+                                    await authFetch(`${BACKEND_URL}/api/finance/order/${selectedOrderId}/discount`, {
+                                      method: "PUT",
+                                      body: JSON.stringify({ amount, note: `Знижка (редаговано)` })
+                                    });
+                                    await refreshAll();
+                                  } catch (e) {
+                                    alert("Помилка: " + e.message);
+                                  }
+                                  setSaving(false);
+                                }}
+                              >
+                                ✏️ Редагувати
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                   {/* Timeline */}
                   {timeline.length > 0 && (

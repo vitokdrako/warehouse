@@ -295,16 +295,14 @@ async def get_items_by_category(
                 SELECT 
                     oi.product_id, 
                     o.order_number, 
-                    c.firstname, 
-                    c.lastname, 
-                    c.telephone,
+                    o.client_name,
+                    o.client_phone,
                     o.rental_start_date,
                     o.rental_end_date,
                     oi.quantity,
                     o.status
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.order_id
-                JOIN customers c ON o.customer_id = c.customer_id
                 WHERE oi.product_id IN :product_ids
                 AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent', 'awaiting_customer', 'pending')
                 AND o.rental_start_date <= :date_to

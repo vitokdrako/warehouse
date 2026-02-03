@@ -107,8 +107,7 @@ async def create_child_order(
         # Отримати оригінальне замовлення
         parent = db.execute(text("""
             SELECT order_id, order_number, customer_name, customer_phone, customer_email,
-                   rental_start_date, rental_end_date, total_price, deposit_amount,
-                   address, delivery_notes, source
+                   rental_start_date, rental_end_date, total_price, deposit_amount, source
             FROM orders WHERE order_id = :id
         """), {"id": order_id}).fetchone()
         
@@ -134,16 +133,12 @@ async def create_child_order(
                 rental_start_date, rental_end_date,
                 total_price, deposit_amount,
                 status, source,
-                address, delivery_notes,
-                parent_order_id,
                 created_at, updated_at
             ) VALUES (
                 :order_number, :name, :phone, :email,
                 :start_date, :end_date,
-                :total, :deposit,
+                :total, 0,
                 'partial_return', :source,
-                :address, :notes,
-                :parent_id,
                 NOW(), NOW()
             )
         """), {
@@ -154,11 +149,7 @@ async def create_child_order(
             "start_date": datetime.now().date(),  # Починається сьогодні
             "end_date": parent[6],  # Оригінальна дата повернення
             "total": total_price,
-            "deposit": 0,  # Застава залишається в оригінальному
-            "source": parent[11] or 'partial_return',
-            "address": parent[9],
-            "notes": data.notes or f"Часткове повернення з {parent_order_number}",
-            "parent_id": order_id
+            "source": parent[9] or 'partial_return'
         })
         
         # Отримати ID нового замовлення
@@ -168,7 +159,7 @@ async def create_child_order(
         for item in data.items:
             db.execute(text("""
                 INSERT INTO order_items (
-                    order_id, product_id, quantity, rental_price
+                    order_id, product_id, quantity, price
                 ) VALUES (
                     :order_id, :product_id, :qty, :price
                 )
@@ -310,7 +301,7 @@ async def get_partial_return_orders(
         for row in result:
             # Отримати товари
             items = db.execute(text("""
-                SELECT oi.product_id, p.sku, p.name, oi.quantity, oi.rental_price
+                SELECT oi.product_id, p.sku, p.name, oi.quantity, oi.price
                 FROM order_items oi
                 LEFT JOIN products p ON oi.product_id = p.product_id
                 WHERE oi.order_id = :order_id

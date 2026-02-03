@@ -524,6 +524,9 @@ export default function OrderItemsModification({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Історія змін замовлення</DialogTitle>
+            <DialogDescription>
+              Перелік всіх змін позицій замовлення
+            </DialogDescription>
           </DialogHeader>
           
           <div className="max-h-[400px] overflow-y-auto space-y-2">

@@ -1,103 +1,111 @@
-# Rental Hub - Product Requirements Document
+# RentalHub - Product Requirements Document
 
-## Original Problem Statement
-Система управління орендою реквізиту для івентів з повним lifecycle замовлень: від створення до повернення. Інтеграція з OpenCart для синхронізації товарів та клієнтів.
+## 🚨 КРИТИЧНО ДЛЯ АГЕНТІВ
 
-## User Personas
-1. **Manager** - обробка замовлень, комунікація з клієнтами, фінанси
-2. **Warehouse Staff** - комплектація, видача, приймання повернень
-3. **Admin** - системні налаштування, користувачі, звіти
+### РОБОЧА ПАПКА: `/app/clean_project/`
 
-## Core Requirements
-- Управління замовленнями з повним lifecycle
-- Інвентаризація та відстеження товарів
-- Фінансовий облік (оренда, застава, пошкодження)
-- Документообіг (накладні, акти, QR коди)
-- Синхронізація з OpenCart
+**НЕ ВИКОРИСТОВУВАТИ:** `/app/backend/`, `/app/frontend/` - це СТАРІ папки!
 
----
+### Компіляція фронтенду:
+```bash
+cd /app/clean_project/frontend_src
+REACT_APP_BACKEND_URL=https://backrentalhub.farforrent.com.ua yarn build
+cp -r build/* /app/clean_project/frontend_build/
+```
 
-## What's Been Implemented
-
-### Latest Session (2026-01-30)
-- ✅ **Real-time Order Synchronization** - WebSocket система для синхронізації змін між користувачами
-  - Backend: WebSocket handler, REST API для версій, конфлікт-детекція
-  - Frontend: useOrderWebSocket хук, індикатори активних юзерів, кнопка оновлення
-  - Таблиця `order_section_versions` для версіонування секцій замовлення
-- ✅ **Звукові сповіщення** - Web Audio API нотифікації при змінах
-  - Різні звуки для: оновлення, приєднання користувача, конфлікту версій
-  - Кнопка вмикання/вимикання звуку в хедері
-- ✅ **Request Limiter Integration** - захист від ERR_HTTP2_SERVER_REFUSED_STREAM
-  - Інтегровано в ManagerDashboard через limitedAuthFetch
-
-### Previous Sessions
-- ✅ Unified Calendar Hub - об'єднаний календар всіх подій
-- ✅ Archive System Overhaul - модальне вікно з повною історією
-- ✅ Inventory Re-audit "Critical" Status
-- ✅ SKU with slashes fix (URL encoding)
-- ✅ Order #7281 deletion (crash fix)
-- ✅ CORS configuration fixes
+### Або просто:
+```bash
+/app/clean_project/build.sh
+```
 
 ---
 
-## Prioritized Backlog
+## Опис системи
 
-### P0 (Critical)
-- [ ] Full RBAC (Role-Based Access Control)
-- [x] Real-time Order Synchronization ← COMPLETED
+**RentalHub** - система управління орендою декору для компанії FarForRent.
 
-### P1 (High Priority)
-- [ ] Monthly Financial Report
-- [x] ERR_HTTP2_SERVER_REFUSED_STREAM protection ← COMPLETED
-- [ ] Product Sub-category Data (empty)
+### URL продакшену:
+- Frontend: `https://rentalhub.farforrent.com.ua`
+- Backend: `https://backrentalhub.farforrent.com.ua`
 
-### P2 (Medium Priority)  
-- [ ] Telegram Bot Integration
-- [ ] Digital Signature Integration
-
-### P3 (Low Priority / Tech Debt)
-- [ ] Refactor `/app/backend/routes/finance.py`
-- [ ] Clean up unused imports/variables in TypeScript files
+### Бази даних:
+- **OpenCart DB** (`farforre_opencart`) - товари, замовлення
+- **RentalHub DB** (`farforre_rentalhub`) - фінанси, картки видачі/повернення
 
 ---
 
-## Architecture
+## Структура проекту
 
-### Backend Stack
-- FastAPI + SQLAlchemy
-- MySQL (RentalHub DB)
-- WebSocket for real-time sync
-- PDF generation (weasyprint)
-
-### Frontend Stack
-- React 18 + TypeScript
-- Shadcn/UI components
-- TailwindCSS
-- React Router
-
-### Key Files (Real-time Sync)
-- `/app/backend/routes/order_sync.py` - WebSocket handler + REST API
-- `/app/frontend/src/hooks/useOrderWebSocket.js` - WebSocket client hook
-- `/app/frontend/src/hooks/useAutoRefresh.js` - Polling fallback
-- `/app/frontend/src/utils/requestLimiter.js` - Request queue utility
-
-### Database Tables (New)
-- `order_section_versions` - tracks version per section (header, items, progress, comments)
-
----
-
-## API Endpoints (Real-time Sync)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/orders/{id}/versions` | Get current versions of all sections |
-| POST | `/api/orders/{id}/sections/{section}/update` | Update section version (returns conflict if outdated) |
-| GET | `/api/orders/{id}/active-users` | Get users currently viewing the order |
-| GET | `/api/orders/{id}/last-modified` | Get last modification timestamp |
-| WS | `/api/orders/{id}/ws` | WebSocket connection for real-time updates |
+```
+/app/clean_project/
+├── backend/                 # FastAPI сервер
+│   ├── server.py           # Головний файл
+│   ├── routes/             # API endpoints (52 файли)
+│   ├── services/           # Бізнес-логіка
+│   ├── templates/          # Jinja2 шаблони документів
+│   └── .env                # Конфігурація
+│
+├── frontend_src/           # React + TypeScript
+│   ├── src/pages/          # Сторінки (22 файли)
+│   ├── src/components/     # UI компоненти
+│   └── .env                # REACT_APP_BACKEND_URL
+│
+├── frontend_build/         # Скомпільований фронт (для деплою)
+│
+├── docs/                   # Документація
+├── AGENT_RULES.md          # Правила для агентів
+└── build.sh                # Скрипт компіляції
+```
 
 ---
 
-## Test Credentials
+## Основні модулі
+
+### 1. Фінансовий кабінет (`FinanceHub.jsx`)
+- Оренда, застава, шкода, прострочення
+- Знижки (записуються при видачі, редагуються менеджером)
+- **Фін кабінет = джерело правди для сум**
+
+### 2. Картки видачі (`IssueCardWorkspace.jsx`)
+- Комплектація замовлення
+- Фото до/після
+- Видалення позицій
+
+### 3. Картки повернення (`ReturnOrderWorkspace.jsx`)
+- Приймання товарів
+- Часткове повернення
+- Фіксація шкоди
+
+### 4. Календар (`UnifiedCalendarNew.jsx`)
+- Видачі/повернення
+- Завдання
+- Прострочення
+
+---
+
+## Останні зміни (02.02.2026)
+
+### Виконано:
+- ✅ Блоки Шкода/Прострочення у фін кабінеті
+- ✅ Знижка записується при видачі у fin_payments
+- ✅ Редагування знижки менеджером
+- ✅ Видалення позицій з картки комплектації
+- ✅ Виправлено помилки календаря (product_cleaning, fin_deposit_holds)
+- ✅ Створено чистий проект без застарілих файлів
+
+### В роботі:
+- [ ] Документи - повний перегляд (аналіз в `/docs/DOCUMENT_ANALYSIS.md`)
+- [ ] Об'єднання робочих просторів замовлень
+
+### Backlog:
+- [ ] RBAC (повний контроль доступу)
+- [ ] Місячний фінансовий звіт
+- [ ] Telegram бот
+- [ ] Цифровий підпис
+
+---
+
+## Credentials для тестування
+
 - Email: `vitokdrako@gmail.com`
 - Password: `test123`

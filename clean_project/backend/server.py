@@ -101,6 +101,7 @@ app.include_router(order_modifications.router)
 app.include_router(order_internal_notes.router)
 app.include_router(order_sync.router)
 app.include_router(partial_returns.router)
+app.include_router(return_versions.router)  # Нова система версій повернення
 app.include_router(uploads.router)
 app.include_router(payer_profiles.router)
 app.include_router(dashboard_overview.router)

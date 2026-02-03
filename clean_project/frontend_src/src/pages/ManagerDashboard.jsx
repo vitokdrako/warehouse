@@ -592,7 +592,7 @@ export default function ManagerDashboard() {
           )}
         </Column>
 
-        {/* КОЛОНКА 3: Готові до видачі */}
+        {/* КОЛОНКА 2: Готові до видачі */}
         <Column title="✅ Готові до видачі" subtitle="Скомплектовано → готово до передачі клієнту" tone="ok">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
@@ -637,7 +637,7 @@ export default function ManagerDashboard() {
           )}
         </Column>
 
-        {/* КОЛОНКА 4: Повернення */}
+        {/* КОЛОНКА 3: Повернення */}
         <Column title="🔙 Повернення" subtitle="Видані замовлення, які очікують повернення" tone="warn">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
@@ -680,7 +680,7 @@ export default function ManagerDashboard() {
           )}
         </Column>
         
-        {/* КОЛОНКА 5: Часткове повернення (версії) */}
+        {/* КОЛОНКА 4: Часткове повернення (версії) */}
         <Column title="⚠️ Часткове повернення" subtitle="Товари які залишились у клієнтів" tone="warn">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />

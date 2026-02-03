@@ -1474,11 +1474,35 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
           )}
         </div>
         
-        {/* Who has it */}
+        {/* Who has it - показуємо номер замовлення та статус */}
         {hasRentals && (
-          <div className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1 truncate">
-            {item.who_has[0].customer}
-            {item.who_has.length > 1 && ` +${item.who_has.length - 1}`}
+          <div className={cls(
+            "text-xs rounded px-2 py-1.5 mt-1",
+            hasConflict ? "bg-rose-50 text-rose-700 border border-rose-200" : "bg-amber-50 text-amber-700 border border-amber-200"
+          )}>
+            <div className="flex items-center gap-1">
+              <span className="font-medium">#{item.who_has[0].order_number}</span>
+              <span className="text-[10px] px-1 py-0.5 rounded bg-white/60">
+                {item.who_has[0].status === 'issued' || item.who_has[0].status === 'on_rent' ? 'В оренді' :
+                 item.who_has[0].status === 'processing' ? 'В обробці' :
+                 item.who_has[0].status === 'ready_for_issue' ? 'До видачі' : 
+                 item.who_has[0].status}
+              </span>
+            </div>
+            {item.who_has.length > 1 && (
+              <div className="text-[10px] mt-0.5 opacity-75">
+                +{item.who_has.length - 1} замовл.
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Processing status (cleaning, repair) */}
+        {hasProcessing && !hasRentals && (
+          <div className="text-xs rounded px-2 py-1.5 mt-1 bg-cyan-50 text-cyan-700 border border-cyan-200">
+            {item.on_wash > 0 && <span>🧹 На мийці: {item.on_wash}</span>}
+            {item.on_restoration > 0 && <span>{item.on_wash > 0 ? ' · ' : ''}🔧 Ремонт: {item.on_restoration}</span>}
+            {item.on_laundry > 0 && <span>{(item.on_wash > 0 || item.on_restoration > 0) ? ' · ' : ''}👕 Хімчистка: {item.on_laundry}</span>}
           </div>
         )}
       </div>
@@ -1627,28 +1651,64 @@ function ProductDetailModal({ item, onClose, dateFilterActive }) {
               item.has_conflict ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
             )}>
               <h3 className={cls(
-                'font-semibold mb-3 text-sm',
+                'font-semibold mb-3 text-sm flex items-center gap-2',
                 item.has_conflict ? 'text-rose-800' : 'text-amber-800'
               )}>
-                {item.has_conflict ? 'Конфліктуючі бронювання' : 'Бронювання'} ({item.who_has.length})
+                {item.has_conflict ? '⚠️ Конфліктуючі бронювання' : '📋 Бронювання'} ({item.who_has.length})
               </h3>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {item.who_has.map((rental, idx) => (
-                  <div key={idx} className="bg-white rounded-lg p-3 border border-amber-200 text-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-corp-text-dark">{rental.customer}</div>
-                        <div className="text-xs text-corp-text-muted">
-                          #{rental.order_number} · {rental.qty} шт · {rental.status}
+                {item.who_has.map((rental, idx) => {
+                  // Визначаємо статус для відображення
+                  const statusLabel = {
+                    'processing': { text: 'В обробці', color: 'bg-blue-100 text-blue-700' },
+                    'ready_for_issue': { text: 'Готово до видачі', color: 'bg-purple-100 text-purple-700' },
+                    'issued': { text: 'Видано', color: 'bg-amber-100 text-amber-700' },
+                    'on_rent': { text: 'В оренді', color: 'bg-orange-100 text-orange-700' },
+                    'returned': { text: 'Повернено', color: 'bg-green-100 text-green-700' },
+                  }[rental.status] || { text: rental.status, color: 'bg-gray-100 text-gray-700' }
+                  
+                  return (
+                    <div key={idx} className={cls(
+                      "bg-white rounded-lg p-3 border text-sm",
+                      item.has_conflict ? "border-rose-200" : "border-amber-200"
+                    )}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-corp-text-dark">
+                              #{rental.order_number}
+                            </span>
+                            <span className={cls("text-xs px-2 py-0.5 rounded-full font-medium", statusLabel.color)}>
+                              {statusLabel.text}
+                            </span>
+                          </div>
+                          <div className="text-corp-text-muted">
+                            {rental.customer}
+                          </div>
+                          <div className="text-xs text-corp-text-muted mt-1">
+                            Кількість: <b>{rental.qty} шт</b>
+                            {rental.phone && <span className="ml-2">📞 {rental.phone}</span>}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={cls(
+                            "font-medium text-sm",
+                            item.has_conflict ? "text-rose-700" : "text-amber-700"
+                          )}>
+                            {rental.start_date}
+                          </div>
+                          <div className="text-xs text-corp-text-muted">↓</div>
+                          <div className={cls(
+                            "font-medium text-sm",
+                            item.has_conflict ? "text-rose-700" : "text-amber-700"
+                          )}>
+                            {rental.return_date}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right text-xs">
-                        <div className="font-medium text-amber-700">{rental.start_date} → {rental.return_date}</div>
-                        {rental.phone && <div className="text-corp-text-muted">{rental.phone}</div>}
-                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

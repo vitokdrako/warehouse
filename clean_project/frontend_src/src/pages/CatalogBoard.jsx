@@ -1651,23 +1651,67 @@ function ProductDetailModal({ item, onClose, dateFilterActive }) {
               item.has_conflict ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
             )}>
               <h3 className={cls(
-                'font-semibold mb-3 text-sm',
+                'font-semibold mb-3 text-sm flex items-center gap-2',
                 item.has_conflict ? 'text-rose-800' : 'text-amber-800'
               )}>
-                {item.has_conflict ? 'Конфліктуючі бронювання' : 'Бронювання'} ({item.who_has.length})
+                {item.has_conflict ? '⚠️ Конфліктуючі бронювання' : '📋 Бронювання'} ({item.who_has.length})
               </h3>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {item.who_has.map((rental, idx) => (
-                  <div key={idx} className="bg-white rounded-lg p-3 border border-amber-200 text-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-corp-text-dark">{rental.customer}</div>
-                        <div className="text-xs text-corp-text-muted">
-                          #{rental.order_number} · {rental.qty} шт · {rental.status}
+                {item.who_has.map((rental, idx) => {
+                  // Визначаємо статус для відображення
+                  const statusLabel = {
+                    'processing': { text: 'В обробці', color: 'bg-blue-100 text-blue-700' },
+                    'ready_for_issue': { text: 'Готово до видачі', color: 'bg-purple-100 text-purple-700' },
+                    'issued': { text: 'Видано', color: 'bg-amber-100 text-amber-700' },
+                    'on_rent': { text: 'В оренді', color: 'bg-orange-100 text-orange-700' },
+                    'returned': { text: 'Повернено', color: 'bg-green-100 text-green-700' },
+                  }[rental.status] || { text: rental.status, color: 'bg-gray-100 text-gray-700' }
+                  
+                  return (
+                    <div key={idx} className={cls(
+                      "bg-white rounded-lg p-3 border text-sm",
+                      item.has_conflict ? "border-rose-200" : "border-amber-200"
+                    )}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-corp-text-dark">
+                              #{rental.order_number}
+                            </span>
+                            <span className={cls("text-xs px-2 py-0.5 rounded-full font-medium", statusLabel.color)}>
+                              {statusLabel.text}
+                            </span>
+                          </div>
+                          <div className="text-corp-text-muted">
+                            {rental.customer}
+                          </div>
+                          <div className="text-xs text-corp-text-muted mt-1">
+                            Кількість: <b>{rental.qty} шт</b>
+                            {rental.phone && <span className="ml-2">📞 {rental.phone}</span>}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={cls(
+                            "font-medium text-sm",
+                            item.has_conflict ? "text-rose-700" : "text-amber-700"
+                          )}>
+                            {rental.start_date}
+                          </div>
+                          <div className="text-xs text-corp-text-muted">↓</div>
+                          <div className={cls(
+                            "font-medium text-sm",
+                            item.has_conflict ? "text-rose-700" : "text-amber-700"
+                          )}>
+                            {rental.return_date}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right text-xs">
-                        <div className="font-medium text-amber-700">{rental.start_date} → {rental.return_date}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
                         {rental.phone && <div className="text-corp-text-muted">{rental.phone}</div>}
                       </div>
                     </div>

@@ -168,7 +168,7 @@ async def create_child_order(
         for item in data.items:
             db.execute(text("""
                 INSERT INTO order_items (
-                    order_id, product_id, quantity, rental_price
+                    order_id, product_id, quantity, price
                 ) VALUES (
                     :order_id, :product_id, :qty, :price
                 )

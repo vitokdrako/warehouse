@@ -26,6 +26,35 @@ from database_rentalhub import get_rh_db
 router = APIRouter(prefix="/api/return-versions", tags=["return-versions"])
 
 
+def ensure_parent_order_column(db: Session):
+    """Додати колонку parent_order_id якщо не існує"""
+    try:
+        db.execute(text("""
+            ALTER TABLE orders ADD COLUMN IF NOT EXISTS parent_order_id INT DEFAULT NULL
+        """))
+        db.commit()
+    except Exception as e:
+        # Колонка може вже існувати
+        db.rollback()
+        # Спробуємо альтернативний синтаксис для MySQL < 8
+        try:
+            # Перевірити чи колонка існує
+            result = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.columns 
+                WHERE table_schema = DATABASE() 
+                AND table_name = 'orders' 
+                AND column_name = 'parent_order_id'
+            """)).scalar()
+            
+            if result == 0:
+                db.execute(text("""
+                    ALTER TABLE orders ADD COLUMN parent_order_id INT DEFAULT NULL
+                """))
+                db.commit()
+        except:
+            db.rollback()
+
+
 class CreateChildOrderRequest(BaseModel):
     """Запит на створення дочірнього замовлення"""
     items: List[dict]  # [{product_id, sku, name, qty, daily_rate}]

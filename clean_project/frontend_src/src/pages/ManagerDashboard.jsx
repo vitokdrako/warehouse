@@ -361,14 +361,15 @@ export default function ManagerDashboard() {
   // 4. На поверненні - ВСІ issue cards що видані (статус 'issued')
   const returnOrders = issueCards.filter(c => c.status === 'issued');
   
-  // 5. Часткові повернення - замовлення зі статусом partial_return
-  const partialReturnCards = issueCards.filter(c => c.status === 'partial_return');
+  // 5. Часткові повернення - ТЕПЕР беремо з окремої таблиці версій
+  // Старі картки з partial_return статусом ігноруємо - вони тепер в архіві
+  // const partialReturnCards = issueCards.filter(c => c.status === 'partial_return');
 
   const kpis = {
-    today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length + partialReturnCards.length,
+    today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length + partialReturnVersions.length,
     revenue: financeData.revenue,
     deposits: financeData.deposits,
-    problems: partialReturnCards.length
+    problems: partialReturnVersions.length
   };
 
   return (

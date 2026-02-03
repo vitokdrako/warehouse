@@ -347,8 +347,8 @@ async def get_items_by_category(
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.order_id
                 WHERE oi.product_id IN :product_ids
-                AND o.status IN ('issued', 'on_rent')
-                ORDER BY o.rental_end_date
+                AND o.status IN ('processing', 'ready_for_issue', 'issued', 'on_rent', 'pending', 'awaiting_customer')
+                ORDER BY o.rental_start_date
             """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
         
         who_has_dict = {}

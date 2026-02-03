@@ -100,6 +100,9 @@ async def create_child_order(
     - Нове замовлення → статус 'partial_return', номер OC-XXXX(N)
     - Нове замовлення містить тільки неповернені товари
     """
+    # Переконатись що колонка parent_order_id існує
+    ensure_parent_order_column(db)
+    
     try:
         # Отримати оригінальне замовлення
         parent = db.execute(text("""

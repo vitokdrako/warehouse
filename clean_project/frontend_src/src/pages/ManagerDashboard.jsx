@@ -668,30 +668,36 @@ export default function ManagerDashboard() {
           )}
         </Column>
         
-        {/* КОЛОНКА 4: Часткове повернення (версії) */}
-        <Column title="⚠️ Часткове повернення" subtitle="Товари які залишились у клієнтів" tone="warn">
+        {/* КОЛОНКА 4: Часткове повернення */}
+        <Column title="⚠️ Часткове повернення" subtitle="Товари що залишились у клієнтів" tone="warn">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
-          ) : returnVersions.length > 0 ? (
+          ) : partialReturnCards.length > 0 ? (
             <>
-              {(showAllVersions ? returnVersions : returnVersions.slice(0, 4)).map(version => (
-                <VersionCard 
-                  key={version.order_id}
-                  version={version}
-                  onClick={() => navigate(`/return/${version.order_id}`)}
+              {(showAllPartial ? partialReturnCards : partialReturnCards.slice(0, 4)).map(card => (
+                <OrderCard 
+                  key={card.id || card.order_id}
+                  id={card.order_number}
+                  name={card.customer_name}
+                  phone={card.customer_phone}
+                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
+                  deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
+                  badge="partial"
+                  order={card}
+                  onClick={() => navigate(`/return/${card.order_id}`)}
                 />
               ))}
-              {returnVersions.length > 4 && !showAllVersions && (
+              {partialReturnCards.length > 4 && !showAllPartial && (
                 <button 
-                  onClick={() => setShowAllVersions(true)}
+                  onClick={() => setShowAllPartial(true)}
                   className="text-center py-3 text-sm text-amber-600 hover:text-amber-800 font-medium hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                 >
-                  +{returnVersions.length - 4} більше - Показати всі
+                  +{partialReturnCards.length - 4} більше - Показати всі
                 </button>
               )}
-              {returnVersions.length > 4 && showAllVersions && (
+              {partialReturnCards.length > 4 && showAllPartial && (
                 <button 
-                  onClick={() => setShowAllVersions(false)}
+                  onClick={() => setShowAllPartial(false)}
                   className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
                 >
                   Згорнути ↑
@@ -712,58 +718,6 @@ export default function ManagerDashboard() {
         isOpen={showChatModal} 
         onClose={() => setShowChatModal(false)} 
       />
-    </div>
-  );
-}
-
-// ✅ Картка часткового повернення (виглядає як звичайна картка замовлення)
-function VersionCard({ version, onClick }) {
-  const daysText = version.days_overdue === 0 
-    ? 'сьогодні' 
-    : version.days_overdue === 1 
-      ? '1 день' 
-      : `${version.days_overdue} днів`;
-  
-  return (
-    <div 
-      onClick={onClick}
-      className="corp-card p-4 cursor-pointer hover:border-amber-400 transition-colors border-l-4 border-l-amber-500"
-    >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-corp-text-dark">{version.order_number}</span>
-            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-medium rounded">
-              Часткове
-            </span>
-          </div>
-          <div className="text-sm text-corp-text-muted">{version.customer_name}</div>
-          {version.customer_phone && (
-            <div className="text-xs text-corp-text-muted">{version.customer_phone}</div>
-          )}
-        </div>
-        <div className={`px-2 py-1 rounded-lg text-xs font-medium ${
-          version.days_overdue > 3 
-            ? 'bg-red-100 text-red-700' 
-            : version.days_overdue > 0 
-              ? 'bg-amber-100 text-amber-700'
-              : 'bg-slate-100 text-slate-600'
-        }`}>
-          {version.days_overdue > 0 ? `+${daysText}` : 'Сьогодні'}
-        </div>
-      </div>
-      
-      <div className="flex items-center justify-between text-sm border-t border-slate-100 pt-2 mt-2">
-        <span className="text-corp-text-muted">{version.items_count} позицій</span>
-        <div className="text-right">
-          <div className="font-medium text-amber-700">
-            ₴ {(version.calculated_fee || 0).toFixed(0)}
-          </div>
-          <div className="text-xs text-corp-text-muted">
-            ₴{(version.daily_fee || 0).toFixed(0)}/день
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

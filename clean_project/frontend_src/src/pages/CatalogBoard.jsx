@@ -1712,14 +1712,6 @@ function ProductDetailModal({ item, onClose, dateFilterActive }) {
               </div>
             </div>
           )}
-                        {rental.phone && <div className="text-corp-text-muted">{rental.phone}</div>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

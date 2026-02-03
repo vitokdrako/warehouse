@@ -88,7 +88,9 @@ async def get_dashboard_overview(
                 SELECT order_id, order_number, customer_name, customer_phone,
                        total_price, deposit_amount, status, created_at,
                        rental_start_date, rental_end_date, rental_days,
-                       delivery_type, city, event_type, source
+                       delivery_type, city, event_type, source,
+                       COALESCE(discount_amount, 0) as discount_amount,
+                       COALESCE(discount_percent, 0) as discount_percent
                 FROM orders 
                 WHERE status = 'awaiting_customer' AND is_archived = 0
                 ORDER BY created_at DESC
@@ -96,12 +98,17 @@ async def get_dashboard_overview(
             """))
             
             for row in awaiting_result:
+                discount = float(row[15] or 0)
+                total_after_discount = float(row[4] or 0) - discount
                 result["orders_awaiting"].append({
                     "order_id": row[0],
                     "order_number": row[1],
                     "customer_name": row[2],
                     "customer_phone": row[3],
                     "total_price": float(row[4] or 0),
+                    "total_after_discount": total_after_discount,
+                    "discount_amount": discount,
+                    "discount_percent": float(row[16] or 0),
                     "deposit_amount": float(row[5] or 0),
                     "status": row[6],
                     "created_at": row[7].isoformat() if row[7] else None,

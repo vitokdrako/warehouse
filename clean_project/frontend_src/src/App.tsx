@@ -309,6 +309,16 @@ function App() {
             } 
           />
           
+          {/* ✅ Return Version Workspace - Версії часткового повернення */}
+          <Route 
+            path="/return-version/:id" 
+            element={
+              <ProtectedRoute>
+                <ReturnVersionWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
           {/* Admin Panel */}
           <Route 
             path="/admin" 

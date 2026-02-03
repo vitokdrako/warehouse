@@ -74,15 +74,15 @@ export default function PartialReturnModal({
     return { totalLoss, extendedItems, lostItems }
   }, [notReturnedItems, itemDecisions])
 
-  // Підтвердження - фіналізує часткове повернення
-  // Додає суфікс (1) до номера і залишає тільки неповернені товари
+  // Підтвердження - створює НОВУ версію замовлення з неповерненими товарами
+  // Оригінальне замовлення закривається і йде в архів
   const handleConfirm = async () => {
     setLoading(true)
     setError(null)
 
     try {
-      // Збираємо товари що ЗАЛИШАЮТЬСЯ у клієнта (action='extend')
-      const keptItems = notReturnedItems
+      // Збираємо товари що НЕ повернулись (action='extend')
+      const notReturnedItems = notReturnedItems
         .filter(item => {
           const decision = itemDecisions[item.product_id] || { action: 'extend' }
           return decision.action === 'extend'
@@ -98,31 +98,30 @@ export default function PartialReturnModal({
           }
         })
 
-      // Фіналізуємо часткове повернення - додаємо суфікс і залишаємо тільки ці товари
-      const response = await fetch(`${BACKEND_URL}/api/return-versions/order/${orderId}/finalize`, {
+      // Створюємо нову версію замовлення
+      const response = await fetch(`${BACKEND_URL}/api/return-versions/order/${orderId}/create-version`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ kept_items: keptItems })
+        body: JSON.stringify({ not_returned_items: notReturnedItems })
       })
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.detail || 'Помилка обробки')
+        throw new Error(data.detail || 'Помилка створення версії')
       }
 
       const result = await response.json()
       
-      // Callback з новим номером замовлення
       onConfirm?.({
         ...result,
-        message: `Створено ${result.new_order_number} з ${keptItems.length} позиціями`
+        message: `Створено ${result.new_order_number} з ${result.items_count} позиціями`
       })
       
-      // Редірект на те саме замовлення (воно тепер має новий номер)
-      onVersionCreated?.(orderId, `/return/${orderId}`)
+      // Редірект на НОВЕ замовлення
+      onVersionCreated?.(result.new_order_id, result.redirect_url)
       
       onClose()
     } catch (err) {

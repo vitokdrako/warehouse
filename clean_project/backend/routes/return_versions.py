@@ -310,7 +310,7 @@ async def get_partial_return_orders(
         for row in result:
             # Отримати товари
             items = db.execute(text("""
-                SELECT oi.product_id, p.article as sku, p.name, oi.quantity, oi.rental_price
+                SELECT oi.product_id, p.sku, p.name, oi.quantity, oi.rental_price
                 FROM order_items oi
                 LEFT JOIN products p ON oi.product_id = p.product_id
                 WHERE oi.order_id = :order_id

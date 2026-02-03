@@ -19,8 +19,10 @@ export default function PartialReturnModal({
   isOpen,
   onClose,
   orderId,
+  orderNumber,              // ✅ Додаємо номер замовлення для версії
   notReturnedItems = [],  // Список неповернених товарів з кількостями
   onConfirm,              // Callback після підтвердження
+  onVersionCreated,       // ✅ Callback з version_id для редіректу
 }) {
   // Стан для кожного товару: { productId: { action: 'loss'|'extend', adjustedRate: number } }
   const [itemDecisions, setItemDecisions] = useState({})

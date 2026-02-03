@@ -170,29 +170,6 @@ async def create_child_order(
                 "price": item.get('daily_rate', 0)
             })
         
-        # Створити issue_card для нового замовлення
-        db.execute(text("""
-            INSERT INTO issue_cards (
-                order_id, order_number, customer_name, customer_phone,
-                rental_start_date, rental_end_date,
-                total_rental, deposit_amount,
-                status, created_at, updated_at
-            ) VALUES (
-                :order_id, :order_number, :name, :phone,
-                :start_date, :end_date,
-                :total, 0,
-                'partial_return', NOW(), NOW()
-            )
-        """), {
-            "order_id": new_order_id,
-            "order_number": new_order_number,
-            "name": parent[2],
-            "phone": parent[3],
-            "start_date": datetime.now().date(),
-            "end_date": parent[6],
-            "total": total_price
-        })
-        
         # Закрити оригінальне замовлення
         db.execute(text("""
             UPDATE orders 
@@ -202,13 +179,25 @@ async def create_child_order(
             WHERE order_id = :id
         """), {"id": order_id})
         
-        # Оновити issue_card оригінального замовлення
+        # Оновити issue_card оригінального замовлення (якщо є)
         db.execute(text("""
             UPDATE issue_cards 
             SET status = 'returned',
                 updated_at = NOW()
             WHERE order_id = :id
         """), {"id": order_id})
+        
+        # Створити issue_card для нового замовлення (спрощений)
+        db.execute(text("""
+            INSERT INTO issue_cards (
+                order_id, order_number, status, created_at, updated_at
+            ) VALUES (
+                :order_id, :order_number, 'partial_return', NOW(), NOW()
+            )
+        """), {
+            "order_id": new_order_id,
+            "order_number": new_order_number
+        })
         
         # Записати в lifecycle
         db.execute(text("""

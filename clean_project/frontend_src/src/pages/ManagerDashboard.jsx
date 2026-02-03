@@ -241,16 +241,6 @@ export default function ManagerDashboard() {
         repair: data.cleaning_stats?.repair || 0
       });
       
-      // ✅ Завантажити замовлення часткового повернення
-      try {
-        const versionsData = await fetchWithRetry(`${BACKEND_URL}/api/return-versions/partial-return-orders`);
-        setReturnVersions(versionsData.orders || []);
-        console.log('[Dashboard] ✅ Partial return orders loaded:', versionsData.count || 0);
-      } catch (vErr) {
-        console.warn('[Dashboard] ⚠️ Could not load partial return orders:', vErr);
-        setReturnVersions([]);
-      }
-      
       setLoading(false);
       
     } catch (error) {

@@ -745,29 +745,41 @@ export default function ManagerDashboard() {
               Немає повернень сьогодні
             </div>
           )}
-          
-          {/* Часткові повернення */}
-          {partialReturnCards.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-200">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-lg">
-                  ⚠️ Часткове повернення
-                </span>
-                <span className="text-sm text-slate-500">{partialReturnCards.length}</span>
-              </div>
-              {partialReturnCards.map(card => (
-                <OrderCard 
-                  key={card.id}
-                  id={card.order_number}
-                  name={card.customer_name}
-                  phone={card.customer_phone}
-                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
-                  deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
-                  badge="partial"
-                  order={card}
-                  onClick={() => navigate(`/return/${card.order_id}`)}
+        </Column>
+        
+        {/* КОЛОНКА 5: Часткове повернення (версії) */}
+        <Column title="⚠️ Часткове повернення" subtitle="Товари які залишились у клієнтів" tone="warn">
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
+          ) : returnVersions.length > 0 ? (
+            <>
+              {(showAllVersions ? returnVersions : returnVersions.slice(0, 4)).map(version => (
+                <VersionCard 
+                  key={version.id}
+                  version={version}
+                  onClick={() => navigate(`/return-version/${version.id}`)}
                 />
               ))}
+              {returnVersions.length > 4 && !showAllVersions && (
+                <button 
+                  onClick={() => setShowAllVersions(true)}
+                  className="text-center py-3 text-sm text-amber-600 hover:text-amber-800 font-medium hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  +{returnVersions.length - 4} більше - Показати всі
+                </button>
+              )}
+              {returnVersions.length > 4 && showAllVersions && (
+                <button 
+                  onClick={() => setShowAllVersions(false)}
+                  className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  Згорнути ↑
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+              Всі товари повернено ✓
             </div>
           )}
         </Column>
@@ -779,6 +791,51 @@ export default function ManagerDashboard() {
         isOpen={showChatModal} 
         onClose={() => setShowChatModal(false)} 
       />
+    </div>
+  );
+}
+
+// ✅ НОВИЙ КОМПОНЕНТ: Картка версії повернення
+function VersionCard({ version, onClick }) {
+  const daysText = version.days_overdue === 0 
+    ? 'сьогодні' 
+    : version.days_overdue === 1 
+      ? '1 день' 
+      : `${version.days_overdue} днів`;
+  
+  return (
+    <div 
+      onClick={onClick}
+      className="corp-card p-4 cursor-pointer hover:border-amber-400 transition-colors"
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div>
+          <div className="font-semibold text-corp-text-dark">{version.order_number}</div>
+          <div className="text-sm text-corp-text-muted">{version.customer_name}</div>
+        </div>
+        <div className={`px-2 py-1 rounded-lg text-xs font-medium ${
+          version.days_overdue > 3 
+            ? 'bg-red-100 text-red-700' 
+            : version.days_overdue > 0 
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-slate-100 text-slate-600'
+        }`}>
+          {daysText}
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-corp-text-muted">{version.remaining_items} позицій</span>
+        <span className="font-medium text-amber-700">
+          ₴ {version.calculated_total_fee?.toFixed(0) || 0}
+        </span>
+      </div>
+      
+      {version.fee_status === 'charged' && (
+        <div className="mt-2 text-xs text-green-600 font-medium">
+          ✓ Нараховано: ₴{version.manager_fee?.toFixed(0)}
+        </div>
+      )}
     </div>
   );
 }

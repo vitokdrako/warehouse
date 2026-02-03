@@ -320,6 +320,16 @@ function App() {
             } 
           />
           
+          {/* ✅ НОВА версіонована система часткових повернень */}
+          <Route 
+            path="/partial-return/:versionId" 
+            element={
+              <ProtectedRoute>
+                <PartialReturnVersionWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
           {/* Admin Panel */}
           <Route 
             path="/admin" 

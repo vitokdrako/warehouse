@@ -16,6 +16,7 @@ export default function ManagerDashboard() {
   const [orders, setOrders] = useState([]);
   const [decorOrders, setDecorOrders] = useState([]);  // Наші замовлення
   const [issueCards, setIssueCards] = useState([]);  // Картки видачі
+  const [partialReturnVersions, setPartialReturnVersions] = useState([]);  // ✅ Версії часткових повернень
   const [loading, setLoading] = useState(true);
   const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
   const [cleaningStats, setCleaningStats] = useState({ repair: 0 });

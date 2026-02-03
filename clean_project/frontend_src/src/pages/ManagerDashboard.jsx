@@ -682,34 +682,44 @@ export default function ManagerDashboard() {
           )}
         </Column>
         
-        {/* КОЛОНКА 4: Часткове повернення */}
+        {/* КОЛОНКА 4: Часткове повернення - ВЕРСІЇ */}
         <Column title="⚠️ Часткове повернення" subtitle="Товари що залишились у клієнтів" tone="warn">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
-          ) : partialReturnCards.length > 0 ? (
+          ) : partialReturnVersions.length > 0 ? (
             <>
-              {(showAllPartial ? partialReturnCards : partialReturnCards.slice(0, 4)).map(card => (
-                <OrderCard 
-                  key={card.id || card.order_id}
-                  id={card.order_number}
-                  name={card.customer_name}
-                  phone={card.customer_phone}
-                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
-                  deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
-                  badge="partial"
-                  order={card}
-                  onClick={() => navigate(`/return/${card.order_id}`)}
-                />
+              {(showAllPartial ? partialReturnVersions : partialReturnVersions.slice(0, 4)).map(version => (
+                <div 
+                  key={version.version_id}
+                  onClick={() => navigate(`/partial-return/${version.version_id}`)}
+                  className="rounded-2xl border border-amber-200 bg-amber-50 p-4 hover:shadow-md hover:border-amber-300 transition-all cursor-pointer"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-bold text-slate-800">{version.display_number}</div>
+                      <div className="text-sm text-slate-600">{version.customer_name}</div>
+                    </div>
+                    <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-medium">
+                      {version.items_count} поз.
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>{version.customer_phone}</span>
+                    {version.days_overdue > 0 && (
+                      <span className="text-red-600 font-medium">+{version.days_overdue} дн.</span>
+                    )}
+                  </div>
+                </div>
               ))}
-              {partialReturnCards.length > 4 && !showAllPartial && (
+              {partialReturnVersions.length > 4 && !showAllPartial && (
                 <button 
                   onClick={() => setShowAllPartial(true)}
                   className="text-center py-3 text-sm text-amber-600 hover:text-amber-800 font-medium hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                 >
-                  +{partialReturnCards.length - 4} більше - Показати всі
+                  +{partialReturnVersions.length - 4} більше - Показати всі
                 </button>
               )}
-              {partialReturnCards.length > 4 && showAllPartial && (
+              {partialReturnVersions.length > 4 && showAllPartial && (
                 <button 
                   onClick={() => setShowAllPartial(false)}
                   className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"

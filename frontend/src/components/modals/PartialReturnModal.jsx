@@ -117,11 +117,11 @@ export default function PartialReturnModal({
       
       onConfirm?.({
         ...result,
-        message: `Створено ${result.new_order_number} з ${result.items_count} позиціями`
+        message: `Створено ${result.display_number} з ${result.items_count} позиціями`
       })
       
-      // Редірект на НОВЕ замовлення
-      onVersionCreated?.(result.new_order_id, result.redirect_url)
+      // Редірект на версію часткового повернення
+      onVersionCreated?.(result.version_id, result.redirect_url)
       
       onClose()
     } catch (err) {

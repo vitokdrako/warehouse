@@ -545,76 +545,9 @@ export default function ManagerDashboard() {
         </div>
       </section>
 
-      {/* Boards */}
-      <main className="mx-auto max-w-7xl px-6 py-6 grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* КОЛОНКА 1: Очікують підтвердження (замовлення одразу з нашої бази) */}
-        <Column title="⏳ Очікують підтвердження" subtitle="Нові замовлення → Редагувати → Email" tone="warning">
-          {loading ? (
-            <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
-          ) : awaitingOrders.length > 0 ? (
-            <>
-              {(showAllAwaiting ? awaitingOrders : awaitingOrders.slice(0, 4)).map(order => (
-                <div key={order.order_id || order.id} className="relative">
-                  {/* ✅ Чекбокс для режиму об'єднання */}
-                  {mergeMode && (
-                    <label className="absolute -left-2 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-8 h-8 bg-white border-2 border-amber-400 rounded-full cursor-pointer hover:bg-amber-50 transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedForMerge.includes(order.order_id || order.id)}
-                        onChange={(e) => {
-                          const oid = order.order_id || order.id;
-                          if (e.target.checked) {
-                            setSelectedForMerge([...selectedForMerge, oid]);
-                          } else {
-                            setSelectedForMerge(selectedForMerge.filter(id => id !== oid));
-                          }
-                        }}
-                        className="w-4 h-4 accent-amber-500"
-                      />
-                    </label>
-                  )}
-                  <div className={mergeMode ? 'ml-6' : ''}>
-                    <OrderCard 
-                      id={order.order_number}
-                      name={order.customer_name || order.client_name}
-                      phone={order.customer_phone || order.client_phone}
-                      rent={`₴ ${(order.total_after_discount || order.total_price || order.total_rental || 0).toFixed(0)}`}
-                      deposit={`₴ ${(order.deposit_amount || order.total_deposit || 0).toFixed(0)}`}
-                      badge="awaiting"
-                      order={order}
-                      onDateUpdate={null}
-                      onCancelByClient={handleCancelByClient}
-                      onClick={() => !mergeMode && navigate(`/order/${order.order_id || order.id}/view`)}
-                      className={selectedForMerge.includes(order.order_id || order.id) ? 'ring-2 ring-amber-400' : ''}
-                    />
-                  </div>
-                </div>
-              ))}
-              {awaitingOrders.length > 4 && !showAllAwaiting && (
-                <button 
-                  onClick={() => setShowAllAwaiting(true)}
-                  className="text-center py-3 text-sm text-blue-600 hover:text-blue-800 font-medium hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  +{awaitingOrders.length - 4} більше замовлень - Показати всі
-                </button>
-              )}
-              {awaitingOrders.length > 4 && showAllAwaiting && (
-                <button 
-                  onClick={() => setShowAllAwaiting(false)}
-                  className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
-                >
-                  Згорнути ↑
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
-              Немає замовлень що очікують
-            </div>
-          )}
-        </Column>
-
-        {/* КОЛОНКА 2: На комплектації / Видача сьогодні */}
+      {/* Boards - 4 колонки: Комплектація, Готово, Повернення, Часткове */}
+      <main className="mx-auto max-w-7xl px-6 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* КОЛОНКА 1: На комплектації / Видача сьогодні */}
         <Column title="📦 На комплектації" subtitle="Збір товарів + видача сьогодні" tone="ok">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />

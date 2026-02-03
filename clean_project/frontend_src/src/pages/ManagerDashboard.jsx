@@ -360,14 +360,14 @@ export default function ManagerDashboard() {
   // Видані замовлення зберігаються в issueCards, а не в decorOrders!
   const returnOrders = issueCards.filter(c => c.status === 'issued');
   
-  // 5. Часткові повернення - замовлення зі статусом partial_return
-  const partialReturnCards = issueCards.filter(c => c.status === 'partial_return');
+  // 5. Часткові повернення - тепер використовуємо returnVersions з нового API
+  // (partialReturnCards більше не потрібні - вони мігровані в versions)
 
   const kpis = {
-    today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length + partialReturnCards.length,  // Всі активні замовлення
+    today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length + returnVersions.length,  // Всі активні замовлення
     revenue: financeData.revenue,  // З Finance API
     deposits: financeData.deposits,  // З Finance API
-    problems: partialReturnCards.length  // Часткові повернення як проблеми
+    problems: returnVersions.length  // Версії часткових повернень
   };
 
   return (

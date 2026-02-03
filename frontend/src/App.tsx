@@ -26,6 +26,7 @@ import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';
 import IssueCardWorkspace from './pages/IssueCardWorkspace';
 import ReturnOrderWorkspace from './pages/ReturnOrderWorkspace';
+import ReturnVersionWorkspace from './pages/ReturnVersionWorkspace';  // ✅ Версії повернення
 import ArchivedOrderWorkspace from './pages/ArchivedOrderWorkspace';
 import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
 // Other pages
@@ -304,6 +305,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <ReturnOrderWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* ✅ Return Version Workspace - Версії часткового повернення */}
+          <Route 
+            path="/return-version/:id" 
+            element={
+              <ProtectedRoute>
+                <ReturnVersionWorkspace />
               </ProtectedRoute>
             } 
           />

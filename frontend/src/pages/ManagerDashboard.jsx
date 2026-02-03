@@ -16,6 +16,7 @@ export default function ManagerDashboard() {
   const [orders, setOrders] = useState([]);
   const [decorOrders, setDecorOrders] = useState([]);  // Наші замовлення
   const [issueCards, setIssueCards] = useState([]);  // Картки видачі
+  const [returnVersions, setReturnVersions] = useState([]);  // ✅ Версії повернення
   const [loading, setLoading] = useState(true);
   const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
   const [cleaningStats, setCleaningStats] = useState({ repair: 0 });
@@ -26,6 +27,7 @@ export default function ManagerDashboard() {
   const [showAllReturns, setShowAllReturns] = useState(true);  // За замовчуванням показуємо всі
   const [showAllPreparation, setShowAllPreparation] = useState(false);  // Комплектація
   const [showAllReady, setShowAllReady] = useState(false);  // Готові до видачі
+  const [showAllVersions, setShowAllVersions] = useState(false);  // ✅ Версії повернення
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('Всі');
   const [user, setUser] = useState(null);
@@ -239,6 +241,17 @@ export default function ManagerDashboard() {
       setCleaningStats({
         repair: data.cleaning_stats?.repair || 0
       });
+      
+      // ✅ Завантажити версії повернення окремим запитом
+      try {
+        const versionsData = await fetchWithRetry(`${BACKEND_URL}/api/return-versions`);
+        setReturnVersions(versionsData.versions || []);
+        console.log('[Dashboard] ✅ Return versions loaded:', versionsData.count || 0);
+      } catch (vErr) {
+        console.warn('[Dashboard] ⚠️ Could not load return versions:', vErr);
+        setReturnVersions([]);
+      }
+      
       setLoading(false);
       
     } catch (error) {
@@ -347,14 +360,14 @@ export default function ManagerDashboard() {
   // Видані замовлення зберігаються в issueCards, а не в decorOrders!
   const returnOrders = issueCards.filter(c => c.status === 'issued');
   
-  // 5. Часткові повернення - замовлення зі статусом partial_return
-  const partialReturnCards = issueCards.filter(c => c.status === 'partial_return');
+  // 5. Часткові повернення - тепер використовуємо returnVersions з нового API
+  // (partialReturnCards більше не потрібні - вони мігровані в versions)
 
   const kpis = {
-    today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length + partialReturnCards.length,  // Всі активні замовлення
+    today: newOrders.length + preparationCards.length + readyCards.length + returnOrders.length + returnVersions.length,  // Всі активні замовлення
     revenue: financeData.revenue,  // З Finance API
     deposits: financeData.deposits,  // З Finance API
-    problems: partialReturnCards.length  // Часткові повернення як проблеми
+    problems: returnVersions.length  // Версії часткових повернень
   };
 
   return (
@@ -732,29 +745,41 @@ export default function ManagerDashboard() {
               Немає повернень сьогодні
             </div>
           )}
-          
-          {/* Часткові повернення */}
-          {partialReturnCards.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-200">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-lg">
-                  ⚠️ Часткове повернення
-                </span>
-                <span className="text-sm text-slate-500">{partialReturnCards.length}</span>
-              </div>
-              {partialReturnCards.map(card => (
-                <OrderCard 
-                  key={card.id}
-                  id={card.order_number}
-                  name={card.customer_name}
-                  phone={card.customer_phone}
-                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
-                  deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
-                  badge="partial"
-                  order={card}
-                  onClick={() => navigate(`/return/${card.order_id}`)}
+        </Column>
+        
+        {/* КОЛОНКА 5: Часткове повернення (версії) */}
+        <Column title="⚠️ Часткове повернення" subtitle="Товари які залишились у клієнтів" tone="warn">
+          {loading ? (
+            <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
+          ) : returnVersions.length > 0 ? (
+            <>
+              {(showAllVersions ? returnVersions : returnVersions.slice(0, 4)).map(version => (
+                <VersionCard 
+                  key={version.id}
+                  version={version}
+                  onClick={() => navigate(`/return-version/${version.id}`)}
                 />
               ))}
+              {returnVersions.length > 4 && !showAllVersions && (
+                <button 
+                  onClick={() => setShowAllVersions(true)}
+                  className="text-center py-3 text-sm text-amber-600 hover:text-amber-800 font-medium hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  +{returnVersions.length - 4} більше - Показати всі
+                </button>
+              )}
+              {returnVersions.length > 4 && showAllVersions && (
+                <button 
+                  onClick={() => setShowAllVersions(false)}
+                  className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
+                >
+                  Згорнути ↑
+                </button>
+              )}
+            </>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
+              Всі товари повернено ✓
             </div>
           )}
         </Column>
@@ -766,6 +791,51 @@ export default function ManagerDashboard() {
         isOpen={showChatModal} 
         onClose={() => setShowChatModal(false)} 
       />
+    </div>
+  );
+}
+
+// ✅ НОВИЙ КОМПОНЕНТ: Картка версії повернення
+function VersionCard({ version, onClick }) {
+  const daysText = version.days_overdue === 0 
+    ? 'сьогодні' 
+    : version.days_overdue === 1 
+      ? '1 день' 
+      : `${version.days_overdue} днів`;
+  
+  return (
+    <div 
+      onClick={onClick}
+      className="corp-card p-4 cursor-pointer hover:border-amber-400 transition-colors"
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div>
+          <div className="font-semibold text-corp-text-dark">{version.order_number}</div>
+          <div className="text-sm text-corp-text-muted">{version.customer_name}</div>
+        </div>
+        <div className={`px-2 py-1 rounded-lg text-xs font-medium ${
+          version.days_overdue > 3 
+            ? 'bg-red-100 text-red-700' 
+            : version.days_overdue > 0 
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-slate-100 text-slate-600'
+        }`}>
+          {daysText}
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-corp-text-muted">{version.remaining_items} позицій</span>
+        <span className="font-medium text-amber-700">
+          ₴ {version.calculated_total_fee?.toFixed(0) || 0}
+        </span>
+      </div>
+      
+      {version.fee_status === 'charged' && (
+        <div className="mt-2 text-xs text-green-600 font-medium">
+          ✓ Нараховано: ₴{version.manager_fee?.toFixed(0)}
+        </div>
+      )}
     </div>
   );
 }

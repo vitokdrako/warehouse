@@ -396,6 +396,9 @@ export default function OrderItemsModification({
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Додати товар до замовлення</DialogTitle>
+            <DialogDescription>
+              Пошук та додавання товарів до поточного замовлення
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">

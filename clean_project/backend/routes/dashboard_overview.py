@@ -28,16 +28,22 @@ def parse_issue_card_simple(row, db: Session):
         order_result = db.execute(text("""
             SELECT customer_name, customer_phone, customer_email,
                    total_price, deposit_amount, rental_days,
-                   rental_start_date, rental_end_date, status
+                   rental_start_date, rental_end_date, status,
+                   COALESCE(discount_amount, 0), COALESCE(discount_percent, 0)
             FROM orders WHERE order_id = :order_id
         """), {"order_id": row[1]})
         order_row = order_result.fetchone()
         if order_row:
+            discount = float(order_row[9] or 0)
+            total_price = float(order_row[3]) if order_row[3] else 0.0
             order_data = {
                 "customer_name": order_row[0],
                 "customer_phone": order_row[1],
                 "customer_email": order_row[2],
-                "total_rental": float(order_row[3]) if order_row[3] else 0.0,
+                "total_rental": total_price,
+                "total_after_discount": total_price - discount,
+                "discount_amount": discount,
+                "discount_percent": float(order_row[10] or 0),
                 "deposit_amount": float(order_row[4]) if order_row[4] else 0.0,
                 "rental_days": order_row[5] or 0,
                 "rental_start_date": order_row[6].strftime('%Y-%m-%d') if order_row[6] else None,

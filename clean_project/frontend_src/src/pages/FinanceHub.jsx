@@ -262,7 +262,7 @@ export default function FinanceHub() {
     }
   }, []);
   
-  // Load late fees (прострочення) for order
+  // Load late fees (прострочення) for order - тепер з версій повернення
   const loadLateFees = useCallback(async (orderId) => {
     if (!orderId) return;
     try {
@@ -275,13 +275,41 @@ export default function FinanceHub() {
         items: data.late?.items || []
       });
       
-      // Завантажуємо орієнтовну суму прострочення з order_extensions
+      // ✅ Завантажуємо орієнтовну суму з НОВОЇ системи версій
       try {
-        const extRes = await authFetch(`${BACKEND_URL}/api/partial-returns/order/${orderId}/extension-summary`);
-        const extData = await extRes.json();
-        // Сума = active.total_charged + completed.total_charged (якщо ще не оплачено)
-        const estimated = (extData.active?.total_charged || 0) + (extData.completed?.total_charged || 0);
-        setEstimatedLateFee(estimated);
+        const versionsRes = await authFetch(`${BACKEND_URL}/api/return-versions/order/${orderId}/versions`);
+        const versionsData = await versionsRes.json();
+        
+        if (versionsData.versions?.length > 0) {
+          // Підсумувати calculated_total_fee з активних версій
+          const activeVersions = versionsData.versions.filter(v => v.status === 'active');
+          const totalEstimated = activeVersions.reduce((sum, v) => sum + (v.manager_fee || 0), 0);
+          
+          // Якщо ще не нараховано - показати розрахунок
+          const pendingVersions = versionsData.versions.filter(v => v.fee_status === 'pending');
+          if (pendingVersions.length > 0) {
+            // Отримуємо розрахункові суми через детальний API
+            let estimated = 0;
+            for (const v of pendingVersions) {
+              try {
+                const vRes = await authFetch(`${BACKEND_URL}/api/return-versions/${v.id}`);
+                const vData = await vRes.json();
+                estimated += vData.calculated_total_fee || 0;
+              } catch (e) {
+                // ignore
+              }
+            }
+            setEstimatedLateFee(estimated);
+          } else {
+            setEstimatedLateFee(0);
+          }
+        } else {
+          // Fallback до старої системи
+          const extRes = await authFetch(`${BACKEND_URL}/api/partial-returns/order/${orderId}/extension-summary`);
+          const extData = await extRes.json();
+          const estimated = (extData.active?.total_charged || 0) + (extData.completed?.total_charged || 0);
+          setEstimatedLateFee(estimated);
+        }
       } catch (e) {
         setEstimatedLateFee(0);
       }

@@ -406,18 +406,20 @@ export default function ReturnOrderWorkspace() {
       return
     }
     
-    // Перевірити чи це повернення товарів з продовження (partial_return статус)
-    const isFromExtension = order?.status === 'partial_return'
-    
-    if (isFromExtension) {
-      // Приймання товарів з продовження оренди
-      await acceptFromExtension()
+    // Якщо є неповернені товари - показати модалку часткового повернення
+    // Це працює і для звичайних замовлень, і для partial_return
+    if (notReturnedItems.length > 0) {
+      setPartialReturnModal({ open: true, items: notReturnedItems })
       return
     }
     
-    // Якщо є неповернені товари - показати модалку часткового повернення
-    if (notReturnedItems.length > 0) {
-      setPartialReturnModal({ open: true, items: notReturnedItems })
+    // Перевірити чи це повернення товарів з продовження (partial_return статус)
+    // Якщо всі товари повернуті - просто закриваємо замовлення
+    const isFromExtension = order?.status === 'partial_return'
+    
+    if (isFromExtension) {
+      // Всі товари повернено з продовження - закриваємо замовлення
+      await acceptFromExtension()
       return
     }
     

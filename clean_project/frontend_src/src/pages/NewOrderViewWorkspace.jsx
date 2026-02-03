@@ -303,7 +303,9 @@ export default function NewOrderViewWorkspace() {
                 type: conflictType,
                 level,
                 available: item.available_quantity,
-                requested: item.requested_quantity
+                requested: item.requested_quantity,
+                // ✅ Додаємо детальну інформацію про конфліктуючі замовлення
+                nearbyOrders: item.nearby_orders || []
               }
             }
             return null

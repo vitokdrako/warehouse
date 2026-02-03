@@ -728,7 +728,7 @@ export default function ManagerDashboard() {
   );
 }
 
-// ✅ НОВИЙ КОМПОНЕНТ: Картка версії повернення
+// ✅ Картка часткового повернення (виглядає як звичайна картка замовлення)
 function VersionCard({ version, onClick }) {
   const daysText = version.days_overdue === 0 
     ? 'сьогодні' 
@@ -739,12 +739,20 @@ function VersionCard({ version, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className="corp-card p-4 cursor-pointer hover:border-amber-400 transition-colors"
+      className="corp-card p-4 cursor-pointer hover:border-amber-400 transition-colors border-l-4 border-l-amber-500"
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <div>
-          <div className="font-semibold text-corp-text-dark">{version.order_number}</div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-corp-text-dark">{version.order_number}</span>
+            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-medium rounded">
+              Часткове
+            </span>
+          </div>
           <div className="text-sm text-corp-text-muted">{version.customer_name}</div>
+          {version.customer_phone && (
+            <div className="text-xs text-corp-text-muted">{version.customer_phone}</div>
+          )}
         </div>
         <div className={`px-2 py-1 rounded-lg text-xs font-medium ${
           version.days_overdue > 3 
@@ -753,22 +761,21 @@ function VersionCard({ version, onClick }) {
               ? 'bg-amber-100 text-amber-700'
               : 'bg-slate-100 text-slate-600'
         }`}>
-          {daysText}
+          {version.days_overdue > 0 ? `+${daysText}` : 'Сьогодні'}
         </div>
       </div>
       
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-corp-text-muted">{version.remaining_items} позицій</span>
-        <span className="font-medium text-amber-700">
-          ₴ {version.calculated_total_fee?.toFixed(0) || 0}
-        </span>
-      </div>
-      
-      {version.fee_status === 'charged' && (
-        <div className="mt-2 text-xs text-green-600 font-medium">
-          ✓ Нараховано: ₴{version.manager_fee?.toFixed(0)}
+      <div className="flex items-center justify-between text-sm border-t border-slate-100 pt-2 mt-2">
+        <span className="text-corp-text-muted">{version.items_count} позицій</span>
+        <div className="text-right">
+          <div className="font-medium text-amber-700">
+            ₴ {(version.calculated_fee || 0).toFixed(0)}
+          </div>
+          <div className="text-xs text-corp-text-muted">
+            ₴{(version.daily_fee || 0).toFixed(0)}/день
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

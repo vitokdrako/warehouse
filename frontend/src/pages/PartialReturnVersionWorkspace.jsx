@@ -115,6 +115,18 @@ export default function PartialReturnVersionWorkspace() {
         setLateFee(data.total_price * data.days_overdue)
       }
       
+      // Завантажуємо фінансовий summary
+      try {
+        const finResponse = await authFetch(`${BACKEND_URL}/api/return-versions/version/${versionId}/finance-summary`)
+        if (finResponse.ok) {
+          const finData = await finResponse.json()
+          setFinanceSummary(finData)
+          console.log('[VersionWorkspace] Finance summary loaded:', finData)
+        }
+      } catch (finErr) {
+        console.log('[VersionWorkspace] Finance summary not available')
+      }
+      
       setLoading(false)
       
     } catch (err) {

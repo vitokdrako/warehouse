@@ -23,7 +23,7 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://order-archiver-1.preview.emergentagent.com/api"
+BASE_URL = "https://rental-versioning.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
@@ -656,7 +656,7 @@ def main():
     print("   7. 📚 Ledger - Verify double-entry bookkeeping")
     print("   8. 🔍 Filtering - Filter payments by order")
     print(f"Credentials: {TEST_CREDENTIALS['email']} / {TEST_CREDENTIALS['password']}")
-    print("URL: https://order-archiver-1.preview.emergentagent.com")
+    print("URL: https://rental-versioning.preview.emergentagent.com")
     print("=" * 80)
     
     tester = FinanceEngineAPITester(BASE_URL)

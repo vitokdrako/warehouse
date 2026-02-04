@@ -833,8 +833,9 @@ export default function DamageHubApp() {
                                 <button
                                   onClick={() => handleSendTo(item.id, 'return_to_stock')}
                                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition"
+                                  title="Повернути на склад без обробки"
                                 >
-                                  <Package className="w-3 h-3" /> На склад
+                                  <Package className="w-3 h-3" /> На склад (без обробки)
                                 </button>
                               </div>
                             )}

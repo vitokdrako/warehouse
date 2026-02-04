@@ -99,7 +99,8 @@ export default function PartialReturnVersionWorkspace() {
         findings: [],  // Завантажити з damage_records через parent_order_id
         ok_serials: [],
         serials: [],
-        image: null,  // TODO: додати фото товару
+        image: item.image_url || null,
+        image_url: item.image_url || null,
         damage_history: []
       }))
       

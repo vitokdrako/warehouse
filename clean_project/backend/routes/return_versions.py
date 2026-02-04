@@ -295,12 +295,16 @@ async def get_version_details(
     if not version:
         raise HTTPException(status_code=404, detail="Версію не знайдено")
     
-    # Товари версії
+    # Товари версії з фото з таблиці products
     items = db.execute(text("""
-        SELECT item_id, product_id, sku, name, qty, daily_rate, status, returned_at
-        FROM partial_return_version_items
-        WHERE version_id = :vid
-        ORDER BY sku
+        SELECT 
+            vi.item_id, vi.product_id, vi.sku, vi.name, vi.qty, vi.daily_rate, 
+            vi.status, vi.returned_at,
+            p.image_url
+        FROM partial_return_version_items vi
+        LEFT JOIN products p ON vi.product_id = p.product_id
+        WHERE vi.version_id = :vid
+        ORDER BY vi.sku
     """), {"vid": version_id}).fetchall()
     
     # Історія версій для цього замовлення
@@ -342,7 +346,8 @@ async def get_version_details(
             "qty": item[4],
             "daily_rate": float(item[5] or 0),
             "status": item[6],
-            "returned_at": item[7].isoformat() if item[7] else None
+            "returned_at": item[7].isoformat() if item[7] else None,
+            "image_url": item[8] if len(item) > 8 else None
         } for item in items],
         "version_history": [{
             "version_id": h[0],

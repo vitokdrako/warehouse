@@ -293,13 +293,24 @@ async def get_laundry_batches(
     result = db.execute(text(sql), params)
     batches = [parse_batch(row) for row in result]
     
-    # Додати інформацію про товари для кожної партії
+    # Додати інформацію про товари для кожної партії з фото
     for batch in batches:
         items_result = db.execute(
-            text("SELECT * FROM laundry_items WHERE batch_id = :batch_id"),
+            text("""
+                SELECT li.*, p.image_url as product_image
+                FROM laundry_items li
+                LEFT JOIN products p ON li.product_id = p.product_id
+                WHERE li.batch_id = :batch_id
+            """),
             {"batch_id": batch["id"]}
         )
-        batch["items"] = [parse_item(row) for row in items_result]
+        items = []
+        for r in items_result:
+            item = parse_item(r)
+            if len(r) > 14:
+                item["product_image"] = r[14]
+            items.append(item)
+        batch["items"] = items
     
     return batches
 

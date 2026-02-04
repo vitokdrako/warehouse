@@ -617,7 +617,10 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
     Отримати damage cases згруповані по замовленнях (для головної вкладки)
     Показує ТІЛЬКИ пошкодження при ПОВЕРНЕННІ (stage='return') - це нова шкода від клієнтів
     Пошкодження до видачі (pre_issue) не включаються - це відомі дефекти
+    НЕ включає архівовані кейси
     """
+    ensure_archive_table(db)
+    
     try:
         result = db.execute(text("""
             SELECT 
@@ -632,12 +635,14 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
                 o.customer_phone,
                 o.status as order_status,
                 COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = pdh.order_id AND payment_type = 'damage'), 0) as damage_paid,
-                SUM(CASE WHEN pdh.processing_type IS NULL OR pdh.processing_type = '' THEN 1 ELSE 0 END) as pending_assignment,
+                SUM(CASE WHEN pdh.processing_type IS NULL OR pdh.processing_type = '' OR pdh.processing_type = 'none' THEN 1 ELSE 0 END) as pending_assignment,
                 SUM(CASE WHEN pdh.processing_status = 'completed' THEN 1 ELSE 0 END) as completed_count
             FROM product_damage_history pdh
             LEFT JOIN orders o ON o.order_id = pdh.order_id
+            LEFT JOIN damage_case_archive dca ON dca.order_id = pdh.order_id
             WHERE pdh.order_id IS NOT NULL
               AND pdh.stage = 'return'
+              AND dca.order_id IS NULL
             GROUP BY pdh.order_id, pdh.order_number, o.customer_name, o.customer_phone, o.status
             ORDER BY latest_damage DESC
         """))

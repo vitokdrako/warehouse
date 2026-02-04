@@ -3,6 +3,7 @@ Product Damage History API - Історія пошкоджень товарів
 Використовується для фіксації пошкоджень до видачі та при поверненні
 """
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
@@ -1684,4 +1685,123 @@ async def get_archived_cases(db: Session = Depends(get_rh_db)):
         return {"cases": cases, "total": len(cases)}
         
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================================
+# СПИСАННЯ ПРИ ПОВНІЙ ВТРАТІ
+# ============================================================
+
+class WriteOffRequest(BaseModel):
+    qty: int = 1
+    reason: Optional[str] = None
+    damage_type: Optional[str] = None
+
+
+@router.post("/{damage_id}/write-off")
+async def write_off_item(
+    damage_id: str,
+    data: WriteOffRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Списати товар при повній втраті.
+    
+    1. Оновлює статус в product_damage_history
+    2. Зменшує кількість в products (stock)
+    3. Створює запис в inventory_recount (переоблік)
+    """
+    try:
+        # Отримуємо дані про пошкодження
+        damage = db.execute(text("""
+            SELECT id, product_id, sku, product_name, order_id, order_number, qty, fee
+            FROM product_damage_history
+            WHERE id = :id
+        """), {"id": damage_id}).fetchone()
+        
+        if not damage:
+            raise HTTPException(status_code=404, detail="Запис про пошкодження не знайдено")
+        
+        product_id = damage[1]
+        sku = damage[2]
+        product_name = damage[3]
+        order_id = damage[4]
+        order_number = damage[5]
+        original_qty = damage[6] or 1
+        fee = damage[7] or 0
+        
+        write_off_qty = min(data.qty, original_qty)
+        
+        # 1. Оновлюємо статус пошкодження
+        db.execute(text("""
+            UPDATE product_damage_history
+            SET processing_type = 'written_off',
+                processing_status = 'completed',
+                processing_notes = CONCAT(COALESCE(processing_notes, ''), '\n[СПИСАНО] ', :reason, ' (', :qty, ' шт)')
+            WHERE id = :id
+        """), {
+            "id": damage_id,
+            "reason": data.reason or "Повна втрата",
+            "qty": write_off_qty
+        })
+        
+        # 2. Зменшуємо кількість в products
+        db.execute(text("""
+            UPDATE products
+            SET stock = GREATEST(0, stock - :qty),
+                updated_at = NOW()
+            WHERE product_id = :pid
+        """), {"qty": write_off_qty, "pid": product_id})
+        
+        # 3. Створюємо запис в inventory_recount (якщо таблиця існує)
+        try:
+            db.execute(text("""
+                INSERT INTO inventory_recount (
+                    product_id, sku, product_name, 
+                    old_qty, new_qty, difference, 
+                    reason, source, source_id, 
+                    created_at, created_by
+                ) VALUES (
+                    :pid, :sku, :name,
+                    (SELECT stock + :qty FROM products WHERE product_id = :pid),
+                    (SELECT stock FROM products WHERE product_id = :pid),
+                    -:qty,
+                    :reason,
+                    'damage_writeoff',
+                    :damage_id,
+                    NOW(),
+                    'damage_hub'
+                )
+            """), {
+                "pid": product_id,
+                "sku": sku,
+                "name": product_name,
+                "qty": write_off_qty,
+                "reason": f"Списання через повну втрату. Замовлення #{order_number}. {data.reason or ''}",
+                "damage_id": damage_id
+            })
+        except Exception as recount_err:
+            print(f"[WriteOff] Warning: Could not create inventory_recount record: {recount_err}")
+            # Продовжуємо навіть якщо таблиця не існує
+        
+        db.commit()
+        
+        print(f"[WriteOff] ✅ Списано {write_off_qty} шт. {sku} ({product_name}) з замовлення #{order_number}")
+        
+        return {
+            "success": True,
+            "message": f"Списано {write_off_qty} шт.",
+            "damage_id": damage_id,
+            "product_id": product_id,
+            "sku": sku,
+            "written_off_qty": write_off_qty,
+            "order_number": order_number
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[WriteOff] ❌ Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

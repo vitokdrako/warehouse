@@ -24,8 +24,15 @@ const authFetch = async (url, options = {}) => {
   const token = localStorage.getItem("token");
   const defaultHeaders = { "Content-Type": "application/json" };
   if (token) defaultHeaders["Authorization"] = `Bearer ${token}`;
-  const response = await fetch(url, { ...options, headers: { ...defaultHeaders, ...options.headers } });
-  return response;
+  console.log("[authFetch] Making request to:", url, "with token:", token ? "present" : "missing");
+  try {
+    const response = await fetch(url, { ...options, headers: { ...defaultHeaders, ...options.headers } });
+    console.log("[authFetch] Response status:", response.status, "ok:", response.ok);
+    return response;
+  } catch (error) {
+    console.error("[authFetch] Fetch error:", error);
+    throw error;
+  }
 };
 
 const getPhotoUrl = (item) => {

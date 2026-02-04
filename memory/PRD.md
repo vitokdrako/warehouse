@@ -26,16 +26,27 @@ Full-stack rental management system (React + FastAPI + MySQL/OpenCart) for Farfo
   - Archive/Restore damage cases
   - One-click write-off for TOTAL_LOSS items
   - "На склад" button to return items without processing
-  - Photo display with zoom
+  - Photo display with zoom (including in laundry section)
   - Damage reason badges
 - NO direct financial settlements (processing/tracking only)
 
-### 4. Finance Hub
+### 4. Laundry/Dry Cleaning Management ✅ (Feb 2026)
+- **Two-step workflow:**
+  1. Send item to queue (`send-to-laundry` → processing_type='laundry', no batch_id)
+  2. Form batch from queue (`/api/laundry/queue/add-to-batch` → creates batch with company name)
+- **Features:**
+  - Queue view with photos and item quantities
+  - Batch creation with company name input
+  - Partial return tracking (receive specific quantities)
+  - Progress bar for each batch
+  - Photo display for items in queue and batches
+
+### 5. Finance Hub
 - Deposit management
 - Payment tracking
 - Late fee calculation and posting
 
-### 5. Authentication & Authorization
+### 6. Authentication & Authorization
 - JWT-based authentication
 - User roles (manager, admin, staff)
 
@@ -45,6 +56,11 @@ Full-stack rental management system (React + FastAPI + MySQL/OpenCart) for Farfo
 - Added alert messages for all processing operations
 - Fixed React StrictMode race condition in data loading
 - Used useRef for mount status tracking
+
+### Fixed: Laundry Workflow
+- Changed `send-to-laundry` to add items to queue only (not create batch immediately)
+- Batch creation now requires explicit action via "Сформувати партію" button
+- Company name input when forming batch
 
 ## Pending Tasks
 
@@ -67,6 +83,7 @@ Full-stack rental management system (React + FastAPI + MySQL/OpenCart) for Farfo
 - Key routes:
   - `return_versions.py` - Versioned returns API
   - `product_damage_history.py` - Damage Hub API
+  - `laundry.py` - Laundry/Dry Cleaning API
   - `finance.py` - Finance operations
 
 ### Frontend (React)
@@ -79,7 +96,7 @@ Full-stack rental management system (React + FastAPI + MySQL/OpenCart) for Farfo
 
 ### Database (MySQL)
 - OpenCart integration
-- Custom tables: `partial_return_versions`, `product_damage_history`, `damage_case_archive`, etc.
+- Custom tables: `partial_return_versions`, `product_damage_history`, `laundry_batches`, `laundry_items`
 
 ## API Endpoints
 
@@ -87,7 +104,16 @@ Full-stack rental management system (React + FastAPI + MySQL/OpenCart) for Farfo
 - `GET /api/product-damage-history/cases/grouped` - Get damage cases
 - `POST /api/product-damage-history/{id}/return-to-stock` - Return to stock
 - `POST /api/product-damage-history/{id}/send-to-wash` - Send to wash
+- `POST /api/product-damage-history/{id}/send-to-laundry` - Add to laundry queue
 - `POST /api/product-damage-history/order/{id}/archive` - Archive case
+
+### Laundry
+- `GET /api/laundry/queue` - Get items in laundry queue
+- `POST /api/laundry/queue/add-to-batch` - Create batch from queue items
+- `GET /api/laundry/batches` - Get all batches
+- `GET /api/laundry/batches/{id}` - Get batch details with items
+- `POST /api/laundry/batches/{id}/return-items` - Receive returned items (with quantity)
+- `POST /api/laundry/batches/{id}/complete` - Close batch
 
 ### Return Versions
 - `POST /api/return-versions/order/{id}/create-version` - Create version

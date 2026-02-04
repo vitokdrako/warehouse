@@ -992,29 +992,46 @@ export default function DamageHubApp() {
               >
                 <span className="font-semibold text-purple-800 flex items-center gap-2">
                   <Sparkles className="w-4 h-4" /> Хімчистка
+                  {laundryQueue.length > 0 && (
+                    <span className="px-1.5 py-0.5 bg-amber-200 text-amber-800 text-xs rounded-full">
+                      черга: {laundryQueue.length}
+                    </span>
+                  )}
                 </span>
                 {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-purple-600" /> : <ChevronRight className="w-4 h-4 text-purple-600" />}
               </button>
               
               {expandedSections.laundry && (
                 <div className="p-2 space-y-3">
-                  {/* Черга */}
+                  {/* Черга - товари що чекають на формування партії */}
                   {laundryQueue.length > 0 && (
-                    <div>
+                    <div className="bg-amber-50 rounded-lg p-2 border border-amber-200">
                       <div className="flex items-center justify-between px-1 mb-2">
-                        <span className="text-xs font-semibold text-amber-700">Черга ({laundryQueue.length})</span>
+                        <span className="text-xs font-semibold text-amber-700 flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> Черга ({laundryQueue.length} поз.)
+                        </span>
                         <button
                           onClick={() => handleAddToBatch(laundryQueue.map(i => i.id))}
-                          className="text-xs px-2 py-1 bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition"
+                          className="text-xs px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium"
                         >
-                          + Партія
+                          Сформувати партію
                         </button>
                       </div>
-                      <div className="space-y-1 max-h-24 overflow-y-auto">
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
                         {laundryQueue.map(item => (
-                          <div key={item.id} className="flex items-center gap-2 p-1.5 bg-amber-50 rounded-lg text-xs">
-                            <span className="font-medium text-slate-700">{item.sku}</span>
-                            <span className="text-slate-500 truncate">{item.product_name}</span>
+                          <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-amber-100">
+                            <ProductPhoto 
+                              item={item} 
+                              size="sm" 
+                              onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} 
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
+                              <div className="text-xs text-slate-500">{item.sku} • <span className="font-medium text-amber-700">{item.qty || item.remaining_qty || 1} шт</span></div>
+                            </div>
+                            {item.order_number && (
+                              <span className="text-xs text-slate-400">#{item.order_number}</span>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1023,10 +1040,12 @@ export default function DamageHubApp() {
                   
                   {/* Партії */}
                   <div>
-                    <div className="text-xs font-semibold text-purple-700 px-1 mb-2">Партії ({laundryBatches.length})</div>
+                    <div className="text-xs font-semibold text-purple-700 px-1 mb-2 flex items-center gap-1">
+                      <Package className="w-3 h-3" /> Партії ({laundryBatches.length})
+                    </div>
                     <div className="space-y-2 max-h-64 overflow-y-auto">
                       {laundryBatches.length === 0 ? (
-                        <div className="text-center py-4 text-slate-400 text-sm">Немає партій</div>
+                        <div className="text-center py-4 text-slate-400 text-sm">Немає активних партій</div>
                       ) : laundryBatches.map(batch => (
                         <LaundryBatchCard
                           key={batch.id}
@@ -1038,40 +1057,91 @@ export default function DamageHubApp() {
                     </div>
                   </div>
                   
-                  {/* Деталі партії */}
+                  {/* Деталі обраної партії */}
                   {selectedBatch && (
                     <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-semibold text-purple-800">{selectedBatch.batch_number}</span>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="font-bold text-purple-800 text-lg">{selectedBatch.batch_number}</div>
+                          <div className="text-sm text-purple-600">{selectedBatch.laundry_company}</div>
+                          {selectedBatch.sent_date && (
+                            <div className="text-xs text-slate-500 mt-1">
+                              Відправлено: {new Date(selectedBatch.sent_date).toLocaleDateString('uk-UA')}
+                            </div>
+                          )}
+                        </div>
                         {selectedBatch.status !== 'completed' && (
                           <button
                             onClick={() => handleCloseBatch(selectedBatch.id)}
-                            className="text-xs px-2 py-1 bg-purple-200 text-purple-800 rounded hover:bg-purple-300"
+                            className="text-xs px-3 py-1.5 bg-purple-200 text-purple-800 rounded-lg hover:bg-purple-300 transition"
                           >
                             Закрити партію
                           </button>
                         )}
                       </div>
-                      <div className="space-y-1">
+                      
+                      {/* Товари в партії */}
+                      <div className="space-y-2">
                         {batchItems.map(item => {
                           const remaining = item.quantity - (item.returned_quantity || 0);
                           return (
-                            <div key={item.id} className="flex items-center justify-between p-2 bg-white rounded-lg text-sm">
-                              <div>
-                                <div className="font-medium text-slate-800">{item.sku}</div>
-                                <div className="text-xs text-slate-500">{item.product_name}</div>
+                            <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-purple-100">
+                              <ProductPhoto 
+                                item={item} 
+                                size="sm" 
+                                onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} 
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
+                                <div className="text-xs text-slate-500">{item.sku}</div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-500">
-                                  {item.returned_quantity || 0}/{item.quantity}
-                                </span>
+                                <div className="text-center">
+                                  <div className="text-xs text-slate-400">Повернуто</div>
+                                  <div className={cls(
+                                    "font-bold text-sm",
+                                    remaining === 0 ? "text-emerald-600" : "text-amber-600"
+                                  )}>
+                                    {item.returned_quantity || 0}/{item.quantity}
+                                  </div>
+                                </div>
                                 {remaining > 0 && (
-                                  <button
-                                    onClick={() => handleReceiveBatchItem(selectedBatch.id, item.id, remaining)}
-                                    className="px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200"
-                                  >
-                                    Прийняти {remaining}
-                                  </button>
+                                  <div className="flex items-center gap-1">
+                                    {remaining > 1 ? (
+                                      <>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          max={remaining}
+                                          defaultValue={remaining}
+                                          className="w-12 px-1 py-1 text-center text-sm border border-slate-300 rounded"
+                                          id={`return-qty-${item.id}`}
+                                        />
+                                        <button
+                                          onClick={() => {
+                                            const input = document.getElementById(`return-qty-${item.id}`);
+                                            const qty = parseInt(input?.value) || remaining;
+                                            handleReceiveBatchItem(selectedBatch.id, item.id, Math.min(qty, remaining));
+                                          }}
+                                          className="px-2 py-1 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600 transition"
+                                        >
+                                          Прийняти
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleReceiveBatchItem(selectedBatch.id, item.id, 1)}
+                                        className="px-3 py-1.5 text-xs bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition font-medium"
+                                      >
+                                        ✓ Прийняти
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                                {remaining === 0 && (
+                                  <span className="text-emerald-500">
+                                    <Check className="w-5 h-5" />
+                                  </span>
                                 )}
                               </div>
                             </div>

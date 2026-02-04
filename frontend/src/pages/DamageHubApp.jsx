@@ -412,10 +412,24 @@ export default function DamageHubApp() {
       }[processingType];
       if (!endpoint) return;
       
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/${endpoint}`, {
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/${endpoint}`, {
         method: "POST",
         body: JSON.stringify({ notes: "Відправлено з кабінету шкоди" })
       });
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}`);
+      }
+      
+      // Повідомлення про успіх
+      const messages = {
+        wash: "✅ Товар відправлено на мийку",
+        restoration: "✅ Товар відправлено на реставрацію",
+        laundry: "✅ Товар додано в чергу хімчистки",
+        return_to_stock: "✅ Товар повернуто на склад і доступний для оренди"
+      };
+      alert(messages[processingType] || "✅ Готово");
       
       await loadOrderDetails(selectedOrderId);
       await loadOrderCases();
@@ -423,7 +437,7 @@ export default function DamageHubApp() {
       if (processingType === "restoration") await loadRestoreItems();
       if (processingType === "laundry") { await loadLaundryQueue(); await loadLaundryBatches(); }
     } catch (e) {
-      alert("Помилка відправки на обробку");
+      alert(`❌ Помилка: ${e.message || "Помилка відправки на обробку"}`);
     }
   };
 

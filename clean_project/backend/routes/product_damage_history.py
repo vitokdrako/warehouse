@@ -3,6 +3,7 @@ Product Damage History API - Історія пошкоджень товарів
 Використовується для фіксації пошкоджень до видачі та при поверненні
 """
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime

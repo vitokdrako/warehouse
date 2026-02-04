@@ -429,7 +429,8 @@ export default function DamageHubApp() {
     return () => {
       cancelled = true;
     };
-  }, [loadOrderCases, loadWashItems, loadRestoreItems, loadLaundryQueue, loadLaundryBatches]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (selectedOrderId) loadOrderDetails(selectedOrderId);

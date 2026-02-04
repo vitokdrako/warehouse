@@ -316,13 +316,12 @@ export default function DamageHubApp() {
         setArchivedCases([]);
       }
       
-      if (!selectedOrderId && data.cases?.length > 0) {
-        setSelectedOrderId(data.cases[0].order_id);
-      }
+      return data.cases || [];
     } catch (e) {
       console.error("Error loading order cases:", e);
+      return [];
     }
-  }, [selectedOrderId]);
+  }, []);
 
   const loadOrderDetails = useCallback(async (orderId) => {
     if (!orderId) return;

@@ -346,7 +346,8 @@ async def get_version_details(
             "qty": item[4],
             "daily_rate": float(item[5] or 0),
             "status": item[6],
-            "returned_at": item[7].isoformat() if item[7] else None
+            "returned_at": item[7].isoformat() if item[7] else None,
+            "image_url": item[8] if len(item) > 8 else None
         } for item in items],
         "version_history": [{
             "version_id": h[0],

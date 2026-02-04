@@ -389,7 +389,6 @@ export default function DamageHubApp() {
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
-      console.log("[DamageHub] Starting initial load...");
       try {
         const results = await Promise.all([
           loadOrderCases(),
@@ -400,7 +399,6 @@ export default function DamageHubApp() {
         ]);
         
         const cases = results[0];
-        console.log("[DamageHub] Initial load complete, cases:", cases?.length);
         
         // Auto-select first order if none selected
         if (cases?.length > 0 && isMountedRef.current) {
@@ -410,7 +408,6 @@ export default function DamageHubApp() {
         console.error("[DamageHub] Initial load error:", e);
       } finally {
         if (isMountedRef.current) {
-          console.log("[DamageHub] Setting loading=false");
           setLoading(false);
         }
       }

@@ -32,6 +32,7 @@ const getPhotoUrl = (item) => {
   if (!item) return null;
   if (item.photo_url) return item.photo_url;
   if (item.image_url) return item.image_url;
+  if (item.product_image) return item.product_image.startsWith("http") ? item.product_image : `${BACKEND_URL}${item.product_image}`;
   if (item.image) return item.image.startsWith("http") ? item.image : `${BACKEND_URL}${item.image}`;
   return null;
 };

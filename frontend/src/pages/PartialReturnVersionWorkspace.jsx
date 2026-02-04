@@ -93,6 +93,7 @@ export default function PartialReturnVersionWorkspace() {
         id: item.item_id,
         item_id: item.item_id,
         product_id: item.product_id,
+        inventory_id: item.product_id,  // Для DamageModal
         sku: item.sku,
         name: item.name,
         rented_qty: item.qty,
@@ -104,7 +105,8 @@ export default function PartialReturnVersionWorkspace() {
         serials: [],
         image: item.image_url || null,
         image_url: item.image_url || null,
-        damage_history: []
+        damage_history: [],
+        pre_damage: []  // Для DamageModal
       }))
       
       setItems(formattedItems)

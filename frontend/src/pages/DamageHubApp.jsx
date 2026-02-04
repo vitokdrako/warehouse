@@ -263,6 +263,7 @@ const LaundryBatchCard = ({ batch, isSelected, onClick }) => {
 
 // ============= MAIN COMPONENT =============
 export default function DamageHubApp() {
+  console.log("[DamageHub] Component rendering, BACKEND_URL:", BACKEND_URL);
   // View states
   const [view, setView] = useState('active'); // 'active' | 'archive'
   const [searchQuery, setSearchQuery] = useState('');

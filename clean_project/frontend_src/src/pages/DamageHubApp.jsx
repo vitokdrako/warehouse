@@ -741,73 +741,121 @@ export default function DamageHubApp() {
                     {selectedOrder ? "Немає товарів" : "Оберіть замовлення зліва"}
                   </div>
                 ) : (
-                  selectedOrderItems.map(item => (
-                    <div key={item.id} className="p-3 rounded-xl border border-slate-200 bg-white">
-                      <div className="flex gap-3">
-                        <ProductPhoto
-                          item={item}
-                          size="lg"
-                          onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-semibold text-slate-800">{item.product_name}</div>
-                              <div className="text-sm text-slate-500">{item.sku}</div>
-                              {item.damage_kind && (
-                                <div className="text-xs text-red-600 mt-1">{item.damage_kind}</div>
-                              )}
+                  selectedOrderItems.map(item => {
+                    const isLoss = item.damage_code === 'TOTAL_LOSS' || item.damage_type?.toLowerCase().includes('втрата');
+                    const damageLabel = item.damage_type || item.damage_code || 'Невідомо';
+                    
+                    // Визначаємо колір бейджа за типом
+                    const getDamageBadge = () => {
+                      const code = item.damage_code?.toLowerCase() || '';
+                      const type = item.damage_type?.toLowerCase() || '';
+                      
+                      if (code === 'total_loss' || type.includes('втрата')) 
+                        return { tone: 'danger', label: '🔴 ПОВНА ВТРАТА' };
+                      if (code.includes('dirty') || code.includes('wet') || type.includes('бруд') || type.includes('волог'))
+                        return { tone: 'info', label: '🧼 ' + damageLabel };
+                      if (code.includes('broken') || code.includes('damaged') || code.includes('restore') || type.includes('бій') || type.includes('реставр'))
+                        return { tone: 'warn', label: '🔧 ' + damageLabel };
+                      if (code.includes('scratch') || code.includes('dent') || code.includes('chip'))
+                        return { tone: 'neutral', label: damageLabel };
+                      return { tone: 'neutral', label: damageLabel };
+                    };
+                    
+                    const badge = getDamageBadge();
+                    
+                    return (
+                      <div key={item.id} className={cls(
+                        "p-3 rounded-xl border bg-white",
+                        isLoss ? "border-red-300 bg-red-50" : "border-slate-200"
+                      )}>
+                        <div className="flex gap-3">
+                          <ProductPhoto
+                            item={item}
+                            size="lg"
+                            onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="font-semibold text-slate-800">{item.product_name}</div>
+                                <div className="text-sm text-slate-500">{item.sku}</div>
+                                {/* Причина пошкодження */}
+                                <div className="mt-1">
+                                  <Badge tone={badge.tone}>{badge.label}</Badge>
+                                </div>
+                                {item.note && (
+                                  <div className="text-xs text-slate-500 mt-1 italic">"{item.note}"</div>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-slate-800">{money(item.fee_amount || item.fee || 0)}</div>
+                                {item.qty > 1 && <div className="text-xs text-slate-500">x{item.qty} шт</div>}
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <div className="font-bold text-slate-800">{money(item.fee_amount || 0)}</div>
-                              {item.qty > 1 && <div className="text-xs text-slate-500">x{item.qty} шт</div>}
-                            </div>
+                            
+                            {/* Action Buttons */}
+                            {(!item.processing_type || item.processing_type === 'none') && view === 'active' && (
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {/* Кнопка списання для повної втрати */}
+                                {isLoss && (
+                                  <button
+                                    onClick={() => handleWriteOff(item)}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition border border-red-300"
+                                  >
+                                    <X className="w-3 h-3" /> Списати ({item.qty || 1} шт)
+                                  </button>
+                                )}
+                                
+                                <button
+                                  onClick={() => handleSendTo(item.id, 'wash')}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
+                                >
+                                  <Droplets className="w-3 h-3" /> Мийка
+                                </button>
+                                <button
+                                  onClick={() => handleSendTo(item.id, 'restoration')}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition"
+                                >
+                                  <Wrench className="w-3 h-3" /> Реставрація
+                                </button>
+                                <button
+                                  onClick={() => handleSendTo(item.id, 'laundry')}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition"
+                                >
+                                  <Sparkles className="w-3 h-3" /> Хімчистка
+                                </button>
+                                <button
+                                  onClick={() => handleSendTo(item.id, 'return_to_stock')}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition"
+                                >
+                                  <Package className="w-3 h-3" /> На склад
+                                </button>
+                              </div>
+                            )}
+                            
+                            {/* Processing Status */}
+                            {item.processing_type && item.processing_type !== 'none' && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Badge tone={item.processing_status === 'completed' ? 'ok' : 'info'}>
+                                  {item.processing_type === 'wash' && '🧼 Мийка'}
+                                  {item.processing_type === 'restoration' && '🔧 Реставрація'}
+                                  {item.processing_type === 'laundry' && '🧺 Хімчистка'}
+                                  {item.processing_status === 'completed' && ' ✓'}
+                                </Badge>
+                              </div>
+                            )}
+                            
+                            {/* Списано */}
+                            {item.processing_type === 'written_off' && (
+                              <div className="mt-2">
+                                <Badge tone="danger">❌ Списано</Badge>
+                              </div>
+                            )}
                           </div>
-                          
-                          {/* Action Buttons */}
-                          {(!item.processing_type || item.processing_type === 'none') && view === 'active' && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              <button
-                                onClick={() => handleSendTo(item.id, 'wash')}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
-                              >
-                                <Droplets className="w-3 h-3" /> Мийка
-                              </button>
-                              <button
-                                onClick={() => handleSendTo(item.id, 'restoration')}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition"
-                              >
-                                <Wrench className="w-3 h-3" /> Реставрація
-                              </button>
-                              <button
-                                onClick={() => handleSendTo(item.id, 'laundry')}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition"
-                              >
-                                <Sparkles className="w-3 h-3" /> Хімчистка
-                              </button>
-                              <button
-                                onClick={() => handleSendTo(item.id, 'return_to_stock')}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition"
-                              >
-                                <Package className="w-3 h-3" /> На склад
-                              </button>
-                            </div>
-                          )}
-                          
-                          {/* Processing Status */}
-                          {item.processing_type && item.processing_type !== 'none' && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <Badge tone={item.processing_status === 'completed' ? 'ok' : 'info'}>
-                                {item.processing_type === 'wash' && '🧼 Мийка'}
-                                {item.processing_type === 'restoration' && '🔧 Реставрація'}
-                                {item.processing_type === 'laundry' && '🧺 Хімчистка'}
-                                {item.processing_status === 'completed' && ' ✓'}
-                              </Badge>
-                            </div>
-                          )}
                         </div>
                       </div>
-                    </div>
+                    );
+                  })
                   ))
                 )}
               </div>

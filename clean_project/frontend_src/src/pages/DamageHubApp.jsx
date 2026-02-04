@@ -891,7 +891,7 @@ export default function DamageHubApp() {
                       <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
-                        <div className="text-xs text-slate-500">{item.sku}</div>
+                        <div className="text-xs text-slate-500">{item.sku} • <span className="font-medium">{item.qty || 1} шт</span></div>
                       </div>
                       {item.processing_status !== 'completed' && (
                         <button

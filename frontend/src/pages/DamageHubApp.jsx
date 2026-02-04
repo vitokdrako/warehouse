@@ -291,11 +291,9 @@ export default function DamageHubApp() {
   // ============= DATA LOADING =============
   const loadOrderCases = useCallback(async () => {
     try {
-      console.log("[DamageHub] Loading order cases from:", `${BACKEND_URL}/api/product-damage-history/cases/grouped`);
       // Завантажуємо активні кейси
       const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/cases/grouped`);
       const data = await res.json();
-      console.log("[DamageHub] Loaded cases:", data);
       setOrderCases(data.cases || []);
       
       // Завантажуємо архівовані кейси окремо
@@ -304,7 +302,6 @@ export default function DamageHubApp() {
         const archiveData = await archiveRes.json();
         setArchivedCases(archiveData.cases || []);
       } catch (e) {
-        console.log("Archive not available");
         setArchivedCases([]);
       }
       

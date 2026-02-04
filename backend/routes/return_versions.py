@@ -542,3 +542,159 @@ async def get_order_versions(
             "items_count": v[6]
         } for v in versions]
     }
+
+
+
+# ============================================================
+# ФІНАНСОВА ІНТЕГРАЦІЯ - Нарахування прострочення
+# ============================================================
+
+class ChargeLateRequest(BaseModel):
+    """Нарахування прострочення з версії"""
+    amount: float
+    note: Optional[str] = None
+    method: str = "cash"  # cash | bank
+
+
+@router.post("/version/{version_id}/charge-late")
+async def charge_late_fee(
+    version_id: int,
+    data: ChargeLateRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Нарахувати прострочення з версії у фінансову систему.
+    
+    Логіка:
+    1. Отримуємо дані версії (parent_order_id, days_overdue, total_price)
+    2. Створюємо запис в fin_payments з типом 'late'
+    3. Оновлюємо статус версії (fee_charged = True)
+    """
+    ensure_version_tables(db)
+    
+    try:
+        # Отримуємо дані версії
+        version = db.execute(text("""
+            SELECT version_id, parent_order_id, display_number, total_price, rental_end_date, status
+            FROM partial_return_versions
+            WHERE version_id = :vid
+        """), {"vid": version_id}).fetchone()
+        
+        if not version:
+            raise HTTPException(status_code=404, detail="Версію не знайдено")
+        
+        parent_order_id = version[1]
+        display_number = version[2]
+        
+        # Рахуємо дні прострочення
+        from datetime import date
+        today = date.today()
+        rental_end = version[4]
+        days_overdue = (today - rental_end).days if rental_end and today > rental_end else 0
+        
+        # Створюємо запис в fin_payments
+        db.execute(text("""
+            INSERT INTO fin_payments (order_id, payment_type, amount, currency, status, note, occurred_at, method)
+            VALUES (:order_id, 'late', :amount, 'UAH', 'pending', :note, NOW(), :method)
+        """), {
+            "order_id": parent_order_id,
+            "amount": data.amount,
+            "note": data.note or f"Прострочення {display_number} ({days_overdue} дн.)",
+            "method": data.method
+        })
+        
+        payment_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        
+        # Оновлюємо версію - позначаємо що нарахування зроблено
+        db.execute(text("""
+            UPDATE partial_return_versions
+            SET notes = CONCAT(COALESCE(notes, ''), '\n[FIN] Нараховано прострочення: ₴', :amount, ' (payment_id=', :pid, ')')
+            WHERE version_id = :vid
+        """), {"amount": data.amount, "pid": payment_id, "vid": version_id})
+        
+        db.commit()
+        
+        print(f"[ReturnVersions] 💰 Нараховано прострочення: {display_number} → ₴{data.amount}")
+        
+        return {
+            "success": True,
+            "payment_id": payment_id,
+            "version_id": version_id,
+            "parent_order_id": parent_order_id,
+            "amount": data.amount,
+            "days_overdue": days_overdue
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[ReturnVersions] ❌ Error charging late fee: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/version/{version_id}/finance-summary")
+async def get_version_finance_summary(
+    version_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати фінансовий підсумок версії:
+    - Розрахункове прострочення
+    - Нараховано
+    - Оплачено
+    """
+    ensure_version_tables(db)
+    
+    try:
+        # Дані версії
+        version = db.execute(text("""
+            SELECT version_id, parent_order_id, display_number, total_price, rental_end_date, status
+            FROM partial_return_versions
+            WHERE version_id = :vid
+        """), {"vid": version_id}).fetchone()
+        
+        if not version:
+            raise HTTPException(status_code=404, detail="Версію не знайдено")
+        
+        parent_order_id = version[1]
+        total_price = float(version[3] or 0)
+        rental_end = version[4]
+        
+        # Рахуємо дні прострочення
+        from datetime import date
+        today = date.today()
+        days_overdue = (today - rental_end).days if rental_end and today > rental_end else 0
+        
+        # Розрахункова сума
+        calculated_late_fee = total_price * days_overdue if days_overdue > 0 else 0
+        
+        # Нараховано (з fin_payments для цього order_id типу 'late')
+        charged = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments
+            WHERE order_id = :order_id AND payment_type = 'late' AND status = 'pending'
+        """), {"order_id": parent_order_id}).scalar() or 0
+        
+        # Оплачено
+        paid = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments
+            WHERE order_id = :order_id AND payment_type = 'late' AND status IN ('completed', 'confirmed')
+        """), {"order_id": parent_order_id}).scalar() or 0
+        
+        return {
+            "version_id": version_id,
+            "parent_order_id": parent_order_id,
+            "display_number": version[2],
+            "daily_rate": total_price,
+            "days_overdue": days_overdue,
+            "calculated_late_fee": calculated_late_fee,
+            "charged_amount": float(charged),
+            "paid_amount": float(paid),
+            "due_amount": float(charged) - float(paid),
+            "status": version[5]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

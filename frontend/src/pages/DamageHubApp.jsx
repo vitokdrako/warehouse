@@ -388,30 +388,48 @@ export default function DamageHubApp() {
 
   // Initial load
   useEffect(() => {
+    let cancelled = false;
+    
     const loadAll = async () => {
       setLoading(true);
       console.log("[DamageHub] Starting initial load...");
       try {
-        const [cases] = await Promise.all([
+        const results = await Promise.all([
           loadOrderCases(),
           loadWashItems(),
           loadRestoreItems(),
           loadLaundryQueue(),
           loadLaundryBatches()
         ]);
+        
+        if (cancelled) {
+          console.log("[DamageHub] Load cancelled, component unmounted");
+          return;
+        }
+        
+        const cases = results[0];
         console.log("[DamageHub] Initial load complete, cases:", cases?.length);
-        // Auto-select first order
-        if (cases?.length > 0 && !selectedOrderId) {
-          setSelectedOrderId(cases[0].order_id);
+        
+        // Auto-select first order if none selected
+        if (cases?.length > 0) {
+          setSelectedOrderId(prev => prev || cases[0].order_id);
         }
       } catch (e) {
         console.error("[DamageHub] Initial load error:", e);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          console.log("[DamageHub] Setting loading=false");
+          setLoading(false);
+        }
       }
     };
+    
     loadAll();
-  }, []);
+    
+    return () => {
+      cancelled = true;
+    };
+  }, [loadOrderCases, loadWashItems, loadRestoreItems, loadLaundryQueue, loadLaundryBatches]);
 
   useEffect(() => {
     if (selectedOrderId) loadOrderDetails(selectedOrderId);

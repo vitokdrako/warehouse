@@ -386,10 +386,18 @@ export default function DamageHubApp() {
     }
   }, []);
 
+  // Track mount status
+  const isMountedRef = React.useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  
   // Initial load
   useEffect(() => {
-    let cancelled = false;
-    
     const loadAll = async () => {
       setLoading(true);
       console.log("[DamageHub] Starting initial load...");
@@ -402,22 +410,17 @@ export default function DamageHubApp() {
           loadLaundryBatches()
         ]);
         
-        if (cancelled) {
-          console.log("[DamageHub] Load cancelled, component unmounted");
-          return;
-        }
-        
         const cases = results[0];
         console.log("[DamageHub] Initial load complete, cases:", cases?.length);
         
         // Auto-select first order if none selected
-        if (cases?.length > 0) {
+        if (cases?.length > 0 && isMountedRef.current) {
           setSelectedOrderId(prev => prev || cases[0].order_id);
         }
       } catch (e) {
         console.error("[DamageHub] Initial load error:", e);
       } finally {
-        if (!cancelled) {
+        if (isMountedRef.current) {
           console.log("[DamageHub] Setting loading=false");
           setLoading(false);
         }
@@ -425,10 +428,6 @@ export default function DamageHubApp() {
     };
     
     loadAll();
-    
-    return () => {
-      cancelled = true;
-    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

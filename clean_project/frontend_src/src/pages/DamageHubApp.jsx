@@ -523,6 +523,36 @@ export default function DamageHubApp() {
     }
   };
 
+  // Списання товару при повній втраті
+  const handleWriteOff = async (item) => {
+    const qty = item.qty || 1;
+    if (!confirm(`Списати ${qty} шт. "${item.product_name || item.sku}" через повну втрату?\n\nТовар буде відправлено в переоблік зі статусом "Списано".`)) {
+      return;
+    }
+    
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/write-off`, {
+        method: "POST",
+        body: JSON.stringify({ 
+          qty: qty,
+          reason: "Повна втрата (списано з кабінету шкоди)",
+          damage_type: item.damage_type || "TOTAL_LOSS"
+        })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Помилка списання");
+      }
+      
+      await loadOrderDetails(selectedOrderId);
+      await loadOrderCases();
+      alert("✅ Товар списано! Кількість оновлено в переобліку.");
+    } catch (e) {
+      alert(`❌ Помилка: ${e.message}`);
+    }
+  };
+
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };

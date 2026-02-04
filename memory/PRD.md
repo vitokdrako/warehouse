@@ -1,146 +1,98 @@
 # RentalHub - Product Requirements Document
 
-## 🚨 КРИТИЧНО ДЛЯ АГЕНТІВ
+## Project Overview
+Full-stack rental management system (React + FastAPI + MySQL/OpenCart) for FarforRent company.
 
-### РОБОЧА ПАПКА: `/app/clean_project/`
+## Core Features Implemented
 
-**НЕ ВИКОРИСТОВУВАТИ:** `/app/backend/`, `/app/frontend/` - це СТАРІ папки!
+### 1. Order Management System
+- Order creation, editing, viewing
+- Order status workflow (new → assembly → issued → return → completed)
+- Manager dashboard with order columns
+- Issue card workspace for order assembly
 
-### Компіляція фронтенду:
-```bash
-cd /app/clean_project/frontend_src
-REACT_APP_BACKEND_URL=https://backrentalhub.farforrent.com.ua yarn build
-cp -r build/* /app/clean_project/frontend_build/
-```
+### 2. Versioned Partial Return System ✅ (Feb 2026)
+- Database schema: `partial_return_versions`, `partial_return_version_items`
+- API: `/api/return-versions/`
+- Frontend: `PartialReturnVersionWorkspace.jsx`
+- Creates versioned orders (e.g., #OC-7266(1)) for unreturned items
+- Integrates with Finance Hub for late fee calculation
 
-### Або просто:
-```bash
-/app/clean_project/build.sh
-```
+### 3. Unified Damage Hub ✅ (Feb 2026)
+- Complete refactor from tab-based to 3-column layout
+- Files: `DamageHubApp.jsx`, `product_damage_history.py`
+- Features:
+  - Processing workflow: Wash, Restoration, Dry Cleaning
+  - Archive/Restore damage cases
+  - One-click write-off for TOTAL_LOSS items
+  - "На склад" button to return items without processing
+  - Photo display with zoom
+  - Damage reason badges
+- NO direct financial settlements (processing/tracking only)
 
----
+### 4. Finance Hub
+- Deposit management
+- Payment tracking
+- Late fee calculation and posting
 
-## Опис системи
+### 5. Authentication & Authorization
+- JWT-based authentication
+- User roles (manager, admin, staff)
 
-**RentalHub** - система управління орендою декору для компанії FarForRent.
+## Bug Fixes (Feb 2026)
 
-### URL продакшену:
-- Frontend: `https://rentalhub.farforrent.com.ua`
-- Backend: `https://backrentalhub.farforrent.com.ua`
+### Fixed: "На склад" Button No Feedback
+- Added alert messages for all processing operations
+- Fixed React StrictMode race condition in data loading
+- Used useRef for mount status tracking
 
-### Бази даних:
-- **OpenCart DB** (`farforre_opencart`) - товари, замовлення
-- **RentalHub DB** (`farforre_rentalhub`) - фінанси, картки видачі/повернення
+## Pending Tasks
 
----
+### P1 - High Priority
+- [ ] Calendar timezone bug (incorrect date highlighting)
 
-## Структура проекту
+### P2 - Medium Priority  
+- [ ] Unify order workspaces (NewOrderViewWorkspace + IssueCardWorkspace)
+- [ ] Full RBAC implementation
+- [ ] Monthly financial report
 
-```
-/app/clean_project/
-├── backend/                 # FastAPI сервер
-│   ├── server.py           # Головний файл
-│   ├── routes/             # API endpoints (52 файли)
-│   ├── services/           # Бізнес-логіка
-│   ├── templates/          # Jinja2 шаблони документів
-│   └── .env                # Конфігурація
-│
-├── frontend_src/           # React + TypeScript
-│   ├── src/pages/          # Сторінки (22 файли)
-│   ├── src/components/     # UI компоненти
-│   └── .env                # REACT_APP_BACKEND_URL
-│
-├── frontend_build/         # Скомпільований фронт (для деплою)
-│
-├── docs/                   # Документація
-├── AGENT_RULES.md          # Правила для агентів
-└── build.sh                # Скрипт компіляції
-```
+### P3 - Low Priority
+- [ ] Digital signature integration
 
----
+## Technical Architecture
 
-## Основні модулі
+### Backend (FastAPI)
+- `/app/backend/routes/` - API routes
+- `/app/backend/database_rentalhub.py` - DB connection
+- Key routes:
+  - `return_versions.py` - Versioned returns API
+  - `product_damage_history.py` - Damage Hub API
+  - `finance.py` - Finance operations
 
-### 1. Фінансовий кабінет (`FinanceHub.jsx`)
-- Оренда, застава, шкода, прострочення
-- Знижки (записуються при видачі, редагуються менеджером)
-- **Фін кабінет = джерело правди для сум**
+### Frontend (React)
+- `/app/frontend/src/pages/` - Page components
+- `/app/frontend/src/components/` - Reusable components
+- Key pages:
+  - `DamageHubApp.jsx` - Damage management
+  - `PartialReturnVersionWorkspace.jsx` - Versioned returns
+  - `ManagerDashboard.jsx` - Main dashboard
 
-### 2. Картки видачі (`IssueCardWorkspace.jsx`)
-- Комплектація замовлення
-- Фото до/після
-- Видалення позицій
+### Database (MySQL)
+- OpenCart integration
+- Custom tables: `partial_return_versions`, `product_damage_history`, `damage_case_archive`, etc.
 
-### 3. Картки повернення (`ReturnOrderWorkspace.jsx`)
-- Приймання товарів
-- Часткове повернення
-- Фіксація шкоди
+## API Endpoints
 
-### 4. Календар (`UnifiedCalendarNew.jsx`)
-- Видачі/повернення
-- Завдання
-- Прострочення
+### Damage Hub
+- `GET /api/product-damage-history/cases/grouped` - Get damage cases
+- `POST /api/product-damage-history/{id}/return-to-stock` - Return to stock
+- `POST /api/product-damage-history/{id}/send-to-wash` - Send to wash
+- `POST /api/product-damage-history/order/{id}/archive` - Archive case
 
----
+### Return Versions
+- `POST /api/return-versions/order/{id}/create-version` - Create version
+- `GET /api/return-versions/version/{id}` - Get version details
+- `GET /api/return-versions/active` - Get active versions
 
-## Останні зміни (03.02.2026)
-
-### Виконано:
-- ✅ **НОВА АРХІТЕКТУРА ВЕРСІЙ ЧАСТКОВИХ ПОВЕРНЕНЬ (v2):**
-  - **ВАЖЛИВО:** Не створюємо записи в таблиці `orders` (це OpenCart!)
-  - Нові таблиці: `partial_return_versions`, `partial_return_version_items`
-  - Версіонування: OC-7266 → OC-7266(1) → OC-7266(2) і т.д.
-  - API endpoints: `/api/return-versions/*`
-  - Нова сторінка: `/partial-return/{versionId}`
-  - Дашборд показує тільки останню активну версію
-  - Історія версій доступна в архіві
-- ✅ **Dashboard:** Колонка "Часткове повернення" тепер завантажує з `partial_return_versions`
-- ✅ **Покращений Conflict Checker** - показує деталі конфліктів
-- ✅ **Покращений каталог** - деталі доступності
-- ✅ Виправлено accessibility warning (DialogDescription)
-- ✅ Блоки Шкода/Прострочення у фін кабінеті
-- ✅ Знижка записується при видачі у fin_payments
-- ✅ Редагування знижки менеджером
-- ✅ Видалення позицій з картки комплектації
-- ✅ Виправлено помилки календаря
-- ✅ Створено чистий проект без застарілих файлів
-
-### Архітектура часткових повернень:
-```
-Оригінальне замовлення (OpenCart):
-  orders.order_id = 7266
-  orders.order_number = "OC-7266"
-  
-При частковому поверненні:
-  1. orders.status → "returned" (архів)
-  2. partial_return_versions:
-     - version_id = 1
-     - parent_order_id = 7266
-     - display_number = "OC-7266(1)"
-     - status = "active"
-  
-При повторному частковому поверненні:
-  3. partial_return_versions[1].status → "archived"
-  4. partial_return_versions:
-     - version_id = 2
-     - display_number = "OC-7266(2)"
-     - status = "active"
-```
-
-### В роботі:
-- [ ] Інтеграція з фін кабінетом для нарахування прострочення
-- [ ] Створення версії з ReturnOrderWorkspace (модалка)
-
-### Backlog:
-- [ ] Баг часового поясу в календарі (очікує перевірки)
-- [ ] RBAC (повний контроль доступу)
-- [ ] Місячний фінансовий звіт
-- [ ] Telegram бот
-- [ ] Цифровий підпис
-
----
-
-## Credentials для тестування
-
-- Email: `vitokdrako@gmail.com`
-- Password: `test123`
+## Credentials
+- Test account: vitokdrako@gmail.com / test123

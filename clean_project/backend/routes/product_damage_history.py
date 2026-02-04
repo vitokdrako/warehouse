@@ -1032,8 +1032,9 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
 @router.post("/{damage_id}/send-to-laundry")
 async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """
-    Відправити товар в хімчистку
-    Створює новий batch або додає до існуючого
+    Додати товар до черги хімчистки.
+    НЕ створює партію - лише позначає товар як 'laundry' без batch_id.
+    Партія формується окремо через /api/laundry/queue/add-to-batch
     """
     try:
         # Отримати інформацію про товар
@@ -1050,76 +1051,27 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
         if damage_info[6] and damage_info[6] != 'none':
             raise HTTPException(status_code=400, detail=f"Товар вже відправлено на {damage_info[6]}")
         
-        laundry_company = data.get("laundry_company", "Хімчистка №1")
-        expected_return_date = data.get("expected_return_date")
         notes = data.get("notes", "")
         
-        # Створити новий batch якщо не вказано існуючий
-        batch_id = data.get("batch_id")
-        if not batch_id:
-            batch_id = f"BATCH-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-            batch_number = f"LB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            db.execute(text("""
-                INSERT INTO laundry_batches (
-                    id, batch_number, laundry_company, status, sent_date, expected_return_date,
-                    notes, total_items, returned_items, created_at, updated_at
-                ) VALUES (
-                    :id, :batch_number, :company, 'sent', NOW(), :return_date,
-                    :notes, 1, 0, NOW(), NOW()
-                )
-            """), {
-                "id": batch_id,
-                "batch_number": batch_number,
-                "company": laundry_company,
-                "return_date": expected_return_date,
-                "notes": notes
-            })
-        
-        # Створити laundry_item (без order_id - такої колонки немає)
-        item_id = f"ITEM-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        db.execute(text("""
-            INSERT INTO laundry_items (
-                id, batch_id, product_id, sku, product_name, category,
-                quantity, returned_quantity, condition_before, notes,
-                created_at
-            ) VALUES (
-                :id, :batch_id, :product_id, :sku, :product_name, :category,
-                1, 0, 'damaged', :notes,
-                NOW()
-            )
-        """), {
-            "id": item_id,
-            "batch_id": batch_id,
-            "product_id": damage_info[0],
-            "sku": damage_info[1],
-            "product_name": damage_info[2],
-            "category": damage_info[3],
-            "notes": f"Від ордера {damage_info[5] or ''}"
-        })
-        
-        # Оновити damage record
+        # Оновити damage record - позначити як laundry БЕЗ batch_id (черга)
         db.execute(text("""
             UPDATE product_damage_history
             SET processing_type = 'laundry',
-                processing_status = 'in_progress',
+                processing_status = 'pending',
                 sent_to_processing_at = NOW(),
                 processing_notes = :notes,
-                laundry_batch_id = :batch_id,
-                laundry_item_id = :item_id
+                laundry_batch_id = NULL,
+                laundry_item_id = NULL
             WHERE id = :damage_id
         """), {
             "damage_id": damage_id,
-            "notes": f"Відправлено в {laundry_company}",
-            "batch_id": batch_id,
-            "item_id": item_id
+            "notes": notes or "Додано до черги хімчистки"
         })
         
         db.commit()
         return {
             "success": True,
-            "message": "Товар відправлено в хімчистку",
-            "batch_id": batch_id,
-            "item_id": item_id
+            "message": "Товар додано до черги хімчистки"
         }
         
     except Exception as e:

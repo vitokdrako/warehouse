@@ -64,6 +64,9 @@ export default function PartialReturnVersionWorkspace() {
   const [cleaningFee, setCleaningFee] = useState(0)
   const [damageFee, setDamageFee] = useState(0)
   
+  // Фінансовий summary
+  const [financeSummary, setFinanceSummary] = useState(null)
+  
   // Приймальники
   const [selectedRequisitors, setSelectedRequisitors] = useState([])
   

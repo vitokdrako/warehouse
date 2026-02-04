@@ -213,6 +213,63 @@ export default function PartialReturnVersionWorkspace() {
     }
   }
   
+  // === НАРАХУВАННЯ ПРОСТРОЧЕННЯ В ФІН СИСТЕМУ ===
+  const handleChargeLate = async () => {
+    if (!financeSummary || financeSummary.calculated_late_fee <= 0) {
+      toast({
+        title: '⚠️ Увага',
+        description: 'Немає прострочення для нарахування',
+        variant: 'destructive'
+      })
+      return
+    }
+    
+    const amount = financeSummary.calculated_late_fee
+    if (!confirm(`Нарахувати прострочення ₴${amount.toFixed(2)} у фінансову систему?`)) {
+      return
+    }
+    
+    setSaving(true)
+    try {
+      const response = await authFetch(`${BACKEND_URL}/api/return-versions/version/${versionId}/charge-late`, {
+        method: 'POST',
+        body: JSON.stringify({
+          amount: amount,
+          note: `Прострочення ${version?.display_number} (${financeSummary.days_overdue} дн.)`,
+          method: 'cash'
+        })
+      })
+      
+      if (!response.ok) {
+        const err = await response.json()
+        throw new Error(err.detail || 'Помилка')
+      }
+      
+      const result = await response.json()
+      
+      // Оновлюємо фінансовий summary
+      setFinanceSummary(prev => ({
+        ...prev,
+        charged_amount: prev.charged_amount + amount,
+        due_amount: prev.due_amount + amount
+      }))
+      
+      toast({
+        title: '✅ Прострочення нараховано',
+        description: `₴${amount.toFixed(2)} додано до фінансової системи`
+      })
+      
+    } catch (err) {
+      toast({
+        title: '❌ Помилка',
+        description: err.message,
+        variant: 'destructive'
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+  
   // === ЗАВЕРШЕННЯ ПРИЙМАННЯ ===
   const handleComplete = async () => {
     // Перевірити чи всі товари повернуто

@@ -291,14 +291,23 @@ export default function DamageHubApp() {
   // ============= DATA LOADING =============
   const loadOrderCases = useCallback(async () => {
     try {
+      // Завантажуємо активні кейси
       const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/cases/grouped`);
       const data = await res.json();
-      const cases = data.cases || [];
-      // Розділяємо на активні та архівні
-      setOrderCases(cases.filter(c => !c.is_archived));
-      setArchivedCases(cases.filter(c => c.is_archived));
-      if (!selectedOrderId && cases.length > 0) {
-        setSelectedOrderId(cases[0].order_id);
+      setOrderCases(data.cases || []);
+      
+      // Завантажуємо архівовані кейси окремо
+      try {
+        const archiveRes = await authFetch(`${BACKEND_URL}/api/product-damage-history/archive`);
+        const archiveData = await archiveRes.json();
+        setArchivedCases(archiveData.cases || []);
+      } catch (e) {
+        console.log("Archive not available");
+        setArchivedCases([]);
+      }
+      
+      if (!selectedOrderId && data.cases?.length > 0) {
+        setSelectedOrderId(data.cases[0].order_id);
       }
     } catch (e) {
       console.error("Error loading order cases:", e);

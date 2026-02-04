@@ -296,6 +296,7 @@ export default function DamageHubApp() {
       // Завантажуємо активні кейси
       const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/cases/grouped`);
       const data = await res.json();
+      console.log("[DamageHub] Loaded cases:", data);
       setOrderCases(data.cases || []);
       
       // Завантажуємо архівовані кейси окремо

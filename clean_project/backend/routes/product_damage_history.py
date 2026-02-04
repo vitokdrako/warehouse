@@ -1543,3 +1543,140 @@ async def delete_damage_record(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Помилка видалення: {str(e)}")
+
+
+
+# ============================================================
+# АРХІВ КЕЙСІВ ШКОДИ
+# ============================================================
+
+def ensure_archive_table(db: Session):
+    """Створити таблицю архіву якщо не існує"""
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS damage_case_archive (
+                order_id INT PRIMARY KEY,
+                archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                archived_by VARCHAR(255),
+                notes TEXT
+            )
+        """))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        if "already exists" not in str(e).lower():
+            print(f"Warning creating archive table: {e}")
+
+
+@router.post("/order/{order_id}/archive")
+async def archive_damage_case(
+    order_id: int,
+    data: dict = None,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Відправити кейс шкоди в архів.
+    Кейс залишається в базі, але не показується в активному списку.
+    """
+    ensure_archive_table(db)
+    
+    try:
+        # Перевірити чи є кейс
+        check = db.execute(text("""
+            SELECT COUNT(*) FROM product_damage_history WHERE order_id = :oid AND stage = 'return'
+        """), {"oid": order_id}).scalar()
+        
+        if not check:
+            raise HTTPException(status_code=404, detail="Кейс не знайдено")
+        
+        # Додати в архів (якщо ще не архівований)
+        db.execute(text("""
+            INSERT INTO damage_case_archive (order_id, archived_by, notes)
+            VALUES (:oid, :by, :notes)
+            ON DUPLICATE KEY UPDATE 
+                archived_at = NOW(),
+                archived_by = :by,
+                notes = :notes
+        """), {
+            "oid": order_id,
+            "by": data.get("archived_by", "manager") if data else "manager",
+            "notes": data.get("notes") if data else None
+        })
+        
+        db.commit()
+        
+        return {"success": True, "message": "Кейс відправлено в архів", "order_id": order_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/order/{order_id}/restore")
+async def restore_damage_case(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """Відновити кейс з архіву."""
+    ensure_archive_table(db)
+    
+    try:
+        db.execute(text("""
+            DELETE FROM damage_case_archive WHERE order_id = :oid
+        """), {"oid": order_id})
+        
+        db.commit()
+        
+        return {"success": True, "message": "Кейс відновлено з архіву", "order_id": order_id}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/archive")
+async def get_archived_cases(db: Session = Depends(get_rh_db)):
+    """Отримати архівовані кейси."""
+    ensure_archive_table(db)
+    
+    try:
+        result = db.execute(text("""
+            SELECT 
+                pdh.order_id,
+                pdh.order_number,
+                COUNT(*) as items_count,
+                SUM(pdh.fee) as total_fee,
+                MAX(pdh.created_at) as latest_damage,
+                o.customer_name,
+                o.customer_phone,
+                a.archived_at,
+                a.archived_by
+            FROM product_damage_history pdh
+            LEFT JOIN orders o ON o.order_id = pdh.order_id
+            INNER JOIN damage_case_archive a ON a.order_id = pdh.order_id
+            WHERE pdh.order_id IS NOT NULL AND pdh.stage = 'return'
+            GROUP BY pdh.order_id, pdh.order_number, o.customer_name, o.customer_phone, a.archived_at, a.archived_by
+            ORDER BY a.archived_at DESC
+        """))
+        
+        cases = []
+        for row in result:
+            cases.append({
+                "order_id": row[0],
+                "order_number": row[1],
+                "items_count": row[2],
+                "total_fee": float(row[3]) if row[3] else 0.0,
+                "latest_damage": row[4].isoformat() if row[4] else None,
+                "customer_name": row[5],
+                "customer_phone": row[6],
+                "archived_at": row[7].isoformat() if row[7] else None,
+                "archived_by": row[8],
+                "is_archived": True
+            })
+        
+        return {"cases": cases, "total": len(cases)}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

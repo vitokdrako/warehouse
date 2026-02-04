@@ -390,14 +390,25 @@ export default function DamageHubApp() {
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
-      await Promise.all([
-        loadOrderCases(),
-        loadWashItems(),
-        loadRestoreItems(),
-        loadLaundryQueue(),
-        loadLaundryBatches()
-      ]);
-      setLoading(false);
+      console.log("[DamageHub] Starting initial load...");
+      try {
+        const [cases] = await Promise.all([
+          loadOrderCases(),
+          loadWashItems(),
+          loadRestoreItems(),
+          loadLaundryQueue(),
+          loadLaundryBatches()
+        ]);
+        console.log("[DamageHub] Initial load complete, cases:", cases?.length);
+        // Auto-select first order
+        if (cases?.length > 0 && !selectedOrderId) {
+          setSelectedOrderId(cases[0].order_id);
+        }
+      } catch (e) {
+        console.error("[DamageHub] Initial load error:", e);
+      } finally {
+        setLoading(false);
+      }
     };
     loadAll();
   }, []);

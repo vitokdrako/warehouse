@@ -856,7 +856,6 @@ export default function DamageHubApp() {
                       </div>
                     );
                   })
-                  ))
                 )}
               </div>
             </div>

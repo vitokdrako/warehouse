@@ -522,10 +522,12 @@ async def get_product(product_id: int, db: Session = Depends(get_rh_db)):
 
 @router.get("/categories")
 async def get_categories(response: Response, db: Session = Depends(get_rh_db)):
-    """Отримати унікальні категорії з товарів з кількістю - з кешуванням"""
+    """
+    Отримати дерево категорій та підкатегорій з кількістю товарів (як RentalHub)
+    Повертає також кольори та матеріали для фільтрів
+    """
     global _categories_cache
     
-    # Перевірити кеш
     now = time.time()
     if _categories_cache["data"] and _categories_cache["expires"] > now:
         response.headers["X-Cache"] = "HIT"
@@ -535,14 +537,65 @@ async def get_categories(response: Response, db: Session = Depends(get_rh_db)):
     response.headers["X-Cache"] = "MISS"
     response.headers["Cache-Control"] = "public, max-age=300"
     
+    # Отримати всі категорії з підкатегоріями та кількістю товарів
     result = db.execute(text("""
-        SELECT category_name, COUNT(*) as product_count
-        FROM products 
-        WHERE status = 1 AND category_name IS NOT NULL AND category_name != ''
-        GROUP BY category_name
-        ORDER BY category_name
+        SELECT 
+            p.category_name,
+            p.subcategory_name,
+            COUNT(DISTINCT p.product_id) as product_count,
+            SUM(p.quantity) as total_qty
+        FROM products p
+        WHERE p.status = 1 AND p.category_name IS NOT NULL AND p.category_name != ''
+        GROUP BY p.category_name, p.subcategory_name
+        ORDER BY p.category_name, p.subcategory_name
     """))
-    data = [{"name": row[0], "product_count": row[1]} for row in result]
+    
+    categories_map = {}
+    for row in result:
+        cat_name = row[0] or "Без категорії"
+        subcat_name = row[1]
+        count = row[2]
+        qty = row[3] or 0
+        
+        if cat_name not in categories_map:
+            categories_map[cat_name] = {
+                "name": cat_name,
+                "product_count": 0,
+                "total_qty": 0,
+                "subcategories": []
+            }
+        
+        categories_map[cat_name]["product_count"] += count
+        categories_map[cat_name]["total_qty"] += qty
+        
+        if subcat_name:
+            categories_map[cat_name]["subcategories"].append({
+                "name": subcat_name,
+                "product_count": count,
+                "total_qty": qty
+            })
+    
+    # Отримати унікальні кольори
+    colors_result = db.execute(text("""
+        SELECT DISTINCT color FROM products 
+        WHERE status = 1 AND color IS NOT NULL AND color != ''
+        ORDER BY color
+    """))
+    colors = [row[0] for row in colors_result]
+    
+    # Отримати унікальні матеріали
+    materials_result = db.execute(text("""
+        SELECT DISTINCT material FROM products 
+        WHERE status = 1 AND material IS NOT NULL AND material != ''
+        ORDER BY material
+    """))
+    materials = [row[0] for row in materials_result]
+    
+    data = {
+        "categories": list(categories_map.values()),
+        "colors": colors,
+        "materials": materials
+    }
     
     # Зберегти в кеш
     _categories_cache = {"data": data, "expires": now + CACHE_TTL}
@@ -550,21 +603,11 @@ async def get_categories(response: Response, db: Session = Depends(get_rh_db)):
 
 @router.get("/subcategories")
 async def get_subcategories(response: Response, category_name: Optional[str] = None, db: Session = Depends(get_rh_db)):
-    """Отримати підкатегорії - з кешуванням"""
-    global _subcategories_cache
-    
+    """Отримати підкатегорії для конкретної категорії"""
     response.headers["Cache-Control"] = "public, max-age=300"
     
-    # Кеш тільки для повного списку (без фільтра)
-    if not category_name:
-        now = time.time()
-        if _subcategories_cache["data"] and _subcategories_cache["expires"] > now:
-            response.headers["X-Cache"] = "HIT"
-            return _subcategories_cache["data"]
-        response.headers["X-Cache"] = "MISS"
-    
     sql = """
-        SELECT category_name, subcategory_name, COUNT(*) as product_count
+        SELECT subcategory_name, COUNT(*) as product_count, SUM(quantity) as total_qty
         FROM products 
         WHERE status = 1 AND subcategory_name IS NOT NULL AND subcategory_name != ''
     """
@@ -574,9 +617,10 @@ async def get_subcategories(response: Response, category_name: Optional[str] = N
         sql += " AND category_name = :category_name"
         params["category_name"] = category_name
     
-    sql += " GROUP BY category_name, subcategory_name ORDER BY category_name, subcategory_name"
+    sql += " GROUP BY subcategory_name ORDER BY subcategory_name"
     
     result = db.execute(text(sql), params)
+    return [{"name": row[0], "product_count": row[1], "total_qty": row[2] or 0} for row in result]
     
     if category_name:
         return [{"name": row[1], "product_count": row[2]} for row in result]

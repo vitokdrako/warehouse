@@ -520,7 +520,11 @@ async def get_boards(
     return boards
 
 @router.post("/boards")
-async def create_board(data: EventBoardCreate, token: str, db: Session = Depends(get_rh_db)):
+async def create_board(
+    data: EventBoardCreate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Створити новий мудборд"""
     customer = get_current_customer(token, db)
     board_id = str(uuid.uuid4())

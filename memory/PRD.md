@@ -149,4 +149,49 @@ Full-stack rental management system (React + FastAPI + MySQL) for FarforRent com
 - `GET /api/return-versions/active` - Get active versions
 
 ## Credentials
-- Test account: vitokdrako@gmail.com / test123
+- Test account (Admin): vitokdrako@gmail.com / test123
+- Test account (Event Tool Decorator): test@decorator.com / test123
+
+## Event Tool Integration ✅ (Feb 2026)
+
+### Architecture
+Event Tool - це окремий публічний каталог для декораторів, інтегрований з основним бекендом RentalHub.
+
+```
+Frontend: events.farforrent.com.ua
+Backend: backrentalhub.farforrent.com.ua/api/event/*
+Database: farforre_rentalhub (tables: event_customers, event_boards, event_board_items, event_soft_reservations)
+```
+
+### Event Tool API Endpoints
+- `POST /api/event/auth/register` - Реєстрація декоратора
+- `POST /api/event/auth/login` - Вхід декоратора
+- `GET /api/event/auth/me` - Профіль декоратора
+- `GET /api/event/products` - Каталог товарів (з фільтрами: search, category, subcategory, color)
+- `GET /api/event/products/{id}` - Деталі товару
+- `POST /api/event/products/check-availability` - Перевірка доступності
+- `GET /api/event/categories` - Категорії з кількістю товарів
+- `GET /api/event/subcategories` - Підкатегорії
+- `GET /api/event/boards` - Мудборди декоратора
+- `POST /api/event/boards` - Створити мудборд
+- `GET /api/event/boards/{id}` - Отримати мудборд з товарами
+- `PATCH /api/event/boards/{id}` - Оновити мудборд (cover_image, canvas_layout, dates)
+- `DELETE /api/event/boards/{id}` - Видалити мудборд
+- `POST /api/event/boards/{id}/items` - Додати товар
+- `PATCH /api/event/boards/{id}/items/{item_id}` - Оновити товар
+- `DELETE /api/event/boards/{id}/items/{item_id}` - Видалити товар
+- `POST /api/event/boards/{id}/convert-to-order` - Конвертувати в замовлення
+
+### Key Features
+- JWT Authentication (окрема від адмінки)
+- Soft reservations (тимчасові резервації товарів у мудбордах)
+- Image URL normalization (через utils/image_helper.py)
+- Board to Order conversion
+
+### Build Instructions
+See `/app/clean_project/BUILD_INSTRUCTIONS.md` for detailed deployment guide.
+
+### Source Files
+- Frontend: `/app/clean_project/front_event_tool_src/`
+- Backend: `/app/clean_project/backend/routes/event_tool.py`
+- Build: `/app/clean_project/front_event_tool/build/`

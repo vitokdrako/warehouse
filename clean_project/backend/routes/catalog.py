@@ -59,21 +59,38 @@ async def get_categories(
                     "total_qty": qty
                 })
         
-        # Отримати унікальні кольори
+        # Отримати унікальні кольори (розбиваємо комбінації на окремі базові)
         colors_result = db.execute(text("""
             SELECT DISTINCT color FROM products 
             WHERE status = 1 AND color IS NOT NULL AND color != ''
-            ORDER BY color
         """))
-        colors = [row[0] for row in colors_result]
         
-        # Отримати унікальні матеріали
+        # Розбиваємо комбінації типу "білий, золотий" на окремі кольори
+        colors_set = set()
+        for row in colors_result:
+            if row[0]:
+                for color in row[0].split(','):
+                    color = color.strip().lower()
+                    if color:
+                        colors_set.add(color)
+        
+        colors = sorted(list(colors_set), key=lambda x: x.lower())
+        
+        # Отримати унікальні матеріали (так само розбиваємо)
         materials_result = db.execute(text("""
             SELECT DISTINCT material FROM products 
             WHERE status = 1 AND material IS NOT NULL AND material != ''
-            ORDER BY material
         """))
-        materials = [row[0] for row in materials_result]
+        
+        materials_set = set()
+        for row in materials_result:
+            if row[0]:
+                for material in row[0].split(','):
+                    material = material.strip().lower()
+                    if material:
+                        materials_set.add(material)
+        
+        materials = sorted(list(materials_set), key=lambda x: x.lower())
         
         return {
             "categories": list(categories_map.values()),

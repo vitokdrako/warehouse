@@ -621,20 +621,6 @@ async def get_subcategories(response: Response, category_name: Optional[str] = N
     
     result = db.execute(text(sql), params)
     return [{"name": row[0], "product_count": row[1], "total_qty": row[2] or 0} for row in result]
-    
-    if category_name:
-        return [{"name": row[1], "product_count": row[2]} for row in result]
-    else:
-        categories = {}
-        for row in result:
-            if row[0] not in categories:
-                categories[row[0]] = []
-            categories[row[0]].append({"name": row[1], "product_count": row[2]})
-        data = [{"category": k, "subcategories": v} for k, v in categories.items()]
-        
-        # Зберегти в кеш
-        _subcategories_cache = {"data": data, "expires": time.time() + CACHE_TTL}
-        return data
 
 # ============================================================================
 # AVAILABILITY CHECK

@@ -172,11 +172,13 @@ frontend_admin_src/build/ → копіювати на сервер → rentalhub
 
 ## 🎪 ЗБІРКА ФРОНТЕНДУ EVENT TOOL (Каталог декораторів)
 
+### Сорси: `/app/clean_project/front_event_tool_src/`
+
 ### ⚠️ КРИТИЧНО: API Prefix
 
 Event Tool використовує **ОКРЕМИЙ prefix** `/api/event/*`!
 
-**Файли API (в `/app/evetnsnew/frontend/src/api/`):**
+**Файли API (в `front_event_tool_src/src/api/`):**
 
 | Файл | Правильний шлях |
 |------|-----------------|
@@ -198,8 +200,9 @@ api.post('/event/auth/login', data)  // Це піде на Event Tool auth
 ### Крок 1: .env для build
 
 ```bash
-cd /app/evetnsnew/frontend
-echo "REACT_APP_BACKEND_URL=https://backrentalhub.farforrent.com.ua" > .env
+cd front_event_tool_src
+cp .env.example .env
+# Відредагувати якщо потрібно
 ```
 
 ### Крок 2: Build
@@ -212,7 +215,7 @@ yarn build
 ### Крок 3: Результат
 
 ```
-/app/evetnsnew/frontend/build/ → копіювати на сервер → events.farforrent.com.ua
+front_event_tool_src/build/ → копіювати на сервер → events.farforrent.com.ua
 ```
 
 ---

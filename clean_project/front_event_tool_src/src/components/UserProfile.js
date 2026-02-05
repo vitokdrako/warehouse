@@ -17,7 +17,7 @@ const UserProfile = () => {
   const loadBoards = async () => {
     try {
       setLoading(true);
-      const boardsData = await api.get('/boards').then(r => r.data);
+      const boardsData = await api.get('/event/boards').then(r => r.data);
       setBoards(boardsData);
     } catch (error) {
       console.error('Failed to load boards:', error);

@@ -33,7 +33,7 @@ const ProductFilters = ({
           <option value="">Всі категорії</option>
           {categories.map((cat, index) => (
             <option key={index} value={cat.name}>
-              {cat.name}
+              {cat.name} ({cat.product_count})
             </option>
           ))}
         </select>
@@ -58,8 +58,8 @@ const ProductFilters = ({
         >
           <option value="">Всі підкатегорії</option>
           {subcategories.map((subcat, index) => (
-            <option key={index} value={subcat}>
-              {subcat}
+            <option key={index} value={subcat.name}>
+              {subcat.name} ({subcat.product_count})
             </option>
           ))}
         </select>

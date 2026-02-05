@@ -448,17 +448,8 @@ const EventPlannerPage = () => {
     });
   }, [categories, products]);
 
-  // Get available subcategories based on selected category
-  // IMPORTANT: Use only subcategories from currently loaded products
+  // Отримати підкатегорії для вибраної категорії (з API даних)
   const availableSubcategories = React.useMemo(() => {
-    if (!selectedCategory) return [];
-    
-    // Get subcategories from loaded products only (not from API)
-    // This ensures we only show subcategories that have products in current view
-    const subcats = new Set();
-    products.forEach(p => {
-  // Отримати підкатегорії для вибраної категорії
-  const currentSubcategories = React.useMemo(() => {
     if (!selectedCategory) return [];
     const category = categories.find(c => c.name === selectedCategory);
     return category?.subcategories || [];
@@ -466,6 +457,9 @@ const EventPlannerPage = () => {
 
   // Кольори тепер приходять з API
   const availableColors = colors;
+
+  // Всі категорії для фільтра
+  const allCategories = categories;
 
   // Reset subcategory when category changes
   useEffect(() => {

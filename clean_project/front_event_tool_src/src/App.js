@@ -259,7 +259,7 @@ const EventPlannerPage = () => {
     if (!startDate || !endDate) return;
 
     try {
-      const updatedBoard = await api.patch(`/boards/${boardId}`, {
+      const updatedBoard = await api.patch(`/event/boards/${boardId}`, {
         rental_start_date: startDate,
         rental_end_date: endDate,
       }).then(r => r.data);

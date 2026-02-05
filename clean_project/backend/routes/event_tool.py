@@ -872,7 +872,12 @@ async def delete_board_item(
 # ============================================================================
 
 @router.post("/boards/{board_id}/convert-to-order")
-async def convert_to_order(board_id: str, data: OrderCreate, token: str, db: Session = Depends(get_rh_db)):
+async def convert_to_order(
+    board_id: str,
+    data: OrderCreate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Конвертувати мудборд у замовлення RentalHub"""
     customer = get_current_customer(token, db)
     

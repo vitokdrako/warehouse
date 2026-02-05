@@ -3,7 +3,7 @@ Event Tool API Routes
 Інтеграція каталогу декораторів з RentalHub
 Всі endpoints під /api/event/*
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional
@@ -138,6 +138,16 @@ def get_current_customer(token: str, db: Session):
         "lastname": row[4],
         "telephone": row[5]
     }
+
+def get_token_from_header(authorization: Optional[str] = Header(None)) -> str:
+    """Витягти токен з Authorization header"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization format. Use: Bearer <token>")
+    
+    return authorization.replace("Bearer ", "")
 
 # ============================================================================
 # INIT TABLES (create if not exist)
@@ -294,7 +304,10 @@ async def login(data: CustomerLogin, db: Session = Depends(get_rh_db)):
     }
 
 @router.get("/auth/me")
-async def get_me(token: str, db: Session = Depends(get_rh_db)):
+async def get_me(
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Отримати профіль поточного декоратора"""
     customer = get_current_customer(token, db)
     return customer
@@ -437,7 +450,11 @@ async def get_subcategories(category_name: Optional[str] = None, db: Session = D
 # ============================================================================
 
 @router.get("/boards")
-async def get_boards(token: str, status: Optional[str] = None, db: Session = Depends(get_rh_db)):
+async def get_boards(
+    status: Optional[str] = None,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Отримати мудборди декоратора"""
     customer = get_current_customer(token, db)
     
@@ -503,7 +520,11 @@ async def get_boards(token: str, status: Optional[str] = None, db: Session = Dep
     return boards
 
 @router.post("/boards")
-async def create_board(data: EventBoardCreate, token: str, db: Session = Depends(get_rh_db)):
+async def create_board(
+    data: EventBoardCreate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Створити новий мудборд"""
     customer = get_current_customer(token, db)
     board_id = str(uuid.uuid4())
@@ -538,7 +559,11 @@ async def create_board(data: EventBoardCreate, token: str, db: Session = Depends
     return {"id": board_id, "board_name": data.board_name, "status": "draft", "items": []}
 
 @router.get("/boards/{board_id}")
-async def get_board(board_id: str, token: str, db: Session = Depends(get_rh_db)):
+async def get_board(
+    board_id: str,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Отримати мудборд з товарами"""
     customer = get_current_customer(token, db)
     
@@ -597,7 +622,12 @@ async def get_board(board_id: str, token: str, db: Session = Depends(get_rh_db))
     return board
 
 @router.patch("/boards/{board_id}")
-async def update_board(board_id: str, data: EventBoardUpdate, token: str, db: Session = Depends(get_rh_db)):
+async def update_board(
+    board_id: str,
+    data: EventBoardUpdate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Оновити мудборд"""
     customer = get_current_customer(token, db)
     
@@ -645,7 +675,11 @@ async def update_board(board_id: str, data: EventBoardUpdate, token: str, db: Se
     return await get_board(board_id, token, db)
 
 @router.delete("/boards/{board_id}")
-async def delete_board(board_id: str, token: str, db: Session = Depends(get_rh_db)):
+async def delete_board(
+    board_id: str,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Видалити мудборд"""
     customer = get_current_customer(token, db)
     
@@ -665,7 +699,12 @@ async def delete_board(board_id: str, token: str, db: Session = Depends(get_rh_d
 # ============================================================================
 
 @router.post("/boards/{board_id}/items")
-async def add_item_to_board(board_id: str, data: EventBoardItemCreate, token: str, db: Session = Depends(get_rh_db)):
+async def add_item_to_board(
+    board_id: str,
+    data: EventBoardItemCreate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Додати товар до мудборду"""
     customer = get_current_customer(token, db)
     
@@ -755,7 +794,13 @@ async def add_item_to_board(board_id: str, data: EventBoardItemCreate, token: st
     return {"id": item_id, "product_id": data.product_id, "quantity": data.quantity}
 
 @router.patch("/boards/{board_id}/items/{item_id}")
-async def update_board_item(board_id: str, item_id: str, data: EventBoardItemUpdate, token: str, db: Session = Depends(get_rh_db)):
+async def update_board_item(
+    board_id: str,
+    item_id: str,
+    data: EventBoardItemUpdate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Оновити товар в мудборді"""
     customer = get_current_customer(token, db)
     
@@ -790,7 +835,12 @@ async def update_board_item(board_id: str, item_id: str, data: EventBoardItemUpd
     return {"id": item_id, "updated": True}
 
 @router.delete("/boards/{board_id}/items/{item_id}")
-async def delete_board_item(board_id: str, item_id: str, token: str, db: Session = Depends(get_rh_db)):
+async def delete_board_item(
+    board_id: str,
+    item_id: str,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Видалити товар з мудборду"""
     customer = get_current_customer(token, db)
     
@@ -822,7 +872,12 @@ async def delete_board_item(board_id: str, item_id: str, token: str, db: Session
 # ============================================================================
 
 @router.post("/boards/{board_id}/convert-to-order")
-async def convert_to_order(board_id: str, data: OrderCreate, token: str, db: Session = Depends(get_rh_db)):
+async def convert_to_order(
+    board_id: str,
+    data: OrderCreate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Конвертувати мудборд у замовлення RentalHub"""
     customer = get_current_customer(token, db)
     

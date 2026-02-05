@@ -304,7 +304,10 @@ async def login(data: CustomerLogin, db: Session = Depends(get_rh_db)):
     }
 
 @router.get("/auth/me")
-async def get_me(token: str, db: Session = Depends(get_rh_db)):
+async def get_me(
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Отримати профіль поточного декоратора"""
     customer = get_current_customer(token, db)
     return customer

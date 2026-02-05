@@ -596,7 +596,11 @@ async def get_board(
     customer = get_current_customer(token, db)
     
     result = db.execute(text("""
-        SELECT * FROM event_boards WHERE id = :id AND customer_id = :customer_id
+        SELECT id, customer_id, board_name, event_date, event_type,
+               rental_start_date, rental_end_date, rental_days, status,
+               notes, budget, estimated_total, cover_image, canvas_layout,
+               created_at, updated_at, converted_to_order_id
+        FROM event_boards WHERE id = :id AND customer_id = :customer_id
     """), {"id": board_id, "customer_id": customer["customer_id"]})
     row = result.fetchone()
     
@@ -616,14 +620,18 @@ async def get_board(
         "notes": row[9],
         "budget": float(row[10]) if row[10] else None,
         "estimated_total": float(row[11]) if row[11] else 0,
-        "created_at": row[12].isoformat() if row[12] else None,
-        "updated_at": row[13].isoformat() if row[13] else None,
-        "converted_to_order_id": row[14]
+        "cover_image": row[12],
+        "canvas_layout": row[13],
+        "created_at": row[14].isoformat() if row[14] else None,
+        "updated_at": row[15].isoformat() if row[15] else None,
+        "converted_to_order_id": row[16]
     }
     
-    # Items
+    # Items з повною інформацією про товар
     items_result = db.execute(text("""
-        SELECT ebi.*, p.sku, p.name, p.rental_price, p.image_url
+        SELECT ebi.id, ebi.board_id, ebi.product_id, ebi.quantity, ebi.notes, 
+               ebi.section, ebi.position, ebi.added_at,
+               p.sku, p.name, p.rental_price, p.image_url, p.color, p.material
         FROM event_board_items ebi
         JOIN products p ON ebi.product_id = p.product_id
         WHERE ebi.board_id = :board_id
@@ -643,7 +651,9 @@ async def get_board(
             "sku": item[8],
             "name": item[9],
             "rental_price": float(item[10]) if item[10] else 0,
-            "image_url": item[11]
+            "image_url": item[11],
+            "color": item[12],
+            "material": item[13]
         }
     } for item in items_result]
     

@@ -204,10 +204,10 @@ const EventPlannerPage = () => {
       setLoading(true);
       // Завантажити перші 100 товарів для швидкого старту
       const [productsData, categoriesData, subcategoriesData, boardsData] = await Promise.all([
-        api.get('/products?limit=100').then(r => r.data),
-        api.get('/categories').then(r => r.data),
-        api.get('/subcategories').then(r => r.data),
-        api.get('/boards').then(r => r.data),
+        api.get('/event/products?limit=100').then(r => r.data),
+        api.get('/event/categories').then(r => r.data),
+        api.get('/event/subcategories').then(r => r.data),
+        api.get('/event/boards').then(r => r.data),
       ]);
       
       setProducts(productsData);

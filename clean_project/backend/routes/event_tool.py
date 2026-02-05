@@ -622,7 +622,12 @@ async def get_board(
     return board
 
 @router.patch("/boards/{board_id}")
-async def update_board(board_id: str, data: EventBoardUpdate, token: str, db: Session = Depends(get_rh_db)):
+async def update_board(
+    board_id: str,
+    data: EventBoardUpdate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Оновити мудборд"""
     customer = get_current_customer(token, db)
     

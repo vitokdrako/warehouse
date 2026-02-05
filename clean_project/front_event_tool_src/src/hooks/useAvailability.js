@@ -17,7 +17,7 @@ export const useAvailability = (productId, quantity, startDate, endDate) => {
       setError(null);
       
       try {
-        const response = await api.post('/products/check-availability', {
+        const response = await api.post('/event/products/check-availability', {
           product_id: productId,
           quantity: quantity,
           reserved_from: startDate,

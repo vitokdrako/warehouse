@@ -183,7 +183,8 @@ const EventPlannerPage = () => {
   
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [allSubcategories, setAllSubcategories] = useState([]);
+  const [colors, setColors] = useState([]);
+  const [materials, setMaterials] = useState([]);
   const [boards, setBoards] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -211,15 +212,16 @@ const EventPlannerPage = () => {
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      // Завантажити категорії та борди паралельно
-      const [categoriesData, subcategoriesData, boardsData] = await Promise.all([
+      // Завантажити категорії (з кольорами та матеріалами) та борди паралельно
+      const [categoriesData, boardsData] = await Promise.all([
         api.get('/event/categories').then(r => r.data),
-        api.get('/event/subcategories').then(r => r.data),
         api.get('/event/boards').then(r => r.data),
       ]);
       
-      setCategories(categoriesData);
-      setAllSubcategories(subcategoriesData);
+      // Нова структура: {categories: [...], colors: [...], materials: [...]}
+      setCategories(categoriesData.categories || []);
+      setColors(categoriesData.colors || []);
+      setMaterials(categoriesData.materials || []);
       setBoards(boardsData);
       
       if (boardsData.length > 0) {

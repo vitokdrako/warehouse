@@ -145,11 +145,14 @@ pm2 restart backend
 
 ## 🎨 ЗБІРКА ФРОНТЕНДУ АДМІНКИ
 
+### Сорси: `/app/clean_project/frontend_admin_src/`
+
 ### Крок 1: .env для build
 
 ```bash
-cd /app/frontend
-echo "REACT_APP_BACKEND_URL=https://backrentalhub.farforrent.com.ua" > .env
+cd frontend_admin_src
+cp .env.example .env
+# Відредагувати якщо потрібно
 ```
 
 ### Крок 2: Build
@@ -162,7 +165,7 @@ yarn build
 ### Крок 3: Результат
 
 ```
-/app/frontend/build/ → копіювати на сервер → rentalhub.farforrent.com.ua
+frontend_admin_src/build/ → копіювати на сервер → rentalhub.farforrent.com.ua
 ```
 
 ---

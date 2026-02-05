@@ -232,15 +232,15 @@ async def get_items_by_category(
             sql_parts.append("AND p.subcategory_name = :subcategory")
             params['subcategory'] = subcategory
         
-        # Color filter
+        # Color filter (LIKE для пошуку в комбінаціях типу "білий, золотий")
         if color and color != 'all':
-            sql_parts.append("AND p.color = :color")
-            params['color'] = color
+            sql_parts.append("AND p.color LIKE :color")
+            params['color'] = f"%{color}%"
         
-        # Material filter
+        # Material filter (LIKE для пошуку в комбінаціях)
         if material and material != 'all':
-            sql_parts.append("AND p.material = :material")
-            params['material'] = material
+            sql_parts.append("AND p.material LIKE :material")
+            params['material'] = f"%{material}%"
         
         # Quantity filter
         if min_qty is not None:

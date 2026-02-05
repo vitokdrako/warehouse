@@ -5,6 +5,9 @@ import './ProductCard.css';
 
 const ProductCard = ({ product, onAddToBoard, boardDates }) => {
   const [isAdding, setIsAdding] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  
   const { availability, loading } = useAvailability(
     product.product_id,
     1,
@@ -34,32 +37,32 @@ const ProductCard = ({ product, onAddToBoard, boardDates }) => {
   };
 
   const getImageUrl = () => {
-    if (product.image_url) {
-      let imagePath = product.image_url;
-      
-      // Якщо шлях вже повний URL - використовуємо як є
-      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-        return imagePath;
-      }
-      
-      // Шляхи з uploads/ або static/ - додаємо базовий URL бекенду
-      if (imagePath.startsWith('uploads/') || imagePath.startsWith('static/')) {
-        return `https://backrentalhub.farforrent.com.ua/${imagePath}`;
-      }
-      
-      // Шляхи з catalog/ - OpenCart структура
-      if (imagePath.startsWith('catalog/')) {
-        // Видаляємо розширення файлу і додаємо розмір для кешу
-        const pathWithoutExt = imagePath.replace(/\.(png|jpg|jpeg|webp)$/i, '');
-        const ext = imagePath.match(/\.(png|jpg|jpeg|webp)$/i)?.[0] || '.png';
-        return `https://www.farforrent.com.ua/image/cache/${pathWithoutExt}-300x200${ext}`;
-      }
-      
-      // За замовчуванням - пробуємо як є через бекенд
+    if (!product.image_url) return null;
+    
+    let imagePath = product.image_url;
+    
+    // Якщо шлях вже повний URL - використовуємо як є
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    
+    // Шляхи з uploads/ або static/ - додаємо базовий URL бекенду
+    if (imagePath.startsWith('uploads/') || imagePath.startsWith('static/')) {
       return `https://backrentalhub.farforrent.com.ua/${imagePath}`;
     }
-    return null;
+    
+    // Шляхи з catalog/ - OpenCart структура з кешованими thumbnails
+    if (imagePath.startsWith('catalog/')) {
+      const pathWithoutExt = imagePath.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+      const ext = imagePath.match(/\.(png|jpg|jpeg|webp)$/i)?.[0] || '.png';
+      return `https://www.farforrent.com.ua/image/cache/${pathWithoutExt}-300x200${ext}`;
+    }
+    
+    // За замовчуванням - через бекенд
+    return `https://backrentalhub.farforrent.com.ua/${imagePath}`;
   };
+
+  const imageUrl = getImageUrl();
 
   return (
     <div className="product-card">

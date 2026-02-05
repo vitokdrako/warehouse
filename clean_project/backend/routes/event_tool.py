@@ -57,6 +57,8 @@ class EventBoardUpdate(BaseModel):
     notes: Optional[str] = None
     budget: Optional[float] = None
     status: Optional[str] = None
+    cover_image: Optional[str] = None
+    canvas_layout: Optional[dict] = None
 
 class EventBoardItemCreate(BaseModel):
     product_id: int

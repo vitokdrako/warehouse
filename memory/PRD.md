@@ -1,7 +1,35 @@
 # RentalHub - Product Requirements Document
 
 ## Project Overview
-Full-stack rental management system (React + FastAPI + MySQL/OpenCart) for FarforRent company.
+Full-stack rental management system (React + FastAPI + MySQL) for FarforRent company.
+**Мова спілкування:** Українська
+
+## Production URLs
+| Сервіс | URL |
+|--------|-----|
+| Адмінка | https://rentalhub.farforrent.com.ua |
+| Каталог декораторів | https://events.farforrent.com.ua |
+| Бекенд API | https://backrentalhub.farforrent.com.ua |
+
+## Architecture
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│  rentalhub (Admin)  │     │  events (Catalog)   │
+└─────────┬───────────┘     └─────────┬───────────┘
+          └───────────┬───────────────┘
+                      ▼
+          ┌───────────────────────┐
+          │  backrentalhub:8001   │
+          │      FastAPI          │
+          │  /api/* (admin)       │
+          │  /api/event/* (catalog)│
+          └───────────┬───────────┘
+                      ▼
+          ┌───────────────────────┐
+          │  farforre_rentalhub   │
+          │       MySQL           │
+          └───────────────────────┘
+```
 
 ## Core Features Implemented
 

@@ -457,27 +457,15 @@ const EventPlannerPage = () => {
     // This ensures we only show subcategories that have products in current view
     const subcats = new Set();
     products.forEach(p => {
-      if (p.category_name === selectedCategory && p.subcategory_name) {
-        subcats.add(p.subcategory_name);
-      }
-    });
-    
-    return Array.from(subcats).sort((a, b) => a.localeCompare(b, 'uk'));
-  }, [products, selectedCategory]);
+  // Отримати підкатегорії для вибраної категорії
+  const currentSubcategories = React.useMemo(() => {
+    if (!selectedCategory) return [];
+    const category = categories.find(c => c.name === selectedCategory);
+    return category?.subcategories || [];
+  }, [categories, selectedCategory]);
 
-  // Get all available colors
-  const availableColors = React.useMemo(() => {
-    const colors = new Set();
-    products.forEach(p => {
-      if (p.color) {
-        p.color.split(',').forEach(c => {
-          const trimmed = c.trim();
-          if (trimmed) colors.add(trimmed);
-        });
-      }
-    });
-    return Array.from(colors).sort((a, b) => a.localeCompare(b, 'uk'));
-  }, [products]);
+  // Кольори тепер приходять з API
+  const availableColors = colors;
 
   // Reset subcategory when category changes
   useEffect(() => {

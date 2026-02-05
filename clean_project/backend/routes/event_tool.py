@@ -12,8 +12,10 @@ from pydantic import BaseModel
 import uuid
 import logging
 import os
+import json
 
 from database_rentalhub import get_rh_db
+from utils.image_helper import normalize_image_url
 
 logger = logging.getLogger(__name__)
 

@@ -794,7 +794,13 @@ async def add_item_to_board(
     return {"id": item_id, "product_id": data.product_id, "quantity": data.quantity}
 
 @router.patch("/boards/{board_id}/items/{item_id}")
-async def update_board_item(board_id: str, item_id: str, data: EventBoardItemUpdate, token: str, db: Session = Depends(get_rh_db)):
+async def update_board_item(
+    board_id: str,
+    item_id: str,
+    data: EventBoardItemUpdate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Оновити товар в мудборді"""
     customer = get_current_customer(token, db)
     

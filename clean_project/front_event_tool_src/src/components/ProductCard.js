@@ -35,16 +35,28 @@ const ProductCard = ({ product, onAddToBoard, boardDates }) => {
 
   const getImageUrl = () => {
     if (product.image_url) {
-      // В базі зберігається: catalog/products/Girlyandy/Girlyanda-temno-zelenyj-drit-25-m.png
-      // Правильний URL: https://www.farforrent.com.ua/image/cache/catalog/products/Girlyandy/Girlyanda-temno-zelenyj-drit-25-m-300x200.png
       let imagePath = product.image_url;
       
-      // Видаляємо розширення файлу і додаємо розмір
-      const pathWithoutExt = imagePath.replace(/\.(png|jpg|jpeg|webp)$/i, '');
-      const ext = imagePath.match(/\.(png|jpg|jpeg|webp)$/i)?.[0] || '.png';
+      // Якщо шлях вже повний URL - використовуємо як є
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return imagePath;
+      }
       
-      // Формуємо URL з правильною структурою (використовуємо 300x200 - це доступний розмір)
-      return `https://www.farforrent.com.ua/image/cache/${pathWithoutExt}-300x200${ext}`;
+      // Шляхи з uploads/ або static/ - додаємо базовий URL бекенду
+      if (imagePath.startsWith('uploads/') || imagePath.startsWith('static/')) {
+        return `https://backrentalhub.farforrent.com.ua/${imagePath}`;
+      }
+      
+      // Шляхи з catalog/ - OpenCart структура
+      if (imagePath.startsWith('catalog/')) {
+        // Видаляємо розширення файлу і додаємо розмір для кешу
+        const pathWithoutExt = imagePath.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+        const ext = imagePath.match(/\.(png|jpg|jpeg|webp)$/i)?.[0] || '.png';
+        return `https://www.farforrent.com.ua/image/cache/${pathWithoutExt}-300x200${ext}`;
+      }
+      
+      // За замовчуванням - пробуємо як є через бекенд
+      return `https://backrentalhub.farforrent.com.ua/${imagePath}`;
     }
     return null;
   };

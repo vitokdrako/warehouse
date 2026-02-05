@@ -249,7 +249,7 @@ const UserProfile = () => {
                         background: '#f9f9f9',
                         borderRadius: '4px'
                       }}>
-                        📅 {formatDate(board.event_date)}
+                        {formatDate(board.event_date)}
                         {board.event_type && ` • ${board.event_type}`}
                       </div>
                     )}

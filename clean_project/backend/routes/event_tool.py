@@ -139,6 +139,16 @@ def get_current_customer(token: str, db: Session):
         "telephone": row[5]
     }
 
+def get_token_from_header(authorization: Optional[str] = Header(None)) -> str:
+    """Витягти токен з Authorization header"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid authorization format. Use: Bearer <token>")
+    
+    return authorization.replace("Bearer ", "")
+
 # ============================================================================
 # INIT TABLES (create if not exist)
 # ============================================================================

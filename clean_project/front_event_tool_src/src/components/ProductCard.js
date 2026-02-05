@@ -67,27 +67,33 @@ const ProductCard = ({ product, onAddToBoard, boardDates }) => {
   return (
     <div className="product-card">
       <div className="product-card-image">
-        {getImageUrl() ? (
-          <img
-            src={getImageUrl()}
-            alt={product.name}
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const placeholder = document.createElement('div');
-              placeholder.className = 'product-card-image-placeholder';
-              placeholder.textContent = '🎨';
-              e.target.parentElement.appendChild(placeholder);
-            }}
-          />
+        {imageUrl && !imageError ? (
+          <>
+            {!imageLoaded && (
+              <div className="product-card-image-placeholder loading">
+                <span className="spinner">⏳</span>
+              </div>
+            )}
+            <img
+              src={imageUrl}
+              alt={product.name}
+              loading="lazy"
+              style={{ opacity: imageLoaded ? 1 : 0, transition: 'opacity 0.3s' }}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+            />
+          </>
         ) : (
-          <div className="product-card-image-placeholder">🎨</div>
+          <div className="product-card-image-placeholder">
+            <span>📦</span>
+          </div>
         )}
         
         {/* Availability badge overlay */}
         {boardDates?.startDate && boardDates?.endDate && (
           <div className="product-availability-badge">
             {loading ? (
-              <span>⏳ Перевірка...</span>
+              <span>⏳</span>
             ) : availability ? (
               <AvailabilityBadge
                 available={availability.available_quantity}

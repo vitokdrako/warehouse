@@ -706,13 +706,24 @@ async def update_board(
     if data.status is not None:
         updates.append("status = :status")
         params["status"] = data.status
+    if data.cover_image is not None:
+        updates.append("cover_image = :cover_image")
+        params["cover_image"] = data.cover_image
+    if data.canvas_layout is not None:
+        import json
+        updates.append("canvas_layout = :canvas_layout")
+        params["canvas_layout"] = json.dumps(data.canvas_layout)
+    
+    # Перерахувати rental_days якщо оновлені дати
+    if data.rental_start_date is not None or data.rental_end_date is not None:
+        updates.append("rental_days = DATEDIFF(COALESCE(:rental_end_date, rental_end_date), COALESCE(:rental_start_date, rental_start_date)) + 1")
     
     if updates:
         sql = f"UPDATE event_boards SET {', '.join(updates)}, updated_at = NOW() WHERE id = :id"
         db.execute(text(sql), params)
         db.commit()
     
-    return await get_board(board_id, token, db)
+    return await get_board(board_id, db, token)
 
 @router.delete("/boards/{board_id}")
 async def delete_board(

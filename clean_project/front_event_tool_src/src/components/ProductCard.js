@@ -65,7 +65,7 @@ const ProductCard = ({ product, onAddToBoard, boardDates }) => {
           <>
             {!imageLoaded && (
               <div className="product-card-image-placeholder loading">
-                <span className="spinner">⏳</span>
+                <span className="spinner" style={{fontSize: '20px', color: '#ccc'}}>●</span>
               </div>
             )}
             <img
@@ -79,17 +79,18 @@ const ProductCard = ({ product, onAddToBoard, boardDates }) => {
           </>
         ) : (
           <div className="product-card-image-placeholder">
-            <span>📦</span>
+            <span style={{fontSize: '40px', color: '#ddd'}}>●</span>
           </div>
         )}
         
-        {/* Availability badge overlay - тільки якщо є дати */}
+        {/* Availability badge overlay - м'який сірий стиль */}
         {boardDates?.startDate && boardDates?.endDate && (
           <div className="product-availability-badge" style={{
-            background: isAvailable ? 'rgba(46, 125, 50, 0.9)' : 'rgba(198, 40, 40, 0.9)',
-            color: '#fff'
+            background: 'rgba(255, 255, 255, 0.95)',
+            color: isAvailable ? '#666' : '#999',
+            border: '1px solid #eee'
           }}>
-            {isAvailable ? `✓ ${product.available}` : '✗'}
+            {isAvailable ? `${product.available}/${product.quantity}` : '0'}
           </div>
         )}
       </div>
@@ -100,7 +101,7 @@ const ProductCard = ({ product, onAddToBoard, boardDates }) => {
         </h3>
         <p className="product-card-sku">{product.sku}</p>
         
-        {/* Availability info - завжди показуємо */}
+        {/* Availability info - м'який стиль */}
         <div style={{
           display: 'flex',
           gap: '6px',
@@ -112,18 +113,18 @@ const ProductCard = ({ product, onAddToBoard, boardDates }) => {
           <span style={{
             padding: '2px 8px',
             borderRadius: '12px',
-            background: isAvailable ? '#e8f5e9' : '#ffebee',
-            color: isAvailable ? '#2e7d32' : '#c62828',
-            fontWeight: '500'
+            background: isAvailable ? '#f5f5f5' : '#fafafa',
+            color: isAvailable ? '#666' : '#999',
+            fontWeight: '400'
           }}>
-            {isAvailable ? `✓ Доступно: ${product.available}` : '✗ Недоступно'}
+            {isAvailable ? `Доступно: ${product.available}` : 'Недоступно'}
           </span>
           {product.in_rent > 0 && (
             <span style={{
               padding: '2px 6px',
               borderRadius: '10px',
-              background: '#fff3e0',
-              color: '#e65100',
+              background: '#fafafa',
+              color: '#999',
               fontSize: '10px'
             }}>
               {product.in_rent} в оренді
@@ -133,8 +134,8 @@ const ProductCard = ({ product, onAddToBoard, boardDates }) => {
             <span style={{
               padding: '2px 6px',
               borderRadius: '10px',
-              background: '#e3f2fd',
-              color: '#1565c0',
+              background: '#fafafa',
+              color: '#999',
               fontSize: '10px'
             }}>
               {product.reserved} в резерві

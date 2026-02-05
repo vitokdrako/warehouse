@@ -245,7 +245,7 @@ const EventPlannerPage = () => {
 
   const handleCreateBoard = async (boardData) => {
     try {
-      const newBoard = await api.post('/boards', boardData).then(r => r.data);
+      const newBoard = await api.post('/event/boards', boardData).then(r => r.data);
       setBoards([newBoard, ...boards]);
       setActiveBoard(newBoard);
       setShowNewBoardModal(false);

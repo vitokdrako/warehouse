@@ -199,15 +199,19 @@ const EventPlannerPage = () => {
     loadInitialData();
   }, []);
 
-  // Завантажувати товари при зміні фільтрів
+  // Завантажувати товари при зміні фільтрів (з debounce для пошуку)
   useEffect(() => {
-    loadProducts();
+    const timer = setTimeout(() => {
+      loadProducts();
+    }, searchTerm ? 300 : 0); // Debounce тільки для пошуку
+    
+    return () => clearTimeout(timer);
   }, [selectedCategory, selectedSubcategory, selectedColor, searchTerm]);
 
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      // Завантажити категорії та борди
+      // Завантажити категорії та борди паралельно
       const [categoriesData, subcategoriesData, boardsData] = await Promise.all([
         api.get('/event/categories').then(r => r.data),
         api.get('/event/subcategories').then(r => r.data),
@@ -233,9 +237,9 @@ const EventPlannerPage = () => {
 
   const loadProducts = async () => {
     try {
-      // Будуємо URL з фільтрами
+      // Будуємо URL з фільтрами - збільшуємо ліміт для швидкого доступу
       const params = new URLSearchParams();
-      params.append('limit', '200');
+      params.append('limit', '500');  // Завантажуємо більше за раз
       
       if (selectedCategory) {
         params.append('category_name', selectedCategory);
@@ -252,7 +256,7 @@ const EventPlannerPage = () => {
       
       const productsData = await api.get(`/event/products?${params.toString()}`).then(r => r.data);
       setProducts(productsData);
-      setHasMore(productsData.length >= 200);
+      setHasMore(productsData.length >= 500);
     } catch (error) {
       console.error('Failed to load products:', error);
     }
@@ -266,7 +270,7 @@ const EventPlannerPage = () => {
       // Будуємо URL з фільтрами
       const params = new URLSearchParams();
       params.append('skip', currentCount.toString());
-      params.append('limit', '100');
+      params.append('limit', '200');  // Завантажуємо більше
       
       if (selectedCategory) {
         params.append('category_name', selectedCategory);

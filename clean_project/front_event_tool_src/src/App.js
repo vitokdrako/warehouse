@@ -334,10 +334,10 @@ const EventPlannerPage = () => {
     if (!activeBoard) return;
 
     try {
-      await api.delete(`/boards/${activeBoard.id}/items/${itemId}`);
+      await api.delete(`/event/boards/${activeBoard.id}/items/${itemId}`);
       
       // Reload active board
-      const updatedBoard = await api.get(`/boards/${activeBoard.id}`).then(r => r.data);
+      const updatedBoard = await api.get(`/event/boards/${activeBoard.id}`).then(r => r.data);
       setActiveBoard(updatedBoard);
       setBoards(boards.map(b => b.id === updatedBoard.id ? updatedBoard : b));
     } catch (error) {

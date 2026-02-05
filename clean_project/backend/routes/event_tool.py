@@ -835,7 +835,12 @@ async def update_board_item(
     return {"id": item_id, "updated": True}
 
 @router.delete("/boards/{board_id}/items/{item_id}")
-async def delete_board_item(board_id: str, item_id: str, token: str, db: Session = Depends(get_rh_db)):
+async def delete_board_item(
+    board_id: str,
+    item_id: str,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Видалити товар з мудборду"""
     customer = get_current_customer(token, db)
     

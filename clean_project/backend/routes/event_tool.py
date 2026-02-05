@@ -3,7 +3,7 @@ Event Tool API Routes
 Інтеграція каталогу декораторів з RentalHub
 Всі endpoints під /api/event/*
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional
@@ -13,6 +13,8 @@ import uuid
 import logging
 import os
 import json
+from functools import lru_cache
+import time
 
 from database_rentalhub import get_rh_db
 from utils.image_helper import normalize_image_url
@@ -20,6 +22,13 @@ from utils.image_helper import normalize_image_url
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/event", tags=["Event Tool"])
+
+# ============================================================================
+# CACHE для швидкої роботи
+# ============================================================================
+_categories_cache = {"data": None, "expires": 0}
+_subcategories_cache = {"data": None, "expires": 0}
+CACHE_TTL = 300  # 5 хвилин
 
 # ============================================================================
 # SCHEMAS

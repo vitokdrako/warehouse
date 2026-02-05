@@ -448,8 +448,20 @@ async def get_product(product_id: int, db: Session = Depends(get_rh_db)):
     }
 
 @router.get("/categories")
-async def get_categories(db: Session = Depends(get_rh_db)):
-    """Отримати унікальні категорії з товарів з кількістю"""
+async def get_categories(response: Response, db: Session = Depends(get_rh_db)):
+    """Отримати унікальні категорії з товарів з кількістю - з кешуванням"""
+    global _categories_cache
+    
+    # Перевірити кеш
+    now = time.time()
+    if _categories_cache["data"] and _categories_cache["expires"] > now:
+        response.headers["X-Cache"] = "HIT"
+        response.headers["Cache-Control"] = "public, max-age=300"
+        return _categories_cache["data"]
+    
+    response.headers["X-Cache"] = "MISS"
+    response.headers["Cache-Control"] = "public, max-age=300"
+    
     result = db.execute(text("""
         SELECT category_name, COUNT(*) as product_count
         FROM products 
@@ -457,11 +469,27 @@ async def get_categories(db: Session = Depends(get_rh_db)):
         GROUP BY category_name
         ORDER BY category_name
     """))
-    return [{"name": row[0], "product_count": row[1]} for row in result]
+    data = [{"name": row[0], "product_count": row[1]} for row in result]
+    
+    # Зберегти в кеш
+    _categories_cache = {"data": data, "expires": now + CACHE_TTL}
+    return data
 
 @router.get("/subcategories")
-async def get_subcategories(category_name: Optional[str] = None, db: Session = Depends(get_rh_db)):
-    """Отримати підкатегорії"""
+async def get_subcategories(response: Response, category_name: Optional[str] = None, db: Session = Depends(get_rh_db)):
+    """Отримати підкатегорії - з кешуванням"""
+    global _subcategories_cache
+    
+    response.headers["Cache-Control"] = "public, max-age=300"
+    
+    # Кеш тільки для повного списку (без фільтра)
+    if not category_name:
+        now = time.time()
+        if _subcategories_cache["data"] and _subcategories_cache["expires"] > now:
+            response.headers["X-Cache"] = "HIT"
+            return _subcategories_cache["data"]
+        response.headers["X-Cache"] = "MISS"
+    
     sql = """
         SELECT category_name, subcategory_name, COUNT(*) as product_count
         FROM products 
@@ -485,7 +513,11 @@ async def get_subcategories(category_name: Optional[str] = None, db: Session = D
             if row[0] not in categories:
                 categories[row[0]] = []
             categories[row[0]].append({"name": row[1], "product_count": row[2]})
-        return [{"category": k, "subcategories": v} for k, v in categories.items()]
+        data = [{"category": k, "subcategories": v} for k, v in categories.items()]
+        
+        # Зберегти в кеш
+        _subcategories_cache = {"data": data, "expires": time.time() + CACHE_TTL}
+        return data
 
 # ============================================================================
 # AVAILABILITY CHECK

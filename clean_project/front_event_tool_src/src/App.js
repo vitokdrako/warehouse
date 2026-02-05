@@ -199,18 +199,21 @@ const EventPlannerPage = () => {
     loadInitialData();
   }, []);
 
+  // Завантажувати товари при зміні фільтрів
+  useEffect(() => {
+    loadProducts();
+  }, [selectedCategory, selectedSubcategory, selectedColor, searchTerm]);
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      // Завантажити перші 100 товарів для швидкого старту
-      const [productsData, categoriesData, subcategoriesData, boardsData] = await Promise.all([
-        api.get('/event/products?limit=100').then(r => r.data),
+      // Завантажити категорії та борди
+      const [categoriesData, subcategoriesData, boardsData] = await Promise.all([
         api.get('/event/categories').then(r => r.data),
         api.get('/event/subcategories').then(r => r.data),
         api.get('/event/boards').then(r => r.data),
       ]);
       
-      setProducts(productsData);
       setCategories(categoriesData);
       setAllSubcategories(subcategoriesData);
       setBoards(boardsData);
@@ -218,6 +221,9 @@ const EventPlannerPage = () => {
       if (boardsData.length > 0) {
         setActiveBoard(boardsData[0]);
       }
+      
+      // Завантажити товари окремо
+      await loadProducts();
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -225,11 +231,57 @@ const EventPlannerPage = () => {
     }
   };
 
+  const loadProducts = async () => {
+    try {
+      // Будуємо URL з фільтрами
+      const params = new URLSearchParams();
+      params.append('limit', '200');
+      
+      if (selectedCategory) {
+        params.append('category_name', selectedCategory);
+      }
+      if (selectedSubcategory) {
+        params.append('subcategory_name', selectedSubcategory);
+      }
+      if (selectedColor) {
+        params.append('color', selectedColor);
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      
+      const productsData = await api.get(`/event/products?${params.toString()}`).then(r => r.data);
+      setProducts(productsData);
+      setHasMore(productsData.length >= 200);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    }
+  };
+
   const loadMoreProducts = async () => {
     try {
       setLoadingMore(true);
       const currentCount = products.length;
-      const moreProducts = await api.get(`/event/products?skip=${currentCount}&limit=100`).then(r => r.data);
+      
+      // Будуємо URL з фільтрами
+      const params = new URLSearchParams();
+      params.append('skip', currentCount.toString());
+      params.append('limit', '100');
+      
+      if (selectedCategory) {
+        params.append('category_name', selectedCategory);
+      }
+      if (selectedSubcategory) {
+        params.append('subcategory_name', selectedSubcategory);
+      }
+      if (selectedColor) {
+        params.append('color', selectedColor);
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+      
+      const moreProducts = await api.get(`/event/products?${params.toString()}`).then(r => r.data);
       
       if (moreProducts.length === 0) {
         setHasMore(false);

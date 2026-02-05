@@ -48,7 +48,7 @@ const BoardItemCard = ({ item, boardDates, rentalDays, onUpdate, onRemove }) => 
           className="board-item-remove"
           title="Видалити"
         >
-          🗑️
+          ×
         </button>
       </div>
 

@@ -1,6 +1,5 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { uk } from 'date-fns/locale';
 
 const DateRangePicker = ({ startDate, endDate, onStartDateChange, onEndDateChange, className = '' }) => {
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -9,7 +8,7 @@ const DateRangePicker = ({ startDate, endDate, onStartDateChange, onEndDateChang
     <div className={`grid grid-cols-2 gap-3 ${className}`}>
       <div>
         <label className="fd-label">
-          📅 Початок оренди
+          Початок оренди
         </label>
         <input
           type="date"
@@ -21,7 +20,7 @@ const DateRangePicker = ({ startDate, endDate, onStartDateChange, onEndDateChang
       </div>
       <div>
         <label className="fd-label">
-          📅 Кінець оренди
+          Кінець оренди
         </label>
         <input
           type="date"

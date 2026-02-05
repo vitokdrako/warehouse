@@ -297,13 +297,13 @@ const EventPlannerPage = () => {
     }
 
     try {
-      await api.post(`/boards/${activeBoard.id}/items`, {
+      await api.post(`/event/boards/${activeBoard.id}/items`, {
         product_id: product.product_id,
         quantity: 1,
       });
       
       // Reload active board
-      const updatedBoard = await api.get(`/boards/${activeBoard.id}`).then(r => r.data);
+      const updatedBoard = await api.get(`/event/boards/${activeBoard.id}`).then(r => r.data);
       setActiveBoard(updatedBoard);
       
       // Update boards list

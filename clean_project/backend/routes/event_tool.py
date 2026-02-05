@@ -3,7 +3,7 @@ Event Tool API Routes
 Інтеграція каталогу декораторів з RentalHub
 Всі endpoints під /api/event/*
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional

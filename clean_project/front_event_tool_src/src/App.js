@@ -417,10 +417,6 @@ const EventPlannerPage = () => {
 
   // Всі категорії - тепер приходять напряму з API з кількістю товарів
   const allCategories = categories;
-      }
-      return a.name.localeCompare(b.name);
-    });
-  }, [categories, products]);
 
   // Отримати підкатегорії для вибраної категорії (з API даних)
   const availableSubcategories = React.useMemo(() => {

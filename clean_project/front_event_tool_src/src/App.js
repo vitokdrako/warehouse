@@ -229,7 +229,7 @@ const EventPlannerPage = () => {
     try {
       setLoadingMore(true);
       const currentCount = products.length;
-      const moreProducts = await api.get(`/products?skip=${currentCount}&limit=100`).then(r => r.data);
+      const moreProducts = await api.get(`/event/products?skip=${currentCount}&limit=100`).then(r => r.data);
       
       if (moreProducts.length === 0) {
         setHasMore(false);

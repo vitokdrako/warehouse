@@ -341,8 +341,9 @@ async def get_products(
     search: Optional[str] = None,
     category_name: Optional[str] = None,
     subcategory_name: Optional[str] = None,
+    color: Optional[str] = None,
     skip: int = 0,
-    limit: int = 50,
+    limit: int = 100,
     db: Session = Depends(get_rh_db)
 ):
     """Отримати каталог товарів для декораторів"""
@@ -350,14 +351,15 @@ async def get_products(
     sql = """
         SELECT product_id, sku, name, category_name, subcategory_name,
                rental_price, image_url, color, material, size,
-               quantity, frozen_quantity
+               quantity, frozen_quantity, description, price
         FROM products
         WHERE status = 1
     """
     params = {}
     
     if search:
-        sql += " AND (name LIKE :search OR sku LIKE :search)"
+        # Розширений пошук по назві, SKU, кольору, матеріалу
+        sql += " AND (name LIKE :search OR sku LIKE :search OR color LIKE :search OR material LIKE :search)"
         params["search"] = f"%{search}%"
     
     if category_name:
@@ -368,7 +370,11 @@ async def get_products(
         sql += " AND subcategory_name = :subcategory_name"
         params["subcategory_name"] = subcategory_name
     
-    sql += " ORDER BY product_id DESC LIMIT :limit OFFSET :skip"
+    if color:
+        sql += " AND color LIKE :color"
+        params["color"] = f"%{color}%"
+    
+    sql += " ORDER BY category_name, subcategory_name, name LIMIT :limit OFFSET :skip"
     params["limit"] = limit
     params["skip"] = skip
     
@@ -384,13 +390,15 @@ async def get_products(
             "category_name": row[3],
             "subcategory_name": row[4],
             "rental_price": float(row[5]) if row[5] else 0,
-            "image_url": row[6],
+            "image_url": normalize_image_url(row[6]),
             "color": row[7],
             "material": row[8],
             "size": row[9],
             "quantity": row[10] or 0,
             "frozen_quantity": row[11] or 0,
-            "available": available
+            "available": available,
+            "description": row[12],
+            "price": float(row[13]) if row[13] else 0
         })
     
     return products

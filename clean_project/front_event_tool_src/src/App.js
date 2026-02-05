@@ -458,9 +458,6 @@ const EventPlannerPage = () => {
   // Кольори тепер приходять з API
   const availableColors = colors;
 
-  // Всі категорії для фільтра
-  const allCategories = categories;
-
   // Reset subcategory when category changes
   useEffect(() => {
     setSelectedSubcategory(null);

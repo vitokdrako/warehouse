@@ -351,14 +351,15 @@ async def get_products(
     category_name: Optional[str] = None,
     subcategory_name: Optional[str] = None,
     color: Optional[str] = None,
+    date_from: Optional[str] = None,  # YYYY-MM-DD - для перевірки доступності
+    date_to: Optional[str] = None,    # YYYY-MM-DD
     skip: int = 0,
-    limit: int = 500,  # Збільшений ліміт для lazy loading
+    limit: int = 500,
     db: Session = Depends(get_rh_db)
 ):
-    """Отримати каталог товарів для декораторів - оптимізовано для швидкості"""
+    """Отримати каталог товарів з перевіркою доступності на дати (як RentalHub)"""
     
-    # Додаємо заголовки кешування для браузера
-    response.headers["Cache-Control"] = "public, max-age=60"  # 1 хвилина кеш браузера
+    response.headers["Cache-Control"] = "public, max-age=30"
     
     sql = """
         SELECT product_id, sku, name, category_name, subcategory_name,
@@ -370,7 +371,6 @@ async def get_products(
     params = {}
     
     if search:
-        # Розширений пошук по назві, SKU, кольору, матеріалу
         sql += " AND (name LIKE :search OR sku LIKE :search OR color LIKE :search OR material LIKE :search)"
         params["search"] = f"%{search}%"
     
@@ -391,12 +391,82 @@ async def get_products(
     params["skip"] = skip
     
     result = db.execute(text(sql), params)
-    products = []
+    rows = result.fetchall()
     
-    for row in result:
-        available = max(0, (row[10] or 0) - (row[11] or 0))
+    if not rows:
+        return []
+    
+    product_ids = [row[0] for row in rows]
+    
+    # Перевірка доступності на дати (як в RentalHub каталозі)
+    reserved_dict = {}
+    in_rent_dict = {}
+    
+    if date_from and date_to:
+        # Резерви на конкретний період (перетинання дат)
+        reserved_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+            AND o.rental_start_date <= :date_to
+            AND o.rental_end_date >= :date_from
+            GROUP BY oi.product_id
+        """), {"product_ids": tuple(product_ids), "date_from": date_from, "date_to": date_to})
+        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+        
+        # В оренді на конкретний період
+        in_rent_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('issued', 'on_rent')
+            AND o.rental_start_date <= :date_to
+            AND o.rental_end_date >= :date_from
+            GROUP BY oi.product_id
+        """), {"product_ids": tuple(product_ids), "date_from": date_from, "date_to": date_to})
+        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+    else:
+        # Без дат - поточний стан
+        reserved_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+            AND o.rental_end_date >= CURDATE()
+            GROUP BY oi.product_id
+        """), {"product_ids": tuple(product_ids)})
+        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+        
+        in_rent_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('issued', 'on_rent')
+            AND o.rental_end_date >= CURDATE()
+            GROUP BY oi.product_id
+        """), {"product_ids": tuple(product_ids)})
+        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+    
+    # Побудова результату
+    products = []
+    for row in rows:
+        product_id = row[0]
+        total_qty = row[10] or 0
+        frozen_qty = row[11] or 0
+        
+        reserved = reserved_dict.get(product_id, 0)
+        in_rent = in_rent_dict.get(product_id, 0)
+        
+        # Доступно = загальна кількість - заморожено - в оренді - в резерві
+        available = max(0, total_qty - frozen_qty - in_rent - reserved)
+        
         products.append({
-            "product_id": row[0],
+            "product_id": product_id,
             "sku": row[1],
             "name": row[2],
             "category_name": row[3],
@@ -406,9 +476,12 @@ async def get_products(
             "color": row[7],
             "material": row[8],
             "size": row[9],
-            "quantity": row[10] or 0,
-            "frozen_quantity": row[11] or 0,
+            "quantity": total_qty,
+            "frozen_quantity": frozen_qty,
+            "reserved": reserved,
+            "in_rent": in_rent,
             "available": available,
+            "is_available": available > 0,
             "description": row[12],
             "price": float(row[13]) if row[13] else 0
         })

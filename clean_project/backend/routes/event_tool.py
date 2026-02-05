@@ -723,7 +723,7 @@ async def update_board(
         db.execute(text(sql), params)
         db.commit()
     
-    return await get_board(board_id, db, token)
+    return await get_board(board_id, db=db, token=token)
 
 @router.delete("/boards/{board_id}")
 async def delete_board(

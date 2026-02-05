@@ -103,12 +103,18 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
+    # Конвертуємо sub в string
+    if "sub" in to_encode:
+        to_encode["sub"] = str(to_encode["sub"])
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire, "type": "access"})
     return jwt.encode(to_encode, get_secret_key(), algorithm=ALGORITHM)
 
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
+    # Конвертуємо sub в string
+    if "sub" in to_encode:
+        to_encode["sub"] = str(to_encode["sub"])
     expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"})
     return jwt.encode(to_encode, get_secret_key(), algorithm=ALGORITHM)
@@ -116,10 +122,14 @@ def create_refresh_token(data: dict) -> str:
 def decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, get_secret_key(), algorithms=[ALGORITHM])
+        # Конвертуємо sub назад в int
+        if "sub" in payload:
+            payload["sub"] = int(payload["sub"])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        logger.error(f"JWT decode error: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def get_current_customer(token: str, db: Session):

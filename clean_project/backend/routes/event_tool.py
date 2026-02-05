@@ -664,7 +664,7 @@ async def get_board(
             "sku": item[8],
             "name": item[9],
             "rental_price": float(item[10]) if item[10] else 0,
-            "image_url": item[11],
+            "image_url": normalize_image_url(item[11]),
             "color": item[12],
             "material": item[13]
         }

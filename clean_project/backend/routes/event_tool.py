@@ -184,41 +184,44 @@ def init_event_tables(db: Session):
         )
     """))
     
-    # Event Boards (мудборди)
+    # Event Boards (мудборди) - БЕЗ FK для сумісності
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS event_boards (
             id VARCHAR(36) PRIMARY KEY,
             customer_id INT NOT NULL,
             board_name VARCHAR(255) NOT NULL,
-            event_date DATE,
-            event_type VARCHAR(100),
-            rental_start_date DATE,
-            rental_end_date DATE,
-            rental_days INT,
+            event_date DATE NULL,
+            event_type VARCHAR(100) NULL,
+            rental_start_date DATE NULL,
+            rental_end_date DATE NULL,
+            rental_days INT NULL,
             status VARCHAR(50) DEFAULT 'draft',
-            notes TEXT,
-            budget DECIMAL(10,2),
+            notes TEXT NULL,
+            budget DECIMAL(10,2) NULL,
             estimated_total DECIMAL(10,2) DEFAULT 0,
+            cover_image VARCHAR(500) NULL,
+            canvas_layout JSON NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            converted_to_order_id INT,
-            FOREIGN KEY (customer_id) REFERENCES event_customers(customer_id) ON DELETE CASCADE
+            converted_to_order_id INT NULL,
+            INDEX idx_event_boards_customer (customer_id),
+            INDEX idx_event_boards_status (status)
         )
     """))
     
-    # Event Board Items
+    # Event Board Items - БЕЗ FK для сумісності
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS event_board_items (
             id VARCHAR(36) PRIMARY KEY,
             board_id VARCHAR(36) NOT NULL,
             product_id INT NOT NULL,
             quantity INT DEFAULT 1,
-            notes TEXT,
-            section VARCHAR(100),
+            notes TEXT NULL,
+            section VARCHAR(100) NULL,
             position INT DEFAULT 0,
             added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (board_id) REFERENCES event_boards(id) ON DELETE CASCADE,
-            FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+            INDEX idx_event_board_items_board (board_id),
+            INDEX idx_event_board_items_product (product_id)
         )
     """))
     
@@ -235,7 +238,7 @@ def init_event_tables(db: Session):
             customer_id INT NOT NULL,
             status VARCHAR(20) DEFAULT 'active',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (board_id) REFERENCES event_boards(id) ON DELETE CASCADE,
+            INDEX idx_soft_res_board (board_id),
             INDEX idx_soft_res_product (product_id),
             INDEX idx_soft_res_dates (reserved_from, reserved_until),
             INDEX idx_soft_res_expires (expires_at)

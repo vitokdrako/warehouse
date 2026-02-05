@@ -276,7 +276,7 @@ const EventPlannerPage = () => {
       // Будуємо URL з фільтрами
       const params = new URLSearchParams();
       params.append('skip', currentCount.toString());
-      params.append('limit', '200');  // Завантажуємо більше
+      params.append('limit', '200');
       
       if (selectedCategory) {
         params.append('category_name', selectedCategory);
@@ -289,6 +289,12 @@ const EventPlannerPage = () => {
       }
       if (searchTerm) {
         params.append('search', searchTerm);
+      }
+      
+      // Передаємо дати для перевірки доступності
+      if (activeBoard?.rental_start_date && activeBoard?.rental_end_date) {
+        params.append('date_from', activeBoard.rental_start_date);
+        params.append('date_to', activeBoard.rental_end_date);
       }
       
       const moreProducts = await api.get(`/event/products?${params.toString()}`).then(r => r.data);

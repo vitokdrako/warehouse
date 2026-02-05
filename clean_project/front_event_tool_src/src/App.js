@@ -415,34 +415,8 @@ const EventPlannerPage = () => {
     }
   };
 
-  // Get all categories from API and products
-  const allCategories = React.useMemo(() => {
-    // Combine categories from API and products
-    const categoriesMap = new Map();
-    
-    // Add categories from API
-    categories.forEach(cat => {
-      categoriesMap.set(cat.name, {
-        name: cat.name,
-        id: cat.category_id,
-        sort_order: cat.sort_order
-      });
-    });
-    
-    // Add categories from products that might not be in API
-    products.forEach(p => {
-      if (p.category_name && !categoriesMap.has(p.category_name)) {
-        categoriesMap.set(p.category_name, {
-          name: p.category_name,
-          sort_order: 999
-        });
-      }
-    });
-    
-    return Array.from(categoriesMap.values()).sort((a, b) => {
-      // Sort by sort_order first, then by name
-      if (a.sort_order !== b.sort_order) {
-        return a.sort_order - b.sort_order;
+  // Всі категорії - тепер приходять напряму з API з кількістю товарів
+  const allCategories = categories;
       }
       return a.name.localeCompare(b.name);
     });

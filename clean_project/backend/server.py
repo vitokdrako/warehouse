@@ -34,12 +34,26 @@ STATIC_ROOT.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_ROOT)), name="static")
 
 # Add CORS middleware (MUST be before routers)
-cors_origins = os.environ.get('CORS_ORIGINS', '*')
+cors_origins = os.environ.get('CORS_ORIGINS', '')
+
+# Default allowed origins for FarForRent
+default_origins = [
+    "https://rentalhub.farforrent.com.ua",
+    "https://events.farforrent.com.ua",
+    "https://backrentalhub.farforrent.com.ua",
+    "http://localhost:3000",
+    "http://localhost:3001",
+]
+
 if cors_origins == '*':
     cors_origins_list = ["*"]
     allow_cred = False  # Cannot use credentials with wildcard origin
-else:
+elif cors_origins:
     cors_origins_list = [o.strip() for o in cors_origins.split(',')]
+    allow_cred = True
+else:
+    # Use default origins if not specified
+    cors_origins_list = default_origins
     allow_cred = True
 
 app.add_middleware(

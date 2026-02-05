@@ -476,6 +476,81 @@ async def get_subcategories(category_name: Optional[str] = None, db: Session = D
         return [{"category": k, "subcategories": v} for k, v in categories.items()]
 
 # ============================================================================
+# AVAILABILITY CHECK
+# ============================================================================
+
+class AvailabilityCheck(BaseModel):
+    product_id: int
+    quantity: int
+    reserved_from: str
+    reserved_until: str
+
+@router.post("/products/check-availability")
+async def check_availability(data: AvailabilityCheck, db: Session = Depends(get_rh_db)):
+    """Перевірити доступність товару на вказані дати"""
+    
+    # Отримати інформацію про товар
+    product_result = db.execute(text("""
+        SELECT product_id, name, quantity, frozen_quantity
+        FROM products WHERE product_id = :id AND status = 1
+    """), {"id": data.product_id})
+    product = product_result.fetchone()
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    total_quantity = product[2] or 0
+    frozen_quantity = product[3] or 0
+    base_available = total_quantity - frozen_quantity
+    
+    # Перевірити перетин з існуючими замовленнями
+    reserved_result = db.execute(text("""
+        SELECT COALESCE(SUM(oi.quantity), 0) as reserved_qty
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE oi.product_id = :product_id
+        AND o.status NOT IN ('cancelled', 'returned', 'completed')
+        AND o.rental_start_date <= :end_date
+        AND o.rental_end_date >= :start_date
+    """), {
+        "product_id": data.product_id,
+        "start_date": data.reserved_from,
+        "end_date": data.reserved_until
+    })
+    reserved_qty = reserved_result.fetchone()[0] or 0
+    
+    # Перевірити soft reservations з інших бордів
+    soft_reserved_result = db.execute(text("""
+        SELECT COALESCE(SUM(quantity), 0) as soft_reserved
+        FROM event_soft_reservations
+        WHERE product_id = :product_id
+        AND status = 'active'
+        AND expires_at > NOW()
+        AND reserved_from <= :end_date
+        AND reserved_until >= :start_date
+    """), {
+        "product_id": data.product_id,
+        "start_date": data.reserved_from,
+        "end_date": data.reserved_until
+    })
+    soft_reserved = soft_reserved_result.fetchone()[0] or 0
+    
+    available_for_dates = base_available - reserved_qty - soft_reserved
+    is_available = available_for_dates >= data.quantity
+    
+    return {
+        "product_id": data.product_id,
+        "requested_quantity": data.quantity,
+        "total_quantity": total_quantity,
+        "reserved_quantity": int(reserved_qty),
+        "soft_reserved": int(soft_reserved),
+        "available": max(0, available_for_dates),
+        "is_available": is_available,
+        "reserved_from": data.reserved_from,
+        "reserved_until": data.reserved_until
+    }
+
+# ============================================================================
 # EVENT BOARDS ENDPOINTS
 # ============================================================================
 

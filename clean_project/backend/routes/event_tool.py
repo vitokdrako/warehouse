@@ -721,7 +721,6 @@ async def update_board(
         updates.append("cover_image = :cover_image")
         params["cover_image"] = data.cover_image
     if data.canvas_layout is not None:
-        import json
         updates.append("canvas_layout = :canvas_layout")
         params["canvas_layout"] = json.dumps(data.canvas_layout)
     

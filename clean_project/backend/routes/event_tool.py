@@ -409,7 +409,7 @@ async def get_product(product_id: int, db: Session = Depends(get_rh_db)):
     result = db.execute(text("""
         SELECT product_id, sku, name, category_name, subcategory_name,
                rental_price, image_url, color, material, size, description,
-               quantity, frozen_quantity
+               quantity, frozen_quantity, price
         FROM products WHERE product_id = :id
     """), {"id": product_id})
     row = result.fetchone()
@@ -424,14 +424,15 @@ async def get_product(product_id: int, db: Session = Depends(get_rh_db)):
         "category_name": row[3],
         "subcategory_name": row[4],
         "rental_price": float(row[5]) if row[5] else 0,
-        "image_url": row[6],
+        "image_url": normalize_image_url(row[6]),
         "color": row[7],
         "material": row[8],
         "size": row[9],
         "description": row[10],
         "quantity": row[11] or 0,
         "frozen_quantity": row[12] or 0,
-        "available": max(0, (row[11] or 0) - (row[12] or 0))
+        "available": max(0, (row[11] or 0) - (row[12] or 0)),
+        "price": float(row[13]) if row[13] else 0
     }
 
 @router.get("/categories")

@@ -450,7 +450,11 @@ async def get_subcategories(category_name: Optional[str] = None, db: Session = D
 # ============================================================================
 
 @router.get("/boards")
-async def get_boards(token: str, status: Optional[str] = None, db: Session = Depends(get_rh_db)):
+async def get_boards(
+    status: Optional[str] = None,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Отримати мудборди декоратора"""
     customer = get_current_customer(token, db)
     

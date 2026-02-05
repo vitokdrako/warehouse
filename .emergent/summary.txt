@@ -1,72 +1,66 @@
 <analysis>**original_problem_statement:**
-The user's primary goal was a major overhaul of two key features.
+The user's initial request was to enhance the Damage Hub by adding photo displays in the dry cleaning section and implementing a more complex workflow: items must first be sent to a queue before being grouped into a batch for a specific cleaning company. The user also wanted to record partial quantity returns from these batches.
 
-First, the partial return workflow was completely refactored. The new system archives the original order and creates a new, versioned child order (e.g., ) containing only the unreturned items. This new versioned order appears in a dedicated column on the manager's dashboard and has its own workspace that mirrors the functionality of the standard return workspace, including integration with the finance system for calculating and posting late fees.
+This evolved into a major new task: integrating a separate, existing public-facing decorator catalog application, named Ivent-tool, into the main RentalHub system. The goal was to have a single, unified backend that serves both the private admin panel and the new public catalog, each from its own frontend application. This required analyzing the Ivent-tool's codebase, adapting its backend logic to fit into the RentalHub's existing FastAPI application, and debugging a series of integration issues related to CORS, authentication, and incorrect API paths.
 
-Second, following the completion of the partial return feature, the user requested a complete refactor of the Damage Hub. The goals were to:
-1.  Unify the separate tabs (Wash, Restoration, Dry Cleaning) into a single, three-column management screen.
-2.  Integrate damage cases originating from the new versioned partial returns, linking them to the parent order.
-3.  Remove all direct financial settlement capabilities (e.g., deduct from deposit), making the hub a tool for processing and tracking only.
-4.  Implement a complex workflow for the Dry Cleaning stage, including creating batches from a queue and processing partial returns from those batches.
-5.  Add functionality to archive and view archived damage cases.
-6.  Enhance the UI to show item photos (with zoom-on-click), the reason for the damage, and the quantity of items being processed.
-7.  Add a one-click write-off button to send items marked as  to the inventory write-off system.
-8.  Ensure the To Stock button returns an item to inventory without processing, for handling pre-existing damages.
+PRODUCT REQUIREMENTS are now documented in .
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is a full-stack RentalHub management system with a React frontend, FastAPI backend, and a MySQL database (from an OpenCart integration).
+The project is a complex, dual-application system with a single, unified FastAPI backend and two separate React frontends:
+1.  **RentalHub Admin Panel:** The original management application. Its source is in .
+2.  **Ivent-tool Decorator Catalog:** The new public-facing application. Its source is in .
 
-The Versioned Partial Return system is fully implemented and was tested successfully by the testing agent. It correctly creates versioned orders, displays them on the dashboard, and has a dedicated workspace () that replicates the original return functionality, including calculating and posting late fees to the finance hub.
-
-The Damage Hub has been completely refactored as requested. The old tab-based interface () has been replaced with a unified three-column layout. This new hub correctly displays damage cases (including those from versioned returns), shows item quantities and damage reasons, allows for archiving, and features a write-off button for totally lost items. The financial settlement features have been removed. The backend logic for all new features, including batching for dry cleaning and archiving, has been implemented.
+The backend has been successfully modified to include all routes for the Ivent-tool (prefixed with ) and to handle CORS requests from both frontend domains. A full project structure, including source code, build artifacts, and detailed deployment instructions, is located in .
 
 **Last working item**:
--   **Last item agent was working:** Clarifying and confirming the functionality of the На склад (To Stock) button within the newly refactored Damage Hub.
+-   **Last item agent was working:** Resolving 404 errors on the  frontend. After a successful login, the application was still making API calls to old, non-prefixed endpoints (e.g.,  instead of the correct ). The agent identified that the user's server was running an outdated frontend build.
 -   **Status:** USER VERIFICATION PENDING
--   **Agent Testing Done:** Y (Agent confirmed the backend logic in  correctly handles the request to return an item to stock without processing).
--   **Which testing method agent to use?** frontend testing agent (To conduct a full regression test of the newly refactored Damage Hub).
+-   **Agent Testing Done:** Y (Agent confirmed the source code was corrected and successfully created a new frontend build with the correct API paths).
+-   **Which testing method agent to use?** Frontend testing agent. Once the user deploys the new build, the testing agent should be used to perform a full regression test of the  frontend (login, browse catalog, view categories, view boards) to ensure all 404 errors are resolved.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-There are no critical blocking issues. The entire Damage Hub refactor is pending final review and verification from the user.
+-   **Issue 1: (P0)  frontend still uses old API paths, causing 404 errors.**
+    -   **Attempted fixes:** The agent has already corrected the API paths in all relevant frontend source files () and created a new, ready-to-deploy production build located at .
+    -   **Next debug checklist:**
+        1.  Instruct the user to replace the current  web root content with the new build from .
+        2.  Ask the user to clear their browser cache and test again.
+        3.  If the issue persists, use the browser's Network tab to confirm the API endpoints are now correctly prefixed with .
+    -   **Why fix this issue?** The public decorator catalog is completely non-functional until this is resolved. It is the final blocker for the Ivent-tool integration task.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend
 
 **In progress Task List**:
--   **Task 1: (P0) Complete the Damage Hub Refactor**
-    -   **Where to resume:** The implementation of the unified Damage Hub is complete. The next agent should await user feedback on the new interface and functionality. If the user confirms everything is working as expected, the task is complete. If there are bugs or further change requests, they should be addressed.
-    -   **What will be achieved with this?** A streamlined, unified, and more powerful interface for managing all stages of item damage processing, fully integrated with the new versioned partial returns system.
+-   **Task 1: (P0) Finalize and Verify  Integration**
+    -   **Where to resume:** Awaiting user to deploy the new frontend build and confirm that the 404 errors after login are gone.
+    -   **What will be achieved with this?** A fully functional public decorator catalog, integrated with the main RentalHub backend.
     -   **Status:** USER VERIFICATION PENDING
-    -   **Should Test frontend/backend/both after fix?** both (A full frontend and backend test of the Damage Hub is recommended upon user approval).
-    -   **Blocked on something:** User feedback.
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on something:** User action (deploying the new build).
 
 **Upcoming and Future Tasks**
--   **(P1) Recurring Calendar Timezone Bug:** An old, known bug where the calendar UI incorrectly highlights dates remains pending.
--   **(P2) Unify Order Workspaces:** Refactor  and  into a single, universal interface.
--   **(P2) Implement Full Role-Based Access Control (RBAC).**
--   **(P2) Implement Monthly Financial Report.**
--   **(P3) Digital Signature Integration.**
+-   **Upcoming Tasks:**
+    -   **(P1) Recurring Calendar Timezone Bug:** An old, known bug where the calendar UI incorrectly highlights dates remains pending.
+-   **Future Tasks:**
+    -   **(P2) Unify Order Workspaces:** Refactor  and  into a single, universal interface.
+    -   **(P2) Implement Full Role-Based Access Control (RBAC).**
+    -   **(P2) Implement Monthly Financial Report.**
+    -   **(P3) Digital Signature Integration.**
 
 **Completed work in this session**
--   **Feature: Versioned Partial Return System (Complete Refactor)**
-    -   Implemented a new database schema (, ) and backend API () to manage versioned returns.
-    -   Created a new frontend page () that reuses existing complex components (, ) to provide a consistent user experience for managing versioned returns.
-    -   Updated the  to fetch and display active versioned partial returns in their own column.
-    -   Integrated the versioned return workspace with the finance system, enabling the calculation and posting of late fees.
--   **Feature: Unified Damage Hub (Complete Refactor)**
-    -   Rebuilt  from a tab-based system to a unified, three-column layout (Orders -> Items -> Processing).
-    -   Implemented backend logic and UI for archiving/unarchiving damage cases, using a new  status.
-    -   Added UI enhancements: item photos with zoom, display of damage reason, and item quantities.
-    -   Created a backend endpoint and UI button for one-click write-off of items marked as .
-    -   Removed direct financial settlement capabilities from the Damage Hub UI as requested.
--   **Bugfix: Blocked Order #7295**
-    -   Identified and deleted a leftover test  that was preventing a real order (#7295) from being processed.
-    -   Manually recreated the correct  to unblock the order for the assembly team.
--   **Builds & Deployment Prep:**
-    -   Generated multiple production-ready frontend builds in , configured with the user's specific backend and frontend URLs.
+-   **Feature: Integrated  Backend:** Successfully merged the  backend logic into the main RentalHub FastAPI application, including all routes for authentication, products, categories, and event boards under the  prefix.
+-   **Feature: Refactored Dry Cleaning Workflow:** Implemented the user's requested two-step workflow (queue -> batch), added photo display, and enabled partial quantity returns.
+-   **Bugfix: Multi-Domain CORS Policy:** Fixed the backend's  to correctly handle CORS requests from both the admin and the new decorator catalog frontend domains.
+-   **Bugfix:  Authentication Flow:** Debugged and fixed a series of critical authentication issues, including incorrect token handling (query param vs. header), invalid JWT  claim (int vs. string), and incorrect API pathing on the frontend.
+-   **Bugfix: Damage Hub Data Loading:** Resolved a race condition in  caused by React StrictMode that prevented data from loading correctly.
+-   **Bugfix: Incorrect Item Availability:** As a quick fix, manually updated the  for two products in the database that were causing availability conflicts, unblocking the user.
+-   **Documentation: Created Build & Deployment Instructions:** Authored a critical  file explaining the new two-frontend architecture and deployment process for future agents.
 
 **Earlier issues found/mentioned but not fixed**
--   **Image 404s in Catalog:** The user reported that product images were not loading in the catalog view. This was deprioritized by the user and not addressed.
+-   **Image 404s in Catalog:** (From previous handoff) Product images are reportedly not loading in the catalog view. This was deprioritized and has not been addressed.
 
 **Known issue recurrence from previous fork**
 -   **Calendar Timezone Bug:**
@@ -74,73 +68,63 @@ There are no critical blocking issues. The entire Damage Hub refactor is pending
     -   Status: NOT STARTED
 
 **Code Architecture**
-The application runs from  and . The development work was done in  and then synced to the execution directories.
-Key modified/created files:
--    (New file for versioned returns API)
--    (Heavily refactored for the new Damage Hub)
--    (New page for managing versioned returns)
--    (Completely refactored for the unified Damage Hub)
--    (Updated to display versioned returns)
--    (Updated with new routes for version and damage hubs)
+
+
+**Key Technical Concepts**
+-   **Unified Backend Architecture:** A single FastAPI instance serves two distinct React frontends.
+-   **API Prefixing:** Endpoints for the decorator catalog are isolated under the  prefix.
+-   **Multi-Domain CORS:** The backend is explicitly configured to accept requests from both frontend domains.
+-   **Header-Based JWT Authentication:** The integrated  API now correctly uses the  header for protected routes.
 
 **key DB schema**
--   ****: 
--   ****: 
--   ****: The  column is now used to manage archiving (value: ).
+-   ****: Stores user data for the decorator catalog.
+-   ****: Stores mood boards created by decorators.
+-   ****: Links products to specific mood boards.
+-   ****: Manages temporary item reservations.
+-   ** / **: Manage the dry cleaning workflow.
 
 **All files of reference**
+-    **(Most Critical)**
 -   
 -   
 -   
 -   
--    (Contains backups of the old Damage Hub files)
+
+**Areas that need refactoring**:
+-   The backend logic for the , currently in a single large file (), should be broken down into smaller, more focused modules (e.g., , , , etc.) for better maintainability.
 
 **key api endpoints**
--   
--   
--   
--   
--   
--   
+-    (Decorator login)
+-    (Decorator profile)
+-    (Decorator catalog products)
+-    (Decorator mood boards)
+-    (Create a dry cleaning batch)
 -   
 
 **Critical Info for New Agent**
--   The user's preferred language is **Ukrainian**. All communication must be in Ukrainian.
--   The user is technically proficient and gives specific, detailed instructions.
--   The Damage Hub is now a processing and tracking tool ONLY. It should not handle any financial settlements directly.
--   The agent successfully created backups of the original Damage Hub files before the refactor. They are located in .
--   The agent correctly diagnosed and resolved a pathing issue where code was being edited in  but the server was running from . Always ensure file changes are copied/synced to the correct execution directory ( and ).
+-   **READ THE BUILD INSTRUCTIONS:** Before any work, you **must** read . It explains the dual-frontend architecture and how to build/deploy each part correctly. Failure to do so will break the applications.
+-   **Two Frontends, One Backend:** Remember that you are working with two separate frontend applications that share a single backend. API endpoints for the decorator catalog are prefixed with .
+-   **User's Language is Ukrainian:** All communication must be in Ukrainian.
+-   **The  frontend build is the immediate priority:** The user's main problem is that their live server is running an old, broken build of the decorator catalog. The fix is ready for deployment in .
 
 **documents and test reports created in this job**
--    (Successful test of the partial return feature)
--    (Updated with completed tasks)
 -   
--   
+-    (Updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User request:** Investigate and refactor the Damage Hub.
-    -   **Status:** Done.
-2.  **User request:** Clarify Damage Hub should not handle finances and detail the complex laundry batching workflow.
-    -   **Status:** Done. Concept updated and implemented.
-3.  **User request:** Add archive functionality, photo zoom, and rebuild the existing component (not create a new page).
-    -   **Status:** Done.
-4.  **User request:** Report of a 404 error after deployment.
-    -   **Status:** Resolved by providing debugging steps.
-5.  **User request:** Ensure image display is consistent between partial and regular returns.
-    -   **Status:** Done.
-6.  **User request:** Investigate if versioned orders send charges to the Finance Hub.
-    -   **Status:** Done. Integration was implemented.
-7.  **User request:** Report a critical bug where a test entry was blocking a real order (#7295).
-    -   **Status:** Resolved. Test data was cleaned up.
-8.  **User request:** Show the reason/type of damage for each item in the Damage Hub and add a write-off button for .
-    -   **Status:** Done.
-9.  **User request:** Display the quantity of items being processed in all relevant UI sections of the Damage Hub.
-    -   **Status:** Done.
-10. **User request:** Clarify that the To Stock button should unfreeze an item for inventory without any processing.
-    -   **Status:** Done. The agent confirmed the backend logic was already correct and updated the UI text.
+1.  **User:** Asks for build instructions for future agents regarding the new dual-frontend structure. (Status: DONE)
+2.  **User:** Asks to include the  files for both frontends in the  directory for easier development. (Status: DONE)
+3.  **User:** Reports that login is not working on the deployed  and provides backend logs showing a 401 Unauthorized error. (Status: IN PROGRESS)
+4.  **User:** Provides a very detailed technical analysis of why a 422 error might be happening on the  endpoint, correctly suspecting an issue with how the token is being passed or validated. (Status: Addressed, was part of the auth fix).
+5.  **User:** Reports login now works but data fetching fails, providing backend logs showing 200 OK for login but 404 Not Found for , , etc. (Status: IN PROGRESS, led to current fix).
+6.  **User:** Provides the correct production URLs for the backend and frontend. (Status: DONE)
+7.  **User:** Asks for a production build. (Status: DONE)
+8.  **User:** Asks to set aside the  integration for later and focus on RentalHub. (Status: Superseded, user came back to Ivent-tool).
+9.  **User:** Confirms the availability check bug is resolved. (Status: DONE)
+10. **User:** Asks to check the availability logic, reporting that items reserved for an order are shown as out of stock for that same order. (Status: DONE)
 
 **Project Health Check:**
--   **Broken:** None.
+-   **Broken:** The deployed  frontend is currently non-functional due to running an old build. A new, fixed build is ready for deployment at .
 -   **Mocked:** None.
 
 **3rd Party Integrations**
@@ -150,14 +134,14 @@ Key modified/created files:
 -   fastapi.WebSocket
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (For the partial return feature, which passed). NO (For the Damage Hub refactor).
+-   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None
--   **Known regressions:** None
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
--   email: 
--   password: 
+-   **RentalHub Admin:**  / 
+-   **Ivent-tool Decorator (Test account):**  / 
 
 **What agent forgot to execute**
-The agent successfully executed all user requests from the current session. The long-term pending tasks from the previous handoff were not addressed as the user's focus was entirely on the partial return and damage hub refactors.</analysis>
+-   The agent did not refactor the very large  file after integrating it. While functional, its size makes it difficult to maintain. This has been noted as a refactoring task.</analysis>

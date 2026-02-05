@@ -21,8 +21,8 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any, Optional
 
 # Configuration
-BASE_URL = "https://rental-versioning.preview.emergentagent.com/api"
-FRONTEND_URL = "https://rental-versioning.preview.emergentagent.com"
+BASE_URL = "https://rental-connect-7.preview.emergentagent.com/api"
+FRONTEND_URL = "https://rental-connect-7.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"

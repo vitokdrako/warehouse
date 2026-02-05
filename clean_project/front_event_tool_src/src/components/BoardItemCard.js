@@ -97,7 +97,7 @@ const BoardItemCard = ({ item, boardDates, rentalDays, onUpdate, onRemove }) => 
       {/* Notes */}
       {item.notes && (
         <div className="board-item-notes">
-          <p className="board-item-notes-text">📝 {item.notes}</p>
+          <p className="board-item-notes-text">{item.notes}</p>
         </div>
       )}
     </div>

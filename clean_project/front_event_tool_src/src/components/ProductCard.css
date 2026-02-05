@@ -162,7 +162,7 @@
 }
 
 .product-card-button.unavailable {
-    background: #ffebee;
-    color: #c62828;
+    background: #f5f5f5;
+    color: #999;
     cursor: not-allowed;
 }

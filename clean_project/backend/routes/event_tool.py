@@ -675,7 +675,11 @@ async def update_board(
     return await get_board(board_id, token, db)
 
 @router.delete("/boards/{board_id}")
-async def delete_board(board_id: str, token: str, db: Session = Depends(get_rh_db)):
+async def delete_board(
+    board_id: str,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Видалити мудборд"""
     customer = get_current_customer(token, db)
     

@@ -1,28 +1,18 @@
 import React, { useState } from 'react';
-import { useAvailability } from '../hooks/useAvailability';
-import AvailabilityBadge from './AvailabilityBadge';
 import './BoardItemCard.css';
 
 const BoardItemCard = ({ item, boardDates, rentalDays, onUpdate, onRemove }) => {
   const [quantity, setQuantity] = useState(item.quantity);
   const [isUpdating, setIsUpdating] = useState(false);
-  
-  const { availability, loading } = useAvailability(
-    item.product_id,
-    quantity,
-    boardDates?.startDate,
-    boardDates?.endDate
-  );
 
   const handleQuantityChange = async (newQuantity) => {
     if (newQuantity < 1) return;
     
-    // Check availability first
-    if (boardDates?.startDate && boardDates?.endDate) {
-      if (availability && newQuantity > availability.available_quantity) {
-        alert(`Доступно лише ${availability.available_quantity} шт на вибрані дати`);
-        return;
-      }
+    // Перевірка доступності на основі даних товару
+    const maxAvailable = item.product?.quantity || 10;
+    if (newQuantity > maxAvailable) {
+      alert(`Доступно лише ${maxAvailable} шт`);
+      return;
     }
 
     setQuantity(newQuantity);
@@ -62,21 +52,6 @@ const BoardItemCard = ({ item, boardDates, rentalDays, onUpdate, onRemove }) => 
         </button>
       </div>
 
-      {/* Availability */}
-      {boardDates?.startDate && boardDates?.endDate && (
-        <div className="board-item-availability">
-          {loading ? (
-            <span className="board-item-loading">⏳ Перевірка...</span>
-          ) : availability ? (
-            <AvailabilityBadge
-              available={availability.available_quantity}
-              total={item.product?.quantity || 0}
-              requested={quantity}
-            />
-          ) : null}
-        </div>
-      )}
-
       {/* Quantity Controls */}
       <div className="board-item-quantity">
         <span className="board-item-quantity-label">Кількість:</span>
@@ -101,7 +76,7 @@ const BoardItemCard = ({ item, boardDates, rentalDays, onUpdate, onRemove }) => 
           />
           <button
             onClick={() => handleQuantityChange(quantity + 1)}
-            disabled={isUpdating || (availability && quantity >= availability.available_quantity)}
+            disabled={isUpdating}
             className="board-item-quantity-btn"
           >
             +

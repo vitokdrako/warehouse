@@ -346,15 +346,19 @@ async def get_me(
 
 @router.get("/products")
 async def get_products(
+    response: Response,
     search: Optional[str] = None,
     category_name: Optional[str] = None,
     subcategory_name: Optional[str] = None,
     color: Optional[str] = None,
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 500,  # Збільшений ліміт для lazy loading
     db: Session = Depends(get_rh_db)
 ):
-    """Отримати каталог товарів для декораторів"""
+    """Отримати каталог товарів для декораторів - оптимізовано для швидкості"""
+    
+    # Додаємо заголовки кешування для браузера
+    response.headers["Cache-Control"] = "public, max-age=60"  # 1 хвилина кеш браузера
     
     sql = """
         SELECT product_id, sku, name, category_name, subcategory_name,

@@ -437,20 +437,21 @@ async def get_product(product_id: int, db: Session = Depends(get_rh_db)):
 
 @router.get("/categories")
 async def get_categories(db: Session = Depends(get_rh_db)):
-    """Отримати унікальні категорії з товарів"""
+    """Отримати унікальні категорії з товарів з кількістю"""
     result = db.execute(text("""
-        SELECT DISTINCT category_name 
+        SELECT category_name, COUNT(*) as product_count
         FROM products 
         WHERE status = 1 AND category_name IS NOT NULL AND category_name != ''
+        GROUP BY category_name
         ORDER BY category_name
     """))
-    return [{"name": row[0]} for row in result]
+    return [{"name": row[0], "product_count": row[1]} for row in result]
 
 @router.get("/subcategories")
 async def get_subcategories(category_name: Optional[str] = None, db: Session = Depends(get_rh_db)):
     """Отримати підкатегорії"""
     sql = """
-        SELECT DISTINCT category_name, subcategory_name 
+        SELECT category_name, subcategory_name, COUNT(*) as product_count
         FROM products 
         WHERE status = 1 AND subcategory_name IS NOT NULL AND subcategory_name != ''
     """
@@ -460,18 +461,18 @@ async def get_subcategories(category_name: Optional[str] = None, db: Session = D
         sql += " AND category_name = :category_name"
         params["category_name"] = category_name
     
-    sql += " ORDER BY category_name, subcategory_name"
+    sql += " GROUP BY category_name, subcategory_name ORDER BY category_name, subcategory_name"
     
     result = db.execute(text(sql), params)
     
     if category_name:
-        return {"category": category_name, "subcategories": [row[1] for row in result]}
+        return [{"name": row[1], "product_count": row[2]} for row in result]
     else:
         categories = {}
         for row in result:
             if row[0] not in categories:
                 categories[row[0]] = []
-            categories[row[0]].append(row[1])
+            categories[row[0]].append({"name": row[1], "product_count": row[2]})
         return [{"category": k, "subcategories": v} for k, v in categories.items()]
 
 # ============================================================================

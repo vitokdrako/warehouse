@@ -276,7 +276,7 @@ const EventPlannerPage = () => {
     if (!activeBoard) return;
 
     try {
-      const updatedBoard = await api.patch(`/boards/${activeBoard.id}`, {
+      const updatedBoard = await api.patch(`/event/boards/${activeBoard.id}`, {
         canvas_layout: canvasLayout,
       }).then(r => r.data);
       

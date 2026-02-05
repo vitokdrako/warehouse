@@ -32,7 +32,7 @@ const UserProfile = () => {
     }
 
     try {
-      await api.delete(`/boards/${boardId}`);
+      await api.delete(`/event/boards/${boardId}`);
       setBoards(boards.filter(b => b.id !== boardId));
       alert('✅ Мудборд видалено');
     } catch (error) {

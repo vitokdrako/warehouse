@@ -559,7 +559,11 @@ async def create_board(
     return {"id": board_id, "board_name": data.board_name, "status": "draft", "items": []}
 
 @router.get("/boards/{board_id}")
-async def get_board(board_id: str, token: str, db: Session = Depends(get_rh_db)):
+async def get_board(
+    board_id: str,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Отримати мудборд з товарами"""
     customer = get_current_customer(token, db)
     

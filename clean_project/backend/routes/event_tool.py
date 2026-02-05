@@ -699,7 +699,12 @@ async def delete_board(
 # ============================================================================
 
 @router.post("/boards/{board_id}/items")
-async def add_item_to_board(board_id: str, data: EventBoardItemCreate, token: str, db: Session = Depends(get_rh_db)):
+async def add_item_to_board(
+    board_id: str,
+    data: EventBoardItemCreate,
+    db: Session = Depends(get_rh_db),
+    token: str = Depends(get_token_from_header)
+):
     """Додати товар до мудборду"""
     customer = get_current_customer(token, db)
     

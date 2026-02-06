@@ -58,10 +58,10 @@ else:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins_list,
-    allow_credentials=allow_cred,
+    allow_origins=["*"],  # Дозволяємо всі origins для спрощення
+    allow_credentials=False,  # Не можна з wildcard
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    allow_headers=["*"],
     expose_headers=["*"],
     max_age=600,
 )

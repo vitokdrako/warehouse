@@ -6,7 +6,7 @@ import { BoardProvider, useBoard } from './context/BoardContext';
 import DateRangePicker from './components/DateRangePicker';
 import ProductCard from './components/ProductCard';
 import BoardItemCard from './components/BoardItemCard';
-import MoodboardCanvas from './components/MoodboardCanvas';
+import { MoodboardPage } from './moodboard';
 import ProductFilters from './components/ProductFilters';
 import CreateBoardModal from './components/CreateBoardModal';
 import UserProfile from './components/UserProfile';

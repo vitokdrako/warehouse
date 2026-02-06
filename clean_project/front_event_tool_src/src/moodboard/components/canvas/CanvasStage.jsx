@@ -226,13 +226,24 @@ const CanvasStage = () => {
         >
           {/* Background Layer */}
           <Layer>
+            {/* Solid color background */}
             <Rect
               x={0}
               y={0}
               width={scene.width}
               height={scene.height}
-              fill={getBackgroundFill()}
+              fill={scene.background?.type === BackgroundType.IMAGE ? '#ffffff' : getBackgroundFill()}
             />
+            
+            {/* Background image */}
+            {backgroundImage && scene.background?.type === BackgroundType.IMAGE && (
+              <KonvaImage
+                image={backgroundImage}
+                {...getBackgroundImageProps()}
+                opacity={scene.background?.imageOpacity || 1}
+              />
+            )}
+            
             {renderGrid()}
           </Layer>
           

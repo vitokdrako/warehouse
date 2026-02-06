@@ -5,7 +5,26 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Group, Rect, Image, Text, Transformer } from 'react-konva';
-import { getProductImageUrl } from '../../utils/imageUtils';
+
+const BACKEND_URL = 'https://backrentalhub.farforrent.com.ua';
+
+/**
+ * Отримати оптимальний URL зображення для canvas
+ * Використовуємо прямий шлях до зображень, щоб уникнути проблем з CORS та OpenCart кешем
+ */
+const getCanvasImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  
+  // Якщо вже повний URL
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // Для всіх інших шляхів - прямий доступ через backend
+  // Видаляємо початкові слеші
+  const cleanPath = imagePath.replace(/^\/+/, '');
+  return `${BACKEND_URL}/${cleanPath}`;
+};
 
 const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }) => {
   const shapeRef = useRef();
@@ -14,53 +33,61 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   
-  // Завантажуємо зображення вручну (без use-image для кращого контролю)
+  // Завантажуємо зображення з кількома fallback варіантами
   useEffect(() => {
     if (!node.imageUrl) {
       setLoading(false);
+      setError(true);
       return;
     }
     
     setLoading(true);
     setError(false);
     
-    const imageUrl = getProductImageUrl(node.imageUrl, '500x500');
-    const img = new window.Image();
+    // Спробуємо кілька варіантів URL
+    const tryUrls = [];
     
-    // Важливо для CORS
-    img.crossOrigin = 'anonymous';
+    // 1. Прямий URL через backend
+    const directUrl = getCanvasImageUrl(node.imageUrl);
+    if (directUrl) tryUrls.push(directUrl);
     
-    img.onload = () => {
-      setImage(img);
-      setLoading(false);
-    };
+    // 2. Якщо шлях починається з catalog/, спробуємо через farforrent.com.ua
+    if (node.imageUrl.includes('catalog/')) {
+      tryUrls.push(`https://www.farforrent.com.ua/image/${node.imageUrl}`);
+    }
     
-    img.onerror = () => {
-      console.error('Failed to load image:', imageUrl);
-      // Спробуємо без кешу OpenCart
-      const fallbackUrl = node.imageUrl.startsWith('http') 
-        ? node.imageUrl 
-        : `https://backrentalhub.farforrent.com.ua/${node.imageUrl}`;
-      
-      const img2 = new window.Image();
-      img2.crossOrigin = 'anonymous';
-      img2.onload = () => {
-        setImage(img2);
-        setLoading(false);
-      };
-      img2.onerror = () => {
+    // 3. Оригінальний URL як fallback
+    if (node.imageUrl.startsWith('http')) {
+      tryUrls.push(node.imageUrl);
+    }
+    
+    let currentIndex = 0;
+    
+    const tryLoadImage = () => {
+      if (currentIndex >= tryUrls.length) {
         setError(true);
         setLoading(false);
+        return;
+      }
+      
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        setImage(img);
+        setLoading(false);
+        setError(false);
       };
-      img2.src = fallbackUrl;
+      
+      img.onerror = () => {
+        currentIndex++;
+        tryLoadImage();
+      };
+      
+      img.src = tryUrls[currentIndex];
     };
     
-    img.src = imageUrl;
-    
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
+    tryLoadImage();
   }, [node.imageUrl]);
   
   // Підключити трансформер при виділенні
@@ -143,6 +170,9 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
             height={node.height - 8}
             opacity={node.opacity || 1}
             crop={getCrop()}
+            // Вимикаємо пікселізацію для якості при масштабуванні
+            imageSmoothingEnabled={true}
+            perfectDrawEnabled={false}
           />
         )}
         

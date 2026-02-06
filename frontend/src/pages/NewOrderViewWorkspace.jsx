@@ -28,6 +28,7 @@ import {
   ZoneItemsList,
   ZoneNotes,
   ZoneDocuments,
+  ZoneEventInfo,
 } from '../components/order-workspace/zones'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''

@@ -1261,6 +1261,9 @@ async def convert_to_order(
         notes_parts.append(f"Місто: {data.city}")
     
     # Подія
+    if data.event_name:
+        notes_parts.append(f"Назва події: {data.event_name}")
+    
     if data.event_type:
         event_labels = {
             'wedding': 'Весілля',
@@ -1298,6 +1301,13 @@ async def convert_to_order(
     # Підготувати event_date та event_time
     event_date = data.event_date or board[4]  # board[4] = event_date з борду
     event_time = data.event_time
+    
+    # event_location: використовуємо назву події + місце
+    event_location_text = data.event_location
+    if data.event_name and event_location_text:
+        event_location_text = f"{data.event_name} | {event_location_text}"
+    elif data.event_name:
+        event_location_text = data.event_name
     
     # Створити order в RentalHub
     # Використовуємо тільки поля які точно існують в БД

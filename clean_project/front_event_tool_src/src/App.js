@@ -755,8 +755,10 @@ const EventPlannerPage = () => {
                   <button 
                     className="w-full fd-btn fd-btn-black" 
                     style={{padding: '9px 12px', fontSize: '11px'}}
+                    onClick={() => setShowCheckoutModal(true)}
+                    disabled={!activeBoard.items || activeBoard.items.length === 0 || activeBoard.status === 'converted'}
                   >
-                    Оформити замовлення
+                    {activeBoard.status === 'converted' ? 'Замовлення оформлено' : 'Оформити замовлення'}
                   </button>
                 </div>
               </>
@@ -785,6 +787,21 @@ const EventPlannerPage = () => {
             <span className="transform rotate-90 inline-block fd-uppercase">Мудборд</span>
           </button>
         )}
+      </div>
+      
+      {/* Order Checkout Modal */}
+      {activeBoard && (
+        <OrderCheckoutModal
+          isOpen={showCheckoutModal}
+          onClose={() => setShowCheckoutModal(false)}
+          board={activeBoard}
+          items={activeBoard.items || []}
+          totalPrice={calculateBoardTotal()}
+          depositAmount={calculateBoardTotal() * 0.3}
+          rentalDays={activeBoard.rental_days || 1}
+          onSubmit={handleSubmitOrder}
+        />
+      )}
       </div>
 
       {/* New Board Modal */}

@@ -595,19 +595,36 @@ const OrderCheckoutModal = ({
                     <span style={{ color: '#666' }}>Доставка:</span>
                     <span>{DELIVERY_TYPES.find(t => t.id === deliveryType)?.label}</span>
                   </div>
+                  {eventName && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#666' }}>Назва події:</span>
+                      <span style={{ fontWeight: '500' }}>{eventName}</span>
+                    </div>
+                  )}
                   {eventType && (
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#666' }}>Подія:</span>
+                      <span style={{ color: '#666' }}>Тип події:</span>
                       <span>{EVENT_TYPES.find(t => t.id === eventType)?.label}</span>
+                    </div>
+                  )}
+                  {eventDate && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#666' }}>Дата події:</span>
+                      <span>{new Date(eventDate).toLocaleDateString('uk-UA')}</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#666' }}>Позицій:</span>
                     <span>{items?.length || 0}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#666' }}>Днів оренди:</span>
-                    <span>{rentalDays}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#666' }}>Діб оренди:</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: '600', color: '#8B0000' }}>~{rentalDays}</span>
+                      {rentalCalculation.isApproximate && (
+                        <span style={{ fontSize: '11px', color: '#92400e' }}>(приблизно)</span>
+                      )}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -619,15 +636,15 @@ const OrderCheckoutModal = ({
                 border: '1px solid #fecaca'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '14px', color: '#666' }}>Сума оренди:</span>
+                  <span style={{ fontSize: '14px', color: '#666' }}>Орієнтовна сума оренди:</span>
                   <span style={{ fontSize: '16px', fontWeight: '600' }}>
-                    ₴ {totalPrice?.toFixed(2) || '0.00'}
+                    ~₴ {totalPrice?.toFixed(0) || '0'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '14px', color: '#666' }}>Депозит (30%):</span>
+                  <span style={{ fontSize: '14px', color: '#666' }}>Орієнтовний депозит:</span>
                   <span style={{ fontSize: '14px' }}>
-                    ₴ {depositAmount?.toFixed(2) || '0.00'}
+                    ~₴ {depositAmount?.toFixed(0) || '0'}
                   </span>
                 </div>
               </div>

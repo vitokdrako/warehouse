@@ -5,7 +5,7 @@
  */
 
 import React from 'react'
-import { parseEventToolNotes } from '../../hooks/useOrderData'
+import { parseEventToolNotes } from '../../../hooks/useOrderData'
 
 const EVENT_TYPE_LABELS = {
   wedding: 'Весілля',

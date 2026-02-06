@@ -32,11 +32,12 @@ const RightPanel = ({ boardItems = [], onOpenCatalog }) => {
       image_url: product.image_url,
       rental_price: product.rental_price
     }, {
-      x: scene.width / 2 - 100,
-      y: scene.height / 2 - 100,
+      x: A4_WIDTH / 2 - 100,
+      y: A4_HEIGHT / 2 - 100,
       width: 200,
       height: 200,
-      quantity: item.quantity || 1
+      quantity: item.quantity || 1,
+      pageIndex: currentPage
     });
     addNode(node);
   };

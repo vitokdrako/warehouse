@@ -329,17 +329,105 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+    .modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+    }
+
     .modal-container {
-        padding: 20px;
+        padding: 20px 16px;
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
         max-height: 95vh;
+        border-radius: 16px 16px 0 0;
+        animation: slideUpMobile 0.3s ease;
+    }
+
+    @keyframes slideUpMobile {
+        from { 
+            opacity: 1;
+            transform: translateY(100%);
+        }
+        to { 
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-close-btn {
+        top: 15px;
+        right: 15px;
+        width: 44px;
+        height: 44px;
+        font-size: 28px;
     }
 
     .modal-title {
-        font-size: 20px;
+        font-size: 18px;
         margin-bottom: 20px;
+        padding-right: 40px;
+    }
+
+    .board-form {
+        gap: 16px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        font-size: 16px;
+        padding: 14px 15px;
+        min-height: 48px;
+    }
+
+    .form-label {
+        font-size: 11px;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .btn-secondary,
+    .btn-primary {
+        width: 100%;
+        padding: 14px 20px;
+        min-height: 48px;
     }
     
     .upload-options {
         gap: 12px;
+    }
+
+    .upload-btn {
+        padding: 12px 20px;
+        width: 100%;
+        text-align: center;
+    }
+
+    .image-remove-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 375px) {
+    .modal-container {
+        padding: 16px 14px;
+    }
+
+    .modal-title {
+        font-size: 16px;
+    }
+
+    .form-label {
+        font-size: 10px;
     }
 }

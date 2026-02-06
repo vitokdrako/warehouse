@@ -58,6 +58,7 @@ class EventBoardCreate(BaseModel):
     rental_end_date: Optional[str] = None
     notes: Optional[str] = None
     budget: Optional[float] = None
+    cover_image: Optional[str] = None
 
 class EventBoardUpdate(BaseModel):
     board_name: Optional[str] = None
@@ -831,9 +832,9 @@ async def create_board(
     
     db.execute(text("""
         INSERT INTO event_boards (id, customer_id, board_name, event_date, event_type,
-                                  rental_start_date, rental_end_date, rental_days, notes, budget, status)
+                                  rental_start_date, rental_end_date, rental_days, notes, budget, status, cover_image)
         VALUES (:id, :customer_id, :board_name, :event_date, :event_type,
-                :rental_start_date, :rental_end_date, :rental_days, :notes, :budget, 'draft')
+                :rental_start_date, :rental_end_date, :rental_days, :notes, :budget, 'draft', :cover_image)
     """), {
         "id": board_id,
         "customer_id": customer["customer_id"],
@@ -844,13 +845,31 @@ async def create_board(
         "rental_end_date": data.rental_end_date,
         "rental_days": rental_days,
         "notes": data.notes,
-        "budget": data.budget
+        "budget": data.budget,
+        "cover_image": data.cover_image
     })
     db.commit()
     
     logger.info(f"✅ Event board created: {board_id}")
     
-    return {"id": board_id, "board_name": data.board_name, "status": "draft", "items": []}
+    # Повертаємо повний об'єкт борду з усіма даними
+    return {
+        "id": board_id,
+        "customer_id": customer["customer_id"],
+        "board_name": data.board_name,
+        "event_date": data.event_date,
+        "event_type": data.event_type,
+        "rental_start_date": data.rental_start_date,
+        "rental_end_date": data.rental_end_date,
+        "rental_days": rental_days,
+        "status": "draft",
+        "notes": data.notes,
+        "budget": data.budget,
+        "estimated_total": 0,
+        "cover_image": data.cover_image,
+        "canvas_layout": None,
+        "items": []
+    }
 
 @router.get("/boards/{board_id}")
 async def get_board(

@@ -264,22 +264,25 @@ const TopBar = ({ boardName, onSave, onBack }) => {
       {/* Separator */}
       <div style={{ width: '1px', height: '24px', background: '#e0e0e0' }} />
       
-      {/* Export */}
-      <button
-        onClick={handleExportPNG}
-        style={{
-          background: 'none',
-          border: '1px solid #e0e0e0',
-          borderRadius: '4px',
-          padding: '6px 12px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}
-      >
-        Експорт PNG
-      </button>
+      {/* Export dropdown */}
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <button
+          onClick={handleExportPNG}
+          title="Експортувати як PNG (висока якість)"
+          style={{
+            background: 'none',
+            border: '1px solid #e0e0e0',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          Експорт PNG
+        </button>
+      </div>
       
       {/* Save */}
       <button

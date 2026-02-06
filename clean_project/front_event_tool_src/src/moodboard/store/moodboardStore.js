@@ -558,6 +558,13 @@ export const useMoodboardStore = create(
     },
     
     getSortedNodes: () => {
+      const { scene, currentPage } = get();
+      // Фільтруємо ноди для поточної сторінки
+      const pageNodes = scene.nodes.filter(n => n.pageIndex === currentPage);
+      return sortNodesByZIndex(pageNodes);
+    },
+    
+    getAllNodes: () => {
       return sortNodesByZIndex(get().scene.nodes);
     }
   }))

@@ -17,6 +17,9 @@ export { default as TopBar } from './components/panels/TopBar';
 export { default as LeftPanel } from './components/panels/LeftPanel';
 export { default as RightPanel } from './components/panels/RightPanel';
 
+// Inspector
+export { default as InspectorPanel } from './components/inspector/InspectorPanel';
+
 // Store
 export { default as useMoodboardStore } from './store/moodboardStore';
 

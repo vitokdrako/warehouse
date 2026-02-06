@@ -3,7 +3,7 @@ Event Tool API Routes
 Інтеграція каталогу декораторів з RentalHub
 Всі endpoints під /api/event/*
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List, Optional
@@ -12,12 +12,23 @@ from pydantic import BaseModel
 import uuid
 import logging
 import os
+import json
+from functools import lru_cache
+import time
 
 from database_rentalhub import get_rh_db
+from utils.image_helper import normalize_image_url
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/event", tags=["Event Tool"])
+
+# ============================================================================
+# CACHE для швидкої роботи
+# ============================================================================
+_categories_cache = {"data": None, "expires": 0}
+_subcategories_cache = {"data": None, "expires": 0}
+CACHE_TTL = 300  # 5 хвилин
 
 # ============================================================================
 # SCHEMAS
@@ -57,6 +68,8 @@ class EventBoardUpdate(BaseModel):
     notes: Optional[str] = None
     budget: Optional[float] = None
     status: Optional[str] = None
+    cover_image: Optional[str] = None
+    canvas_layout: Optional[dict] = None
 
 class EventBoardItemCreate(BaseModel):
     product_id: int
@@ -70,14 +83,24 @@ class EventBoardItemUpdate(BaseModel):
     section: Optional[str] = None
 
 class OrderCreate(BaseModel):
+    """Схема для створення замовлення з Ivent-tool"""
     customer_name: str
     phone: str
     delivery_address: Optional[str] = None
     city: Optional[str] = None
-    delivery_type: str = "self_pickup"
+    delivery_type: str = "self_pickup"  # self_pickup, delivery, event_delivery
     customer_comment: Optional[str] = None
-    event_type: Optional[str] = None
+    event_type: Optional[str] = None  # wedding, corporate, birthday, etc.
+    event_location: Optional[str] = None  # Місце проведення події
     guests_count: Optional[int] = None
+    # Додаткові поля для Ivent-tool
+    event_date: Optional[str] = None  # Дата події (може відрізнятися від оренди)
+    event_time: Optional[str] = None  # Час події
+    setup_required: bool = False  # Чи потрібен монтаж
+    setup_notes: Optional[str] = None  # Примітки по монтажу
+    payer_type: str = "individual"  # individual, company
+    company_name: Optional[str] = None
+    company_edrpou: Optional[str] = None
 
 # ============================================================================
 # AUTH HELPERS
@@ -85,7 +108,6 @@ class OrderCreate(BaseModel):
 
 import hashlib
 import jwt
-from datetime import timedelta
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
@@ -184,41 +206,44 @@ def init_event_tables(db: Session):
         )
     """))
     
-    # Event Boards (мудборди)
+    # Event Boards (мудборди) - БЕЗ FK для сумісності
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS event_boards (
             id VARCHAR(36) PRIMARY KEY,
             customer_id INT NOT NULL,
             board_name VARCHAR(255) NOT NULL,
-            event_date DATE,
-            event_type VARCHAR(100),
-            rental_start_date DATE,
-            rental_end_date DATE,
-            rental_days INT,
+            event_date DATE NULL,
+            event_type VARCHAR(100) NULL,
+            rental_start_date DATE NULL,
+            rental_end_date DATE NULL,
+            rental_days INT NULL,
             status VARCHAR(50) DEFAULT 'draft',
-            notes TEXT,
-            budget DECIMAL(10,2),
+            notes TEXT NULL,
+            budget DECIMAL(10,2) NULL,
             estimated_total DECIMAL(10,2) DEFAULT 0,
+            cover_image VARCHAR(500) NULL,
+            canvas_layout JSON NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            converted_to_order_id INT,
-            FOREIGN KEY (customer_id) REFERENCES event_customers(customer_id) ON DELETE CASCADE
+            converted_to_order_id INT NULL,
+            INDEX idx_event_boards_customer (customer_id),
+            INDEX idx_event_boards_status (status)
         )
     """))
     
-    # Event Board Items
+    # Event Board Items - БЕЗ FK для сумісності
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS event_board_items (
             id VARCHAR(36) PRIMARY KEY,
             board_id VARCHAR(36) NOT NULL,
             product_id INT NOT NULL,
             quantity INT DEFAULT 1,
-            notes TEXT,
-            section VARCHAR(100),
+            notes TEXT NULL,
+            section VARCHAR(100) NULL,
             position INT DEFAULT 0,
             added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (board_id) REFERENCES event_boards(id) ON DELETE CASCADE,
-            FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
+            INDEX idx_event_board_items_board (board_id),
+            INDEX idx_event_board_items_product (product_id)
         )
     """))
     
@@ -235,7 +260,7 @@ def init_event_tables(db: Session):
             customer_id INT NOT NULL,
             status VARCHAR(20) DEFAULT 'active',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (board_id) REFERENCES event_boards(id) ON DELETE CASCADE,
+            INDEX idx_soft_res_board (board_id),
             INDEX idx_soft_res_product (product_id),
             INDEX idx_soft_res_dates (reserved_from, reserved_until),
             INDEX idx_soft_res_expires (expires_at)
@@ -331,26 +356,32 @@ async def get_me(
 
 @router.get("/products")
 async def get_products(
+    response: Response,
     search: Optional[str] = None,
     category_name: Optional[str] = None,
     subcategory_name: Optional[str] = None,
+    color: Optional[str] = None,
+    date_from: Optional[str] = None,  # YYYY-MM-DD - для перевірки доступності
+    date_to: Optional[str] = None,    # YYYY-MM-DD
     skip: int = 0,
-    limit: int = 50,
+    limit: int = 500,
     db: Session = Depends(get_rh_db)
 ):
-    """Отримати каталог товарів для декораторів"""
+    """Отримати каталог товарів з перевіркою доступності на дати (як RentalHub)"""
+    
+    response.headers["Cache-Control"] = "public, max-age=30"
     
     sql = """
         SELECT product_id, sku, name, category_name, subcategory_name,
                rental_price, image_url, color, material, size,
-               quantity, frozen_quantity
+               quantity, frozen_quantity, description, price
         FROM products
         WHERE status = 1
     """
     params = {}
     
     if search:
-        sql += " AND (name LIKE :search OR sku LIKE :search)"
+        sql += " AND (name LIKE :search OR sku LIKE :search OR color LIKE :search OR material LIKE :search)"
         params["search"] = f"%{search}%"
     
     if category_name:
@@ -361,29 +392,108 @@ async def get_products(
         sql += " AND subcategory_name = :subcategory_name"
         params["subcategory_name"] = subcategory_name
     
-    sql += " ORDER BY product_id DESC LIMIT :limit OFFSET :skip"
+    if color:
+        sql += " AND color LIKE :color"
+        params["color"] = f"%{color}%"
+    
+    sql += " ORDER BY category_name, subcategory_name, name LIMIT :limit OFFSET :skip"
     params["limit"] = limit
     params["skip"] = skip
     
     result = db.execute(text(sql), params)
-    products = []
+    rows = result.fetchall()
     
-    for row in result:
-        available = max(0, (row[10] or 0) - (row[11] or 0))
+    if not rows:
+        return []
+    
+    product_ids = [row[0] for row in rows]
+    
+    # Перевірка доступності на дати (як в RentalHub каталозі)
+    reserved_dict = {}
+    in_rent_dict = {}
+    
+    if date_from and date_to:
+        # Резерви на конкретний період (перетинання дат)
+        reserved_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+            AND o.rental_start_date <= :date_to
+            AND o.rental_end_date >= :date_from
+            GROUP BY oi.product_id
+        """), {"product_ids": tuple(product_ids), "date_from": date_from, "date_to": date_to})
+        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+        
+        # В оренді на конкретний період
+        in_rent_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('issued', 'on_rent')
+            AND o.rental_start_date <= :date_to
+            AND o.rental_end_date >= :date_from
+            GROUP BY oi.product_id
+        """), {"product_ids": tuple(product_ids), "date_from": date_from, "date_to": date_to})
+        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+    else:
+        # Без дат - поточний стан
+        reserved_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+            AND o.rental_end_date >= CURDATE()
+            GROUP BY oi.product_id
+        """), {"product_ids": tuple(product_ids)})
+        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+        
+        in_rent_result = db.execute(text("""
+            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id IN :product_ids
+            AND o.status IN ('issued', 'on_rent')
+            AND o.rental_end_date >= CURDATE()
+            GROUP BY oi.product_id
+        """), {"product_ids": tuple(product_ids)})
+        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+    
+    # Побудова результату
+    products = []
+    for row in rows:
+        product_id = row[0]
+        total_qty = row[10] or 0
+        frozen_qty = row[11] or 0
+        
+        reserved = reserved_dict.get(product_id, 0)
+        in_rent = in_rent_dict.get(product_id, 0)
+        
+        # Доступно = загальна кількість - заморожено - в оренді - в резерві
+        available = max(0, total_qty - frozen_qty - in_rent - reserved)
+        
         products.append({
-            "product_id": row[0],
+            "product_id": product_id,
             "sku": row[1],
             "name": row[2],
             "category_name": row[3],
             "subcategory_name": row[4],
             "rental_price": float(row[5]) if row[5] else 0,
-            "image_url": row[6],
+            "image_url": normalize_image_url(row[6]),
             "color": row[7],
             "material": row[8],
             "size": row[9],
-            "quantity": row[10] or 0,
-            "frozen_quantity": row[11] or 0,
-            "available": available
+            "quantity": total_qty,
+            "frozen_quantity": frozen_qty,
+            "reserved": reserved,
+            "in_rent": in_rent,
+            "available": available,
+            "is_available": available > 0,
+            "description": row[12],
+            "price": float(row[13]) if row[13] else 0
         })
     
     return products
@@ -394,7 +504,7 @@ async def get_product(product_id: int, db: Session = Depends(get_rh_db)):
     result = db.execute(text("""
         SELECT product_id, sku, name, category_name, subcategory_name,
                rental_price, image_url, color, material, size, description,
-               quantity, frozen_quantity
+               quantity, frozen_quantity, price
         FROM products WHERE product_id = :id
     """), {"id": product_id})
     row = result.fetchone()
@@ -409,32 +519,124 @@ async def get_product(product_id: int, db: Session = Depends(get_rh_db)):
         "category_name": row[3],
         "subcategory_name": row[4],
         "rental_price": float(row[5]) if row[5] else 0,
-        "image_url": row[6],
+        "image_url": normalize_image_url(row[6]),
         "color": row[7],
         "material": row[8],
         "size": row[9],
         "description": row[10],
         "quantity": row[11] or 0,
         "frozen_quantity": row[12] or 0,
-        "available": max(0, (row[11] or 0) - (row[12] or 0))
+        "available": max(0, (row[11] or 0) - (row[12] or 0)),
+        "price": float(row[13]) if row[13] else 0
     }
 
 @router.get("/categories")
-async def get_categories(db: Session = Depends(get_rh_db)):
-    """Отримати унікальні категорії з товарів"""
+async def get_categories(response: Response, db: Session = Depends(get_rh_db)):
+    """
+    Отримати дерево категорій та підкатегорій з кількістю товарів (як RentalHub)
+    Повертає також кольори та матеріали для фільтрів
+    """
+    global _categories_cache
+    
+    now = time.time()
+    if _categories_cache["data"] and _categories_cache["expires"] > now:
+        response.headers["X-Cache"] = "HIT"
+        response.headers["Cache-Control"] = "public, max-age=300"
+        return _categories_cache["data"]
+    
+    response.headers["X-Cache"] = "MISS"
+    response.headers["Cache-Control"] = "public, max-age=300"
+    
+    # Отримати всі категорії з підкатегоріями та кількістю товарів
     result = db.execute(text("""
-        SELECT DISTINCT category_name 
-        FROM products 
-        WHERE status = 1 AND category_name IS NOT NULL AND category_name != ''
-        ORDER BY category_name
+        SELECT 
+            p.category_name,
+            p.subcategory_name,
+            COUNT(DISTINCT p.product_id) as product_count,
+            SUM(p.quantity) as total_qty
+        FROM products p
+        WHERE p.status = 1 AND p.category_name IS NOT NULL AND p.category_name != ''
+        GROUP BY p.category_name, p.subcategory_name
+        ORDER BY p.category_name, p.subcategory_name
     """))
-    return [{"name": row[0]} for row in result]
+    
+    categories_map = {}
+    for row in result:
+        cat_name = row[0] or "Без категорії"
+        subcat_name = row[1]
+        count = row[2]
+        qty = row[3] or 0
+        
+        if cat_name not in categories_map:
+            categories_map[cat_name] = {
+                "name": cat_name,
+                "product_count": 0,
+                "total_qty": 0,
+                "subcategories": []
+            }
+        
+        categories_map[cat_name]["product_count"] += count
+        categories_map[cat_name]["total_qty"] += qty
+        
+        if subcat_name:
+            categories_map[cat_name]["subcategories"].append({
+                "name": subcat_name,
+                "product_count": count,
+                "total_qty": qty
+            })
+    
+    # Отримати унікальні кольори (розбиваємо комбінації на окремі базові)
+    colors_result = db.execute(text("""
+        SELECT DISTINCT color FROM products 
+        WHERE status = 1 AND color IS NOT NULL AND color != ''
+    """))
+    
+    # Розбиваємо комбінації типу "білий, золотий" на окремі кольори
+    colors_set = set()
+    for row in colors_result:
+        if row[0]:
+            # Розбиваємо по комі і нормалізуємо
+            for color in row[0].split(','):
+                color = color.strip().lower()
+                if color:
+                    colors_set.add(color)
+    
+    # Сортуємо українською
+    colors = sorted(list(colors_set), key=lambda x: x.lower())
+    
+    # Отримати унікальні матеріали (так само розбиваємо)
+    materials_result = db.execute(text("""
+        SELECT DISTINCT material FROM products 
+        WHERE status = 1 AND material IS NOT NULL AND material != ''
+    """))
+    
+    materials_set = set()
+    for row in materials_result:
+        if row[0]:
+            for material in row[0].split(','):
+                material = material.strip().lower()
+                if material:
+                    materials_set.add(material)
+    
+    materials = sorted(list(materials_set), key=lambda x: x.lower())
+    
+    data = {
+        "categories": list(categories_map.values()),
+        "colors": colors,
+        "materials": materials
+    }
+    
+    # Зберегти в кеш
+    _categories_cache = {"data": data, "expires": now + CACHE_TTL}
+    return data
 
 @router.get("/subcategories")
-async def get_subcategories(category_name: Optional[str] = None, db: Session = Depends(get_rh_db)):
-    """Отримати підкатегорії"""
+async def get_subcategories(response: Response, category_name: Optional[str] = None, db: Session = Depends(get_rh_db)):
+    """Отримати підкатегорії для конкретної категорії"""
+    response.headers["Cache-Control"] = "public, max-age=300"
+    
     sql = """
-        SELECT DISTINCT category_name, subcategory_name 
+        SELECT subcategory_name, COUNT(*) as product_count, SUM(quantity) as total_qty
         FROM products 
         WHERE status = 1 AND subcategory_name IS NOT NULL AND subcategory_name != ''
     """
@@ -444,19 +646,85 @@ async def get_subcategories(category_name: Optional[str] = None, db: Session = D
         sql += " AND category_name = :category_name"
         params["category_name"] = category_name
     
-    sql += " ORDER BY category_name, subcategory_name"
+    sql += " GROUP BY subcategory_name ORDER BY subcategory_name"
     
     result = db.execute(text(sql), params)
+    return [{"name": row[0], "product_count": row[1], "total_qty": row[2] or 0} for row in result]
+
+# ============================================================================
+# AVAILABILITY CHECK
+# ============================================================================
+
+class AvailabilityCheck(BaseModel):
+    product_id: int
+    quantity: int
+    reserved_from: str
+    reserved_until: str
+
+@router.post("/products/check-availability")
+async def check_availability(data: AvailabilityCheck, db: Session = Depends(get_rh_db)):
+    """Перевірити доступність товару на вказані дати"""
     
-    if category_name:
-        return {"category": category_name, "subcategories": [row[1] for row in result]}
-    else:
-        categories = {}
-        for row in result:
-            if row[0] not in categories:
-                categories[row[0]] = []
-            categories[row[0]].append(row[1])
-        return [{"category": k, "subcategories": v} for k, v in categories.items()]
+    # Отримати інформацію про товар
+    product_result = db.execute(text("""
+        SELECT product_id, name, quantity, frozen_quantity
+        FROM products WHERE product_id = :id AND status = 1
+    """), {"id": data.product_id})
+    product = product_result.fetchone()
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    total_quantity = product[2] or 0
+    frozen_quantity = product[3] or 0
+    base_available = total_quantity - frozen_quantity
+    
+    # Перевірити перетин з існуючими замовленнями
+    reserved_result = db.execute(text("""
+        SELECT COALESCE(SUM(oi.quantity), 0) as reserved_qty
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.order_id
+        WHERE oi.product_id = :product_id
+        AND o.status NOT IN ('cancelled', 'returned', 'completed')
+        AND o.rental_start_date <= :end_date
+        AND o.rental_end_date >= :start_date
+    """), {
+        "product_id": data.product_id,
+        "start_date": data.reserved_from,
+        "end_date": data.reserved_until
+    })
+    reserved_qty = reserved_result.fetchone()[0] or 0
+    
+    # Перевірити soft reservations з інших бордів
+    soft_reserved_result = db.execute(text("""
+        SELECT COALESCE(SUM(quantity), 0) as soft_reserved
+        FROM event_soft_reservations
+        WHERE product_id = :product_id
+        AND status = 'active'
+        AND expires_at > NOW()
+        AND reserved_from <= :end_date
+        AND reserved_until >= :start_date
+    """), {
+        "product_id": data.product_id,
+        "start_date": data.reserved_from,
+        "end_date": data.reserved_until
+    })
+    soft_reserved = soft_reserved_result.fetchone()[0] or 0
+    
+    available_for_dates = base_available - reserved_qty - soft_reserved
+    is_available = available_for_dates >= data.quantity
+    
+    return {
+        "product_id": data.product_id,
+        "requested_quantity": data.quantity,
+        "total_quantity": total_quantity,
+        "reserved_quantity": int(reserved_qty),
+        "soft_reserved": int(soft_reserved),
+        "available": max(0, available_for_dates),
+        "is_available": is_available,
+        "reserved_from": data.reserved_from,
+        "reserved_until": data.reserved_until
+    }
 
 # ============================================================================
 # EVENT BOARDS ENDPOINTS
@@ -471,7 +739,13 @@ async def get_boards(
     """Отримати мудборди декоратора"""
     customer = get_current_customer(token, db)
     
-    sql = "SELECT * FROM event_boards WHERE customer_id = :customer_id"
+    sql = """
+        SELECT id, customer_id, board_name, event_date, event_type,
+               rental_start_date, rental_end_date, rental_days, status,
+               notes, budget, estimated_total, cover_image, canvas_layout,
+               created_at, updated_at, converted_to_order_id
+        FROM event_boards WHERE customer_id = :customer_id
+    """
     params = {"customer_id": customer["customer_id"]}
     
     if status:
@@ -497,14 +771,18 @@ async def get_boards(
             "notes": row[9],
             "budget": float(row[10]) if row[10] else None,
             "estimated_total": float(row[11]) if row[11] else 0,
-            "created_at": row[12].isoformat() if row[12] else None,
-            "updated_at": row[13].isoformat() if row[13] else None,
-            "converted_to_order_id": row[14]
+            "cover_image": row[12],
+            "canvas_layout": row[13],
+            "created_at": row[14].isoformat() if row[14] else None,
+            "updated_at": row[15].isoformat() if row[15] else None,
+            "converted_to_order_id": row[16]
         }
         
         # Завантажити items
         items_result = db.execute(text("""
-            SELECT ebi.*, p.sku, p.name, p.rental_price, p.image_url
+            SELECT ebi.id, ebi.board_id, ebi.product_id, ebi.quantity, ebi.notes, 
+                   ebi.section, ebi.position, ebi.added_at,
+                   p.sku, p.name, p.rental_price, p.image_url, p.color, p.material
             FROM event_board_items ebi
             JOIN products p ON ebi.product_id = p.product_id
             WHERE ebi.board_id = :board_id
@@ -524,7 +802,9 @@ async def get_boards(
                 "sku": item[8],
                 "name": item[9],
                 "rental_price": float(item[10]) if item[10] else 0,
-                "image_url": item[11]
+                "image_url": normalize_image_url(item[11]),
+                "color": item[12],
+                "material": item[13]
             }
         } for item in items_result]
         
@@ -581,7 +861,11 @@ async def get_board(
     customer = get_current_customer(token, db)
     
     result = db.execute(text("""
-        SELECT * FROM event_boards WHERE id = :id AND customer_id = :customer_id
+        SELECT id, customer_id, board_name, event_date, event_type,
+               rental_start_date, rental_end_date, rental_days, status,
+               notes, budget, estimated_total, cover_image, canvas_layout,
+               created_at, updated_at, converted_to_order_id
+        FROM event_boards WHERE id = :id AND customer_id = :customer_id
     """), {"id": board_id, "customer_id": customer["customer_id"]})
     row = result.fetchone()
     
@@ -601,14 +885,18 @@ async def get_board(
         "notes": row[9],
         "budget": float(row[10]) if row[10] else None,
         "estimated_total": float(row[11]) if row[11] else 0,
-        "created_at": row[12].isoformat() if row[12] else None,
-        "updated_at": row[13].isoformat() if row[13] else None,
-        "converted_to_order_id": row[14]
+        "cover_image": row[12],
+        "canvas_layout": row[13],
+        "created_at": row[14].isoformat() if row[14] else None,
+        "updated_at": row[15].isoformat() if row[15] else None,
+        "converted_to_order_id": row[16]
     }
     
-    # Items
+    # Items з повною інформацією про товар
     items_result = db.execute(text("""
-        SELECT ebi.*, p.sku, p.name, p.rental_price, p.image_url
+        SELECT ebi.id, ebi.board_id, ebi.product_id, ebi.quantity, ebi.notes, 
+               ebi.section, ebi.position, ebi.added_at,
+               p.sku, p.name, p.rental_price, p.image_url, p.color, p.material
         FROM event_board_items ebi
         JOIN products p ON ebi.product_id = p.product_id
         WHERE ebi.board_id = :board_id
@@ -628,7 +916,9 @@ async def get_board(
             "sku": item[8],
             "name": item[9],
             "rental_price": float(item[10]) if item[10] else 0,
-            "image_url": item[11]
+            "image_url": normalize_image_url(item[11]),
+            "color": item[12],
+            "material": item[13]
         }
     } for item in items_result]
     
@@ -679,13 +969,23 @@ async def update_board(
     if data.status is not None:
         updates.append("status = :status")
         params["status"] = data.status
+    if data.cover_image is not None:
+        updates.append("cover_image = :cover_image")
+        params["cover_image"] = data.cover_image
+    if data.canvas_layout is not None:
+        updates.append("canvas_layout = :canvas_layout")
+        params["canvas_layout"] = json.dumps(data.canvas_layout)
+    
+    # Перерахувати rental_days якщо оновлені дати
+    if data.rental_start_date is not None or data.rental_end_date is not None:
+        updates.append("rental_days = DATEDIFF(COALESCE(:rental_end_date, rental_end_date), COALESCE(:rental_start_date, rental_start_date)) + 1")
     
     if updates:
         sql = f"UPDATE event_boards SET {', '.join(updates)}, updated_at = NOW() WHERE id = :id"
         db.execute(text(sql), params)
         db.commit()
     
-    return await get_board(board_id, token, db)
+    return await get_board(board_id, db=db, token=token)
 
 @router.delete("/boards/{board_id}")
 async def delete_board(
@@ -891,7 +1191,13 @@ async def convert_to_order(
     db: Session = Depends(get_rh_db),
     token: str = Depends(get_token_from_header)
 ):
-    """Конвертувати мудборд у замовлення RentalHub"""
+    """
+    Конвертувати мудборд у замовлення RentalHub
+    
+    Замовлення з Ivent-tool мають префікс #IT-XXXX для розрізнення від:
+    - #OC-XXXX - замовлення з OpenCart (старий сайт)
+    - #ORD-XXXX - замовлення створені вручну в RentalHub
+    """
     customer = get_current_customer(token, db)
     
     # Отримати board
@@ -911,7 +1217,7 @@ async def convert_to_order(
     
     # Отримати items
     items_result = db.execute(text("""
-        SELECT ebi.product_id, ebi.quantity, p.rental_price, p.name, p.image_url
+        SELECT ebi.product_id, ebi.quantity, p.rental_price, p.name, p.image_url, p.sku
         FROM event_board_items ebi
         JOIN products p ON ebi.product_id = p.product_id
         WHERE ebi.board_id = :board_id
@@ -924,35 +1230,78 @@ async def convert_to_order(
     # Розрахувати total
     rental_days = board[7] or 1
     total_price = sum(float(item[2] or 0) * item[1] * rental_days for item in items)
-    deposit_amount = total_price * 0.3
+    deposit_amount = total_price * 0.3  # 30% депозит
     
-    # Генерувати order_number
+    # Генерувати order_number з префіксом IT- для Ivent-tool
     max_id_result = db.execute(text("SELECT MAX(order_id) FROM orders"))
     max_id = max_id_result.fetchone()[0] or 0
     new_order_id = max_id + 1
-    order_number = f"OC-{new_order_id}"
+    order_number = f"IT-{new_order_id}"  # IT = Ivent-Tool
     
-    # Створити order в RentalHub
+    # Підготувати notes з усією додатковою інформацією
+    notes_parts = []
+    if data.customer_comment:
+        notes_parts.append(f"Коментар клієнта: {data.customer_comment}")
+    if data.event_type:
+        notes_parts.append(f"Тип події: {data.event_type}")
+    if data.event_location:
+        notes_parts.append(f"Місце події: {data.event_location}")
+    if data.guests_count:
+        notes_parts.append(f"Кількість гостей: {data.guests_count}")
+    if data.setup_required:
+        notes_parts.append(f"Потрібен монтаж: Так")
+        if data.setup_notes:
+            notes_parts.append(f"Монтаж: {data.setup_notes}")
+    if data.payer_type == "company" and data.company_name:
+        notes_parts.append(f"Платник: {data.company_name}")
+        if data.company_edrpou:
+            notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
+    
+    notes_text = "\n".join(notes_parts) if notes_parts else None
+    
+    # Підготувати event_date та event_time
+    event_date = data.event_date or board[4]  # board[4] = event_date з борду
+    event_time = data.event_time
+    
+    # Створити order в RentalHub з усіма полями
     db.execute(text("""
-        INSERT INTO orders (order_id, order_number, status, rental_start_date, rental_end_date,
-                           total_price, deposit_amount, customer_name, customer_phone, customer_email,
-                           delivery_address, delivery_type, notes, source, created_at)
-        VALUES (:order_id, :order_number, 'awaiting_customer', :start_date, :end_date,
-                :total_price, :deposit_amount, :customer_name, :phone, :email,
-                :delivery_address, :delivery_type, :notes, 'event_tool', NOW())
+        INSERT INTO orders (
+            order_id, order_number, status, 
+            rental_start_date, rental_end_date, rental_days,
+            event_date, event_time, event_location,
+            total_price, deposit_amount, 
+            customer_name, customer_phone, customer_email,
+            delivery_address, delivery_type, 
+            notes, source, 
+            created_at
+        )
+        VALUES (
+            :order_id, :order_number, 'awaiting_customer', 
+            :start_date, :end_date, :rental_days,
+            :event_date, :event_time, :event_location,
+            :total_price, :deposit_amount, 
+            :customer_name, :phone, :email,
+            :delivery_address, :delivery_type, 
+            :notes, 'event_tool', 
+            NOW()
+        )
     """), {
         "order_id": new_order_id,
         "order_number": order_number,
         "start_date": board[5],
         "end_date": board[6],
+        "rental_days": rental_days,
+        "event_date": event_date,
+        "event_time": event_time,
+        "event_location": data.event_location,
         "total_price": total_price,
         "deposit_amount": deposit_amount,
         "customer_name": data.customer_name,
         "phone": data.phone,
         "email": customer["email"],
-        "delivery_address": data.delivery_address,
+        "delivery_address": data.delivery_address or data.city,
         "delivery_type": data.delivery_type,
-        "notes": data.customer_comment
+        "notes": notes_text
     })
     
     # Створити order_items
@@ -970,6 +1319,34 @@ async def convert_to_order(
             "image_url": item[4]
         })
     
+    # Записати в order_internal_notes якщо є коментар клієнта (як в sync з OpenCart)
+    if data.customer_comment:
+        try:
+            db.execute(text("""
+                INSERT INTO order_internal_notes 
+                (order_id, user_id, user_name, message, created_at)
+                VALUES (:order_id, NULL, :user_name, :message, NOW())
+            """), {
+                "order_id": new_order_id,
+                "user_name": "💬 Коментар клієнта (Ivent-tool)",
+                "message": data.customer_comment
+            })
+        except Exception as e:
+            logger.warning(f"Could not save internal note: {e}")
+    
+    # Записати в order_lifecycle
+    try:
+        db.execute(text("""
+            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+            VALUES (:order_id, 'created', :notes, :created_by, NOW())
+        """), {
+            "order_id": new_order_id,
+            "notes": f"Замовлення створено з Ivent-tool (мудборд: {board[2]})",
+            "created_by": f"{customer['firstname']} {customer.get('lastname', '')} (декоратор)"
+        })
+    except Exception as e:
+        logger.warning(f"Could not save lifecycle: {e}")
+    
     # Видалити soft reservations
     db.execute(text("DELETE FROM event_soft_reservations WHERE board_id = :board_id"), {"board_id": board_id})
     
@@ -981,15 +1358,18 @@ async def convert_to_order(
     
     db.commit()
     
-    logger.info(f"✅ Board {board_id} converted to order {order_number}")
+    logger.info(f"✅ Board {board_id} converted to order {order_number} (Ivent-tool)")
     
     return {
         "order_id": new_order_id,
         "order_number": order_number,
         "total_price": total_price,
         "deposit_amount": deposit_amount,
+        "rental_days": rental_days,
+        "items_count": len(items),
         "status": "awaiting_customer",
-        "message": "Order created successfully"
+        "source": "event_tool",
+        "message": f"Замовлення {order_number} успішно створено!"
     }
 
 # ============================================================================

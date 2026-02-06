@@ -91,10 +91,11 @@ class OrderCreate(BaseModel):
     delivery_type: str = "self_pickup"  # self_pickup, delivery, event_delivery
     customer_comment: Optional[str] = None
     event_type: Optional[str] = None  # wedding, corporate, birthday, etc.
+    event_name: Optional[str] = None  # Назва події (наприклад: "Весілля Олени та Максима")
     event_location: Optional[str] = None  # Місце проведення події
     guests_count: Optional[int] = None
     # Додаткові поля для Ivent-tool
-    event_date: Optional[str] = None  # Дата події (може відрізнятися від оренди)
+    event_date: Optional[str] = None  # Дата події (інформативна, може відрізнятися від оренди)
     event_time: Optional[str] = None  # Час події
     setup_required: bool = False  # Чи потрібен монтаж
     setup_notes: Optional[str] = None  # Примітки по монтажу

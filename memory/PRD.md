@@ -1,111 +1,99 @@
-# RentalHub + Ivent-tool PRD
+# RentalHub + Ivent-tool Project PRD
 
 ## Original Problem Statement
-Інтеграція публічного каталогу декору (Ivent-tool) з адміністративною панеллю RentalHub. Створення візуального мудборд-редактора для декораторів та функціоналу відправки замовлень до RentalHub.
+The user's initial request was to enhance the "Damage Hub" and integrate an existing public-facing decorator catalog application, "Ivent-tool," into the main RentalHub system.
 
-## User's Preferred Language
-Українська
-
----
+## Project Architecture
+```
+/app/
+├── backend/                  # Main backend (synced with clean_project/backend)
+│   ├── routes/
+│   │   └── event_tool.py     # Event Tool API routes
+│   └── server.py
+├── clean_project/
+│   ├── backend/              # Source of truth for backend code
+│   └── front_event_tool_src/ # Source of truth for Ivent-tool frontend
+│       └── src/
+│           ├── components/   # React components
+│           ├── moodboard/    # Konva.js moodboard feature
+│           ├── styles/       # CSS including mobile.css
+│           └── utils/
+└── frontend/                 # RentalHub Admin Panel frontend
+```
 
 ## What's Been Implemented
 
-### 2025-02-06: Complete Moodboard + Order System + Workspace Unification
+### December 2025 Session:
 
-**Moodboard Features (Complete)**
-- ✅ Drag & Drop Products
-- ✅ Image Rendering (CORS fixed)
-- ✅ Text Elements
-- ✅ Transform (resize/rotate)
-- ✅ Layer Management (LayersPanel)
-- ✅ Layout Templates (TemplatesPanel)
-- ✅ Background Colors + Images
-- ✅ Canvas Size Presets (A4, Square, Instagram)
-- ✅ Export: PNG, JPG, PDF
-- ✅ Undo/Redo, Zoom/Pan, Grid
+#### 1. Mobile Optimization (COMPLETED)
+- Created comprehensive mobile stylesheet (`/app/clean_project/front_event_tool_src/src/styles/mobile.css`)
+- Responsive header with mobile menu icons
+- Mobile-first product grid (2 columns on phones)
+- Full-screen side panel overlay on mobile with dark backdrop
+- Floating cart button on mobile
+- Touch-optimized buttons (min 44px touch targets)
+- iOS-specific fixes (font-size 16px to prevent zoom)
+- Mobile-friendly modals (bottom sheet style)
 
-**Order Submission (Complete)**
-- ✅ 4-step checkout wizard (OrderCheckoutModal)
-- ✅ #IT-XXXX prefix for Ivent-tool orders
-- ✅ Rental days calculator with FarForRent rules
-- ✅ Event info (name, type, location, date)
-- ✅ Delivery options, setup notes, company details
+#### 2. Date Bug Fix (COMPLETED)
+- Fixed backend `POST /api/event/boards` endpoint to return full board object
+- Previously only returned `{id, board_name, status, items}` - missing dates
+- Now returns complete board with `rental_start_date`, `rental_end_date`, `rental_days`, etc.
+- Added `cover_image` to `EventBoardCreate` schema
 
-**Workspace Unification (Complete)**
-- ✅ Badge "Ivent-tool" for IT- orders in WorkspaceHeader
-- ✅ ZoneEventInfo component - shows event details for IT- orders
-- ✅ useOrderData hook - unified order loading
-- ✅ parseEventToolNotes - parses structured notes
+### Previous Sessions:
 
----
+#### Moodboard MVP
+- Konva.js canvas rendering with Zustand state management
+- Inspector panel for editing nodes
+- Layers panel and layout templates
+- PNG/PDF export (currently affected by CORS workaround)
+- Custom background images
 
-## Architecture
+#### Ivent-tool Order Submission
+- Full checkout flow (`OrderCheckoutModal.jsx`)
+- Backend order creation with `#IT-` prefix
+- Custom rental day calculations
+- Integration with RentalHub orders table
 
-```
-/app/
-├── backend/                    # FastAPI (shared)
-│   └── routes/
-│       ├── event_tool.py      # Ivent-tool API
-│       ├── orders.py          # Orders API
-│       └── catalog.py         # Catalog API
-│
-├── frontend/                   # RentalHub Admin (port 3000)
-│   └── src/
-│       ├── hooks/
-│       │   └── useOrderData.js  # Unified order hook (NEW)
-│       ├── components/
-│       │   └── order-workspace/
-│       │       ├── WorkspaceHeader.jsx (IT- badge)
-│       │       └── zones/
-│       │           └── ZoneEventInfo.jsx (NEW)
-│       └── pages/
-│           ├── NewOrderViewWorkspace.jsx
-│           └── IssueCardWorkspace.jsx
-│
-└── clean_project/
-    ├── front_event_tool_src/  # Ivent-tool React source
-    │   └── src/
-    │       ├── moodboard/     # Konva.js + Zustand
-    │       │   ├── components/
-    │       │   │   ├── canvas/ (CanvasStage + background images)
-    │       │   │   ├── panels/ (TopBar, LeftPanel, LayersPanel, TemplatesPanel)
-    │       │   │   └── inspector/
-    │       │   └── store/
-    │       ├── components/
-    │       │   └── OrderCheckoutModal.jsx
-    │       └── utils/
-    │           └── rentalDaysCalculator.js
-    │
-    └── front_event_tool/      # Production build
-```
+#### Bug Fixes
+- CORS fix for user registration (`allow_origins=["*"]`)
+- User registration flow working
 
----
+## Known Issues
 
-## P0 Pending Issues
-- None
+### P0 - Moodboard Export
+**Status:** BLOCKED - awaiting user to deploy backend CORS fix to production
+**Details:** Images render but export fails due to canvas tainting. Once backend is deployed, need to re-add `crossOrigin="anonymous"` in `DecorItemNode.jsx`.
 
-## P1 Upcoming Tasks
-- [ ] Test on production (events.farforrent.com.ua)
-- [ ] Calendar timezone bug (recurring)
+### P1 - Calendar Timezone Bug
+**Status:** NOT STARTED
+**Recurrence:** 4+ times reported
 
-## P2 Future Tasks
-- [ ] Full RBAC implementation
-- [ ] Monthly Financial Reports
-
-## P3 Backlog
-- [ ] Digital Signature Integration
-
----
-
-## Dependencies Added
-- `jspdf` - PDF generation
-- `konva`, `react-konva` - Canvas rendering
-- `zustand` - State management
-
-## Production URLs
-- Ivent-tool: events.farforrent.com.ua
-- Backend: backrentalhub.farforrent.com.ua
+## Key API Endpoints
+- `POST /api/event/boards` - Create moodboard (NOW returns full board object)
+- `PATCH /api/event/boards/{board_id}` - Update board dates/info
+- `POST /api/event/boards/{board_id}/convert-to-order` - Create RentalHub order
+- `POST /api/event/auth/register` - User registration
 
 ## Test Credentials
-- RentalHub: vitokdrako@gmail.com / test123
-- Ivent-tool: test@decorator.com / test123
+- **RentalHub Admin:** vitokdrako@gmail.com / test123
+- **Ivent-tool Decorator:** test@decorator.com / test123
+
+## Upcoming Tasks
+1. Complete workspace unification (NewOrderViewWorkspace + IssueCardWorkspace)
+2. Fix moodboard export after CORS deployment
+3. Calendar timezone bug fix
+4. Role-Based Access Control (RBAC)
+5. Monthly Financial Report
+6. Digital Signature Integration
+
+## Files Modified This Session
+- `/app/clean_project/backend/routes/event_tool.py` - Fixed board creation response
+- `/app/clean_project/front_event_tool_src/src/App.js` - Mobile responsive layout
+- `/app/clean_project/front_event_tool_src/src/index.css` - Added mobile.css import
+- `/app/clean_project/front_event_tool_src/src/styles/mobile.css` - NEW: Comprehensive mobile styles
+- `/app/clean_project/front_event_tool_src/src/components/ProductCard.css` - Mobile responsive
+- `/app/clean_project/front_event_tool_src/src/components/BoardItemCard.css` - Mobile responsive
+- `/app/clean_project/front_event_tool_src/src/components/CreateBoardModal.css` - Mobile responsive
+- `/app/clean_project/front_event_tool_src/src/components/OrderCheckoutModal.jsx` - Mobile responsive

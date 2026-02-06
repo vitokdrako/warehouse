@@ -401,7 +401,7 @@ const CanvasStage = () => {
       </div>
       
       {/* Page thumbnails */}
-      {totalPages > 1 && (
+      {totalPages > 1 && !isMobile && (
         <div style={{
           display: 'flex',
           gap: '12px',
@@ -459,14 +459,16 @@ const CanvasStage = () => {
       )}
       
       {/* Format info */}
-      <div style={{
-        marginTop: '12px',
-        fontSize: '11px',
-        color: '#999',
-        textAlign: 'center'
-      }}>
-        Формат A4 (210 × 297 мм) • {A4_WIDTH} × {A4_HEIGHT} px
-      </div>
+      {!isMobile && (
+        <div style={{
+          marginTop: '12px',
+          fontSize: '11px',
+          color: '#999',
+          textAlign: 'center'
+        }}>
+          Формат A4 (210 × 297 мм) • {A4_WIDTH} × {A4_HEIGHT} px
+        </div>
+      )}
     </div>
   );
 };

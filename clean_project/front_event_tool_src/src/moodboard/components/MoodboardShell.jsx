@@ -3,11 +3,12 @@
  * Головний контейнер мудборду
  */
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import useMoodboardStore from '../store/moodboardStore';
 import TopBar from './panels/TopBar';
 import LeftPanel from './panels/LeftPanel';
 import RightPanel from './panels/RightPanel';
+import InspectorPanel from './inspector/InspectorPanel';
 import CanvasStage from './canvas/CanvasStage';
 import { createDecorItemNode } from '../domain/moodboard.types';
 

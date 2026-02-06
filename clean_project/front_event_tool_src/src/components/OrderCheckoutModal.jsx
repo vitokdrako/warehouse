@@ -155,34 +155,34 @@ const OrderCheckoutModal = ({
       bottom: 0,
       background: 'rgba(0,0,0,0.5)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-end',
       justifyContent: 'center',
       zIndex: 10000,
-      padding: '20px'
-    }}>
+      padding: '0'
+    }} className="checkout-modal-overlay">
       <div style={{
         background: '#fff',
-        borderRadius: '16px',
+        borderRadius: '16px 16px 0 0',
         width: '100%',
         maxWidth: '560px',
-        maxHeight: '90vh',
+        maxHeight: '95vh',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column'
-      }}>
+      }} className="checkout-modal-container">
         {/* Header */}
         <div style={{
-          padding: '20px 24px',
+          padding: '16px 20px',
           borderBottom: '1px solid #f0f0f0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>
               Оформлення замовлення
             </h2>
-            <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
               Крок {step} з 4
             </div>
           </div>
@@ -191,10 +191,15 @@ const OrderCheckoutModal = ({
             style={{
               background: 'none',
               border: 'none',
-              fontSize: '24px',
+              fontSize: '28px',
               cursor: 'pointer',
               color: '#999',
-              padding: '4px'
+              padding: '8px',
+              minWidth: '44px',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             ×
@@ -202,11 +207,11 @@ const OrderCheckoutModal = ({
         </div>
         
         {/* Progress bar */}
-        <div style={{ padding: '0 24px' }}>
+        <div style={{ padding: '0 20px' }}>
           <div style={{
             display: 'flex',
             gap: '4px',
-            marginTop: '16px'
+            marginTop: '12px'
           }}>
             {[1, 2, 3, 4].map(s => (
               <div
@@ -224,10 +229,10 @@ const OrderCheckoutModal = ({
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            fontSize: '11px',
+            fontSize: '10px',
             color: '#999',
-            marginTop: '8px',
-            marginBottom: '16px'
+            marginTop: '6px',
+            marginBottom: '12px'
           }}>
             <span style={{ color: step >= 1 ? '#8B0000' : '#999' }}>Контакти</span>
             <span style={{ color: step >= 2 ? '#8B0000' : '#999' }}>Доставка</span>
@@ -237,7 +242,7 @@ const OrderCheckoutModal = ({
         </div>
         
         {/* Content */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '0 20px 20px', WebkitOverflowScrolling: 'touch' }}>
           {/* Step 1: Contacts */}
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

@@ -221,19 +221,22 @@ const CanvasStage = () => {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '20px'
+        padding: isMobile ? '12px' : '20px',
+        WebkitOverflowScrolling: 'touch'
       }}
     >
       {/* Page Navigation */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
-        marginBottom: '16px',
-        padding: '10px 20px',
+        gap: isMobile ? '6px' : '12px',
+        marginBottom: isMobile ? '12px' : '16px',
+        padding: isMobile ? '8px 12px' : '10px 20px',
         background: '#fff',
         borderRadius: '8px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        flexWrap: isMobile ? 'wrap' : 'nowrap',
+        justifyContent: 'center'
       }}>
         <button
           onClick={() => setCurrentPage(currentPage - 1)}
@@ -242,23 +245,22 @@ const CanvasStage = () => {
             background: currentPage === 0 ? '#f0f0f0' : '#fff',
             border: '1px solid #ddd',
             borderRadius: '4px',
-            padding: '6px 12px',
+            padding: isMobile ? '6px 10px' : '6px 12px',
             cursor: currentPage === 0 ? 'not-allowed' : 'pointer',
-            opacity: currentPage === 0 ? 0.5 : 1
+            opacity: currentPage === 0 ? 0.5 : 1,
+            fontSize: isMobile ? '12px' : '14px'
           }}
         >
-          ← Попередня
+          ←{!isMobile && ' Попередня'}
         </button>
         
         <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '8px',
-          padding: '0 12px'
+          padding: '0 8px',
+          fontSize: isMobile ? '12px' : '14px',
+          fontWeight: '500',
+          whiteSpace: 'nowrap'
         }}>
-          <span style={{ fontWeight: '500', fontSize: '14px' }}>
-            Сторінка {currentPage + 1} з {totalPages}
-          </span>
+          {currentPage + 1} / {totalPages}
         </div>
         
         <button
@@ -268,15 +270,18 @@ const CanvasStage = () => {
             background: currentPage >= totalPages - 1 ? '#f0f0f0' : '#fff',
             border: '1px solid #ddd',
             borderRadius: '4px',
-            padding: '6px 12px',
+            padding: isMobile ? '6px 10px' : '6px 12px',
             cursor: currentPage >= totalPages - 1 ? 'not-allowed' : 'pointer',
-            opacity: currentPage >= totalPages - 1 ? 0.5 : 1
+            opacity: currentPage >= totalPages - 1 ? 0.5 : 1,
+            fontSize: isMobile ? '12px' : '14px'
           }}
         >
-          Наступна →
+          {!isMobile && 'Наступна '}→
         </button>
         
-        <div style={{ width: '1px', height: '24px', background: '#ddd', margin: '0 4px' }} />
+        {!isMobile && (
+          <div style={{ width: '1px', height: '24px', background: '#ddd', margin: '0 4px' }} />
+        )}
         
         <button
           onClick={addPage}
@@ -285,18 +290,19 @@ const CanvasStage = () => {
             color: '#fff',
             border: 'none',
             borderRadius: '4px',
-            padding: '6px 12px',
+            padding: isMobile ? '6px 10px' : '6px 12px',
             cursor: 'pointer',
-            fontWeight: '500'
+            fontWeight: '500',
+            fontSize: isMobile ? '11px' : '13px'
           }}
         >
-          + Додати сторінку
+          + {isMobile ? 'Стор.' : 'Додати сторінку'}
         </button>
         
         {totalPages > 1 && (
           <button
             onClick={() => {
-              if (window.confirm(`Видалити сторінку ${currentPage + 1}? Всі елементи на ній будуть втрачені.`)) {
+              if (window.confirm(`Видалити сторінку ${currentPage + 1}?`)) {
                 removePage(currentPage);
               }
             }}
@@ -305,11 +311,12 @@ const CanvasStage = () => {
               color: '#c00',
               border: '1px solid #c00',
               borderRadius: '4px',
-              padding: '6px 12px',
-              cursor: 'pointer'
+              padding: isMobile ? '6px 10px' : '6px 12px',
+              cursor: 'pointer',
+              fontSize: isMobile ? '11px' : '13px'
             }}
           >
-            Видалити
+            {isMobile ? '✕' : 'Видалити'}
           </button>
         )}
       </div>

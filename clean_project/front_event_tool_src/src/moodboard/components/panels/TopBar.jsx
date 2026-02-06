@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { jsPDF } from 'jspdf';
 import useMoodboardStore from '../../store/moodboardStore';
+import { A4_WIDTH, A4_HEIGHT } from '../../domain/moodboard.types';
 
 const TopBar = ({ boardName, onSave, onBack }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -23,10 +24,13 @@ const TopBar = ({ boardName, onSave, onBack }) => {
     canUndo,
     canRedo,
     isDirty,
-    isSaving
+    isSaving,
+    totalPages,
+    currentPage,
+    setCurrentPage
   } = useMoodboardStore();
   
-  // Отримати canvas для експорту
+  // Отримати canvas для експорту поточної сторінки
   const getExportCanvas = async (pixelRatio = 3) => {
     const stageContainer = document.querySelector('.konvajs-content');
     if (!stageContainer) {
@@ -40,8 +44,8 @@ const TopBar = ({ boardName, onSave, onBack }) => {
     
     // Створюємо новий canvas з високою роздільністю
     const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = scene.width * pixelRatio;
-    exportCanvas.height = scene.height * pixelRatio;
+    exportCanvas.width = A4_WIDTH * pixelRatio;
+    exportCanvas.height = A4_HEIGHT * pixelRatio;
     
     const ctx = exportCanvas.getContext('2d');
     ctx.scale(pixelRatio, pixelRatio);
@@ -50,10 +54,10 @@ const TopBar = ({ boardName, onSave, onBack }) => {
     
     // Малюємо фон
     ctx.fillStyle = scene.background?.value || '#ffffff';
-    ctx.fillRect(0, 0, scene.width, scene.height);
+    ctx.fillRect(0, 0, A4_WIDTH, A4_HEIGHT);
     
     // Малюємо оригінальний canvas
-    ctx.drawImage(canvas, 0, 0, scene.width, scene.height);
+    ctx.drawImage(canvas, 0, 0, A4_WIDTH, A4_HEIGHT);
     
     return exportCanvas;
   };
@@ -67,7 +71,7 @@ const TopBar = ({ boardName, onSave, onBack }) => {
       const dataUrl = exportCanvas.toDataURL('image/png', 1.0);
       
       const link = document.createElement('a');
-      link.download = `${scene.name || 'moodboard'}-${Date.now()}.png`;
+      link.download = `${scene.name || 'moodboard'}-page${currentPage + 1}-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
     } catch (error) {
@@ -83,28 +87,78 @@ const TopBar = ({ boardName, onSave, onBack }) => {
     setShowExportMenu(false);
     
     try {
-      const exportCanvas = await getExportCanvas(2); // Менший ratio для PDF
-      const imgData = exportCanvas.toDataURL('image/jpeg', 0.92);
-      
-      // Визначаємо орієнтацію
-      const orientation = scene.width > scene.height ? 'landscape' : 'portrait';
-      
-      // Створюємо PDF з правильним розміром сторінки
+      // Створюємо PDF в форматі A4
       const pdf = new jsPDF({
-        orientation,
-        unit: 'px',
-        format: [scene.width, scene.height],
-        hotfixes: ['px_scaling']
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
       });
       
-      // Додаємо зображення
-      pdf.addImage(imgData, 'JPEG', 0, 0, scene.width, scene.height);
+      const originalPage = currentPage;
+      
+      // Експортуємо всі сторінки
+      for (let page = 0; page < totalPages; page++) {
+        // Переключаємось на сторінку
+        setCurrentPage(page);
+        
+        // Чекаємо рендер
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const exportCanvas = await getExportCanvas(2);
+        const imgData = exportCanvas.toDataURL('image/jpeg', 0.92);
+        
+        if (page > 0) {
+          pdf.addPage();
+        }
+        
+        // Додаємо зображення на повну сторінку A4
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+        
+        // Додаємо номер сторінки
+        pdf.setFontSize(8);
+        pdf.setTextColor(150);
+        pdf.text(`${page + 1} / ${totalPages}`, 200, 292, { align: 'right' });
+      }
+      
+      // Повертаємось на оригінальну сторінку
+      setCurrentPage(originalPage);
       
       // Зберігаємо
       pdf.save(`${scene.name || 'moodboard'}-${Date.now()}.pdf`);
     } catch (error) {
       console.error('PDF Export error:', error);
       alert('Помилка експорту PDF: ' + error.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+  
+  const handleExportAllPNG = async () => {
+    setExporting(true);
+    setShowExportMenu(false);
+    
+    try {
+      const originalPage = currentPage;
+      
+      for (let page = 0; page < totalPages; page++) {
+        setCurrentPage(page);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const exportCanvas = await getExportCanvas(3);
+        const dataUrl = exportCanvas.toDataURL('image/png', 1.0);
+        
+        const link = document.createElement('a');
+        link.download = `${scene.name || 'moodboard'}-page${page + 1}.png`;
+        link.href = dataUrl;
+        link.click();
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      setCurrentPage(originalPage);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Помилка експорту: ' + error.message);
     } finally {
       setExporting(false);
     }
@@ -119,7 +173,7 @@ const TopBar = ({ boardName, onSave, onBack }) => {
       const dataUrl = exportCanvas.toDataURL('image/jpeg', 0.92);
       
       const link = document.createElement('a');
-      link.download = `${scene.name || 'moodboard'}-${Date.now()}.jpg`;
+      link.download = `${scene.name || 'moodboard'}-page${currentPage + 1}-${Date.now()}.jpg`;
       link.href = dataUrl;
       link.click();
     } catch (error) {

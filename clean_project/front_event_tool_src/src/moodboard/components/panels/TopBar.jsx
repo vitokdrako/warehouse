@@ -276,8 +276,8 @@ const TopBar = ({ boardName, onSave, onBack }) => {
       {/* Export dropdown */}
       <div style={{ position: 'relative', display: 'inline-block' }}>
         <button
-          onClick={handleExportPNG}
-          title="Експортувати як PNG (висока якість)"
+          onClick={() => setShowExportMenu(!showExportMenu)}
+          disabled={exporting}
           style={{
             background: 'none',
             border: '1px solid #e0e0e0',
@@ -289,8 +289,55 @@ const TopBar = ({ boardName, onSave, onBack }) => {
             gap: '6px'
           }}
         >
-          Експорт PNG
+          {exporting ? 'Експорт...' : 'Експорт ▾'}
         </button>
+        
+        {showExportMenu && (
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            right: 0,
+            marginTop: '4px',
+            background: '#fff',
+            border: '1px solid #e0e0e0',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            minWidth: '160px',
+            zIndex: 100,
+            overflow: 'hidden'
+          }}>
+            <button
+              onClick={handleExportPNG}
+              style={exportMenuItemStyle}
+            >
+              <span>🖼️</span>
+              <div>
+                <div style={{ fontWeight: '500' }}>PNG</div>
+                <div style={{ fontSize: '10px', color: '#999' }}>Висока якість</div>
+              </div>
+            </button>
+            <button
+              onClick={handleExportJPG}
+              style={exportMenuItemStyle}
+            >
+              <span>📷</span>
+              <div>
+                <div style={{ fontWeight: '500' }}>JPG</div>
+                <div style={{ fontSize: '10px', color: '#999' }}>Менший розмір</div>
+              </div>
+            </button>
+            <button
+              onClick={handleExportPDF}
+              style={exportMenuItemStyle}
+            >
+              <span>📄</span>
+              <div>
+                <div style={{ fontWeight: '500' }}>PDF</div>
+                <div style={{ fontSize: '10px', color: '#999' }}>Для друку</div>
+              </div>
+            </button>
+          </div>
+        )}
       </div>
       
       {/* Save */}
@@ -311,6 +358,20 @@ const TopBar = ({ boardName, onSave, onBack }) => {
       </button>
     </div>
   );
+};
+
+const exportMenuItemStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  width: '100%',
+  padding: '10px 14px',
+  border: 'none',
+  background: 'none',
+  cursor: 'pointer',
+  textAlign: 'left',
+  fontSize: '13px',
+  borderBottom: '1px solid #f0f0f0'
 };
 
 export default TopBar;

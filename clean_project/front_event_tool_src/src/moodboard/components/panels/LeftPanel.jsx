@@ -18,6 +18,7 @@ const LeftPanel = ({ boardItems = [] }) => {
     scene,
     addNode,
     setBackgroundColor,
+    setBackgroundImage,
     showGrid,
     toggleGrid,
     applyTemplate,

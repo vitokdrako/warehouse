@@ -744,8 +744,8 @@ const EventPlannerPage = () => {
                   )}
                 </div>
 
-                {/* Items List - Більше місця для товарів */}
-                <div className="flex-1 overflow-auto" style={{padding: '12px 12px'}}>
+                {/* Items List */}
+                <div className="flex-1 overflow-auto" style={{padding: '12px'}}>
                   {activeBoard.items && activeBoard.items.length > 0 ? (
                     <div className="space-y-2">
                       {activeBoard.items.map((item) => (
@@ -770,30 +770,30 @@ const EventPlannerPage = () => {
                   )}
                 </div>
 
-                {/* Compact Summary - Оптимізовано */}
-                <div style={{padding: '14px 18px', borderTop: '1px solid #f0f0f0', background: '#fafafa'}}>
-                  {/* Інфо в один рядок */}
-                  <div className="flex justify-between items-center mb-3" style={{fontSize: '11px'}}>
+                {/* Summary */}
+                <div style={{padding: '14px 16px', borderTop: '1px solid #f0f0f0', background: '#fafafa'}}>
+                  {/* Info row */}
+                  <div className="flex justify-between items-center mb-3" style={{fontSize: '12px'}}>
                     <span style={{color: '#666'}}>
                       Позицій: <strong style={{color: '#333'}}>{activeBoard.items?.length || 0}</strong>
                     </span>
                     <span style={{color: '#666'}}>
-                      Разом: <strong style={{color: '#333', fontSize: '13px'}}>₴{calculateBoardTotal().toFixed(2)}</strong>
+                      Разом: <strong style={{color: '#333', fontSize: '14px'}}>₴{calculateBoardTotal().toFixed(2)}</strong>
                     </span>
                   </div>
                   
-                  {/* Кнопки */}
+                  {/* Buttons */}
                   <button 
                     onClick={() => setShowCanvas(true)}
                     className="w-full fd-btn fd-btn-primary mb-2"
                     disabled={!activeBoard.items || activeBoard.items.length === 0}
-                    style={{padding: '9px 12px', fontSize: '11px'}}
+                    style={{padding: '12px', fontSize: '12px'}}
                   >
                     Візуальний мудборд
                   </button>
                   <button 
                     className="w-full fd-btn fd-btn-black" 
-                    style={{padding: '9px 12px', fontSize: '11px'}}
+                    style={{padding: '12px', fontSize: '12px'}}
                     onClick={() => setShowCheckoutModal(true)}
                     disabled={!activeBoard.items || activeBoard.items.length === 0 || activeBoard.status === 'converted'}
                   >
@@ -802,13 +802,13 @@ const EventPlannerPage = () => {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex-1 flex items-center justify-center p-4">
                 <div className="fd-empty" style={{textAlign: 'center'}}>
                   <div style={{fontSize: '16px', fontWeight: '600', color: '#999', marginBottom: '12px'}}>
                     Створіть перший мудборд
                   </div>
                   <div className="fd-empty-text" style={{fontSize: '13px', color: '#999', lineHeight: '1.6'}}>
-                    Додавайте позиції з каталогу ліворуч,<br/>щоб зібрати підбірку для клієнта
+                    Додавайте позиції з каталогу,<br/>щоб зібрати підбірку для клієнта
                   </div>
                 </div>
               </div>
@@ -816,14 +816,45 @@ const EventPlannerPage = () => {
           </div>
         )}
 
-        {/* Toggle button when panel is closed */}
+        {/* Toggle button when panel is closed - Desktop only */}
         {!isSidePanelOpen && (
           <button
             onClick={toggleSidePanel}
-            className="fixed right-0 top-1/2 transform -translate-y-1/2 fd-btn-black px-3 py-10 z-20"
+            className="fixed right-0 top-1/2 transform -translate-y-1/2 fd-btn-black px-3 py-10 z-20 hidden lg:block"
             style={{boxShadow: '0 2px 8px rgba(0,0,0,0.1)', borderRadius: '4px 0 0 4px'}}
           >
             <span className="transform rotate-90 inline-block fd-uppercase">Мудборд</span>
+          </button>
+        )}
+
+        {/* Mobile floating cart button */}
+        {!isSidePanelOpen && (
+          <button
+            onClick={toggleSidePanel}
+            className="lg:hidden fixed bottom-5 right-4 z-50 fd-btn-black rounded-full w-14 h-14 flex items-center justify-center shadow-lg"
+            style={{boxShadow: '0 4px 12px rgba(0,0,0,0.25)'}}
+          >
+            <span className="text-xl">🛒</span>
+            {activeBoard?.items?.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                background: '#fff',
+                color: '#333',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid #333'
+              }}>
+                {activeBoard.items.length}
+              </span>
+            )}
           </button>
         )}
       </div>

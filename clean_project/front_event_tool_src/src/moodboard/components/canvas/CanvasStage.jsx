@@ -421,7 +421,7 @@ const CanvasStage = () => {
           fontWeight: '500',
           zIndex: 10
         }}>
-          A4 (210×297 мм)
+          A4 Альбомна (297×210 мм)
         </div>
 
         <Stage

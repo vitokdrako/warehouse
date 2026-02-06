@@ -58,6 +58,7 @@ class EventBoardCreate(BaseModel):
     rental_end_date: Optional[str] = None
     notes: Optional[str] = None
     budget: Optional[float] = None
+    cover_image: Optional[str] = None
 
 class EventBoardUpdate(BaseModel):
     board_name: Optional[str] = None

@@ -270,6 +270,9 @@ export const BACKGROUND_PRESETS = [
 export default {
   NodeType,
   BackgroundType,
+  A4_WIDTH,
+  A4_HEIGHT,
+  PAGE_PADDING,
   createBaseNode,
   createDecorItemNode,
   createTextNode,

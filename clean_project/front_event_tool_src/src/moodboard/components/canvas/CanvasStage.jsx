@@ -217,20 +217,22 @@ const CanvasStage = () => {
       style={{
         flex: 1,
         overflow: 'auto',
-        background: '#e8e8e8',
+        background: '#d0d0d0',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: isMobile ? '12px' : '20px',
-        WebkitOverflowScrolling: 'touch'
+        padding: isMobile ? '12px' : '30px',
+        paddingTop: isMobile ? '12px' : '20px',
+        WebkitOverflowScrolling: 'touch',
+        minHeight: '100%'
       }}
     >
-      {/* Page Navigation */}
+      {/* Page Navigation & Zoom Controls */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: isMobile ? '6px' : '12px',
-        marginBottom: isMobile ? '12px' : '16px',
+        marginBottom: isMobile ? '16px' : '20px',
         padding: isMobile ? '8px 12px' : '10px 20px',
         background: '#fff',
         borderRadius: '8px',
@@ -238,6 +240,56 @@ const CanvasStage = () => {
         flexWrap: isMobile ? 'wrap' : 'nowrap',
         justifyContent: 'center'
       }}>
+        {/* Zoom controls */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '4px',
+          marginRight: isMobile ? '0' : '8px'
+        }}>
+          <button
+            onClick={() => setZoom(Math.max(0.3, zoom - 0.1))}
+            style={{
+              background: '#fff',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              padding: '6px 10px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            −
+          </button>
+          <span style={{ 
+            padding: '0 8px', 
+            fontSize: '12px',
+            minWidth: '45px',
+            textAlign: 'center',
+            fontWeight: '500'
+          }}>
+            {Math.round(zoom * 100)}%
+          </span>
+          <button
+            onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+            style={{
+              background: '#fff',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              padding: '6px 10px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}
+          >
+            +
+          </button>
+        </div>
+        
+        {!isMobile && (
+          <div style={{ width: '1px', height: '24px', background: '#ddd' }} />
+        )}
+        
         <button
           onClick={() => setCurrentPage(currentPage - 1)}
           disabled={currentPage === 0}

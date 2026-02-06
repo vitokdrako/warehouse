@@ -353,11 +353,66 @@ export const useMoodboardStore = create(
     // ========================================================================
     
     applyTemplate: (templateId, products) => {
-      const { scene } = get();
-      const nodes = applyTemplate(templateId, products, scene.width, scene.height);
+      const { currentPage, scene } = get();
+      
+      // Імпортуємо реальні розміри A4
+      const { A4_WIDTH, A4_HEIGHT, LAYOUT_TEMPLATES, createDecorItemNode } = require('../domain/moodboard.types');
+      
+      const template = LAYOUT_TEMPLATES.find(t => t.id === templateId);
+      if (!template) return;
+      
+      // Скільки товарів може вмістити шаблон
+      const maxItems = template.cells.length;
+      const itemsToPlace = products.slice(0, maxItems);
+      
+      if (itemsToPlace.length === 0) return;
+      
+      // Створюємо нові ноди для поточної сторінки
+      const padding = 20;
+      const newNodes = [];
+      
+      template.cells.forEach((cell, index) => {
+        const product = itemsToPlace[index];
+        if (!product) return;
+        
+        const productData = product.product || product;
+        
+        // Розрахунок позиції в межах A4
+        const x = (cell.x / 100) * (A4_WIDTH - padding * 2) + padding;
+        const y = (cell.y / 100) * (A4_HEIGHT - padding * 2) + padding;
+        const width = (cell.width / 100) * (A4_WIDTH - padding * 2);
+        const height = (cell.height / 100) * (A4_HEIGHT - padding * 2);
+        
+        const node = createDecorItemNode({
+          product_id: productData.product_id,
+          name: productData.name,
+          sku: productData.sku,
+          image_url: productData.image_url,
+          rental_price: productData.rental_price
+        }, {
+          x,
+          y,
+          width,
+          height,
+          zIndex: index,
+          pageIndex: currentPage,
+          quantity: product.quantity || 1
+        });
+        
+        newNodes.push(node);
+      });
       
       set(state => {
-        state.scene.nodes = nodes;
+        // Видаляємо ноди тільки з ПОТОЧНОЇ сторінки
+        state.scene.nodes = state.scene.nodes.filter(n => n.pageIndex !== currentPage);
+        // Додаємо нові ноди
+        state.scene.nodes = [...state.scene.nodes, ...newNodes];
+        state.selectedNodeIds = newNodes.map(n => n.id);
+        state.isDirty = true;
+      });
+      
+      get()._pushHistory();
+    },
         state.selectedNodeIds = [];
         state.isDirty = true;
       });

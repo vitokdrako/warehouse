@@ -3,10 +3,14 @@
  * Верхня панель з назвою, undo/redo, zoom, export
  */
 
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
+import { jsPDF } from 'jspdf';
 import useMoodboardStore from '../../store/moodboardStore';
 
 const TopBar = ({ boardName, onSave, onBack }) => {
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  
   const {
     scene,
     setSceneName,
@@ -22,41 +26,44 @@ const TopBar = ({ boardName, onSave, onBack }) => {
     isSaving
   } = useMoodboardStore();
   
-  const handleExportPNG = async () => {
-    // Знаходимо Konva Stage
+  // Отримати canvas для експорту
+  const getExportCanvas = async (pixelRatio = 3) => {
     const stageContainer = document.querySelector('.konvajs-content');
     if (!stageContainer) {
-      alert('Canvas не знайдено');
-      return;
+      throw new Error('Canvas не знайдено');
     }
     
+    const canvas = stageContainer.querySelector('canvas');
+    if (!canvas) {
+      throw new Error('Canvas не знайдено');
+    }
+    
+    // Створюємо новий canvas з високою роздільністю
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = scene.width * pixelRatio;
+    exportCanvas.height = scene.height * pixelRatio;
+    
+    const ctx = exportCanvas.getContext('2d');
+    ctx.scale(pixelRatio, pixelRatio);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    // Малюємо фон
+    ctx.fillStyle = scene.background?.value || '#ffffff';
+    ctx.fillRect(0, 0, scene.width, scene.height);
+    
+    // Малюємо оригінальний canvas
+    ctx.drawImage(canvas, 0, 0, scene.width, scene.height);
+    
+    return exportCanvas;
+  };
+  
+  const handleExportPNG = async () => {
+    setExporting(true);
+    setShowExportMenu(false);
+    
     try {
-      // Знаходимо Konva Stage через window.Konva або напряму
-      const canvas = stageContainer.querySelector('canvas');
-      if (!canvas) {
-        alert('Canvas не знайдено');
-        return;
-      }
-      
-      // Створюємо новий canvas з високою роздільністю
-      const pixelRatio = 3; // Висока якість
-      const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = scene.width * pixelRatio;
-      exportCanvas.height = scene.height * pixelRatio;
-      
-      const ctx = exportCanvas.getContext('2d');
-      ctx.scale(pixelRatio, pixelRatio);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      
-      // Малюємо фон
-      ctx.fillStyle = scene.background?.value || '#ffffff';
-      ctx.fillRect(0, 0, scene.width, scene.height);
-      
-      // Малюємо оригінальний canvas
-      ctx.drawImage(canvas, 0, 0, scene.width, scene.height);
-      
-      // Експортуємо
+      const exportCanvas = await getExportCanvas(3);
       const dataUrl = exportCanvas.toDataURL('image/png', 1.0);
       
       const link = document.createElement('a');
@@ -66,58 +73,62 @@ const TopBar = ({ boardName, onSave, onBack }) => {
     } catch (error) {
       console.error('Export error:', error);
       alert('Помилка експорту: ' + error.message);
+    } finally {
+      setExporting(false);
     }
   };
   
-  // PDF експорт
   const handleExportPDF = async () => {
-    const stageContainer = document.querySelector('.konvajs-content');
-    if (!stageContainer) {
-      alert('Canvas не знайдено');
-      return;
-    }
+    setExporting(true);
+    setShowExportMenu(false);
     
     try {
-      const canvas = stageContainer.querySelector('canvas');
-      if (!canvas) {
-        alert('Canvas не знайдено');
-        return;
-      }
+      const exportCanvas = await getExportCanvas(2); // Менший ratio для PDF
+      const imgData = exportCanvas.toDataURL('image/jpeg', 0.92);
       
-      // Створюємо високоякісний canvas
-      const pixelRatio = 3;
-      const exportCanvas = document.createElement('canvas');
-      exportCanvas.width = scene.width * pixelRatio;
-      exportCanvas.height = scene.height * pixelRatio;
+      // Визначаємо орієнтацію
+      const orientation = scene.width > scene.height ? 'landscape' : 'portrait';
       
-      const ctx = exportCanvas.getContext('2d');
-      ctx.scale(pixelRatio, pixelRatio);
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+      // Створюємо PDF з правильним розміром сторінки
+      const pdf = new jsPDF({
+        orientation,
+        unit: 'px',
+        format: [scene.width, scene.height],
+        hotfixes: ['px_scaling']
+      });
       
-      ctx.fillStyle = scene.background?.value || '#ffffff';
-      ctx.fillRect(0, 0, scene.width, scene.height);
-      ctx.drawImage(canvas, 0, 0, scene.width, scene.height);
+      // Додаємо зображення
+      pdf.addImage(imgData, 'JPEG', 0, 0, scene.width, scene.height);
       
-      const imgData = exportCanvas.toDataURL('image/jpeg', 0.95);
-      
-      // Використовуємо jsPDF якщо доступний, інакше - PNG
-      if (window.jspdf) {
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
-          orientation: scene.width > scene.height ? 'landscape' : 'portrait',
-          unit: 'px',
-          format: [scene.width, scene.height]
-        });
-        pdf.addImage(imgData, 'JPEG', 0, 0, scene.width, scene.height);
-        pdf.save(`${scene.name || 'moodboard'}.pdf`);
-      } else {
-        // Fallback to PNG
-        handleExportPNG();
-      }
+      // Зберігаємо
+      pdf.save(`${scene.name || 'moodboard'}-${Date.now()}.pdf`);
     } catch (error) {
       console.error('PDF Export error:', error);
-      alert('Помилка експорту PDF');
+      alert('Помилка експорту PDF: ' + error.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+  
+  const handleExportJPG = async () => {
+    setExporting(true);
+    setShowExportMenu(false);
+    
+    try {
+      const exportCanvas = await getExportCanvas(3);
+      const dataUrl = exportCanvas.toDataURL('image/jpeg', 0.92);
+      
+      const link = document.createElement('a');
+      link.download = `${scene.name || 'moodboard'}-${Date.now()}.jpg`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Помилка експорту: ' + error.message);
+    } finally {
+      setExporting(false);
+    }
+  };
     }
   };
   

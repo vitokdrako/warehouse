@@ -9,7 +9,9 @@ import {
   createScene, 
   createBackground,
   createHistoryState,
-  BackgroundType 
+  BackgroundType,
+  A4_WIDTH,
+  A4_HEIGHT 
 } from '../domain/moodboard.types';
 import {
   addNode,
@@ -35,6 +37,12 @@ export const useMoodboardStore = create(
     // SCENE STATE
     // ========================================================================
     scene: createScene(),
+    
+    // ========================================================================
+    // PAGE STATE
+    // ========================================================================
+    currentPage: 0,
+    totalPages: 1,
     
     // ========================================================================
     // SELECTION STATE

@@ -104,6 +104,55 @@ export const useMoodboardStore = create(
     }),
     
     // ========================================================================
+    // PAGE ACTIONS
+    // ========================================================================
+    
+    setCurrentPage: (pageIndex) => set(state => {
+      if (pageIndex >= 0 && pageIndex < state.totalPages) {
+        state.currentPage = pageIndex;
+        state.selectedNodeIds = [];
+      }
+    }),
+    
+    addPage: () => {
+      set(state => {
+        state.totalPages += 1;
+        state.scene.totalPages = state.totalPages;
+        state.currentPage = state.totalPages - 1;
+        state.isDirty = true;
+      });
+      get()._pushHistory();
+    },
+    
+    removePage: (pageIndex) => {
+      const { totalPages, scene } = get();
+      if (totalPages <= 1) return; // Мінімум 1 сторінка
+      
+      set(state => {
+        // Видаляємо всі ноди на цій сторінці
+        state.scene.nodes = state.scene.nodes.filter(n => n.pageIndex !== pageIndex);
+        // Оновлюємо pageIndex для нод на наступних сторінках
+        state.scene.nodes.forEach(n => {
+          if (n.pageIndex > pageIndex) {
+            n.pageIndex -= 1;
+          }
+        });
+        state.totalPages -= 1;
+        state.scene.totalPages = state.totalPages;
+        if (state.currentPage >= state.totalPages) {
+          state.currentPage = state.totalPages - 1;
+        }
+        state.isDirty = true;
+      });
+      get()._pushHistory();
+    },
+    
+    getNodesForPage: (pageIndex) => {
+      const { scene } = get();
+      return scene.nodes.filter(n => n.pageIndex === pageIndex);
+    },
+    
+    // ========================================================================
     // NODE ACTIONS
     // ========================================================================
     

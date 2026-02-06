@@ -1,6 +1,6 @@
 /**
  * Decor Item Node
- * Компонент товару на canvas - з підтримкою image proxy для CORS
+ * Компонент товару на canvas - з підтримкою різних режимів відображення
  */
 
 import React, { useRef, useEffect, useState } from 'react';
@@ -11,35 +11,13 @@ const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farf
 const BACKEND_URL = 'https://backrentalhub.farforrent.com.ua';
 
 /**
- * Отримати URL зображення через proxy для обходу CORS
+ * Режими відображення:
+ * - 'card' - з рамкою, тінню та артикулом (за замовчуванням)
+ * - 'clean' - тільки зображення без фону/рамки (для прозорих PNG)
  */
-const getProxiedImageUrl = (imagePath) => {
-  if (!imagePath) return null;
-  
-  let fullUrl = imagePath;
-  
-  // Якщо не повний URL - додаємо backend
-  if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
-    const cleanPath = imagePath.replace(/^\/+/, '');
-    fullUrl = `${BACKEND_URL}/${cleanPath}`;
-  }
-  
-  // Повертаємо URL через proxy
-  return `${API_URL}/api/event/image-proxy?url=${encodeURIComponent(fullUrl)}`;
-};
-
-/**
- * Отримати прямий URL (для fallback)
- */
-const getDirectImageUrl = (imagePath) => {
-  if (!imagePath) return null;
-  
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-  
-  const cleanPath = imagePath.replace(/^\/+/, '');
-  return `${BACKEND_URL}/${cleanPath}`;
+export const DISPLAY_MODES = {
+  CARD: 'card',
+  CLEAN: 'clean'
 };
 
 const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }) => {
@@ -48,11 +26,13 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [naturalSize, setNaturalSize] = useState({ width: 200, height: 200 });
+  
+  // Режим відображення (за замовчуванням 'card')
+  const displayMode = node.displayMode || DISPLAY_MODES.CARD;
+  const isCleanMode = displayMode === DISPLAY_MODES.CLEAN;
   
   // Завантажуємо зображення
-  // ВАЖЛИВО: Для відображення на canvas не використовуємо crossOrigin
-  // Це дозволяє показувати зображення без CORS
-  // Для експорту canvas буде "tainted", але це можна обійти через proxy
   useEffect(() => {
     if (!node.imageUrl) {
       setLoading(false);
@@ -72,11 +52,13 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
       imageUrl = `${BACKEND_URL}/${cleanPath}`;
     }
     
-    // Завантажуємо БЕЗ crossOrigin - це дозволить відобразити на canvas
+    // Завантажуємо БЕЗ crossOrigin
     const img = new window.Image();
     
     img.onload = () => {
       setImage(img);
+      // Зберігаємо оригінальні пропорції
+      setNaturalSize({ width: img.width, height: img.height });
       setLoading(false);
       setError(false);
     };
@@ -88,6 +70,7 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
         const altImg = new window.Image();
         altImg.onload = () => {
           setImage(altImg);
+          setNaturalSize({ width: altImg.width, height: altImg.height });
           setLoading(false);
           setError(false);
         };
@@ -118,34 +101,179 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
     onSelect();
   };
   
-  // Розрахунок crop для збереження пропорцій
-  const getCrop = () => {
-    if (!image) return null;
+  // Розраховуємо розміри зображення зі збереженням пропорцій (contain)
+  const getImageDimensions = () => {
+    if (!image) return { x: 0, y: 0, width: node.width, height: node.height };
     
-    const imgRatio = image.width / image.height;
-    const nodeRatio = node.width / node.height;
+    const padding = isCleanMode ? 0 : 4;
+    const availableWidth = node.width - (padding * 2);
+    const availableHeight = node.height - (padding * 2) - (isCleanMode ? 0 : 24); // місце для SKU
     
-    if (imgRatio > nodeRatio) {
-      // Зображення ширше - обрізаємо боки
-      const cropWidth = image.height * nodeRatio;
-      return {
-        x: (image.width - cropWidth) / 2,
-        y: 0,
-        width: cropWidth,
-        height: image.height
-      };
+    const imgRatio = naturalSize.width / naturalSize.height;
+    const boxRatio = availableWidth / availableHeight;
+    
+    let renderWidth, renderHeight;
+    
+    if (imgRatio > boxRatio) {
+      // Зображення ширше - підганяємо по ширині
+      renderWidth = availableWidth;
+      renderHeight = availableWidth / imgRatio;
     } else {
-      // Зображення вище - обрізаємо верх/низ
-      const cropHeight = image.width / nodeRatio;
-      return {
-        x: 0,
-        y: (image.height - cropHeight) / 2,
-        width: image.width,
-        height: cropHeight
-      };
+      // Зображення вище - підганяємо по висоті
+      renderHeight = availableHeight;
+      renderWidth = availableHeight * imgRatio;
     }
+    
+    // Центруємо зображення
+    const x = padding + (availableWidth - renderWidth) / 2;
+    const y = padding + (availableHeight - renderHeight) / 2;
+    
+    return { x, y, width: renderWidth, height: renderHeight };
   };
   
+  const imageDims = getImageDimensions();
+  
+  // CLEAN MODE - тільки зображення без рамки
+  if (isCleanMode) {
+    return (
+      <>
+        <Group
+          ref={shapeRef}
+          x={node.x}
+          y={node.y}
+          width={node.width}
+          height={node.height}
+          rotation={node.rotation || 0}
+          draggable={!node.locked}
+          onClick={handleClick}
+          onTap={handleClick}
+          onDragEnd={onDragEnd}
+          onTransformEnd={onTransformEnd}
+        >
+          {/* Прозорий фон для взаємодії */}
+          <Rect
+            width={node.width}
+            height={node.height}
+            fill="transparent"
+            stroke={isSelected ? '#2196F3' : 'transparent'}
+            strokeWidth={isSelected ? 2 : 0}
+            dash={isSelected ? [5, 5] : []}
+          />
+          
+          {/* Зображення товару */}
+          {image && !error && (
+            <Image
+              image={image}
+              x={imageDims.x}
+              y={imageDims.y}
+              width={imageDims.width}
+              height={imageDims.height}
+              opacity={node.opacity || 1}
+              imageSmoothingEnabled={true}
+              perfectDrawEnabled={false}
+            />
+          )}
+          
+          {/* Індикатор завантаження */}
+          {loading && (
+            <Text
+              text="..."
+              width={node.width}
+              height={node.height}
+              align="center"
+              verticalAlign="middle"
+              fontSize={24}
+              fill="#999"
+            />
+          )}
+          
+          {/* Помилка завантаження */}
+          {error && !loading && (
+            <Text
+              text={node.productName || '?'}
+              x={0}
+              y={node.height / 2 - 10}
+              width={node.width}
+              height={20}
+              align="center"
+              fontSize={12}
+              fill="#999"
+            />
+          )}
+          
+          {/* Бейдж кількості */}
+          {node.quantity > 1 && (
+            <>
+              <Rect
+                x={node.width - 30}
+                y={5}
+                width={25}
+                height={20}
+                fill="rgba(139,0,0,0.9)"
+                cornerRadius={4}
+              />
+              <Text
+                x={node.width - 30}
+                y={5}
+                width={25}
+                height={20}
+                text={`×${node.quantity}`}
+                fontSize={11}
+                fill="#fff"
+                align="center"
+                verticalAlign="middle"
+              />
+            </>
+          )}
+          
+          {/* Іконка замка */}
+          {node.locked && (
+            <>
+              <Rect
+                x={5}
+                y={5}
+                width={20}
+                height={20}
+                fill="rgba(0,0,0,0.5)"
+                cornerRadius={4}
+              />
+              <Text
+                x={5}
+                y={3}
+                width={20}
+                height={20}
+                text="🔒"
+                fontSize={12}
+                align="center"
+                verticalAlign="middle"
+              />
+            </>
+          )}
+        </Group>
+        
+        {/* Трансформер */}
+        {isSelected && !node.locked && (
+          <Transformer
+            ref={trRef}
+            rotateEnabled={true}
+            keepRatio={true}
+            enabledAnchors={[
+              'top-left', 'top-right', 
+              'bottom-left', 'bottom-right'
+            ]}
+            boundBoxFunc={(oldBox, newBox) => {
+              if (newBox.width < 30 || newBox.height < 30) {
+                return oldBox;
+              }
+              return newBox;
+            }}
+          />
+        )}
+      </>
+    );
+  }
+  
+  // CARD MODE - з рамкою та артикулом (за замовчуванням)
   return (
     <>
       <Group
@@ -175,17 +303,15 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
           shadowOpacity={0.3}
         />
         
-        {/* Зображення товару */}
+        {/* Зображення товару зі збереженням пропорцій */}
         {image && !error && (
           <Image
             image={image}
-            x={4}
-            y={4}
-            width={node.width - 8}
-            height={node.height - 8}
+            x={imageDims.x}
+            y={imageDims.y}
+            width={imageDims.width}
+            height={imageDims.height}
             opacity={node.opacity || 1}
-            crop={getCrop()}
-            // Вимикаємо пікселізацію для якості при масштабуванні
             imageSmoothingEnabled={true}
             perfectDrawEnabled={false}
           />
@@ -211,14 +337,14 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
               x={4}
               y={4}
               width={node.width - 8}
-              height={node.height - 8}
+              height={node.height - 28}
               fill="#f5f5f5"
               cornerRadius={2}
             />
             <Text
               text={node.productName || 'Фото'}
               x={8}
-              y={node.height / 2 - 20}
+              y={node.height / 2 - 30}
               width={node.width - 16}
               height={40}
               align="center"
@@ -238,7 +364,7 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
               y={node.height - 24}
               width={node.width - 8}
               height={20}
-              fill="rgba(255,255,255,0.9)"
+              fill="rgba(255,255,255,0.95)"
               cornerRadius={2}
             />
             <Text
@@ -263,7 +389,7 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
               y={5}
               width={25}
               height={20}
-              fill="rgba(0,0,0,0.7)"
+              fill="rgba(139,0,0,0.9)"
               cornerRadius={4}
             />
             <Text
@@ -272,7 +398,7 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
               width={25}
               height={20}
               text={`×${node.quantity}`}
-              fontSize={12}
+              fontSize={11}
               fill="#fff"
               align="center"
               verticalAlign="middle"
@@ -316,7 +442,6 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
             'bottom-left', 'bottom-right'
           ]}
           boundBoxFunc={(oldBox, newBox) => {
-            // Мінімальний розмір
             if (newBox.width < 50 || newBox.height < 50) {
               return oldBox;
             }

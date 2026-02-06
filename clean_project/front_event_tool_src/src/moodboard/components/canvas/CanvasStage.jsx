@@ -3,16 +3,17 @@
  * Головний компонент canvas на Konva.js
  */
 
-import React, { useRef, useEffect, useCallback } from 'react';
-import { Stage, Layer, Rect, Line } from 'react-konva';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
+import { Stage, Layer, Rect, Line, Image as KonvaImage } from 'react-konva';
 import useMoodboardStore from '../../store/moodboardStore';
 import DecorItemNode from './DecorItemNode';
 import TextNode from './TextNode';
-import { NodeType } from '../../domain/moodboard.types';
+import { NodeType, BackgroundType } from '../../domain/moodboard.types';
 
 const CanvasStage = () => {
   const stageRef = useRef(null);
   const containerRef = useRef(null);
+  const [backgroundImage, setBackgroundImage] = useState(null);
   
   const {
     scene,
@@ -28,6 +29,19 @@ const CanvasStage = () => {
   } = useMoodboardStore();
   
   const nodes = getSortedNodes();
+  
+  // Завантаження background image
+  useEffect(() => {
+    if (scene.background?.type === BackgroundType.IMAGE && scene.background?.imageUrl) {
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => setBackgroundImage(img);
+      img.onerror = () => setBackgroundImage(null);
+      img.src = scene.background.imageUrl;
+    } else {
+      setBackgroundImage(null);
+    }
+  }, [scene.background?.type, scene.background?.imageUrl]);
   
   // Обробка кліку на пустому місці
   const handleStageClick = useCallback((e) => {
@@ -69,6 +83,11 @@ const CanvasStage = () => {
     const { background } = scene;
     if (!background) return '#ffffff';
     
+    // Якщо є зображення, повертаємо прозорий або білий фон
+    if (background.type === BackgroundType.IMAGE && backgroundImage) {
+      return 'transparent';
+    }
+    
     switch (background.type) {
       case 'gradient':
         return background.gradientColors?.[0] || '#ffffff';
@@ -76,6 +95,45 @@ const CanvasStage = () => {
       default:
         return background.value || '#ffffff';
     }
+  };
+  
+  // Розрахувати розміри та позицію background image
+  const getBackgroundImageProps = () => {
+    if (!backgroundImage) return null;
+    
+    const fit = scene.background?.imageFit || 'cover';
+    const imgRatio = backgroundImage.width / backgroundImage.height;
+    const canvasRatio = scene.width / scene.height;
+    
+    let width, height, x = 0, y = 0;
+    
+    if (fit === 'cover') {
+      if (imgRatio > canvasRatio) {
+        height = scene.height;
+        width = height * imgRatio;
+        x = (scene.width - width) / 2;
+      } else {
+        width = scene.width;
+        height = width / imgRatio;
+        y = (scene.height - height) / 2;
+      }
+    } else if (fit === 'contain') {
+      if (imgRatio > canvasRatio) {
+        width = scene.width;
+        height = width / imgRatio;
+        y = (scene.height - height) / 2;
+      } else {
+        height = scene.height;
+        width = height * imgRatio;
+        x = (scene.width - width) / 2;
+      }
+    } else {
+      // stretch
+      width = scene.width;
+      height = scene.height;
+    }
+    
+    return { x, y, width, height };
   };
   
   // Рендер сітки

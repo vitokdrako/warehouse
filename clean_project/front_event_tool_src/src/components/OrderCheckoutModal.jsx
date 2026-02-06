@@ -438,6 +438,62 @@ const OrderCheckoutModal = ({
           {/* Step 3: Event */}
           {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Інформація про дати оренди */}
+              <div style={{ 
+                background: '#f0f9ff', 
+                padding: '14px', 
+                borderRadius: '8px',
+                border: '1px solid #bae6fd'
+              }}>
+                <div style={{ fontSize: '12px', color: '#0369a1', marginBottom: '6px', fontWeight: '500' }}>
+                  Дати оренди (з мудборду)
+                </div>
+                <div style={{ fontSize: '14px', fontWeight: '500' }}>
+                  {formatDateRange(board?.rental_start_date, board?.rental_end_date)}
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px', 
+                  marginTop: '8px',
+                  fontSize: '13px'
+                }}>
+                  <span style={{ color: '#666' }}>Приблизно:</span>
+                  <span style={{ 
+                    fontWeight: '600', 
+                    color: '#8B0000',
+                    background: '#fef2f2',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    {rentalDays} {rentalDays === 1 ? 'доба' : 'доби'}
+                  </span>
+                </div>
+                {rentalCalculation.isApproximate && (
+                  <div style={{ 
+                    fontSize: '11px', 
+                    color: '#92400e', 
+                    marginTop: '6px',
+                    background: '#fffbeb',
+                    padding: '6px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    Це приблизний розрахунок. Менеджер уточнить кількість діб згідно з правилами оренди.
+                  </div>
+                )}
+              </div>
+              
+              <div>
+                <label style={labelStyle}>Назва події (необов'язково)</label>
+                <input
+                  type="text"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  placeholder="Весілля Олени та Максима"
+                  style={inputStyle}
+                />
+              </div>
+              
               <div>
                 <label style={labelStyle}>Тип події</label>
                 <select
@@ -472,6 +528,9 @@ const OrderCheckoutModal = ({
                     onChange={(e) => setEventDate(e.target.value)}
                     style={inputStyle}
                   />
+                  <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                    Це інформативна дата (може відрізнятись від дат оренди)
+                  </div>
                 </div>
                 <div>
                   <label style={labelStyle}>Час початку</label>
@@ -500,7 +559,7 @@ const OrderCheckoutModal = ({
                 <textarea
                   value={customerComment}
                   onChange={(e) => setCustomerComment(e.target.value)}
-                  placeholder="Додаткові побажання..."
+                  placeholder="Додаткові побажання, особливі вимоги, деталі..."
                   style={{
                     ...inputStyle,
                     minHeight: '100px',

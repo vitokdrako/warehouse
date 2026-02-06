@@ -196,6 +196,7 @@ const EventPlannerPage = () => {
   const [hasMore, setHasMore] = useState(true);
   const [showNewBoardModal, setShowNewBoardModal] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
   useEffect(() => {
     loadInitialData();

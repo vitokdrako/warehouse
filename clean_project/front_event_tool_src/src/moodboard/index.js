@@ -16,6 +16,8 @@ export { default as TextNode } from './components/canvas/TextNode';
 export { default as TopBar } from './components/panels/TopBar';
 export { default as LeftPanel } from './components/panels/LeftPanel';
 export { default as RightPanel } from './components/panels/RightPanel';
+export { default as LayersPanel } from './components/panels/LayersPanel';
+export { default as TemplatesPanel } from './components/panels/TemplatesPanel';
 
 // Inspector
 export { default as InspectorPanel } from './components/inspector/InspectorPanel';

@@ -22,7 +22,9 @@ import {
   bringForward,
   sendBackward,
   sortNodesByZIndex,
-  applyTemplate
+  applyTemplate,
+  toggleNodeLock as toggleNodeLockOp,
+  toggleNodeVisibility as toggleNodeVisibilityOp
 } from '../domain/moodboard.ops';
 
 const MAX_HISTORY = 50;
@@ -171,6 +173,21 @@ export const useMoodboardStore = create(
         state.isDirty = true;
       });
       get()._pushHistory();
+    },
+    
+    // Toggle lock/visibility
+    toggleNodeLock: (nodeId) => {
+      set(state => {
+        state.scene.nodes = toggleNodeLockOp(state.scene.nodes, nodeId);
+        state.isDirty = true;
+      });
+    },
+    
+    toggleNodeVisibility: (nodeId) => {
+      set(state => {
+        state.scene.nodes = toggleNodeVisibilityOp(state.scene.nodes, nodeId);
+        state.isDirty = true;
+      });
     },
     
     // ========================================================================

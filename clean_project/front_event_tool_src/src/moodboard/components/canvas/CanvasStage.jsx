@@ -5,7 +5,7 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { Stage, Layer, Rect, Line } from 'react-konva';
-import useMoodboardStore from '../store/moodboardStore';
+import useMoodboardStore from '../../store/moodboardStore';
 import DecorItemNode from './DecorItemNode';
 import TextNode from './TextNode';
 import { NodeType } from '../domain/moodboard.types';

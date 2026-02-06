@@ -448,6 +448,36 @@ const EventPlannerPage = () => {
     }, 0);
   };
 
+  // Відправка замовлення
+  const handleSubmitOrder = async (orderData) => {
+    if (!activeBoard) {
+      throw new Error('Мудборд не вибрано');
+    }
+    
+    try {
+      const response = await api.post(`/event/boards/${activeBoard.id}/convert-to-order`, orderData);
+      const result = response.data;
+      
+      // Показати успішне повідомлення
+      alert(`Замовлення ${result.order_number} успішно створено!\n\nМенеджер зв'яжеться з вами найближчим часом.`);
+      
+      // Оновити борд (він тепер converted)
+      setActiveBoard({ ...activeBoard, status: 'converted', converted_to_order_id: result.order_id });
+      setBoards(boards.map(b => 
+        b.id === activeBoard.id 
+          ? { ...b, status: 'converted', converted_to_order_id: result.order_id }
+          : b
+      ));
+      
+      setShowCheckoutModal(false);
+      
+      return result;
+    } catch (error) {
+      console.error('Order submission error:', error);
+      throw new Error(error.response?.data?.detail || 'Помилка створення замовлення');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

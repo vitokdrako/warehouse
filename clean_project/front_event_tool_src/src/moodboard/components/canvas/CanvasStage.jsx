@@ -324,40 +324,59 @@ const CanvasStage = () => {
       {/* A4 Page Container */}
       <div
         style={{
-          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-          borderRadius: '4px',
-          overflow: 'hidden',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.1)',
+          borderRadius: '2px',
+          overflow: 'visible',
           background: '#fff',
-          position: 'relative'
+          position: 'relative',
+          border: '1px solid #ccc',
+          transform: `scale(${zoom})`,
+          transformOrigin: 'top center',
+          transition: 'transform 0.2s ease'
         }}
       >
         {/* Page number indicator */}
         <div style={{
           position: 'absolute',
-          top: '8px',
-          right: '8px',
-          background: 'rgba(0,0,0,0.6)',
+          top: '-30px',
+          right: '0px',
+          background: 'rgba(0,0,0,0.7)',
           color: '#fff',
-          padding: '4px 10px',
+          padding: '4px 12px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          fontWeight: '500',
+          zIndex: 10
+        }}>
+          Сторінка {currentPage + 1} / {totalPages}
+        </div>
+        
+        {/* A4 Format label */}
+        <div style={{
+          position: 'absolute',
+          top: '-30px',
+          left: '0px',
+          background: '#8B0000',
+          color: '#fff',
+          padding: '4px 12px',
           borderRadius: '4px',
           fontSize: '11px',
           fontWeight: '500',
           zIndex: 10
         }}>
-          {currentPage + 1} / {totalPages}
+          A4 (210×297 мм)
         </div>
-        
+
         <Stage
           ref={stageRef}
           width={A4_WIDTH}
           height={A4_HEIGHT}
-          scaleX={zoom}
-          scaleY={zoom}
-          x={panOffset.x}
-          y={panOffset.y}
           onClick={handleStageClick}
           onTap={handleStageClick}
-          style={{ background: getBackgroundFill() }}
+          style={{ 
+            background: getBackgroundFill(),
+            display: 'block'
+          }}
         >
           {/* Background Layer */}
           <Layer>

@@ -4,10 +4,10 @@
  */
 
 // ============================================================================
-// A4 PAGE SETTINGS (96 DPI)
+// A4 PAGE SETTINGS (96 DPI) - LANDSCAPE / АЛЬБОМНА ОРІЄНТАЦІЯ
 // ============================================================================
-export const A4_WIDTH = 794;  // 210mm at 96 DPI
-export const A4_HEIGHT = 1123; // 297mm at 96 DPI
+export const A4_WIDTH = 1123;  // 297mm at 96 DPI (landscape)
+export const A4_HEIGHT = 794;  // 210mm at 96 DPI (landscape)
 export const PAGE_PADDING = 40;
 
 // ============================================================================

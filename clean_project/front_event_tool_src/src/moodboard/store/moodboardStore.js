@@ -157,9 +157,12 @@ export const useMoodboardStore = create(
     // ========================================================================
     
     addNode: (node) => {
+      const { currentPage } = get();
       set(state => {
-        state.scene.nodes = addNode(state.scene.nodes, node);
-        state.selectedNodeIds = [node.id];
+        // Додаємо pageIndex до нової ноди
+        const nodeWithPage = { ...node, pageIndex: currentPage };
+        state.scene.nodes = addNode(state.scene.nodes, nodeWithPage);
+        state.selectedNodeIds = [nodeWithPage.id];
         state.isDirty = true;
       });
       get()._pushHistory();

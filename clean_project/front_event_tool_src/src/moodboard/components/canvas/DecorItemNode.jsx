@@ -1,27 +1,43 @@
 /**
  * Decor Item Node
- * Компонент товару на canvas - виправлено завантаження зображень
+ * Компонент товару на canvas - з підтримкою image proxy для CORS
  */
 
 import React, { useRef, useEffect, useState } from 'react';
 import { Group, Rect, Image, Text, Transformer } from 'react-konva';
 
+// API URL для proxy
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'https://backrentalhub.farforrent.com.ua';
 const BACKEND_URL = 'https://backrentalhub.farforrent.com.ua';
 
 /**
- * Отримати оптимальний URL зображення для canvas
- * Використовуємо прямий шлях до зображень, щоб уникнути проблем з CORS та OpenCart кешем
+ * Отримати URL зображення через proxy для обходу CORS
  */
-const getCanvasImageUrl = (imagePath) => {
+const getProxiedImageUrl = (imagePath) => {
   if (!imagePath) return null;
   
-  // Якщо вже повний URL
+  let fullUrl = imagePath;
+  
+  // Якщо не повний URL - додаємо backend
+  if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+    const cleanPath = imagePath.replace(/^\/+/, '');
+    fullUrl = `${BACKEND_URL}/${cleanPath}`;
+  }
+  
+  // Повертаємо URL через proxy
+  return `${API_URL}/api/event/image-proxy?url=${encodeURIComponent(fullUrl)}`;
+};
+
+/**
+ * Отримати прямий URL (для fallback)
+ */
+const getDirectImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
   }
   
-  // Для всіх інших шляхів - прямий доступ через backend
-  // Видаляємо початкові слеші
   const cleanPath = imagePath.replace(/^\/+/, '');
   return `${BACKEND_URL}/${cleanPath}`;
 };
@@ -33,7 +49,7 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   
-  // Завантажуємо зображення з кількома fallback варіантами
+  // Завантажуємо зображення через proxy
   useEffect(() => {
     if (!node.imageUrl) {
       setLoading(false);
@@ -47,18 +63,17 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
     // Спробуємо кілька варіантів URL
     const tryUrls = [];
     
-    // 1. Прямий URL через backend
-    const directUrl = getCanvasImageUrl(node.imageUrl);
+    // 1. Через proxy (обхід CORS)
+    const proxyUrl = getProxiedImageUrl(node.imageUrl);
+    if (proxyUrl) tryUrls.push(proxyUrl);
+    
+    // 2. Прямий URL (може працювати якщо CORS налаштовано на сервері)
+    const directUrl = getDirectImageUrl(node.imageUrl);
     if (directUrl) tryUrls.push(directUrl);
     
-    // 2. Якщо шлях починається з catalog/, спробуємо через farforrent.com.ua
+    // 3. Якщо є catalog/ - спробуємо через farforrent.com.ua
     if (node.imageUrl.includes('catalog/')) {
       tryUrls.push(`https://www.farforrent.com.ua/image/${node.imageUrl}`);
-    }
-    
-    // 3. Оригінальний URL як fallback
-    if (node.imageUrl.startsWith('http')) {
-      tryUrls.push(node.imageUrl);
     }
     
     let currentIndex = 0;

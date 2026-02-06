@@ -9,6 +9,7 @@ import BoardItemCard from './components/BoardItemCard';
 import { MoodboardPage } from './moodboard';
 import ProductFilters from './components/ProductFilters';
 import CreateBoardModal from './components/CreateBoardModal';
+import OrderCheckoutModal from './components/OrderCheckoutModal';
 import UserProfile from './components/UserProfile';
 import './App.css';
 import api from './api/axios';

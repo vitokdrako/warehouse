@@ -496,33 +496,62 @@ const EventPlannerPage = () => {
             <img 
               src="/logo.svg" 
               alt="FarforDecor Logo" 
+              className="fd-logo"
               style={{
                 height: '40px',
                 width: 'auto'
               }}
             />
-            {/* Company Name */}
-            <h1 className="text-xl font-bold" style={{color: '#333', letterSpacing: '0.03em'}}>
+            {/* Company Name - hidden on mobile */}
+            <h1 className="text-xl font-bold hidden sm:block" style={{color: '#333', letterSpacing: '0.03em'}}>
               FarforDecorOrenda
             </h1>
-            <div className="w-px h-5" style={{background: '#e6e6e6'}}></div>
-            <span className="text-xs" style={{color: '#999', textTransform: 'uppercase'}}>Event Planning Platform</span>
+            <div className="w-px h-5 hidden md:block" style={{background: '#e6e6e6'}}></div>
+            <span className="text-xs hidden md:block" style={{color: '#999', textTransform: 'uppercase'}}>Event Planning Platform</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* Mobile: Cart badge */}
+            <button
+              onClick={toggleSidePanel}
+              className="fd-btn fd-btn-secondary sm:hidden relative"
+              style={{padding: '8px 12px'}}
+            >
+              <span>🛒</span>
+              {activeBoard?.items?.length > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  background: '#333',
+                  color: '#fff',
+                  fontSize: '10px',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {activeBoard.items.length}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => navigate('/profile')}
               className="fd-btn fd-btn-secondary"
             >
-              Мої мудборди
+              <span className="hidden sm:inline">Мої мудборди</span>
+              <span className="sm:hidden">📋</span>
             </button>
-            <span className="text-sm" style={{color: '#555'}}>
+            <span className="text-sm hidden md:block" style={{color: '#555'}}>
               {user?.firstname} {user?.lastname}
             </span>
             <button
               onClick={logout}
               className="fd-btn fd-btn-secondary"
             >
-              Вийти
+              <span className="hidden sm:inline">Вийти</span>
+              <span className="sm:hidden">↪</span>
             </button>
           </div>
         </div>

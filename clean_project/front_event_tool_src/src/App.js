@@ -557,24 +557,25 @@ const EventPlannerPage = () => {
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-73px)]" style={{background: '#f3f3f3'}}>
+      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-73px)] lg:h-[calc(100vh-73px)]" style={{background: '#f3f3f3'}}>
         {/* Catalog Section */}
-        <div className={`flex-1 overflow-auto transition-all duration-300 ${isSidePanelOpen ? 'mr-96' : ''}`}>
-          <div className="p-8">
+        <div className={`flex-1 overflow-auto transition-all duration-300 ${isSidePanelOpen ? 'lg:mr-96' : ''}`}>
+          <div className="p-4 sm:p-6 lg:p-8">
             {/* Search and Filters */}
-            <div className="mb-6 space-y-4">
-              <div style={{maxWidth: '600px'}}>
+            <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
+              <div className="w-full lg:max-w-[600px]">
                 <input
                   type="text"
-                  placeholder="Розумний пошук: назва, артикул, категорія, колір, матеріал..."
+                  placeholder="Пошук: назва, артикул, колір..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input-mobile"
                   style={{
                     width: '100%',
                     padding: '12px 15px',
                     border: '1px solid #e5ecf3',
                     borderRadius: '4px',
-                    fontSize: '14px',
+                    fontSize: '16px',
                     fontFamily: 'Montserrat, Arial, sans-serif',
                     color: '#838182',
                     transition: 'all 0.3s ease'
@@ -596,17 +597,17 @@ const EventPlannerPage = () => {
             </div>
 
             {/* Products Count */}
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-sm" style={{color: '#666'}}>
-                Знайдено товарів: <span style={{fontWeight: 'bold', color: '#333'}}>{filteredProducts.length}</span>
+            <div className="mb-3 sm:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="text-xs sm:text-sm" style={{color: '#666'}}>
+                Знайдено: <span style={{fontWeight: 'bold', color: '#333'}}>{filteredProducts.length}</span>
                 {(selectedCategory || selectedSubcategory || selectedColor || searchTerm) && (
-                  <span style={{color: '#999'}}> (з {products.length} всього)</span>
+                  <span style={{color: '#999'}}> (з {products.length})</span>
                 )}
               </div>
             </div>
 
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {/* Products Grid - responsive */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.product_id}
@@ -622,12 +623,12 @@ const EventPlannerPage = () => {
 
             {/* Load More Button */}
             {hasMore && filteredProducts.length > 0 && !searchTerm && !selectedCategory && !selectedSubcategory && !selectedColor && (
-              <div className="text-center mt-8">
+              <div className="text-center mt-6 sm:mt-8 pb-4">
                 <button
                   onClick={loadMoreProducts}
                   disabled={loadingMore}
-                  className="fd-btn fd-btn-black disabled:opacity-50"
-                  style={{minWidth: '200px'}}
+                  className="fd-btn fd-btn-black disabled:opacity-50 w-full sm:w-auto"
+                  style={{minWidth: '200px', padding: '12px 24px'}}
                 >
                   {loadingMore ? 'Завантаження...' : 'Завантажити більше'}
                 </button>
@@ -635,7 +636,7 @@ const EventPlannerPage = () => {
             )}
 
             {filteredProducts.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-8 sm:py-12 text-gray-500">
                 Товари не знайдено
               </div>
             )}

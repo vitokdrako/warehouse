@@ -151,7 +151,7 @@ const LeftPanel = ({ boardItems = [] }) => {
                       width: '36px',
                       height: '36px',
                       borderRadius: '6px',
-                      border: scene.background?.value === preset.value 
+                      border: scene.background?.value === preset.value && scene.background?.type !== 'image'
                         ? '2px solid #8B0000' 
                         : '1px solid #e0e0e0',
                       background: preset.value,
@@ -178,6 +178,110 @@ const LeftPanel = ({ boardItems = [] }) => {
                   cursor: 'pointer'
                 }}
               />
+            </div>
+            
+            {/* Background Image */}
+            <div style={{ borderTop: '1px solid #e0e0e0', paddingTop: '16px' }}>
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                Зображення фону
+              </div>
+              
+              {scene.background?.type === 'image' && scene.background?.imageUrl ? (
+                <div style={{ 
+                  position: 'relative',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  marginBottom: '8px'
+                }}>
+                  <img 
+                    src={scene.background.imageUrl} 
+                    alt="Background"
+                    style={{
+                      width: '100%',
+                      height: '80px',
+                      objectFit: 'cover'
+                    }}
+                  />
+                  <button
+                    onClick={() => setBackgroundColor('#ffffff')}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(0,0,0,0.6)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      fontSize: '11px'
+                    }}
+                  >
+                    Видалити
+                  </button>
+                </div>
+              ) : null}
+              
+              <input
+                type="file"
+                accept="image/*"
+                id="bg-image-upload"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      setBackgroundImage(event.target.result, 'cover');
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+              <label
+                htmlFor="bg-image-upload"
+                style={{
+                  display: 'block',
+                  padding: '12px',
+                  border: '2px dashed #e0e0e0',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: '#666'
+                }}
+              >
+                Натисніть щоб завантажити
+              </label>
+              
+              {scene.background?.type === 'image' && (
+                <div style={{ marginTop: '12px' }}>
+                  <div style={{ fontSize: '11px', color: '#666', marginBottom: '6px' }}>
+                    Масштабування
+                  </div>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {['cover', 'contain', 'stretch'].map(fit => (
+                      <button
+                        key={fit}
+                        onClick={() => setBackgroundImage(scene.background.imageUrl, fit)}
+                        style={{
+                          flex: 1,
+                          padding: '6px',
+                          border: scene.background?.imageFit === fit 
+                            ? '2px solid #8B0000' 
+                            : '1px solid #e0e0e0',
+                          borderRadius: '4px',
+                          background: scene.background?.imageFit === fit ? '#fef7f7' : '#fff',
+                          cursor: 'pointer',
+                          fontSize: '10px'
+                        }}
+                      >
+                        {fit === 'cover' ? 'Заповнити' : fit === 'contain' ? 'Вмістити' : 'Розтягнути'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

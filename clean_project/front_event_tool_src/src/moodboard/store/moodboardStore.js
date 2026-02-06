@@ -354,6 +354,12 @@ export const useMoodboardStore = create(
       state.inspectorOpen = nodeIds.length > 0;
     }),
     
+    selectMultipleNodes: (nodeIds) => set(state => {
+      state.selectedNodeIds = [...new Set(nodeIds)]; // Remove duplicates
+      state.isMultiSelect = state.selectedNodeIds.length > 1;
+      state.inspectorOpen = state.selectedNodeIds.length > 0;
+    }),
+    
     selectAll: () => set(state => {
       state.selectedNodeIds = state.scene.nodes.map(n => n.id);
       state.isMultiSelect = state.selectedNodeIds.length > 1;

@@ -643,23 +643,32 @@ const EventPlannerPage = () => {
           </div>
         </div>
 
+        {/* Mobile overlay when side panel is open */}
+        {isSidePanelOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={toggleSidePanel}
+          />
+        )}
+
         {/* Side Panel - Event Board */}
         {isSidePanelOpen && (
-          <div className="w-96 fd-side-panel flex flex-col fixed right-0 h-[calc(100vh-73px)]">
-            {/* Compact Panel Header - Оптимізовано */}
+          <div className="w-full sm:w-96 fd-side-panel flex flex-col fixed right-0 top-0 lg:top-auto h-full lg:h-[calc(100vh-73px)] z-50 lg:z-auto">
+            {/* Compact Panel Header */}
             <div className="fd-side-header flex items-center justify-between" style={{padding: '14px 18px 10px', marginBottom: '0', borderBottom: '1px solid #f0f0f0'}}>
               <h2 className="fd-side-title" style={{fontSize: '13px'}}>МІЙ ІВЕНТ</h2>
               <button
                 onClick={toggleSidePanel}
-                className="fd-btn"
-                style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#999', background: 'none', border: 'none', padding: 0}}
+                className="fd-btn flex items-center gap-2"
+                style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#999', background: 'none', border: 'none', padding: '8px'}}
               >
-                згорнути
+                <span className="hidden sm:inline">згорнути</span>
+                <span className="text-lg">✕</span>
               </button>
             </div>
 
-            {/* Compact Board Selector - Оптимізовано */}
-            <div style={{padding: '12px 18px 12px', background: '#fafafa'}}>
+            {/* Compact Board Selector */}
+            <div style={{padding: '12px 16px', background: '#fafafa'}}>
               <select
                 value={activeBoard?.id || ''}
                 onChange={(e) => {
@@ -667,7 +676,7 @@ const EventPlannerPage = () => {
                   setActiveBoard(board);
                 }}
                 className="w-full fd-select mb-2"
-                style={{fontSize: '12px', padding: '8px 12px'}}
+                style={{fontSize: '14px', padding: '10px 12px'}}
               >
                 <option value="">Виберіть мудборд</option>
                 {boards.map((board) => (
@@ -679,7 +688,7 @@ const EventPlannerPage = () => {
               <button
                 onClick={() => setShowNewBoardModal(true)}
                 className="w-full fd-btn fd-btn-primary"
-                style={{padding: '8px 12px', fontSize: '11px'}}
+                style={{padding: '10px 12px', fontSize: '12px'}}
               >
                 + створити івент
               </button>
@@ -688,9 +697,9 @@ const EventPlannerPage = () => {
             {/* Board Content */}
             {activeBoard ? (
               <>
-                {/* Compact Board Info - Оптимізовано */}
-                <div style={{padding: '12px 18px', borderBottom: '1px solid #f0f0f0'}}>
-                  {/* Cover Image - Менше */}
+                {/* Compact Board Info */}
+                <div style={{padding: '12px 16px', borderBottom: '1px solid #f0f0f0'}}>
+                  {/* Cover Image */}
                   {activeBoard.cover_image && (
                     <div style={{
                       width: '100%',
@@ -715,12 +724,12 @@ const EventPlannerPage = () => {
                     </div>
                   )}
                   
-                  <h3 className="font-bold mb-1" style={{fontSize: '13px', color: '#333', lineHeight: '1.3'}}>{activeBoard.board_name}</h3>
-                  <p className="fd-label mb-2" style={{fontSize: '10px'}}>
+                  <h3 className="font-bold mb-1" style={{fontSize: '14px', color: '#333', lineHeight: '1.3'}}>{activeBoard.board_name}</h3>
+                  <p className="fd-label mb-2" style={{fontSize: '11px'}}>
                     {activeBoard.event_date || 'Дата не вказана'}
                   </p>
                   
-                  {/* Компактний DateRangePicker */}
+                  {/* DateRangePicker */}
                   <DateRangePicker
                     startDate={activeBoard.rental_start_date}
                     endDate={activeBoard.rental_end_date}
@@ -729,7 +738,7 @@ const EventPlannerPage = () => {
                   />
                   
                   {activeBoard.rental_days && (
-                    <p className="text-center mt-1" style={{fontSize: '10px', color: '#999'}}>
+                    <p className="text-center mt-1" style={{fontSize: '11px', color: '#999'}}>
                       {activeBoard.rental_days} днів оренди
                     </p>
                   )}

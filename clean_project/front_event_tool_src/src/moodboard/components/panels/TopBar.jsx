@@ -129,8 +129,6 @@ const TopBar = ({ boardName, onSave, onBack }) => {
       setExporting(false);
     }
   };
-    }
-  };
   
   return (
     <div style={{

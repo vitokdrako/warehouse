@@ -10,7 +10,8 @@
 
 ## What's Been Implemented
 
-### 2025-02-06: Moodboard Canvas Fix + Order Submission
+### 2025-02-06: Complete Moodboard + Order System
+
 **P0 Bug Fix: Images rendering as grey squares**
 - Fixed `DecorItemNode.jsx` - images now load correctly with CORS support
 - Added multiple fallback URLs for image loading
@@ -22,31 +23,56 @@
   2. Delivery options (self pickup, delivery, event delivery with setup)
   3. Event details (name, type, location, date, guests, comments)
   4. Order confirmation with approximate pricing
-
 - Orders from Ivent-tool have prefix `#IT-XXXX` (vs `#OC-XXXX` from OpenCart)
-- All additional data saved in `notes` field for compatibility with existing DB schema
-- Backend endpoint: `POST /api/event/boards/{board_id}/convert-to-order`
+- Rental days calculator with FarForRent business rules
 
-**P1: Rental Days Calculator**
-- Created `rentalDaysCalculator.js` with FarForRent business rules:
-  - 2 days: Mon→Thu, Tue→Fri, Wed→Sat, Fri→Tue, Sat→Tue
-  - 1 day: Mon→Wed, Tue→Thu, Wed→Fri, Thu→Sat, Fri→Sat, Sat→Mon
-- Shows approximate calculation with disclaimer that manager will confirm
+**P1: PDF Export (NEW)**
+- Integrated `jsPDF` library
+- Export dropdown menu with PNG, JPG, PDF options
+- High-quality export with pixelRatio=3
+
+**P1: Layers Panel (NEW)**
+- Full layer management: visibility, lock, delete
+- Layer ordering: bring to front, send to back
+- Visual thumbnail previews
+
+**P1: Templates Panel (NEW)**
+- Layout templates: Single, Grid 2x2, Collage, etc.
+- Canvas size presets: A4 Portrait/Landscape, Square, Instagram
+- Background color picker with presets
 
 **P1: Inspector Panel**
-- Created `InspectorPanel.jsx` for moodboard element editing
 - Position, size, rotation, opacity controls
-- Layer controls (bring to front/send to back)
-- Delete/duplicate actions
-
-**P1: PNG Export with High Quality**
-- Updated `TopBar.jsx` with pixelRatio=3 for high-res export
+- Layer controls and actions
+- Type-specific properties (text font size, color)
 
 ### Previous Session Work
 - Moodboard MVP architecture with Konva.js + Zustand
 - Color filter deduplication  
 - Availability check sync with RentalHub
 - Backend caching for filters
+
+---
+
+## Moodboard Feature Summary
+
+| Feature | Status |
+|---------|--------|
+| Drag & Drop Products | ✅ Done |
+| Image Rendering (CORS) | ✅ Fixed |
+| Text Elements | ✅ Done |
+| Transform (resize/rotate) | ✅ Done |
+| Layer Management | ✅ Done |
+| Layout Templates | ✅ Done |
+| Background Colors | ✅ Done |
+| Canvas Size Presets | ✅ Done |
+| Export PNG | ✅ Done |
+| Export JPG | ✅ Done |
+| Export PDF | ✅ Done |
+| Undo/Redo | ✅ Done |
+| Zoom/Pan | ✅ Done |
+| Grid Overlay | ✅ Done |
+| Inspector Panel | ✅ Done |
 
 ---
 
@@ -66,31 +92,8 @@ INSERT INTO orders (
     notes [all extra data], created_at
 )
     ↓
-INSERT INTO order_items (...)
-    ↓
-INSERT INTO order_internal_notes (customer comment)
-    ↓
-INSERT INTO order_lifecycle (created from Ivent-tool)
-    ↓
 RentalHub Admin sees order with #IT-XXXX prefix
 ```
-
----
-
-## Fields Comparison: OpenCart vs Ivent-tool
-
-| Field | OpenCart (OC-) | Ivent-tool (IT-) |
-|-------|----------------|------------------|
-| order_number | OC-XXXX | IT-XXXX |
-| customer_id | ✓ | ✗ |
-| event_date | ✗ | ✓ (informative) |
-| event_time | ✗ | ✓ |
-| event_location | ✗ | ✓ (+ event name) |
-| delivery_type | ✗ | ✓ (in notes) |
-| delivery_address | ✗ | ✓ (in notes) |
-| setup_required | ✗ | ✓ (in notes) |
-| payer_type | ✗ | ✓ (in notes) |
-| source | ✗ | 'event_tool' (in notes) |
 
 ---
 
@@ -98,13 +101,15 @@ RentalHub Admin sees order with #IT-XXXX prefix
 - None currently blocking
 
 ## P1 Upcoming Tasks
-- [ ] Full Moodboard feature implementation (PDF export, templates, advanced layers)
+- [ ] Test checkout flow on events.farforrent.com.ua
+- [ ] Verify #IT-XXXX orders display correctly in RentalHub
 - [ ] Calendar timezone bug (recurring 3+ times)
 
 ## P2 Future Tasks
 - [ ] Unify Order Workspaces (NewOrderViewWorkspace + IssueCardWorkspace)
 - [ ] Full RBAC implementation
 - [ ] Monthly Financial Reports
+- [ ] Background images for moodboard
 
 ## P3 Backlog
 - [ ] Digital Signature Integration
@@ -128,6 +133,13 @@ RentalHub Admin sees order with #IT-XXXX prefix
     ├── front_event_tool_src/  # Ivent-tool React source
     │   └── src/
     │       ├── moodboard/     # Konva.js + Zustand module
+    │       │   ├── components/
+    │       │   │   ├── canvas/ (CanvasStage, DecorItemNode, TextNode)
+    │       │   │   ├── panels/ (TopBar, LeftPanel, RightPanel, LayersPanel, TemplatesPanel)
+    │       │   │   └── inspector/ (InspectorPanel)
+    │       │   ├── store/ (moodboardStore.js - Zustand)
+    │       │   ├── domain/ (types, ops)
+    │       │   └── utils/ (imageUtils)
     │       ├── components/
     │       │   └── OrderCheckoutModal.jsx
     │       └── utils/
@@ -136,6 +148,12 @@ RentalHub Admin sees order with #IT-XXXX prefix
     ├── front_event_tool/      # Production build
     └── backend/               # Backend source (synced to /app/backend)
 ```
+
+## Dependencies Added
+- `jspdf` - PDF generation
+- `konva`, `react-konva` - Canvas rendering
+- `zustand` - State management
+- `use-image` - Image loading for canvas
 
 ## Production URLs
 - RentalHub Admin: Internal

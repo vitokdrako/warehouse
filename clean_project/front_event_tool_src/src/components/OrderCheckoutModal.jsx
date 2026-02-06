@@ -130,12 +130,14 @@ const OrderCheckoutModal = ({
   
   const inputStyle = {
     width: '100%',
-    padding: '12px 14px',
+    padding: '14px',
     border: '1px solid #e0e0e0',
     borderRadius: '8px',
-    fontSize: '14px',
+    fontSize: '16px', // Prevent iOS zoom
     outline: 'none',
-    transition: 'border-color 0.2s'
+    transition: 'border-color 0.2s',
+    minHeight: '48px',
+    boxSizing: 'border-box'
   };
   
   const labelStyle = {

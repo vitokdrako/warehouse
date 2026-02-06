@@ -3,7 +3,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 import os
 import logging
 from pathlib import Path
@@ -17,25 +16,6 @@ from routes import inventory, clients, orders, tasks, damages, finance, test_ord
 
 # Create the main app
 app = FastAPI(title="Rental Hub API")
-
-# ============================================================================
-# CORS Middleware для статичних файлів (uploads, static)
-# ============================================================================
-class StaticFilesCORSMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        
-        # Додаємо CORS headers для статичних файлів
-        if request.url.path.startswith('/uploads/') or request.url.path.startswith('/static/'):
-            response.headers['Access-Control-Allow-Origin'] = '*'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = '*'
-            response.headers['Cache-Control'] = 'public, max-age=86400'
-        
-        return response
-
-# Додаємо middleware для статичних файлів
-app.add_middleware(StaticFilesCORSMiddleware)
 
 # Налаштувати статичні файли для завантажених зображень
 UPLOAD_ROOT = ROOT_DIR / "uploads"

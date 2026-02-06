@@ -1239,23 +1239,58 @@ async def convert_to_order(
     order_number = f"IT-{new_order_id}"  # IT = Ivent-Tool
     
     # Підготувати notes з усією додатковою інформацією
+    # Включаємо delivery та інші дані, яких немає в окремих полях БД
     notes_parts = []
-    if data.customer_comment:
-        notes_parts.append(f"Коментар клієнта: {data.customer_comment}")
+    
+    # Джерело замовлення
+    notes_parts.append("[Джерело: Ivent-tool]")
+    
+    # Доставка
+    if data.delivery_type:
+        delivery_labels = {
+            'self_pickup': 'Самовивіз',
+            'delivery': 'Доставка',
+            'event_delivery': 'Доставка на подію'
+        }
+        notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
+    
+    if data.delivery_address:
+        notes_parts.append(f"Адреса: {data.delivery_address}")
+    elif data.city:
+        notes_parts.append(f"Місто: {data.city}")
+    
+    # Подія
     if data.event_type:
-        notes_parts.append(f"Тип події: {data.event_type}")
-    if data.event_location:
-        notes_parts.append(f"Місце події: {data.event_location}")
+        event_labels = {
+            'wedding': 'Весілля',
+            'corporate': 'Корпоратив', 
+            'birthday': 'День народження',
+            'baby_shower': 'Baby Shower',
+            'graduation': 'Випускний',
+            'anniversary': 'Річниця',
+            'photoshoot': 'Фотосесія',
+            'other': 'Інше'
+        }
+        notes_parts.append(f"Тип події: {event_labels.get(data.event_type, data.event_type)}")
+    
     if data.guests_count:
         notes_parts.append(f"Кількість гостей: {data.guests_count}")
+    
+    # Монтаж
     if data.setup_required:
-        notes_parts.append(f"Потрібен монтаж: Так")
+        notes_parts.append("Потрібен монтаж: Так")
         if data.setup_notes:
-            notes_parts.append(f"Монтаж: {data.setup_notes}")
+            notes_parts.append(f"Деталі монтажу: {data.setup_notes}")
+    
+    # Платник
     if data.payer_type == "company" and data.company_name:
         notes_parts.append(f"Платник: {data.company_name}")
         if data.company_edrpou:
             notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
+    
+    # Коментар клієнта в кінці
+    if data.customer_comment:
+        notes_parts.append(f"---\nКоментар клієнта: {data.customer_comment}")
     
     notes_text = "\n".join(notes_parts) if notes_parts else None
     
@@ -1263,7 +1298,8 @@ async def convert_to_order(
     event_date = data.event_date or board[4]  # board[4] = event_date з борду
     event_time = data.event_time
     
-    # Створити order в RentalHub з усіма полями
+    # Створити order в RentalHub
+    # Використовуємо тільки поля які точно існують в БД
     db.execute(text("""
         INSERT INTO orders (
             order_id, order_number, status, 
@@ -1271,9 +1307,7 @@ async def convert_to_order(
             event_date, event_time, event_location,
             total_price, deposit_amount, 
             customer_name, customer_phone, customer_email,
-            delivery_address, delivery_type, 
-            notes, source, 
-            created_at
+            notes, created_at
         )
         VALUES (
             :order_id, :order_number, 'awaiting_customer', 
@@ -1281,9 +1315,7 @@ async def convert_to_order(
             :event_date, :event_time, :event_location,
             :total_price, :deposit_amount, 
             :customer_name, :phone, :email,
-            :delivery_address, :delivery_type, 
-            :notes, 'event_tool', 
-            NOW()
+            :notes, NOW()
         )
     """), {
         "order_id": new_order_id,
@@ -1299,8 +1331,6 @@ async def convert_to_order(
         "customer_name": data.customer_name,
         "phone": data.phone,
         "email": customer["email"],
-        "delivery_address": data.delivery_address or data.city,
-        "delivery_type": data.delivery_type,
         "notes": notes_text
     })
     

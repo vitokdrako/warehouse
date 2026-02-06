@@ -1298,7 +1298,8 @@ async def convert_to_order(
     event_date = data.event_date or board[4]  # board[4] = event_date з борду
     event_time = data.event_time
     
-    # Створити order в RentalHub з усіма полями
+    # Створити order в RentalHub
+    # Використовуємо тільки поля які точно існують в БД
     db.execute(text("""
         INSERT INTO orders (
             order_id, order_number, status, 
@@ -1306,9 +1307,7 @@ async def convert_to_order(
             event_date, event_time, event_location,
             total_price, deposit_amount, 
             customer_name, customer_phone, customer_email,
-            delivery_address, delivery_type, 
-            notes, source, 
-            created_at
+            notes, created_at
         )
         VALUES (
             :order_id, :order_number, 'awaiting_customer', 
@@ -1316,9 +1315,7 @@ async def convert_to_order(
             :event_date, :event_time, :event_location,
             :total_price, :deposit_amount, 
             :customer_name, :phone, :email,
-            :delivery_address, :delivery_type, 
-            :notes, 'event_tool', 
-            NOW()
+            :notes, NOW()
         )
     """), {
         "order_id": new_order_id,
@@ -1334,8 +1331,6 @@ async def convert_to_order(
         "customer_name": data.customer_name,
         "phone": data.phone,
         "email": customer["email"],
-        "delivery_address": data.delivery_address or data.city,
-        "delivery_type": data.delivery_type,
         "notes": notes_text
     })
     

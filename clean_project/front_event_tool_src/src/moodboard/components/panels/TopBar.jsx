@@ -367,7 +367,6 @@ const TopBar = ({ boardName, onSave, onBack }) => {
               onClick={handleExportPNG}
               style={exportMenuItemStyle}
             >
-              <span>🖼️</span>
               <div>
                 <div style={{ fontWeight: '500' }}>PNG</div>
                 <div style={{ fontSize: '10px', color: '#999' }}>Висока якість</div>
@@ -377,7 +376,6 @@ const TopBar = ({ boardName, onSave, onBack }) => {
               onClick={handleExportJPG}
               style={exportMenuItemStyle}
             >
-              <span>📷</span>
               <div>
                 <div style={{ fontWeight: '500' }}>JPG</div>
                 <div style={{ fontSize: '10px', color: '#999' }}>Менший розмір</div>
@@ -391,7 +389,6 @@ const TopBar = ({ boardName, onSave, onBack }) => {
               onClick={handleExportPDF}
               style={exportMenuItemStyle}
             >
-              <span>📄</span>
               <div>
                 <div style={{ fontWeight: '500' }}>PDF (A4)</div>
                 <div style={{ fontSize: '10px', color: '#999' }}>Всі сторінки для друку</div>
@@ -402,7 +399,6 @@ const TopBar = ({ boardName, onSave, onBack }) => {
                 onClick={handleExportAllPNG}
                 style={exportMenuItemStyle}
               >
-                <span>📦</span>
                 <div>
                   <div style={{ fontWeight: '500' }}>PNG (усі)</div>
                   <div style={{ fontSize: '10px', color: '#999' }}>Завантажити кожну сторінку</div>

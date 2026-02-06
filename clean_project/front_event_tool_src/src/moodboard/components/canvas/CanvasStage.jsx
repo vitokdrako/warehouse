@@ -42,11 +42,16 @@ const CanvasStage = () => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      // Auto-adjust zoom for mobile
+      // Auto-adjust zoom for mobile to fit screen
       if (mobile) {
-        const containerWidth = window.innerWidth - 40;
-        const optimalZoom = Math.min(containerWidth / A4_WIDTH, 0.6);
-        setZoom(optimalZoom);
+        const containerWidth = window.innerWidth - 24; // padding
+        const optimalZoom = Math.min(containerWidth / A4_WIDTH, 0.5);
+        setZoom(Math.max(0.3, optimalZoom));
+      } else {
+        // Desktop default zoom
+        const containerHeight = window.innerHeight - 200;
+        const optimalZoom = Math.min(containerHeight / A4_HEIGHT, 0.85);
+        setZoom(Math.max(0.5, optimalZoom));
       }
     };
     checkMobile();

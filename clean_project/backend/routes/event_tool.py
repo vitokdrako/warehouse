@@ -1336,7 +1336,7 @@ async def convert_to_order(
         "rental_days": rental_days,
         "event_date": event_date,
         "event_time": event_time,
-        "event_location": data.event_location,
+        "event_location": event_location_text,  # Назва події + місце
         "total_price": total_price,
         "deposit_amount": deposit_amount,
         "customer_name": data.customer_name,

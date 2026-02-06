@@ -99,6 +99,12 @@ export default function WorkspaceHeader({
             <h1 className={`font-bold text-slate-900 truncate transition-all ${scrolled ? 'text-sm' : 'text-base sm:text-xl'}`}>
               {title || `#${orderNumber || orderId}`}
             </h1>
+            {/* Badge для Ivent-tool замовлень */}
+            {orderNumber?.startsWith('IT-') && (
+              <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-100 text-purple-700 rounded">
+                Ivent-tool
+              </span>
+            )}
             <TonePill tone={config.tone} icon={config.icon} compact>
               {scrolled ? '' : config.title}
             </TonePill>

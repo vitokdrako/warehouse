@@ -83,14 +83,24 @@ class EventBoardItemUpdate(BaseModel):
     section: Optional[str] = None
 
 class OrderCreate(BaseModel):
+    """Схема для створення замовлення з Ivent-tool"""
     customer_name: str
     phone: str
     delivery_address: Optional[str] = None
     city: Optional[str] = None
-    delivery_type: str = "self_pickup"
+    delivery_type: str = "self_pickup"  # self_pickup, delivery, event_delivery
     customer_comment: Optional[str] = None
-    event_type: Optional[str] = None
+    event_type: Optional[str] = None  # wedding, corporate, birthday, etc.
+    event_location: Optional[str] = None  # Місце проведення події
     guests_count: Optional[int] = None
+    # Додаткові поля для Ivent-tool
+    event_date: Optional[str] = None  # Дата події (може відрізнятися від оренди)
+    event_time: Optional[str] = None  # Час події
+    setup_required: bool = False  # Чи потрібен монтаж
+    setup_notes: Optional[str] = None  # Примітки по монтажу
+    payer_type: str = "individual"  # individual, company
+    company_name: Optional[str] = None
+    company_edrpou: Optional[str] = None
 
 # ============================================================================
 # AUTH HELPERS

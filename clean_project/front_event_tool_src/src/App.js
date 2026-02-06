@@ -763,13 +763,32 @@ const EventPlannerPage = () => {
         />
       )}
 
-      {/* Moodboard Canvas */}
+      {/* Moodboard Canvas - Новий модуль */}
       {showCanvas && activeBoard && (
-        <MoodboardCanvas
-          board={activeBoard}
-          onClose={() => setShowCanvas(false)}
-          onSave={handleSaveCanvas}
-        />
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1000,
+          background: '#fff'
+        }}>
+          <MoodboardPage
+            board={activeBoard}
+            boardItems={activeBoard.items || []}
+            onSave={async (scene) => {
+              try {
+                await handleSaveCanvas(scene);
+                alert('Мудборд збережено!');
+              } catch (error) {
+                alert('Помилка збереження');
+              }
+            }}
+            onBack={() => setShowCanvas(false)}
+            onOpenCatalog={() => setShowCanvas(false)}
+          />
+        </div>
       )}
     </div>
   );

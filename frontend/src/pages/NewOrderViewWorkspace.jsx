@@ -776,6 +776,8 @@ export default function NewOrderViewWorkspace() {
             tier={clientTier}
             orderCount={customerStats?.total_orders}
           />
+          {/* Event Info для IT- замовлень */}
+          <ZoneEventInfo order={order} />
           <LeftRailFinance
             orderId={orderId}
             rentAmount={calculations.rentAfterDiscount}

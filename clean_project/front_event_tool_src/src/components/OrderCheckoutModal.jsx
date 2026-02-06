@@ -3,7 +3,8 @@
  * Модальне вікно для оформлення замовлення з мудборду
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { calculateRentalDays, formatDateRange } from '../utils/rentalDaysCalculator';
 
 const DELIVERY_TYPES = [
   { id: 'self_pickup', label: 'Самовивіз', description: 'Забрати зі складу' },
@@ -29,7 +30,7 @@ const OrderCheckoutModal = ({
   items,
   totalPrice,
   depositAmount,
-  rentalDays,
+  rentalDays: initialRentalDays,
   onSubmit
 }) => {
   const [step, setStep] = useState(1); // 1 = contact, 2 = delivery, 3 = event, 4 = confirm
@@ -47,6 +48,7 @@ const OrderCheckoutModal = ({
   
   // Форма події
   const [eventType, setEventType] = useState('');
+  const [eventName, setEventName] = useState(''); // Назва події
   const [eventLocation, setEventLocation] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');

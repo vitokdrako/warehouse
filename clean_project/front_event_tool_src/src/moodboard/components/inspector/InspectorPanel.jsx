@@ -172,24 +172,76 @@ const InspectorPanel = () => {
       
       {/* Decor Item specific */}
       {node.type === NodeType.DECOR_ITEM && (
-        <div style={{ padding: '0 16px' }}>
-          <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px', textTransform: 'uppercase' }}>
-            Кількість
+        <>
+          {/* Display Mode Toggle */}
+          <div style={{ padding: '0 16px' }}>
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px', textTransform: 'uppercase' }}>
+              Режим відображення
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => handleUpdateNode({ displayMode: 'card' })}
+                style={{
+                  flex: 1,
+                  padding: '10px 8px',
+                  border: (node.displayMode || 'card') === 'card' ? '2px solid #8B0000' : '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  background: (node.displayMode || 'card') === 'card' ? '#fff5f5' : '#fff',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: (node.displayMode || 'card') === 'card' ? '600' : '400',
+                  color: (node.displayMode || 'card') === 'card' ? '#8B0000' : '#666'
+                }}
+              >
+                <div style={{ fontSize: '16px', marginBottom: '4px' }}>🖼️</div>
+                Картка
+              </button>
+              <button
+                onClick={() => handleUpdateNode({ displayMode: 'clean' })}
+                style={{
+                  flex: 1,
+                  padding: '10px 8px',
+                  border: node.displayMode === 'clean' ? '2px solid #8B0000' : '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  background: node.displayMode === 'clean' ? '#fff5f5' : '#fff',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: node.displayMode === 'clean' ? '600' : '400',
+                  color: node.displayMode === 'clean' ? '#8B0000' : '#666'
+                }}
+              >
+                <div style={{ fontSize: '16px', marginBottom: '4px' }}>✨</div>
+                Чисте фото
+              </button>
+            </div>
+            <div style={{ fontSize: '10px', color: '#999', marginTop: '6px', textAlign: 'center' }}>
+              {node.displayMode === 'clean' 
+                ? 'Без рамки та артикулу (для прозорих PNG)'
+                : 'З рамкою, тінню та артикулом'
+              }
+            </div>
           </div>
-          <input
-            type="number"
-            min="1"
-            value={node.quantity || 1}
-            onChange={(e) => handleUpdateNode({ quantity: Math.max(1, Number(e.target.value)) })}
-            style={{
-              width: '100%',
-              padding: '6px 8px',
-              border: '1px solid #e0e0e0',
-              borderRadius: '4px',
-              fontSize: '13px'
-            }}
-          />
-        </div>
+          
+          {/* Кількість */}
+          <div style={{ padding: '0 16px' }}>
+            <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px', textTransform: 'uppercase' }}>
+              Кількість
+            </div>
+            <input
+              type="number"
+              min="1"
+              value={node.quantity || 1}
+              onChange={(e) => handleUpdateNode({ quantity: Math.max(1, Number(e.target.value)) })}
+              style={{
+                width: '100%',
+                padding: '6px 8px',
+                border: '1px solid #e0e0e0',
+                borderRadius: '4px',
+                fontSize: '13px'
+              }}
+            />
+          </div>
+        </>
       )}
       
       {/* Text specific */}

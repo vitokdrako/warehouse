@@ -193,7 +193,6 @@ const InspectorPanel = () => {
                   color: (node.displayMode || 'card') === 'card' ? '#8B0000' : '#666'
                 }}
               >
-                <div style={{ fontSize: '16px', marginBottom: '4px' }}>🖼️</div>
                 Картка
               </button>
               <button
@@ -210,7 +209,6 @@ const InspectorPanel = () => {
                   color: node.displayMode === 'clean' ? '#8B0000' : '#666'
                 }}
               >
-                <div style={{ fontSize: '16px', marginBottom: '4px' }}>✨</div>
                 Чисте фото
               </button>
             </div>

@@ -802,7 +802,6 @@ const EventPlannerPage = () => {
           onSubmit={handleSubmitOrder}
         />
       )}
-      </div>
 
       {/* New Board Modal */}
       {showNewBoardModal && (

@@ -27,7 +27,9 @@ const MoodboardShell = ({
     redo,
     removeSelectedNodes,
     duplicateSelectedNodes,
-    selectAll
+    selectAll,
+    selectedNodeIds,
+    inspectorOpen
   } = useMoodboardStore();
   
   // Ініціалізація при монтуванні

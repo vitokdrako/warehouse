@@ -49,7 +49,10 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   
-  // Завантажуємо зображення через proxy
+  // Завантажуємо зображення
+  // ВАЖЛИВО: Для відображення на canvas не використовуємо crossOrigin
+  // Це дозволяє показувати зображення без CORS
+  // Для експорту canvas буде "tainted", але це можна обійти через proxy
   useEffect(() => {
     if (!node.imageUrl) {
       setLoading(false);
@@ -60,49 +63,46 @@ const DecorItemNode = ({ node, isSelected, onSelect, onDragEnd, onTransformEnd }
     setLoading(true);
     setError(false);
     
-    // Спробуємо кілька варіантів URL
-    const tryUrls = [];
+    // Формуємо URL
+    let imageUrl = node.imageUrl;
     
-    // 1. Через proxy (обхід CORS)
-    const proxyUrl = getProxiedImageUrl(node.imageUrl);
-    if (proxyUrl) tryUrls.push(proxyUrl);
-    
-    // 2. Прямий URL (може працювати якщо CORS налаштовано на сервері)
-    const directUrl = getDirectImageUrl(node.imageUrl);
-    if (directUrl) tryUrls.push(directUrl);
-    
-    // 3. Якщо є catalog/ - спробуємо через farforrent.com.ua
-    if (node.imageUrl.includes('catalog/')) {
-      tryUrls.push(`https://www.farforrent.com.ua/image/${node.imageUrl}`);
+    // Якщо не повний URL - додаємо backend
+    if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+      const cleanPath = imageUrl.replace(/^\/+/, '');
+      imageUrl = `${BACKEND_URL}/${cleanPath}`;
     }
     
-    let currentIndex = 0;
+    // Завантажуємо БЕЗ crossOrigin - це дозволить відобразити на canvas
+    const img = new window.Image();
     
-    const tryLoadImage = () => {
-      if (currentIndex >= tryUrls.length) {
-        setError(true);
-        setLoading(false);
-        return;
-      }
-      
-      const img = new window.Image();
-      img.crossOrigin = 'anonymous';
-      
-      img.onload = () => {
-        setImage(img);
-        setLoading(false);
-        setError(false);
-      };
-      
-      img.onerror = () => {
-        currentIndex++;
-        tryLoadImage();
-      };
-      
-      img.src = tryUrls[currentIndex];
+    img.onload = () => {
+      setImage(img);
+      setLoading(false);
+      setError(false);
     };
     
-    tryLoadImage();
+    img.onerror = () => {
+      console.error('Failed to load image:', imageUrl);
+      // Спробуємо альтернативний URL
+      if (node.imageUrl.includes('catalog/')) {
+        const altImg = new window.Image();
+        altImg.onload = () => {
+          setImage(altImg);
+          setLoading(false);
+          setError(false);
+        };
+        altImg.onerror = () => {
+          setError(true);
+          setLoading(false);
+        };
+        altImg.src = `https://www.farforrent.com.ua/image/${node.imageUrl}`;
+      } else {
+        setError(true);
+        setLoading(false);
+      }
+    };
+    
+    img.src = imageUrl;
   }, [node.imageUrl]);
   
   // Підключити трансформер при виділенні

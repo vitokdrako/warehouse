@@ -8,6 +8,12 @@
     border: 1px solid var(--corp-border);
 }
 
+@media (max-width: 768px) {
+    .board-item-card {
+        padding: 10px;
+    }
+}
+
 .board-item-card:hover {
     box-shadow: var(--corp-shadow-sm);
 }
@@ -32,10 +38,22 @@
     line-height: 1.2;
 }
 
+@media (max-width: 768px) {
+    .board-item-title {
+        font-size: 13px;
+    }
+}
+
 .board-item-sku {
     font-size: 10px;
     color: var(--corp-text-main);
     opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+    .board-item-sku {
+        font-size: 11px;
+    }
 }
 
 .board-item-remove {
@@ -43,10 +61,21 @@
     border: none;
     font-size: 16px;
     cursor: pointer;
-    padding: 4px;
+    padding: 8px;
     line-height: 1;
     transition: var(--corp-transition);
     color: #c62828;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    .board-item-remove {
+        font-size: 20px;
+    }
 }
 
 .board-item-remove:hover {
@@ -77,27 +106,49 @@
     letter-spacing: 0.05em;
 }
 
+@media (max-width: 768px) {
+    .board-item-quantity-label {
+        font-size: 12px;
+    }
+}
+
 .board-item-quantity-controls {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
+@media (max-width: 768px) {
+    .board-item-quantity-controls {
+        gap: 10px;
+    }
+}
+
 .board-item-quantity-btn {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--corp-bg-white);
     border: 1px solid var(--corp-border);
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 16px;
     color: var(--corp-text-dark);
     cursor: pointer;
     transition: var(--corp-transition);
     font-family: 'Montserrat', Arial, sans-serif;
     font-weight: 500;
+    min-width: 44px;
+    min-height: 44px;
+}
+
+@media (max-width: 768px) {
+    .board-item-quantity-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
 }
 
 .board-item-quantity-btn:hover:not(:disabled) {
@@ -112,16 +163,24 @@
 }
 
 .board-item-quantity-input {
-    width: 45px;
-    height: 24px;
+    width: 50px;
+    height: 32px;
     text-align: center;
     border: 1px solid var(--corp-border);
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 14px;
     font-family: 'Montserrat', Arial, sans-serif;
     font-weight: 500;
     color: var(--corp-text-dark);
     margin: 0;
+}
+
+@media (max-width: 768px) {
+    .board-item-quantity-input {
+        width: 50px;
+        height: 36px;
+        font-size: 16px;
+    }
 }
 
 .board-item-quantity-input:focus {
@@ -141,10 +200,22 @@
     color: var(--corp-text-main);
 }
 
+@media (max-width: 768px) {
+    .board-item-price-calculation {
+        font-size: 11px;
+    }
+}
+
 .board-item-price-total {
     font-size: 13px;
     font-weight: 700;
     color: var(--corp-text-dark);
+}
+
+@media (max-width: 768px) {
+    .board-item-price-total {
+        font-size: 14px;
+    }
 }
 
 .board-item-notes {
@@ -158,3 +229,4 @@
     color: var(--corp-text-main);
     font-style: italic;
 }
+

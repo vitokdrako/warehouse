@@ -1420,3 +1420,58 @@ async def convert_to_order(
 @router.get("/health")
 async def health():
     return {"status": "ok", "service": "event-tool", "timestamp": datetime.utcnow().isoformat()}
+
+# ============================================================================
+# IMAGE PROXY (для обходу CORS)
+# ============================================================================
+
+import httpx
+from fastapi.responses import StreamingResponse
+import io
+
+@router.get("/image-proxy")
+async def image_proxy(url: str, response: Response):
+    """
+    Проксі для зображень з CORS headers
+    Використовується для завантаження зображень на canvas
+    """
+    # Перевіряємо що URL з довіреного домену
+    allowed_domains = [
+        "backrentalhub.farforrent.com.ua",
+        "www.farforrent.com.ua",
+        "farforrent.com.ua"
+    ]
+    
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    
+    if parsed.netloc not in allowed_domains:
+        raise HTTPException(status_code=400, detail="Domain not allowed")
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            img_response = await client.get(url)
+            
+            if img_response.status_code != 200:
+                raise HTTPException(status_code=404, detail="Image not found")
+            
+            # Визначаємо content-type
+            content_type = img_response.headers.get("content-type", "image/jpeg")
+            
+            # Повертаємо з CORS headers
+            return Response(
+                content=img_response.content,
+                media_type=content_type,
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods": "GET, OPTIONS",
+                    "Access-Control-Allow-Headers": "*",
+                    "Cache-Control": "public, max-age=86400"  # Cache 24 години
+                }
+            )
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Image fetch timeout")
+    except Exception as e:
+        logger.error(f"Image proxy error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

@@ -5,13 +5,13 @@
 
 import React, { useState } from 'react';
 import useMoodboardStore from '../../store/moodboardStore';
-import { createDecorItemNode } from '../../domain/moodboard.types';
+import { createDecorItemNode, A4_WIDTH, A4_HEIGHT } from '../../domain/moodboard.types';
 import { getThumbnailUrl } from '../../utils/imageUtils';
 
 const RightPanel = ({ boardItems = [], onOpenCatalog }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
-  const { scene, addNode } = useMoodboardStore();
+  const { scene, addNode, currentPage } = useMoodboardStore();
   
   const filteredItems = boardItems.filter(item => {
     if (!searchTerm) return true;

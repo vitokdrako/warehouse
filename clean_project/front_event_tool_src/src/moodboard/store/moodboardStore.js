@@ -266,6 +266,28 @@ export const useMoodboardStore = create(
       get()._pushHistory();
     },
     
+    // Universal background setter
+    setSceneBackground: (background) => {
+      set(state => {
+        state.scene.background = {
+          ...state.scene.background,
+          ...background
+        };
+        state.isDirty = true;
+      });
+      get()._pushHistory();
+    },
+    
+    // Scene size
+    setSceneSize: (width, height) => {
+      set(state => {
+        state.scene.width = width;
+        state.scene.height = height;
+        state.isDirty = true;
+      });
+      get()._pushHistory();
+    },
+    
     // ========================================================================
     // TEMPLATE ACTIONS
     // ========================================================================
@@ -277,6 +299,31 @@ export const useMoodboardStore = create(
       set(state => {
         state.scene.nodes = nodes;
         state.selectedNodeIds = [];
+        state.isDirty = true;
+      });
+      get()._pushHistory();
+    },
+    
+    // Apply layout template to existing nodes
+    applyLayoutTemplate: (templateId) => {
+      const { scene } = get();
+      const { LAYOUT_TEMPLATES } = require('../domain/moodboard.types');
+      
+      const template = LAYOUT_TEMPLATES.find(t => t.id === templateId);
+      if (!template || scene.nodes.length === 0) return;
+      
+      const cells = template.cells;
+      
+      set(state => {
+        state.scene.nodes.forEach((node, index) => {
+          if (index < cells.length) {
+            const cell = cells[index];
+            node.x = (cell.x / 100) * state.scene.width;
+            node.y = (cell.y / 100) * state.scene.height;
+            node.width = (cell.width / 100) * state.scene.width;
+            node.height = (cell.height / 100) * state.scene.height;
+          }
+        });
         state.isDirty = true;
       });
       get()._pushHistory();

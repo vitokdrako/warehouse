@@ -798,3 +798,11 @@ rentalhub_deployment_20260121.tar.gz
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
+-e 
+# Environment files
+*.env
+*.env.*

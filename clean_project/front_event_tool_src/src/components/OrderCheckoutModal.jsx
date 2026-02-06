@@ -64,6 +64,16 @@ const OrderCheckoutModal = ({
   const [companyName, setCompanyName] = useState('');
   const [companyEdrpou, setCompanyEdrpou] = useState('');
   
+  // Розрахунок діб оренди за правилами
+  const rentalCalculation = useMemo(() => {
+    if (board?.rental_start_date && board?.rental_end_date) {
+      return calculateRentalDays(board.rental_start_date, board.rental_end_date);
+    }
+    return { days: initialRentalDays || 1, isApproximate: true, explanation: '' };
+  }, [board?.rental_start_date, board?.rental_end_date, initialRentalDays]);
+  
+  const rentalDays = rentalCalculation.days;
+  
   if (!isOpen) return null;
   
   const handleSubmit = async () => {
@@ -83,6 +93,7 @@ const OrderCheckoutModal = ({
         delivery_address: deliveryAddress.trim() || null,
         city: city.trim() || null,
         event_type: eventType || null,
+        event_name: eventName.trim() || null, // Назва події
         event_location: eventLocation.trim() || null,
         event_date: eventDate || null,
         event_time: eventTime || null,

@@ -356,10 +356,13 @@ const TopBar = ({ boardName, onSave, onBack }) => {
             border: '1px solid #e0e0e0',
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            minWidth: '160px',
+            minWidth: '180px',
             zIndex: 100,
             overflow: 'hidden'
           }}>
+            <div style={{ padding: '8px 14px', borderBottom: '1px solid #f0f0f0', fontSize: '11px', color: '#999', fontWeight: '500' }}>
+              ПОТОЧНА СТОРІНКА
+            </div>
             <button
               onClick={handleExportPNG}
               style={exportMenuItemStyle}
@@ -380,16 +383,32 @@ const TopBar = ({ boardName, onSave, onBack }) => {
                 <div style={{ fontSize: '10px', color: '#999' }}>Менший розмір</div>
               </div>
             </button>
+            
+            <div style={{ padding: '8px 14px', borderBottom: '1px solid #f0f0f0', borderTop: '1px solid #f0f0f0', fontSize: '11px', color: '#999', fontWeight: '500', marginTop: '4px' }}>
+              ВСІ СТОРІНКИ ({totalPages})
+            </div>
             <button
               onClick={handleExportPDF}
               style={exportMenuItemStyle}
             >
               <span>📄</span>
               <div>
-                <div style={{ fontWeight: '500' }}>PDF</div>
-                <div style={{ fontSize: '10px', color: '#999' }}>Для друку</div>
+                <div style={{ fontWeight: '500' }}>PDF (A4)</div>
+                <div style={{ fontSize: '10px', color: '#999' }}>Всі сторінки для друку</div>
               </div>
             </button>
+            {totalPages > 1 && (
+              <button
+                onClick={handleExportAllPNG}
+                style={exportMenuItemStyle}
+              >
+                <span>📦</span>
+                <div>
+                  <div style={{ fontWeight: '500' }}>PNG (усі)</div>
+                  <div style={{ fontSize: '10px', color: '#999' }}>Завантажити кожну сторінку</div>
+                </div>
+              </button>
+            )}
           </div>
         )}
       </div>

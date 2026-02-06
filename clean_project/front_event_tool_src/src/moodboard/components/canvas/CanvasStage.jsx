@@ -1,14 +1,14 @@
 /**
  * Canvas Stage
- * Головний компонент canvas на Konva.js
+ * Головний компонент canvas на Konva.js з підтримкою A4 сторінок
  */
 
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { Stage, Layer, Rect, Line, Image as KonvaImage } from 'react-konva';
+import { Stage, Layer, Rect, Line, Image as KonvaImage, Text } from 'react-konva';
 import useMoodboardStore from '../../store/moodboardStore';
 import DecorItemNode from './DecorItemNode';
 import TextNode from './TextNode';
-import { NodeType, BackgroundType } from '../../domain/moodboard.types';
+import { NodeType, BackgroundType, A4_WIDTH, A4_HEIGHT } from '../../domain/moodboard.types';
 
 const CanvasStage = () => {
   const stageRef = useRef(null);
@@ -22,10 +22,15 @@ const CanvasStage = () => {
     showGrid,
     gridSize,
     selectedNodeIds,
+    currentPage,
+    totalPages,
     getSortedNodes,
     selectNode,
     clearSelection,
-    updateNode
+    updateNode,
+    setCurrentPage,
+    addPage,
+    removePage
   } = useMoodboardStore();
   
   const nodes = getSortedNodes();
@@ -45,7 +50,6 @@ const CanvasStage = () => {
   
   // Обробка кліку на пустому місці
   const handleStageClick = useCallback((e) => {
-    // Клік на stage (не на елементі)
     if (e.target === e.target.getStage()) {
       clearSelection();
     }
@@ -65,7 +69,6 @@ const CanvasStage = () => {
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
     
-    // Reset scale and apply to width/height
     node.scaleX(1);
     node.scaleY(1);
     
@@ -83,7 +86,6 @@ const CanvasStage = () => {
     const { background } = scene;
     if (!background) return '#ffffff';
     
-    // Якщо є зображення, повертаємо прозорий або білий фон
     if (background.type === BackgroundType.IMAGE && backgroundImage) {
       return 'transparent';
     }
@@ -103,34 +105,33 @@ const CanvasStage = () => {
     
     const fit = scene.background?.imageFit || 'cover';
     const imgRatio = backgroundImage.width / backgroundImage.height;
-    const canvasRatio = scene.width / scene.height;
+    const canvasRatio = A4_WIDTH / A4_HEIGHT;
     
     let width, height, x = 0, y = 0;
     
     if (fit === 'cover') {
       if (imgRatio > canvasRatio) {
-        height = scene.height;
+        height = A4_HEIGHT;
         width = height * imgRatio;
-        x = (scene.width - width) / 2;
+        x = (A4_WIDTH - width) / 2;
       } else {
-        width = scene.width;
+        width = A4_WIDTH;
         height = width / imgRatio;
-        y = (scene.height - height) / 2;
+        y = (A4_HEIGHT - height) / 2;
       }
     } else if (fit === 'contain') {
       if (imgRatio > canvasRatio) {
-        width = scene.width;
+        width = A4_WIDTH;
         height = width / imgRatio;
-        y = (scene.height - height) / 2;
+        y = (A4_HEIGHT - height) / 2;
       } else {
-        height = scene.height;
+        height = A4_HEIGHT;
         width = height * imgRatio;
-        x = (scene.width - width) / 2;
+        x = (A4_WIDTH - width) / 2;
       }
     } else {
-      // stretch
-      width = scene.width;
-      height = scene.height;
+      width = A4_WIDTH;
+      height = A4_HEIGHT;
     }
     
     return { x, y, width, height };
@@ -141,14 +142,13 @@ const CanvasStage = () => {
     if (!showGrid) return null;
     
     const lines = [];
-    const { width, height } = scene;
     
     // Вертикальні лінії
-    for (let i = 0; i <= width; i += gridSize) {
+    for (let i = 0; i <= A4_WIDTH; i += gridSize) {
       lines.push(
         <Line
           key={`v-${i}`}
-          points={[i, 0, i, height]}
+          points={[i, 0, i, A4_HEIGHT]}
           stroke="#e0e0e0"
           strokeWidth={0.5}
         />
@@ -156,11 +156,11 @@ const CanvasStage = () => {
     }
     
     // Горизонтальні лінії
-    for (let i = 0; i <= height; i += gridSize) {
+    for (let i = 0; i <= A4_HEIGHT; i += gridSize) {
       lines.push(
         <Line
           key={`h-${i}`}
-          points={[0, i, width, i]}
+          points={[0, i, A4_WIDTH, i]}
           stroke="#e0e0e0"
           strokeWidth={0.5}
         />
@@ -200,22 +200,131 @@ const CanvasStage = () => {
         overflow: 'auto',
         background: '#e8e8e8',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px'
+        padding: '20px'
       }}
     >
+      {/* Page Navigation */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        marginBottom: '16px',
+        padding: '10px 20px',
+        background: '#fff',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      }}>
+        <button
+          onClick={() => setCurrentPage(currentPage - 1)}
+          disabled={currentPage === 0}
+          style={{
+            background: currentPage === 0 ? '#f0f0f0' : '#fff',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            cursor: currentPage === 0 ? 'not-allowed' : 'pointer',
+            opacity: currentPage === 0 ? 0.5 : 1
+          }}
+        >
+          ← Попередня
+        </button>
+        
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          padding: '0 12px'
+        }}>
+          <span style={{ fontWeight: '500', fontSize: '14px' }}>
+            Сторінка {currentPage + 1} з {totalPages}
+          </span>
+        </div>
+        
+        <button
+          onClick={() => setCurrentPage(currentPage + 1)}
+          disabled={currentPage >= totalPages - 1}
+          style={{
+            background: currentPage >= totalPages - 1 ? '#f0f0f0' : '#fff',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            cursor: currentPage >= totalPages - 1 ? 'not-allowed' : 'pointer',
+            opacity: currentPage >= totalPages - 1 ? 0.5 : 1
+          }}
+        >
+          Наступна →
+        </button>
+        
+        <div style={{ width: '1px', height: '24px', background: '#ddd', margin: '0 4px' }} />
+        
+        <button
+          onClick={addPage}
+          style={{
+            background: '#8B0000',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '6px 12px',
+            cursor: 'pointer',
+            fontWeight: '500'
+          }}
+        >
+          + Додати сторінку
+        </button>
+        
+        {totalPages > 1 && (
+          <button
+            onClick={() => {
+              if (window.confirm(`Видалити сторінку ${currentPage + 1}? Всі елементи на ній будуть втрачені.`)) {
+                removePage(currentPage);
+              }
+            }}
+            style={{
+              background: '#fff',
+              color: '#c00',
+              border: '1px solid #c00',
+              borderRadius: '4px',
+              padding: '6px 12px',
+              cursor: 'pointer'
+            }}
+          >
+            Видалити
+          </button>
+        )}
+      </div>
+      
+      {/* A4 Page Container */}
       <div
         style={{
           boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
           borderRadius: '4px',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          background: '#fff',
+          position: 'relative'
         }}
       >
+        {/* Page number indicator */}
+        <div style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          background: 'rgba(0,0,0,0.6)',
+          color: '#fff',
+          padding: '4px 10px',
+          borderRadius: '4px',
+          fontSize: '11px',
+          fontWeight: '500',
+          zIndex: 10
+        }}>
+          {currentPage + 1} / {totalPages}
+        </div>
+        
         <Stage
           ref={stageRef}
-          width={scene.width}
-          height={scene.height}
+          width={A4_WIDTH}
+          height={A4_HEIGHT}
           scaleX={zoom}
           scaleY={zoom}
           x={panOffset.x}
@@ -230,8 +339,8 @@ const CanvasStage = () => {
             <Rect
               x={0}
               y={0}
-              width={scene.width}
-              height={scene.height}
+              width={A4_WIDTH}
+              height={A4_HEIGHT}
               fill={scene.background?.type === BackgroundType.IMAGE ? '#ffffff' : getBackgroundFill()}
             />
             
@@ -245,6 +354,17 @@ const CanvasStage = () => {
             )}
             
             {renderGrid()}
+            
+            {/* Page border for visual clarity */}
+            <Rect
+              x={0}
+              y={0}
+              width={A4_WIDTH}
+              height={A4_HEIGHT}
+              stroke="#ccc"
+              strokeWidth={1}
+              fill="transparent"
+            />
           </Layer>
           
           {/* Nodes Layer */}
@@ -252,6 +372,74 @@ const CanvasStage = () => {
             {nodes.filter(n => n.visible !== false).map(renderNode)}
           </Layer>
         </Stage>
+      </div>
+      
+      {/* Page thumbnails */}
+      {totalPages > 1 && (
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          marginTop: '20px',
+          padding: '16px',
+          background: '#fff',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          overflowX: 'auto',
+          maxWidth: '100%'
+        }}>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentPage(i)}
+              style={{
+                width: '60px',
+                height: '85px',
+                border: i === currentPage ? '2px solid #8B0000' : '1px solid #ddd',
+                borderRadius: '4px',
+                background: i === currentPage ? '#fff5f5' : '#fff',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div style={{
+                width: '100%',
+                height: '60px',
+                background: '#f9f9f9',
+                borderRadius: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                color: '#999'
+              }}>
+                A4
+              </div>
+              <span style={{
+                fontSize: '10px',
+                marginTop: '4px',
+                fontWeight: i === currentPage ? '600' : '400',
+                color: i === currentPage ? '#8B0000' : '#666'
+              }}>
+                {i + 1}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      
+      {/* Format info */}
+      <div style={{
+        marginTop: '12px',
+        fontSize: '11px',
+        color: '#999',
+        textAlign: 'center'
+      }}>
+        Формат A4 (210 × 297 мм) • {A4_WIDTH} × {A4_HEIGHT} px
       </div>
     </div>
   );

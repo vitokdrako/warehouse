@@ -807,3 +807,7 @@ rentalhub_deployment_20260121.tar.gz
 *.env
 *.env.*
 clean_project/front_event_tool_src/node_modules/.cache/default-development/0.pack
+-e 
+# Environment files
+*.env
+*.env.*

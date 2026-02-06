@@ -165,6 +165,18 @@ const MoodboardShell = ({
           <CanvasStage />
         </div>
         
+        {/* Inspector panel - показується при виділенні */}
+        {selectedNodeIds.length > 0 && (
+          <div style={{
+            width: '260px',
+            background: '#fff',
+            borderLeft: '1px solid #e0e0e0',
+            overflow: 'auto'
+          }}>
+            <InspectorPanel />
+          </div>
+        )}
+        
         <RightPanel 
           boardItems={boardItems}
           onOpenCatalog={onOpenCatalog}

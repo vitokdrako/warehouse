@@ -138,10 +138,12 @@ export const createBackground = (type = BackgroundType.COLOR, value = '#ffffff')
 export const createScene = (overrides = {}) => ({
   id: `scene-${Date.now()}`,
   name: 'Новий мудборд',
-  width: 1200,
-  height: 800,
+  width: A4_WIDTH,
+  height: A4_HEIGHT,
   nodes: [],
   background: createBackground(),
+  // Сторінки
+  totalPages: 1,
   // Метадані
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),

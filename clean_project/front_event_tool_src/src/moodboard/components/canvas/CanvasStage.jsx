@@ -14,6 +14,7 @@ const CanvasStage = () => {
   const stageRef = useRef(null);
   const containerRef = useRef(null);
   const [backgroundImage, setBackgroundImage] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
   
   const {
     scene,
@@ -30,10 +31,28 @@ const CanvasStage = () => {
     updateNode,
     setCurrentPage,
     addPage,
-    removePage
+    removePage,
+    setZoom
   } = useMoodboardStore();
   
   const nodes = getSortedNodes();
+  
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Auto-adjust zoom for mobile
+      if (mobile) {
+        const containerWidth = window.innerWidth - 40;
+        const optimalZoom = Math.min(containerWidth / A4_WIDTH, 0.6);
+        setZoom(optimalZoom);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [setZoom]);
   
   // Завантаження background image
   useEffect(() => {

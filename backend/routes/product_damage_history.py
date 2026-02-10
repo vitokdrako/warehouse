@@ -967,6 +967,9 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
 async def get_laundry_queue(db: Session = Depends(get_rh_db)):
     """Отримати всі товари в черзі на хімчистку"""
     try:
+        items = []
+        
+        # 1. Товари з product_damage_history (стара система)
         result = db.execute(text("""
             SELECT 
                 pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
@@ -984,8 +987,9 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
-        items = []
+        pdh_product_ids = set()
         for row in result:
+            pdh_product_ids.add(row[1])
             items.append({
                 "id": row[0],
                 "product_id": row[1],
@@ -1008,7 +1012,45 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 "created_at": row[18].isoformat() if row[18] else None,
                 "created_by": row[19],
                 "laundry_company": row[20],
-                "batch_status": row[21]
+                "batch_status": row[21],
+                "source": "damage_history"
+            })
+        
+        # 2. Товари з products.state = 'on_laundry' (нова система - швидкі дії)
+        result2 = db.execute(text("""
+            SELECT 
+                p.product_id, p.sku, p.name, p.category_name,
+                p.frozen_quantity, p.image_url, p.state
+            FROM products p
+            WHERE p.state = 'on_laundry' AND p.frozen_quantity > 0
+            AND p.product_id NOT IN :pdh_ids
+        """), {"pdh_ids": tuple(pdh_product_ids) if pdh_product_ids else (0,)})
+        
+        for row in result2:
+            items.append({
+                "id": f"quick_{row[0]}",
+                "product_id": row[0],
+                "sku": row[1],
+                "product_name": row[2],
+                "category": row[3],
+                "order_id": None,
+                "order_number": None,
+                "damage_type": "Внутрішня обробка",
+                "severity": "low",
+                "fee": 0.0,
+                "photo_url": None,
+                "note": "Відправлено через швидкі дії (інвентаризація)",
+                "processing_status": "in_progress",
+                "sent_to_processing_at": None,
+                "returned_from_processing_at": None,
+                "processing_notes": None,
+                "laundry_batch_id": None,
+                "laundry_item_id": None,
+                "created_at": None,
+                "created_by": "system",
+                "laundry_company": None,
+                "batch_status": None,
+                "source": "quick_action"
             })
         
         return {"items": items, "total": len(items)}

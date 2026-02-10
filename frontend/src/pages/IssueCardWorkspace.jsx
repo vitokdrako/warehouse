@@ -235,6 +235,15 @@ export default function IssueCardWorkspace() {
     },
   })
   
+  // ОПТИМІЗАЦІЯ P0.2: Синхронізація змін - вимкнено polling коли WS активний
+  const { hasNewChanges, lastModifiedBy, markMyUpdate, dismissChanges } = useOrderSync(
+    order?.order_id,
+    loadIssueCardCallback,
+    10000,
+    !loading && !!order?.order_id,
+    { wsConnected }  // Передаємо статус WS для вимкнення polling
+  )
+  
   // Хук для повідомлення про збереження
   const { updateSection } = useOrderSectionUpdate()
 

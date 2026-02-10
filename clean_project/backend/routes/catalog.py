@@ -59,38 +59,21 @@ async def get_categories(
                     "total_qty": qty
                 })
         
-        # Отримати унікальні кольори (розбиваємо комбінації на окремі базові)
+        # Отримати унікальні кольори
         colors_result = db.execute(text("""
             SELECT DISTINCT color FROM products 
             WHERE status = 1 AND color IS NOT NULL AND color != ''
+            ORDER BY color
         """))
+        colors = [row[0] for row in colors_result]
         
-        # Розбиваємо комбінації типу "білий, золотий" на окремі кольори
-        colors_set = set()
-        for row in colors_result:
-            if row[0]:
-                for color in row[0].split(','):
-                    color = color.strip().lower()
-                    if color:
-                        colors_set.add(color)
-        
-        colors = sorted(list(colors_set), key=lambda x: x.lower())
-        
-        # Отримати унікальні матеріали (так само розбиваємо)
+        # Отримати унікальні матеріали
         materials_result = db.execute(text("""
             SELECT DISTINCT material FROM products 
             WHERE status = 1 AND material IS NOT NULL AND material != ''
+            ORDER BY material
         """))
-        
-        materials_set = set()
-        for row in materials_result:
-            if row[0]:
-                for material in row[0].split(','):
-                    material = material.strip().lower()
-                    if material:
-                        materials_set.add(material)
-        
-        materials = sorted(list(materials_set), key=lambda x: x.lower())
+        materials = [row[0] for row in materials_result]
         
         return {
             "categories": list(categories_map.values()),
@@ -124,39 +107,28 @@ async def get_items_by_category(
     Статуси:
     - reserved: awaiting_customer, processing, ready_for_issue, pending (очікують видачі)
     - in_rent: issued, on_rent (видані клієнту)
-    - on_wash: на мийці (з product_damage_history)
-    - on_restoration: на реставрації (з product_damage_history)
-    - on_laundry: в хімчистці (з product_damage_history)
+    - on_wash: на мийці (products.state = 'on_wash')
+    - on_restoration: на реставрації (products.state = 'on_repair')
+    - on_laundry: в хімчистці (products.state = 'on_laundry')
+    
+    ВАЖЛИВО: Статус товару береться з products.state та products.frozen_quantity
     """
     try:
+        # Маппінг фільтрів до значень state в БД
+        state_filter_map = {
+            'on_wash': 'on_wash',
+            'on_restoration': 'on_repair',
+            'on_laundry': 'on_laundry'
+        }
+        
         # Спеціальна обробка для фільтрів по статусу обробки
-        # Якщо вибрано on_wash, on_restoration, on_laundry - шукаємо спочатку ці товари
         processing_filter = availability in ('on_wash', 'on_restoration', 'on_laundry')
         rent_filter = availability in ('in_rent', 'reserved')
         
         if processing_filter:
-            # Знайти товари на обробці
-            processing_type_map = {
-                'on_wash': 'wash',
-                'on_restoration': 'restoration',
-                'on_laundry': 'laundry'
-            }
-            p_type = processing_type_map[availability]
+            # Знайти товари на обробці з products.state
+            db_state = state_filter_map[availability]
             
-            processing_sql = """
-                SELECT DISTINCT pdh.product_id
-                FROM product_damage_history pdh
-                WHERE pdh.processing_type = :p_type
-                AND (pdh.processing_status IN ('pending', 'in_progress') 
-                     OR (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0)
-            """
-            processing_result = db.execute(text(processing_sql), {"p_type": p_type}).fetchall()
-            processing_product_ids = [row[0] for row in processing_result]
-            
-            if not processing_product_ids:
-                return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0, "on_wash": 0, "on_restoration": 0, "on_laundry": 0}, "date_filter_active": bool(date_from and date_to)}
-            
-            # Основний запит тільки для цих товарів
             sql_parts = ["""
                 SELECT 
                     p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
@@ -164,11 +136,11 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description
+                    p.description, p.state, p.frozen_quantity
                 FROM products p
-                WHERE p.status = 1 AND p.product_id IN :processing_ids
+                WHERE p.status = 1 AND p.state = :db_state AND COALESCE(p.frozen_quantity, 0) > 0
             """]
-            params = {"processing_ids": tuple(processing_product_ids)}
+            params = {"db_state": db_state}
             
         elif rent_filter:
             # Знайти товари в оренді або резерві
@@ -201,7 +173,7 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description
+                    p.description, p.state, p.frozen_quantity
                 FROM products p
                 WHERE p.status = 1 AND p.product_id IN :rent_ids
             """]
@@ -216,7 +188,7 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description
+                    p.description, p.state, p.frozen_quantity
                 FROM products p
                 WHERE p.status = 1
             """]
@@ -232,15 +204,15 @@ async def get_items_by_category(
             sql_parts.append("AND p.subcategory_name = :subcategory")
             params['subcategory'] = subcategory
         
-        # Color filter (LIKE для пошуку в комбінаціях типу "білий, золотий")
+        # Color filter
         if color and color != 'all':
-            sql_parts.append("AND p.color LIKE :color")
-            params['color'] = f"%{color}%"
+            sql_parts.append("AND p.color = :color")
+            params['color'] = color
         
-        # Material filter (LIKE для пошуку в комбінаціях)
+        # Material filter
         if material and material != 'all':
-            sql_parts.append("AND p.material LIKE :material")
-            params['material'] = f"%{material}%"
+            sql_parts.append("AND p.material = :material")
+            params['material'] = material
         
         # Quantity filter
         if min_qty is not None:
@@ -383,38 +355,9 @@ async def get_items_by_category(
                 "status": row[7]
             })
         
-        # Отримати товари на обробці (мийка, реставрація, хімчистка) з product_damage_history
-        # Рахуємо тільки ті що ще не повністю оброблені (qty - processed_qty > 0)
-        processing_result = db.execute(text("""
-            SELECT 
-                product_id,
-                processing_type,
-                COALESCE(SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)), 0) as remaining_qty
-            FROM product_damage_history
-            WHERE product_id IN :product_ids
-            AND processing_type IN ('wash', 'restoration', 'laundry')
-            AND (processing_status IN ('pending', 'in_progress') 
-                 OR (COALESCE(qty, 1) - COALESCE(processed_qty, 0)) > 0)
-            GROUP BY product_id, processing_type
-            HAVING remaining_qty > 0
-        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
-        
-        # Словники для кожного типу обробки
-        on_wash_dict = {}
-        on_restoration_dict = {}
-        on_laundry_dict = {}
-        
-        for row in processing_result:
-            pid = row[0]
-            ptype = row[1]
-            qty = int(row[2])
-            
-            if ptype == 'wash':
-                on_wash_dict[pid] = on_wash_dict.get(pid, 0) + qty
-            elif ptype == 'restoration':
-                on_restoration_dict[pid] = on_restoration_dict.get(pid, 0) + qty
-            elif ptype == 'laundry':
-                on_laundry_dict[pid] = on_laundry_dict.get(pid, 0) + qty
+        # Тепер НЕ потрібно окремо запитувати product_damage_history
+        # Статус обробки беремо напряму з products.state та products.frozen_quantity
+        # row[18] = state, row[19] = frozen_quantity
         
         # Формуємо результат
         items = []
@@ -433,13 +376,29 @@ async def get_items_by_category(
             total_qty = row[8] or 0
             reserved_qty = reserved_dict.get(product_id, 0)
             in_rent_qty = in_rent_dict.get(product_id, 0)
-            on_wash_qty = on_wash_dict.get(product_id, 0)
-            on_restoration_qty = on_restoration_dict.get(product_id, 0)
-            on_laundry_qty = on_laundry_dict.get(product_id, 0)
             
-            # Доступно = всього - резерв - в оренді - на обробці
-            processing_total = on_wash_qty + on_restoration_qty + on_laundry_qty
-            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - processing_total)
+            # Отримуємо статус з products.state та frozen_quantity
+            product_state = row[18] if len(row) > 18 else None  # state
+            frozen_qty = row[19] if len(row) > 19 else 0  # frozen_quantity
+            frozen_qty = frozen_qty or 0
+            
+            # Визначаємо кількість на обробці по типу з state
+            on_wash_qty = 0
+            on_restoration_qty = 0
+            on_laundry_qty = 0
+            
+            if product_state == 'on_wash':
+                on_wash_qty = frozen_qty
+            elif product_state == 'on_repair':
+                on_restoration_qty = frozen_qty
+            elif product_state == 'on_laundry':
+                on_laundry_qty = frozen_qty
+            elif product_state == 'processing':
+                # Для generic processing state - рахуємо як на реставрації
+                on_restoration_qty = frozen_qty
+            
+            # Доступно = всього - резерв - в оренді - заморожено
+            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - frozen_qty)
             
             # Stats
             stats["total"] += total_qty
@@ -494,7 +453,7 @@ async def get_items_by_category(
                 "material": row[13],
                 "size": row[14],
                 "cleaning_status": row[15],
-                "product_state": row[16],
+                "product_state": product_state,  # Тепер з products.state
                 "description": row[17],
                 "who_has": conflicts
             })

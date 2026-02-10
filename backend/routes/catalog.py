@@ -355,38 +355,9 @@ async def get_items_by_category(
                 "status": row[7]
             })
         
-        # Отримати товари на обробці (мийка, реставрація, хімчистка) з product_damage_history
-        # Рахуємо тільки ті що ще не повністю оброблені (qty - processed_qty > 0)
-        processing_result = db.execute(text("""
-            SELECT 
-                product_id,
-                processing_type,
-                COALESCE(SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)), 0) as remaining_qty
-            FROM product_damage_history
-            WHERE product_id IN :product_ids
-            AND processing_type IN ('wash', 'restoration', 'laundry')
-            AND (processing_status IN ('pending', 'in_progress') 
-                 OR (COALESCE(qty, 1) - COALESCE(processed_qty, 0)) > 0)
-            GROUP BY product_id, processing_type
-            HAVING remaining_qty > 0
-        """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
-        
-        # Словники для кожного типу обробки
-        on_wash_dict = {}
-        on_restoration_dict = {}
-        on_laundry_dict = {}
-        
-        for row in processing_result:
-            pid = row[0]
-            ptype = row[1]
-            qty = int(row[2])
-            
-            if ptype == 'wash':
-                on_wash_dict[pid] = on_wash_dict.get(pid, 0) + qty
-            elif ptype == 'restoration':
-                on_restoration_dict[pid] = on_restoration_dict.get(pid, 0) + qty
-            elif ptype == 'laundry':
-                on_laundry_dict[pid] = on_laundry_dict.get(pid, 0) + qty
+        # Тепер НЕ потрібно окремо запитувати product_damage_history
+        # Статус обробки беремо напряму з products.state та products.frozen_quantity
+        # row[18] = state, row[19] = frozen_quantity
         
         # Формуємо результат
         items = []
@@ -405,13 +376,29 @@ async def get_items_by_category(
             total_qty = row[8] or 0
             reserved_qty = reserved_dict.get(product_id, 0)
             in_rent_qty = in_rent_dict.get(product_id, 0)
-            on_wash_qty = on_wash_dict.get(product_id, 0)
-            on_restoration_qty = on_restoration_dict.get(product_id, 0)
-            on_laundry_qty = on_laundry_dict.get(product_id, 0)
             
-            # Доступно = всього - резерв - в оренді - на обробці
-            processing_total = on_wash_qty + on_restoration_qty + on_laundry_qty
-            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - processing_total)
+            # Отримуємо статус з products.state та frozen_quantity
+            product_state = row[18] if len(row) > 18 else None  # state
+            frozen_qty = row[19] if len(row) > 19 else 0  # frozen_quantity
+            frozen_qty = frozen_qty or 0
+            
+            # Визначаємо кількість на обробці по типу з state
+            on_wash_qty = 0
+            on_restoration_qty = 0
+            on_laundry_qty = 0
+            
+            if product_state == 'on_wash':
+                on_wash_qty = frozen_qty
+            elif product_state == 'on_repair':
+                on_restoration_qty = frozen_qty
+            elif product_state == 'on_laundry':
+                on_laundry_qty = frozen_qty
+            elif product_state == 'processing':
+                # Для generic processing state - рахуємо як на реставрації
+                on_restoration_qty = frozen_qty
+            
+            # Доступно = всього - резерв - в оренді - заморожено
+            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - frozen_qty)
             
             # Stats
             stats["total"] += total_qty
@@ -466,7 +453,7 @@ async def get_items_by_category(
                 "material": row[13],
                 "size": row[14],
                 "cleaning_status": row[15],
-                "product_state": row[16],
+                "product_state": product_state,  # Тепер з products.state
                 "description": row[17],
                 "who_has": conflicts
             })

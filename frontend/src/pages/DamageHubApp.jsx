@@ -1103,14 +1103,18 @@ export default function DamageHubApp() {
                   </span>
                   {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-purple-600" /> : <ChevronRight className="w-4 h-4 text-purple-600" />}
                 </button>
-                {laundryQueue.length > 0 && (
-                  <button
-                    onClick={openBatchModal}
-                    className="text-xs px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium flex items-center gap-1"
-                  >
-                    <Package className="w-3 h-3" /> Сформувати партію
-                  </button>
-                )}
+                <button
+                  onClick={openBatchModal}
+                  disabled={laundryQueue.length === 0}
+                  className={`text-xs px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1 ${
+                    laundryQueue.length > 0 
+                      ? 'bg-purple-500 text-white hover:bg-purple-600' 
+                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                  }`}
+                  title={laundryQueue.length === 0 ? "Черга порожня" : "Сформувати партію"}
+                >
+                  <Package className="w-3 h-3" /> Сформувати партію
+                </button>
               </div>
               
               {expandedSections.laundry && (

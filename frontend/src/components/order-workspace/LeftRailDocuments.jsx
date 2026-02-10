@@ -68,7 +68,7 @@ export default function LeftRailDocuments({
 
   const getToken = () => localStorage.getItem('token')
 
-  // ОПТИМІЗАЦІЯ P1.1: Паралельне завантаження версій документів
+  // ОПТИМІЗАЦІЯ Phase 2: Використовуємо batch endpoint замість N окремих запитів
   const loadDocumentVersions = async () => {
     const docs = DOCS_BY_STATUS[orderStatus] || []
     if (docs.length === 0) {
@@ -76,34 +76,57 @@ export default function LeftRailDocuments({
       return
     }
     
-    // Створюємо масив промісів для паралельного виконання
-    const fetchPromises = docs.map(async (doc) => {
-      const entityType = ISSUE_CARD_DOCS.includes(doc.type) ? 'issue' : 'order'
-      const entityId = ISSUE_CARD_DOCS.includes(doc.type) ? (issueCardId || orderId) : orderId
-      
-      if (!entityId) return { docType: doc.type, data: null }
-      
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/documents/latest/${entityType}/${entityId}/${doc.type}`, {
-          headers: { 'Authorization': `Bearer ${getToken()}` }
-        })
-        if (res.ok) {
-          const data = await res.json()
-          return { docType: doc.type, data }
-        }
-      } catch (e) {
-        console.error(`Error loading version for ${doc.type}:`, e)
-      }
-      return { docType: doc.type, data: null }
-    })
+    // Групуємо документи за entity_type для batch запитів
+    const orderDocs = docs.filter(d => !ISSUE_CARD_DOCS.includes(d.type)).map(d => d.type)
+    const issueDocs = docs.filter(d => ISSUE_CARD_DOCS.includes(d.type)).map(d => d.type)
     
-    // Promise.allSettled - всі запити паралельно, навіть якщо деякі впадуть
-    const results = await Promise.allSettled(fetchPromises)
+    const batchPromises = []
     
+    // Batch для order документів
+    if (orderDocs.length > 0 && orderId) {
+      batchPromises.push(
+        fetch(`${BACKEND_URL}/api/documents/latest-batch`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}` 
+          },
+          body: JSON.stringify({
+            entity_type: 'order',
+            entity_id: String(orderId),
+            doc_types: orderDocs
+          })
+        }).then(r => r.json()).catch(() => ({ documents: {} }))
+      )
+    }
+    
+    // Batch для issue документів
+    const effectiveIssueId = issueCardId || orderId
+    if (issueDocs.length > 0 && effectiveIssueId) {
+      batchPromises.push(
+        fetch(`${BACKEND_URL}/api/documents/latest-batch`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}` 
+          },
+          body: JSON.stringify({
+            entity_type: 'issue',
+            entity_id: String(effectiveIssueId),
+            doc_types: issueDocs
+          })
+        }).then(r => r.json()).catch(() => ({ documents: {} }))
+      )
+    }
+    
+    // Виконуємо batch запити паралельно
+    const results = await Promise.all(batchPromises)
+    
+    // Об'єднуємо результати
     const versions = {}
-    results.forEach((result) => {
-      if (result.status === 'fulfilled' && result.value?.data) {
-        versions[result.value.docType] = result.value.data
+    results.forEach(result => {
+      if (result?.documents) {
+        Object.assign(versions, result.documents)
       }
     })
     

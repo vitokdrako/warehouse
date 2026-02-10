@@ -1002,15 +1002,18 @@ export default function DamageHubApp() {
             
             {/* МИЙКА Section */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <button
-                onClick={() => toggleSection('wash')}
-                className="w-full p-3 flex items-center justify-between bg-blue-50 border-b border-blue-100"
-              >
-                <span className="font-semibold text-blue-800 flex items-center gap-2">
+              <div className="p-3 flex items-center justify-between bg-blue-50 border-b border-blue-100">
+                <button
+                  onClick={() => setFullScreenModal({ isOpen: true, section: 'wash' })}
+                  className="font-semibold text-blue-800 flex items-center gap-2 hover:text-blue-900"
+                >
                   <Droplets className="w-4 h-4" /> Мийка ({washItems.length})
-                </span>
-                {expandedSections.wash ? <ChevronDown className="w-4 h-4 text-blue-600" /> : <ChevronRight className="w-4 h-4 text-blue-600" />}
-              </button>
+                  <span className="text-xs text-blue-500">↗</span>
+                </button>
+                <button onClick={() => toggleSection('wash')}>
+                  {expandedSections.wash ? <ChevronDown className="w-4 h-4 text-blue-600" /> : <ChevronRight className="w-4 h-4 text-blue-600" />}
+                </button>
+              </div>
               
               {expandedSections.wash && (
                 <div className="max-h-48 overflow-y-auto p-2 space-y-2">
@@ -1023,7 +1026,16 @@ export default function DamageHubApp() {
                         <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
                         <div className="text-xs text-slate-500">{item.sku} • <span className="font-medium">{item.qty || 1} шт</span></div>
                       </div>
-                      {item.processing_status === 'completed' ? (
+                      <div className="flex items-center gap-1">
+                        {item.processing_status !== 'completed' && (
+                          <button
+                            onClick={() => handleComplete(item.id)}
+                            className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
+                            title="Готово"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleRemoveFromList(item.id, 'wash')}
                           className="p-1.5 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 hover:text-slate-700 transition"
@@ -1031,13 +1043,9 @@ export default function DamageHubApp() {
                         >
                           <X className="w-4 h-4" />
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => handleComplete(item.id)}
-                          className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
-                          title="Готово"
-                        >
-                          <Check className="w-4 h-4" />
+                      </div>
+                    </div>
+                  ))}
                         </button>
                       )}
                     </div>

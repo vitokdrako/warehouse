@@ -90,11 +90,11 @@ The user's initial request was to enhance the "Damage Hub" and integrate an exis
 
 ## Known Issues
 
-### P0 - Moodboard Export
+### P1 - Moodboard Export
 **Status:** BLOCKED - awaiting user to deploy backend CORS fix to production
 **Details:** Images render but export fails due to canvas tainting. Once backend is deployed, need to re-add `crossOrigin="anonymous"` in `DecorItemNode.jsx`.
 
-### P1 - Calendar Timezone Bug
+### P2 - Calendar Timezone Bug
 **Status:** NOT STARTED
 **Recurrence:** 4+ times reported
 

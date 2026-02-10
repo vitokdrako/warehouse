@@ -1313,6 +1313,99 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
+@router.post("/quick-action/complete/{product_id}")
+async def complete_quick_action_processing(product_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """
+    Завершити обробку товару відправленого через "Швидкі дії" (інвентаризація).
+    Повертає товар в стан 'available' та скидає frozen_quantity.
+    
+    Body params:
+        - completed_qty: int (optional) - кількість оброблених одиниць. Якщо не вказано, завершує все.
+        - notes: str (optional) - примітки
+    """
+    try:
+        # Отримати поточний стан товару
+        product = db.execute(text("""
+            SELECT product_id, sku, name, state, frozen_quantity, quantity
+            FROM products 
+            WHERE product_id = :product_id
+        """), {"product_id": product_id}).fetchone()
+        
+        if not product:
+            raise HTTPException(status_code=404, detail="Товар не знайдено")
+        
+        current_state = product[3]
+        frozen_qty = product[4] or 0
+        
+        if current_state not in ('on_repair', 'on_wash', 'on_laundry', 'processing'):
+            raise HTTPException(status_code=400, detail=f"Товар не на обробці (state={current_state})")
+        
+        if frozen_qty <= 0:
+            raise HTTPException(status_code=400, detail="Немає замороженої кількості для повернення")
+        
+        # Визначити кількість для повернення
+        completed_qty = data.get("completed_qty")
+        if completed_qty is None:
+            completed_qty = frozen_qty
+        else:
+            completed_qty = int(completed_qty)
+        
+        if completed_qty > frozen_qty:
+            completed_qty = frozen_qty
+        
+        if completed_qty <= 0:
+            return {"success": False, "message": "Немає товарів для повернення"}
+        
+        new_frozen = frozen_qty - completed_qty
+        is_fully_completed = new_frozen <= 0
+        
+        # Оновити стан товару
+        if is_fully_completed:
+            db.execute(text("""
+                UPDATE products 
+                SET frozen_quantity = 0,
+                    state = 'available'
+                WHERE product_id = :product_id
+            """), {"product_id": product_id})
+        else:
+            db.execute(text("""
+                UPDATE products 
+                SET frozen_quantity = :new_frozen
+                WHERE product_id = :product_id
+            """), {"product_id": product_id, "new_frozen": new_frozen})
+        
+        # Логування в product_history
+        notes = data.get("notes", "")
+        db.execute(text("""
+            INSERT INTO product_history (product_id, action, actor, details, created_at)
+            VALUES (:product_id, 'returned_from_processing', 'system', :details, NOW())
+        """), {
+            "product_id": product_id,
+            "details": f"Повернено {completed_qty} шт з обробки ({current_state}). {notes}"
+        })
+        
+        db.commit()
+        
+        print(f"[QuickAction] ✅ Товар {product[1]} ({product_id}): повернено {completed_qty} шт з {current_state}")
+        
+        return {
+            "success": True,
+            "message": f"Повернено {completed_qty} шт." if not is_fully_completed else "Товар повністю повернено в наявність",
+            "product_id": product_id,
+            "sku": product[1],
+            "completed_qty": completed_qty,
+            "remaining_frozen": new_frozen,
+            "is_fully_completed": is_fully_completed,
+            "new_state": "available" if is_fully_completed else current_state
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
 @router.post("/{damage_id}/mark-failed")
 async def mark_processing_failed(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """Позначити обробку як невдалу (не вдалося відремонтувати/відчистити)"""

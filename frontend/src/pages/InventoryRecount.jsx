@@ -112,10 +112,15 @@ export default function InventoryRecount() {
     const actionLabels = {
       wash: 'мийку',
       repair: 'реставрацію', 
-      laundry: 'хімчистку'
+      laundry: 'хімчистку',
+      write_off: 'списання'
     }
     
-    if (!window.confirm(`Відправити ${qty} шт на ${actionLabels[actionType]}?\n\nТовар буде заморожено до завершення обробки.`)) {
+    const confirmMsg = actionType === 'write_off' 
+      ? `Списати ${qty} шт?\n\nЦю дію НЕ можна скасувати!`
+      : `Відправити ${qty} шт на ${actionLabels[actionType]}?\n\nТовар буде заморожено до завершення обробки.`
+    
+    if (!window.confirm(confirmMsg)) {
       return
     }
     
@@ -132,7 +137,10 @@ export default function InventoryRecount() {
         source: 'reaudit'
       })
       
-      alert(`✅ ${qty} шт відправлено на ${actionLabels[actionType]}!`)
+      const successMsg = actionType === 'write_off'
+        ? `✅ ${qty} шт списано!`
+        : `✅ ${qty} шт відправлено на ${actionLabels[actionType]}!`
+      alert(successMsg)
       
       // Оновити дані товару
       await loadProduct()

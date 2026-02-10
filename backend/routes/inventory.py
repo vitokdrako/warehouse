@@ -166,7 +166,8 @@ async def send_to_processing(
     action_labels = {
         'wash': 'На мийці',
         'repair': 'На реставрації',
-        'laundry': 'На хімчистці'
+        'laundry': 'На хімчистці',
+        'write_off': 'Списано'
     }
     
     if data.action_type not in action_labels:

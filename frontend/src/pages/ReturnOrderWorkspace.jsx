@@ -230,15 +230,6 @@ export default function ReturnOrderWorkspace() {
   // Обгортаємо в useCallback для автооновлення
   const loadOrderCallback = useCallback(loadOrder, [orderId])
 
-  // Автооновлення кожні 15 секунд
-  // Синхронізація змін з іншими користувачами
-  const { hasNewChanges, lastModifiedBy, markMyUpdate, dismissChanges } = useOrderSync(
-    orderId,
-    loadOrderCallback,
-    10000,
-    !loading && !!orderId
-  )
-  
   // WebSocket синхронізація (real-time)
   const {
     connected: wsConnected,
@@ -262,6 +253,15 @@ export default function ReturnOrderWorkspace() {
       })
     },
   })
+  
+  // ОПТИМІЗАЦІЯ P0.2: Синхронізація змін - вимкнено polling коли WS активний
+  const { hasNewChanges, lastModifiedBy, markMyUpdate, dismissChanges } = useOrderSync(
+    orderId,
+    loadOrderCallback,
+    10000,
+    !loading && !!orderId,
+    { wsConnected }  // Передаємо статус WS для вимкнення polling
+  )
   
   // Хук для повідомлення про збереження
   const { updateSection } = useOrderSectionUpdate()

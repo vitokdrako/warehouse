@@ -9,6 +9,15 @@ import CorporateHeader from '../components/CorporateHeader';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
+// Helper for image URLs
+const getImageUrl = (path) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const base = BACKEND_URL.endsWith('/') ? BACKEND_URL.slice(0, -1) : BACKEND_URL;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${cleanPath}`;
+};
+
 // Helpers
 const cn = (...xs) => xs.filter(Boolean).join(' ');
 const money = (v) => v ? `₴${Number(v).toLocaleString('uk-UA')}` : '₴0';

@@ -308,6 +308,12 @@ export default function DamageHubApp() {
     complexity: 'normal' // 'light', 'normal', 'heavy'
   });
   
+  // Full-screen section modals
+  const [fullScreenModal, setFullScreenModal] = useState({
+    isOpen: false,
+    section: null // 'wash', 'restore', 'laundry'
+  });
+  
   // ============= DATA LOADING =============
   const loadOrderCases = useCallback(async () => {
     try {

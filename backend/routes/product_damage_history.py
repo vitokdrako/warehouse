@@ -974,6 +974,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
         items = []
         
         # 1. Товари з product_damage_history (стара система)
+        # Виключаємо hidden записи
         result = db.execute(text("""
             SELECT 
                 pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
@@ -988,6 +989,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN laundry_batches lb ON pdh.laundry_batch_id = lb.id
             WHERE pdh.processing_type = 'laundry'
+            AND COALESCE(pdh.processing_status, '') != 'hidden'
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         

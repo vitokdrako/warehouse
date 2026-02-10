@@ -107,39 +107,28 @@ async def get_items_by_category(
     Статуси:
     - reserved: awaiting_customer, processing, ready_for_issue, pending (очікують видачі)
     - in_rent: issued, on_rent (видані клієнту)
-    - on_wash: на мийці (з product_damage_history)
-    - on_restoration: на реставрації (з product_damage_history)
-    - on_laundry: в хімчистці (з product_damage_history)
+    - on_wash: на мийці (products.state = 'on_wash')
+    - on_restoration: на реставрації (products.state = 'on_repair')
+    - on_laundry: в хімчистці (products.state = 'on_laundry')
+    
+    ВАЖЛИВО: Статус товару береться з products.state та products.frozen_quantity
     """
     try:
+        # Маппінг фільтрів до значень state в БД
+        state_filter_map = {
+            'on_wash': 'on_wash',
+            'on_restoration': 'on_repair',
+            'on_laundry': 'on_laundry'
+        }
+        
         # Спеціальна обробка для фільтрів по статусу обробки
-        # Якщо вибрано on_wash, on_restoration, on_laundry - шукаємо спочатку ці товари
         processing_filter = availability in ('on_wash', 'on_restoration', 'on_laundry')
         rent_filter = availability in ('in_rent', 'reserved')
         
         if processing_filter:
-            # Знайти товари на обробці
-            processing_type_map = {
-                'on_wash': 'wash',
-                'on_restoration': 'restoration',
-                'on_laundry': 'laundry'
-            }
-            p_type = processing_type_map[availability]
+            # Знайти товари на обробці з products.state
+            db_state = state_filter_map[availability]
             
-            processing_sql = """
-                SELECT DISTINCT pdh.product_id
-                FROM product_damage_history pdh
-                WHERE pdh.processing_type = :p_type
-                AND (pdh.processing_status IN ('pending', 'in_progress') 
-                     OR (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0)
-            """
-            processing_result = db.execute(text(processing_sql), {"p_type": p_type}).fetchall()
-            processing_product_ids = [row[0] for row in processing_result]
-            
-            if not processing_product_ids:
-                return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0, "on_wash": 0, "on_restoration": 0, "on_laundry": 0}, "date_filter_active": bool(date_from and date_to)}
-            
-            # Основний запит тільки для цих товарів
             sql_parts = ["""
                 SELECT 
                     p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
@@ -147,11 +136,11 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description
+                    p.description, p.state, p.frozen_quantity
                 FROM products p
-                WHERE p.status = 1 AND p.product_id IN :processing_ids
+                WHERE p.status = 1 AND p.state = :db_state AND COALESCE(p.frozen_quantity, 0) > 0
             """]
-            params = {"processing_ids": tuple(processing_product_ids)}
+            params = {"db_state": db_state}
             
         elif rent_filter:
             # Знайти товари в оренді або резерві

@@ -136,3 +136,138 @@ async def get_inventory_item(item_id: str, db: Session = Depends(get_rh_db)):  #
         "cleaning_status": cleaning_status,
         "product_state": product_state
     }
+
+
+# ============================================================
+# SEND TO PROCESSING (WASH / REPAIR / LAUNDRY)
+# ============================================================
+
+class SendToProcessingRequest(BaseModel):
+    product_id: int
+    sku: str
+    quantity: int = 1
+    action_type: str  # wash, repair, laundry
+    notes: Optional[str] = None
+    source: str = 'reaudit'
+
+
+@router.post("/send-to-processing")
+async def send_to_processing(
+    data: SendToProcessingRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Відправити товар на обробку (мийка/реставрація/хімчистка)
+    - Заморожує вказану кількість
+    - Оновлює статус товару
+    """
+    import uuid
+    
+    action_labels = {
+        'wash': 'На мийці',
+        'repair': 'На реставрації',
+        'laundry': 'На хімчистці'
+    }
+    
+    if data.action_type not in action_labels:
+        raise HTTPException(status_code=400, detail=f"Invalid action_type: {data.action_type}")
+    
+    # Перевірити наявність товару
+    result = db.execute(text("""
+        SELECT product_id, sku, name, quantity, frozen_quantity 
+        FROM products 
+        WHERE product_id = :product_id
+    """), {"product_id": data.product_id})
+    
+    product = result.fetchone()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    product_id, sku, name, quantity, frozen_qty = product
+    available_qty = (quantity or 0) - (frozen_qty or 0)
+    
+    if data.quantity > available_qty:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Недостатньо доступної кількості. Доступно: {available_qty}, запитано: {data.quantity}"
+        )
+    
+    # Заморозити товар
+    new_frozen_qty = (frozen_qty or 0) + data.quantity
+    db.execute(text("""
+        UPDATE products 
+        SET frozen_quantity = :frozen_qty,
+            state = 'processing'
+        WHERE product_id = :product_id
+    """), {
+        "frozen_qty": new_frozen_qty,
+        "product_id": data.product_id
+    })
+    
+    # Записати в processing_queue (або інша таблиця для черги обробки)
+    # Спочатку перевіримо чи існує таблиця
+    try:
+        queue_id = str(uuid.uuid4())
+        db.execute(text("""
+            INSERT INTO processing_queue 
+            (id, product_id, sku, quantity, action_type, status, notes, source, created_at)
+            VALUES
+            (:id, :product_id, :sku, :quantity, :action_type, 'pending', :notes, :source, NOW())
+        """), {
+            "id": queue_id,
+            "product_id": data.product_id,
+            "sku": data.sku,
+            "quantity": data.quantity,
+            "action_type": data.action_type,
+            "notes": data.notes,
+            "source": data.source
+        })
+    except Exception as e:
+        # Якщо таблиці немає - створимо її
+        if "doesn't exist" in str(e) or "1146" in str(e):
+            db.execute(text("""
+                CREATE TABLE IF NOT EXISTS processing_queue (
+                    id VARCHAR(36) PRIMARY KEY,
+                    product_id INT NOT NULL,
+                    sku VARCHAR(100),
+                    quantity INT DEFAULT 1,
+                    action_type VARCHAR(50) NOT NULL,
+                    status VARCHAR(50) DEFAULT 'pending',
+                    notes TEXT,
+                    source VARCHAR(50),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    completed_at DATETIME,
+                    completed_by VARCHAR(100)
+                )
+            """))
+            db.commit()
+            
+            # Повторити вставку
+            queue_id = str(uuid.uuid4())
+            db.execute(text("""
+                INSERT INTO processing_queue 
+                (id, product_id, sku, quantity, action_type, status, notes, source, created_at)
+                VALUES
+                (:id, :product_id, :sku, :quantity, :action_type, 'pending', :notes, :source, NOW())
+            """), {
+                "id": queue_id,
+                "product_id": data.product_id,
+                "sku": data.sku,
+                "quantity": data.quantity,
+                "action_type": data.action_type,
+                "notes": data.notes,
+                "source": data.source
+            })
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"{data.quantity} шт '{name}' відправлено на {action_labels[data.action_type].lower()}",
+        "queue_id": queue_id,
+        "product_id": data.product_id,
+        "sku": data.sku,
+        "quantity": data.quantity,
+        "action_type": data.action_type,
+        "new_frozen_quantity": new_frozen_qty
+    }

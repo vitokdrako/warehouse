@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { getStatusConfig } from './statusConfig'
 import { MoreHorizontal, X } from 'lucide-react'
 
@@ -7,6 +7,10 @@ import { MoreHorizontal, X } from 'lucide-react'
  * FooterActions - Фіксований компактний футер з bottom-sheet
  * Mobile: 1 ряд (Save + Primary + More)
  * Desktop: розширена версія
+ * 
+ * ОПТИМІЗАЦІЯ Phase 2: useRef для scroll listener
+ * - lastScrollY тепер в useRef (не викликає ререндер)
+ * - scroll listener встановлюється один раз
  */
 export default function FooterActions({
   status,
@@ -25,24 +29,31 @@ export default function FooterActions({
   const effectivePrimaryLabel = primaryLabel || config.primaryAction
   const [showMore, setShowMore] = useState(false)
   const [hidden, setHidden] = useState(false)
-  const [lastScrollY, setLastScrollY] = useState(0)
   
-  // Hide/show footer on scroll (mobile UX)
+  // ОПТИМІЗАЦІЯ Phase 2: useRef замість useState для lastScrollY
+  const lastScrollYRef = useRef(0)
+  
+  // Hide/show footer on scroll (mobile UX) - ОПТИМІЗОВАНО
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
+      const lastScrollY = lastScrollYRef.current
+      
       // Ховаємо футер при швидкому скролі вниз
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setHidden(true)
       } else {
         setHidden(false)
       }
-      setLastScrollY(currentScrollY)
+      
+      // Оновлюємо ref (не викликає ререндер)
+      lastScrollYRef.current = currentScrollY
     }
     
+    // Listener встановлюється один раз - без залежності від lastScrollY
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY])
+  }, [])  // Пустий масив - listener один раз
   
   // Фільтруємо додаткові дії для More меню
   const moreActions = additionalActions.filter(a => !a.alwaysShow)

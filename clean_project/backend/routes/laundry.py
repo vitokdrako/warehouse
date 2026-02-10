@@ -162,12 +162,17 @@ async def add_queue_items_to_batch(
         - item_ids: list[str] - ID записів з product_damage_history
         - batch_id: str (optional) - ID існуючої партії, або створити нову
         - laundry_company: str - назва хімчистки (для нової партії)
+        - complexity: str - складність обробки ('light', 'normal', 'heavy')
         - expected_return_date: str (optional) - очікувана дата повернення
     """
     item_ids = data.get("item_ids", [])
     batch_id = data.get("batch_id")
     laundry_company = data.get("laundry_company", "Хімчистка")
+    complexity = data.get("complexity", "normal")  # light, normal, heavy
     expected_return_date = data.get("expected_return_date")
+    
+    # Отримати поточного користувача (якщо є)
+    created_by = data.get("created_by", "system")
     
     if not item_ids:
         raise HTTPException(status_code=400, detail="Не вказано товари")
@@ -181,16 +186,19 @@ async def add_queue_items_to_batch(
             db.execute(text("""
                 INSERT INTO laundry_batches (
                     id, batch_number, laundry_company, status, sent_date, 
-                    expected_return_date, total_items, returned_items, created_at, updated_at
+                    expected_return_date, total_items, returned_items, 
+                    complexity, created_by, created_at, updated_at
                 ) VALUES (
                     :id, :batch_number, :company, 'sent', NOW(), :return_date,
-                    0, 0, NOW(), NOW()
+                    0, 0, :complexity, :created_by, NOW(), NOW()
                 )
             """), {
                 "id": batch_id,
                 "batch_number": batch_number,
                 "company": laundry_company,
-                "return_date": expected_return_date
+                "return_date": expected_return_date,
+                "complexity": complexity,
+                "created_by": created_by
             })
         
         added_count = 0

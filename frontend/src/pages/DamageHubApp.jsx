@@ -1088,20 +1088,30 @@ export default function DamageHubApp() {
 
             {/* ХІМЧИСТКА Section */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <button
-                onClick={() => toggleSection('laundry')}
-                className="w-full p-3 flex items-center justify-between bg-purple-50 border-b border-purple-100"
-              >
-                <span className="font-semibold text-purple-800 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4" /> Хімчистка
-                  {laundryQueue.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-amber-200 text-amber-800 text-xs rounded-full">
-                      черга: {laundryQueue.length}
-                    </span>
-                  )}
-                </span>
-                {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-purple-600" /> : <ChevronRight className="w-4 h-4 text-purple-600" />}
-              </button>
+              <div className="flex items-center justify-between bg-purple-50 border-b border-purple-100 p-3">
+                <button
+                  onClick={() => toggleSection('laundry')}
+                  className="flex items-center gap-2 flex-1"
+                >
+                  <span className="font-semibold text-purple-800 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Хімчистка
+                    {laundryQueue.length > 0 && (
+                      <span className="px-1.5 py-0.5 bg-amber-200 text-amber-800 text-xs rounded-full">
+                        черга: {laundryQueue.length}
+                      </span>
+                    )}
+                  </span>
+                  {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-purple-600" /> : <ChevronRight className="w-4 h-4 text-purple-600" />}
+                </button>
+                {laundryQueue.length > 0 && (
+                  <button
+                    onClick={openBatchModal}
+                    className="text-xs px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium flex items-center gap-1"
+                  >
+                    <Package className="w-3 h-3" /> Сформувати партію
+                  </button>
+                )}
+              </div>
               
               {expandedSections.laundry && (
                 <div className="p-2 space-y-3">
@@ -1112,12 +1122,6 @@ export default function DamageHubApp() {
                         <span className="text-xs font-semibold text-amber-700 flex items-center gap-1">
                           <Clock className="w-3 h-3" /> Черга ({laundryQueue.length} поз.)
                         </span>
-                        <button
-                          onClick={() => handleAddToBatch(laundryQueue.map(i => i.id))}
-                          className="text-xs px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium"
-                        >
-                          Сформувати партію
-                        </button>
                       </div>
                       <div className="space-y-1.5 max-h-40 overflow-y-auto">
                         {laundryQueue.map(item => (

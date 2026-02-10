@@ -1501,7 +1501,7 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
         {hasProcessing && !hasRentals && (
           <div className="text-xs rounded px-2 py-1.5 mt-1 bg-cyan-50 text-cyan-700 border border-cyan-200">
             {item.on_wash > 0 && <span>🧹 На мийці: {item.on_wash}</span>}
-            {item.on_restoration > 0 && <span>{item.on_wash > 0 ? ' · ' : ''}🔧 Ремонт: {item.on_restoration}</span>}
+            {item.on_restoration > 0 && <span>{item.on_wash > 0 ? ' · ' : ''}🔧 Реставрація: {item.on_restoration}</span>}
             {item.on_laundry > 0 && <span>{(item.on_wash > 0 || item.on_restoration > 0) ? ' · ' : ''}👕 Хімчистка: {item.on_laundry}</span>}
           </div>
         )}

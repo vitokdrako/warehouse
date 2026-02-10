@@ -9,21 +9,34 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
  * Перевіряє тільки timestamp - легкий запит кожні N секунд
  * Оновлює дані тільки якщо хтось інший зберіг зміни
  * 
+ * ОПТИМІЗАЦІЯ P0.2:
+ * - Коли WebSocket підключений (wsConnected: true), polling вимикається
+ * - Fallback polling збільшено до 60 секунд (замість 10)
+ * 
  * @param {string} orderId - ID замовлення
  * @param {Function} onUpdate - Callback коли потрібно оновити дані
  * @param {number} intervalMs - Інтервал перевірки (default: 10000 = 10 сек)
  * @param {boolean} enabled - Чи включено синхронізацію
+ * @param {Object} options - Додаткові опції
+ * @param {boolean} options.wsConnected - Чи підключений WebSocket (вимикає polling)
  */
-export function useOrderSync(orderId, onUpdate, intervalMs = 10000, enabled = true) {
+export function useOrderSync(orderId, onUpdate, intervalMs = 10000, enabled = true, options = {}) {
+  const { wsConnected = false } = options
+  
   const [lastKnownModified, setLastKnownModified] = useState(null)
   const [lastModifiedBy, setLastModifiedBy] = useState(null)
   const [hasNewChanges, setHasNewChanges] = useState(false)
   const intervalRef = useRef(null)
   const isMyUpdate = useRef(false)
 
+  // ОПТИМІЗАЦІЯ P0.2: Визначаємо чи потрібен polling
+  // Якщо WS активний - polling вимкнено повністю (або рідкий fallback 60с)
+  const pollingEnabled = enabled && !wsConnected
+  const effectiveInterval = wsConnected ? 60000 : intervalMs  // 60s fallback якщо WS
+
   // Перевірка timestamp
   const checkForUpdates = useCallback(async () => {
-    if (!orderId || !enabled) return
+    if (!orderId || !pollingEnabled) return
     
     try {
       const response = await axios.get(`${BACKEND_URL}/api/orders/${orderId}/last-modified`)
@@ -49,7 +62,7 @@ export function useOrderSync(orderId, onUpdate, intervalMs = 10000, enabled = tr
     } catch (err) {
       // Тихо ігноруємо помилки - це фоновий процес
     }
-  }, [orderId, enabled, lastKnownModified, onUpdate])
+  }, [orderId, pollingEnabled, lastKnownModified, onUpdate])
 
   // Позначити що ми самі зберегли (щоб не реагувати на свої зміни)
   const markMyUpdate = useCallback(async () => {
@@ -75,21 +88,24 @@ export function useOrderSync(orderId, onUpdate, intervalMs = 10000, enabled = tr
     setLastModifiedBy(null)
   }, [])
 
-  // Запуск polling
+  // Запуск polling - ОПТИМІЗОВАНО
   useEffect(() => {
-    if (!enabled || !orderId) {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
+    // Очистити попередній interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    
+    // ОПТИМІЗАЦІЯ P0.2: Не запускаємо polling якщо WS активний
+    if (!pollingEnabled || !orderId) {
       return
     }
 
     // Перша перевірка одразу
     checkForUpdates()
 
-    // Запускаємо interval
-    intervalRef.current = setInterval(checkForUpdates, intervalMs)
+    // Запускаємо interval з ефективним інтервалом
+    intervalRef.current = setInterval(checkForUpdates, effectiveInterval)
 
     return () => {
       if (intervalRef.current) {
@@ -97,7 +113,7 @@ export function useOrderSync(orderId, onUpdate, intervalMs = 10000, enabled = tr
         intervalRef.current = null
       }
     }
-  }, [enabled, orderId, intervalMs, checkForUpdates])
+  }, [pollingEnabled, orderId, effectiveInterval, checkForUpdates])
 
   return {
     hasNewChanges,
@@ -105,6 +121,7 @@ export function useOrderSync(orderId, onUpdate, intervalMs = 10000, enabled = tr
     markMyUpdate,
     dismissChanges,
     checkForUpdates,
+    pollingActive: pollingEnabled,  // Експортуємо для дебагу
   }
 }
 

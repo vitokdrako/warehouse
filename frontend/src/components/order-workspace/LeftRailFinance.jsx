@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import TonePill from './TonePill'
 import eventBus, { EVENTS } from '../../utils/eventBus'
 
@@ -18,10 +18,24 @@ const authFetch = (url) => {
 
 const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 
+// Debounce utility
+const debounce = (fn, delay) => {
+  let timeoutId;
+  const debouncedFn = (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+  debouncedFn.cancel = () => clearTimeout(timeoutId);
+  return debouncedFn;
+};
+
 /**
  * LeftRailFinance - Фінансовий блок в лівій панелі
  * Читає РЕАЛЬНІ дані з фінансової системи
- * Автоматично оновлюється при змінах через EventBus
+ * 
+ * ОПТИМІЗОВАНО:
+ * - Використовує новий endpoint /api/finance/deposit-hold?order_id={id} замість /api/finance/deposits
+ * - Debounce для EventBus (300ms) щоб уникнути "шторму" рефетчів
  */
 export default function LeftRailFinance({
   orderId,             // ID замовлення для завантаження реальних даних
@@ -32,8 +46,11 @@ export default function LeftRailFinance({
   const [payments, setPayments] = useState([])
   const [deposit, setDeposit] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Ref для debounced функції
+  const debouncedRefreshRef = useRef(null)
 
-  // Функція завантаження даних
+  // Функція завантаження даних - ОПТИМІЗОВАНА
   const fetchData = useCallback(() => {
     if (!orderId) {
       setLoading(false)
@@ -42,16 +59,15 @@ export default function LeftRailFinance({
 
     setLoading(true)
     
-    // Завантажити реальні дані з фінансової системи
+    // ОПТИМІЗАЦІЯ P0.1: Використовуємо новий endpoint для одного депозиту
     Promise.all([
       authFetch(`${BACKEND_URL}/api/finance/payments?order_id=${orderId}`).then(r => r.json()),
-      authFetch(`${BACKEND_URL}/api/finance/deposits`).then(r => r.json())
+      authFetch(`${BACKEND_URL}/api/finance/deposit-hold?order_id=${orderId}`).then(r => r.json())
     ])
-    .then(([paymentsData, depositsData]) => {
+    .then(([paymentsData, depositData]) => {
       setPayments(paymentsData.payments || [])
-      // Знайти депозит для цього замовлення
-      const orderDeposit = (depositsData || []).find(d => d.order_id === orderId)
-      setDeposit(orderDeposit || null)
+      // depositData вже є депозитом для цього замовлення або null
+      setDeposit(depositData || null)
       setLoading(false)
     })
     .catch(err => {
@@ -65,12 +81,30 @@ export default function LeftRailFinance({
     fetchData()
   }, [fetchData, refreshKey])
 
-  // Підписка на події оновлення
+  // ОПТИМІЗАЦІЯ P0.3: Debounced refresh для EventBus
+  useEffect(() => {
+    // Створюємо debounced функцію
+    debouncedRefreshRef.current = debounce(() => {
+      setRefreshKey(k => k + 1)
+    }, 300)
+    
+    return () => {
+      // Cleanup debounce при unmount
+      if (debouncedRefreshRef.current?.cancel) {
+        debouncedRefreshRef.current.cancel()
+      }
+    }
+  }, [])
+
+  // Підписка на події оновлення з DEBOUNCE
   useEffect(() => {
     const handleFinanceUpdate = (data) => {
       // Оновлюємо тільки якщо це наше замовлення або глобальне оновлення
       if (!data || !data.orderId || data.orderId === orderId) {
-        setRefreshKey(k => k + 1)
+        // ОПТИМІЗАЦІЯ P0.3: Використовуємо debounced refresh
+        if (debouncedRefreshRef.current) {
+          debouncedRefreshRef.current()
+        }
       }
     }
 

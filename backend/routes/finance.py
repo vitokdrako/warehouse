@@ -655,6 +655,42 @@ async def list_all_expenses(limit: int = 100, db: Session = Depends(get_rh_db)):
 # DEPOSITS
 # ============================================================
 
+@router.get("/deposit-hold")
+async def get_deposit_for_order(order_id: int = Query(..., description="Order ID"), db: Session = Depends(get_rh_db)):
+    """Get single deposit hold for a specific order - optimized endpoint for LeftRailFinance"""
+    result = db.execute(text("""
+        SELECT d.id, d.order_id, d.held_amount, d.used_amount, d.refunded_amount, d.status, 
+               d.opened_at, d.closed_at, d.note, o.order_number, o.customer_name,
+               d.actual_amount, d.currency, d.exchange_rate, d.expected_amount
+        FROM fin_deposit_holds d 
+        LEFT JOIN orders o ON o.order_id = d.order_id 
+        WHERE d.order_id = :order_id
+        LIMIT 1
+    """), {"order_id": order_id})
+    
+    r = result.fetchone()
+    if not r:
+        return None  # No deposit for this order
+    
+    currency = r[12] or 'UAH'
+    actual_amount = float(r[11]) if r[11] else float(r[2])
+    
+    return {
+        "id": r[0], "order_id": r[1], 
+        "held_amount": float(r[2]),
+        "actual_amount": actual_amount,
+        "currency": currency,
+        "exchange_rate": float(r[13]) if r[13] else 1.0,
+        "expected_amount": float(r[14]) if r[14] else 0,
+        "used_amount": float(r[3]), "refunded_amount": float(r[4]),
+        "available": float(r[2]) - float(r[3]) - float(r[4]),
+        "status": r[5], "opened_at": r[6].isoformat() if r[6] else None,
+        "closed_at": r[7].isoformat() if r[7] else None, "note": r[8],
+        "order_number": r[9], "customer_name": r[10],
+        "display_amount": f"{actual_amount:,.0f} {currency}" if currency != 'UAH' else f"₴{actual_amount:,.0f}"
+    }
+
+
 @router.get("/deposits")
 async def list_deposits(status: Optional[str] = None, db: Session = Depends(get_rh_db)):
     """List deposit holds with order info and currency"""

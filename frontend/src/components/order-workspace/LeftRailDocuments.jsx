@@ -68,17 +68,20 @@ export default function LeftRailDocuments({
 
   const getToken = () => localStorage.getItem('token')
 
-  // Завантажити інформацію про останні версії документів
+  // ОПТИМІЗАЦІЯ P1.1: Паралельне завантаження версій документів
   const loadDocumentVersions = async () => {
     const docs = DOCS_BY_STATUS[orderStatus] || []
-    const versions = {}
+    if (docs.length === 0) {
+      setDocVersions({})
+      return
+    }
     
-    for (const doc of docs) {
-      // entity_type в БД: 'issue' для issue_card документів, 'order' для решти
+    // Створюємо масив промісів для паралельного виконання
+    const fetchPromises = docs.map(async (doc) => {
       const entityType = ISSUE_CARD_DOCS.includes(doc.type) ? 'issue' : 'order'
       const entityId = ISSUE_CARD_DOCS.includes(doc.type) ? (issueCardId || orderId) : orderId
       
-      if (!entityId) continue
+      if (!entityId) return { docType: doc.type, data: null }
       
       try {
         const res = await fetch(`${BACKEND_URL}/api/documents/latest/${entityType}/${entityId}/${doc.type}`, {
@@ -86,12 +89,23 @@ export default function LeftRailDocuments({
         })
         if (res.ok) {
           const data = await res.json()
-          versions[doc.type] = data
+          return { docType: doc.type, data }
         }
       } catch (e) {
         console.error(`Error loading version for ${doc.type}:`, e)
       }
-    }
+      return { docType: doc.type, data: null }
+    })
+    
+    // Promise.allSettled - всі запити паралельно, навіть якщо деякі впадуть
+    const results = await Promise.allSettled(fetchPromises)
+    
+    const versions = {}
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value?.data) {
+        versions[result.value.docType] = result.value.data
+      }
+    })
     
     setDocVersions(versions)
   }
@@ -124,7 +138,8 @@ export default function LeftRailDocuments({
   }
 
   // Генерувати НОВИЙ документ
-  const generateNewDocument = async (docType) => {
+  // ОПТИМІЗАЦІЯ P1.2: Повертає data для використання в sendEmail (fix race condition)
+  const generateNewDocument = async (docType, openPreview = true) => {
     setGenerating(docType)
     setError(null)
     
@@ -134,7 +149,7 @@ export default function LeftRailDocuments({
     if (!entityId) {
       setError('ID не знайдено')
       setGenerating(null)
-      return
+      return null  // Повертаємо null замість undefined
     }
     
     try {
@@ -158,11 +173,11 @@ export default function LeftRailDocuments({
       
       const data = await response.json()
       
-      // Оновити версію
+      // Оновити версію в state
       await loadDocumentVersions()
       
-      // Показати новий документ
-      if (data.html_content) {
+      // Показати новий документ (тільки якщо openPreview = true)
+      if (openPreview && data.html_content) {
         const win = window.open('', '_blank')
         if (win) {
           win.document.write(data.html_content)
@@ -172,9 +187,13 @@ export default function LeftRailDocuments({
       
       onDocumentGenerated(docType, data)
       
+      // ОПТИМІЗАЦІЯ P1.2: Повертаємо data для використання в sendEmail
+      return data
+      
     } catch (err) {
       console.error('Document error:', err)
       setError(err.message)
+      return null
     } finally {
       setGenerating(null)
     }
@@ -242,7 +261,7 @@ export default function LeftRailDocuments({
     }
   }
 
-  // Email
+  // Email - ОПТИМІЗОВАНО P1.2: Виправлено race condition
   const sendEmail = async (docType) => {
     if (!customerEmail) {
       alert('Email клієнта не вказано')
@@ -250,22 +269,25 @@ export default function LeftRailDocuments({
     }
     
     let docInfo = docVersions[docType]
+    let generatedData = null
     
     // Якщо документ не існує - спочатку генеруємо
+    // ОПТИМІЗАЦІЯ P1.2: Використовуємо повернені дані напряму, а не state
     if (!docInfo?.exists) {
-      await generateNewDocument(docType)
-      // Перезавантажуємо версії
-      await loadDocumentVersions()
-      // Оновлюємо docInfo після генерації
-      docInfo = docVersions[docType]
+      generatedData = await generateNewDocument(docType, false)  // false = не відкривати preview
+      if (!generatedData) {
+        alert('❌ Не вдалося згенерувати документ')
+        return
+      }
     }
     
     setSending(docType)
     setError(null)
     
     try {
-      // Використовуємо ID збереженого документа
-      const documentId = docInfo?.id
+      // ОПТИМІЗАЦІЯ P1.2: Використовуємо ID з generatedData якщо щойно згенерували
+      // Це вирішує race condition коли state ще не оновився
+      const documentId = generatedData?.id || docInfo?.id
       
       if (!documentId) {
         // Якщо немає збереженого документа - використовуємо новий endpoint

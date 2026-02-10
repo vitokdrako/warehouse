@@ -214,16 +214,26 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
                 ⚠️ Перевірте ці дефекти перед прийманням
               </div>
               <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
-                {damageHistory.slice(0, 5).map((d, idx) => (
+                {damageHistory.slice(0, 5).map((d, idx) => {
+                  const getFullPhotoUrl = (url) => {
+                    if (!url) return null;
+                    if (url.startsWith('http')) return url;
+                    const base = BACKEND_URL.endsWith('/') ? BACKEND_URL.slice(0, -1) : BACKEND_URL;
+                    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+                    return `${base}${cleanPath}`;
+                  };
+                  const photoUrl = getFullPhotoUrl(d.photo_url);
+                  
+                  return (
                   <div key={d.id || idx} className="flex items-start gap-2 text-[10px] bg-white rounded p-1.5 border border-red-100">
-                    {d.photo_url && (
+                    {photoUrl && (
                       <img 
-                        src={d.photo_url.startsWith('http') ? d.photo_url : `${BACKEND_URL}${d.photo_url}`} 
+                        src={photoUrl} 
                         alt="" 
                         className="w-10 h-10 rounded object-cover flex-shrink-0 cursor-pointer border-2 border-red-200 hover:border-red-400"
                         onClick={(e) => { 
                           e.stopPropagation()
-                          setShowDamagePhoto(d.photo_url.startsWith('http') ? d.photo_url : `${BACKEND_URL}${d.photo_url}`)
+                          setShowDamagePhoto(photoUrl)
                         }}
                       />
                     )}

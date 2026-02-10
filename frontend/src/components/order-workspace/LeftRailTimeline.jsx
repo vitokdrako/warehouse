@@ -1,5 +1,5 @@
 /* eslint-disable */
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import eventBus, { EVENTS } from '../../utils/eventBus'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
@@ -17,10 +17,24 @@ const authFetch = (url) => {
 
 const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 
+// Debounce utility
+const debounce = (fn, delay) => {
+  let timeoutId;
+  const debouncedFn = (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), delay);
+  };
+  debouncedFn.cancel = () => clearTimeout(timeoutId);
+  return debouncedFn;
+};
+
 /**
  * LeftRailTimeline - Таймлайн подій в лівій панелі
  * Завантажує реальні дані з фінансової системи
- * Автоматично оновлюється при змінах через EventBus
+ * 
+ * ОПТИМІЗАЦІЯ Phase 2:
+ * - useMemo для dedupe та сортування events
+ * - Debounce для EventBus (300ms)
  */
 export default function LeftRailTimeline({
   orderId,            // ID замовлення для завантаження реальних даних
@@ -31,6 +45,9 @@ export default function LeftRailTimeline({
   const [financeEvents, setFinanceEvents] = useState([])
   const [loading, setLoading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Ref для debounced функції
+  const debouncedRefreshRef = useRef(null)
 
   // Функція завантаження даних
   const fetchData = useCallback(() => {
@@ -64,6 +81,7 @@ export default function LeftRailTimeline({
             : `₴ ${fmtUA(p.amount)}`
           
           return {
+            id: `payment_${p.id}`,  // Унікальний ID для dedupe
             text: `${typeInfo.icon} ${typeInfo.text}: ${amountDisplay}`,
             at: p.occurred_at ? new Date(p.occurred_at).toLocaleString('uk-UA', { 
               day: '2-digit', 
@@ -100,6 +118,7 @@ export default function LeftRailTimeline({
           const stageInfo = lifecycleStages[l.stage] || { text: l.stage, tone: 'slate', icon: '📌' }
           
           return {
+            id: `lifecycle_${l.id}`,  // Унікальний ID для dedupe
             text: `${stageInfo.icon} ${stageInfo.text}`,
             at: l.created_at ? new Date(l.created_at).toLocaleString('uk-UA', { 
               day: '2-digit', 
@@ -114,24 +133,41 @@ export default function LeftRailTimeline({
           }
         })
         
-        // Об'єднати та відсортувати за часом (найновіші зверху)
-        const allFinanceEvents = [...paymentEvents, ...lifecycleEvents]
-          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
-        
-        setFinanceEvents(allFinanceEvents)
+        // Зберігаємо несортовані - сортування в useMemo
+        setFinanceEvents([...paymentEvents, ...lifecycleEvents])
         setLoading(false)
       })
       .catch(err => {
         console.error('Failed to load events:', err)
         setLoading(false)
       })
-  }, [orderId, refreshKey])
+  }, [orderId])
 
-  // Підписка на події оновлення
+  // ОПТИМІЗАЦІЯ Phase 2: Debounce для EventBus
+  useEffect(() => {
+    debouncedRefreshRef.current = debounce(() => {
+      setRefreshKey(k => k + 1)
+    }, 300)
+    
+    return () => {
+      if (debouncedRefreshRef.current?.cancel) {
+        debouncedRefreshRef.current.cancel()
+      }
+    }
+  }, [])
+
+  // Початкове завантаження
+  useEffect(() => {
+    fetchData()
+  }, [fetchData, refreshKey])
+
+  // Підписка на події оновлення з DEBOUNCE
   useEffect(() => {
     const handleUpdate = (data) => {
       if (!data || !data.orderId || data.orderId === orderId) {
-        setRefreshKey(k => k + 1)
+        if (debouncedRefreshRef.current) {
+          debouncedRefreshRef.current()
+        }
       }
     }
 
@@ -152,10 +188,28 @@ export default function LeftRailTimeline({
     }
   }, [orderId])
 
-  // Об'єднати фінансові події з зовнішніми
-  const allEvents = [...financeEvents, ...externalEvents]
+  // ОПТИМІЗАЦІЯ Phase 2: useMemo для dedupe та сортування
+  const allEvents = useMemo(() => {
+    const combined = [...financeEvents, ...externalEvents]
+    
+    // Dedupe по id (якщо є) або по text+timestamp
+    const seen = new Set()
+    const unique = combined.filter(event => {
+      const key = event.id || `${event.text}_${event.timestamp}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    
+    // Сортуємо за часом (найновіші зверху)
+    return unique.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+  }, [financeEvents, externalEvents])
   
-  const visibleEvents = showAll ? allEvents : allEvents.slice(0, maxVisible)
+  // ОПТИМІЗАЦІЯ Phase 2: useMemo для visible events
+  const visibleEvents = useMemo(() => {
+    return showAll ? allEvents : allEvents.slice(0, maxVisible)
+  }, [allEvents, showAll, maxVisible])
+  
   const hasMore = allEvents.length > maxVisible
   
   const toneColors = {

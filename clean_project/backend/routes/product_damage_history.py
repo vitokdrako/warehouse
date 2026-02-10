@@ -1382,10 +1382,12 @@ async def complete_quick_action_processing(product_id: int, data: dict, db: Sess
         
         # Логування в product_history
         notes = data.get("notes", "")
+        history_id = str(uuid.uuid4())
         db.execute(text("""
-            INSERT INTO product_history (product_id, action, actor, details, created_at)
-            VALUES (:product_id, 'returned_from_processing', 'system', :details, NOW())
+            INSERT INTO product_history (id, product_id, action, actor, details, created_at)
+            VALUES (:id, :product_id, 'returned_from_processing', 'system', :details, NOW())
         """), {
+            "id": history_id,
             "product_id": product_id,
             "details": f"Повернено {completed_qty} шт з обробки ({current_state}). {notes}"
         })

@@ -557,14 +557,45 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleAddToBatch = async (itemIds) => {
-    const company = prompt("Введіть назву хімчистки:", "Прана");
-    if (!company) return;
+  // Відкрити модалку формування партії
+  const openBatchModal = () => {
+    setBatchModal({
+      isOpen: true,
+      selectedItems: laundryQueue.map(i => i.id), // За замовчуванням вибрати всі
+      companyName: '',
+      complexity: 'normal'
+    });
+  };
+
+  // Перемикання вибору товару в модалці
+  const toggleBatchItem = (itemId) => {
+    setBatchModal(prev => ({
+      ...prev,
+      selectedItems: prev.selectedItems.includes(itemId)
+        ? prev.selectedItems.filter(id => id !== itemId)
+        : [...prev.selectedItems, itemId]
+    }));
+  };
+
+  // Створити партію
+  const handleCreateBatch = async () => {
+    if (!batchModal.companyName.trim()) {
+      alert("Введіть назву хімчистки");
+      return;
+    }
+    if (batchModal.selectedItems.length === 0) {
+      alert("Оберіть хоча б один товар");
+      return;
+    }
     
     try {
       const res = await authFetch(`${BACKEND_URL}/api/laundry/queue/add-to-batch`, {
         method: "POST",
-        body: JSON.stringify({ item_ids: itemIds, laundry_company: company })
+        body: JSON.stringify({ 
+          item_ids: batchModal.selectedItems, 
+          laundry_company: batchModal.companyName.trim(),
+          complexity: batchModal.complexity
+        })
       });
       
       if (!res.ok) {
@@ -575,10 +606,16 @@ export default function DamageHubApp() {
       
       await loadLaundryQueue();
       await loadLaundryBatches();
+      setBatchModal({ isOpen: false, selectedItems: [], companyName: '', complexity: 'normal' });
       alert("✅ Партію сформовано");
     } catch (e) {
       alert("Помилка формування партії");
     }
+  };
+
+  // Legacy function - keep for backward compatibility
+  const handleAddToBatch = async (itemIds) => {
+    openBatchModal();
   };
 
   const handleReceiveBatchItem = async (batchId, itemId, quantity) => {

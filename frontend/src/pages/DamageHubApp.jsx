@@ -1018,7 +1018,15 @@ export default function DamageHubApp() {
                         <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
                         <div className="text-xs text-slate-500">{item.sku} • <span className="font-medium">{item.qty || 1} шт</span></div>
                       </div>
-                      {item.processing_status !== 'completed' && (
+                      {item.processing_status === 'completed' ? (
+                        <button
+                          onClick={() => handleRemoveFromList(item.id, 'restore')}
+                          className="p-1.5 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 hover:text-slate-700 transition"
+                          title="Видалити зі списку"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      ) : (
                         <button
                           onClick={() => handleComplete(item.id)}
                           className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"

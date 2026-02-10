@@ -40,13 +40,31 @@ The user's initial request was to enhance the "Damage Hub" and integrate an exis
    - `sendEmail` uses returned data directly instead of relying on state
    - Fixes "Generate → Send Email" failing on first attempt
 
-**Files Modified:**
-- `/app/backend/routes/finance.py` - Added deposit-hold endpoint
-- `/app/frontend/src/components/order-workspace/LeftRailFinance.jsx` - Optimized with debounce + new endpoint
-- `/app/frontend/src/components/order-workspace/LeftRailDocuments.jsx` - Parallel loading + race condition fix
-- `/app/frontend/src/hooks/useAutoRefresh.js` - WS-aware polling
-- `/app/frontend/src/pages/IssueCardWorkspace.jsx` - Pass wsConnected to useOrderSync
-- `/app/frontend/src/pages/ReturnOrderWorkspace.jsx` - Pass wsConnected to useOrderSync
+---
+
+### Performance Optimization Phase 2 - COMPLETED ✅
+
+1. **Batch endpoint для документів**
+   - Новий endpoint `POST /api/documents/latest-batch`
+   - Приймає список doc_types і повертає всі версії одним запитом
+   - `LeftRailDocuments.jsx` оновлено для використання batch замість N окремих запитів
+
+2. **Timeline dedupe + useMemo**
+   - `LeftRailTimeline.jsx` використовує useMemo для:
+     - Дедуплікації events по id (payment_id/lifecycle_id)
+     - Кешування відсортованих та відфільтрованих events
+   - Додано debounce (300ms) для EventBus
+
+3. **Footer scroll refactor**
+   - `FooterActions.jsx`: `lastScrollY` перенесено в `useRef`
+   - Scroll listener встановлюється один раз (пустий масив залежностей)
+   - Менше ререндерів при скролі
+
+**Files Modified (Phase 2):**
+- `/app/backend/routes/documents.py` - Added latest-batch endpoint
+- `/app/frontend/src/components/order-workspace/LeftRailDocuments.jsx` - Batch loading
+- `/app/frontend/src/components/order-workspace/LeftRailTimeline.jsx` - useMemo + debounce
+- `/app/frontend/src/components/order-workspace/FooterActions.jsx` - useRef scroll
 
 ---
 

@@ -166,6 +166,32 @@ async def create_damage_case(
             """)
             rh_db.execute(update_query, {'qty': qty, 'pid': product_id, 'new_state': new_state})
             message = f"{action_type.capitalize()}: заморожено {qty} од."
+            
+            # Для хімчистки - додати запис в product_damage_history щоб з'явився в черзі
+            if action_type == 'laundry':
+                try:
+                    pdh_id = str(uuid.uuid4())
+                    rh_db.execute(text("""
+                        INSERT INTO product_damage_history (
+                            id, product_id, sku, product_name, category,
+                            damage_type, processing_type, processing_status,
+                            qty, processed_qty, note, created_at, created_by
+                        )
+                        SELECT 
+                            :id, :product_id, sku, name, category_name,
+                            :damage_type, 'laundry', 'pending',
+                            :qty, 0, :notes, NOW(), 'system'
+                        FROM products
+                        WHERE product_id = :product_id
+                    """), {
+                        "id": pdh_id,
+                        "product_id": product_id,
+                        "damage_type": description or "З кабінету переобліку",
+                        "qty": qty,
+                        "notes": description or "Створено через кейс шкоди"
+                    })
+                except Exception as e:
+                    print(f"[DamageCases] Warning: Could not add to product_damage_history: {e}")
         
         rh_db.commit()
         

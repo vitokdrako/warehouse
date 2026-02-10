@@ -1274,7 +1274,7 @@ export default function ReauditCabinetFull({
                                   estimated_cost: 0, 
                                   create_damage_case: false, 
                                   photo_url: '',
-                                  action_type: 'repair',
+                                  action_type: 'restoration',
                                   qty: 1
                                 })
                                 loadItems()
@@ -1296,7 +1296,7 @@ export default function ReauditCabinetFull({
                               estimated_cost: 0, 
                               create_damage_case: false, 
                               photo_url: '',
-                              action_type: 'repair',
+                              action_type: 'restoration',
                               qty: 1
                             })
                           }}>

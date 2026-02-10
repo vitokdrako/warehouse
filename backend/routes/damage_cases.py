@@ -139,19 +139,32 @@ async def create_damage_case(
             # Повна втрата - віднімаємо від кількості
             update_query = text("""
                 UPDATE products 
-                SET quantity = quantity - :qty
+                SET quantity = quantity - :qty,
+                    state = 'written_off'
                 WHERE product_id = :pid
             """)
             rh_db.execute(update_query, {'qty': qty, 'pid': product_id})
             message = f"Повна втрата: віднято {qty} од."
         else:
-            # Ремонт/Реставрація/Мийка - заморожуємо товар
+            # Ремонт/Реставрація/Мийка - заморожуємо товар і оновлюємо state
+            # Маппінг action_type до state
+            action_to_state = {
+                'repair': 'on_repair',
+                'restoration': 'on_repair',
+                'washing': 'on_wash',
+                'wash': 'on_wash',
+                'laundry': 'on_laundry',
+                'dry_cleaning': 'on_laundry'
+            }
+            new_state = action_to_state.get(action_type, 'on_repair')
+            
             update_query = text("""
                 UPDATE products 
-                SET frozen_quantity = frozen_quantity + :qty
+                SET frozen_quantity = frozen_quantity + :qty,
+                    state = :new_state
                 WHERE product_id = :pid
             """)
-            rh_db.execute(update_query, {'qty': qty, 'pid': product_id})
+            rh_db.execute(update_query, {'qty': qty, 'pid': product_id, 'new_state': new_state})
             message = f"{action_type.capitalize()}: заморожено {qty} од."
         
         rh_db.commit()

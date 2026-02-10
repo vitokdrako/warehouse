@@ -1281,6 +1281,151 @@ export default function DamageHubApp() {
         productName={photoModal.name}
         onClose={() => setPhotoModal({ isOpen: false, url: null, name: null })}
       />
+
+      {/* Batch Creation Modal */}
+      {batchModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-purple-50 border-b border-purple-200 px-5 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-purple-800 flex items-center gap-2">
+                  <Package className="w-5 h-5" /> Формування партії
+                </h2>
+                <p className="text-sm text-purple-600 mt-0.5">Оберіть товари та заповніть дані</p>
+              </div>
+              <button 
+                onClick={() => setBatchModal({ isOpen: false, selectedItems: [], companyName: '', complexity: 'normal' })}
+                className="p-2 hover:bg-purple-100 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-purple-600" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Company Name */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Назва хімчистки <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={batchModal.companyName}
+                  onChange={(e) => setBatchModal(prev => ({ ...prev, companyName: e.target.value }))}
+                  placeholder="Наприклад: Прана, Чистюля..."
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+              
+              {/* Complexity */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Складність обробки
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'light', label: 'Легка', color: 'emerald' },
+                    { value: 'normal', label: 'Звичайна', color: 'blue' },
+                    { value: 'heavy', label: 'Складна', color: 'amber' }
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setBatchModal(prev => ({ ...prev, complexity: opt.value }))}
+                      className={`py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition ${
+                        batchModal.complexity === opt.value
+                          ? opt.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : opt.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-amber-500 bg-amber-50 text-amber-700'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Items Selection */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-slate-700">
+                    Оберіть товари <span className="text-slate-500">({batchModal.selectedItems.length} обрано)</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setBatchModal(prev => ({ ...prev, selectedItems: laundryQueue.map(i => i.id) }))}
+                      className="text-xs text-purple-600 hover:text-purple-800"
+                    >
+                      Обрати всі
+                    </button>
+                    <span className="text-slate-300">|</span>
+                    <button
+                      onClick={() => setBatchModal(prev => ({ ...prev, selectedItems: [] }))}
+                      className="text-xs text-slate-500 hover:text-slate-700"
+                    >
+                      Скинути
+                    </button>
+                  </div>
+                </div>
+                <div className="border border-slate-200 rounded-lg max-h-60 overflow-y-auto">
+                  {laundryQueue.map(item => (
+                    <div
+                      key={item.id}
+                      onClick={() => toggleBatchItem(item.id)}
+                      className={`flex items-center gap-3 p-3 border-b border-slate-100 last:border-b-0 cursor-pointer transition ${
+                        batchModal.selectedItems.includes(item.id)
+                          ? 'bg-purple-50'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${
+                        batchModal.selectedItems.includes(item.id)
+                          ? 'bg-purple-500 border-purple-500'
+                          : 'border-slate-300'
+                      }`}>
+                        {batchModal.selectedItems.includes(item.id) && (
+                          <Check className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+                      <ProductPhoto item={item} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
+                        <div className="text-xs text-slate-500">
+                          {item.sku} • {item.qty || item.remaining_qty || 1} шт
+                          {item.order_number && <span className="text-slate-400 ml-1">• #{item.order_number}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="border-t border-slate-200 px-5 py-4 bg-slate-50 flex items-center justify-between">
+              <div className="text-sm text-slate-500">
+                Дата: <span className="font-medium text-slate-700">{new Date().toLocaleDateString('uk-UA')}</span>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setBatchModal({ isOpen: false, selectedItems: [], companyName: '', complexity: 'normal' })}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition font-medium"
+                >
+                  Скасувати
+                </button>
+                <button
+                  onClick={handleCreateBatch}
+                  disabled={!batchModal.companyName.trim() || batchModal.selectedItems.length === 0}
+                  className="px-5 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <Package className="w-4 h-4" /> Створити партію
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

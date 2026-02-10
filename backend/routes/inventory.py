@@ -192,16 +192,26 @@ async def send_to_processing(
             detail=f"Недостатньо доступної кількості. Доступно: {available_qty}, запитано: {data.quantity}"
         )
     
+    # Маппінг action_type до state в БД
+    action_to_state = {
+        'wash': 'on_wash',
+        'repair': 'on_repair',
+        'laundry': 'on_laundry'
+    }
+    
+    new_state = action_to_state.get(data.action_type, 'processing')
+    
     # Заморозити товар
     new_frozen_qty = (frozen_qty or 0) + data.quantity
     db.execute(text("""
         UPDATE products 
         SET frozen_quantity = :frozen_qty,
-            state = 'processing'
+            state = :new_state
         WHERE product_id = :product_id
     """), {
         "frozen_qty": new_frozen_qty,
-        "product_id": data.product_id
+        "product_id": data.product_id,
+        "new_state": new_state
     })
     
     # Записати в processing_queue (або інша таблиця для черги обробки)

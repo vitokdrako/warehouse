@@ -3,6 +3,34 @@
 ## Original Problem Statement
 The user's initial request was to enhance the "Damage Hub" and integrate an existing public-facing decorator catalog application, "Ivent-tool," into the main RentalHub system.
 
+---
+
+## Latest Update: February 10, 2025
+
+### CRITICAL BUG FIX: Catalog Inventory Status (P0) - COMPLETED ✅
+
+**Problem:** Items sent to repair/wash/laundry via "Quick Actions" on the Inventory Recount page were not showing correct status in the main catalog. The catalog displayed them as "available" when they should show "on restoration".
+
+**Root Cause:** The `/api/catalog/items-by-category` endpoint in `/app/backend/routes/catalog.py` was using outdated logic - querying `product_damage_history` table instead of the new `products.state` and `products.frozen_quantity` columns.
+
+**Solution:**
+1. Updated `catalog.py` to read item status from `products.state` and `products.frozen_quantity`
+2. Fixed `inventory.py` to set proper state values (`on_wash`, `on_repair`, `on_laundry`) instead of generic `processing`
+3. Unified availability calculation across the system
+
+**Verification:**
+- API correctly returns AR019 with `available: 0`, `on_restoration: 2`, `product_state: "on_repair"`
+- Filter `availability=on_restoration` correctly shows items on restoration
+- Frontend displays items with yellow "Ремонт: X" badge
+
+**Files Modified:**
+- `/app/backend/routes/catalog.py` - Fixed availability logic
+- `/app/backend/routes/inventory.py` - Fixed state assignment
+
+**Production Build Created:** Yes, copied to `/app/clean_project/`
+
+---
+
 ## Project Architecture
 ```
 /app/

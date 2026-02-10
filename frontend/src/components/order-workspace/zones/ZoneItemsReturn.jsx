@@ -253,7 +253,7 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
                       <div className="text-slate-400">{d.created_at}</div>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
               {damageHistory.length > 5 && (
                 <div className="text-center text-[10px] text-red-600 mt-1">

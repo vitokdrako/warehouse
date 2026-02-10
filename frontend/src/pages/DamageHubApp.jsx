@@ -1447,6 +1447,230 @@ export default function DamageHubApp() {
           </div>
         </div>
       )}
+
+      {/* Full-screen Section Modal */}
+      {fullScreenModal.isOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${
+              fullScreenModal.section === 'wash' ? 'bg-blue-50 border-blue-200' :
+              fullScreenModal.section === 'restore' ? 'bg-orange-50 border-orange-200' :
+              'bg-purple-50 border-purple-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                {fullScreenModal.section === 'wash' && <Droplets className="w-6 h-6 text-blue-600" />}
+                {fullScreenModal.section === 'restore' && <Wrench className="w-6 h-6 text-orange-600" />}
+                {fullScreenModal.section === 'laundry' && <Sparkles className="w-6 h-6 text-purple-600" />}
+                <div>
+                  <h2 className={`text-xl font-bold ${
+                    fullScreenModal.section === 'wash' ? 'text-blue-800' :
+                    fullScreenModal.section === 'restore' ? 'text-orange-800' :
+                    'text-purple-800'
+                  }`}>
+                    {fullScreenModal.section === 'wash' && 'Мийка'}
+                    {fullScreenModal.section === 'restore' && 'Реставрація'}
+                    {fullScreenModal.section === 'laundry' && 'Хімчистка'}
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    {fullScreenModal.section === 'wash' && `${washItems.length} товарів`}
+                    {fullScreenModal.section === 'restore' && `${restoreItems.length} товарів`}
+                    {fullScreenModal.section === 'laundry' && `Черга: ${laundryQueue.length}, Партій: ${laundryBatches.length}`}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setFullScreenModal({ isOpen: false, section: null })}
+                className="p-2 hover:bg-white/50 rounded-lg transition"
+              >
+                <X className="w-6 h-6 text-slate-500" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* МИЙКА */}
+              {fullScreenModal.section === 'wash' && (
+                <div className="space-y-3">
+                  {washItems.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <Droplets className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                      <p className="text-lg">Немає товарів на мийці</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {washItems.map(item => (
+                        <div key={item.id} className={`flex items-center gap-3 p-4 rounded-xl border-2 transition ${
+                          item.processing_status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
+                        }`}>
+                          <ProductPhoto item={item} size="md" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
+                            <div className="text-sm text-slate-500">{item.sku}</div>
+                            <div className="text-sm font-semibold text-blue-600">{item.qty || 1} шт</div>
+                            {item.processing_status === 'completed' && (
+                              <span className="text-xs text-emerald-600 font-medium">✓ Готово</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {item.processing_status !== 'completed' && (
+                              <button
+                                onClick={() => handleComplete(item.id)}
+                                className="p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
+                                title="Готово"
+                              >
+                                <Check className="w-5 h-5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleRemoveFromList(item.id, 'wash')}
+                              className="p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
+                              title="Видалити"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* РЕСТАВРАЦІЯ */}
+              {fullScreenModal.section === 'restore' && (
+                <div className="space-y-3">
+                  {restoreItems.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <Wrench className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                      <p className="text-lg">Немає товарів на реставрації</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {restoreItems.map(item => (
+                        <div key={item.id} className={`flex items-center gap-3 p-4 rounded-xl border-2 transition ${
+                          item.processing_status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
+                        }`}>
+                          <ProductPhoto item={item} size="md" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
+                            <div className="text-sm text-slate-500">{item.sku}</div>
+                            <div className="text-sm font-semibold text-orange-600">{item.qty || 1} шт</div>
+                            {item.processing_status === 'completed' && (
+                              <span className="text-xs text-emerald-600 font-medium">✓ Готово</span>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            {item.processing_status !== 'completed' && (
+                              <button
+                                onClick={() => handleComplete(item.id)}
+                                className="p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
+                                title="Готово"
+                              >
+                                <Check className="w-5 h-5" />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleRemoveFromList(item.id, 'restore')}
+                              className="p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
+                              title="Видалити"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ХІМЧИСТКА */}
+              {fullScreenModal.section === 'laundry' && (
+                <div className="space-y-6">
+                  {/* Черга */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-amber-500" /> Черга ({laundryQueue.length})
+                      </h3>
+                      {laundryQueue.length > 0 && (
+                        <button
+                          onClick={openBatchModal}
+                          className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium flex items-center gap-2"
+                        >
+                          <Package className="w-4 h-4" /> Сформувати партію
+                        </button>
+                      )}
+                    </div>
+                    {laundryQueue.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl">
+                        Черга порожня
+                      </div>
+                    ) : (
+                      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {laundryQueue.map(item => (
+                          <div key={item.id} className="flex items-center gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                            <ProductPhoto item={item} size="md" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
+                              <div className="text-sm text-slate-500">{item.sku}</div>
+                              <div className="text-sm font-semibold text-amber-600">{item.qty || item.remaining_qty || 1} шт</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Партії */}
+                  <div>
+                    <h3 className="font-semibold text-slate-800 flex items-center gap-2 mb-3">
+                      <Package className="w-5 h-5 text-purple-500" /> Партії ({laundryBatches.length})
+                    </h3>
+                    {laundryBatches.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 bg-slate-50 rounded-xl">
+                        Немає партій
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {laundryBatches.map(batch => (
+                          <div 
+                            key={batch.id} 
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition ${
+                              selectedBatchId === batch.id ? 'border-purple-500 bg-purple-50' : 'border-slate-200 hover:border-purple-300'
+                            }`}
+                            onClick={() => {
+                              setSelectedBatchId(batch.id);
+                              loadBatchItems(batch.id);
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold text-slate-800">{batch.laundry_company}</div>
+                                <div className="text-sm text-slate-500">
+                                  {batch.batch_number} • {batch.total_items} шт • Повернено: {batch.returned_items}
+                                </div>
+                              </div>
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                batch.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                batch.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                {batch.status === 'completed' ? 'Завершено' : batch.status === 'sent' ? 'Відправлено' : batch.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

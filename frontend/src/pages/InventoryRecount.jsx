@@ -20,6 +20,8 @@ export default function InventoryRecount() {
   const [damageHistory, setDamageHistory] = useState([]) // Історія пошкоджень
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [damageModalOpen, setDamageModalOpen] = useState(false) // Для відкриття DamageModal
+  const [processingQty, setProcessingQty] = useState(1) // Кількість для обробки
+  const [sendingToProcessing, setSendingToProcessing] = useState(false)
 
   useEffect(() => {
     loadProduct()

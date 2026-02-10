@@ -492,6 +492,35 @@ export default function DamageHubApp() {
     }
   };
 
+  // Видалити готову позицію зі списку (приховати, не видаляючи з БД)
+  const handleRemoveFromList = async (itemId, itemType = 'wash') => {
+    try {
+      // Для quick_action товарів - використовуємо спеціальний endpoint
+      if (String(itemId).startsWith('quick_')) {
+        const productId = String(itemId).replace('quick_', '');
+        await authFetch(`${BACKEND_URL}/api/product-damage-history/quick-action/complete/${productId}`, {
+          method: "POST",
+          body: JSON.stringify({ notes: "Видалено зі списку" })
+        });
+      } else {
+        // Для звичайних записів - помічаємо як приховані
+        await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/hide`, {
+          method: "POST"
+        });
+      }
+      
+      // Оновлюємо списки
+      if (itemType === 'wash') {
+        await loadWashItems();
+      } else if (itemType === 'restore') {
+        await loadRestoreItems();
+      }
+    } catch (e) {
+      console.error("Error removing item:", e);
+      alert("Помилка видалення зі списку");
+    }
+  };
+
   const handleArchiveCase = async (orderId) => {
     if (!confirm("Відправити кейс в архів?")) return;
     

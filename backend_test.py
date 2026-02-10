@@ -41,8 +41,8 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://mobile-event.preview.emergentagent.com/api"
-FRONTEND_URL = "https://mobile-event.preview.emergentagent.com"
+BASE_URL = "https://inventory-state.preview.emergentagent.com/api"
+FRONTEND_URL = "https://inventory-state.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"

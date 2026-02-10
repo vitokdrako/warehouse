@@ -211,14 +211,6 @@ export default function IssueCardWorkspace() {
   // Обгортаємо в useCallback для синхронізації
   const loadIssueCardCallback = useCallback(loadIssueCard, [id])
 
-  // Синхронізація змін з іншими користувачами (polling fallback)
-  const { hasNewChanges, lastModifiedBy, markMyUpdate, dismissChanges } = useOrderSync(
-    order?.order_id,
-    loadIssueCardCallback,
-    10000, // перевірка кожні 10 секунд
-    !loading && !!order?.order_id
-  )
-  
   // WebSocket синхронізація (real-time)
   const {
     connected: wsConnected,

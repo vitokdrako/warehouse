@@ -118,22 +118,20 @@ The user's initial request was to enhance the "Damage Hub" and integrate an exis
 **Status:** NOT STARTED
 **Recurrence:** 4+ times reported
 
-## Upcoming Tasks (Phase 2)
-1. **Batch endpoint for documents** - `POST /api/documents/latest-batch`
-2. **Timeline dedupe + useMemo** - Optimize timeline rendering
-3. **Footer scroll refactor** - Use useRef for scroll listener
-4. **Workspace unification** - Merge NewOrderViewWorkspace + IssueCardWorkspace
+## Upcoming Tasks
+1. Fix moodboard export after CORS deployment (BLOCKED)
+2. Calendar timezone bug fix (P2)
+3. Workspace unification - Merge NewOrderViewWorkspace + IssueCardWorkspace (P2)
 
 ## Future Tasks (P2+)
-1. Fix moodboard export after CORS deployment
-2. Calendar timezone bug fix
-3. Role-Based Access Control (RBAC)
-4. Monthly Financial Report
-5. Digital Signature Integration
+1. Role-Based Access Control (RBAC)
+2. Monthly Financial Report
+3. Digital Signature Integration
 
 ## Key API Endpoints
-- `GET /api/finance/deposit-hold?order_id={id}` - **NEW** Single deposit for order
-- `GET /api/finance/deposits` - All deposits (still works)
+- `GET /api/finance/deposit-hold?order_id={id}` - Single deposit for order
+- `POST /api/documents/latest-batch` - **NEW** Batch document versions
+- `GET /api/finance/deposits` - All deposits (legacy, still works)
 - `POST /api/event/boards` - Create moodboard
 - `PATCH /api/event/boards/{board_id}` - Update board
 - `POST /api/event/boards/{board_id}/convert-to-order` - Create RentalHub order

@@ -493,15 +493,25 @@ export default function DamageHubApp() {
 
   const handleComplete = async (itemId, notes = "") => {
     try {
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/complete-processing`, {
-        method: "POST",
-        body: JSON.stringify({ notes: notes || "Обробку завершено" })
-      });
+      // Для quick_action товарів - використовуємо спеціальний endpoint
+      if (String(itemId).startsWith('quick_')) {
+        const productId = String(itemId).replace('quick_', '');
+        await authFetch(`${BACKEND_URL}/api/product-damage-history/quick-action/complete/${productId}`, {
+          method: "POST",
+          body: JSON.stringify({ notes: notes || "Обробку завершено" })
+        });
+      } else {
+        await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/complete-processing`, {
+          method: "POST",
+          body: JSON.stringify({ notes: notes || "Обробку завершено" })
+        });
+      }
       
       await loadWashItems();
       await loadRestoreItems();
       alert("✅ Обробку завершено!");
     } catch (e) {
+      console.error("Error completing:", e);
       alert("Помилка завершення обробки");
     }
   };
@@ -528,6 +538,8 @@ export default function DamageHubApp() {
         await loadWashItems();
       } else if (itemType === 'restore') {
         await loadRestoreItems();
+      } else if (itemType === 'laundry') {
+        await loadLaundryQueue();
       }
     } catch (e) {
       console.error("Error removing item:", e);

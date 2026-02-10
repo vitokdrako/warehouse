@@ -444,7 +444,7 @@ export default function InventoryRecount() {
             </div>
           )}
           
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => handleQuickAction('wash')}
               disabled={sendingToProcessing}
@@ -468,6 +468,14 @@ export default function InventoryRecount() {
             >
               <div className="text-2xl mb-1">👔</div>
               <div className="text-sm font-medium text-purple-800">На хімчистку</div>
+            </button>
+            <button
+              onClick={() => handleQuickAction('write_off')}
+              disabled={sendingToProcessing}
+              className="p-4 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all disabled:opacity-50"
+            >
+              <div className="text-2xl mb-1">🗑️</div>
+              <div className="text-sm font-medium text-red-800">Списати</div>
             </button>
           </div>
           

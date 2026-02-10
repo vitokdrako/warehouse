@@ -485,6 +485,81 @@ async def get_latest_entity_document(
     }
 
 
+# ============ Batch endpoint для паралельного завантаження версій ============
+
+from typing import List
+
+class LatestBatchRequest(BaseModel):
+    """Запит на отримання останніх версій документів batch"""
+    entity_type: str
+    entity_id: str
+    doc_types: List[str]
+
+@router.post("/latest-batch")
+async def get_latest_documents_batch(
+    request: LatestBatchRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    ОПТИМІЗОВАНИЙ endpoint: Отримує останні версії кількох документів одним запитом.
+    Замість N окремих запитів на /latest/{type}/{id}/{doc_type} - один запит.
+    """
+    if not request.doc_types:
+        return {"documents": {}}
+    
+    # Один SQL запит для всіх типів документів
+    placeholders = ", ".join([f":doc_type_{i}" for i in range(len(request.doc_types))])
+    params = {
+        "entity_type": request.entity_type,
+        "entity_id": str(request.entity_id),
+    }
+    for i, dt in enumerate(request.doc_types):
+        params[f"doc_type_{i}"] = dt
+    
+    result = db.execute(text(f"""
+        SELECT d1.id, d1.doc_type, d1.doc_number, d1.version, d1.status, 
+               d1.signed_at, d1.created_at, d1.html_content
+        FROM documents d1
+        INNER JOIN (
+            SELECT doc_type, MAX(version) as max_version
+            FROM documents
+            WHERE entity_type = :entity_type AND entity_id = :entity_id
+              AND doc_type IN ({placeholders})
+            GROUP BY doc_type
+        ) d2 ON d1.doc_type = d2.doc_type AND d1.version = d2.max_version
+        WHERE d1.entity_type = :entity_type AND d1.entity_id = :entity_id
+    """), params)
+    
+    documents = {}
+    for row in result:
+        doc_type = row[1]
+        config = DOC_REGISTRY.get(doc_type, {})
+        documents[doc_type] = {
+            "exists": True,
+            "id": row[0],
+            "doc_type": doc_type,
+            "doc_type_name": config.get("name", doc_type),
+            "doc_number": row[2],
+            "version": row[3],
+            "status": row[4],
+            "signed_at": row[5].isoformat() if row[5] else None,
+            "created_at": row[6].isoformat() if row[6] else None,
+            "preview_url": f"/api/documents/{row[0]}/preview",
+            "pdf_url": f"/api/documents/{row[0]}/pdf",
+            "html_content": row[7]
+        }
+    
+    # Для типів без документів - повертаємо exists: false
+    for doc_type in request.doc_types:
+        if doc_type not in documents:
+            documents[doc_type] = {
+                "exists": False,
+                "message": "Документ ще не згенеровано"
+            }
+    
+    return {"documents": documents}
+
+
 @router.get("/history/{entity_type}/{entity_id}/{doc_type}")
 async def get_document_history(
     entity_type: str,

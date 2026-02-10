@@ -770,6 +770,7 @@ async def get_wash_queue(db: Session = Depends(get_rh_db)):
         items = []
         
         # 1. Товари з product_damage_history (стара система)
+        # Виключаємо hidden записи
         result = db.execute(text("""
             SELECT 
                 pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
@@ -784,6 +785,7 @@ async def get_wash_queue(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'wash'
+            AND COALESCE(pdh.processing_status, '') != 'hidden'
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
@@ -870,6 +872,7 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
         items = []
         
         # 1. Товари з product_damage_history (стара система)
+        # Виключаємо hidden записи
         result = db.execute(text("""
             SELECT 
                 pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
@@ -884,6 +887,7 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'restoration'
+            AND COALESCE(pdh.processing_status, '') != 'hidden'
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
@@ -970,6 +974,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
         items = []
         
         # 1. Товари з product_damage_history (стара система)
+        # Виключаємо hidden записи
         result = db.execute(text("""
             SELECT 
                 pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
@@ -984,6 +989,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN laundry_batches lb ON pdh.laundry_batch_id = lb.id
             WHERE pdh.processing_type = 'laundry'
+            AND COALESCE(pdh.processing_status, '') != 'hidden'
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
@@ -1398,6 +1404,69 @@ async def complete_quick_action_processing(product_id: int, data: dict, db: Sess
             "is_fully_completed": is_fully_completed,
             "new_state": "available" if is_fully_completed else current_state
         }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
+@router.post("/{damage_id}/hide")
+async def hide_from_list(damage_id: str, db: Session = Depends(get_rh_db)):
+    """
+    Приховати запис зі списку обробки (не видаляючи з БД).
+    Встановлює processing_status = 'hidden' щоб він не показувався у черзі.
+    Також повертає товар в available якщо є заморожена кількість.
+    """
+    try:
+        # Отримати інформацію про запис
+        result = db.execute(text("""
+            SELECT pdh.id, pdh.product_id, pdh.processing_status, pdh.qty, pdh.processed_qty,
+                   p.frozen_quantity, p.state
+            FROM product_damage_history pdh
+            LEFT JOIN products p ON pdh.product_id = p.product_id
+            WHERE pdh.id = :damage_id
+        """), {"damage_id": damage_id}).fetchone()
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="Запис не знайдено")
+        
+        product_id = result[1]
+        current_qty = result[3] or 1
+        processed_qty = result[4] or 0
+        frozen_qty = result[5] or 0
+        current_state = result[6]
+        
+        # Оновити статус запису на 'hidden'
+        db.execute(text("""
+            UPDATE product_damage_history
+            SET processing_status = 'hidden',
+                returned_from_processing_at = NOW()
+            WHERE id = :damage_id
+        """), {"damage_id": damage_id})
+        
+        # Якщо товар все ще заморожений і на обробці - повернути в available
+        remaining = current_qty - processed_qty
+        if remaining > 0 and frozen_qty > 0 and current_state in ('on_repair', 'on_wash', 'on_laundry', 'processing'):
+            new_frozen = max(0, frozen_qty - remaining)
+            
+            if new_frozen <= 0:
+                db.execute(text("""
+                    UPDATE products 
+                    SET frozen_quantity = 0, state = 'available'
+                    WHERE product_id = :product_id
+                """), {"product_id": product_id})
+            else:
+                db.execute(text("""
+                    UPDATE products 
+                    SET frozen_quantity = :new_frozen
+                    WHERE product_id = :product_id
+                """), {"product_id": product_id, "new_frozen": new_frozen})
+        
+        db.commit()
+        
+        return {"success": True, "message": "Запис приховано зі списку"}
         
     except HTTPException:
         raise

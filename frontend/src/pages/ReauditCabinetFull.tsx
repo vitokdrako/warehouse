@@ -1181,9 +1181,9 @@ export default function ReauditCabinetFull({
                             onChange={(e) => setDamageData({...damageData, action_type: e.target.value})}
                             className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                           >
-                            <option value="repair">🔧 Ремонт (заморожує товар)</option>
-                            <option value="restoration">🎨 Реставрація (заморожує товар)</option>
+                            <option value="restoration">🔧 Реставрація (заморожує товар)</option>
                             <option value="washing">🧼 Мийка (заморожує товар)</option>
+                            <option value="laundry">👔 Хімчистка (заморожує товар)</option>
                             <option value="total_loss">💔 Повна втрата (віднімає кількість)</option>
                           </select>
                         </div>

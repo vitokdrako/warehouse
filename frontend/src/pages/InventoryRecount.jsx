@@ -105,6 +105,47 @@ export default function InventoryRecount() {
     await loadDamageHistory() // Оновити історію
     await saveRecount()
   }
+  
+  // Швидка дія - відправити на обробку
+  const handleQuickAction = async (actionType) => {
+    const qty = product.quantity > 1 ? processingQty : 1
+    const actionLabels = {
+      wash: 'мийку',
+      repair: 'реставрацію', 
+      laundry: 'хімчистку'
+    }
+    
+    if (!window.confirm(`Відправити ${qty} шт на ${actionLabels[actionType]}?\n\nТовар буде заморожено до завершення обробки.`)) {
+      return
+    }
+    
+    try {
+      setSendingToProcessing(true)
+      
+      // Відправляємо на обробку через API
+      await axios.post(`${BACKEND_URL}/api/inventory/send-to-processing`, {
+        product_id: product.product_id,
+        sku: product.sku,
+        quantity: qty,
+        action_type: actionType,
+        notes: notes || `Відправлено з кабінету переобліку`,
+        source: 'reaudit'
+      })
+      
+      alert(`✅ ${qty} шт відправлено на ${actionLabels[actionType]}!`)
+      
+      // Оновити дані товару
+      await loadProduct()
+      setProcessingQty(1)
+      
+    } catch (err) {
+      console.error('Error sending to processing:', err)
+      const errorMsg = err.response?.data?.detail || err.message || 'Невідома помилка'
+      alert(`❌ Помилка: ${errorMsg}`)
+    } finally {
+      setSendingToProcessing(false)
+    }
+  }
 
   if (loading) {
     return (

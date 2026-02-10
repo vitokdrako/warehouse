@@ -1104,31 +1104,34 @@ export default function DamageHubApp() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between bg-purple-50 border-b border-purple-100 p-3">
                 <button
-                  onClick={() => toggleSection('laundry')}
-                  className="flex items-center gap-2 flex-1"
+                  onClick={() => setFullScreenModal({ isOpen: true, section: 'laundry' })}
+                  className="font-semibold text-purple-800 flex items-center gap-2 hover:text-purple-900"
                 >
-                  <span className="font-semibold text-purple-800 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" /> Хімчистка
-                    {laundryQueue.length > 0 && (
-                      <span className="px-1.5 py-0.5 bg-amber-200 text-amber-800 text-xs rounded-full">
-                        черга: {laundryQueue.length}
-                      </span>
-                    )}
-                  </span>
-                  {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-purple-600" /> : <ChevronRight className="w-4 h-4 text-purple-600" />}
+                  <Sparkles className="w-4 h-4" /> Хімчистка
+                  {laundryQueue.length > 0 && (
+                    <span className="px-1.5 py-0.5 bg-amber-200 text-amber-800 text-xs rounded-full">
+                      черга: {laundryQueue.length}
+                    </span>
+                  )}
+                  <span className="text-xs text-purple-500">↗</span>
                 </button>
-                <button
-                  onClick={openBatchModal}
-                  disabled={laundryQueue.length === 0}
-                  className={`text-xs px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1 ${
-                    laundryQueue.length > 0 
-                      ? 'bg-purple-500 text-white hover:bg-purple-600' 
-                      : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                  }`}
-                  title={laundryQueue.length === 0 ? "Черга порожня" : "Сформувати партію"}
-                >
-                  <Package className="w-3 h-3" /> Сформувати партію
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={openBatchModal}
+                    disabled={laundryQueue.length === 0}
+                    className={`text-xs px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1 ${
+                      laundryQueue.length > 0 
+                        ? 'bg-purple-500 text-white hover:bg-purple-600' 
+                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    }`}
+                    title={laundryQueue.length === 0 ? "Черга порожня" : "Сформувати партію"}
+                  >
+                    <Package className="w-3 h-3" /> Партія
+                  </button>
+                  <button onClick={() => toggleSection('laundry')}>
+                    {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-purple-600" /> : <ChevronRight className="w-4 h-4 text-purple-600" />}
+                  </button>
+                </div>
               </div>
               
               {expandedSections.laundry && (

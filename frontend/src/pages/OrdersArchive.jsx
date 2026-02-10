@@ -150,11 +150,11 @@ const OrderViewModal = ({ order, history, onClose }) => {
                       {/* Photo */}
                       <div 
                         className="w-16 h-16 rounded-lg bg-white border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg transition flex-shrink-0"
-                        onClick={() => setEnlargedImage(item.image_url ? `${BACKEND_URL}${item.image_url}` : null)}
+                        onClick={() => setEnlargedImage(getImageUrl(item.image_url))}
                       >
                         {item.image_url ? (
                           <img 
-                            src={`${BACKEND_URL}${item.image_url}`} 
+                            src={getImageUrl(item.image_url)} 
                             alt={item.name}
                             className="w-full h-full object-cover"
                             onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-slate-400 text-2xl">📦</div>'; }}

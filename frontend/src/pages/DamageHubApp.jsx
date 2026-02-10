@@ -300,6 +300,14 @@ export default function DamageHubApp() {
   // Photo modal
   const [photoModal, setPhotoModal] = useState({ isOpen: false, url: null, name: null });
   
+  // Laundry batch creation modal
+  const [batchModal, setBatchModal] = useState({
+    isOpen: false,
+    selectedItems: [],
+    companyName: '',
+    complexity: 'normal' // 'light', 'normal', 'heavy'
+  });
+  
   // ============= DATA LOADING =============
   const loadOrderCases = useCallback(async () => {
     try {

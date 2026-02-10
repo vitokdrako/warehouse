@@ -7,27 +7,56 @@ The user's initial request was to enhance the "Damage Hub" and integrate an exis
 
 ## Latest Update: February 10, 2025
 
-### CRITICAL BUG FIX: Catalog Inventory Status (P0) - COMPLETED ✅
+### Performance Optimization Phase 1 (P0) - COMPLETED ✅
 
-**Problem:** Items sent to repair/wash/laundry via "Quick Actions" on the Inventory Recount page were not showing correct status in the main catalog. The catalog displayed them as "available" when they should show "on restoration".
+**Problem:** Order Workspace had significant performance issues causing:
+- Slow load times due to fetching ALL deposits (`GET /api/finance/deposits`)
+- Duplicate data fetching (WebSocket + Polling + EventBus simultaneously)
+- "Refetch storms" from rapid EventBus events
+- Race conditions when sending emails after document generation
 
-**Root Cause:** The `/api/catalog/items-by-category` endpoint in `/app/backend/routes/catalog.py` was using outdated logic - querying `product_damage_history` table instead of the new `products.state` and `products.frozen_quantity` columns.
+**Solution (Phase 1):**
+
+1. **P0.1 LeftRailFinance - New Optimized Endpoint**
+   - Created `GET /api/finance/deposit-hold?order_id={id}` endpoint in `/app/backend/routes/finance.py`
+   - Returns single deposit for order instead of ALL deposits
+   - Updated `LeftRailFinance.jsx` to use new endpoint
+
+2. **P0.2 Polling Deduplication**
+   - Modified `useOrderSync` hook to accept `wsConnected` parameter
+   - When WebSocket connected: polling disabled (60s fallback)
+   - Updated `IssueCardWorkspace.jsx` and `ReturnOrderWorkspace.jsx`
+
+3. **P0.3 EventBus Debounce**
+   - Added 300ms debounce to EventBus refetch triggers in `LeftRailFinance.jsx`
+   - Prevents "refetch storms" from rapid events
+
+4. **P1.1 Parallel Document Loading**
+   - Changed `loadDocumentVersions` in `LeftRailDocuments.jsx` from serial loop to `Promise.allSettled`
+   - Documents now load in parallel
+
+5. **P1.2 Race Condition Fix**
+   - `generateNewDocument` now returns document data
+   - `sendEmail` uses returned data directly instead of relying on state
+   - Fixes "Generate → Send Email" failing on first attempt
+
+**Files Modified:**
+- `/app/backend/routes/finance.py` - Added deposit-hold endpoint
+- `/app/frontend/src/components/order-workspace/LeftRailFinance.jsx` - Optimized with debounce + new endpoint
+- `/app/frontend/src/components/order-workspace/LeftRailDocuments.jsx` - Parallel loading + race condition fix
+- `/app/frontend/src/hooks/useAutoRefresh.js` - WS-aware polling
+- `/app/frontend/src/pages/IssueCardWorkspace.jsx` - Pass wsConnected to useOrderSync
+- `/app/frontend/src/pages/ReturnOrderWorkspace.jsx` - Pass wsConnected to useOrderSync
+
+---
+
+### Previous Update: Catalog Inventory Status Fix (P0) - COMPLETED ✅
+
+**Problem:** Items sent to repair/wash/laundry via "Quick Actions" were showing as "available" when they should show "on restoration".
 
 **Solution:**
 1. Updated `catalog.py` to read item status from `products.state` and `products.frozen_quantity`
-2. Fixed `inventory.py` to set proper state values (`on_wash`, `on_repair`, `on_laundry`) instead of generic `processing`
-3. Unified availability calculation across the system
-
-**Verification:**
-- API correctly returns AR019 with `available: 0`, `on_restoration: 2`, `product_state: "on_repair"`
-- Filter `availability=on_restoration` correctly shows items on restoration
-- Frontend displays items with yellow "Ремонт: X" badge
-
-**Files Modified:**
-- `/app/backend/routes/catalog.py` - Fixed availability logic
-- `/app/backend/routes/inventory.py` - Fixed state assignment
-
-**Production Build Created:** Yes, copied to `/app/clean_project/`
+2. Fixed `inventory.py` to set proper state values
 
 ---
 
@@ -51,77 +80,46 @@ The user's initial request was to enhance the "Damage Hub" and integrate an exis
 
 ## What's Been Implemented
 
-### December 2025 Session:
-
-#### 1. Mobile Optimization (COMPLETED)
-- Created comprehensive mobile stylesheet (`/app/clean_project/front_event_tool_src/src/styles/mobile.css`)
-- Responsive header with mobile menu icons
-- Mobile-first product grid (2 columns on phones)
-- Full-screen side panel overlay on mobile with dark backdrop
-- Floating cart button on mobile
-- Touch-optimized buttons (min 44px touch targets)
-- iOS-specific fixes (font-size 16px to prevent zoom)
-- Mobile-friendly modals (bottom sheet style)
-
-#### 2. Date Bug Fix (COMPLETED)
-- Fixed backend `POST /api/event/boards` endpoint to return full board object
-- Previously only returned `{id, board_name, status, items}` - missing dates
-- Now returns complete board with `rental_start_date`, `rental_end_date`, `rental_days`, etc.
-- Added `cover_image` to `EventBoardCreate` schema
+### February 10, 2025:
+- **Performance Optimization Phase 1** - Order Workspace optimization (debounce, parallel loading, polling dedup)
 
 ### Previous Sessions:
-
-#### Moodboard MVP
-- Konva.js canvas rendering with Zustand state management
-- Inspector panel for editing nodes
-- Layers panel and layout templates
-- PNG/PDF export (currently affected by CORS workaround)
-- Custom background images
-
-#### Ivent-tool Order Submission
-- Full checkout flow (`OrderCheckoutModal.jsx`)
-- Backend order creation with `#IT-` prefix
-- Custom rental day calculations
-- Integration with RentalHub orders table
-
-#### Bug Fixes
-- CORS fix for user registration (`allow_origins=["*"]`)
-- User registration flow working
+- **Inventory Status Fix** - Catalog now correctly shows items on restoration
+- **Damage Hub Enhancements** - Complete/hide items, full-screen modals
+- **Mobile Optimization** - Responsive design for Ivent-tool
+- **Moodboard MVP** - Konva.js canvas with export (CORS blocked)
+- **Ivent-tool Order Submission** - Full checkout flow
 
 ## Known Issues
 
 ### P1 - Moodboard Export
-**Status:** BLOCKED - awaiting user to deploy backend CORS fix to production
-**Details:** Images render but export fails due to canvas tainting. Once backend is deployed, need to re-add `crossOrigin="anonymous"` in `DecorItemNode.jsx`.
+**Status:** BLOCKED - awaiting user to deploy backend CORS fix
+**Details:** Export fails due to canvas tainting. Need to re-add `crossOrigin="anonymous"` after backend deploy.
 
 ### P2 - Calendar Timezone Bug
 **Status:** NOT STARTED
 **Recurrence:** 4+ times reported
 
+## Upcoming Tasks (Phase 2)
+1. **Batch endpoint for documents** - `POST /api/documents/latest-batch`
+2. **Timeline dedupe + useMemo** - Optimize timeline rendering
+3. **Footer scroll refactor** - Use useRef for scroll listener
+4. **Workspace unification** - Merge NewOrderViewWorkspace + IssueCardWorkspace
+
+## Future Tasks (P2+)
+1. Fix moodboard export after CORS deployment
+2. Calendar timezone bug fix
+3. Role-Based Access Control (RBAC)
+4. Monthly Financial Report
+5. Digital Signature Integration
+
 ## Key API Endpoints
-- `POST /api/event/boards` - Create moodboard (NOW returns full board object)
-- `PATCH /api/event/boards/{board_id}` - Update board dates/info
+- `GET /api/finance/deposit-hold?order_id={id}` - **NEW** Single deposit for order
+- `GET /api/finance/deposits` - All deposits (still works)
+- `POST /api/event/boards` - Create moodboard
+- `PATCH /api/event/boards/{board_id}` - Update board
 - `POST /api/event/boards/{board_id}/convert-to-order` - Create RentalHub order
-- `POST /api/event/auth/register` - User registration
 
 ## Test Credentials
 - **RentalHub Admin:** vitokdrako@gmail.com / test123
 - **Ivent-tool Decorator:** test@decorator.com / test123
-
-## Upcoming Tasks
-1. Complete workspace unification (NewOrderViewWorkspace + IssueCardWorkspace)
-2. Fix moodboard export after CORS deployment
-3. Calendar timezone bug fix
-4. Role-Based Access Control (RBAC)
-5. Monthly Financial Report
-6. Digital Signature Integration
-
-## Files Modified This Session
-- `/app/clean_project/backend/routes/event_tool.py` - Fixed board creation response
-- `/app/clean_project/front_event_tool_src/src/App.js` - Mobile responsive layout
-- `/app/clean_project/front_event_tool_src/src/index.css` - Added mobile.css import
-- `/app/clean_project/front_event_tool_src/src/styles/mobile.css` - NEW: Comprehensive mobile styles
-- `/app/clean_project/front_event_tool_src/src/components/ProductCard.css` - Mobile responsive
-- `/app/clean_project/front_event_tool_src/src/components/BoardItemCard.css` - Mobile responsive
-- `/app/clean_project/front_event_tool_src/src/components/CreateBoardModal.css` - Mobile responsive
-- `/app/clean_project/front_event_tool_src/src/components/OrderCheckoutModal.jsx` - Mobile responsive

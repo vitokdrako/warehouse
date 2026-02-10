@@ -284,6 +284,34 @@ async def send_to_processing(
     
     db.commit()
     
+    # Для хімчистки - також додати запис в product_damage_history
+    # щоб товар з'явився в черзі хімчистки в Damage Hub
+    if data.action_type == 'laundry':
+        try:
+            pdh_id = str(uuid.uuid4())
+            db.execute(text("""
+                INSERT INTO product_damage_history (
+                    id, product_id, sku, product_name, category,
+                    damage_type, processing_type, processing_status,
+                    qty, processed_qty, note, created_at, created_by
+                )
+                SELECT 
+                    :id, :product_id, :sku, name, category_name,
+                    'Внутрішня обробка', 'laundry', 'pending',
+                    :qty, 0, :notes, NOW(), 'system'
+                FROM products
+                WHERE product_id = :product_id
+            """), {
+                "id": pdh_id,
+                "product_id": data.product_id,
+                "sku": data.sku,
+                "qty": data.quantity,
+                "notes": data.notes or "Відправлено з кабінету переобліку"
+            })
+            db.commit()
+        except Exception as e:
+            print(f"[Inventory] Warning: Could not add to product_damage_history: {e}")
+    
     return {
         "success": True,
         "message": f"{data.quantity} шт '{name}' відправлено на {action_labels[data.action_type].lower()}",

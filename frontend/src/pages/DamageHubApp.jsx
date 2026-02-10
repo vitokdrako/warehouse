@@ -32,8 +32,19 @@ const getPhotoUrl = (item) => {
   if (!item) return null;
   if (item.photo_url) return item.photo_url;
   if (item.image_url) return item.image_url;
-  if (item.product_image) return item.product_image.startsWith("http") ? item.product_image : `${BACKEND_URL}${item.product_image}`;
-  if (item.image) return item.image.startsWith("http") ? item.image : `${BACKEND_URL}${item.image}`;
+  
+  // Допоміжна функція для формування повного URL
+  const makeFullUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith("http")) return path;
+    // Додаємо слеш якщо потрібно
+    const base = BACKEND_URL.endsWith('/') ? BACKEND_URL.slice(0, -1) : BACKEND_URL;
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+    return `${base}${cleanPath}`;
+  };
+  
+  if (item.product_image) return makeFullUrl(item.product_image);
+  if (item.image) return makeFullUrl(item.image);
   return null;
 };
 

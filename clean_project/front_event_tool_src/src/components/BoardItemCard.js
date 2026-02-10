@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
 import './BoardItemCard.css';
 
+const BACKEND_URL = 'https://backrentalhub.farforrent.com.ua';
+
+// Отримати повний URL зображення
+const getImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  const cleanPath = imagePath.replace(/^\/+/, '');
+  return `${BACKEND_URL}/${cleanPath}`;
+};
+
 const BoardItemCard = ({ item, boardDates, rentalDays, onUpdate, onRemove }) => {
   const [quantity, setQuantity] = useState(item.quantity);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleQuantityChange = async (newQuantity) => {
     if (newQuantity < 1) return;
@@ -34,9 +47,27 @@ const BoardItemCard = ({ item, boardDates, rentalDays, onUpdate, onRemove }) => 
     return price * quantity * days;
   };
 
+  const imageUrl = getImageUrl(item.product?.image_url);
+
   return (
     <div className="board-item-card">
+      {/* Product Image + Info Row */}
       <div className="board-item-header">
+        {/* Thumbnail */}
+        <div className="board-item-thumb">
+          {imageUrl && !imageError ? (
+            <img 
+              src={imageUrl} 
+              alt={item.product?.name}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="board-item-thumb-placeholder">
+              {item.product?.name?.charAt(0) || '?'}
+            </div>
+          )}
+        </div>
+        
         <div className="board-item-info">
           <h4 className="board-item-title">
             {item.product?.name}

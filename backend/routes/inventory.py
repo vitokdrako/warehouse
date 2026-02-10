@@ -200,20 +200,32 @@ async def send_to_processing(
         'laundry': 'on_laundry'
     }
     
-    new_state = action_to_state.get(data.action_type, 'processing')
-    
-    # Заморозити товар
-    new_frozen_qty = (frozen_qty or 0) + data.quantity
-    db.execute(text("""
-        UPDATE products 
-        SET frozen_quantity = :frozen_qty,
-            state = :new_state
-        WHERE product_id = :product_id
-    """), {
-        "frozen_qty": new_frozen_qty,
-        "product_id": data.product_id,
-        "new_state": new_state
-    })
+    # Списання - зменшуємо кількість, не заморожуємо
+    if data.action_type == 'write_off':
+        new_qty = max(0, (current_qty or 0) - data.quantity)
+        db.execute(text("""
+            UPDATE products 
+            SET quantity = :new_qty
+            WHERE product_id = :product_id
+        """), {
+            "new_qty": new_qty,
+            "product_id": data.product_id
+        })
+        new_frozen_qty = frozen_qty or 0  # Не змінюємо frozen
+    else:
+        # Заморозити товар для обробки
+        new_state = action_to_state.get(data.action_type, 'processing')
+        new_frozen_qty = (frozen_qty or 0) + data.quantity
+        db.execute(text("""
+            UPDATE products 
+            SET frozen_quantity = :frozen_qty,
+                state = :new_state
+            WHERE product_id = :product_id
+        """), {
+            "frozen_qty": new_frozen_qty,
+            "product_id": data.product_id,
+            "new_state": new_state
+        })
     
     # Записати в processing_queue (або інша таблиця для черги обробки)
     # Спочатку перевіримо чи існує таблиця

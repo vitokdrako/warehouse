@@ -179,23 +179,33 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 │   │   ├── master_agreements.py
 │   │   ├── order_annexes.py
 │   │   ├── document_policy.py
-│   │   ├── document_render.py      # NEW: Jinja2 rendering
-│   │   ├── document_signatures.py  # NEW: Signature API
+│   │   ├── document_render.py
+│   │   ├── document_signatures.py
+│   │   ├── document_manual_fields.py  # NEW: Manual fields schema
+│   │   ├── document_email.py          # NEW: Email workflow
 │   │   └── migrations.py
+│   ├── services/
+│   │   └── email_provider.py          # NEW: Email abstraction
 │   ├── templates/
-│   │   └── documents/              # NEW: HTML templates
+│   │   └── documents/
 │   │       ├── _partials/
+│   │       │   └── base.css           # Updated with print CSS
 │   │       ├── master_agreement.html
 │   │       ├── annex_to_contract.html
 │   │       ├── issue_act.html
 │   │       ├── return_act.html
 │   │       ├── defect_act.html
-│   │       └── quote.html
+│   │       ├── quote.html
+│   │       └── invoice_offer.html     # NEW
 │   └── server.py
 ├── frontend/
-│   └── src/pages/FinanceHub.jsx
+│   └── src/
+│       ├── pages/FinanceHub.jsx       # Updated with expiration banners
+│       └── components/
+│           ├── DocumentPreviewModal.jsx # Updated with print/email
+│           └── SignatureCanvas.jsx
 ├── docs/
-│   └── document-data-mapping.md    # NEW: Field mapping
+│   └── document-data-mapping.md
 └── memory/
     └── PRD.md
 ```
@@ -208,6 +218,10 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 1. ~~**Frontend SignatureCanvas Component**~~ ✅ DONE
 2. ~~**Document Preview Modal**~~ ✅ DONE  
 3. ~~**Manual Fields Form**~~ ✅ DONE
+4. ~~**Email Provider Abstraction**~~ ✅ DONE
+5. ~~**Print/PDF Button**~~ ✅ DONE
+6. ~~**Expiration UI Banners**~~ ✅ DONE
+7. **Real Email Integration** — Set RESEND_API_KEY in .env
 4. ~~**Payment-Annex Linking**~~ ✅ DONE
 5. ~~**Contract Expiration Warning**~~ ✅ DONE
 6. ~~**Email Workflow**~~ ✅ DONE (MOCKED)

@@ -454,7 +454,7 @@ export default function FinanceHub() {
       setExpenseAmount("");
       setExpenseDescription("");
       setShowExpenseModal(false);
-      await loadPayoutsStats();
+      await loadPayoutsStatsOptimized();
     } catch (e) {
       console.error("Add expense error:", e);
       alert("Помилка: " + e.message);

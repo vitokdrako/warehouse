@@ -636,6 +636,29 @@ async def migrate_payment_annex_linking():
             results.append(f"document_emails: error - {str(e)}")
             db.rollback()
         
+        # === 3. ADD subject/message TO document_emails ===
+        try:
+            check = db.execute(text("""
+                SELECT 1 FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'document_emails'
+                AND COLUMN_NAME = 'subject'
+            """)).fetchone()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE document_emails 
+                    ADD COLUMN subject VARCHAR(500),
+                    ADD COLUMN message TEXT
+                """))
+                db.commit()
+                results.append("document_emails: added subject/message columns")
+            else:
+                results.append("document_emails: subject/message columns already exist")
+        except Exception as e:
+            results.append(f"document_emails subject/message: error - {str(e)}")
+            db.rollback()
+        
         db.close()
         
         return {

@@ -238,7 +238,9 @@ export function DocumentPreviewModal({
     issue_act: "Акт передачі",
     return_act: "Акт повернення",
     defect_act: "Дефектний акт",
-    quote: "Кошторис"
+    quote: "Кошторис",
+    invoice_offer: "Рахунок-оферта",
+    contract_rent: "Договір оренди"
   };
   
   // Documents that need manual fields

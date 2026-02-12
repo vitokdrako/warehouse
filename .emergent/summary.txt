@@ -1,31 +1,29 @@
 <analysis>**original_problem_statement:**
-The user's initial request was to fix a critical bug where items sent for processing did not update their status correctly. This led to fixing several related bugs concerning inventory status and the Damage Hub.
+The user provided a comprehensive analysis and technical specification for a complete overhaul of the Finance Hub module. The goal is to address architectural issues, improve performance, and build a robust, legally-compliant document management system.
 
-The focus then pivoted to a major performance optimization of the Order Workspace based on a detailed technical plan provided by the user. After completing the performance work, the user requested a full analysis of the Finance Hub workflow, which the previous agent provided.
-
-PRODUCT REQUIREMENTS (from user's performance plan):
-- **P0.1 (LeftRailFinance):** Create a new backend endpoint  to fetch a single deposit record for an order, instead of all deposits. Update the frontend to use this endpoint. (COMPLETED)
-- **P0.2 (Data Fetching):** Disable the polling mechanism () when a WebSocket connection is active to prevent redundant data fetching. (COMPLETED)
-- **P0.3 (EventBus):** Add a  (300ms) to the refetch logic triggered by the local  to prevent refetch storms. (COMPLETED)
-- **P1.1 (LeftRailDocuments):** Optimize the loading of document versions by fetching them in parallel (). (COMPLETED, later superseded by a batch endpoint).
-- **P1.2 (Race Condition):** Fix a race condition where sending an email after document generation sometimes fails by having the generation function return the new document's data directly. (COMPLETED)
-- **Phase 2:**
-    - Create a batch endpoint for fetching document versions (). (COMPLETED)
-    - Deduplicate and memoize timeline events. (COMPLETED)
-    - Refactor the  scroll listener to use . (COMPLETED)
+The project is broken down into phases:
+-   **Phase 0 (Data Model Foundation):** Introduce a  entity, a  (rent/sale) on orders, and clearly separate  vs.  payment types. (COMPLETED - Backend)
+-   **Phase 1 (Performance Optimization):** Create a single  endpoint to aggregate data, optimize the slow  endpoint, and reduce redundant API calls from the frontend. (COMPLETED)
+-   **Phase 2 (UI/UX Refactoring):** Rearchitect the  component into a unified, tab-based interface (Operations, Documents, Cash Registers, etc.) and deprecate the old . (COMPLETED)
+-   **Phase 3 (Documents Engine):** Implement a full-featured document generation system based on a detailed technical specification provided by the user. This includes:
+    -   Distinguishing between  (estimate) and  (legal document).
+    -   Introducing .
+    -   Implementing a  to control document availability.
+    -   Ensuring document reproducibility via .
+    -   Creating new database tables (, ) and APIs.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application's core functionality is stable. Critical inventory status bugs have been resolved. A major, two-phase performance optimization of the  component has been successfully completed, addressing all points from the user's technical plan (redundant API calls, race conditions, polling issues).
-
-Following the optimization work, the agent performed a detailed analysis of the entire Finance Hub workflow, from frontend components to backend APIs and database interactions, and presented this documentation to the user. The project is now awaiting the user's next set of priorities.
+The application's Finance Hub has been completely refactored according to the user's specifications for Phases 0, 1, and 2.
+-   **Backend:** A new, highly-optimized  API endpoint aggregates all financial data for an order into a single call. The slow  endpoint has been optimized, resulting in a ~2.5x speed improvement. The database has been migrated to support a  on orders.
+-   **Frontend:** The monolithic  has been rewritten from scratch into a modern, 7-tab component (, , , etc.). It utilizes the new backend optimizations, resulting in a much faster and more responsive user experience. The distinction between Deposit and Advance payments is now clear in the UI.
 
 **Last working item**:
--   **Last item agent was working:** The agent conducted a comprehensive investigation and documentation of the Finance Hub workflow as requested by the user. This involved analyzing frontend components (), backend routes (), and the underlying database schema to map out the complete data flow for payments, deposits, expenses, and financial reporting.
--   **Status:** NONE (The analysis task is complete and was delivered to the user. There is no active implementation task.)
+-   **Last item agent was working:** The agent received a very detailed technical specification from the user for **Phase 3: The Documents Engine**. The agent began the initial analysis of this phase by reviewing the existing code in  to understand the current structure before planning the large-scale implementation.
+-   **Status:** NOT STARTED
 -   **Agent Testing Done:** N/A
--   **Which testing method agent to use?** NA
+-   **Which testing method agent to use?** both
 -   **User Testing Done:** N/A
 
 **All Pending/In progress Issue list**:
@@ -43,36 +41,40 @@ Following the optimization work, the agent performed a detailed analysis of the 
     -   **Should Test frontend/backend/both after fix?** Frontend
 
 -   **Issue 3: (P3) Image 404s in Catalog.**
-    -   **Description:** Some product images are not loading in the catalog view. This is a separate issue from the malformed URL bug that was fixed in a previous session.
+    -   **Description:** Some product images are not loading in the catalog view.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Frontend
 
 **In progress Task List**:
--   None.
+-   **Task 1: (P0) Implement Phase 3: Documents Engine**
+    -   **Description:** This is the next major feature. The user has provided a comprehensive technical specification covering database models, API endpoints, a policy engine, and frontend requirements for a robust document management system.
+    -   **Where to resume:** The agent has analyzed the user's spec and the existing  file. The next step is to create a detailed implementation plan, starting with backend database migrations.
+    -   **What will be achieved with this?** A legally correct and scalable document generation system that distinguishes between quotes, contracts, and acts, and enforces business rules automatically.
+    -   **Status:** IN PROGRESS (Analysis complete, implementation pending)
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **(P2) Unify Order Workspaces:** Refactor  and  to reduce code duplication, potentially using the shared  hook more effectively.
+    -   **(P2) Unify Order Workspaces:** Refactor  and  to reduce code duplication.
 -   **Future Tasks:**
-    -   **(P2) Database Refactoring:** A major task to unify the 9+ tables related to item status into a cleaner system ( for current state,  for history). This was previously postponed by the user.
+    -   **(P2) Database Refactoring:** A major task to unify the 9+ tables related to item status into a cleaner system ( for current state,  for history).
     -   **(P2) Implement full Role-Based Access Control (RBAC).**
     -   **(P2) Implement Monthly Financial Report.**
     -   **(P3) Digital Signature Integration.**
+    -   **(P3) HR/Ops Module:** Create a separate module for managing employee shifts, check-ins, sick leave, etc., as per the user's request to keep it separate from finance.
 
 **Completed work in this session**
--   **Performance (Phase 1):**
-    -   Created and integrated a new backend endpoint  to optimize the finance panel in the Order Workspace. (, ).
-    -   Disabled polling in  when a WebSocket connection is active. ().
-    -   Debounced  refetch calls to prevent API call storms. ().
-    -   Fixed a race condition with document generation and emailing by modifying  to return data directly. ().
--   **Performance (Phase 2):**
-    -   Created a new batch endpoint  to fetch multiple document versions in a single call. ().
-    -   Refactored the frontend to use the new batch document endpoint. ().
-    -   Optimized the timeline component with event deduplication and . ().
-    -   Refactored the footer scroll listener to use  for better performance. ().
--   **Research & Documentation:**
-    -   Conducted a full analysis of the RentalHub Finance Cabinet, documenting its architecture, data flow, database schema, and key workflows. The findings were presented to the user.
+-   **Finance Hub Refactor - Phase 1 (Backend Optimization):**
+    -   Created a new aggregator endpoint  in .
+    -   Created an optimized endpoint  in , achieving a ~2.5x performance increase.
+    -   Added a  column to the  table via a database migration.
+
+-   **Finance Hub Refactor - Phase 2 (Frontend Overhaul):**
+    -   Completely rewrote  to implement a new 7-tab architecture.
+    -   The new UI now uses the optimized  and  endpoints, drastically reducing API calls and improving load times.
+    -   Implemented separate UI actions for Accept Deposit and Accept Advance Payment to clarify the financial flows.
 
 **Earlier issues found/mentioned but not fixed**
 -   None that aren't already listed in the Pending/In progress Issue list.
@@ -86,64 +88,54 @@ Following the optimization work, the agent performed a detailed analysis of the 
 
 
 **Key Technical Concepts**
--   **User-Driven Refactoring:** The project priorities are heavily influenced by detailed technical plans from the user.
--   **Performance Optimization:** The last session focused on reducing API calls, eliminating race conditions, and debouncing events in a complex React component.
--   **Double-Entry Bookkeeping:** The finance module is built on a proper accounting system with transactions, ledgers, and accounts, which was recently documented.
--   **Data Model Complexity:** The application still has significant technical debt in its data models, particularly for item status tracking and duplicated UI components (/, /).
+-   **Phased Refactoring:** The project is being executed in distinct, user-approved phases (Data Model, Performance, UI, Documents).
+-   **API Aggregation (Snapshot Pattern):** A single backend endpoint () now serves as the source of truth for the order finance view, replacing 6+ separate API calls.
+-   **Tabbed UI Architecture:** The main Finance Hub UI was refactored from a single view into a multi-tab layout to organize complex functionality.
 
 **key DB schema**
--   ****: Main table for inventory items.  is the source of truth for availability.
--   ****: All customer payments (rent, damage, etc.).
--   ****: Manages customer security deposits.
--   ****: History of all operations on a deposit.
--   ****: The core of the double-entry bookkeeping system.
--   ****: The debit/credit entries for each transaction.
--   ****: The chart of accounts (e.g., CASH, BANK, RENT_REV).
--   ****: Records for business expenses and cash deposits.
+-   ****: MODIFIED: Added  (enum: 'rent', 'sale') and  (nullable int).
+-   ****: Existing table, to be central to the new document engine.
+-   **Upcoming (Phase 3):** New tables will be created:  and . The  table will be significantly extended.
 
 **changes in tech stack**
 -   None.
 
 **All files of reference**
--    (Analyzed for workflow documentation)
--    (Analyzed and Modified)
--    (Modified)
--    (Modified)
--    (Modified)
--    (Modified)
--    (Modified)
--    (Modified)
--    (Modified)
--    (Modified)
--    (Updated)
+-    (Completely rewritten)
+-    (Heavily modified with new endpoints)
+-    (Modified to add new schema changes)
+-    (Analyzed for the next phase of work)
+-    (Updated with completed work and future plans)
 
-**Areas that need refactoring**
--   Unify  and .
--   Unify  and .
--   The item status data model across multiple database tables remains a prime candidate for a large-scale refactoring task.
+**Areas that need refactoring**:
+-    is now deprecated and should be removed after the new  is fully stable and vetted.
+-   The large  (2000+ lines) could be broken down into smaller sub-components for each tab in the future.
 
 **key api endpoints**
--   : **(NEW)** Fetches a single deposit record for an order.
--   : **(NEW)** Fetches the latest versions of multiple document types for an entity in a single request.
--   : Key endpoint for loading the main list in the Finance Hub.
--   : Key endpoint for calculating cash/bank balances.
+-   : **(NEW)** Aggregates all financial data for a single order.
+-   : **(NEW & OPTIMIZED)** Provides fast cash/bank statistics.
+-   **Upcoming (Phase 3):**
+    -   
+    -   
+    -   
 
 **Critical Info for New Agent**
 -   **You must communicate in Ukrainian.**
--   The major performance optimization task for the  is **complete**. Do not attempt to work on it further unless the user reports a new issue.
--   The user's last request was to understand the Finance Hub, and the analysis has been delivered. The next step is to confirm new priorities with the user.
--   Propose a plan to the user based on the backlog: starting with P1/P2 issues (Moodboard, Calendar) or larger future tasks (Unifying Workspaces, DB Refactor). Be prepared for the user to provide a completely new direction based on the recent finance analysis.
+-   Phases 0, 1, and 2 of the Finance Hub refactor are **COMPLETE**. Do not modify the core structure of the new Finance Hub unless a bug is reported.
+-   Your immediate and highest priority task is to **implement Phase 3: The Documents Engine**. The user has provided an extremely detailed technical specification which you must follow closely. Start by planning the database migrations and new API endpoints.
 
 **documents and test reports created in this job**
--    (updated with completed performance tasks).
+-    (Updated with progress from Phases 1 & 2)
 
 **Last 10 User Messages and any pending HUMAN messages**
--   **User (Fulfilled):** Asked for a full investigation and explanation of the Finance Hub workflow.
--   **User (Fulfilled):** Confirmed the plan for Phase 2 performance optimizations.
--   **User (Fulfilled):** Confirmed the plan for Phase 1 performance optimizations and provided detailed acceptance criteria.
+1.  **User (Fulfilled):** Provided an extremely detailed technical specification for **Phase 3 (Documents Engine)**, covering data models, APIs, policy rules, and acceptance criteria.
+2.  **User (Fulfilled):** Confirmed the successful completion of the Phase 2 UI refactor and initiated the start of Phase 3.
+3.  **User (Fulfilled):** Provided detailed analysis and a full architectural plan for a new, tab-based Finance Hub.
+4.  **User (Fulfilled):** Confirmed the plan to tackle the refactor in phases, starting with Phase 1 (Snapshot API) and the backend work for Phase 0 (Payer Profile).
+5.  **User (Fulfilled):** Outlined key architectural decisions, such as creating a new  table and making UAH the base currency for accounting.
 
 **Project Health Check:**
--   **Broken:** Moodboard export functionality is likely non-functional due to a pending CORS fix.
+-   **Broken:** Moodboard export functionality is likely non-functional.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
@@ -163,4 +155,4 @@ Following the optimization work, the agent performed a detailed analysis of the 
 -   **RentalHub Admin:**  / 
 
 **What agent forgot to execute**
--   Nothing. The agent successfully executed the user's high-priority performance plan and then fulfilled a research request. The remaining backlog items were not addressed, which was the correct prioritization.</analysis>
+-   The agent successfully followed the user's phased plan and did not miss any requested items. The remaining backlog items were correctly de-prioritized in favor of the major Finance Hub refactor.</analysis>

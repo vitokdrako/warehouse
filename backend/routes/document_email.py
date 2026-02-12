@@ -156,33 +156,6 @@ async def send_document_email(
         "provider": result.provider,
         "email_id": result.email_id
     }
-            "subject": subject,
-            "message": message,
-            "version": doc_version,
-            "user_id": request.sent_by_user_id,
-            "user_name": request.sent_by_user_name,
-            "status": "sent" if email_sent else "failed"
-        })
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        # Still return success if email was sent but logging failed
-    
-    if not email_sent:
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Email sending failed: {email_error}"
-        )
-    
-    return {
-        "success": True,
-        "document_id": document_id,
-        "sent_to": request.to,
-        "subject": subject,
-        "document_version": doc_version,
-        "attach_pdf": request.attach_pdf,
-        "note": "Email service not fully integrated. Log created for audit."
-    }
 
 
 @router.get("/{document_id}/email-history")

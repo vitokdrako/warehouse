@@ -91,6 +91,8 @@ curl -I -X OPTIONS https://backrentalhub.farforrent.com.ua/api/event/boards/test
 - Додає credentials: true для авторизованих запитів
 
 ### convert-to-order endpoint:
+- **ВИПРАВЛЕНО**: SQL запит використовував колонки `name`, `description`, `share_token`, `is_favorite`, `view_mode` які не існують в таблиці `event_boards`
+- Правильні колонки: `board_name` (замість `name`), `notes` (замість `description`)
 - Замінено небезпечну індексацію board[14] на dict
 - Додано try-except з trace_id для дебагу
 - IT- нумерація: окремий лічильник, старт з 10000

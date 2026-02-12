@@ -211,7 +211,7 @@ async def get_recent_emails(
             de.document_version, de.sent_by_user_name, de.status,
             d.doc_type
         FROM document_emails de
-        LEFT JOIN documents d ON d.id = de.document_id
+        LEFT JOIN documents d ON d.id COLLATE utf8mb4_unicode_ci = de.document_id COLLATE utf8mb4_unicode_ci
         ORDER BY de.sent_at DESC
         LIMIT :limit
     """), {"limit": limit})

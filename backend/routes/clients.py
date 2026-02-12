@@ -422,22 +422,80 @@ async def unlink_payer_from_client(client_id: int, payer_id: int, db: Session = 
 @router.get("/resolve/by-email")
 async def resolve_client_by_email(email: str, db: Session = Depends(get_rh_db)):
     """
-    Знайти або створити клієнта по email.
+    Знайти або отримати інформацію про клієнта по email.
     Використовується при checkout в EventTool.
+    
+    Повертає:
+    - exists: чи існує клієнт
+    - client: дані клієнта (id, name, phone, email)
+    - payers: список платників [{id, type, display_name, tax_mode, is_default}]
+    - default_payer_id: ID платника за замовчуванням
     """
     email_normalized = email.lower().strip()
     
+    if not email_normalized or '@' not in email_normalized:
+        return {
+            "exists": False,
+            "email": email,
+            "error": "Invalid email format"
+        }
+    
     result = db.execute(text("""
-        SELECT id FROM client_users WHERE email_normalized = :email
+        SELECT id, email, full_name, phone, company_hint, source
+        FROM client_users 
+        WHERE email_normalized = :email
     """), {"email": email_normalized}).fetchone()
     
-    if result:
-        return await get_client(result[0], db)
+    if not result:
+        return {
+            "exists": False,
+            "email": email,
+            "email_normalized": email_normalized,
+            "client": None,
+            "payers": [],
+            "default_payer_id": None
+        }
     
-    # Клієнт не існує
+    client_id = result[0]
+    
+    # Отримати платників
+    payers_result = db.execute(text("""
+        SELECT 
+            pp.id, pp.type, pp.display_name, pp.tax_mode, pp.edrpou,
+            cpl.is_default
+        FROM client_payer_links cpl
+        JOIN payer_profiles pp ON pp.id = cpl.payer_profile_id
+        WHERE cpl.client_user_id = :client_id AND pp.is_active = TRUE
+        ORDER BY cpl.is_default DESC, pp.display_name
+    """), {"client_id": client_id})
+    
+    payers = []
+    default_payer_id = None
+    for p in payers_result:
+        payer = {
+            "id": p[0],
+            "type": p[1],
+            "display_name": p[2],
+            "tax_mode": p[3],
+            "edrpou": p[4],
+            "is_default": bool(p[5])
+        }
+        payers.append(payer)
+        if payer["is_default"]:
+            default_payer_id = payer["id"]
+    
     return {
-        "exists": False,
-        "email": email,
-        "email_normalized": email_normalized,
-        "message": "Клієнта не знайдено. Буде створено при оформленні замовлення."
+        "exists": True,
+        "client_user_id": client_id,
+        "client": {
+            "id": client_id,
+            "email": result[1],
+            "full_name": result[2],
+            "phone": result[3],
+            "company_hint": result[4],
+            "source": result[5]
+        },
+        "payers": payers,
+        "default_payer_id": default_payer_id,
+        "payer_status": "ok" if any(p["type"] != "pending" for p in payers) else ("pending" if payers else "missing")
     }

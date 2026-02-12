@@ -2086,3 +2086,429 @@ async def create_encashment(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# FINANCE HUB 2.0 - SNAPSHOT API (ФАЗА 1)
+# Один запит замість 6+ для правої панелі ордера
+# ============================================================
+
+@router.get("/orders/{order_id}/snapshot")
+async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh_db)):
+    """
+    📊 Finance Snapshot API - Всі фінансові дані ордера одним запитом.
+    
+    Замінює:
+    - GET /payments?order_id=X
+    - GET /deposits (пошук по order_id)  
+    - GET /order/X/charges (damage + late)
+    - GET /documents/entity/order/X
+    - GET /order/X/discount
+    - Рахунки totals з order
+    
+    Returns: payments, deposit, damage, late, totals, documents, timeline, payer_profile
+    """
+    import hashlib
+    from datetime import datetime
+    
+    try:
+        # === 1. ORDER BASE INFO ===
+        order_row = db.execute(text("""
+            SELECT o.order_id, o.order_number, o.customer_name, o.customer_phone,
+                   o.status, o.total_price, o.deposit_amount, 
+                   o.rental_start_date, o.rental_end_date,
+                   COALESCE(o.discount_amount, 0) as discount_amount,
+                   COALESCE(o.discount_percent, 0) as discount_percent,
+                   o.payer_profile_id, o.created_at
+            FROM orders o WHERE o.order_id = :order_id
+        """), {"order_id": order_id}).fetchone()
+        
+        if not order_row:
+            raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+        
+        # === 2. PAYMENTS (all types) ===
+        payments_rows = db.execute(text("""
+            SELECT id, payment_type, method, amount, currency, 
+                   payer_name, occurred_at, note, status,
+                   accepted_by_id, accepted_by_name, description
+            FROM fin_payments 
+            WHERE order_id = :order_id
+            ORDER BY occurred_at DESC
+        """), {"order_id": order_id})
+        
+        payments = []
+        rent_paid = 0
+        damage_paid = 0
+        late_paid = 0
+        advance_paid = 0
+        
+        for p in payments_rows:
+            payment = {
+                "id": p[0], "payment_type": p[1], "method": p[2],
+                "amount": float(p[3] or 0), "currency": p[4] or "UAH",
+                "payer_name": p[5], 
+                "occurred_at": p[6].isoformat() if p[6] else None,
+                "note": p[7], "status": p[8],
+                "accepted_by_id": p[9], "accepted_by_name": p[10],
+                "description": p[11]
+            }
+            payments.append(payment)
+            
+            # Accumulate by type
+            if p[8] in ('completed', 'confirmed'):
+                if p[1] == 'rent':
+                    rent_paid += float(p[3] or 0)
+                elif p[1] == 'damage':
+                    damage_paid += float(p[3] or 0)
+                elif p[1] == 'late':
+                    late_paid += float(p[3] or 0)
+                elif p[1] == 'advance':
+                    advance_paid += float(p[3] or 0)
+                elif p[1] == 'additional':
+                    rent_paid += float(p[3] or 0)  # Донарахування → rent
+        
+        # === 3. DEPOSIT ===
+        deposit_row = db.execute(text("""
+            SELECT id, held_amount, used_amount, refunded_amount, status,
+                   actual_amount, currency, exchange_rate, expected_amount,
+                   opened_at, closed_at, note
+            FROM fin_deposit_holds 
+            WHERE order_id = :order_id
+            LIMIT 1
+        """), {"order_id": order_id}).fetchone()
+        
+        deposit = None
+        if deposit_row:
+            currency = deposit_row[6] or 'UAH'
+            actual = float(deposit_row[5]) if deposit_row[5] else float(deposit_row[1])
+            used = float(deposit_row[2] or 0)
+            refunded = float(deposit_row[3] or 0)
+            available = float(deposit_row[1]) - used - refunded
+            
+            deposit = {
+                "id": deposit_row[0],
+                "held_amount": float(deposit_row[1]),
+                "actual_amount": actual,
+                "currency": currency,
+                "exchange_rate": float(deposit_row[7]) if deposit_row[7] else 1.0,
+                "expected_amount": float(deposit_row[8]) if deposit_row[8] else 0,
+                "used_amount": used,
+                "refunded_amount": refunded,
+                "available": available,
+                "status": deposit_row[4],
+                "opened_at": deposit_row[9].isoformat() if deposit_row[9] else None,
+                "closed_at": deposit_row[10].isoformat() if deposit_row[10] else None,
+                "note": deposit_row[11],
+                "display_amount": f"{actual:,.0f} {currency}" if currency != 'UAH' else f"₴{actual:,.0f}"
+            }
+        
+        # === 4. DAMAGE ===
+        damage_total = db.execute(text("""
+            SELECT COALESCE(SUM(fee), 0) FROM product_damage_history WHERE order_id = :order_id
+        """), {"order_id": order_id}).scalar() or 0
+        
+        damage_items_rows = db.execute(text("""
+            SELECT pdh.id, pdh.product_id, p.sku, p.name, pdh.damage_type, 
+                   pdh.qty, pdh.fee, pdh.note, pdh.created_at
+            FROM product_damage_history pdh
+            LEFT JOIN products p ON p.product_id = pdh.product_id
+            WHERE pdh.order_id = :order_id
+            ORDER BY pdh.created_at DESC
+        """), {"order_id": order_id})
+        
+        damage_items = [{
+            "id": r[0], "product_id": r[1], "sku": r[2], "name": r[3],
+            "damage_type": r[4], "qty": r[5], "fee": float(r[6] or 0),
+            "note": r[7], "created_at": r[8].isoformat() if r[8] else None
+        } for r in damage_items_rows]
+        
+        damage = {
+            "total": float(damage_total),
+            "paid": damage_paid,
+            "due": max(0, float(damage_total) - damage_paid),
+            "items": damage_items
+        }
+        
+        # === 5. LATE FEES ===
+        late_rows = db.execute(text("""
+            SELECT id, amount, status, note, occurred_at, accepted_by_name
+            FROM fin_payments 
+            WHERE order_id = :order_id AND payment_type = 'late'
+            ORDER BY occurred_at DESC
+        """), {"order_id": order_id})
+        
+        late_items = [{
+            "id": r[0], "amount": float(r[1] or 0), "status": r[2],
+            "note": r[3], "occurred_at": r[4].isoformat() if r[4] else None,
+            "accepted_by": r[5]
+        } for r in late_rows]
+        
+        late_due = sum(l["amount"] for l in late_items if l["status"] == "pending")
+        late_paid_total = sum(l["amount"] for l in late_items if l["status"] in ("completed", "confirmed"))
+        
+        late = {
+            "total": late_due + late_paid_total,
+            "paid": late_paid_total,
+            "due": late_due,
+            "items": late_items
+        }
+        
+        # === 6. DOCUMENTS (latest versions only) ===
+        docs_rows = db.execute(text("""
+            SELECT d.id, d.doc_type, d.entity_id, d.version, d.format, 
+                   d.created_at, d.created_by_name
+            FROM documents d
+            INNER JOIN (
+                SELECT doc_type, MAX(version) as max_version
+                FROM documents
+                WHERE entity_type = 'order' AND entity_id = :order_id
+                GROUP BY doc_type
+            ) latest ON d.doc_type = latest.doc_type AND d.version = latest.max_version
+            WHERE d.entity_type = 'order' AND d.entity_id = :order_id
+        """), {"order_id": str(order_id)})
+        
+        documents = [{
+            "id": r[0], "doc_type": r[1], "entity_id": r[2], "version": r[3],
+            "format": r[4], "created_at": r[5].isoformat() if r[5] else None,
+            "created_by_name": r[6]
+        } for r in docs_rows]
+        
+        # === 7. PAYER PROFILE ===
+        payer_profile = None
+        if order_row[11]:  # payer_profile_id
+            payer_row = db.execute(text("""
+                SELECT id, payer_type, company_name, edrpou, iban, bank_name,
+                       director_name, address, is_vat_payer
+                FROM payer_profiles WHERE id = :id AND is_active = TRUE
+            """), {"id": order_row[11]}).fetchone()
+            
+            if payer_row:
+                payer_profile = {
+                    "id": payer_row[0], "payer_type": payer_row[1],
+                    "company_name": payer_row[2], "edrpou": payer_row[3],
+                    "iban": payer_row[4], "bank_name": payer_row[5],
+                    "director_name": payer_row[6], "address": payer_row[7],
+                    "is_vat_payer": bool(payer_row[8])
+                }
+        
+        # === 8. TOTALS ===
+        total_rental = float(order_row[5] or 0)
+        discount = float(order_row[9] or 0)
+        total_after_discount = total_rental - discount
+        rent_due = max(0, total_after_discount - rent_paid - advance_paid)
+        
+        totals = {
+            "rental_total": total_rental,
+            "discount": discount,
+            "discount_percent": float(order_row[10] or 0),
+            "rental_after_discount": total_after_discount,
+            "rent_paid": rent_paid,
+            "advance_paid": advance_paid,
+            "rent_due": rent_due,
+            "deposit_expected": float(order_row[6] or 0),
+            "deposit_held": deposit["held_amount"] if deposit else 0,
+            "deposit_available": deposit["available"] if deposit else 0,
+            "damage_total": damage["total"],
+            "damage_paid": damage["paid"],
+            "damage_due": damage["due"],
+            "late_total": late["total"],
+            "late_paid": late["paid"],
+            "late_due": late["due"],
+            "grand_total_due": rent_due + damage["due"] + late["due"]
+        }
+        
+        # === 9. TIMELINE (для UI) ===
+        timeline = []
+        
+        # Payments to timeline
+        for p in payments:
+            type_labels = {
+                "rent": "Оренда", "additional": "Донарахування", 
+                "damage": "Шкода", "deposit": "Застава", "late": "Прострочення",
+                "advance": "Передплата"
+            }
+            timeline.append({
+                "id": f"pay_{p['id']}", 
+                "type": "payment",
+                "at": p["occurred_at"],
+                "label": p["note"] or type_labels.get(p["payment_type"], p["payment_type"]),
+                "amount": p["amount"],
+                "status": "done" if p["status"] in ('completed', 'confirmed') else "pending",
+                "meta": f"{p['method']} · {p.get('accepted_by_name', '')}"
+            })
+        
+        # Deposit events to timeline
+        if deposit:
+            if deposit["used_amount"] > 0:
+                timeline.append({
+                    "id": "dep_used", "type": "deposit_use",
+                    "at": deposit["closed_at"],
+                    "label": "Утримано із застави",
+                    "amount": -deposit["used_amount"],
+                    "status": "warn", "meta": "компенсація"
+                })
+            if deposit["refunded_amount"] > 0:
+                timeline.append({
+                    "id": "dep_refund", "type": "deposit_refund",
+                    "at": deposit["closed_at"],
+                    "label": "Застава повернута",
+                    "amount": deposit["refunded_amount"],
+                    "status": "done", "meta": ""
+                })
+        
+        # Pending damage
+        if damage["due"] > 0:
+            timeline.append({
+                "id": "dmg_due", "type": "damage_pending",
+                "at": None, "label": "Шкода (очікує)",
+                "amount": damage["due"], "status": "warn",
+                "meta": ", ".join([d["name"] for d in damage_items[:3]])
+            })
+        
+        # Sort timeline by date (newest first, pending last)
+        timeline.sort(key=lambda x: (x["at"] is None, x["at"] or ""), reverse=True)
+        
+        # === 10. SNAPSHOT METADATA ===
+        snapshot_time = datetime.now().isoformat()
+        data_hash = hashlib.md5(f"{order_id}_{rent_paid}_{deposit}_{damage['due']}_{late['due']}".encode()).hexdigest()[:8]
+        
+        return {
+            "order_id": order_id,
+            "order_number": order_row[1],
+            "customer_name": order_row[2],
+            "customer_phone": order_row[3],
+            "status": order_row[4],
+            "rental_dates": {
+                "start": str(order_row[7]) if order_row[7] else None,
+                "end": str(order_row[8]) if order_row[8] else None
+            },
+            "payments": payments,
+            "deposit": deposit,
+            "damage": damage,
+            "late": late,
+            "totals": totals,
+            "documents": documents,
+            "payer_profile": payer_profile,
+            "timeline": timeline,
+            "_meta": {
+                "snapshot_at": snapshot_time,
+                "version": data_hash,
+                "source": "snapshot_api_v1"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# OPTIMIZED PAYOUTS STATS (ФАЗА 1)
+# 12 SQL → 2 SQL з SUM(CASE WHEN)
+# ============================================================
+
+@router.get("/payouts-stats-v2")
+async def get_payouts_stats_optimized(db: Session = Depends(get_rh_db)):
+    """
+    Оптимізована версія payouts-stats: 2 SQL запити замість 12.
+    Використовує SUM(CASE WHEN ...) для агрегації.
+    """
+    try:
+        # === ОДИН ЗАПИТ ДЛЯ ВСІХ PAYMENTS ===
+        payments_stats = db.execute(text("""
+            SELECT 
+                SUM(CASE WHEN payment_type = 'rent' AND method = 'cash' AND status IN ('completed', 'confirmed') THEN amount ELSE 0 END) as rent_cash,
+                SUM(CASE WHEN payment_type = 'rent' AND method IN ('card', 'bank') AND status IN ('completed', 'confirmed') THEN amount ELSE 0 END) as rent_bank,
+                SUM(CASE WHEN payment_type = 'damage' AND method = 'cash' AND status IN ('completed', 'confirmed') THEN amount ELSE 0 END) as damage_cash,
+                SUM(CASE WHEN payment_type = 'damage' AND method IN ('card', 'bank') AND status IN ('completed', 'confirmed') THEN amount ELSE 0 END) as damage_bank,
+                SUM(CASE WHEN payment_type = 'rent' AND status IN ('completed', 'confirmed') THEN amount ELSE 0 END) as total_rent
+            FROM fin_payments
+        """)).fetchone()
+        
+        rent_cash_income = float(payments_stats[0] or 0)
+        rent_bank_income = float(payments_stats[1] or 0)
+        damage_cash_income = float(payments_stats[2] or 0)
+        damage_bank_income = float(payments_stats[3] or 0)
+        total_rent = float(payments_stats[4] or 0)
+        
+        # === ОДИН ЗАПИТ ДЛЯ ВСІХ EXPENSES ===
+        expenses_stats = db.execute(text("""
+            SELECT 
+                SUM(CASE WHEN c.code IN ('RENT_EXPENSE', 'RENT_CASH_EXPENSE') AND e.method = 'cash' THEN e.amount ELSE 0 END) as rent_cash_exp,
+                SUM(CASE WHEN c.code = 'DAMAGE_EXPENSE' AND e.method = 'cash' THEN e.amount ELSE 0 END) as damage_cash_exp,
+                SUM(CASE WHEN c.code = 'RENT_BANK_EXPENSE' AND e.method = 'bank' THEN e.amount ELSE 0 END) as rent_bank_exp,
+                SUM(CASE WHEN c.code = 'DAMAGE_BANK_EXPENSE' AND e.method = 'bank' THEN e.amount ELSE 0 END) as damage_bank_exp,
+                SUM(CASE WHEN c.code = 'RENT_CASH_DEPOSIT' THEN e.amount ELSE 0 END) as rent_cash_dep,
+                SUM(CASE WHEN c.code = 'DAMAGE_CASH_DEPOSIT' THEN e.amount ELSE 0 END) as damage_cash_dep
+            FROM fin_expenses e
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+        """)).fetchone()
+        
+        rent_cash_expenses = float(expenses_stats[0] or 0)
+        damage_cash_expenses = float(expenses_stats[1] or 0)
+        rent_bank_expenses = float(expenses_stats[2] or 0)
+        damage_bank_expenses = float(expenses_stats[3] or 0)
+        rent_cash_deposits = float(expenses_stats[4] or 0)
+        damage_cash_deposits = float(expenses_stats[5] or 0)
+        
+        # === DEPOSITS HELD ===
+        deposits_held = db.execute(text("""
+            SELECT 
+                SUM(CASE WHEN currency = 'UAH' OR currency IS NULL THEN held_amount - used_amount - refunded_amount ELSE 0 END) as uah,
+                SUM(CASE WHEN currency = 'USD' THEN actual_amount - COALESCE(used_amount/exchange_rate, 0) - COALESCE(refunded_amount/exchange_rate, 0) ELSE 0 END) as usd,
+                SUM(CASE WHEN currency = 'EUR' THEN actual_amount - COALESCE(used_amount/exchange_rate, 0) - COALESCE(refunded_amount/exchange_rate, 0) ELSE 0 END) as eur
+            FROM fin_deposit_holds 
+            WHERE status IN ('holding', 'partially_used')
+        """)).fetchone()
+        
+        # === CALCULATE BALANCES ===
+        rent_cash_balance = rent_cash_income - rent_cash_expenses + rent_cash_deposits
+        damage_cash_balance = damage_cash_income - damage_cash_expenses + damage_cash_deposits
+        rent_bank_balance = rent_bank_income - rent_bank_expenses
+        damage_bank_balance = damage_bank_income - damage_bank_expenses
+        
+        return {
+            # Готівка балансі
+            "rent_cash_balance": rent_cash_balance,
+            "damage_cash_balance": damage_cash_balance,
+            "total_cash_balance": rent_cash_balance + damage_cash_balance,
+            
+            # Безготівка балансі
+            "rent_bank_balance": rent_bank_balance,
+            "damage_bank_balance": damage_bank_balance,
+            "bank_balance": rent_bank_balance + damage_bank_balance,
+            
+            # Витрати
+            "rent_cash_expenses": rent_cash_expenses,
+            "damage_cash_expenses": damage_cash_expenses,
+            "rent_bank_expenses": rent_bank_expenses,
+            "damage_bank_expenses": damage_bank_expenses,
+            
+            # Внесення
+            "rent_cash_deposits": rent_cash_deposits,
+            "damage_cash_deposits": damage_cash_deposits,
+            
+            # Застави по валютах
+            "deposits_by_currency": {
+                "UAH": float(deposits_held[0] or 0),
+                "USD": float(deposits_held[1] or 0),
+                "EUR": float(deposits_held[2] or 0)
+            },
+            
+            # Legacy fields
+            "total_rent_revenue": total_rent,
+            "cash_balance": rent_cash_balance + damage_cash_balance,
+            "total_active_balance": rent_cash_balance + damage_cash_balance + rent_bank_balance + damage_bank_balance,
+            
+            # Meta
+            "_optimized": True,
+            "_queries": 3
+        }
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

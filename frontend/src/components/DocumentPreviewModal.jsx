@@ -497,7 +497,8 @@ export function DocumentPreviewModal({
       const userStr = localStorage.getItem("user");
       const user = userStr ? JSON.parse(userStr) : {};
       
-      const response = await fetch(`${BACKEND_URL}/api/documents/${documentId || docNumber}/send-email`, {
+      // Use preview-email endpoint which doesn't require document in DB
+      const response = await fetch(`${BACKEND_URL}/api/documents/send-preview-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -506,8 +507,9 @@ export function DocumentPreviewModal({
         body: JSON.stringify({
           to: emailForm.to,
           subject: emailForm.subject || `${DOC_TYPE_LABELS[docType]} #${docNumber}`,
-          message: emailForm.message || "Документ від FarforRent. Будь ласка, перегляньте вкладення.",
-          attach_pdf: emailForm.attachPdf,
+          html_content: htmlContent,
+          doc_type: docType,
+          order_id: orderId,
           sent_by_user_id: user.id,
           sent_by_user_name: user.name || user.email
         })

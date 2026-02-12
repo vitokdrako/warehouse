@@ -1210,6 +1210,11 @@ async def convert_to_order(
     """
     Конвертувати мудборд у замовлення RentalHub
     
+    Використовує нову архітектуру client_users/payer_profiles:
+    - Створює/знаходить client_user по email
+    - Прив'язує замовлення до client_user_id
+    - payer_profile_id = NULL або pending (менеджер вибере пізніше)
+    
     Замовлення з Ivent-tool мають префікс #IT-XXXX для розрізнення від:
     - #OC-XXXX - замовлення з OpenCart (старий сайт)
     - #ORD-XXXX - замовлення створені вручну в RentalHub
@@ -1254,6 +1259,10 @@ async def convert_to_order(
         # АВТОМАТИЧНЕ ЗАПОВНЕННЯ ДАНИХ
         # ========================================
         
+        # Email: завжди з профілю (авторизований користувач)
+        email = customer.get("email", "")
+        email_normalized = email.lower().strip() if email else ""
+        
         # Ім'я клієнта: з запиту або з профілю event_customer
         customer_name = data.customer_name
         if not customer_name:
@@ -1264,8 +1273,37 @@ async def convert_to_order(
         # Телефон: з запиту або з профілю
         phone = data.phone or customer.get("telephone", "")
         
-        # Email: завжди з профілю (авторизований користувач)
-        email = customer.get("email", "")
+        # ========================================
+        # RESOLVE/CREATE client_user
+        # ========================================
+        client_user_id = None
+        if email_normalized:
+            # Шукаємо існуючого клієнта
+            client_check = db.execute(text("""
+                SELECT id FROM client_users WHERE email_normalized = :email
+            """), {"email": email_normalized}).fetchone()
+            
+            if client_check:
+                client_user_id = client_check[0]
+                logger.info(f"[convert-to-order] Found existing client_user: {client_user_id}")
+            else:
+                # Створюємо нового клієнта
+                db.execute(text("""
+                    INSERT INTO client_users (email, email_normalized, full_name, phone, source)
+                    VALUES (:email, :email_norm, :name, :phone, 'events')
+                """), {
+                    "email": email,
+                    "email_norm": email_normalized,
+                    "name": customer_name,
+                    "phone": phone
+                })
+                db.commit()
+                
+                client_user_id = db.execute(text("""
+                    SELECT id FROM client_users WHERE email_normalized = :email
+                """), {"email": email_normalized}).fetchone()[0]
+                
+                logger.info(f"[convert-to-order] Created new client_user: {client_user_id}")
         
         # Назва події: з мудборду (board_name)
         event_name = board["name"]

@@ -1218,21 +1218,46 @@ async def convert_to_order(
     - #OC-XXXX - замовлення з OpenCart (старий сайт)
     - #ORD-XXXX - замовлення створені вручну в RentalHub
     """
-    customer = get_current_customer(token, db)
+    import traceback
     
-    # Отримати board
-    board_result = db.execute(text("""
-        SELECT * FROM event_boards WHERE id = :id AND customer_id = :customer_id
-    """), {"id": board_id, "customer_id": customer["customer_id"]})
-    board = board_result.fetchone()
-    
-    if not board:
-        raise HTTPException(status_code=404, detail="Board not found")
-    
-    if board[14]:  # converted_to_order_id
-        raise HTTPException(status_code=400, detail="Board already converted")
-    
-    if not board[5] or not board[6]:  # rental dates
+    try:
+        customer = get_current_customer(token, db)
+        logger.info(f"[convert-to-order] Customer: {customer.get('customer_id')}, Board: {board_id}")
+        
+        # Отримати board з явними іменами колонок
+        board_result = db.execute(text("""
+            SELECT id, customer_id, name, description, event_date, 
+                   rental_start_date, rental_end_date, rental_days,
+                   status, created_at, updated_at, share_token,
+                   is_favorite, view_mode, converted_to_order_id
+            FROM event_boards 
+            WHERE id = :id AND customer_id = :customer_id
+        """), {"id": board_id, "customer_id": customer["customer_id"]})
+        board_row = board_result.fetchone()
+        
+        if not board_row:
+            logger.warning(f"[convert-to-order] Board not found: {board_id}")
+            raise HTTPException(status_code=404, detail="Board not found")
+        
+        # Конвертуємо в dict для зручності
+        board = {
+            "id": board_row[0],
+            "customer_id": board_row[1],
+            "name": board_row[2],
+            "description": board_row[3],
+            "event_date": board_row[4],
+            "rental_start_date": board_row[5],
+            "rental_end_date": board_row[6],
+            "rental_days": board_row[7],
+            "status": board_row[8],
+            "converted_to_order_id": board_row[14]
+        }
+        
+        if board["converted_to_order_id"]:
+            raise HTTPException(status_code=400, detail="Board already converted to order")
+        
+        if not board["rental_start_date"] or not board["rental_end_date"]:
+            raise HTTPException(status_code=400, detail="Rental dates required. Please set rental period first.")
         raise HTTPException(status_code=400, detail="Rental dates required")
     
     # Отримати items

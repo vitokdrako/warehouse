@@ -5,9 +5,29 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ---
 
-## Latest Update: February 12, 2025
+## Latest Update: February 12, 2026
 
-### Phase 3.1: Production Documents Engine - IN PROGRESS ✅
+### Phase 3.2: Production Documents Features - COMPLETE ✅
+
+**DocumentPreviewModal Integration:**
+- Modal opens when clicking document buttons (quote, invoice_offer, contract_rent)
+- HTML renders in iframe with watermark "ЧЕРНЕТКА"
+- Sign button opens SignatureCanvas modal
+- PDF download button (falls back to HTML due to missing WeasyPrint deps)
+- Edit/Back button for modifying fields
+
+**New Templates Added:**
+- `invoice_offer.html` — Рахунок-оферта
+
+**Bug Fixes Applied:**
+- Fixed localStorage token key (`authToken` → `token`)
+- Fixed WeasyPrint import error (OSError handling)
+
+**Test Report:** `/app/test_reports/iteration_4.json` - 18/18 backend tests passed
+
+---
+
+### Phase 3.1: Production Documents Engine - COMPLETE ✅
 
 **New Template-Based Document System:**
 
@@ -23,14 +43,15 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 ├── issue_act.html         # Акт передачі
 ├── return_act.html        # Акт повернення
 ├── defect_act.html        # Дефектний акт
-└── quote.html             # Кошторис (non-legal)
+├── quote.html             # Кошторис (non-legal)
+└── invoice_offer.html     # Рахунок-оферта
 
 /docs/
 └── document-data-mapping.md  # Field mapping specification
 ```
 
-#### New API Endpoints:
-- `POST /api/documents/render` — Render document from template
+#### API Endpoints:
+- `POST /api/documents/render` — Render document from template (7 types)
 - `GET /api/documents/render/preview/{doc_type}` — HTML preview
 - `GET /api/documents/render/templates` — List available templates
 - `GET /api/documents/render/context/{doc_type}` — Get context data
@@ -62,6 +83,8 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 **Frontend:**
 - FinanceHub DocumentsTab with 3 sub-tabs: Документи, Договори, Додатки
+- DocumentPreviewModal with iframe preview
+- SignatureCanvas for digital signatures
 
 ---
 

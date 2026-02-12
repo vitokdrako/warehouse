@@ -36,6 +36,7 @@ class PaymentCreate(BaseModel):
     description: Optional[str] = None  # Назва донарахування (для additional)
     accepted_by_id: Optional[int] = None  # ID користувача який прийняв
     accepted_by_name: Optional[str] = None  # Ім'я користувача
+    annex_id: Optional[int] = None  # P1: Link to order_annexes for legal documents
 
 class ExpenseCreate(BaseModel):
     expense_type: str = "expense"  # expense | investment

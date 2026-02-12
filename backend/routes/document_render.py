@@ -72,7 +72,8 @@ DOCUMENT_TEMPLATES = {
     "issue_act": "issue_act.html",
     "return_act": "return_act.html",
     "defect_act": "defect_act.html",
-    "quote": "quote.html"
+    "quote": "quote.html",
+    "invoice_offer": "invoice_offer.html"
 }
 
 # ============================================================

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Рахунок-оферта</title>
+  <style>
+    {% include "_partials/base.css" %}
+  </style>
+</head>
+<body>
+{% if meta.watermark_text %}<div class="watermark">{{ meta.watermark_text }}</div>{% endif %}
+<div class="page">
+  {% include "_partials/header.html" %}
+
+  <h1>РАХУНОК-ОФЕРТА</h1>
+
+  <p class="row">
+    <span>Замовлення: <b>{{ order.order_number or "—" }}</b></span>
+    <span>Дата: <b>{{ meta.doc_day or "___" }} {{ meta.doc_month or "____________" }} {{ meta.doc_year or "202_" }}</b></span>
+  </p>
+
+  <div class="section-title">Замовник</div>
+  <table style="width: auto; margin-bottom: 14px;">
+    <tr>
+      <td style="padding-right: 20px;">ПІБ / Компанія:</td>
+      <td><b>{{ tenant.legal_name or order.customer_name or "—" }}</b></td>
+    </tr>
+    <tr>
+      <td>Телефон:</td>
+      <td>{{ tenant.phone or order.customer_phone or "—" }}</td>
+    </tr>
+    {% if tenant.email %}
+    <tr>
+      <td>Email:</td>
+      <td>{{ tenant.email }}</td>
+    </tr>
+    {% endif %}
+    {% if tenant.edrpou %}
+    <tr>
+      <td>ЄДРПОУ / ІПН:</td>
+      <td>{{ tenant.edrpou }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  <div class="section-title">Деталі оренди</div>
+  <p>Період: <b>{{ order.issue_date or "___" }} — {{ order.return_date or "___" }}</b> ({{ order.days or "___" }} днів)</p>
+  <p>Адреса отримання/повернення: <b>{{ order.warehouse_address or "м. Київ, вул. Будіндустрії 4" }}</b></p>
+
+  <div class="section-title">Позиції</div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th style="width:35px;">№</th>
+        <th>Найменування</th>
+        <th style="width:55px;">К-ть</th>
+        <th style="width:100px;">Ціна/день</th>
+        <th style="width:100px;">Оренда</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if items and items|length > 0 %}
+        {% for it in items %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ it.name }}</td>
+          <td>{{ it.qty }}</td>
+          <td>{{ it.price_per_day or "" }} грн</td>
+          <td>{{ it.rent_price_total or it.total_rental or "" }} грн</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="5" class="muted center">Немає позицій</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <div class="hr"></div>
+
+  <div class="section-title">Підсумок</div>
+  <table style="width: auto; margin-top: 8px;">
+    <tr>
+      <td style="padding-right: 20px;">Оренда (весь термін):</td>
+      <td><b>{{ totals.rent_total or "—" }}</b> грн</td>
+    </tr>
+    {% if totals.discount and totals.discount > 0 %}
+    <tr>
+      <td>Знижка:</td>
+      <td><b>-{{ totals.discount }}</b> грн</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td>Забезпечувальний платіж (застава):</td>
+      <td><b>{{ totals.deposit_security or "—" }}</b> грн</td>
+    </tr>
+    <tr>
+      <td><b>РАЗОМ до сплати:</b></td>
+      <td><b>{{ (totals.rent_total or 0) + (totals.deposit_security or 0) - (totals.discount or 0) }}</b> грн</td>
+    </tr>
+  </table>
+
+  <div class="hr"></div>
+
+  <div class="section-title">Умови оплати</div>
+  <ul style="font-size: 9pt; padding-left: 20px; margin-bottom: 14px;">
+    <li>Передоплата 100% вартості оренди</li>
+    <li>Застава сплачується повністю до видачі товару</li>
+    <li>Застава повертається після перевірки стану товару</li>
+  </ul>
+
+  <div class="section-title">Реквізити для оплати</div>
+  <table style="width: auto; margin-bottom: 14px;">
+    <tr>
+      <td style="padding-right: 20px;">Отримувач:</td>
+      <td><b>{{ landlord.name or "ФОП Николенко Наталя Станіславівна" }}</b></td>
+    </tr>
+    {% if landlord.iban %}
+    <tr>
+      <td>IBAN:</td>
+      <td>{{ landlord.iban }}</td>
+    </tr>
+    {% endif %}
+    {% if landlord.tax_id %}
+    <tr>
+      <td>ІПН:</td>
+      <td>{{ landlord.tax_id }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td>Призначення:</td>
+      <td>Оплата за оренду декору, замовлення {{ order.order_number }}</td>
+    </tr>
+  </table>
+
+  <div class="hr"></div>
+
+  <p class="small muted center" style="margin-top: 14px;">
+    Цей рахунок є офертою. Оплата означає акцепт умов оренди згідно з договором оферти.
+  </p>
+
+  {% if meta.quote_valid_until %}
+    <p class="small muted center">Рахунок дійсний до: {{ meta.quote_valid_until }}</p>
+  {% endif %}
+</div>
+</body>
+</html>

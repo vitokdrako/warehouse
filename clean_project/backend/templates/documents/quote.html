@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <title>Кошторис (попередній розрахунок)</title>
+  <style>
+    {% include "_partials/base.css" %}
+  </style>
+</head>
+<body>
+{% if meta.watermark_text %}<div class="watermark">{{ meta.watermark_text }}</div>{% endif %}
+<div class="page">
+  {% include "_partials/header.html" %}
+
+  <h1>КОШТОРИС (попередній розрахунок)</h1>
+
+  <p class="row">
+    <span>Замовлення: <b>{{ order.order_number or "—" }}</b></span>
+    <span>Дата: <b>{{ meta.doc_day or "___" }} {{ meta.doc_month or "____________" }} {{ meta.doc_year or "202_" }}</b></span>
+  </p>
+
+  <p class="small muted center" style="margin-bottom: 14px;">
+    Цей кошторис не є юридичним документом і може змінюватися до моменту підтвердження замовлення.
+  </p>
+
+  <div class="section-title">Параметри оренди</div>
+  <p>Період: <b>{{ order.issue_date or "___" }} — {{ order.return_date or "___" }}</b> ({{ order.days or "___" }} днів)</p>
+  <p>Адреса отримання/повернення: <b>{{ order.warehouse_address or "м. Київ, вул. Будіндустрії 4" }}</b></p>
+
+  {% if tenant %}
+    <p>Клієнт: <b>{{ tenant.legal_name or tenant.name or "—" }}</b>
+      {% if tenant.contact_value %} • Контакт: {{ tenant.contact_value }}{% endif %}
+    </p>
+  {% endif %}
+
+  <div class="section-title">Позиції</div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th style="width:35px;">№</th>
+        <th>Найменування</th>
+        <th style="width:55px;">К-ть</th>
+        <th style="width:120px;">Ціна (весь термін)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if items and items|length > 0 %}
+        {% for it in items %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ it.name }}</td>
+          <td>{{ it.qty }}</td>
+          <td>{{ it.rent_price_total or it.total_rental or "" }} грн</td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="4" class="muted center">Немає позицій</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+  <div class="hr"></div>
+
+  <div class="section-title">Підсумок</div>
+  <table style="width: auto; margin-top: 8px;">
+    <tr>
+      <td style="padding-right: 20px;">Ціна оренди (весь термін):</td>
+      <td><b>{{ totals.rent_total or "—" }}</b> грн</td>
+    </tr>
+    {% if totals.rent_per_day %}
+    <tr>
+      <td>Ціна оренди / день:</td>
+      <td><b>{{ totals.rent_per_day }}</b> грн</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td>Забезпечувальний платіж (застава):</td>
+      <td><b>{{ totals.deposit_security or "—" }}</b> грн</td>
+    </tr>
+    {% if totals.advance_payment %}
+    <tr>
+      <td>Передоплата:</td>
+      <td><b>{{ totals.advance_payment }}</b> грн</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  {% if meta.quote_valid_until %}
+    <p class="small muted" style="margin-top: 12px;">Кошторис дійсний до: {{ meta.quote_valid_until }}</p>
+  {% endif %}
+
+  <div class="hr"></div>
+
+  <div class="sign-grid">
+    <div class="sign-box">
+      <div class="sign-label">Менеджер (підготовлено):</div>
+      <div class="sign-line"></div>
+      <div class="small">{{ meta.prepared_by_name or "" }}</div>
+    </div>
+    <div class="sign-box">
+      <div class="sign-label">Клієнт (ознайомлений):</div>
+      <div class="sign-line"></div>
+      <div class="small muted">—</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

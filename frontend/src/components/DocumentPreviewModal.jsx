@@ -482,6 +482,56 @@ export function DocumentPreviewModal({
     }
   };
   
+  // Send document via email
+  const sendEmail = async () => {
+    if (!emailForm.to) {
+      setError("Вкажіть email отримувача");
+      return;
+    }
+    
+    setEmailSending(true);
+    setError(null);
+    
+    try {
+      // Get user info from localStorage
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : {};
+      
+      const response = await fetch(`${BACKEND_URL}/api/documents/${documentId || docNumber}/send-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({
+          to: emailForm.to,
+          subject: emailForm.subject || `${DOC_TYPE_LABELS[docType]} #${docNumber}`,
+          message: emailForm.message || "Документ від FarforRent. Будь ласка, перегляньте вкладення.",
+          attach_pdf: emailForm.attachPdf,
+          sent_by_user_id: user.id,
+          sent_by_user_name: user.name || user.email
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || "Помилка відправки email");
+      }
+      
+      setShowEmailModal(false);
+      setEmailForm({ to: "", subject: "", message: "", attachPdf: true });
+      
+      // Show success toast or notification
+      alert(`Email успішно надіслано на ${emailForm.to}`);
+      
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEmailSending(false);
+    }
+  };
+  
   if (!isOpen) return null;
   
   return (

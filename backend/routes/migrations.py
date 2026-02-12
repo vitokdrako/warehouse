@@ -573,3 +573,80 @@ async def migrate_documents_engine_v3():
             status_code=500,
             detail=f"Помилка міграції: {str(e)}"
         )
+
+
+@router.post("/migrations/payment-annex-linking")
+async def migrate_payment_annex_linking():
+    """
+    Phase 3.2: Add annex_id to fin_payments for legal linking
+    
+    - Adds annex_id column to fin_payments
+    - Creates index for efficient lookups
+    """
+    try:
+        from database_rentalhub import get_rh_db_direct
+        db = get_rh_db_direct()
+        results = []
+        
+        # === 1. ADD annex_id TO fin_payments ===
+        try:
+            check = db.execute(text("""
+                SELECT 1 FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'fin_payments'
+                AND COLUMN_NAME = 'annex_id'
+            """)).fetchone()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE fin_payments 
+                    ADD COLUMN annex_id INT NULL 
+                    COMMENT 'Link to order_annexes for legal documents',
+                    ADD INDEX idx_payments_annex (annex_id)
+                """))
+                db.commit()
+                results.append("fin_payments.annex_id: added")
+            else:
+                results.append("fin_payments.annex_id: already exists")
+        except Exception as e:
+            results.append(f"fin_payments.annex_id: error - {str(e)}")
+            db.rollback()
+        
+        # === 2. ADD document_version TO document_emails ===
+        try:
+            check = db.execute(text("""
+                SELECT 1 FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'document_emails'
+                AND COLUMN_NAME = 'document_version'
+            """)).fetchone()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE document_emails 
+                    ADD COLUMN document_version INT DEFAULT 1,
+                    ADD COLUMN sent_by_user_id INT NULL,
+                    ADD COLUMN sent_by_user_name VARCHAR(255)
+                """))
+                db.commit()
+                results.append("document_emails: added version/user columns")
+            else:
+                results.append("document_emails: columns already exist")
+        except Exception as e:
+            results.append(f"document_emails: error - {str(e)}")
+            db.rollback()
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "payment-annex-linking",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Payment-Annex Linking migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )

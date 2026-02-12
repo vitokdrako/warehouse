@@ -1337,67 +1337,71 @@ async def convert_to_order(
         notes_parts.append(f"Кількість гостей: {data.guests_count}")
     
     # Монтаж
-    if data.setup_required:
-        notes_parts.append("Потрібен монтаж: Так")
-        if data.setup_notes:
-            notes_parts.append(f"Деталі монтажу: {data.setup_notes}")
-    
-    # Платник
-    if data.payer_type == "company" and data.company_name:
-        notes_parts.append(f"Платник: {data.company_name}")
-        if data.company_edrpou:
-            notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
-    
-    # Коментар клієнта в кінці
-    if data.customer_comment:
-        notes_parts.append(f"---\nКоментар клієнта: {data.customer_comment}")
-    
-    notes_text = "\n".join(notes_parts) if notes_parts else None
-    
-    # Підготувати event_date та event_time
-    event_date = data.event_date or board[4]  # board[4] = event_date з борду
-    event_time = data.event_time
-    
-    # event_location: використовуємо назву події + місце
-    event_location_text = data.event_location
-    if data.event_name and event_location_text:
-        event_location_text = f"{data.event_name} | {event_location_text}"
-    elif data.event_name:
-        event_location_text = data.event_name
-    
-    # Створити order в RentalHub
-    # Використовуємо тільки поля які точно існують в БД
-    db.execute(text("""
-        INSERT INTO orders (
-            order_id, order_number, status, 
-            rental_start_date, rental_end_date, rental_days,
-            event_date, event_time, event_location,
-            total_price, deposit_amount, 
-            customer_name, customer_phone, customer_email,
-            notes, created_at
-        )
-        VALUES (
-            :order_id, :order_number, 'awaiting_customer', 
-            :start_date, :end_date, :rental_days,
-            :event_date, :event_time, :event_location,
-            :total_price, :deposit_amount, 
-            :customer_name, :phone, :email,
-            :notes, NOW()
-        )
-    """), {
-        "order_id": new_order_id,
-        "order_number": order_number,
-        "start_date": board[5],
-        "end_date": board[6],
-        "rental_days": rental_days,
-        "event_date": event_date,
-        "event_time": event_time,
-        "event_location": event_location_text,  # Назва події + місце
-        "total_price": total_price,
-        "deposit_amount": deposit_amount,
-        "customer_name": data.customer_name,
-        "phone": data.phone,
-        "email": customer["email"],
+        if data.setup_required:
+            notes_parts.append("Потрібен монтаж: Так")
+            if data.setup_notes:
+                notes_parts.append(f"Деталі монтажу: {data.setup_notes}")
+        
+        # Платник
+        if data.payer_type == "company" and data.company_name:
+            notes_parts.append(f"Платник: {data.company_name}")
+            if data.company_edrpou:
+                notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
+        
+        # Коментар клієнта в кінці
+        if data.customer_comment:
+            notes_parts.append(f"---\nКоментар клієнта: {data.customer_comment}")
+        
+        notes_text = "\n".join(notes_parts) if notes_parts else None
+        
+        # Підготувати event_date та event_time
+        event_date = data.event_date or board["event_date"]
+        event_time = data.event_time
+        
+        # event_location: використовуємо назву події + місце
+        event_location_text = data.event_location
+        if data.event_name and event_location_text:
+            event_location_text = f"{data.event_name} | {event_location_text}"
+        elif data.event_name:
+            event_location_text = data.event_name
+        
+        # Створити order в RentalHub
+        # source = 'event_tool' для позначення джерела
+        # event_board_id = UUID борду для зв'язку
+        db.execute(text("""
+            INSERT INTO orders (
+                order_id, order_number, status, 
+                rental_start_date, rental_end_date, rental_days,
+                event_date, event_time, event_location,
+                total_price, deposit_amount, 
+                customer_name, customer_phone, customer_email,
+                notes, source, event_board_id, created_at
+            )
+            VALUES (
+                :order_id, :order_number, 'awaiting_customer', 
+                :start_date, :end_date, :rental_days,
+                :event_date, :event_time, :event_location,
+                :total_price, :deposit_amount, 
+                :customer_name, :phone, :email,
+                :notes, 'event_tool', :board_id, NOW()
+            )
+        """), {
+            "order_id": new_order_id,
+            "order_number": order_number,
+            "start_date": board["rental_start_date"],
+            "end_date": board["rental_end_date"],
+            "rental_days": rental_days,
+            "event_date": event_date,
+            "event_time": event_time,
+            "event_location": event_location_text,
+            "total_price": total_price,
+            "deposit_amount": deposit_amount,
+            "customer_name": data.customer_name,
+            "phone": data.phone,
+            "email": customer["email"],
+            "notes": notes_text,
+            "board_id": board_id
+        })
         "notes": notes_text
     })
     

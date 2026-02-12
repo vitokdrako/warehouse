@@ -1243,7 +1243,8 @@ async def convert_to_order(
         board_result = db.execute(text("""
             SELECT id, customer_id, board_name, notes, event_date, 
                    rental_start_date, rental_end_date, rental_days,
-                   status, created_at, updated_at, converted_to_order_id
+                   status, created_at, updated_at, converted_to_order_id,
+                   event_type
             FROM event_boards 
             WHERE id = :id AND customer_id = :customer_id
         """), {"id": board_id, "customer_id": customer["customer_id"]})
@@ -1257,15 +1258,44 @@ async def convert_to_order(
         board = {
             "id": board_row[0],
             "customer_id": board_row[1],
-            "name": board_row[2],  # board_name mapped to name for consistency
-            "description": board_row[3],  # notes mapped to description
+            "name": board_row[2],  # board_name - назва події/мудборду
+            "notes": board_row[3],  # нотатки мудборду
             "event_date": board_row[4],
             "rental_start_date": board_row[5],
             "rental_end_date": board_row[6],
             "rental_days": board_row[7],
             "status": board_row[8],
-            "converted_to_order_id": board_row[11]
+            "converted_to_order_id": board_row[11],
+            "event_type": board_row[12]  # тип події з мудборду
         }
+        
+        # ========================================
+        # АВТОМАТИЧНЕ ЗАПОВНЕННЯ ДАНИХ
+        # ========================================
+        
+        # Ім'я клієнта: з запиту або з профілю event_customer
+        customer_name = data.customer_name
+        if not customer_name:
+            firstname = customer.get("firstname", "")
+            lastname = customer.get("lastname", "")
+            customer_name = f"{firstname} {lastname}".strip() or "Клієнт EventTool"
+        
+        # Телефон: з запиту або з профілю
+        phone = data.phone or customer.get("telephone", "")
+        
+        # Email: завжди з профілю (авторизований користувач)
+        email = customer.get("email", "")
+        
+        # Назва події: з запиту або з мудборду (board_name)
+        event_name = data.event_name or board["name"]
+        
+        # Тип події: з запиту або з мудборду
+        event_type = data.event_type or board.get("event_type")
+        
+        # Дата події: з запиту або з мудборду
+        event_date = data.event_date or board["event_date"]
+        
+        logger.info(f"[convert-to-order] Auto-filled: name={customer_name}, phone={phone}, event={event_name}")
         
         if board["converted_to_order_id"]:
             raise HTTPException(status_code=400, detail="Board already converted to order")

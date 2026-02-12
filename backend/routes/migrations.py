@@ -148,3 +148,122 @@ async def check_orders_schema():
             status_code=500,
             detail=f"Помилка перевірки схеми: {str(e)}"
         )
+
+
+@router.post("/finance-hub-v2")
+async def migrate_finance_hub_v2():
+    """
+    Finance Hub 2.0 - Міграція для підтримки:
+    - deal_mode в orders (rent/sale)
+    - Розширення fin_payments для advance/discount
+    - Оптимізовані індекси
+    
+    Safe to run multiple times.
+    """
+    try:
+        db = get_rh_db_sync()
+        results = []
+        
+        # === 1. ADD deal_mode TO orders ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' 
+                AND COLUMN_NAME = 'deal_mode'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN deal_mode VARCHAR(20) DEFAULT 'rent' 
+                    COMMENT 'rent=оренда, sale=продаж'
+                """))
+                db.commit()
+                results.append("deal_mode: added to orders")
+            else:
+                results.append("deal_mode: already exists")
+        except Exception as e:
+            results.append(f"deal_mode: error - {str(e)}")
+            db.rollback()
+        
+        # === 2. ADD INDEX on fin_payments (order_id, payment_type) ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.STATISTICS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fin_payments' 
+                AND INDEX_NAME = 'idx_payments_order_type'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE INDEX idx_payments_order_type 
+                    ON fin_payments(order_id, payment_type)
+                """))
+                db.commit()
+                results.append("idx_payments_order_type: created")
+            else:
+                results.append("idx_payments_order_type: already exists")
+        except Exception as e:
+            results.append(f"idx_payments_order_type: error - {str(e)}")
+            db.rollback()
+        
+        # === 3. ADD INDEX on fin_payments (payment_type, method, status) for stats ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.STATISTICS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fin_payments' 
+                AND INDEX_NAME = 'idx_payments_stats'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE INDEX idx_payments_stats 
+                    ON fin_payments(payment_type, method, status)
+                """))
+                db.commit()
+                results.append("idx_payments_stats: created")
+            else:
+                results.append("idx_payments_stats: already exists")
+        except Exception as e:
+            results.append(f"idx_payments_stats: error - {str(e)}")
+            db.rollback()
+        
+        # === 4. ADD INDEX on fin_expenses for category aggregation ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.STATISTICS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'fin_expenses' 
+                AND INDEX_NAME = 'idx_expenses_category_method'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE INDEX idx_expenses_category_method 
+                    ON fin_expenses(category_id, method)
+                """))
+                db.commit()
+                results.append("idx_expenses_category_method: created")
+            else:
+                results.append("idx_expenses_category_method: already exists")
+        except Exception as e:
+            results.append(f"idx_expenses_category_method: error - {str(e)}")
+            db.rollback()
+        
+        # === 5. Ensure 'advance' payment type works ===
+        # fin_payments.payment_type is VARCHAR, no enum migration needed
+        results.append("payment_type 'advance': VARCHAR field supports it")
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "finance-hub-v2",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Finance Hub V2 migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )

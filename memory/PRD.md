@@ -132,13 +132,13 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ---
 
-## Remaining Tasks (Phase 3.1)
+## Remaining Tasks
 
 ### P0 - Critical (Next Steps):
-1. **Frontend SignatureCanvas Component** — Touch/mouse signature capture
-2. **PDF Generation** — HTML → PDF with WeasyPrint or similar
-3. **Document Preview Modal** — Show rendered HTML in UI
-4. **Manual Fields Input** — Contact person, condition mode, notes
+1. ~~**Frontend SignatureCanvas Component**~~ ✅ DONE
+2. ~~**Document Preview Modal**~~ ✅ DONE  
+3. **PDF Generation** — Install WeasyPrint system dependencies or use alternative
+4. **Manual Fields Form** — Pre-generation form for contact person, notes (UI ready, needs connection)
 
 ### P1 - Important:
 5. **Payment-Annex Linking** — `fin_payments.annex_id` column + validation

@@ -1349,6 +1349,16 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
   const [creatingAgreement, setCreatingAgreement] = useState(false);
   const [generatingAnnex, setGeneratingAnnex] = useState(false);
   
+  // === State for Document Preview Modal ===
+  const [previewModal, setPreviewModal] = useState({
+    isOpen: false,
+    docType: null,
+    orderId: null,
+    payerProfileId: null,
+    agreementId: null,
+    annexId: null
+  });
+  
   const PAYER_TYPE_LABELS = {
     individual: "Фізична особа",
     fop_simple: "ФОП (спрощена)",
@@ -1372,6 +1382,22 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
     act: "Акти",
     finance: "Фінансові",
     operations: "Операційні"
+  };
+  
+  // === Open Document Preview ===
+  const openDocumentPreview = (docType) => {
+    setPreviewModal({
+      isOpen: true,
+      docType,
+      orderId: selectedOrderId,
+      payerProfileId: selectedPayerProfile?.id,
+      agreementId: masterAgreements.find(a => a.payer_profile_id === selectedPayerProfile?.id && a.status === "signed")?.id,
+      annexId: orderAnnexes[0]?.id
+    });
+  };
+  
+  const closePreviewModal = () => {
+    setPreviewModal(prev => ({ ...prev, isOpen: false }));
   };
   
   // === Load master agreements ===

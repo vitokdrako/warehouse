@@ -55,7 +55,7 @@ export function SignatureModal({
       const signatureDataUrl = sigCanvasRef.current.toDataURL("image/png");
       
       // Send to backend
-      const token = localStorage.getItem("authToken");
+      const token = localStorage.getItem("token");
       const response = await fetch(`${BACKEND_URL}/api/documents/signatures/sign`, {
         method: "POST",
         headers: {

@@ -1320,22 +1320,12 @@ async def convert_to_order(
         
         logger.info(f"[convert-to-order] Creating order {order_number} (id={new_order_id})")
         
-        # Підготувати notes з усією додатковою інформацією
-        # Включаємо delivery та інші дані, яких немає в окремих полях БД
+        # Підготувати notes - простий формат
         notes_parts = []
         
-        # Джерело замовлення
+        # Джерело та мудборд
         notes_parts.append("[Джерело: Ivent-tool]")
         notes_parts.append(f"Мудборд: {board['name']}")
-        
-        # Доставка
-        if data.delivery_type:
-            delivery_labels = {
-                'self_pickup': 'Самовивіз',
-                'delivery': 'Доставка',
-                'event_delivery': 'Доставка на подію'
-            }
-            notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
         
         # Тип платника
         payer_labels = {

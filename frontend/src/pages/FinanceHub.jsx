@@ -467,10 +467,13 @@ export default function FinanceHub() {
     return orders.find(o => o.order_id === selectedOrderId) || null;
   }, [orders, selectedOrderId]);
   
+  // Use deposit from snapshot if available, fallback to deposits array
   const orderDeposit = useMemo(() => {
     if (!selectedOrderId) return null;
+    // Prefer snapshot data (one less API call)
+    if (orderSnapshot?.deposit) return orderSnapshot.deposit;
     return deposits.find(d => d.order_id === selectedOrderId) || null;
-  }, [deposits, selectedOrderId]);
+  }, [deposits, selectedOrderId, orderSnapshot]);
   
   // Build timeline from payments
   const timeline = useMemo(() => {

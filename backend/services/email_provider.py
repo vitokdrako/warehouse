@@ -462,15 +462,26 @@ def get_email_provider() -> EmailProvider:
     """
     Get configured email provider based on EMAIL_PROVIDER env var.
     Uses singleton pattern for efficiency.
+    
+    Priority:
+    1. If EMAIL_PROVIDER is set explicitly, use that
+    2. If SMTP_HOST is configured, use SMTP
+    3. Fall back to dummy
     """
     global _provider_instance
     
     if _provider_instance is not None:
         return _provider_instance
     
-    provider_name = os.environ.get("EMAIL_PROVIDER", "dummy").lower()
+    provider_name = os.environ.get("EMAIL_PROVIDER", "").lower()
     
-    if provider_name == "resend":
+    # Explicit provider selection
+    if provider_name == "smtp":
+        provider = SMTPEmailProvider()
+        if not provider.is_configured():
+            logger.warning("SMTP not configured, falling back to dummy provider")
+            provider = DummyEmailProvider()
+    elif provider_name == "resend":
         provider = ResendEmailProvider()
         if not provider.is_configured():
             logger.warning("Resend not configured, falling back to dummy provider")
@@ -480,8 +491,16 @@ def get_email_provider() -> EmailProvider:
         if not provider.is_configured():
             logger.warning("SendGrid not configured, falling back to dummy provider")
             provider = DummyEmailProvider()
-    else:
+    elif provider_name == "dummy":
         provider = DummyEmailProvider()
+    else:
+        # Auto-detect: check if SMTP is configured
+        smtp_provider = SMTPEmailProvider()
+        if smtp_provider.is_configured():
+            provider = smtp_provider
+            logger.info("Auto-detected SMTP configuration, using SMTP provider")
+        else:
+            provider = DummyEmailProvider()
     
     _provider_instance = provider
     logger.info(f"Email provider initialized: {provider.name}")

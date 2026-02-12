@@ -1,30 +1,43 @@
 <analysis>**original_problem_statement:**
-The user provided a comprehensive analysis and technical specification for a complete overhaul of the Finance Hub module. The goal is to address architectural issues, improve performance, and build a robust, legally-compliant document management system.
+The user has provided a comprehensive technical specification for a complete overhaul of the Finance Hub module. The goal is to build a robust, legally-compliant document management system. The project is divided into phases, with the current focus being Phase 3 and its sub-phases.
 
-The project is broken down into phases:
--   **Phase 0 (Data Model Foundation):** Introduce a  entity, a  (rent/sale) on orders, and clearly separate  vs.  payment types. (COMPLETED - Backend)
--   **Phase 1 (Performance Optimization):** Create a single  endpoint to aggregate data, optimize the slow  endpoint, and reduce redundant API calls from the frontend. (COMPLETED)
--   **Phase 2 (UI/UX Refactoring):** Rearchitect the  component into a unified, tab-based interface (Operations, Documents, Cash Registers, etc.) and deprecate the old . (COMPLETED)
--   **Phase 3 (Documents Engine):** Implement a full-featured document generation system based on a detailed technical specification provided by the user. This includes:
-    -   Distinguishing between  (estimate) and  (legal document).
-    -   Introducing .
-    -   Implementing a  to control document availability.
-    -   Ensuring document reproducibility via .
-    -   Creating new database tables (, ) and APIs.
+**Phase 3: Documents Engine**
+-   Distinguish between  (estimate) and  (legal document).
+-   Introduce  (annual contracts).
+-   Implement  linked to master agreements and orders.
+-   Enforce a  to control document availability based on order status and other conditions.
+-   Ensure document immutability using a  model, where generated documents are frozen and do not change even if the source order is modified.
+-   Integrate this engine into the  UI.
+
+**Phase 3.2: Production-Ready Features**
+-   Implement a  component for digital signatures.
+-   Create a backend service for PDF generation from HTML templates (using WeasyPrint).
+-   Develop a  to allow users to view documents before signing.
+-   Create a  to capture user input for specific document fields.
+-   Implement  to enforce financial-legal consistency.
+-   Add a  to the UI.
+
+The user also provided full legal text and HTML/CSS templates for all required documents.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application's Finance Hub has been completely refactored according to the user's specifications for Phases 0, 1, and 2.
--   **Backend:** A new, highly-optimized  API endpoint aggregates all financial data for an order into a single call. The slow  endpoint has been optimized, resulting in a ~2.5x speed improvement. The database has been migrated to support a  on orders.
--   **Frontend:** The monolithic  has been rewritten from scratch into a modern, 7-tab component (, , , etc.). It utilizes the new backend optimizations, resulting in a much faster and more responsive user experience. The distinction between Deposit and Advance payments is now clear in the UI.
+The foundational backend for the **Phase 3 Documents Engine** is complete and tested. This includes:
+-   New database tables: , , , and .
+-   API endpoints for creating and managing these entities (, ).
+-   A working  () that correctly determines which documents are available for a given order.
+-   A  mechanism that creates immutable JSON data for legal documents.
+-   A full set of production-grade HTML templates (using Jinja2) for 6 document types (, , , etc.) located in .
+-   A backend rendering endpoint () that generates HTML previews from these templates.
+
+On the frontend, the  within  has been significantly updated with sub-tabs for Documents, Agreements, and Annexes, and successfully displays data from the new backend APIs. New components for  and  have been created.
 
 **Last working item**:
--   **Last item agent was working:** The agent received a very detailed technical specification from the user for **Phase 3: The Documents Engine**. The agent began the initial analysis of this phase by reviewing the existing code in  to understand the current structure before planning the large-scale implementation.
--   **Status:** NOT STARTED
--   **Agent Testing Done:** N/A
--   **Which testing method agent to use?** both
--   **User Testing Done:** N/A
+-   **Last item agent was working:** The agent was integrating the newly created  into the  page. The goal was to make document buttons (like Generate Quote) open this preview modal instead of directly triggering an action. The agent had added the modal and was in the process of modifying the  handlers for the document buttons to trigger the preview.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** frontend testing agent
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
 -   **Issue 1: (P1) Moodboard export is likely broken due to a CORS workaround.**
@@ -47,37 +60,56 @@ The application's Finance Hub has been completely refactored according to the us
     -   **Should Test frontend/backend/both after fix?** Frontend
 
 **In progress Task List**:
--   **Task 1: (P0) Implement Phase 3: Documents Engine**
-    -   **Description:** This is the next major feature. The user has provided a comprehensive technical specification covering database models, API endpoints, a policy engine, and frontend requirements for a robust document management system.
-    -   **Where to resume:** The agent has analyzed the user's spec and the existing  file. The next step is to create a detailed implementation plan, starting with backend database migrations.
-    -   **What will be achieved with this?** A legally correct and scalable document generation system that distinguishes between quotes, contracts, and acts, and enforces business rules automatically.
-    -   **Status:** IN PROGRESS (Analysis complete, implementation pending)
+-   **Task 1: (P0) Implement Phase 3.2: Production Documents Features**
+    -   **Description:** This is the highest priority task, aimed at making the Documents Engine fully production-ready.
+    -   **Where to resume:** Resume in . The agent was modifying the  handler of the document generation buttons (inside the  component) to open the  with the correct document type. The next step is to complete this modification and ensure the modal receives the correct props to render the HTML preview.
+    -   **What will be achieved with this?** A complete, legally compliant document lifecycle: create -> preview -> sign -> generate PDF -> link to payments.
+    -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
+    -   **(P0) Phase 3.2 - Manual Fields Form:** Create a UI form to capture manual data required for documents (e.g., contact person, condition notes) before generation.
+    -   **(P1) Phase 3.2 - Payment ↔ Annex Linking:** Add an  to the  table and enforce validation to ensure rent payments are linked to a legal annex.
+    -   **(P1) Phase 3.2 - Contract Expiration Warning:** Implement UI warnings and backend jobs for expiring master agreements.
+    -   **(P1) Phase 3.2 - Email Workflow:** Integrate email sending for documents (e.g., sending a signed copy to the client).
     -   **(P2) Unify Order Workspaces:** Refactor  and  to reduce code duplication.
+
 -   **Future Tasks:**
-    -   **(P2) Database Refactoring:** A major task to unify the 9+ tables related to item status into a cleaner system ( for current state,  for history).
+    -   **(P2) Database Refactoring:** Unify item status tables into a cleaner  and  system.
     -   **(P2) Implement full Role-Based Access Control (RBAC).**
     -   **(P2) Implement Monthly Financial Report.**
-    -   **(P3) Digital Signature Integration.**
-    -   **(P3) HR/Ops Module:** Create a separate module for managing employee shifts, check-ins, sick leave, etc., as per the user's request to keep it separate from finance.
+    -   **(P3) Digital Signature Integration (Phase 2):** Enhance the existing signature system if required.
+    -   **(P3) HR/Ops Module:** Create a separate module for managing employee shifts, check-ins, sick leave, etc.
 
 **Completed work in this session**
--   **Finance Hub Refactor - Phase 1 (Backend Optimization):**
-    -   Created a new aggregator endpoint  in .
-    -   Created an optimized endpoint  in , achieving a ~2.5x performance increase.
-    -   Added a  column to the  table via a database migration.
+-   **Phase 3: Documents Engine - Backend Foundation (DONE):**
+    -   Created DB tables , , ,  via migration in .
+    -   Implemented API routes for , ,  in their respective files.
+    -   Implemented a working Document Policy Matrix to control document availability.
+    -   Implemented a snapshot data builder for creating immutable document data.
+    -   All backend changes were tested successfully with the testing agent ().
 
--   **Finance Hub Refactor - Phase 2 (Frontend Overhaul):**
-    -   Completely rewrote  to implement a new 7-tab architecture.
-    -   The new UI now uses the optimized  and  endpoints, drastically reducing API calls and improving load times.
-    -   Implemented separate UI actions for Accept Deposit and Accept Advance Payment to clarify the financial flows.
+-   **Phase 3.1: Production Document Templates (DONE):**
+    -   Created 6 production-ready HTML templates (, , etc.) with partials (, ) in .
+    -   Created a backend route  to generate HTML previews from these templates.
+    -   Created a placeholder API route  for handling digital signatures.
+    -   Created a documentation file .
+
+-   **Phase 3.2: Frontend Integration (IN PROGRESS):**
+    -   Rewrote the  in  to include sub-tabs for Agreements and Annexes, fetching and displaying data correctly.
+    -   Installed .
+    -   Created new components:  and .
+    -   Started integrating the preview modal into the  workflow.
 
 **Earlier issues found/mentioned but not fixed**
--   None that aren't already listed in the Pending/In progress Issue list.
+-   **Issue 1: Login API response key mismatch.**
+    -   **Description:** The login API returns , but the frontend might be expecting . This caused some initial UI login issues during testing but was deemed non-blocking for the document engine task.
+    -   **Debug checklist:** Check  or similar auth-handling files to see which key is expected from the login response. Adjust either the frontend or the backend () to be consistent.
+    -   **Why to solve this issue and what will be achieved with this?** To ensure a stable and predictable authentication flow for the entire application.
+    -   **Should Test frontend/backend/both after fix:** Frontend
+    -   **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
 -   **Calendar Timezone Bug:**
@@ -88,51 +120,69 @@ The application's Finance Hub has been completely refactored according to the us
 
 
 **Key Technical Concepts**
--   **Phased Refactoring:** The project is being executed in distinct, user-approved phases (Data Model, Performance, UI, Documents).
--   **API Aggregation (Snapshot Pattern):** A single backend endpoint () now serves as the source of truth for the order finance view, replacing 6+ separate API calls.
--   **Tabbed UI Architecture:** The main Finance Hub UI was refactored from a single view into a multi-tab layout to organize complex functionality.
+-   **Phased Refactoring:** Project execution in distinct, user-approved phases.
+-   **API Aggregation (Snapshot Pattern):** Using a single backend endpoint to serve aggregated data.
+-   **Immutable Document Snapshots:** Storing a  of order data at the time of document generation to ensure legal integrity.
+-   **HTML/CSS Template-based Document Generation:** Using Jinja2 on the backend to render production-ready HTML templates, which will then be converted to PDF.
+-   **Digital Signatures:** Capturing user signatures via a canvas on the frontend and saving them as images.
 
 **key DB schema**
--   ****: MODIFIED: Added  (enum: 'rent', 'sale') and  (nullable int).
--   ****: Existing table, to be central to the new document engine.
--   **Upcoming (Phase 3):** New tables will be created:  and . The  table will be significantly extended.
+-   **** (NEW): 
+-   **** (NEW): 
+-   **** (NEW): 
+-   **** (NEW): 
+-   **** (MODIFIED): Added , , .
 
 **changes in tech stack**
--   None.
+-   **Frontend:** Added .
+-   **Backend:** Will require 
+-----
+
+WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
+https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
+
+----- for PDF generation (planning phase).
 
 **All files of reference**
--    (Completely rewritten)
--    (Heavily modified with new endpoints)
--    (Modified to add new schema changes)
--    (Analyzed for the next phase of work)
--    (Updated with completed work and future plans)
+-   **/app/frontend/src/pages/FinanceHub.jsx**: Main UI component being modified.
+-   **/app/frontend/src/components/DocumentPreviewModal.jsx**: New modal for previewing/signing.
+-   **/app/frontend/src/components/SignatureCanvas.jsx**: New component for capturing signatures.
+-   **/app/backend/routes/document_render.py**: New backend for rendering HTML.
+-   **/app/backend/routes/document_pdf.py**: New backend for generating PDFs.
+-   **/app/backend/routes/document_signatures.py**: New backend for saving signatures.
+-   **/app/backend/templates/documents/**: Directory containing all new HTML templates.
+-   **/app/backend/server.py**: Modified to include new routes.
+-   **/app/backend/routes/migrations.py**: Modified with new table schemas.
 
 **Areas that need refactoring**:
--    is now deprecated and should be removed after the new  is fully stable and vetted.
 -   The large  (2000+ lines) could be broken down into smaller sub-components for each tab in the future.
 
 **key api endpoints**
--   : **(NEW)** Aggregates all financial data for a single order.
--   : **(NEW & OPTIMIZED)** Provides fast cash/bank statistics.
--   **Upcoming (Phase 3):**
-    -   
-    -   
-    -   
+-   : **(NEW)** Renders a document's HTML preview.
+-   : **(NEW)** Generates a PDF for a document.
+-   : **(NEW)** Saves a signature for a document.
+-   : **(NEW)** Lists all master agreements.
+-   : **(NEW)** Creates a new master agreement.
+-   : **(NEW)** Lists annexes for an order.
+-   : **(NEW)** Generates a new annex for an order.
 
 **Critical Info for New Agent**
 -   **You must communicate in Ukrainian.**
--   Phases 0, 1, and 2 of the Finance Hub refactor are **COMPLETE**. Do not modify the core structure of the new Finance Hub unless a bug is reported.
--   Your immediate and highest priority task is to **implement Phase 3: The Documents Engine**. The user has provided an extremely detailed technical specification which you must follow closely. Start by planning the database migrations and new API endpoints.
+-   Your immediate priority is **Phase 3.2**, continuing the work on the frontend.
+-   **Resume work in **. You need to finish wiring the . The goal is for document buttons to open a preview of the HTML document inside this modal.
+-   The user has provided extremely detailed, production-level specifications. Follow them closely. The next steps after the preview modal are PDF generation, signature saving, and handling manual input fields.
 
 **documents and test reports created in this job**
--    (Updated with progress from Phases 1 & 2)
+-    (Updated with Phase 3 & 3.1 completion and Phase 3.2 roadmap)
+-    (Successful backend test report for Phase 3 foundation)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (Fulfilled):** Provided an extremely detailed technical specification for **Phase 3 (Documents Engine)**, covering data models, APIs, policy rules, and acceptance criteria.
-2.  **User (Fulfilled):** Confirmed the successful completion of the Phase 2 UI refactor and initiated the start of Phase 3.
-3.  **User (Fulfilled):** Provided detailed analysis and a full architectural plan for a new, tab-based Finance Hub.
-4.  **User (Fulfilled):** Confirmed the plan to tackle the refactor in phases, starting with Phase 1 (Snapshot API) and the backend work for Phase 0 (Payer Profile).
-5.  **User (Fulfilled):** Outlined key architectural decisions, such as creating a new  table and making UAH the base currency for accounting.
+1.  **User (Fulfilled):** Provided an extremely detailed production specification for Phase 3.2, including file structures, HTML/CSS templates, data contracts, and implementation order for signatures, PDFs, and payment linking.
+2.  **User (Fulfilled):** Confirmed the plan to start Phase 3.2, prioritizing HTML templates, watermarks, and signature canvas.
+3.  **User (Fulfilled):** Provided the full legal text for all document templates.
+4.  **User (Fulfilled):** Provided the complete technical specification for Phase 3 (Documents Engine), covering data models, APIs, policy rules, and UI requirements.
+5.  ... older messages about completing previous phases ...
 
 **Project Health Check:**
 -   **Broken:** Moodboard export functionality is likely non-functional.
@@ -144,15 +194,16 @@ The application's Finance Hub has been completely refactored according to the us
 -   **jspdf, html-to-image:** Used for moodboard export.
 -   **mysql-connector-python:** Backend database driver.
 -   **lucide-react:** Icon library.
+-   **react-signature-canvas:** (NEW) For capturing digital signatures.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES (for backend foundation)
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None
+-   **Test files created:** 
 -   **Known regressions:** Moodboard export is likely broken.
 
 **Credentials to test flow:**
 -   **RentalHub Admin:**  / 
 
 **What agent forgot to execute**
--   The agent successfully followed the user's phased plan and did not miss any requested items. The remaining backlog items were correctly de-prioritized in favor of the major Finance Hub refactor.</analysis>
+The agent was in the middle of implementing the  integration. The  handler for the document buttons in  was being modified but is not yet complete. The immediate next action is to finish that implementation.</analysis>

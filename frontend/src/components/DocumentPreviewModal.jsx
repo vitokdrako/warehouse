@@ -640,6 +640,15 @@ export function DocumentPreviewModal({
             </div>
             
             <div className="flex gap-3">
+              {/* Email Button */}
+              <button
+                onClick={() => setShowEmailModal(true)}
+                data-testid="send-email-btn"
+                className="px-4 py-2 text-sm font-medium bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
+              >
+                📧 Надіслати email
+              </button>
+              
               <button
                 onClick={generatePdf}
                 disabled={loading}
@@ -654,6 +663,93 @@ export function DocumentPreviewModal({
                   className="px-5 py-2 text-sm font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
                 >
                   ✍️ Підписати
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Email Modal */}
+        {showEmailModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60]">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+              <h3 className="text-lg font-semibold mb-4">📧 Надіслати документ</h3>
+              
+              {error && (
+                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-700">
+                  {error}
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Email отримувача <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={emailForm.to}
+                    onChange={(e) => setEmailForm(prev => ({ ...prev, to: e.target.value }))}
+                    placeholder="client@example.com"
+                    data-testid="email-to-input"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Тема листа
+                  </label>
+                  <input
+                    type="text"
+                    value={emailForm.subject}
+                    onChange={(e) => setEmailForm(prev => ({ ...prev, subject: e.target.value }))}
+                    placeholder={`${DOC_TYPE_LABELS[docType]} #${docNumber}`}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Повідомлення
+                  </label>
+                  <textarea
+                    value={emailForm.message}
+                    onChange={(e) => setEmailForm(prev => ({ ...prev, message: e.target.value }))}
+                    rows={3}
+                    placeholder="Документ від FarforRent..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={emailForm.attachPdf}
+                    onChange={(e) => setEmailForm(prev => ({ ...prev, attachPdf: e.target.checked }))}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <span className="text-sm text-slate-700">Додати PDF як вкладення</span>
+                </label>
+              </div>
+              
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowEmailModal(false);
+                    setError(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Скасувати
+                </button>
+                <button
+                  onClick={sendEmail}
+                  disabled={emailSending || !emailForm.to}
+                  data-testid="send-email-submit"
+                  className="px-6 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {emailSending ? "Надсилання..." : "Надіслати"}
                 </button>
               </div>
             </div>

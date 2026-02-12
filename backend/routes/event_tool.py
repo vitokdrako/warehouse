@@ -1402,76 +1402,90 @@ async def convert_to_order(
             "notes": notes_text,
             "board_id": board_id
         })
-        "notes": notes_text
-    })
-    
-    # Створити order_items
-    for item in items:
-        db.execute(text("""
-            INSERT INTO order_items (order_id, product_id, product_name, quantity, price, total_rental, image_url)
-            VALUES (:order_id, :product_id, :name, :quantity, :price, :total, :image_url)
-        """), {
-            "order_id": new_order_id,
-            "product_id": item[0],
-            "name": item[3],
-            "quantity": item[1],
-            "price": float(item[2] or 0),
-            "total": float(item[2] or 0) * item[1] * rental_days,
-            "image_url": item[4]
-        })
-    
-    # Записати в order_internal_notes якщо є коментар клієнта (як в sync з OpenCart)
-    if data.customer_comment:
-        try:
+        
+        # Створити order_items
+        for item in items:
             db.execute(text("""
-                INSERT INTO order_internal_notes 
-                (order_id, user_id, user_name, message, created_at)
-                VALUES (:order_id, NULL, :user_name, :message, NOW())
+                INSERT INTO order_items (order_id, product_id, product_name, quantity, price, total_rental, image_url)
+                VALUES (:order_id, :product_id, :name, :quantity, :price, :total, :image_url)
             """), {
                 "order_id": new_order_id,
-                "user_name": "💬 Коментар клієнта (Ivent-tool)",
-                "message": data.customer_comment
+                "product_id": item[0],
+                "name": item[3],
+                "quantity": item[1],
+                "price": float(item[2] or 0),
+                "total": float(item[2] or 0) * item[1] * rental_days,
+                "image_url": item[4]
+            })
+        
+        # Записати в order_internal_notes якщо є коментар клієнта (як в sync з OpenCart)
+        if data.customer_comment:
+            try:
+                db.execute(text("""
+                    INSERT INTO order_internal_notes 
+                    (order_id, user_id, user_name, message, created_at)
+                    VALUES (:order_id, NULL, :user_name, :message, NOW())
+                """), {
+                    "order_id": new_order_id,
+                    "user_name": "💬 Коментар клієнта (Ivent-tool)",
+                    "message": data.customer_comment
+                })
+            except Exception as e:
+                logger.warning(f"Could not save internal note: {e}")
+        
+        # Записати в order_lifecycle
+        try:
+            db.execute(text("""
+                INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+                VALUES (:order_id, 'created', :notes, :created_by, NOW())
+            """), {
+                "order_id": new_order_id,
+                "notes": f"Замовлення створено з Ivent-tool (мудборд: {board['name']})",
+                "created_by": f"{customer['firstname']} {customer.get('lastname', '')} (декоратор)"
             })
         except Exception as e:
-            logger.warning(f"Could not save internal note: {e}")
-    
-    # Записати в order_lifecycle
-    try:
+            logger.warning(f"Could not save lifecycle: {e}")
+        
+        # Видалити soft reservations
+        db.execute(text("DELETE FROM event_soft_reservations WHERE board_id = :board_id"), {"board_id": board_id})
+        
+        # Оновити board
         db.execute(text("""
-            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-            VALUES (:order_id, 'created', :notes, :created_by, NOW())
-        """), {
+            UPDATE event_boards SET converted_to_order_id = :order_id, status = 'converted', updated_at = NOW()
+            WHERE id = :board_id
+        """), {"order_id": new_order_id, "board_id": board_id})
+        
+        db.commit()
+        
+        logger.info(f"✅ Board {board_id} converted to order {order_number} (Ivent-tool)")
+        
+        return {
             "order_id": new_order_id,
-            "notes": f"Замовлення створено з Ivent-tool (мудборд: {board[2]})",
-            "created_by": f"{customer['firstname']} {customer.get('lastname', '')} (декоратор)"
-        })
+            "order_number": order_number,
+            "total_price": total_price,
+            "deposit_amount": deposit_amount,
+            "rental_days": rental_days,
+            "items_count": len(items),
+            "status": "awaiting_customer",
+            "source": "event_tool",
+            "message": f"Замовлення {order_number} успішно створено!"
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"Could not save lifecycle: {e}")
-    
-    # Видалити soft reservations
-    db.execute(text("DELETE FROM event_soft_reservations WHERE board_id = :board_id"), {"board_id": board_id})
-    
-    # Оновити board
-    db.execute(text("""
-        UPDATE event_boards SET converted_to_order_id = :order_id, status = 'converted', updated_at = NOW()
-        WHERE id = :board_id
-    """), {"order_id": new_order_id, "board_id": board_id})
-    
-    db.commit()
-    
-    logger.info(f"✅ Board {board_id} converted to order {order_number} (Ivent-tool)")
-    
-    return {
-        "order_id": new_order_id,
-        "order_number": order_number,
-        "total_price": total_price,
-        "deposit_amount": deposit_amount,
-        "rental_days": rental_days,
-        "items_count": len(items),
-        "status": "awaiting_customer",
-        "source": "event_tool",
-        "message": f"Замовлення {order_number} успішно створено!"
-    }
+        db.rollback()
+        trace_id = f"ERR-{board_id[:8]}-{datetime.now().strftime('%H%M%S')}"
+        logger.error(f"[convert-to-order] {trace_id}: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "convert_failed",
+                "trace_id": trace_id,
+                "message": "Помилка при створенні замовлення. Зверніться до підтримки.",
+                "details": str(e)
+            }
+        )
 
 # ============================================================================
 # HEALTH CHECK

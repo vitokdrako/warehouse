@@ -302,6 +302,157 @@ class SendGridEmailProvider(EmailProvider):
 
 
 # ============================================================
+# SMTP PROVIDER (Direct SMTP connection)
+# ============================================================
+
+class SMTPEmailProvider(EmailProvider):
+    """
+    Direct SMTP email provider.
+    Uses standard SMTP protocol with SSL/TLS support.
+    
+    Environment Variables:
+        SMTP_HOST=mail.example.com
+        SMTP_PORT=465 (SSL) or 587 (TLS)
+        SMTP_USERNAME=user@example.com
+        SMTP_PASSWORD=password
+        SMTP_USE_SSL=True|False
+        SMTP_FROM_EMAIL=noreply@example.com
+        SMTP_FROM_NAME=Company Name
+    """
+    
+    def __init__(self):
+        self.host = os.environ.get("SMTP_HOST")
+        self.port = int(os.environ.get("SMTP_PORT", 465))
+        self.username = os.environ.get("SMTP_USERNAME")
+        self.password = os.environ.get("SMTP_PASSWORD")
+        self.use_ssl = os.environ.get("SMTP_USE_SSL", "True").lower() == "true"
+        self.from_email = os.environ.get("SMTP_FROM_EMAIL", self.username)
+        self.from_name = os.environ.get("SMTP_FROM_NAME", "FarforDecorRent")
+    
+    @property
+    def name(self) -> str:
+        return "smtp"
+    
+    def is_configured(self) -> bool:
+        return bool(self.host and self.username and self.password)
+    
+    async def send(
+        self,
+        to: str,
+        subject: str,
+        html: str,
+        from_email: Optional[str] = None,
+        attachments: Optional[List[EmailAttachment]] = None,
+        cc: Optional[str] = None,
+        bcc: Optional[str] = None
+    ) -> EmailResult:
+        """Send email via SMTP"""
+        
+        if not self.is_configured():
+            return EmailResult(
+                success=False,
+                provider="smtp",
+                error="SMTP not configured. Set SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD"
+            )
+        
+        try:
+            import smtplib
+            from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
+            from email.mime.base import MIMEBase
+            from email import encoders
+            import base64
+            import uuid
+            
+            # Build email message
+            msg = MIMEMultipart('alternative')
+            
+            # From header with name
+            sender = from_email or self.from_email
+            if self.from_name:
+                msg['From'] = f"{self.from_name} <{sender}>"
+            else:
+                msg['From'] = sender
+            
+            msg['To'] = to
+            msg['Subject'] = subject
+            
+            if cc:
+                msg['Cc'] = cc
+            
+            # Add HTML body
+            msg.attach(MIMEText(html, 'html', 'utf-8'))
+            
+            # Add attachments
+            if attachments:
+                for att in attachments:
+                    try:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(base64.b64decode(att.content))
+                        encoders.encode_base64(part)
+                        part.add_header(
+                            'Content-Disposition',
+                            f'attachment; filename="{att.filename}"'
+                        )
+                        msg.attach(part)
+                    except Exception as att_err:
+                        logger.warning(f"[SMTP] Failed to attach {att.filename}: {att_err}")
+            
+            # Build recipient list
+            recipients = [to]
+            if cc:
+                recipients.append(cc)
+            if bcc:
+                recipients.append(bcc)
+            
+            # Send email (run sync SMTP in thread)
+            def send_smtp():
+                if self.use_ssl:
+                    server = smtplib.SMTP_SSL(self.host, self.port, timeout=30)
+                else:
+                    server = smtplib.SMTP(self.host, self.port, timeout=30)
+                    server.starttls()
+                
+                server.login(self.username, self.password)
+                server.sendmail(sender, recipients, msg.as_string())
+                server.quit()
+                return True
+            
+            await asyncio.to_thread(send_smtp)
+            
+            email_id = f"smtp_{uuid.uuid4().hex[:12]}"
+            logger.info(f"[SMTP] Email sent to {to} via {self.host}, id: {email_id}")
+            
+            return EmailResult(
+                success=True,
+                provider="smtp",
+                email_id=email_id
+            )
+            
+        except smtplib.SMTPAuthenticationError as e:
+            logger.error(f"[SMTP] Authentication failed: {str(e)}")
+            return EmailResult(
+                success=False,
+                provider="smtp",
+                error=f"SMTP authentication failed: {str(e)}"
+            )
+        except smtplib.SMTPException as e:
+            logger.error(f"[SMTP] SMTP error: {str(e)}")
+            return EmailResult(
+                success=False,
+                provider="smtp",
+                error=f"SMTP error: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"[SMTP] Failed to send email: {str(e)}")
+            return EmailResult(
+                success=False,
+                provider="smtp",
+                error=str(e)
+            )
+
+
+# ============================================================
 # PROVIDER FACTORY
 # ============================================================
 

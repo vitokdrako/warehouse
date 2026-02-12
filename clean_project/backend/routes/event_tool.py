@@ -1267,14 +1267,11 @@ async def convert_to_order(
         # Email: завжди з профілю (авторизований користувач)
         email = customer.get("email", "")
         
-        # Назва події: з запиту або з мудборду (board_name)
-        event_name = data.event_name or board["name"]
+        # Назва події: з мудборду (board_name)
+        event_name = board["name"]
         
-        # Тип події: з запиту або з мудборду
-        event_type = data.event_type or board.get("event_type")
-        
-        # Дата події: з запиту або з мудборду
-        event_date = data.event_date or board["event_date"]
+        # Дата події: з мудборду
+        event_date = board["event_date"]
         
         logger.info(f"[convert-to-order] Auto-filled: name={customer_name}, phone={phone}, event={event_name}")
         

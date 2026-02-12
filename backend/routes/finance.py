@@ -2269,8 +2269,8 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
         
         documents = [{
             "id": r[0], "doc_type": r[1], "entity_id": r[2], "version": r[3],
-            "format": r[4], "created_at": r[5].isoformat() if r[5] else None,
-            "created_by_name": r[6]
+            "status": r[4], "created_at": r[5].isoformat() if r[5] else None,
+            "doc_number": r[6]
         } for r in docs_rows]
         
         # === 7. PAYER PROFILE ===

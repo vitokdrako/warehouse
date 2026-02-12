@@ -649,12 +649,24 @@ export function DocumentPreviewModal({
                 📧 Надіслати email
               </button>
               
+              {/* Print / PDF Button */}
               <button
-                onClick={generatePdf}
-                disabled={loading}
+                onClick={() => {
+                  // Open HTML in new window for printing
+                  const printWindow = window.open('', '_blank', 'width=800,height=600');
+                  printWindow.document.write(htmlContent);
+                  printWindow.document.close();
+                  printWindow.focus();
+                  // Auto-trigger print dialog after a short delay
+                  setTimeout(() => {
+                    printWindow.print();
+                  }, 500);
+                }}
+                disabled={!htmlContent}
+                data-testid="print-pdf-btn"
                 className="px-4 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition disabled:opacity-50"
               >
-                📄 Завантажити PDF
+                🖨️ Друк / PDF
               </button>
               
               <div className="relative">

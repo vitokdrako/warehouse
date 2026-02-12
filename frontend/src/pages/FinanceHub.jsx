@@ -394,6 +394,7 @@ export default function FinanceHub() {
       setLoading(false);
     };
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Load order-specific data when selection changes - USE SNAPSHOT API
@@ -407,6 +408,7 @@ export default function FinanceHub() {
   // Load payer profiles on mount
   useEffect(() => {
     loadPayerProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Refresh all data - use optimized endpoints

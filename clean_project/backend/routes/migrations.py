@@ -770,3 +770,380 @@ async def migrate_event_tool_orders():
             status_code=500,
             detail=f"Помилка міграції: {str(e)}"
         )
+
+
+
+@router.post("/client-payer-architecture")
+async def migrate_client_payer_architecture():
+    """
+    ФАЗА 1: Архітектура Client/Payer для Finance Cabinet
+    
+    Створює:
+    - client_users: контакти/клієнти (один email = один клієнт)
+    - payer_profiles: платники (5 типів з реквізитами)
+    - client_payer_links: зв'язка клієнт ↔ платники
+    - Додає client_user_id та payer_profile_id в orders
+    
+    Safe to run multiple times.
+    """
+    try:
+        db = get_rh_db_sync()
+        results = []
+        
+        # === 1. CREATE client_users TABLE ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'client_users'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE client_users (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        email VARCHAR(255) NOT NULL COMMENT 'Original email',
+                        email_normalized VARCHAR(255) NOT NULL COMMENT 'Lowercase trimmed email',
+                        phone VARCHAR(50) NULL,
+                        full_name VARCHAR(255) NULL,
+                        company_hint VARCHAR(255) NULL COMMENT 'Підказка компанії від клієнта',
+                        source VARCHAR(50) DEFAULT 'rentalhub' COMMENT 'rentalhub/events/import/opencart',
+                        notes TEXT NULL COMMENT 'Нотатки менеджера',
+                        preferred_contact VARCHAR(50) NULL COMMENT 'telegram/viber/whatsapp/email/phone',
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        UNIQUE KEY uk_client_email (email_normalized),
+                        INDEX idx_client_phone (phone),
+                        INDEX idx_client_source (source)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                    COMMENT='Клієнти/контакти - один email = один клієнт'
+                """))
+                db.commit()
+                results.append("client_users: TABLE CREATED")
+            else:
+                results.append("client_users: already exists")
+        except Exception as e:
+            results.append(f"client_users: error - {str(e)}")
+            db.rollback()
+        
+        # === 2. CREATE payer_profiles TABLE ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payer_profiles'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE payer_profiles (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        
+                        -- Основні поля
+                        type VARCHAR(50) NOT NULL DEFAULT 'individual' 
+                            COMMENT 'individual/fop/company/foreign/pending',
+                        display_name VARCHAR(255) NOT NULL COMMENT 'Як показувати в UI',
+                        tax_mode VARCHAR(50) NULL COMMENT 'none/simplified/general/vat',
+                        
+                        -- Реквізити (структурований JSON для гнучкості)
+                        details_json JSON NULL COMMENT 'Всі реквізити платника',
+                        
+                        -- Окремі поля для швидкого пошуку/фільтрації
+                        legal_name VARCHAR(255) NULL COMMENT 'Юридична назва',
+                        edrpou VARCHAR(20) NULL COMMENT 'ЄДРПОУ/ІПН',
+                        iban VARCHAR(50) NULL COMMENT 'IBAN рахунок',
+                        
+                        -- Контакти для документів
+                        email_for_docs VARCHAR(255) NULL,
+                        phone_for_docs VARCHAR(50) NULL,
+                        
+                        -- Підписант
+                        signatory_name VARCHAR(255) NULL COMMENT 'ПІБ підписанта',
+                        signatory_basis VARCHAR(255) NULL COMMENT 'На підставі чого діє',
+                        
+                        -- Службові
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_by_user_id INT NULL COMMENT 'Хто створив (менеджер)',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        
+                        INDEX idx_payer_type (type),
+                        INDEX idx_payer_edrpou (edrpou),
+                        INDEX idx_payer_display (display_name)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                    COMMENT='Профілі платників - 5 типів з реквізитами'
+                """))
+                db.commit()
+                results.append("payer_profiles: TABLE CREATED")
+            else:
+                results.append("payer_profiles: already exists")
+        except Exception as e:
+            results.append(f"payer_profiles: error - {str(e)}")
+            db.rollback()
+        
+        # === 3. CREATE client_payer_links TABLE ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'client_payer_links'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE client_payer_links (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        client_user_id INT NOT NULL,
+                        payer_profile_id INT NOT NULL,
+                        is_default BOOLEAN DEFAULT FALSE COMMENT 'Платник за замовчуванням',
+                        label VARCHAR(100) NULL COMMENT 'Мітка: "Для проєкту X"',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        
+                        UNIQUE KEY uk_client_payer (client_user_id, payer_profile_id),
+                        INDEX idx_link_client (client_user_id),
+                        INDEX idx_link_payer (payer_profile_id),
+                        
+                        CONSTRAINT fk_link_client FOREIGN KEY (client_user_id) 
+                            REFERENCES client_users(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_link_payer FOREIGN KEY (payer_profile_id) 
+                            REFERENCES payer_profiles(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                    COMMENT='Зв язок клієнт ↔ платники (один клієнт може мати багато платників)'
+                """))
+                db.commit()
+                results.append("client_payer_links: TABLE CREATED")
+            else:
+                results.append("client_payer_links: already exists")
+        except Exception as e:
+            results.append(f"client_payer_links: error - {str(e)}")
+            db.rollback()
+        
+        # === 4. ADD client_user_id TO orders ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' 
+                AND COLUMN_NAME = 'client_user_id'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN client_user_id INT NULL 
+                    COMMENT 'FK to client_users - контакт/замовник',
+                    ADD INDEX idx_orders_client (client_user_id)
+                """))
+                db.commit()
+                results.append("orders.client_user_id: ADDED")
+            else:
+                results.append("orders.client_user_id: already exists")
+        except Exception as e:
+            results.append(f"orders.client_user_id: error - {str(e)}")
+            db.rollback()
+        
+        # === 5. ADD payer_profile_id TO orders ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' 
+                AND COLUMN_NAME = 'payer_profile_id'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN payer_profile_id INT NULL 
+                    COMMENT 'FK to payer_profiles - платник замовлення',
+                    ADD INDEX idx_orders_payer (payer_profile_id)
+                """))
+                db.commit()
+                results.append("orders.payer_profile_id: ADDED")
+            else:
+                results.append("orders.payer_profile_id: already exists")
+        except Exception as e:
+            results.append(f"orders.payer_profile_id: error - {str(e)}")
+            db.rollback()
+        
+        # === 6. ADD payer_snapshot_json TO orders ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' 
+                AND COLUMN_NAME = 'payer_snapshot_json'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN payer_snapshot_json JSON NULL 
+                    COMMENT 'Зліпок реквізитів платника на момент документів'
+                """))
+                db.commit()
+                results.append("orders.payer_snapshot_json: ADDED")
+            else:
+                results.append("orders.payer_snapshot_json: already exists")
+        except Exception as e:
+            results.append(f"orders.payer_snapshot_json: error - {str(e)}")
+            db.rollback()
+        
+        # === 7. ADD source TO orders (if not exists from previous migration) ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' 
+                AND COLUMN_NAME = 'source'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN source VARCHAR(50) NULL 
+                    COMMENT 'Джерело: rentalhub/event_tool/opencart'
+                """))
+                db.commit()
+                results.append("orders.source: ADDED")
+            else:
+                results.append("orders.source: already exists")
+        except Exception as e:
+            results.append(f"orders.source: error - {str(e)}")
+            db.rollback()
+        
+        # === 8. ADD event_board_id TO orders ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' 
+                AND COLUMN_NAME = 'event_board_id'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN event_board_id VARCHAR(36) NULL 
+                    COMMENT 'UUID мудборду з EventTool'
+                """))
+                db.commit()
+                results.append("orders.event_board_id: ADDED")
+            else:
+                results.append("orders.event_board_id: already exists")
+        except Exception as e:
+            results.append(f"orders.event_board_id: error - {str(e)}")
+            db.rollback()
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "client-payer-architecture",
+            "description": "Архітектура Client/Payer для Finance Cabinet",
+            "tables_created": ["client_users", "payer_profiles", "client_payer_links"],
+            "orders_columns": ["client_user_id", "payer_profile_id", "payer_snapshot_json", "source", "event_board_id"],
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Client/Payer migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )
+
+
+@router.post("/migrate-existing-clients")
+async def migrate_existing_clients_to_client_users():
+    """
+    Міграція існуючих клієнтів з orders в client_users.
+    Об'єднує записи по email (один email = один client_user).
+    
+    Safe to run multiple times - перевіряє чи клієнт вже існує.
+    """
+    try:
+        db = get_rh_db_sync()
+        results = {
+            "created": 0,
+            "skipped": 0,
+            "linked": 0,
+            "errors": []
+        }
+        
+        # Отримати унікальні email з orders
+        emails_query = db.execute(text("""
+            SELECT DISTINCT 
+                LOWER(TRIM(customer_email)) as email_norm,
+                customer_email,
+                customer_name,
+                customer_phone,
+                source
+            FROM orders 
+            WHERE customer_email IS NOT NULL 
+            AND customer_email != ''
+            ORDER BY created_at DESC
+        """))
+        
+        for row in emails_query:
+            email_norm = row[0]
+            email_orig = row[1]
+            name = row[2]
+            phone = row[3]
+            source = row[4] or 'rentalhub'
+            
+            if not email_norm:
+                continue
+            
+            try:
+                # Перевірити чи вже існує
+                existing = db.execute(text("""
+                    SELECT id FROM client_users WHERE email_normalized = :email
+                """), {"email": email_norm}).fetchone()
+                
+                if existing:
+                    client_id = existing[0]
+                    results["skipped"] += 1
+                else:
+                    # Створити нового клієнта
+                    db.execute(text("""
+                        INSERT INTO client_users (email, email_normalized, full_name, phone, source)
+                        VALUES (:email, :email_norm, :name, :phone, :source)
+                    """), {
+                        "email": email_orig,
+                        "email_norm": email_norm,
+                        "name": name,
+                        "phone": phone,
+                        "source": source
+                    })
+                    db.commit()
+                    
+                    # Отримати ID
+                    client_id = db.execute(text("""
+                        SELECT id FROM client_users WHERE email_normalized = :email
+                    """), {"email": email_norm}).fetchone()[0]
+                    
+                    results["created"] += 1
+                
+                # Оновити orders з цим email
+                updated = db.execute(text("""
+                    UPDATE orders 
+                    SET client_user_id = :client_id 
+                    WHERE LOWER(TRIM(customer_email)) = :email 
+                    AND (client_user_id IS NULL OR client_user_id != :client_id)
+                """), {"client_id": client_id, "email": email_norm})
+                db.commit()
+                
+                results["linked"] += updated.rowcount
+                
+            except Exception as e:
+                results["errors"].append(f"{email_norm}: {str(e)}")
+                db.rollback()
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "migrate-existing-clients",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Client migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )

@@ -19,17 +19,27 @@ router = APIRouter(prefix="/api/payer-profiles", tags=["payer-profiles"])
 
 class PayerProfileCreate(BaseModel):
     """Створення/оновлення профілю платника"""
-    payer_type: str  # individual, fop_simple, fop_general, llc_simple, llc_general
-    company_name: Optional[str] = None  # Назва компанії / ФОП ПІБ
-    edrpou: Optional[str] = None  # ЄДРПОУ (для ТОВ) або ДРФО (для ФОП)
-    iban: Optional[str] = None  # Рахунок IBAN
-    bank_name: Optional[str] = None  # Назва банку
-    director_name: Optional[str] = None  # ПІБ директора / ФОП
-    address: Optional[str] = None  # Юридична адреса
-    tax_number: Optional[str] = None  # ІПН (якщо є)
-    is_vat_payer: bool = False  # Платник ПДВ
-    phone: Optional[str] = None
-    email: Optional[str] = None
+    type: str  # individual, fop, company, foreign, pending
+    display_name: str  # Як показувати в UI
+    tax_mode: Optional[str] = "none"  # none/simplified/general/vat
+    
+    # Юридичні дані
+    legal_name: Optional[str] = None  # Юридична назва
+    edrpou: Optional[str] = None  # ЄДРПОУ/ІПН
+    iban: Optional[str] = None  # IBAN рахунок
+    bank_name: Optional[str] = None
+    address: Optional[str] = None
+    
+    # Підписант
+    signatory_name: Optional[str] = None  # ПІБ підписанта
+    signatory_basis: Optional[str] = None  # "Статуту" / "Довіреності"
+    
+    # Контакти для документів
+    email_for_docs: Optional[str] = None
+    phone_for_docs: Optional[str] = None
+    
+    # Інше
+    details_json: Optional[dict] = None  # Додаткові реквізити
     note: Optional[str] = None
 
 class PayerProfileResponse(BaseModel):
@@ -56,39 +66,47 @@ class PayerProfileResponse(BaseModel):
 PAYER_TYPES = {
     "individual": {
         "label": "Фізична особа",
+        "tax_system": "none",
+        "documents": ["quote", "invoice_offer"],
+        "requires_edrpou": False,
+        "vat_applicable": False
+    },
+    "fop": {
+        "label": "ФОП",
+        "tax_system": "varies",  # simplified/general/vat - визначається tax_mode
+        "documents": ["quote", "invoice_offer", "master_agreement", "annex", "service_act"],
+        "requires_edrpou": True,
+        "vat_applicable": True  # Залежить від tax_mode
+    },
+    "company": {
+        "label": "Юридична особа",
+        "tax_system": "varies",
+        "documents": ["quote", "invoice_offer", "master_agreement", "annex", "service_act", "goods_invoice"],
+        "requires_edrpou": True,
+        "vat_applicable": True
+    },
+    "foreign": {
+        "label": "Нерезидент",
+        "tax_system": "foreign",
+        "documents": ["quote", "invoice_offer", "contract_foreign"],
+        "requires_edrpou": False,
+        "vat_applicable": False
+    },
+    "pending": {
+        "label": "Вкажу пізніше",
         "tax_system": None,
-        "documents": ["invoice_offer", "contract_rent"],
-        "item_type": "service",  # послуга чи товар
+        "documents": ["quote"],  # Тільки кошторис
+        "requires_edrpou": False,
         "vat_applicable": False
-    },
-    "fop_simple": {
-        "label": "ФОП (спрощена система)",
-        "tax_system": "simplified",
-        "documents": ["invoice_legal", "service_act"],
-        "item_type": "service",  # Послуга "Прокат декору"
-        "vat_applicable": False
-    },
-    "fop_general": {
-        "label": "ФОП (загальна система)",
-        "tax_system": "general",
-        "documents": ["invoice_legal", "goods_invoice"],
-        "item_type": "goods",  # Товар "Декор"
-        "vat_applicable": True
-    },
-    "llc_simple": {
-        "label": "ТОВ (спрощена система)",
-        "tax_system": "simplified",
-        "documents": ["invoice_legal", "service_act"],
-        "item_type": "service",
-        "vat_applicable": False
-    },
-    "llc_general": {
-        "label": "ТОВ (загальна система)",
-        "tax_system": "general",
-        "documents": ["invoice_legal", "goods_invoice"],
-        "item_type": "goods",
-        "vat_applicable": True
     }
+}
+
+# Tax modes для ФОП та компаній
+TAX_MODES = {
+    "none": {"label": "Без оподаткування", "vat": False},
+    "simplified": {"label": "Спрощена система (1-3 група)", "vat": False},
+    "general": {"label": "Загальна система", "vat": False},
+    "vat": {"label": "Платник ПДВ", "vat": True}
 }
 
 # ============================================================
@@ -141,17 +159,22 @@ def ensure_table_exists(db: Session):
 @router.get("/types")
 async def get_payer_types():
     """Отримати всі типи платників з описом"""
-    return [
-        {
-            "value": key,
-            "label": val["label"],
-            "tax_system": val["tax_system"],
-            "documents": val["documents"],
-            "item_type": val["item_type"],
-            "vat_applicable": val["vat_applicable"]
-        }
-        for key, val in PAYER_TYPES.items()
-    ]
+    return {
+        "types": [
+            {
+                "value": key,
+                "label": val["label"],
+                "requires_edrpou": val["requires_edrpou"],
+                "documents": val["documents"],
+                "vat_applicable": val["vat_applicable"]
+            }
+            for key, val in PAYER_TYPES.items()
+        ],
+        "tax_modes": [
+            {"value": key, "label": val["label"], "vat": val["vat"]}
+            for key, val in TAX_MODES.items()
+        ]
+    }
 
 @router.get("")
 async def list_payer_profiles(

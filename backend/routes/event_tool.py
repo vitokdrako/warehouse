@@ -1328,15 +1328,15 @@ async def convert_to_order(
                 'baby_shower': 'Baby Shower',
                 'graduation': 'Випускний',
                 'anniversary': 'Річниця',
-            'photoshoot': 'Фотосесія',
-            'other': 'Інше'
-        }
-        notes_parts.append(f"Тип події: {event_labels.get(data.event_type, data.event_type)}")
-    
-    if data.guests_count:
-        notes_parts.append(f"Кількість гостей: {data.guests_count}")
-    
-    # Монтаж
+                'photoshoot': 'Фотосесія',
+                'other': 'Інше'
+            }
+            notes_parts.append(f"Тип події: {event_labels.get(data.event_type, data.event_type)}")
+        
+        if data.guests_count:
+            notes_parts.append(f"Кількість гостей: {data.guests_count}")
+        
+        # Монтаж
         if data.setup_required:
             notes_parts.append("Потрібен монтаж: Так")
             if data.setup_notes:

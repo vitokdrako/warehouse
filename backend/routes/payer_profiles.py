@@ -159,17 +159,22 @@ def ensure_table_exists(db: Session):
 @router.get("/types")
 async def get_payer_types():
     """Отримати всі типи платників з описом"""
-    return [
-        {
-            "value": key,
-            "label": val["label"],
-            "tax_system": val["tax_system"],
-            "documents": val["documents"],
-            "item_type": val["item_type"],
-            "vat_applicable": val["vat_applicable"]
-        }
-        for key, val in PAYER_TYPES.items()
-    ]
+    return {
+        "types": [
+            {
+                "value": key,
+                "label": val["label"],
+                "requires_edrpou": val["requires_edrpou"],
+                "documents": val["documents"],
+                "vat_applicable": val["vat_applicable"]
+            }
+            for key, val in PAYER_TYPES.items()
+        ],
+        "tax_modes": [
+            {"value": key, "label": val["label"], "vat": val["vat"]}
+            for key, val in TAX_MODES.items()
+        ]
+    }
 
 @router.get("")
 async def list_payer_profiles(

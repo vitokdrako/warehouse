@@ -158,6 +158,93 @@ async def send_document_email(
     }
 
 
+class SendPreviewEmailRequest(BaseModel):
+    to: str
+    subject: str
+    html_content: str  # The document HTML
+    sent_by_user_id: Optional[int] = None
+    sent_by_user_name: Optional[str] = None
+    doc_type: Optional[str] = None
+    order_id: Optional[int] = None
+
+
+@router.post("/send-preview-email")
+async def send_preview_email(
+    request: SendPreviewEmailRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Send document preview email directly (without saving document to DB).
+    Useful for sending quotes and draft documents.
+    Still logs the send for audit purposes.
+    """
+    from services.email_provider import get_email_provider, EmailResult
+    
+    # Build HTML email wrapper
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+        <p style="color: #475569; margin-bottom: 20px;">
+            Документ від FarforRent. Будь ласка, перегляньте вкладення.
+        </p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+        {request.html_content}
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+        <p style="color: #94a3b8; font-size: 12px;">
+            Цей лист надіслано автоматично системою FarforRent.
+        </p>
+    </div>
+    """
+    
+    # Send email via provider
+    provider = get_email_provider()
+    result: EmailResult = await provider.send(
+        to=request.to,
+        subject=request.subject,
+        html=html_body
+    )
+    
+    # Log the send (without document_id)
+    try:
+        db.execute(text("""
+            INSERT INTO document_emails (
+                document_id, sent_to, subject, message,
+                sent_at, document_version, sent_by_user_id, sent_by_user_name,
+                status, provider, provider_email_id
+            ) VALUES (
+                :doc_id, :to, :subject, :message,
+                NOW(), 1, :user_id, :user_name,
+                :status, :provider, :provider_id
+            )
+        """), {
+            "doc_id": f"preview_{request.doc_type or 'unknown'}_{request.order_id or 0}",
+            "to": request.to,
+            "subject": request.subject,
+            "message": "Preview email",
+            "user_id": request.sent_by_user_id,
+            "user_name": request.sent_by_user_name,
+            "status": "sent" if result.success else "failed",
+            "provider": result.provider,
+            "provider_id": result.email_id
+        })
+        db.commit()
+    except Exception as e:
+        db.rollback()
+    
+    if not result.success:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Email sending failed: {result.error}"
+        )
+    
+    return {
+        "success": True,
+        "sent_to": request.to,
+        "subject": request.subject,
+        "provider": result.provider,
+        "email_id": result.email_id
+    }
+
+
 @router.get("/{document_id}/email-history")
 async def get_email_history(
     document_id: str,

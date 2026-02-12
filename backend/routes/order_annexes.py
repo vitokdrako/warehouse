@@ -220,6 +220,24 @@ async def generate_annex_for_order(
     
     agreement_id = agreement[0]
     contract_number = agreement[1]
+    agreement_status = agreement[2]
+    valid_until = agreement[3]
+    
+    # === P1: CONTRACT EXPIRATION CHECK ===
+    # Block annex creation for expired contracts
+    from datetime import date
+    if valid_until and valid_until < date.today():
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Рамковий договір {contract_number} закінчився {valid_until.strftime('%d.%m.%Y')}. Потрібно продовжити або створити новий договір."
+        )
+    
+    # Warn if contract expires within 30 days
+    warning_message = None
+    if valid_until:
+        days_until_expiry = (valid_until - date.today()).days
+        if days_until_expiry <= 30:
+            warning_message = f"⚠️ Договір {contract_number} закінчується через {days_until_expiry} днів ({valid_until.strftime('%d.%m.%Y')})"
     
     # Get order items for snapshot
     items_result = db.execute(text("""

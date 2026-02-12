@@ -21,23 +21,31 @@ const getAuthHeaders = () => {
 /**
  * Manual Fields Form for document generation
  */
-function ManualFieldsForm({ docType, onSubmit, onCancel, loading }) {
+function ManualFieldsForm({ docType, onSubmit, onCancel, loading, initialValues = {} }) {
   const [fields, setFields] = useState({
-    contact_person: "",
-    contact_channel: "Telegram",
-    contact_value: "",
-    pickup_time: "17:00",
-    condition_mode: "ok",
-    issue_notes: "",
-    return_notes: "",
-    defect_notes: ""
+    // Annex fields
+    contact_person: initialValues.contact_person || "",
+    contact_channel: initialValues.contact_channel || "Telegram",
+    contact_value: initialValues.contact_value || "",
+    pickup_time: initialValues.pickup_time || "17:00",
+    return_time: initialValues.return_time || "10:00",
+    // Return act fields
+    condition_mode: initialValues.condition_mode || "ok",
+    return_notes: initialValues.return_notes || "",
+    defect_act_number: initialValues.defect_act_number || "",
+    // Issue act fields
+    issue_notes: initialValues.issue_notes || "",
+    // Defect act fields
+    defect_notes: initialValues.defect_notes || "",
+    tenant_refused_to_sign: initialValues.tenant_refused_to_sign || false,
+    refusal_witnesses: initialValues.refusal_witnesses || ""
   });
   
-  const channelOptions = ["Telegram", "Viber", "WhatsApp", "Email"];
+  const channelOptions = ["Telegram", "Viber", "WhatsApp", "Email", "Телефон"];
   const conditionOptions = [
     { value: "excellent", label: "Відмінний стан" },
     { value: "ok", label: "Справний / без зауважень" },
-    { value: "damaged", label: "Є пошкодження (дефектний акт)" }
+    { value: "damaged", label: "Є пошкодження (див. дефектний акт)" }
   ];
   
   const handleChange = (key, value) => {
@@ -49,18 +57,22 @@ function ManualFieldsForm({ docType, onSubmit, onCancel, loading }) {
     onSubmit(fields);
   };
   
-  // Different fields for different document types
-  const showContactFields = ["annex_to_contract", "issue_act"].includes(docType);
-  const showConditionField = docType === "return_act";
-  const showDefectNotes = docType === "defect_act";
-  const showIssueNotes = docType === "issue_act";
-  const showReturnNotes = docType === "return_act";
+  // Document type field visibility
+  const isAnnex = docType === "annex_to_contract";
+  const isReturnAct = docType === "return_act";
+  const isDefectAct = docType === "defect_act";
+  const isIssueAct = docType === "issue_act";
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Contact Fields (for Annex) */}
-      {showContactFields && (
+      {/* === ANNEX TO CONTRACT FIELDS === */}
+      {isAnnex && (
         <>
+          <div className="p-3 bg-blue-50 rounded-lg mb-4">
+            <div className="text-sm font-medium text-blue-800">Додаток до договору</div>
+            <div className="text-xs text-blue-600">Юридично важливі поля для додатку</div>
+          </div>
+          
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Контактна особа
@@ -91,7 +103,7 @@ function ManualFieldsForm({ docType, onSubmit, onCancel, loading }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Номер / Email
+                Номер / Username
               </label>
               <input
                 type="text"
@@ -103,9 +115,166 @@ function ManualFieldsForm({ docType, onSubmit, onCancel, loading }) {
             </div>
           </div>
           
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Час отримання <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="time"
+                value={fields.pickup_time}
+                onChange={(e) => handleChange("pickup_time", e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Час повернення <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="time"
+                value={fields.return_time}
+                onChange={(e) => handleChange("return_time", e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        </>
+      )}
+      
+      {/* === RETURN ACT FIELDS === */}
+      {isReturnAct && (
+        <>
+          <div className="p-3 bg-emerald-50 rounded-lg mb-4">
+            <div className="text-sm font-medium text-emerald-800">Акт повернення</div>
+            <div className="text-xs text-emerald-600">Зафіксуйте стан товару при поверненні</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Стан товару при поверненні <span className="text-rose-500">*</span>
+            </label>
+            <div className="space-y-2">
+              {conditionOptions.map(opt => (
+                <label key={opt.value} className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-slate-50">
+                  <input
+                    type="radio"
+                    name="condition_mode"
+                    value={opt.value}
+                    checked={fields.condition_mode === opt.value}
+                    onChange={(e) => handleChange("condition_mode", e.target.value)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-sm">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          
+          {fields.condition_mode === "damaged" && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Номер дефектного акту
+              </label>
+              <input
+                type="text"
+                value={fields.defect_act_number}
+                onChange={(e) => handleChange("defect_act_number", e.target.value)}
+                placeholder="DEF-2026XXXX-XXXX"
+                className="w-full px-3 py-2 border border-amber-300 bg-amber-50 rounded-lg focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+          )}
+          
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Час отримання
+              Примітки при поверненні
+            </label>
+            <textarea
+              value={fields.return_notes}
+              onChange={(e) => handleChange("return_notes", e.target.value)}
+              rows={3}
+              placeholder="Зауваження, коментарі щодо стану..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </>
+      )}
+      
+      {/* === DEFECT ACT FIELDS === */}
+      {isDefectAct && (
+        <>
+          <div className="p-3 bg-rose-50 rounded-lg mb-4">
+            <div className="text-sm font-medium text-rose-800">Дефектний акт</div>
+            <div className="text-xs text-rose-600">Фіксація пошкоджень для юридичних цілей</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Загальні примітки щодо пошкоджень
+            </label>
+            <textarea
+              value={fields.defect_notes}
+              onChange={(e) => handleChange("defect_notes", e.target.value)}
+              rows={3}
+              placeholder="Опис обставин, загальний стан товару..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div className="p-3 border-2 border-dashed border-amber-300 rounded-lg bg-amber-50">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={fields.tenant_refused_to_sign}
+                onChange={(e) => handleChange("tenant_refused_to_sign", e.target.checked)}
+                className="w-5 h-5 text-amber-600 rounded mt-0.5"
+              />
+              <div>
+                <span className="text-sm font-medium text-amber-800">
+                  Орендар відмовився підписувати акт
+                </span>
+                <p className="text-xs text-amber-600 mt-1">
+                  Позначте, якщо орендар відмовляється визнавати пошкодження
+                </p>
+              </div>
+            </label>
+          </div>
+          
+          {fields.tenant_refused_to_sign && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Свідки відмови <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={fields.refusal_witnesses}
+                onChange={(e) => handleChange("refusal_witnesses", e.target.value)}
+                placeholder="ПІБ свідків (через кому)"
+                required={fields.tenant_refused_to_sign}
+                className="w-full px-3 py-2 border border-rose-300 bg-rose-50 rounded-lg focus:ring-2 focus:ring-rose-500"
+              />
+              <p className="text-xs text-rose-600 mt-1">
+                При відмові підписувати обов'язкові свідки
+              </p>
+            </div>
+          )}
+        </>
+      )}
+      
+      {/* === ISSUE ACT FIELDS === */}
+      {isIssueAct && (
+        <>
+          <div className="p-3 bg-violet-50 rounded-lg mb-4">
+            <div className="text-sm font-medium text-violet-800">Акт передачі</div>
+            <div className="text-xs text-violet-600">Зафіксуйте стан при видачі</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Час видачі
             </label>
             <input
               type="time"
@@ -114,77 +283,20 @@ function ManualFieldsForm({ docType, onSubmit, onCancel, loading }) {
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
-        </>
-      )}
-      
-      {/* Condition Mode (for Return Act) */}
-      {showConditionField && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Стан повернення
-          </label>
-          <div className="space-y-2">
-            {conditionOptions.map(opt => (
-              <label key={opt.value} className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="condition_mode"
-                  value={opt.value}
-                  checked={fields.condition_mode === opt.value}
-                  onChange={(e) => handleChange("condition_mode", e.target.value)}
-                  className="w-4 h-4 text-blue-600"
-                />
-                <span className="text-sm">{opt.label}</span>
-              </label>
-            ))}
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Примітки при видачі
+            </label>
+            <textarea
+              value={fields.issue_notes}
+              onChange={(e) => handleChange("issue_notes", e.target.value)}
+              rows={3}
+              placeholder="Особливості стану, комплектація, зауваження..."
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
           </div>
-        </div>
-      )}
-      
-      {/* Notes Fields */}
-      {showIssueNotes && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Примітки при видачі
-          </label>
-          <textarea
-            value={fields.issue_notes}
-            onChange={(e) => handleChange("issue_notes", e.target.value)}
-            rows={3}
-            placeholder="Особливості стану, дефекти при видачі..."
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      )}
-      
-      {showReturnNotes && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Примітки при поверненні
-          </label>
-          <textarea
-            value={fields.return_notes}
-            onChange={(e) => handleChange("return_notes", e.target.value)}
-            rows={3}
-            placeholder="Зауваження при поверненні..."
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      )}
-      
-      {showDefectNotes && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Примітки до дефектного акту
-          </label>
-          <textarea
-            value={fields.defect_notes}
-            onChange={(e) => handleChange("defect_notes", e.target.value)}
-            rows={3}
-            placeholder="Загальні примітки щодо пошкоджень..."
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        </>
       )}
       
       {/* Submit */}

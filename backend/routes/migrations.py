@@ -575,7 +575,7 @@ async def migrate_documents_engine_v3():
         )
 
 
-@router.post("/migrations/payment-annex-linking")
+@router.post("/payment-annex-linking")
 async def migrate_payment_annex_linking():
     """
     Phase 3.2: Add annex_id to fin_payments for legal linking

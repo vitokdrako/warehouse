@@ -222,22 +222,20 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 5. ~~**Print/PDF Button**~~ ✅ DONE
 6. ~~**Expiration UI Banners**~~ ✅ DONE
 7. **Real Email Integration** — Set RESEND_API_KEY in .env
-4. ~~**Payment-Annex Linking**~~ ✅ DONE
-5. ~~**Contract Expiration Warning**~~ ✅ DONE
-6. ~~**Email Workflow**~~ ✅ DONE (MOCKED)
-7. **PDF Generation** — Install WeasyPrint system dependencies or use alternative
-8. **Real Email Integration** — Connect to SendGrid/Resend for actual sending
+7. **Real Email Integration** — Set RESEND_API_KEY in .env
 
 ### P2 - Nice to Have:
+- **Playwright PDF Service** — Server-side PDF generation
 - **Document Version Viewer** — History of versions
-- **PDF Watermark** — Draft/Signed overlay on generated PDF
-- **Expiration UI Banner** — Visual warning in Agreements tab
 
 ---
 
 ## Known Issues
 
-### P1 - Moodboard Export
+### P1 - Finance Tab Loading
+**Status:** IN PROGRESS — API returns 200 OK but frontend doesn't render orders (pre-existing)
+
+### P2 - Moodboard Export
 **Status:** BLOCKED — awaiting backend CORS fix deployment
 
 ### P2 - Calendar Timezone Bug

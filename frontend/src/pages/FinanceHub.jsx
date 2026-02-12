@@ -1338,19 +1338,14 @@ function DepositAdvanceButton({ type, orderDeposit, expectedAmount, handlePaymen
 // TAB: DOCUMENTS
 // ============================================================
 function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrder, documents, generateDocument, selectedPayerProfile, setSelectedPayerProfile, payerProfiles }) {
-  const DOC_TYPES = {
-    individual: [
-      { type: "invoice_offer", label: "Рахунок-оферта" },
-      { type: "contract_rent", label: "Договір оренди" },
-      { type: "deposit_settlement_act", label: "Акт взаєморозрахунків" },
-      { type: "deposit_refund_act", label: "Акт повернення застави" },
-    ],
-    legal: [
-      { type: "invoice_legal", label: "Рахунок (юр. особа)" },
-      { type: "service_act", label: "Акт виконаних робіт" },
-      { type: "goods_invoice", label: "Видаткова накладна" },
-    ]
-  };
+  // === State for Phase 3 Documents Engine ===
+  const [activeSubTab, setActiveSubTab] = useState("documents"); // documents | agreements | annexes
+  const [masterAgreements, setMasterAgreements] = useState([]);
+  const [orderAnnexes, setOrderAnnexes] = useState([]);
+  const [availableDocs, setAvailableDocs] = useState([]);
+  const [loadingPolicy, setLoadingPolicy] = useState(false);
+  const [creatingAgreement, setCreatingAgreement] = useState(false);
+  const [generatingAnnex, setGeneratingAnnex] = useState(false);
   
   const PAYER_TYPE_LABELS = {
     individual: "Фізична особа",
@@ -1360,60 +1355,359 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
     llc_general: "ТОВ (загальна)"
   };
   
+  const STATUS_LABELS = {
+    draft: { label: "Чернетка", color: "bg-slate-100 text-slate-600" },
+    sent: { label: "Відправлено", color: "bg-blue-100 text-blue-700" },
+    signed: { label: "Підписано", color: "bg-emerald-100 text-emerald-700" },
+    expired: { label: "Закінчився", color: "bg-rose-100 text-rose-700" },
+    generated: { label: "Згенеровано", color: "bg-blue-100 text-blue-700" },
+  };
+  
+  const CATEGORY_LABELS = {
+    quote: "Кошториси",
+    contract: "Договори",
+    annex: "Додатки",
+    act: "Акти",
+    finance: "Фінансові",
+    operations: "Операційні"
+  };
+  
+  // === Load master agreements ===
+  useEffect(() => {
+    const loadAgreements = async () => {
+      try {
+        const res = await authFetch(`${BACKEND_URL}/api/agreements`);
+        const data = await res.json();
+        setMasterAgreements(data.agreements || []);
+      } catch (e) {
+        console.error("Failed to load agreements:", e);
+      }
+    };
+    loadAgreements();
+  }, []);
+  
+  // === Load annexes for selected order ===
+  useEffect(() => {
+    if (!selectedOrderId) {
+      setOrderAnnexes([]);
+      return;
+    }
+    const loadAnnexes = async () => {
+      try {
+        const res = await authFetch(`${BACKEND_URL}/api/annexes?order_id=${selectedOrderId}`);
+        const data = await res.json();
+        setOrderAnnexes(data.annexes || []);
+      } catch (e) {
+        console.error("Failed to load annexes:", e);
+      }
+    };
+    loadAnnexes();
+  }, [selectedOrderId]);
+  
+  // === Load available documents based on policy ===
+  useEffect(() => {
+    if (!selectedOrderId) {
+      setAvailableDocs([]);
+      return;
+    }
+    const loadPolicy = async () => {
+      setLoadingPolicy(true);
+      try {
+        const res = await authFetch(`${BACKEND_URL}/api/documents/policy/available?order_id=${selectedOrderId}`);
+        const data = await res.json();
+        setAvailableDocs(data.documents || []);
+      } catch (e) {
+        console.error("Failed to load policy:", e);
+      } finally {
+        setLoadingPolicy(false);
+      }
+    };
+    loadPolicy();
+  }, [selectedOrderId, selectedPayerProfile]);
+  
+  // === Create Master Agreement ===
+  const createMasterAgreement = async () => {
+    if (!selectedPayerProfile) {
+      alert("Виберіть профіль платника");
+      return;
+    }
+    setCreatingAgreement(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/agreements/create`, {
+        method: "POST",
+        body: JSON.stringify({
+          payer_profile_id: selectedPayerProfile.id,
+          template_version: "v1",
+          valid_months: 12
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Договір створено: ${data.contract_number}`);
+        // Reload agreements
+        const res2 = await authFetch(`${BACKEND_URL}/api/agreements`);
+        const data2 = await res2.json();
+        setMasterAgreements(data2.agreements || []);
+      } else {
+        alert(data.detail || "Помилка створення договору");
+      }
+    } catch (e) {
+      alert("Помилка: " + e.message);
+    } finally {
+      setCreatingAgreement(false);
+    }
+  };
+  
+  // === Generate Annex for Order ===
+  const generateAnnex = async () => {
+    if (!selectedOrderId) return;
+    setGeneratingAnnex(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/annexes/generate-for-order/${selectedOrderId}`, {
+        method: "POST"
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Додаток створено: ${data.annex_number}`);
+        // Reload annexes
+        const res2 = await authFetch(`${BACKEND_URL}/api/annexes?order_id=${selectedOrderId}`);
+        const data2 = await res2.json();
+        setOrderAnnexes(data2.annexes || []);
+      } else {
+        alert(data.detail || "Помилка створення додатку");
+      }
+    } catch (e) {
+      alert("Помилка: " + e.message);
+    } finally {
+      setGeneratingAnnex(false);
+    }
+  };
+  
+  // === Sign Agreement ===
+  const signAgreement = async (agreementId) => {
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/agreements/${agreementId}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "signed" })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Reload
+        const res2 = await authFetch(`${BACKEND_URL}/api/agreements`);
+        const data2 = await res2.json();
+        setMasterAgreements(data2.agreements || []);
+      }
+    } catch (e) {
+      alert("Помилка: " + e.message);
+    }
+  };
+  
+  // === Group available docs by category ===
+  const docsByCategory = useMemo(() => {
+    const grouped = {};
+    availableDocs.forEach(doc => {
+      if (!grouped[doc.category]) grouped[doc.category] = [];
+      grouped[doc.category].push(doc);
+    });
+    return grouped;
+  }, [availableDocs]);
+  
+  // === Render sub-tabs ===
+  const subTabs = [
+    { id: "documents", label: "📄 Документи" },
+    { id: "agreements", label: "📋 Договори" },
+    { id: "annexes", label: "📎 Додатки" }
+  ];
+  
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-      {/* Left: Order selection */}
-      <div className="lg:col-span-3">
-        <Card title="📋 Виберіть ордер">
-          <div className="space-y-2 max-h-[500px] overflow-y-auto">
-            {orders.slice(0, 50).map(o => (
-              <button
-                key={o.order_id}
-                onClick={() => setSelectedOrderId(o.order_id)}
-                className={cn(
-                  "w-full rounded-lg border px-3 py-2 text-left transition text-sm",
-                  o.order_id === selectedOrderId 
-                    ? "border-slate-900 bg-slate-50" 
-                    : "border-slate-200 hover:bg-slate-50"
-                )}
-              >
-                <div className="font-medium">#{o.order_number}</div>
-                <div className="text-xs text-slate-500">{o.customer_name}</div>
-              </button>
-            ))}
-          </div>
-        </Card>
+    <div className="space-y-4">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 border-b border-slate-200 pb-2">
+        {subTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveSubTab(tab.id)}
+            className={cn(
+              "px-4 py-2 rounded-lg text-sm font-medium transition",
+              activeSubTab === tab.id 
+                ? "bg-slate-900 text-white" 
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
       
-      {/* Center: Payer profile & Document generation */}
-      <div className="lg:col-span-6 space-y-4">
-        {selectedOrder ? (
-          <>
-            {/* Payer Profile Selection */}
-            <Card title="👤 Тип платника">
-              <div className="space-y-3">
-                <div className="text-sm text-slate-600">
-                  Ордер: <span className="font-semibold">#{selectedOrder.order_number}</span> · {selectedOrder.customer_name}
-                </div>
-                
-                {selectedPayerProfile ? (
-                  <div className="p-3 bg-slate-50 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-semibold">{selectedPayerProfile.company_name || "Фіз. особа"}</div>
-                        <div className="text-xs text-slate-500">{PAYER_TYPE_LABELS[selectedPayerProfile.payer_type]}</div>
-                        {selectedPayerProfile.edrpou && <div className="text-xs text-slate-500">ЄДРПОУ: {selectedPayerProfile.edrpou}</div>}
+      {/* === DOCUMENTS SUB-TAB === */}
+      {activeSubTab === "documents" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left: Order selection */}
+          <div className="lg:col-span-3">
+            <Card title="📋 Виберіть ордер">
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {orders.slice(0, 50).map(o => (
+                  <button
+                    key={o.order_id}
+                    onClick={() => setSelectedOrderId(o.order_id)}
+                    className={cn(
+                      "w-full rounded-lg border px-3 py-2 text-left transition text-sm",
+                      o.order_id === selectedOrderId 
+                        ? "border-slate-900 bg-slate-50" 
+                        : "border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    <div className="font-medium">#{o.order_number}</div>
+                    <div className="text-xs text-slate-500">{o.customer_name}</div>
+                    <div className="text-xs text-slate-400">{o.status}</div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+          
+          {/* Center: Policy-based document generation */}
+          <div className="lg:col-span-6 space-y-4">
+            {selectedOrder ? (
+              <>
+                {/* Order Info */}
+                <Card title={`Ордер #${selectedOrder.order_number}`}>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-slate-500">Клієнт:</span> {selectedOrder.customer_name}
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Статус:</span> <Badge kind="info">{selectedOrder.status}</Badge>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Платник:</span>{" "}
+                      {selectedPayerProfile ? (
+                        <span className="font-medium">{selectedPayerProfile.company_name || "Фіз. особа"}</span>
+                      ) : (
+                        <span className="text-slate-400">Не вибрано</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Payer Profile Selection */}
+                  {!selectedPayerProfile && payerProfiles.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <div className="text-xs font-semibold text-slate-500 mb-2">Виберіть платника:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {payerProfiles.slice(0, 4).map(p => (
+                          <button
+                            key={p.id}
+                            onClick={() => setSelectedPayerProfile(p)}
+                            className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs"
+                          >
+                            {p.company_name} ({PAYER_TYPE_LABELS[p.payer_type]})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedPayerProfile && (
+                    <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div className="text-sm">
+                        <span className="font-medium">{selectedPayerProfile.company_name}</span>
+                        <span className="text-slate-500 ml-2">{PAYER_TYPE_LABELS[selectedPayerProfile.payer_type]}</span>
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => setSelectedPayerProfile(null)}>
                         Змінити
                       </Button>
                     </div>
+                  )}
+                </Card>
+                
+                {/* Available Documents by Category */}
+                {loadingPolicy ? (
+                  <Card><div className="text-center py-4 text-slate-500">Завантаження...</div></Card>
+                ) : (
+                  Object.entries(docsByCategory).map(([category, docs]) => (
+                    <Card key={category} title={CATEGORY_LABELS[category] || category}>
+                      <div className="grid grid-cols-2 gap-2">
+                        {docs.map(doc => (
+                          <button
+                            key={doc.doc_type}
+                            onClick={() => doc.available && generateDocument(doc.doc_type)}
+                            disabled={!doc.available}
+                            className={cn(
+                              "p-3 rounded-lg border text-left text-sm transition",
+                              doc.available 
+                                ? "border-slate-200 hover:bg-slate-50 hover:border-slate-300" 
+                                : "border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{doc.is_legal ? "⚖️" : "📄"}</span>
+                              <span className="font-medium">{doc.name}</span>
+                            </div>
+                            {!doc.available && doc.reason && (
+                              <div className="text-xs text-rose-500 mt-1">{doc.reason}</div>
+                            )}
+                            {doc.warnings && doc.warnings.length > 0 && (
+                              <div className="text-xs text-amber-600 mt-1">{doc.warnings[0]}</div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </Card>
+                  ))
+                )}
+              </>
+            ) : (
+              <Card>
+                <div className="text-center text-slate-500 py-8">Виберіть ордер для генерації документів</div>
+              </Card>
+            )}
+          </div>
+          
+          {/* Right: Recent documents */}
+          <div className="lg:col-span-3">
+            <Card title="📜 Останні документи">
+              {documents.length > 0 ? (
+                <div className="space-y-2">
+                  {documents.map(doc => (
+                    <div key={doc.id} className="p-2 bg-slate-50 rounded-lg text-sm">
+                      <div className="font-medium">{doc.doc_type}</div>
+                      <div className="text-xs text-slate-500">v{doc.version} · {fmtDateShort(doc.created_at)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">Документів поки немає</div>
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
+      
+      {/* === AGREEMENTS SUB-TAB === */}
+      {activeSubTab === "agreements" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left: Create new agreement */}
+          <div className="lg:col-span-4">
+            <Card title="➕ Новий рамковий договір">
+              <div className="space-y-4">
+                <div className="text-sm text-slate-600">
+                  Рамковий договір діє 12 місяців. Всі додатки (Annexes) посилаються на нього.
+                </div>
+                
+                {selectedPayerProfile ? (
+                  <div className="p-3 bg-slate-50 rounded-xl">
+                    <div className="text-sm font-semibold">{selectedPayerProfile.company_name || "Фіз. особа"}</div>
+                    <div className="text-xs text-slate-500">{PAYER_TYPE_LABELS[selectedPayerProfile.payer_type]}</div>
+                    {selectedPayerProfile.edrpou && <div className="text-xs text-slate-500">ЄДРПОУ: {selectedPayerProfile.edrpou}</div>}
+                    <Button variant="ghost" size="sm" className="mt-2" onClick={() => setSelectedPayerProfile(null)}>
+                      Змінити платника
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="text-xs text-slate-500">Виберіть існуючий профіль або залиште як фіз. особа:</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {payerProfiles.slice(0, 6).map(p => (
+                    <div className="text-xs text-slate-500">Виберіть платника:</div>
+                    <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto">
+                      {payerProfiles.map(p => (
                         <button
                           key={p.id}
                           onClick={() => setSelectedPayerProfile(p)}
@@ -1426,72 +1720,167 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
                     </div>
                   </div>
                 )}
-              </div>
-            </Card>
-            
-            {/* Document Generation */}
-            <Card title="📄 Генерація документів">
-              <div className="space-y-4">
-                <div>
-                  <div className="text-xs font-semibold text-slate-600 mb-2">ДОКУМЕНТИ ДЛЯ ФІЗ. ОСОБИ</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {DOC_TYPES.individual.map(doc => (
-                      <Button
-                        key={doc.type}
-                        variant="ghost"
-                        onClick={() => generateDocument(doc.type)}
-                        className="justify-start"
-                      >
-                        📄 {doc.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
                 
-                {selectedPayerProfile && selectedPayerProfile.payer_type !== "individual" && (
-                  <div>
-                    <div className="text-xs font-semibold text-slate-600 mb-2">ДОКУМЕНТИ ДЛЯ ЮР. ОСОБИ</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {DOC_TYPES.legal.map(doc => (
-                        <Button
-                          key={doc.type}
-                          variant="ghost"
-                          onClick={() => generateDocument(doc.type)}
-                          className="justify-start"
-                        >
-                          📄 {doc.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <Button 
+                  onClick={createMasterAgreement} 
+                  disabled={!selectedPayerProfile || creatingAgreement}
+                  className="w-full"
+                >
+                  {creatingAgreement ? "Створення..." : "📋 Створити договір"}
+                </Button>
               </div>
             </Card>
-          </>
-        ) : (
-          <Card>
-            <div className="text-center text-slate-500 py-8">Виберіть ордер для генерації документів</div>
-          </Card>
-        )}
-      </div>
-      
-      {/* Right: Recent documents */}
-      <div className="lg:col-span-3">
-        <Card title="📜 Останні документи">
-          {documents.length > 0 ? (
-            <div className="space-y-2">
-              {documents.map(doc => (
-                <div key={doc.id} className="p-2 bg-slate-50 rounded-lg text-sm">
-                  <div className="font-medium">{doc.doc_type}</div>
-                  <div className="text-xs text-slate-500">v{doc.version} · {fmtDateShort(doc.created_at)}</div>
+          </div>
+          
+          {/* Right: Agreements list */}
+          <div className="lg:col-span-8">
+            <Card title="📋 Рамкові договори">
+              {masterAgreements.length > 0 ? (
+                <div className="space-y-3">
+                  {masterAgreements.map(a => (
+                    <div key={a.id} className="p-4 bg-slate-50 rounded-xl">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-semibold text-lg">{a.contract_number}</div>
+                          <div className="text-sm text-slate-600">{a.payer?.company_name || "—"}</div>
+                          <div className="text-xs text-slate-500">
+                            {PAYER_TYPE_LABELS[a.payer?.payer_type] || "—"}
+                          </div>
+                        </div>
+                        <span className={cn(
+                          "px-2 py-1 rounded-full text-xs font-medium",
+                          STATUS_LABELS[a.status]?.color || "bg-slate-100"
+                        )}>
+                          {STATUS_LABELS[a.status]?.label || a.status}
+                        </span>
+                      </div>
+                      
+                      <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="text-slate-500">Дійсний з:</span>{" "}
+                          {a.valid_from ? fmtDateShort(a.valid_from) : "—"}
+                        </div>
+                        <div>
+                          <span className="text-slate-500">До:</span>{" "}
+                          {a.valid_until ? fmtDateShort(a.valid_until) : "—"}
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Підписано:</span>{" "}
+                          {a.signed_at ? fmtDateShort(a.signed_at) : "—"}
+                        </div>
+                      </div>
+                      
+                      {a.status === "draft" && (
+                        <div className="mt-3 flex gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => signAgreement(a.id)}>
+                            ✅ Позначити підписаним
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-sm text-slate-500">Документів поки немає</div>
-          )}
-        </Card>
-      </div>
+              ) : (
+                <div className="text-center text-slate-500 py-8">
+                  Договорів поки немає. Створіть перший рамковий договір.
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
+      
+      {/* === ANNEXES SUB-TAB === */}
+      {activeSubTab === "annexes" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* Left: Order selection */}
+          <div className="lg:col-span-3">
+            <Card title="📋 Виберіть ордер">
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                {orders.slice(0, 50).map(o => (
+                  <button
+                    key={o.order_id}
+                    onClick={() => setSelectedOrderId(o.order_id)}
+                    className={cn(
+                      "w-full rounded-lg border px-3 py-2 text-left transition text-sm",
+                      o.order_id === selectedOrderId 
+                        ? "border-slate-900 bg-slate-50" 
+                        : "border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    <div className="font-medium">#{o.order_number}</div>
+                    <div className="text-xs text-slate-500">{o.customer_name}</div>
+                    <div className="text-xs text-slate-400">{o.status}</div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+          
+          {/* Center: Generate annex */}
+          <div className="lg:col-span-5">
+            <Card title="📎 Додатки до договору">
+              {selectedOrder ? (
+                <div className="space-y-4">
+                  <div className="text-sm">
+                    Ордер: <span className="font-semibold">#{selectedOrder.order_number}</span> · {selectedOrder.customer_name}
+                  </div>
+                  
+                  <div className="p-4 bg-blue-50 rounded-xl text-sm text-blue-800">
+                    <strong>Додаток (Annex)</strong> — юридичний документ, що описує конкретну оренду. 
+                    Після генерації стає immutable (snapshot даних).
+                  </div>
+                  
+                  <Button 
+                    onClick={generateAnnex} 
+                    disabled={generatingAnnex}
+                    className="w-full"
+                  >
+                    {generatingAnnex ? "Генерація..." : "📎 Згенерувати Додаток"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center text-slate-500 py-8">
+                  Виберіть ордер для створення додатку
+                </div>
+              )}
+            </Card>
+          </div>
+          
+          {/* Right: Annexes list */}
+          <div className="lg:col-span-4">
+            <Card title="📜 Історія додатків">
+              {orderAnnexes.length > 0 ? (
+                <div className="space-y-2">
+                  {orderAnnexes.map(annex => (
+                    <div key={annex.id} className="p-3 bg-slate-50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium">{annex.annex_number}</div>
+                        <span className={cn(
+                          "px-2 py-0.5 rounded-full text-xs",
+                          STATUS_LABELS[annex.status]?.color || "bg-slate-100"
+                        )}>
+                          {STATUS_LABELS[annex.status]?.label || annex.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        v{annex.version} · {fmtDateShort(annex.created_at)}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        Договір: {annex.contract_number || "—"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-slate-500">
+                  {selectedOrderId ? "Додатків для цього ордера немає" : "Виберіть ордер"}
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -241,7 +241,7 @@ def build_document_context(
             # Load damage data
             damage_result = db.execute(text("""
                 SELECT 
-                    pdh.product_name, pdh.defect_description, pdh.fee
+                    pdh.product_name, pdh.damage_type, pdh.note, pdh.fee
                 FROM product_damage_history pdh
                 WHERE pdh.order_id = :order_id
             """), {"order_id": order_id})
@@ -251,10 +251,10 @@ def build_document_context(
             for drow in damage_result:
                 damage_rows.append({
                     "name": drow[0],
-                    "description": drow[1],
-                    "amount": float(drow[2] or 0)
+                    "description": drow[1] + (f" - {drow[2]}" if drow[2] else ""),
+                    "amount": float(drow[3] or 0)
                 })
-                damage_total += float(drow[2] or 0)
+                damage_total += float(drow[3] or 0)
             
             context["damage"] = {
                 "has_damage": len(damage_rows) > 0,

@@ -12,11 +12,24 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 **Email Provider Abstraction - DONE ✅**
 - `/app/backend/services/email_provider.py` with:
   - `EmailProvider` abstract base class
-  - `DummyEmailProvider` (default, logs without sending)
+  - `DummyEmailProvider` (logs without sending)
+  - `SMTPEmailProvider` ✅ **ACTIVE** (uses your SMTP config)
   - `ResendEmailProvider` (requires RESEND_API_KEY)
   - `SendGridEmailProvider` (requires SENDGRID_API_KEY)
-- Environment variables: `EMAIL_PROVIDER`, `RESEND_API_KEY`, `SENDGRID_API_KEY`, `EMAIL_FROM`
-- Factory function `get_email_provider()` with automatic fallback to Dummy
+- Auto-detection: if SMTP_HOST configured → uses SMTP
+- Environment variables from your `.env`:
+  ```
+  SMTP_HOST=mail.adm.tools
+  SMTP_PORT=465
+  SMTP_USERNAME=info@farforrent.com.ua
+  SMTP_USE_SSL=True
+  SMTP_FROM_EMAIL=info@farforrent.com.ua
+  SMTP_FROM_NAME=FarforRent
+  ```
+
+**SMTP Email Verified Working:**
+- Sent test email to vitokdrako@gmail.com ✅
+- Audit log created with provider=smtp, email_id, status=sent
 
 **Print / PDF Button - DONE ✅**
 - "🖨️ Друк / PDF" button in DocumentPreviewModal

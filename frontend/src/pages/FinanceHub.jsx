@@ -1393,9 +1393,11 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
       return;
     }
     const loadAnnexes = async () => {
+      console.log(`[DocumentsTab] Loading annexes for order ${selectedOrderId}...`);
       try {
         const res = await authFetch(`${BACKEND_URL}/api/annexes?order_id=${selectedOrderId}`);
         const data = await res.json();
+        console.log(`[DocumentsTab] Loaded ${data.annexes?.length || 0} annexes`);
         setOrderAnnexes(data.annexes || []);
       } catch (e) {
         console.error("Failed to load annexes:", e);

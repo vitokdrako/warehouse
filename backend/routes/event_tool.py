@@ -1224,12 +1224,11 @@ async def convert_to_order(
         customer = get_current_customer(token, db)
         logger.info(f"[convert-to-order] Customer: {customer.get('customer_id')}, Board: {board_id}")
         
-        # Отримати board з явними іменами колонок
+        # Отримати board - використовуємо правильні імена колонок з таблиці event_boards
         board_result = db.execute(text("""
-            SELECT id, customer_id, name, description, event_date, 
+            SELECT id, customer_id, board_name, notes, event_date, 
                    rental_start_date, rental_end_date, rental_days,
-                   status, created_at, updated_at, share_token,
-                   is_favorite, view_mode, converted_to_order_id
+                   status, created_at, updated_at, converted_to_order_id
             FROM event_boards 
             WHERE id = :id AND customer_id = :customer_id
         """), {"id": board_id, "customer_id": customer["customer_id"]})
@@ -1243,14 +1242,14 @@ async def convert_to_order(
         board = {
             "id": board_row[0],
             "customer_id": board_row[1],
-            "name": board_row[2],
-            "description": board_row[3],
+            "name": board_row[2],  # board_name mapped to name for consistency
+            "description": board_row[3],  # notes mapped to description
             "event_date": board_row[4],
             "rental_start_date": board_row[5],
             "rental_end_date": board_row[6],
             "rental_days": board_row[7],
             "status": board_row[8],
-            "converted_to_order_id": board_row[14]
+            "converted_to_order_id": board_row[11]
         }
         
         if board["converted_to_order_id"]:

@@ -164,6 +164,8 @@ const TabButton = ({ active, onClick, children, icon }) => (
 
 // ===== MAIN COMPONENT =====
 export default function FinanceHub() {
+  console.log("[FinanceHub] Component rendering...");
+  
   // === GLOBAL STATE ===
   const [activeTab, setActiveTab] = useState("operations");
   const [month, setMonth] = useState(() => {

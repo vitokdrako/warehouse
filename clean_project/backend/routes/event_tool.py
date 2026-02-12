@@ -1218,219 +1218,274 @@ async def convert_to_order(
     - #OC-XXXX - замовлення з OpenCart (старий сайт)
     - #ORD-XXXX - замовлення створені вручну в RentalHub
     """
-    customer = get_current_customer(token, db)
+    import traceback
     
-    # Отримати board
-    board_result = db.execute(text("""
-        SELECT * FROM event_boards WHERE id = :id AND customer_id = :customer_id
-    """), {"id": board_id, "customer_id": customer["customer_id"]})
-    board = board_result.fetchone()
-    
-    if not board:
-        raise HTTPException(status_code=404, detail="Board not found")
-    
-    if board[14]:  # converted_to_order_id
-        raise HTTPException(status_code=400, detail="Board already converted")
-    
-    if not board[5] or not board[6]:  # rental dates
-        raise HTTPException(status_code=400, detail="Rental dates required")
-    
-    # Отримати items
-    items_result = db.execute(text("""
-        SELECT ebi.product_id, ebi.quantity, p.rental_price, p.name, p.image_url, p.sku
-        FROM event_board_items ebi
-        JOIN products p ON ebi.product_id = p.product_id
-        WHERE ebi.board_id = :board_id
-    """), {"board_id": board_id})
-    items = items_result.fetchall()
-    
-    if not items:
-        raise HTTPException(status_code=400, detail="Board has no items")
-    
-    # Розрахувати total
-    rental_days = board[7] or 1
-    total_price = sum(float(item[2] or 0) * item[1] * rental_days for item in items)
-    deposit_amount = total_price * 0.3  # 30% депозит
-    
-    # Генерувати order_number з префіксом IT- для Ivent-tool
-    max_id_result = db.execute(text("SELECT MAX(order_id) FROM orders"))
-    max_id = max_id_result.fetchone()[0] or 0
-    new_order_id = max_id + 1
-    order_number = f"IT-{new_order_id}"  # IT = Ivent-Tool
-    
-    # Підготувати notes з усією додатковою інформацією
-    # Включаємо delivery та інші дані, яких немає в окремих полях БД
-    notes_parts = []
-    
-    # Джерело замовлення
-    notes_parts.append("[Джерело: Ivent-tool]")
-    
-    # Доставка
-    if data.delivery_type:
-        delivery_labels = {
-            'self_pickup': 'Самовивіз',
-            'delivery': 'Доставка',
-            'event_delivery': 'Доставка на подію'
+    try:
+        customer = get_current_customer(token, db)
+        logger.info(f"[convert-to-order] Customer: {customer.get('customer_id')}, Board: {board_id}")
+        
+        # Отримати board з явними іменами колонок
+        board_result = db.execute(text("""
+            SELECT id, customer_id, name, description, event_date, 
+                   rental_start_date, rental_end_date, rental_days,
+                   status, created_at, updated_at, share_token,
+                   is_favorite, view_mode, converted_to_order_id
+            FROM event_boards 
+            WHERE id = :id AND customer_id = :customer_id
+        """), {"id": board_id, "customer_id": customer["customer_id"]})
+        board_row = board_result.fetchone()
+        
+        if not board_row:
+            logger.warning(f"[convert-to-order] Board not found: {board_id}")
+            raise HTTPException(status_code=404, detail="Board not found")
+        
+        # Конвертуємо в dict для зручності
+        board = {
+            "id": board_row[0],
+            "customer_id": board_row[1],
+            "name": board_row[2],
+            "description": board_row[3],
+            "event_date": board_row[4],
+            "rental_start_date": board_row[5],
+            "rental_end_date": board_row[6],
+            "rental_days": board_row[7],
+            "status": board_row[8],
+            "converted_to_order_id": board_row[14]
         }
-        notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
+        
+        if board["converted_to_order_id"]:
+            raise HTTPException(status_code=400, detail="Board already converted to order")
+        
+        if not board["rental_start_date"] or not board["rental_end_date"]:
+            raise HTTPException(status_code=400, detail="Rental dates required. Please set rental period first.")
     
-    if data.delivery_address:
-        notes_parts.append(f"Адреса: {data.delivery_address}")
-    elif data.city:
-        notes_parts.append(f"Місто: {data.city}")
-    
-    # Подія
-    if data.event_name:
-        notes_parts.append(f"Назва події: {data.event_name}")
-    
-    if data.event_type:
-        event_labels = {
-            'wedding': 'Весілля',
-            'corporate': 'Корпоратив', 
-            'birthday': 'День народження',
-            'baby_shower': 'Baby Shower',
-            'graduation': 'Випускний',
-            'anniversary': 'Річниця',
-            'photoshoot': 'Фотосесія',
-            'other': 'Інше'
-        }
-        notes_parts.append(f"Тип події: {event_labels.get(data.event_type, data.event_type)}")
-    
-    if data.guests_count:
-        notes_parts.append(f"Кількість гостей: {data.guests_count}")
-    
-    # Монтаж
-    if data.setup_required:
-        notes_parts.append("Потрібен монтаж: Так")
-        if data.setup_notes:
-            notes_parts.append(f"Деталі монтажу: {data.setup_notes}")
-    
-    # Платник
-    if data.payer_type == "company" and data.company_name:
-        notes_parts.append(f"Платник: {data.company_name}")
-        if data.company_edrpou:
-            notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
-    
-    # Коментар клієнта в кінці
-    if data.customer_comment:
-        notes_parts.append(f"---\nКоментар клієнта: {data.customer_comment}")
-    
-    notes_text = "\n".join(notes_parts) if notes_parts else None
-    
-    # Підготувати event_date та event_time
-    event_date = data.event_date or board[4]  # board[4] = event_date з борду
-    event_time = data.event_time
-    
-    # event_location: використовуємо назву події + місце
-    event_location_text = data.event_location
-    if data.event_name and event_location_text:
-        event_location_text = f"{data.event_name} | {event_location_text}"
-    elif data.event_name:
-        event_location_text = data.event_name
-    
-    # Створити order в RentalHub
-    # Використовуємо тільки поля які точно існують в БД
-    db.execute(text("""
-        INSERT INTO orders (
-            order_id, order_number, status, 
-            rental_start_date, rental_end_date, rental_days,
-            event_date, event_time, event_location,
-            total_price, deposit_amount, 
-            customer_name, customer_phone, customer_email,
-            notes, created_at
-        )
-        VALUES (
-            :order_id, :order_number, 'awaiting_customer', 
-            :start_date, :end_date, :rental_days,
-            :event_date, :event_time, :event_location,
-            :total_price, :deposit_amount, 
-            :customer_name, :phone, :email,
-            :notes, NOW()
-        )
-    """), {
-        "order_id": new_order_id,
-        "order_number": order_number,
-        "start_date": board[5],
-        "end_date": board[6],
-        "rental_days": rental_days,
-        "event_date": event_date,
-        "event_time": event_time,
-        "event_location": event_location_text,  # Назва події + місце
-        "total_price": total_price,
-        "deposit_amount": deposit_amount,
-        "customer_name": data.customer_name,
-        "phone": data.phone,
-        "email": customer["email"],
-        "notes": notes_text
-    })
-    
-    # Створити order_items
-    for item in items:
+        # Отримати items
+        items_result = db.execute(text("""
+            SELECT ebi.product_id, ebi.quantity, p.rental_price, p.name, p.image_url, p.sku
+            FROM event_board_items ebi
+            JOIN products p ON ebi.product_id = p.product_id
+            WHERE ebi.board_id = :board_id
+        """), {"board_id": board_id})
+        items = items_result.fetchall()
+        
+        if not items:
+            raise HTTPException(status_code=400, detail="Board has no items")
+        
+        # Розрахувати total
+        rental_days = board["rental_days"] or 1
+        total_price = sum(float(item[2] or 0) * item[1] * rental_days for item in items)
+        deposit_amount = total_price * 0.3  # 30% депозит
+        
+        # Генерувати order_number з префіксом IT- для Ivent-tool
+        # Починаємо з 10000 для IT замовлень
+        max_it_result = db.execute(text("""
+            SELECT MAX(CAST(SUBSTRING(order_number, 4) AS UNSIGNED)) 
+            FROM orders 
+            WHERE order_number LIKE 'IT-%'
+        """))
+        max_it_num = max_it_result.fetchone()[0] or 9999
+        new_it_number = max(max_it_num + 1, 10000)
+        
+        # Отримуємо MAX order_id для нового запису
+        max_id_result = db.execute(text("SELECT MAX(order_id) FROM orders"))
+        max_id = max_id_result.fetchone()[0] or 0
+        new_order_id = max_id + 1
+        
+        order_number = f"IT-{new_it_number}"  # IT = Ivent-Tool
+        
+        logger.info(f"[convert-to-order] Creating order {order_number} (id={new_order_id})")
+        
+        # Підготувати notes з усією додатковою інформацією
+        # Включаємо delivery та інші дані, яких немає в окремих полях БД
+        notes_parts = []
+        
+        # Джерело замовлення
+        notes_parts.append("[Джерело: Ivent-tool]")
+        
+        # Доставка
+        if data.delivery_type:
+            delivery_labels = {
+                'self_pickup': 'Самовивіз',
+                'delivery': 'Доставка',
+                'event_delivery': 'Доставка на подію'
+            }
+            notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
+        
+        if data.delivery_address:
+            notes_parts.append(f"Адреса: {data.delivery_address}")
+        elif data.city:
+            notes_parts.append(f"Місто: {data.city}")
+        
+        # Подія
+        if data.event_name:
+            notes_parts.append(f"Назва події: {data.event_name}")
+        
+        if data.event_type:
+            event_labels = {
+                'wedding': 'Весілля',
+                'corporate': 'Корпоратив', 
+                'birthday': 'День народження',
+                'baby_shower': 'Baby Shower',
+                'graduation': 'Випускний',
+                'anniversary': 'Річниця',
+                'photoshoot': 'Фотосесія',
+                'other': 'Інше'
+            }
+            notes_parts.append(f"Тип події: {event_labels.get(data.event_type, data.event_type)}")
+        
+        if data.guests_count:
+            notes_parts.append(f"Кількість гостей: {data.guests_count}")
+        
+        # Монтаж
+        if data.setup_required:
+            notes_parts.append("Потрібен монтаж: Так")
+            if data.setup_notes:
+                notes_parts.append(f"Деталі монтажу: {data.setup_notes}")
+        
+        # Платник
+        if data.payer_type == "company" and data.company_name:
+            notes_parts.append(f"Платник: {data.company_name}")
+            if data.company_edrpou:
+                notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
+        
+        # Коментар клієнта в кінці
+        if data.customer_comment:
+            notes_parts.append(f"---\nКоментар клієнта: {data.customer_comment}")
+        
+        notes_text = "\n".join(notes_parts) if notes_parts else None
+        
+        # Підготувати event_date та event_time
+        event_date = data.event_date or board["event_date"]
+        event_time = data.event_time
+        
+        # event_location: використовуємо назву події + місце
+        event_location_text = data.event_location
+        if data.event_name and event_location_text:
+            event_location_text = f"{data.event_name} | {event_location_text}"
+        elif data.event_name:
+            event_location_text = data.event_name
+        
+        # Створити order в RentalHub
+        # source = 'event_tool' для позначення джерела
+        # event_board_id = UUID борду для зв'язку
         db.execute(text("""
-            INSERT INTO order_items (order_id, product_id, product_name, quantity, price, total_rental, image_url)
-            VALUES (:order_id, :product_id, :name, :quantity, :price, :total, :image_url)
+            INSERT INTO orders (
+                order_id, order_number, status, 
+                rental_start_date, rental_end_date, rental_days,
+                event_date, event_time, event_location,
+                total_price, deposit_amount, 
+                customer_name, customer_phone, customer_email,
+                notes, source, event_board_id, created_at
+            )
+            VALUES (
+                :order_id, :order_number, 'awaiting_customer', 
+                :start_date, :end_date, :rental_days,
+                :event_date, :event_time, :event_location,
+                :total_price, :deposit_amount, 
+                :customer_name, :phone, :email,
+                :notes, 'event_tool', :board_id, NOW()
+            )
         """), {
             "order_id": new_order_id,
-            "product_id": item[0],
-            "name": item[3],
-            "quantity": item[1],
-            "price": float(item[2] or 0),
-            "total": float(item[2] or 0) * item[1] * rental_days,
-            "image_url": item[4]
+            "order_number": order_number,
+            "start_date": board["rental_start_date"],
+            "end_date": board["rental_end_date"],
+            "rental_days": rental_days,
+            "event_date": event_date,
+            "event_time": event_time,
+            "event_location": event_location_text,
+            "total_price": total_price,
+            "deposit_amount": deposit_amount,
+            "customer_name": data.customer_name,
+            "phone": data.phone,
+            "email": customer["email"],
+            "notes": notes_text,
+            "board_id": board_id
         })
-    
-    # Записати в order_internal_notes якщо є коментар клієнта (як в sync з OpenCart)
-    if data.customer_comment:
-        try:
+        
+        # Створити order_items
+        for item in items:
             db.execute(text("""
-                INSERT INTO order_internal_notes 
-                (order_id, user_id, user_name, message, created_at)
-                VALUES (:order_id, NULL, :user_name, :message, NOW())
+                INSERT INTO order_items (order_id, product_id, product_name, quantity, price, total_rental, image_url)
+                VALUES (:order_id, :product_id, :name, :quantity, :price, :total, :image_url)
             """), {
                 "order_id": new_order_id,
-                "user_name": "💬 Коментар клієнта (Ivent-tool)",
-                "message": data.customer_comment
+                "product_id": item[0],
+                "name": item[3],
+                "quantity": item[1],
+                "price": float(item[2] or 0),
+                "total": float(item[2] or 0) * item[1] * rental_days,
+                "image_url": item[4]
+            })
+        
+        # Записати в order_internal_notes якщо є коментар клієнта (як в sync з OpenCart)
+        if data.customer_comment:
+            try:
+                db.execute(text("""
+                    INSERT INTO order_internal_notes 
+                    (order_id, user_id, user_name, message, created_at)
+                    VALUES (:order_id, NULL, :user_name, :message, NOW())
+                """), {
+                    "order_id": new_order_id,
+                    "user_name": "💬 Коментар клієнта (Ivent-tool)",
+                    "message": data.customer_comment
+                })
+            except Exception as e:
+                logger.warning(f"Could not save internal note: {e}")
+        
+        # Записати в order_lifecycle
+        try:
+            db.execute(text("""
+                INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
+                VALUES (:order_id, 'created', :notes, :created_by, NOW())
+            """), {
+                "order_id": new_order_id,
+                "notes": f"Замовлення створено з Ivent-tool (мудборд: {board['name']})",
+                "created_by": f"{customer['firstname']} {customer.get('lastname', '')} (декоратор)"
             })
         except Exception as e:
-            logger.warning(f"Could not save internal note: {e}")
-    
-    # Записати в order_lifecycle
-    try:
+            logger.warning(f"Could not save lifecycle: {e}")
+        
+        # Видалити soft reservations
+        db.execute(text("DELETE FROM event_soft_reservations WHERE board_id = :board_id"), {"board_id": board_id})
+        
+        # Оновити board
         db.execute(text("""
-            INSERT INTO order_lifecycle (order_id, stage, notes, created_by, created_at)
-            VALUES (:order_id, 'created', :notes, :created_by, NOW())
-        """), {
+            UPDATE event_boards SET converted_to_order_id = :order_id, status = 'converted', updated_at = NOW()
+            WHERE id = :board_id
+        """), {"order_id": new_order_id, "board_id": board_id})
+        
+        db.commit()
+        
+        logger.info(f"✅ Board {board_id} converted to order {order_number} (Ivent-tool)")
+        
+        return {
             "order_id": new_order_id,
-            "notes": f"Замовлення створено з Ivent-tool (мудборд: {board[2]})",
-            "created_by": f"{customer['firstname']} {customer.get('lastname', '')} (декоратор)"
-        })
+            "order_number": order_number,
+            "total_price": total_price,
+            "deposit_amount": deposit_amount,
+            "rental_days": rental_days,
+            "items_count": len(items),
+            "status": "awaiting_customer",
+            "source": "event_tool",
+            "message": f"Замовлення {order_number} успішно створено!"
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"Could not save lifecycle: {e}")
-    
-    # Видалити soft reservations
-    db.execute(text("DELETE FROM event_soft_reservations WHERE board_id = :board_id"), {"board_id": board_id})
-    
-    # Оновити board
-    db.execute(text("""
-        UPDATE event_boards SET converted_to_order_id = :order_id, status = 'converted', updated_at = NOW()
-        WHERE id = :board_id
-    """), {"order_id": new_order_id, "board_id": board_id})
-    
-    db.commit()
-    
-    logger.info(f"✅ Board {board_id} converted to order {order_number} (Ivent-tool)")
-    
-    return {
-        "order_id": new_order_id,
-        "order_number": order_number,
-        "total_price": total_price,
-        "deposit_amount": deposit_amount,
-        "rental_days": rental_days,
-        "items_count": len(items),
-        "status": "awaiting_customer",
-        "source": "event_tool",
-        "message": f"Замовлення {order_number} успішно створено!"
-    }
+        db.rollback()
+        trace_id = f"ERR-{board_id[:8]}-{datetime.now().strftime('%H%M%S')}"
+        logger.error(f"[convert-to-order] {trace_id}: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "convert_failed",
+                "trace_id": trace_id,
+                "message": "Помилка при створенні замовлення. Зверніться до підтримки.",
+                "details": str(e)
+            }
+        )
 
 # ============================================================================
 # HEALTH CHECK

@@ -12,7 +12,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Import route modules AFTER loading env
-from routes import inventory, clients, orders, tasks, damages, finance, test_orders, settings, pdf, users, issue_cards, return_cards, photos, qr_codes, email, catalog, archive, warehouse, extended_catalog, audit, products, auth, image_proxy, price_sync, damage_cases, admin, product_damage_history, product_reservations, inventory_adjustments, sync, product_cleaning, migrations, product_images, event_tool_integration, user_tracking, laundry, documents, analytics, product_sets, expense_management, export, template_admin, order_modifications, order_internal_notes, order_sync, partial_returns, uploads, payer_profiles, dashboard_overview, calendar_events, return_versions, event_tool
+from routes import inventory, clients, orders, tasks, damages, finance, test_orders, settings, pdf, users, issue_cards, return_cards, photos, qr_codes, email, catalog, archive, warehouse, extended_catalog, audit, products, auth, image_proxy, price_sync, damage_cases, admin, product_damage_history, product_reservations, inventory_adjustments, sync, product_cleaning, migrations, product_images, event_tool_integration, user_tracking, laundry, documents, analytics, product_sets, expense_management, export, template_admin, order_modifications, order_internal_notes, order_sync, partial_returns, uploads, payer_profiles, dashboard_overview, calendar_events, return_versions, event_tool, master_agreements, order_annexes, document_policy, document_render, document_signatures, document_pdf, document_manual_fields, document_email
 
 # Create the main app
 app = FastAPI(title="Rental Hub API")
@@ -39,6 +39,7 @@ cors_origins = os.environ.get('CORS_ORIGINS', '')
 # Default allowed origins for FarForRent
 default_origins = [
     "https://rentalhub.farforrent.com.ua",
+    "https://www.rentalhub.farforrent.com.ua",
     "https://events.farforrent.com.ua",
     "https://backrentalhub.farforrent.com.ua",
     "http://localhost:3000",
@@ -56,10 +57,14 @@ else:
     cors_origins_list = default_origins
     allow_cred = True
 
+# Log CORS config for debugging
+print(f"[CORS] Origins: {cors_origins_list}")
+print(f"[CORS] Credentials: {allow_cred}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Дозволяємо всі origins для спрощення
-    allow_credentials=False,  # Не можна з wildcard
+    allow_origins=cors_origins_list,
+    allow_credentials=allow_cred,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
@@ -106,6 +111,9 @@ app.include_router(event_tool_integration.router)
 app.include_router(event_tool.router, prefix="/api")  # Full Event Tool API for decorators
 app.include_router(user_tracking.router)
 app.include_router(laundry.router)
+# Phase 3.2: Manual Fields & Email - MUST be before documents.router to avoid route conflicts
+app.include_router(document_manual_fields.router)
+app.include_router(document_email.router)
 app.include_router(documents.router)
 app.include_router(analytics.router)
 app.include_router(product_sets.router)
@@ -121,6 +129,14 @@ app.include_router(uploads.router)
 app.include_router(payer_profiles.router)
 app.include_router(dashboard_overview.router)
 app.include_router(calendar_events.router)
+# Phase 3: Documents Engine
+app.include_router(master_agreements.router)
+app.include_router(order_annexes.router)
+app.include_router(document_policy.router)
+# Phase 3.1: Document Rendering & Signatures
+app.include_router(document_render.router)
+app.include_router(document_signatures.router)
+app.include_router(document_pdf.router)
 
 # Configure logging
 logging.basicConfig(

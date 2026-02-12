@@ -7,6 +7,45 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 12, 2026
 
+### Phase 3.2+: Full Documents Lifecycle - COMPLETE ✅
+
+**P0: Manual Fields Form - DONE ✅**
+- JSON schema per document type via `GET /api/documents/schema/{doc_type}`
+- ManualFieldsForm component with fields:
+  - `annex_to_contract`: contact_person, contact_channel, pickup_time, return_time
+  - `return_act`: condition_mode (radio), return_notes, defect_act_number
+  - `defect_act`: defect_notes, tenant_refused_to_sign (checkbox), refusal_witnesses
+  - `issue_act`: pickup_time, issue_notes
+- Form renders based on docType in DocumentPreviewModal
+- Templates updated to use manual_fields
+
+**P1: Email Workflow - DONE ✅**
+- "📧 Надіслати email" button in DocumentPreviewModal footer
+- Email modal with to/subject/message/attachPdf fields
+- `POST /api/documents/{id}/send-email` creates audit log
+- `GET /api/documents/{id}/email-history` returns send history
+- Full audit trail: sent_to, sent_by_user_id, sent_at, document_version
+- **NOTE: Email sending is MOCKED** - logs created but no actual SMTP integration
+
+**P1: Payment ↔ Annex Linking - DONE ✅**
+- Added `annex_id` column to `fin_payments` table
+- Validation rule: `IF deal_mode = "rent" AND payment_type = "rent" THEN annex_id REQUIRED`
+- Returns 400 error with Ukrainian message if rent payment without annex_id
+
+**P1: Contract Expiration Warning - DONE ✅**
+- Checks `valid_until` date in master_agreements
+- Blocks annex creation for expired contracts (returns 400)
+- Adds warning to response if contract expires within 30 days
+
+**Bug Fixes Applied:**
+- Fixed route ordering (manual_fields/email routers before documents.router)
+- Added subject/message columns to document_emails table
+- Fixed collation mismatch in recent-emails query
+
+**Test Report:** `/app/test_reports/iteration_5.json` - 16/16 backend tests passed
+
+---
+
 ### Phase 3.2: Production Documents Features - COMPLETE ✅
 
 **DocumentPreviewModal Integration:**

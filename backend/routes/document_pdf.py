@@ -36,13 +36,15 @@ router = APIRouter(prefix="/api/documents", tags=["document-pdf"])
 PDF_STORAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "documents")
 os.makedirs(PDF_STORAGE_DIR, exist_ok=True)
 
-# Try to import WeasyPrint (may fail on some systems)
+# Try to import WeasyPrint (may fail on some systems due to missing system libs)
+WEASYPRINT_AVAILABLE = False
+HTML = None
+CSS = None
 try:
     from weasyprint import HTML, CSS
     WEASYPRINT_AVAILABLE = True
-except ImportError:
-    WEASYPRINT_AVAILABLE = False
-    print("WARNING: WeasyPrint not available. PDF generation will return HTML.")
+except (ImportError, OSError) as e:
+    print(f"WARNING: WeasyPrint not available ({e}). PDF generation will return HTML fallback.")
 
 
 # ============================================================

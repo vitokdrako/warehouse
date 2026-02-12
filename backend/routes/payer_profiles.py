@@ -19,17 +19,27 @@ router = APIRouter(prefix="/api/payer-profiles", tags=["payer-profiles"])
 
 class PayerProfileCreate(BaseModel):
     """Створення/оновлення профілю платника"""
-    payer_type: str  # individual, fop_simple, fop_general, llc_simple, llc_general
-    company_name: Optional[str] = None  # Назва компанії / ФОП ПІБ
-    edrpou: Optional[str] = None  # ЄДРПОУ (для ТОВ) або ДРФО (для ФОП)
-    iban: Optional[str] = None  # Рахунок IBAN
-    bank_name: Optional[str] = None  # Назва банку
-    director_name: Optional[str] = None  # ПІБ директора / ФОП
-    address: Optional[str] = None  # Юридична адреса
-    tax_number: Optional[str] = None  # ІПН (якщо є)
-    is_vat_payer: bool = False  # Платник ПДВ
-    phone: Optional[str] = None
-    email: Optional[str] = None
+    type: str  # individual, fop, company, foreign, pending
+    display_name: str  # Як показувати в UI
+    tax_mode: Optional[str] = "none"  # none/simplified/general/vat
+    
+    # Юридичні дані
+    legal_name: Optional[str] = None  # Юридична назва
+    edrpou: Optional[str] = None  # ЄДРПОУ/ІПН
+    iban: Optional[str] = None  # IBAN рахунок
+    bank_name: Optional[str] = None
+    address: Optional[str] = None
+    
+    # Підписант
+    signatory_name: Optional[str] = None  # ПІБ підписанта
+    signatory_basis: Optional[str] = None  # "Статуту" / "Довіреності"
+    
+    # Контакти для документів
+    email_for_docs: Optional[str] = None
+    phone_for_docs: Optional[str] = None
+    
+    # Інше
+    details_json: Optional[dict] = None  # Додаткові реквізити
     note: Optional[str] = None
 
 class PayerProfileResponse(BaseModel):

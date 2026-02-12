@@ -106,6 +106,9 @@ app.include_router(event_tool_integration.router)
 app.include_router(event_tool.router, prefix="/api")  # Full Event Tool API for decorators
 app.include_router(user_tracking.router)
 app.include_router(laundry.router)
+# Phase 3.2: Manual Fields & Email - MUST be before documents.router to avoid route conflicts
+app.include_router(document_manual_fields.router)
+app.include_router(document_email.router)
 app.include_router(documents.router)
 app.include_router(analytics.router)
 app.include_router(product_sets.router)

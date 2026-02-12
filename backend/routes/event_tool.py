@@ -1258,46 +1258,58 @@ async def convert_to_order(
         
         if not board["rental_start_date"] or not board["rental_end_date"]:
             raise HTTPException(status_code=400, detail="Rental dates required. Please set rental period first.")
-        raise HTTPException(status_code=400, detail="Rental dates required")
     
-    # Отримати items
-    items_result = db.execute(text("""
-        SELECT ebi.product_id, ebi.quantity, p.rental_price, p.name, p.image_url, p.sku
-        FROM event_board_items ebi
-        JOIN products p ON ebi.product_id = p.product_id
-        WHERE ebi.board_id = :board_id
-    """), {"board_id": board_id})
-    items = items_result.fetchall()
-    
-    if not items:
-        raise HTTPException(status_code=400, detail="Board has no items")
-    
-    # Розрахувати total
-    rental_days = board[7] or 1
-    total_price = sum(float(item[2] or 0) * item[1] * rental_days for item in items)
-    deposit_amount = total_price * 0.3  # 30% депозит
-    
-    # Генерувати order_number з префіксом IT- для Ivent-tool
-    max_id_result = db.execute(text("SELECT MAX(order_id) FROM orders"))
-    max_id = max_id_result.fetchone()[0] or 0
-    new_order_id = max_id + 1
-    order_number = f"IT-{new_order_id}"  # IT = Ivent-Tool
-    
-    # Підготувати notes з усією додатковою інформацією
-    # Включаємо delivery та інші дані, яких немає в окремих полях БД
-    notes_parts = []
-    
-    # Джерело замовлення
-    notes_parts.append("[Джерело: Ivent-tool]")
-    
-    # Доставка
-    if data.delivery_type:
-        delivery_labels = {
-            'self_pickup': 'Самовивіз',
-            'delivery': 'Доставка',
-            'event_delivery': 'Доставка на подію'
-        }
-        notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
+        # Отримати items
+        items_result = db.execute(text("""
+            SELECT ebi.product_id, ebi.quantity, p.rental_price, p.name, p.image_url, p.sku
+            FROM event_board_items ebi
+            JOIN products p ON ebi.product_id = p.product_id
+            WHERE ebi.board_id = :board_id
+        """), {"board_id": board_id})
+        items = items_result.fetchall()
+        
+        if not items:
+            raise HTTPException(status_code=400, detail="Board has no items")
+        
+        # Розрахувати total
+        rental_days = board["rental_days"] or 1
+        total_price = sum(float(item[2] or 0) * item[1] * rental_days for item in items)
+        deposit_amount = total_price * 0.3  # 30% депозит
+        
+        # Генерувати order_number з префіксом IT- для Ivent-tool
+        # Починаємо з 10000 для IT замовлень
+        max_it_result = db.execute(text("""
+            SELECT MAX(CAST(SUBSTRING(order_number, 4) AS UNSIGNED)) 
+            FROM orders 
+            WHERE order_number LIKE 'IT-%'
+        """))
+        max_it_num = max_it_result.fetchone()[0] or 9999
+        new_it_number = max(max_it_num + 1, 10000)
+        
+        # Отримуємо MAX order_id для нового запису
+        max_id_result = db.execute(text("SELECT MAX(order_id) FROM orders"))
+        max_id = max_id_result.fetchone()[0] or 0
+        new_order_id = max_id + 1
+        
+        order_number = f"IT-{new_it_number}"  # IT = Ivent-Tool
+        
+        logger.info(f"[convert-to-order] Creating order {order_number} (id={new_order_id})")
+        
+        # Підготувати notes з усією додатковою інформацією
+        # Включаємо delivery та інші дані, яких немає в окремих полях БД
+        notes_parts = []
+        
+        # Джерело замовлення
+        notes_parts.append("[Джерело: Ivent-tool]")
+        
+        # Доставка
+        if data.delivery_type:
+            delivery_labels = {
+                'self_pickup': 'Самовивіз',
+                'delivery': 'Доставка',
+                'event_delivery': 'Доставка на подію'
+            }
+            notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
     
     if data.delivery_address:
         notes_parts.append(f"Адреса: {data.delivery_address}")

@@ -2255,8 +2255,8 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
         
         # === 6. DOCUMENTS (latest versions only) ===
         docs_rows = db.execute(text("""
-            SELECT d.id, d.doc_type, d.entity_id, d.version, d.format, 
-                   d.created_at, d.created_by_name
+            SELECT d.id, d.doc_type, d.entity_id, d.version, d.status, 
+                   d.created_at, d.doc_number
             FROM documents d
             INNER JOIN (
                 SELECT doc_type, MAX(version) as max_version

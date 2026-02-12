@@ -344,6 +344,16 @@ export function DocumentPreviewModal({
   const [showSignModal, setShowSignModal] = useState(false);
   const [signerRole, setSignerRole] = useState("tenant");
   
+  // Email modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailForm, setEmailForm] = useState({
+    to: "",
+    subject: "",
+    message: "",
+    attachPdf: true
+  });
+  const [emailSending, setEmailSending] = useState(false);
+  
   const DOC_TYPE_LABELS = {
     master_agreement: "Рамковий договір",
     annex_to_contract: "Додаток до договору",

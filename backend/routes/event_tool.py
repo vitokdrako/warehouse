@@ -1343,41 +1343,77 @@ async def convert_to_order(
         notes_text = "\n".join(notes_parts) if notes_parts else None
         
         # Створити order в RentalHub
-        # source = 'event_tool' для позначення джерела
-        # event_board_id = UUID борду для зв'язку
-        db.execute(text("""
-            INSERT INTO orders (
-                order_id, order_number, status, 
-                rental_start_date, rental_end_date, rental_days,
-                event_date, event_location,
-                total_price, deposit_amount, 
-                customer_name, customer_phone, customer_email,
-                notes, source, event_board_id, created_at
-            )
-            VALUES (
-                :order_id, :order_number, 'awaiting_customer', 
-                :start_date, :end_date, :rental_days,
-                :event_date, :event_location,
-                :total_price, :deposit_amount, 
-                :customer_name, :phone, :email,
-                :notes, 'event_tool', :board_id, NOW()
-            )
-        """), {
-            "order_id": new_order_id,
-            "order_number": order_number,
-            "start_date": board["rental_start_date"],
-            "end_date": board["rental_end_date"],
-            "rental_days": rental_days,
-            "event_date": event_date,
-            "event_location": event_name,  # Назва події = місце/назва
-            "total_price": total_price,
-            "deposit_amount": deposit_amount,
-            "customer_name": customer_name,
-            "phone": phone,
-            "email": email,
-            "notes": notes_text,
-            "board_id": board_id
-        })
+        # Перевіряємо чи є колонки source та event_board_id
+        try:
+            # Спочатку пробуємо з новими полями
+            db.execute(text("""
+                INSERT INTO orders (
+                    order_id, order_number, status, 
+                    rental_start_date, rental_end_date, rental_days,
+                    event_date, event_location,
+                    total_price, deposit_amount, 
+                    customer_name, customer_phone, customer_email,
+                    notes, source, event_board_id, created_at
+                )
+                VALUES (
+                    :order_id, :order_number, 'awaiting_customer', 
+                    :start_date, :end_date, :rental_days,
+                    :event_date, :event_location,
+                    :total_price, :deposit_amount, 
+                    :customer_name, :phone, :email,
+                    :notes, 'event_tool', :board_id, NOW()
+                )
+            """), {
+                "order_id": new_order_id,
+                "order_number": order_number,
+                "start_date": board["rental_start_date"],
+                "end_date": board["rental_end_date"],
+                "rental_days": rental_days,
+                "event_date": event_date,
+                "event_location": event_name,
+                "total_price": total_price,
+                "deposit_amount": deposit_amount,
+                "customer_name": customer_name,
+                "phone": phone,
+                "email": email,
+                "notes": notes_text,
+                "board_id": board_id
+            })
+        except Exception as insert_err:
+            # Якщо не вдалось - пробуємо без source/event_board_id
+            logger.warning(f"[convert-to-order] Fallback INSERT without source/event_board_id: {insert_err}")
+            db.execute(text("""
+                INSERT INTO orders (
+                    order_id, order_number, status, 
+                    rental_start_date, rental_end_date, rental_days,
+                    event_date, event_location,
+                    total_price, deposit_amount, 
+                    customer_name, customer_phone, customer_email,
+                    notes, created_at
+                )
+                VALUES (
+                    :order_id, :order_number, 'awaiting_customer', 
+                    :start_date, :end_date, :rental_days,
+                    :event_date, :event_location,
+                    :total_price, :deposit_amount, 
+                    :customer_name, :phone, :email,
+                    :notes, NOW()
+                )
+            """), {
+                "order_id": new_order_id,
+                "order_number": order_number,
+                "start_date": board["rental_start_date"],
+                "end_date": board["rental_end_date"],
+                "rental_days": rental_days,
+                "event_date": event_date,
+                "event_location": event_name,
+                "total_price": total_price,
+                "deposit_amount": deposit_amount,
+                "customer_name": customer_name,
+                "phone": phone,
+                "email": email,
+                "notes": notes_text
+            })
         
         # Створити order_items
         for item in items:

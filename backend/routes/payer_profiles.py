@@ -56,39 +56,47 @@ class PayerProfileResponse(BaseModel):
 PAYER_TYPES = {
     "individual": {
         "label": "Фізична особа",
+        "tax_system": "none",
+        "documents": ["quote", "invoice_offer"],
+        "requires_edrpou": False,
+        "vat_applicable": False
+    },
+    "fop": {
+        "label": "ФОП",
+        "tax_system": "varies",  # simplified/general/vat - визначається tax_mode
+        "documents": ["quote", "invoice_offer", "master_agreement", "annex", "service_act"],
+        "requires_edrpou": True,
+        "vat_applicable": True  # Залежить від tax_mode
+    },
+    "company": {
+        "label": "Юридична особа",
+        "tax_system": "varies",
+        "documents": ["quote", "invoice_offer", "master_agreement", "annex", "service_act", "goods_invoice"],
+        "requires_edrpou": True,
+        "vat_applicable": True
+    },
+    "foreign": {
+        "label": "Нерезидент",
+        "tax_system": "foreign",
+        "documents": ["quote", "invoice_offer", "contract_foreign"],
+        "requires_edrpou": False,
+        "vat_applicable": False
+    },
+    "pending": {
+        "label": "Вкажу пізніше",
         "tax_system": None,
-        "documents": ["invoice_offer", "contract_rent"],
-        "item_type": "service",  # послуга чи товар
+        "documents": ["quote"],  # Тільки кошторис
+        "requires_edrpou": False,
         "vat_applicable": False
-    },
-    "fop_simple": {
-        "label": "ФОП (спрощена система)",
-        "tax_system": "simplified",
-        "documents": ["invoice_legal", "service_act"],
-        "item_type": "service",  # Послуга "Прокат декору"
-        "vat_applicable": False
-    },
-    "fop_general": {
-        "label": "ФОП (загальна система)",
-        "tax_system": "general",
-        "documents": ["invoice_legal", "goods_invoice"],
-        "item_type": "goods",  # Товар "Декор"
-        "vat_applicable": True
-    },
-    "llc_simple": {
-        "label": "ТОВ (спрощена система)",
-        "tax_system": "simplified",
-        "documents": ["invoice_legal", "service_act"],
-        "item_type": "service",
-        "vat_applicable": False
-    },
-    "llc_general": {
-        "label": "ТОВ (загальна система)",
-        "tax_system": "general",
-        "documents": ["invoice_legal", "goods_invoice"],
-        "item_type": "goods",
-        "vat_applicable": True
     }
+}
+
+# Tax modes для ФОП та компаній
+TAX_MODES = {
+    "none": {"label": "Без оподаткування", "vat": False},
+    "simplified": {"label": "Спрощена система (1-3 група)", "vat": False},
+    "general": {"label": "Загальна система", "vat": False},
+    "vat": {"label": "Платник ПДВ", "vat": True}
 }
 
 # ============================================================

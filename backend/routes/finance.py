@@ -421,6 +421,38 @@ async def create_payment(data: PaymentCreate):
     from datetime import datetime
     import os
     
+    # === P1: ANNEX VALIDATION ===
+    # IF deal_mode = "rent" AND payment_type = "rent" THEN annex_id REQUIRED
+    if data.payment_type == "rent" and data.order_id:
+        # Check if order is rent mode
+        conn_check = pymysql.connect(
+            host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
+            port=int(os.environ.get('RH_DB_PORT', 3306)),
+            user=os.environ.get('RH_DB_USERNAME', 'farforre_rentalhub'),
+            password=os.environ.get('RH_DB_PASSWORD', '-nu+3Gp54L'),
+            database=os.environ.get('RH_DB_DATABASE', 'farforre_rentalhub'),
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        try:
+            cursor_check = conn_check.cursor()
+            cursor_check.execute("""
+                SELECT deal_mode, active_annex_id FROM orders WHERE order_id = %s
+            """, (data.order_id,))
+            order_row = cursor_check.fetchone()
+            
+            if order_row and order_row.get('deal_mode') == 'rent':
+                # Use provided annex_id or fall back to active_annex_id
+                if not data.annex_id and order_row.get('active_annex_id'):
+                    data.annex_id = order_row['active_annex_id']
+                elif not data.annex_id:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail="Для оренди (rent payment) потрібен annex_id. Спочатку створіть додаток до договору."
+                    )
+        finally:
+            conn_check.close()
+    
     # Direct MySQL connection
     conn = pymysql.connect(
         host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),

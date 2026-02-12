@@ -30,7 +30,7 @@ DOCUMENT_POLICY = {
         "requires_master_agreement": False,
         "requires_annex": False,
         "payer_types": ["individual", "fop_simple", "fop_general", "llc_simple", "llc_general"],
-        "order_statuses": ["draft", "negotiation", "pending_confirmation", "confirmed", "ready"],
+        "order_statuses": ["draft", "negotiation", "pending_confirmation", "confirmed", "ready", "processing", "ready_for_issue"],
         "deal_modes": ["rent", "sale"],
         "conditions": [],
         "description": "Попередня оцінка вартості оренди"
@@ -43,7 +43,7 @@ DOCUMENT_POLICY = {
         "requires_master_agreement": False,
         "requires_annex": False,
         "payer_types": ["individual"],
-        "order_statuses": ["draft", "negotiation", "pending_confirmation", "confirmed"],
+        "order_statuses": ["draft", "negotiation", "pending_confirmation", "confirmed", "processing", "ready_for_issue"],
         "deal_modes": ["rent", "sale"],
         "conditions": [],
         "description": "Рахунок на передоплату для фіз. осіб"
@@ -73,7 +73,7 @@ DOCUMENT_POLICY = {
         "requires_master_agreement": False,  # Legacy - для індивідуальних
         "requires_annex": False,
         "payer_types": ["individual"],
-        "order_statuses": ["confirmed", "ready", "issued"],
+        "order_statuses": ["confirmed", "ready", "issued", "processing", "ready_for_issue"],
         "deal_modes": ["rent"],
         "conditions": [],
         "description": "Договір оренди для фіз. осіб (без рамкового)"

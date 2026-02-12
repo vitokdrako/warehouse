@@ -1786,11 +1786,72 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
             <Card title="📋 Рамкові договори">
               {masterAgreements.length > 0 ? (
                 <div className="space-y-3">
-                  {masterAgreements.map(a => (
+                  {masterAgreements.map(a => {
+                    // Calculate expiration status
+                    const today = new Date();
+                    const validUntil = a.valid_until ? new Date(a.valid_until) : null;
+                    let expirationStatus = null;
+                    let daysUntilExpiry = null;
+                    
+                    if (validUntil && a.status === "signed") {
+                      daysUntilExpiry = Math.ceil((validUntil - today) / (1000 * 60 * 60 * 24));
+                      if (daysUntilExpiry < 0) {
+                        expirationStatus = "expired";
+                      } else if (daysUntilExpiry <= 30) {
+                        expirationStatus = "warning";
+                      } else {
+                        expirationStatus = "active";
+                      }
+                    }
+                    
+                    return (
                     <div key={a.id} className="p-4 bg-slate-50 rounded-xl">
+                      {/* Expiration Banner */}
+                      {expirationStatus === "expired" && (
+                        <div className="mb-3 p-3 bg-rose-100 border border-rose-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-rose-700">
+                            <span className="text-lg">🔴</span>
+                            <div>
+                              <div className="font-semibold">Договір закінчився</div>
+                              <div className="text-sm">Створення додатків заблоковано. Оновіть або створіть новий договір.</div>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => {/* TODO: Open create agreement modal */}}
+                            className="mt-2 px-4 py-1.5 bg-rose-600 text-white text-sm rounded-lg hover:bg-rose-700"
+                          >
+                            ➕ Створити новий договір
+                          </button>
+                        </div>
+                      )}
+                      
+                      {expirationStatus === "warning" && (
+                        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-amber-700">
+                            <span className="text-lg">⚠️</span>
+                            <div>
+                              <div className="font-semibold">Договір закінчується через {daysUntilExpiry} {daysUntilExpiry === 1 ? 'день' : daysUntilExpiry < 5 ? 'дні' : 'днів'}</div>
+                              <div className="text-sm">Рекомендуємо завчасно продовжити договір.</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
                       <div className="flex items-start justify-between">
                         <div>
-                          <div className="font-semibold text-lg">{a.contract_number}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-lg">{a.contract_number}</span>
+                            {/* Expiration Badge */}
+                            {expirationStatus === "active" && (
+                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full">✅ активний</span>
+                            )}
+                            {expirationStatus === "warning" && (
+                              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">⚠️ {daysUntilExpiry} дн.</span>
+                            )}
+                            {expirationStatus === "expired" && (
+                              <span className="px-2 py-0.5 bg-rose-100 text-rose-700 text-xs rounded-full">🔴 закінчився</span>
+                            )}
+                          </div>
                           <div className="text-sm text-slate-600">{a.payer?.company_name || "—"}</div>
                           <div className="text-xs text-slate-500">
                             {PAYER_TYPE_LABELS[a.payer?.payer_type] || "—"}
@@ -1827,7 +1888,7 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
                         </div>
                       )}
                     </div>
-                  ))}
+                  )})}
                 </div>
               ) : (
                 <div className="text-center text-slate-500 py-8">

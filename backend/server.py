@@ -39,6 +39,7 @@ cors_origins = os.environ.get('CORS_ORIGINS', '')
 # Default allowed origins for FarForRent
 default_origins = [
     "https://rentalhub.farforrent.com.ua",
+    "https://www.rentalhub.farforrent.com.ua",
     "https://events.farforrent.com.ua",
     "https://backrentalhub.farforrent.com.ua",
     "http://localhost:3000",
@@ -56,10 +57,14 @@ else:
     cors_origins_list = default_origins
     allow_cred = True
 
+# Log CORS config for debugging
+print(f"[CORS] Origins: {cors_origins_list}")
+print(f"[CORS] Credentials: {allow_cred}")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Дозволяємо всі origins для спрощення
-    allow_credentials=False,  # Не можна з wildcard
+    allow_origins=cors_origins_list,
+    allow_credentials=allow_cred,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],

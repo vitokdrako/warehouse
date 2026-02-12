@@ -364,6 +364,9 @@ def build_document_context(
                 context["agreement"]["contract_number"] = annex_row[4]
     
     # === Apply Manual Fields ===
+    # Also store all manual_fields for direct template access
+    context["manual_fields"] = manual_fields or {}
+    
     if manual_fields:
         # Tenant contact info
         if "contact_person" in manual_fields:
@@ -372,6 +375,12 @@ def build_document_context(
             context["tenant"]["contact_channel"] = manual_fields["contact_channel"]
         if "contact_value" in manual_fields:
             context["tenant"]["contact_value"] = manual_fields["contact_value"]
+        
+        # Time fields for annex
+        if "pickup_time" in manual_fields:
+            context["order"]["pickup_time"] = manual_fields["pickup_time"]
+        if "return_time" in manual_fields:
+            context["order"]["return_time"] = manual_fields["return_time"]
         
         # Return condition
         if "condition_mode" in manual_fields:

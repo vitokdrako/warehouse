@@ -1660,8 +1660,9 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
                         {docs.map(doc => (
                           <button
                             key={doc.doc_type}
-                            onClick={() => doc.available && generateDocument(doc.doc_type)}
+                            onClick={() => doc.available && openDocumentPreview(doc.doc_type)}
                             disabled={!doc.available}
+                            data-testid={`doc-btn-${doc.doc_type}`}
                             className={cn(
                               "p-3 rounded-lg border text-left text-sm transition",
                               doc.available 
@@ -1675,7 +1676,7 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
                                 <span className="font-medium">{doc.name}</span>
                               </div>
                               {doc.available && (
-                                <span className="text-xs text-blue-600">👁️</span>
+                                <span className="text-xs text-blue-600">👁️ Перегляд</span>
                               )}
                             </div>
                             {!doc.available && doc.reason && (

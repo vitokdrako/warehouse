@@ -7,58 +7,85 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 12, 2025
 
-### Finance Hub 2.0 - PHASE 2 COMPLETE ✅
+### Phase 3: Documents Engine - COMPLETE ✅
 
-**New Tabbed Architecture Implemented:**
+**New Document Management System Implemented:**
 
-1. **💰 Операції** (Main tab)
-   - Orders list with search
-   - Order finance panel with KPI cards
-   - Payment form (rent, additional, damage, late)
-   - **SEPARATE buttons for Deposit vs Advance** ✅
-   - Deposit management (accept, use, refund)
-   - Damage section
-   - Timeline of operations
-   - Quick documents
+#### Database Tables Created:
+1. **master_agreements** - Рамкові договори (12-month contracts)
+   - contract_number (MA-YYYY-NNN)
+   - payer_profile_id FK
+   - status: draft → sent → signed → expired
+   - snapshot_json (immutable)
+   - valid_from, valid_until
 
-2. **📄 Документи**
-   - Order selection
-   - Payer profile selection
-   - Document generation by type (individual vs legal)
-   - Recent documents list
+2. **order_annexes** - Додатки до замовлень
+   - annex_number (MA-YYYY-NNN-ANNN)
+   - order_id FK
+   - master_agreement_id FK
+   - version (auto-increment per order)
+   - snapshot_json (immutable)
+   - status: draft → generated → signed
 
-3. **💵 Каси**
-   - Cash balance (rent + damage + totals)
-   - Bank balance breakdown
-   - Deposits by currency (UAH/USD/EUR)
-   - Add expense/income buttons
+3. **document_emails** - Email log for documents
+4. **document_signatures** - Digital signatures (for future)
 
-4. **📊 План надходжень**
-   - Expected rent summary
-   - Expected deposits summary
-   - Upcoming orders table with amounts
+5. **documents table extended:**
+   - snapshot_json
+   - is_legal (boolean)
+   - category (quote|contract|annex|act|finance|operations)
+   - master_agreement_id
+   - annex_id
 
-5. **📉 Витрати**
-   - Add expense form
-   - Expenses history table
+#### API Endpoints:
+- `GET/POST /api/agreements` - Master agreements CRUD
+- `PUT /api/agreements/{id}` - Update status
+- `GET /api/agreements/active/{payer_id}` - Get active agreement
+- `GET/POST /api/annexes` - Order annexes CRUD
+- `POST /api/annexes/generate-for-order/{order_id}` - Generate annex with snapshot
+- `GET /api/annexes/latest/{order_id}` - Latest annex
+- `GET /api/annexes/history/{order_id}` - All versions
+- `GET /api/documents/policy/matrix` - Full policy matrix (19 doc types)
+- `GET /api/documents/policy/check/{doc_type}` - Check availability
+- `GET /api/documents/policy/available?order_id=X` - All available docs
 
-6. **🔒 Депозити**
-   - Balances by currency (UAH/USD/EUR)
-   - Active deposits table
-   - Closed deposits table
+#### Document Policy Matrix:
+- **Quote** (Кошторис, Рахунок-оферта) - not legal, no agreement required
+- **Contract** (Рамковий договір, Договір оренди) - legal
+- **Annex** (Додаток, Продовження) - legal, requires master agreement
+- **Act** (Передача, Приймання, Пошкодження, Взаєморозрахунки) - legal
+- **Finance** (Рахунок, Акт робіт, Накладна) - legal
+- **Operations** (Комплектація, Чеклист, ТТН) - internal
 
-7. **📈 Аналітика**
-   - KPI cards (revenue, deposits, avg check, paid %)
-   - Revenue breakdown by source
-   - Order statistics
+#### Frontend (FinanceHub.jsx) Updated:
+- **Documents Tab** now has 3 sub-tabs:
+  1. **📄 Документи** - Policy-based document generation
+  2. **📋 Договори** - Master Agreements management
+  3. **📎 Додатки** - Order Annexes with version history
 
 ---
 
-### Previous: Phase 1 (Snapshot API) - COMPLETE ✅
+### Finance Hub 2.0 - PHASE 2 COMPLETE ✅
 
-- `GET /api/finance/orders/{order_id}/snapshot` - single endpoint for all order finance data
+**7-Tab Architecture:**
+1. **💰 Операції** - Orders list, payments, deposits
+2. **📄 Документи** - Document generation (Phase 3 enhanced)
+3. **💵 Каси** - Cash/bank balances
+4. **📊 План надходжень** - Expected income
+5. **📉 Витрати** - Expenses
+6. **🔒 Депозити** - Deposit management
+7. **📈 Аналітика** - KPIs
+
+**Deposit vs Advance Separation:**
+- **Deposit (Застава)**: Goes to `fin_deposit_holds`, liability
+- **Advance (Передплата)**: Goes to `fin_payments`, income
+
+---
+
+### Phase 1 (Snapshot API) - COMPLETE ✅
+
+- `GET /api/finance/orders/{order_id}/snapshot` - aggregated order data
 - `GET /api/finance/payouts-stats-v2` - optimized stats (3 SQL instead of 12)
-- Database migration with `deal_mode` column and indexes
 
 ---
 
@@ -67,30 +94,27 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 /app/
 ├── backend/
 │   ├── routes/
-│   │   ├── finance.py         # +snapshot, +payouts-stats-v2
-│   │   ├── migrations.py      # +finance-hub-v2 migration
-│   │   ├── payer_profiles.py  # PayerProfile management
+│   │   ├── finance.py              # +snapshot, +payouts-stats-v2
+│   │   ├── master_agreements.py    # NEW: Phase 3
+│   │   ├── order_annexes.py        # NEW: Phase 3
+│   │   ├── document_policy.py      # NEW: Phase 3 policy matrix
+│   │   ├── migrations.py           # +documents-engine-v3 migration
+│   │   ├── payer_profiles.py
 │   │   └── documents.py
+│   ├── tests/
+│   │   └── test_phase3_documents_engine.py  # 35 tests
 │   └── server.py
 ├── frontend/
 │   └── src/
 │       └── pages/
-│           └── FinanceHub.jsx # REFACTORED: 7 tabs architecture
+│           └── FinanceHub.jsx      # 7 tabs + Documents Engine
 └── memory/
     └── PRD.md
 ```
 
-## Key Features Implemented
-
-### Deposit vs Advance Separation ✅
-- **Deposit (Застава)**: Blue button, goes to `fin_deposit_holds`, liability
-- **Advance (Передплата)**: Purple button, goes to `fin_payments`, income
-- Each has its own form with currency (deposit) or note (advance)
-
-### Optimized Data Loading
-- Sequential loading with detailed logging
-- Fallback to individual endpoints on error
-- `loadOrderSnapshot` for selected order
+## Test Results
+- **Phase 3 Backend**: 35/35 tests passed (100%)
+- Test file: `/app/backend/tests/test_phase3_documents_engine.py`
 
 ## Known Issues
 
@@ -98,57 +122,37 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 **Status:** BLOCKED - awaiting backend CORS fix deployment
 
 ### P2 - Calendar Timezone Bug  
-**Status:** NOT STARTED
+**Status:** NOT STARTED - recurring issue (4+ times)
 
 ### P3 - Image 404s in Catalog
 **Status:** NOT STARTED
 
+---
+
 ## Future Tasks
 
-### Phase 3: Documents
-1. Розділити Quote vs Annex
-2. Document Policy Matrix
-3. Snapshot в документі
+### P2 - Unify Order Workspaces
+Refactor NewOrderViewWorkspace.jsx and IssueCardWorkspace.jsx
 
-### Phase 4: Safety & Accounting
-1. Заборона delete → тільки сторно
-2. Idempotency keys
-3. Atomic transactions audit
+### P2 - Database Refactoring
+Unify 9+ item status tables into products + product_state_log
 
-### Other
-- Unify Workspaces
-- RBAC
-- Monthly Financial Report
-- Digital Signature
-- HR/Ops module (separate from Finance)
+### P2 - Full RBAC
+Role-Based Access Control implementation
 
-## Key API Endpoints
+### P2 - Monthly Financial Report
+Generate PDF reports
 
-### Finance Hub 2.0
-- `GET /api/finance/orders/{order_id}/snapshot` - All order data in one call
-- `GET /api/finance/payouts-stats-v2` - Optimized stats
-- `POST /api/migrations/finance-hub-v2` - Migration
+### P3 - Digital Signature Integration
+Connect document_signatures table to e-sign service
 
-### Existing
-- `GET /api/manager/finance/orders-with-finance` - Orders list
-- `GET /api/finance/deposits` - All deposits
-- `GET /api/payer-profiles` - Payer profiles
-- `POST /api/finance/payments` - Create payment
-- `POST /api/finance/deposits/create` - Create deposit
+### P3 - HR/Ops Module
+Employee shifts, check-ins, sick leave management
 
-## Database Schema
-
-### orders table
-- `deal_mode VARCHAR(20) DEFAULT 'rent'` - rent | sale
-- `payer_profile_id INT NULL` - FK to payer_profiles
-
-### fin_payments
-- `payment_type`: rent, additional, damage, late, **advance**
-- `method`: cash, bank
-
-### fin_deposit_holds
-- `held_amount`, `used_amount`, `refunded_amount`
-- `currency`, `exchange_rate`, `actual_amount`
+---
 
 ## Test Credentials
-- **RentalHub Admin:** vitokdrako@gmail.com / test123
+- **Admin:** vitokdrako@gmail.com / test123
+- **Test payer_profile_id:** 1 (Хук Тетяна, fop_simple)
+- **Test order_id:** 7325 (issued, has payer)
+- **Test agreement:** MA-2026-001 (signed)

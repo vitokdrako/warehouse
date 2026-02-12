@@ -584,8 +584,8 @@ async def migrate_payment_annex_linking():
     - Creates index for efficient lookups
     """
     try:
-        from database_rentalhub import get_rh_db_direct
-        db = get_rh_db_direct()
+        from database_rentalhub import get_rh_db_sync
+        db = get_rh_db_sync()
         results = []
         
         # === 1. ADD annex_id TO fin_payments ===

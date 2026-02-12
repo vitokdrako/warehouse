@@ -219,7 +219,7 @@ def build_document_context(
             items_result = db.execute(text("""
                 SELECT 
                     oi.product_name, oi.product_id, oi.quantity,
-                    oi.price, oi.total_rental, p.sku, p.packaging_type
+                    oi.price, oi.total_rental, p.sku
                 FROM order_items oi
                 LEFT JOIN products p ON p.product_id = oi.product_id
                 WHERE oi.order_id = :order_id AND (oi.status = 'active' OR oi.status IS NULL)
@@ -235,7 +235,7 @@ def build_document_context(
                     "rent_price_total": float(row[4] or 0),
                     "total_rental": float(row[4] or 0),
                     "sku": row[5],
-                    "packaging_type": row[6] or ""
+                    "packaging_type": ""  # Can be added later if needed
                 })
             
             # Load damage data

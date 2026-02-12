@@ -870,6 +870,7 @@ const EventPlannerPage = () => {
           depositAmount={calculateBoardTotal() * 0.3}
           rentalDays={activeBoard.rental_days || 1}
           onSubmit={handleSubmitOrder}
+          userProfile={user}
         />
       )}
 

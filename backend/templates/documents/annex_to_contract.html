@@ -68,8 +68,8 @@
     з «<b>{{ order.issue_date or "____" }}</b>» до «<b>{{ order.return_date or "____" }}</b>».
   </p>
   
-  <p class="indent">Отримання Майна в оренду здійснюється Орендарем не пізніше <b>{{ order.pickup_time or "17:00" }}</b> «{{ order.issue_date or "____" }}».</p>
-  <p class="indent">Орендар зобов'язаний повернути Майно з оренди не пізніше «{{ order.return_date or "____" }}».</p>
+  <p class="indent">Отримання Майна в оренду здійснюється Орендарем не пізніше <b>{{ manual_fields.pickup_time or order.pickup_time or "17:00" }}</b> «{{ order.issue_date or "____" }}».</p>
+  <p class="indent">Орендар зобов'язаний повернути Майно з оренди не пізніше <b>{{ manual_fields.return_time or "10:00" }}</b> «{{ order.return_date or "____" }}».</p>
   <p class="indent">Отримання та повернення Майна здійснюються за адресою: <b>{{ order.warehouse_address or "м. Київ, вул. Будіндустрії 4" }}</b>.</p>
 
   <p class="indent">

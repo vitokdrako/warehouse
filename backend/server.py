@@ -128,6 +128,7 @@ app.include_router(document_policy.router)
 # Phase 3.1: Document Rendering & Signatures
 app.include_router(document_render.router)
 app.include_router(document_signatures.router)
+app.include_router(document_pdf.router)
 
 # Configure logging
 logging.basicConfig(

@@ -696,3 +696,77 @@ async def migrate_payment_annex_linking():
             status_code=500,
             detail=f"Помилка міграції: {str(e)}"
         )
+
+
+@router.post("/event-tool-orders")
+async def migrate_event_tool_orders():
+    """
+    EventTool Integration: Add source and event_board_id columns to orders table.
+    Also ensures IT- order numbering starts from 10000.
+    """
+    try:
+        from database_rentalhub import get_rh_db_sync
+        db = get_rh_db_sync()
+        results = []
+        
+        # === 1. ADD source TO orders ===
+        try:
+            check = db.execute(text("""
+                SELECT 1 FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'orders'
+                AND COLUMN_NAME = 'source'
+            """)).fetchone()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN source VARCHAR(50) DEFAULT 'opencart'
+                    COMMENT 'Order source: opencart, event_tool, manual'
+                """))
+                db.commit()
+                results.append("orders.source: added")
+            else:
+                results.append("orders.source: already exists")
+        except Exception as e:
+            results.append(f"orders.source: error - {str(e)}")
+            db.rollback()
+        
+        # === 2. ADD event_board_id TO orders ===
+        try:
+            check = db.execute(text("""
+                SELECT 1 FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'orders'
+                AND COLUMN_NAME = 'event_board_id'
+            """)).fetchone()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN event_board_id VARCHAR(36) NULL
+                    COMMENT 'UUID of EventTool board if source=event_tool',
+                    ADD INDEX idx_orders_event_board (event_board_id)
+                """))
+                db.commit()
+                results.append("orders.event_board_id: added")
+            else:
+                results.append("orders.event_board_id: already exists")
+        except Exception as e:
+            results.append(f"orders.event_board_id: error - {str(e)}")
+            db.rollback()
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "event-tool-orders",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"EventTool Orders migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )

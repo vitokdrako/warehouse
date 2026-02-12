@@ -212,9 +212,11 @@ export default function FinanceHub() {
   }, []);
   
   const loadDeposits = useCallback(async () => {
+    console.log("[FinanceHub] loadDeposits called");
     try {
       const res = await authFetch(`${BACKEND_URL}/api/finance/deposits`);
       const data = await res.json();
+      console.log("[FinanceHub] loadDeposits response:", Array.isArray(data) ? data.length : 0);
       setDeposits(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Load deposits error:", e);
@@ -222,9 +224,11 @@ export default function FinanceHub() {
   }, []);
   
   const loadPayoutsStats = useCallback(async () => {
+    console.log("[FinanceHub] loadPayoutsStats called");
     try {
       const res = await authFetch(`${BACKEND_URL}/api/finance/payouts-stats-v2`);
       const data = await res.json();
+      console.log("[FinanceHub] loadPayoutsStats response:", data?.total_cash_balance);
       setPayoutsStats(data);
     } catch (e) {
       console.error("Load stats error:", e);

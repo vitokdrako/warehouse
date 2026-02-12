@@ -14,7 +14,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
 // Helper for auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("authToken");
+  const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 

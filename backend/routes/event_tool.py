@@ -1310,24 +1310,24 @@ async def convert_to_order(
                 'event_delivery': 'Доставка на подію'
             }
             notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
-    
-    if data.delivery_address:
-        notes_parts.append(f"Адреса: {data.delivery_address}")
-    elif data.city:
-        notes_parts.append(f"Місто: {data.city}")
-    
-    # Подія
-    if data.event_name:
-        notes_parts.append(f"Назва події: {data.event_name}")
-    
-    if data.event_type:
-        event_labels = {
-            'wedding': 'Весілля',
-            'corporate': 'Корпоратив', 
-            'birthday': 'День народження',
-            'baby_shower': 'Baby Shower',
-            'graduation': 'Випускний',
-            'anniversary': 'Річниця',
+        
+        if data.delivery_address:
+            notes_parts.append(f"Адреса: {data.delivery_address}")
+        elif data.city:
+            notes_parts.append(f"Місто: {data.city}")
+        
+        # Подія
+        if data.event_name:
+            notes_parts.append(f"Назва події: {data.event_name}")
+        
+        if data.event_type:
+            event_labels = {
+                'wedding': 'Весілля',
+                'corporate': 'Корпоратив', 
+                'birthday': 'День народження',
+                'baby_shower': 'Baby Shower',
+                'graduation': 'Випускний',
+                'anniversary': 'Річниця',
             'photoshoot': 'Фотосесія',
             'other': 'Інше'
         }

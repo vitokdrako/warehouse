@@ -1345,6 +1345,7 @@ async def convert_to_order(
         
         # Джерело замовлення
         notes_parts.append("[Джерело: Ivent-tool]")
+        notes_parts.append(f"Мудборд: {board['name']}")
         
         # Доставка
         if data.delivery_type:
@@ -1360,11 +1361,11 @@ async def convert_to_order(
         elif data.city:
             notes_parts.append(f"Місто: {data.city}")
         
-        # Подія
-        if data.event_name:
-            notes_parts.append(f"Назва події: {data.event_name}")
+        # Подія - використовуємо автозаповнені значення
+        if event_name:
+            notes_parts.append(f"Назва події: {event_name}")
         
-        if data.event_type:
+        if event_type:
             event_labels = {
                 'wedding': 'Весілля',
                 'corporate': 'Корпоратив', 
@@ -1375,7 +1376,7 @@ async def convert_to_order(
                 'photoshoot': 'Фотосесія',
                 'other': 'Інше'
             }
-            notes_parts.append(f"Тип події: {event_labels.get(data.event_type, data.event_type)}")
+            notes_parts.append(f"Тип події: {event_labels.get(event_type, event_type)}")
         
         if data.guests_count:
             notes_parts.append(f"Кількість гостей: {data.guests_count}")
@@ -1392,22 +1393,25 @@ async def convert_to_order(
             if data.company_edrpou:
                 notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
         
+        # Нотатки з мудборду
+        if board.get("notes"):
+            notes_parts.append(f"---\nНотатки мудборду: {board['notes']}")
+        
         # Коментар клієнта в кінці
         if data.customer_comment:
             notes_parts.append(f"---\nКоментар клієнта: {data.customer_comment}")
         
         notes_text = "\n".join(notes_parts) if notes_parts else None
         
-        # Підготувати event_date та event_time
-        event_date = data.event_date or board["event_date"]
+        # event_time з запиту
         event_time = data.event_time
         
         # event_location: використовуємо назву події + місце
         event_location_text = data.event_location
-        if data.event_name and event_location_text:
-            event_location_text = f"{data.event_name} | {event_location_text}"
-        elif data.event_name:
-            event_location_text = data.event_name
+        if event_name and event_location_text:
+            event_location_text = f"{event_name} | {event_location_text}"
+        elif event_name:
+            event_location_text = event_name
         
         # Створити order в RentalHub
         # source = 'event_tool' для позначення джерела

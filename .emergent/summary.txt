@@ -1,115 +1,89 @@
 <analysis>**original_problem_statement:**
-The user has provided a comprehensive technical specification for a complete overhaul of the Finance Hub module. The goal is to build a robust, legally-compliant document management system. The project is divided into phases, with the current focus being Phase 3 and its sub-phases.
+The user is facing a critical issue where their Event Tool frontend () cannot create orders in their Rental Hub backend (). This is caused by two simultaneous errors on the  endpoint:
+1.  **CORS Policy Error:** The browser blocks the request because the backend server does not return the required  header for the  origin.
+2.  **500 Internal Server Error:** The backend endpoint itself is crashing, which is likely the root cause of the missing CORS headers.
 
-**Phase 3: Documents Engine**
--   Distinguish between  (estimate) and  (legal document).
--   Introduce  (annual contracts).
--   Implement  linked to master agreements and orders.
--   Enforce a  to control document availability based on order status and other conditions.
--   Ensure document immutability using a  model, where generated documents are frozen and do not change even if the source order is modified.
--   Integrate this engine into the  UI.
-
-**Phase 3.2: Production-Ready Features**
--   Implement a  component for digital signatures.
--   Create a backend service for PDF generation from HTML templates (using WeasyPrint).
--   Develop a  to allow users to view documents before signing.
--   Create a  to capture user input for specific document fields.
--   Implement  to enforce financial-legal consistency.
--   Add a  to the UI.
-
-The user also provided full legal text and HTML/CSS templates for all required documents.
+**PRODUCT REQUIREMENTS:**
+1.  **Fix the  flow:** Resolve both the CORS and 500 errors to ensure orders from the Event Tool are reliably created in the Rental Hub database.
+2.  **Enhance Order Data:** Orders created from the Event Tool must have  and a unique  starting with .
+3.  **Expand EventTool User Cabinet:** After the fix, the next major goal is to build out the client-facing personal cabinet in the Event Tool to:
+    *   Display a list of the user's orders.
+    *   Show all associated legal documents (quotes, annexes, acts) for each order.
+    *   Allow clients to view and digitally sign these documents directly within the Event Tool interface.
+    *   Link payments to legal annexes to enforce financial integrity.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The foundational backend for the **Phase 3 Documents Engine** is complete and tested. This includes:
--   New database tables: , , , and .
--   API endpoints for creating and managing these entities (, ).
--   A working  () that correctly determines which documents are available for a given order.
--   A  mechanism that creates immutable JSON data for legal documents.
--   A full set of production-grade HTML templates (using Jinja2) for 6 document types (, , , etc.) located in .
--   A backend rendering endpoint () that generates HTML previews from these templates.
+The backend has a  endpoint located in , but it was buggy, using unreliable tuple indexing and lacking proper error handling. The CORS configuration in  was hardcoded to  and did not respect the  environment variable, causing it to fail in the user's production environment.
 
-On the frontend, the  within  has been significantly updated with sub-tabs for Documents, Agreements, and Annexes, and successfully displays data from the new backend APIs. New components for  and  have been created.
+The agent has fixed these issues by refactoring the endpoint for stability and correcting the CORS middleware to read from the environment. A database migration to add  and  columns to the  table has also been created and applied directly to the user's production database as requested.
+
+A complete deployment package, including the updated backend files and a new frontend build for the RentalHub app, has been prepared in the  directory.
 
 **Last working item**:
--   **Last item agent was working:** The agent was integrating the newly created  into the  page. The goal was to make document buttons (like Generate Quote) open this preview modal instead of directly triggering an action. The agent had added the modal and was in the process of modifying the  handlers for the document buttons to trigger the preview.
--   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** frontend testing agent
+-   **Last item agent was working:** Preparing a final deployment package with fixes for the CORS and 500 errors on the  endpoint.
+-   **Status:** USER VERIFICATION PENDING
+-   **Agent Testing Done:** Y (Agent tested the CORS preflight and the refactored endpoint on the preview environment using . The fixes worked as expected.)
+-   **Which testing method agent to use?** Manual testing by user. The next agent must ask the user to confirm if they have deployed the files from  and if the issue is now resolved on their production server.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P1) Moodboard export is likely broken due to a CORS workaround.**
-    -   **Description:** Exporting the moodboard as PNG/PDF will likely fail because the  attribute was removed from images.
-    -   **Status:** BLOCKED (Requires user to confirm backend deployment of a previous CORS fix).
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend
-    -   **Blocked on other issue:** User confirmation.
-
--   **Issue 2: (P2) Recurring Calendar Timezone Bug.**
-    -   **Description:** A long-standing bug that affects the calendar UI across the application.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Frontend
-
--   **Issue 3: (P3) Image 404s in Catalog.**
-    -   **Description:** Some product images are not loading in the catalog view.
-    -   **Status:** NOT STARTED
+-   **Issue 1: (P0) Production:  is failing with CORS + 500 error.**
+    -   **Attempted fixes:** The agent has implemented a fix. The CORS middleware in  was corrected to use the  variable. The  endpoint in  was refactored with robust error handling and dictionary-based data access. A deployment package is ready in .
+    -   **Next debug checklist:** Ask the user to deploy the provided files and test the functionality on . If it still fails, ask for the browser console output and check the production backend logs.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical blocker that prevents a key business flow (creating orders from the Event Tool). Fixing it will unblock revenue generation and enable further development of the user cabinet.
+    -   **Status:** USER VERIFICATION PENDING
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Should Test frontend/backend/both after fix?** User must test the full frontend-to-backend flow.
+    -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   **Task 1: (P0) Implement Phase 3.2: Production Documents Features**
-    -   **Description:** This is the highest priority task, aimed at making the Documents Engine fully production-ready.
-    -   **Where to resume:** Resume in . The agent was modifying the  handler of the document generation buttons (inside the  component) to open the  with the correct document type. The next step is to complete this modification and ensure the modal receives the correct props to render the HTML preview.
-    -   **What will be achieved with this?** A complete, legally compliant document lifecycle: create -> preview -> sign -> generate PDF -> link to payments.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** None
+-   None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **(P0) Phase 3.2 - Manual Fields Form:** Create a UI form to capture manual data required for documents (e.g., contact person, condition notes) before generation.
-    -   **(P1) Phase 3.2 - Payment ↔ Annex Linking:** Add an  to the  table and enforce validation to ensure rent payments are linked to a legal annex.
-    -   **(P1) Phase 3.2 - Contract Expiration Warning:** Implement UI warnings and backend jobs for expiring master agreements.
-    -   **(P1) Phase 3.2 - Email Workflow:** Integrate email sending for documents (e.g., sending a signed copy to the client).
-    -   **(P2) Unify Order Workspaces:** Refactor  and  to reduce code duplication.
+    -   **(P0) Expand EventTool User Cabinet:** Once the  fix is confirmed, begin work on the user cabinet.
+        -   Create a My Orders page in the EventTool frontend.
+        -   Create backend endpoints to fetch orders and their associated documents (quotes, annexes, acts) for a given user.
+        -   Integrate the existing  and  components into the EventTool to allow clients to view and sign documents.
+    -   **(P1) Implement Playwright PDF Service:** Replace the current Print to PDF browser feature with a server-side PDF generation service using Playwright. This will enable automatically attaching PDFs to emails.
+    -   **(P1) Unify Order Workspaces:** Refactor  and  to reduce code duplication.
 
 -   **Future Tasks:**
-    -   **(P2) Database Refactoring:** Unify item status tables into a cleaner  and  system.
-    -   **(P2) Implement full Role-Based Access Control (RBAC).**
-    -   **(P2) Implement Monthly Financial Report.**
-    -   **(P3) Digital Signature Integration (Phase 2):** Enhance the existing signature system if required.
-    -   **(P3) HR/Ops Module:** Create a separate module for managing employee shifts, check-ins, sick leave, etc.
+    -   Database Refactoring: Unify item status tables.
+    -   Implement full Role-Based Access Control (RBAC).
+    -   Implement a Monthly Financial Report.
+    -   Create an HR/Ops Module.
 
 **Completed work in this session**
--   **Phase 3: Documents Engine - Backend Foundation (DONE):**
-    -   Created DB tables , , ,  via migration in .
-    -   Implemented API routes for , ,  in their respective files.
-    -   Implemented a working Document Policy Matrix to control document availability.
-    -   Implemented a snapshot data builder for creating immutable document data.
-    -   All backend changes were tested successfully with the testing agent ().
-
--   **Phase 3.1: Production Document Templates (DONE):**
-    -   Created 6 production-ready HTML templates (, , etc.) with partials (, ) in .
-    -   Created a backend route  to generate HTML previews from these templates.
-    -   Created a placeholder API route  for handling digital signatures.
-    -   Created a documentation file .
-
--   **Phase 3.2: Frontend Integration (IN PROGRESS):**
-    -   Rewrote the  in  to include sub-tabs for Agreements and Annexes, fetching and displaying data correctly.
-    -   Installed .
-    -   Created new components:  and .
-    -   Started integrating the preview modal into the  workflow.
+-   **EventTool Integration Fix (Ready for Deploy):**
+    -   Fixed CORS middleware logic in .
+    -   Refactored  endpoint in  for stability and error handling.
+    -   Ran DB migration on user's production DB to add  and  to  table.
+-   **Deployment Package Creation:**
+    -   Assembled all updated backend files in .
+    -   Generated a new production build of the RentalHub frontend at .
+    -   Created deployment instructions at .
+-   **SMTP Email Integration:**
+    -   Implemented a robust email provider abstraction in  with an  using the user's provided credentials.
+    -   Integrated email sending functionality into the  on the frontend.
+-   **Document Lifecycle Enhancements:**
+    -   Added a Print / PDF button to documents that uses print-specific CSS.
+    -   Implemented UI banners and backend logic for contract expiration warnings in  and .
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Login API response key mismatch.**
-    -   **Description:** The login API returns , but the frontend might be expecting . This caused some initial UI login issues during testing but was deemed non-blocking for the document engine task.
-    -   **Debug checklist:** Check  or similar auth-handling files to see which key is expected from the login response. Adjust either the frontend or the backend () to be consistent.
-    -   **Why to solve this issue and what will be achieved with this?** To ensure a stable and predictable authentication flow for the entire application.
+-   **Issue 1: Moodboard export is likely broken.**
+    -   **Debug checklist:** Investigate the  attribute on images used in the moodboard canvas, which was previously removed. A backend CORS fix was deployed, but user confirmation is needed.
+    -   **Why to solve this issue and what will be achieved with this?** To restore the moodboard export-to-image functionality.
     -   **Should Test frontend/backend/both after fix:** Frontend
-    -   **Is recurring issue?** N
+    -   **Is recurring issue?** Y
+
+-   **Issue 2: Recurring Calendar Timezone Bug.**
+    -   **Debug checklist:** This is a long-standing issue requiring a deep dive into how dates and timezones are handled across the full stack, particularly in the calendar components.
+    -   **Why to solve this issue and what will be achieved with this?** To provide a consistent and accurate calendar experience for all users, regardless of their timezone.
+    -   **Should Test frontend/backend/both after fix:** Frontend
+    -   **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
 -   **Calendar Timezone Bug:**
@@ -120,84 +94,53 @@ On the frontend, the  within  has been significantly updated with sub-tabs for D
 
 
 **Key Technical Concepts**
--   **Phased Refactoring:** Project execution in distinct, user-approved phases.
--   **API Aggregation (Snapshot Pattern):** Using a single backend endpoint to serve aggregated data.
--   **Immutable Document Snapshots:** Storing a  of order data at the time of document generation to ensure legal integrity.
--   **HTML/CSS Template-based Document Generation:** Using Jinja2 on the backend to render production-ready HTML templates, which will then be converted to PDF.
--   **Digital Signatures:** Capturing user signatures via a canvas on the frontend and saving them as images.
+-   **CORS Configuration:** Correctly configuring FastAPI's  to read origins from environment variables is crucial for multi-frontend production environments.
+-   **Robust API Design:** Refactoring endpoints to be resilient against schema changes (using dictionaries over tuples) and implementing comprehensive  blocks that return structured JSON errors instead of generic 500s.
+-   **Service Abstraction:** Decoupling the application from a specific email service by using a provider pattern ( interface with  and  implementations).
+-   **Manual Deployment Workflow:** The user manages their own production deployment by copying files provided by the agent. Migrations are run directly against the production DB by the agent.
 
 **key DB schema**
--   **** (NEW): 
--   **** (NEW): 
--   **** (NEW): 
--   **** (NEW): 
--   **** (MODIFIED): Added , , .
-
-**changes in tech stack**
--   **Frontend:** Added .
--   **Backend:** Will require 
------
-
-WeasyPrint could not import some external libraries. Please carefully follow the installation steps before reporting an issue:
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation
-https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting 
-
------ for PDF generation (planning phase).
+-   ****: (MODIFIED) Added  (VARCHAR) and  (VARCHAR).
+-   ****: (MODIFIED) Added  (INT).
+-   ****: (MODIFIED) Added  (VARCHAR),  (VARCHAR),  (VARCHAR),  (TEXT).
 
 **All files of reference**
--   **/app/frontend/src/pages/FinanceHub.jsx**: Main UI component being modified.
--   **/app/frontend/src/components/DocumentPreviewModal.jsx**: New modal for previewing/signing.
--   **/app/frontend/src/components/SignatureCanvas.jsx**: New component for capturing signatures.
--   **/app/backend/routes/document_render.py**: New backend for rendering HTML.
--   **/app/backend/routes/document_pdf.py**: New backend for generating PDFs.
--   **/app/backend/routes/document_signatures.py**: New backend for saving signatures.
--   **/app/backend/templates/documents/**: Directory containing all new HTML templates.
--   **/app/backend/server.py**: Modified to include new routes.
--   **/app/backend/routes/migrations.py**: Modified with new table schemas.
-
-**Areas that need refactoring**:
--   The large  (2000+ lines) could be broken down into smaller sub-components for each tab in the future.
-
-**key api endpoints**
--   : **(NEW)** Renders a document's HTML preview.
--   : **(NEW)** Generates a PDF for a document.
--   : **(NEW)** Saves a signature for a document.
--   : **(NEW)** Lists all master agreements.
--   : **(NEW)** Creates a new master agreement.
--   : **(NEW)** Lists annexes for an order.
--   : **(NEW)** Generates a new annex for an order.
+-   **/app/backend/server.py**: Contains the primary CORS configuration fix.
+-   **/app/backend/routes/event_tool.py**: Contains the refactored  endpoint.
+-   **/app/backend/routes/migrations.py**: Contains the new migration for the  table.
+-   **/app/clean_project/DEPLOYMENT_INSTRUCTIONS.md**: User-facing instructions for deployment.
+-   **/app/clean_project/**: The directory containing all files for the user to deploy.
 
 **Critical Info for New Agent**
 -   **You must communicate in Ukrainian.**
--   Your immediate priority is **Phase 3.2**, continuing the work on the frontend.
--   **Resume work in **. You need to finish wiring the . The goal is for document buttons to open a preview of the HTML document inside this modal.
--   The user has provided extremely detailed, production-level specifications. Follow them closely. The next steps after the preview modal are PDF generation, signature saving, and handling manual input fields.
+-   Your first action is to confirm with the user if they have deployed the files from  and if the  functionality is now working on their production site. **Do not start new work until this is verified.**
+-   The user has a manual deployment process. You prepare files in , and they copy them to their server.
+-   The user has provided production database credentials and expects the agent to run migrations directly on that database.
+-   Once the fix is confirmed, the next priority is to begin implementing the **EventTool User Cabinet expansion**, as per the detailed requirements provided by the user.
 
 **documents and test reports created in this job**
--    (Updated with Phase 3 & 3.1 completion and Phase 3.2 roadmap)
--    (Successful backend test report for Phase 3 foundation)
+-   
+-   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (Fulfilled):** Provided an extremely detailed production specification for Phase 3.2, including file structures, HTML/CSS templates, data contracts, and implementation order for signatures, PDFs, and payment linking.
-2.  **User (Fulfilled):** Confirmed the plan to start Phase 3.2, prioritizing HTML templates, watermarks, and signature canvas.
-3.  **User (Fulfilled):** Provided the full legal text for all document templates.
-4.  **User (Fulfilled):** Provided the complete technical specification for Phase 3 (Documents Engine), covering data models, APIs, policy rules, and UI requirements.
-5.  ... older messages about completing previous phases ...
+1.  **User (Problem):** Reported the CORS and 500 error on  and outlined the desired functionality for the EventTool user cabinet.
+2.  **User (Info):** Provided the  file content for the EventTool frontend.
+3.  **User (Info):** Clarified their manual deployment process (copying files from a  folder) and provided the production domains for all three services.
+4.  **User (Info):** Provided the  line from their backend  file.
+5.  **User (Info):** Provided production database credentials and confirmed that migrations should be run directly.
+6.  **User (Request):** Asked for a new frontend build for the RentalHub application to be included in the deployment package.
+7.  **Agent (Completed):** Confirmed that the fixes were implemented, the production migration was run, and the  directory was ready with all necessary files and instructions.
+8.  **No pending user messages.** The agent is waiting for the user to deploy the fix and confirm the result.
 
 **Project Health Check:**
--   **Broken:** Moodboard export functionality is likely non-functional.
--   **Mocked:** None.
+-   **Broken:** Moodboard export.
+-   **Mocked:** An  abstraction exists with a , but the primary  is fully configured and functional.
 
 **3rd Party Integrations**
--   **konva, react-konva:** Used for moodboard canvas.
--   **zustand:** State management.
--   **jspdf, html-to-image:** Used for moodboard export.
--   **mysql-connector-python:** Backend database driver.
--   **lucide-react:** Icon library.
--   **react-signature-canvas:** (NEW) For capturing digital signatures.
+-   **SMTP:** A custom  is implemented for sending emails via the user's own mail server ().
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (for backend foundation)
+-   **Testing agent used after significant changes:** YES (For previous features).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** 
 -   **Known regressions:** Moodboard export is likely broken.
@@ -206,4 +149,4 @@ https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#troubleshooting
 -   **RentalHub Admin:**  / 
 
 **What agent forgot to execute**
-The agent was in the middle of implementing the  integration. The  handler for the document buttons in  was being modified but is not yet complete. The immediate next action is to finish that implementation.</analysis>
+-   Nothing. The agent correctly identified the root causes, implemented fixes, and prepared a complete deployment package as requested by the user. The next step is correctly blocked on user action.</analysis>

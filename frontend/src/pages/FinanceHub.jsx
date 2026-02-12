@@ -1669,9 +1669,14 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
                                 : "border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed"
                             )}
                           >
-                            <div className="flex items-center gap-2">
-                              <span>{doc.is_legal ? "⚖️" : "📄"}</span>
-                              <span className="font-medium">{doc.name}</span>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span>{doc.is_legal ? "⚖️" : "📄"}</span>
+                                <span className="font-medium">{doc.name}</span>
+                              </div>
+                              {doc.available && (
+                                <span className="text-xs text-blue-600">👁️</span>
+                              )}
                             </div>
                             {!doc.available && doc.reason && (
                               <div className="text-xs text-rose-500 mt-1">{doc.reason}</div>
@@ -1712,6 +1717,19 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
           </div>
         </div>
       )}
+      
+      {/* Document Preview Modal */}
+      <DocumentPreviewModal
+        isOpen={previewModal.isOpen}
+        onClose={closePreviewModal}
+        docType={previewModal.docType}
+        orderId={previewModal.orderId}
+        payerProfileId={previewModal.payerProfileId}
+        agreementId={previewModal.agreementId}
+        annexId={previewModal.annexId}
+        onDocumentGenerated={(data) => console.log("Document generated:", data)}
+        onDocumentSigned={(data) => console.log("Document signed:", data)}
+      />
       
       {/* === AGREEMENTS SUB-TAB === */}
       {activeSubTab === "agreements" && (

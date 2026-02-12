@@ -337,7 +337,7 @@ async def generate_annex_for_order(
         
         db.commit()
         
-        return {
+        response = {
             "success": True,
             "annex_id": annex_id,
             "annex_number": annex_number,
@@ -345,6 +345,12 @@ async def generate_annex_for_order(
             "contract_number": contract_number,
             "snapshot": snapshot
         }
+        
+        # Add warning if contract expiring soon
+        if warning_message:
+            response["warning"] = warning_message
+        
+        return response
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

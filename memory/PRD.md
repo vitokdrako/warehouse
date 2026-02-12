@@ -176,17 +176,17 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 ### P0 - Critical (Next Steps):
 1. ~~**Frontend SignatureCanvas Component**~~ ✅ DONE
 2. ~~**Document Preview Modal**~~ ✅ DONE  
-3. **PDF Generation** — Install WeasyPrint system dependencies or use alternative
-4. **Manual Fields Form** — Pre-generation form for contact person, notes (UI ready, needs connection)
-
-### P1 - Important:
-5. **Payment-Annex Linking** — `fin_payments.annex_id` column + validation
-6. **Contract Expiration Warning** — Banner in UI
-7. **Email Workflow** — Send document via email with sign link
+3. ~~**Manual Fields Form**~~ ✅ DONE
+4. ~~**Payment-Annex Linking**~~ ✅ DONE
+5. ~~**Contract Expiration Warning**~~ ✅ DONE
+6. ~~**Email Workflow**~~ ✅ DONE (MOCKED)
+7. **PDF Generation** — Install WeasyPrint system dependencies or use alternative
+8. **Real Email Integration** — Connect to SendGrid/Resend for actual sending
 
 ### P2 - Nice to Have:
-8. **Document Version Viewer** — History of versions
-9. **PDF Watermark** — Draft/Signed overlay on generated PDF
+- **Document Version Viewer** — History of versions
+- **PDF Watermark** — Draft/Signed overlay on generated PDF
+- **Expiration UI Banner** — Visual warning in Agreements tab
 
 ---
 

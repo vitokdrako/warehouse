@@ -243,7 +243,8 @@ class TestDocumentPreviewPrintButton:
         
         # Check for print button with data-testid
         assert 'data-testid="print-pdf-btn"' in content, "Print button should have data-testid"
-        assert 'window.print()' in content, "Print button should trigger window.print()"
+        # Print button opens new window and triggers print
+        assert 'printWindow.print()' in content or 'window.print()' in content, "Print button should trigger print"
         assert '🖨️' in content or 'Друк' in content, "Print button should have print icon or label"
 
 

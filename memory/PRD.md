@@ -1,68 +1,64 @@
 # RentalHub + Ivent-tool Project PRD
 
 ## Original Problem Statement
-The user's initial request was to enhance the "Damage Hub" and integrate an existing public-facing decorator catalog application, "Ivent-tool," into the main RentalHub system.
+Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus shifted to Finance Hub optimization and restructuring.
 
 ---
 
 ## Latest Update: February 12, 2025
 
-### Finance Hub 2.0 - Phase 1 (Snapshot API) - COMPLETED ✅
+### Finance Hub 2.0 - PHASE 2 COMPLETE ✅
 
-**Problem:** Finance Hub had performance issues causing:
-- 6+ API calls per order selection (payments, deposits, damage, late, documents, payer)
-- 12 SQL queries in payouts-stats endpoint
-- No single source of truth for order financial data
-- Slow load times and potential race conditions
+**New Tabbed Architecture Implemented:**
 
-**Solution (Phase 1 - Snapshot API):**
+1. **💰 Операції** (Main tab)
+   - Orders list with search
+   - Order finance panel with KPI cards
+   - Payment form (rent, additional, damage, late)
+   - **SEPARATE buttons for Deposit vs Advance** ✅
+   - Deposit management (accept, use, refund)
+   - Damage section
+   - Timeline of operations
+   - Quick documents
 
-1. **NEW: `GET /api/finance/orders/{order_id}/snapshot`**
-   - Single endpoint replaces 5+ separate requests
-   - Returns: payments, deposit, damage, late, totals, documents, payer_profile, timeline
-   - Includes `_meta` with version hash for change detection
-   - File: `/app/backend/routes/finance.py`
+2. **📄 Документи**
+   - Order selection
+   - Payer profile selection
+   - Document generation by type (individual vs legal)
+   - Recent documents list
 
-2. **NEW: `GET /api/finance/payouts-stats-v2`**
-   - Optimized from 12 SQL queries → 3 queries
-   - Uses `SUM(CASE WHEN ...)` for aggregation
-   - ~2.5x faster (2.0s → 0.8s)
-   - Returns deposits by currency (UAH/USD/EUR)
+3. **💵 Каси**
+   - Cash balance (rent + damage + totals)
+   - Bank balance breakdown
+   - Deposits by currency (UAH/USD/EUR)
+   - Add expense/income buttons
 
-3. **Frontend: `FinanceHub.jsx` Updated**
-   - Uses `loadOrderSnapshot()` instead of 5 separate load functions
-   - Uses `loadPayoutsStatsOptimized()` for stats
-   - Fallback to old endpoints if new ones fail
+4. **📊 План надходжень**
+   - Expected rent summary
+   - Expected deposits summary
+   - Upcoming orders table with amounts
 
-### Finance Hub 2.0 - Phase 0 (Foundation) - COMPLETED ✅
+5. **📉 Витрати**
+   - Add expense form
+   - Expenses history table
 
-**Database Migration: `/api/migrations/finance-hub-v2`**
+6. **🔒 Депозити**
+   - Balances by currency (UAH/USD/EUR)
+   - Active deposits table
+   - Closed deposits table
 
-1. **`deal_mode` column added to orders**
-   - Values: 'rent' (default) | 'sale'
-   - For future: ФОП/ТОВ на спрощеній → тільки sale
-
-2. **New indexes for performance:**
-   - `idx_payments_order_type` on fin_payments(order_id, payment_type)
-   - `idx_payments_stats` on fin_payments(payment_type, method, status)
-   - `idx_expenses_category_method` on fin_expenses(category_id, method)
-
-3. **PayerProfile system (already existed)**
-   - Table: `payer_profiles`
-   - Types: individual, fop_simple, fop_general, llc_simple, llc_general
-   - Integration with orders via `payer_profile_id`
+7. **📈 Аналітика**
+   - KPI cards (revenue, deposits, avg check, paid %)
+   - Revenue breakdown by source
+   - Order statistics
 
 ---
 
-### Previous: Performance Optimization Phase 1 & 2 - COMPLETED ✅
+### Previous: Phase 1 (Snapshot API) - COMPLETE ✅
 
-**Order Workspace optimizations:**
-- `GET /api/finance/deposit-hold?order_id={id}` - single deposit
-- `POST /api/documents/latest-batch` - batch document versions
-- Disabled polling when WebSocket connected
-- 300ms debounce on EventBus refetch
-- Timeline deduplication with useMemo
-- Footer scroll with useRef
+- `GET /api/finance/orders/{order_id}/snapshot` - single endpoint for all order finance data
+- `GET /api/finance/payouts-stats-v2` - optimized stats (3 SQL instead of 12)
+- Database migration with `deal_mode` column and indexes
 
 ---
 
@@ -71,60 +67,46 @@ The user's initial request was to enhance the "Damage Hub" and integrate an exis
 /app/
 ├── backend/
 │   ├── routes/
-│   │   ├── finance.py         # MODIFIED: +snapshot, +payouts-stats-v2
-│   │   ├── migrations.py      # MODIFIED: +finance-hub-v2 migration
+│   │   ├── finance.py         # +snapshot, +payouts-stats-v2
+│   │   ├── migrations.py      # +finance-hub-v2 migration
 │   │   ├── payer_profiles.py  # PayerProfile management
-│   │   └── documents.py       # +latest-batch endpoint
+│   │   └── documents.py
 │   └── server.py
 ├── frontend/
 │   └── src/
 │       └── pages/
-│           └── FinanceHub.jsx # MODIFIED: uses snapshot API
+│           └── FinanceHub.jsx # REFACTORED: 7 tabs architecture
 └── memory/
     └── PRD.md
 ```
 
-## What's Been Implemented
+## Key Features Implemented
 
-### February 12, 2025:
-- **Finance Hub 2.0 Phase 1** - Snapshot API, optimized stats (3x faster)
-- **Finance Hub 2.0 Phase 0** - deal_mode, database indexes
+### Deposit vs Advance Separation ✅
+- **Deposit (Застава)**: Blue button, goes to `fin_deposit_holds`, liability
+- **Advance (Передплата)**: Purple button, goes to `fin_payments`, income
+- Each has its own form with currency (deposit) or note (advance)
 
-### February 10, 2025:
-- **Performance Optimization Phase 1 & 2** - Order Workspace optimization
-
-### Previous Sessions:
-- **Inventory Status Fix** - Catalog correctly shows items on restoration
-- **Damage Hub Enhancements** - Complete/hide items, full-screen modals
-- **Mobile Optimization** - Responsive design for Ivent-tool
-- **Moodboard MVP** - Konva.js canvas with export
-- **Ivent-tool Order Submission** - Full checkout flow
+### Optimized Data Loading
+- Sequential loading with detailed logging
+- Fallback to individual endpoints on error
+- `loadOrderSnapshot` for selected order
 
 ## Known Issues
 
 ### P1 - Moodboard Export
-**Status:** BLOCKED - awaiting user to deploy backend CORS fix
+**Status:** BLOCKED - awaiting backend CORS fix deployment
 
-### P2 - Calendar Timezone Bug
+### P2 - Calendar Timezone Bug  
 **Status:** NOT STARTED
-**Recurrence:** 4+ times reported
 
 ### P3 - Image 404s in Catalog
 **Status:** NOT STARTED
 
-## Upcoming Tasks (Finance Hub 2.0 Continued)
-
-### Phase 2: New Finance Hub UI (Tabs Architecture)
-1. **Операції** - головна вкладка (OrderList + OrderFinancePanel)
-2. **Документи** - центр документів з policy matrix
-3. **Каси** - баланси + вечірнє зведення
-4. **План надходжень** - прогноз по датах
-5. **Витрати** - категорії витрат
-6. **Депозити** - глобальний список
-7. **Аналітика** - звіти
+## Future Tasks
 
 ### Phase 3: Documents
-1. Розділити Quote vs Annex (кошторис ≠ додаток)
+1. Розділити Quote vs Annex
 2. Document Policy Matrix
 3. Snapshot в документі
 
@@ -133,37 +115,40 @@ The user's initial request was to enhance the "Damage Hub" and integrate an exis
 2. Idempotency keys
 3. Atomic transactions audit
 
-## Future Tasks (P2+)
-1. **Unify Workspaces** - Merge NewOrderViewWorkspace + IssueCardWorkspace
-2. **Role-Based Access Control (RBAC)**
-3. **Monthly Financial Report**
-4. **Digital Signature Integration**
-5. **HR/Ops module** (виходи, лікарняні) - окремий від Finance
+### Other
+- Unify Workspaces
+- RBAC
+- Monthly Financial Report
+- Digital Signature
+- HR/Ops module (separate from Finance)
 
 ## Key API Endpoints
 
-### Finance Hub 2.0 (NEW)
-- `GET /api/finance/orders/{order_id}/snapshot` - All order finance data in one call
-- `GET /api/finance/payouts-stats-v2` - Optimized stats (3 queries)
-- `POST /api/migrations/finance-hub-v2` - Run Phase 0 migration
+### Finance Hub 2.0
+- `GET /api/finance/orders/{order_id}/snapshot` - All order data in one call
+- `GET /api/finance/payouts-stats-v2` - Optimized stats
+- `POST /api/migrations/finance-hub-v2` - Migration
 
 ### Existing
-- `GET /api/finance/deposit-hold?order_id={id}` - Single deposit for order
-- `POST /api/documents/latest-batch` - Batch document versions
+- `GET /api/manager/finance/orders-with-finance` - Orders list
 - `GET /api/finance/deposits` - All deposits
-- `GET /api/payer-profiles` - List payer profiles
-- `POST /api/payer-profiles/order/{id}/assign/{profile_id}` - Assign payer
+- `GET /api/payer-profiles` - Payer profiles
+- `POST /api/finance/payments` - Create payment
+- `POST /api/finance/deposits/create` - Create deposit
 
-## Database Schema Updates
+## Database Schema
 
-### orders table (new columns)
+### orders table
 - `deal_mode VARCHAR(20) DEFAULT 'rent'` - rent | sale
 - `payer_profile_id INT NULL` - FK to payer_profiles
 
-### payer_profiles table
-- id, payer_type, company_name, edrpou, iban, bank_name
-- director_name, address, tax_number, is_vat_payer
-- phone, email, note, is_active, created_at
+### fin_payments
+- `payment_type`: rent, additional, damage, late, **advance**
+- `method`: cash, bank
+
+### fin_deposit_holds
+- `held_amount`, `used_amount`, `refunded_amount`
+- `currency`, `exchange_rate`, `actual_amount`
 
 ## Test Credentials
 - **RentalHub Admin:** vitokdrako@gmail.com / test123

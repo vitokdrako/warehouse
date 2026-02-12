@@ -1353,7 +1353,7 @@ async def convert_to_order(
         
         order_number = f"IT-{new_it_number}"  # IT = Ivent-Tool
         
-        logger.info(f"[convert-to-order] Creating order {order_number} (id={new_order_id})")
+        logger.info(f"[convert-to-order] Creating order {order_number} (id={new_order_id}, client_user_id={client_user_id})")
         
         # Підготувати notes - простий формат
         notes_parts = []
@@ -1362,13 +1362,13 @@ async def convert_to_order(
         notes_parts.append("[Джерело: Ivent-tool]")
         notes_parts.append(f"Мудборд: {board['name']}")
         
-        # Тип платника
+        # Тип платника (поки в notes, payer_profile_id буде вибрано менеджером)
         payer_labels = {
             'individual': 'Фізична особа',
             'fop': 'ФОП',
             'company': 'Юридична особа'
         }
-        notes_parts.append(f"Тип платника: {payer_labels.get(data.payer_type, data.payer_type)}")
+        notes_parts.append(f"Тип платника (вказано клієнтом): {payer_labels.get(data.payer_type, data.payer_type)}")
         
         # Нотатки з мудборду
         if board.get("notes"):
@@ -1380,44 +1380,41 @@ async def convert_to_order(
         
         notes_text = "\n".join(notes_parts) if notes_parts else None
         
-        # Створити order в RentalHub
-        # Перевіряємо чи є колонки source та event_board_id
-        try:
-            # Спочатку пробуємо з новими полями
-            db.execute(text("""
-                INSERT INTO orders (
-                    order_id, order_number, status, 
-                    rental_start_date, rental_end_date, rental_days,
-                    event_date, event_location,
-                    total_price, deposit_amount, 
-                    customer_name, customer_phone, customer_email,
-                    notes, source, event_board_id, created_at
-                )
-                VALUES (
-                    :order_id, :order_number, 'awaiting_customer', 
-                    :start_date, :end_date, :rental_days,
-                    :event_date, :event_location,
-                    :total_price, :deposit_amount, 
-                    :customer_name, :phone, :email,
-                    :notes, 'event_tool', :board_id, NOW()
-                )
-            """), {
-                "order_id": new_order_id,
-                "order_number": order_number,
-                "start_date": board["rental_start_date"],
-                "end_date": board["rental_end_date"],
-                "rental_days": rental_days,
-                "event_date": event_date,
-                "event_location": event_name,
-                "total_price": total_price,
-                "deposit_amount": deposit_amount,
-                "customer_name": customer_name,
-                "phone": phone,
-                "email": email,
-                "notes": notes_text,
-                "board_id": board_id
-            })
-        except Exception as insert_err:
+        # Створити order в RentalHub з client_user_id
+        db.execute(text("""
+            INSERT INTO orders (
+                order_id, order_number, status, 
+                rental_start_date, rental_end_date, rental_days,
+                event_date, event_location,
+                total_price, deposit_amount, 
+                customer_name, customer_phone, customer_email,
+                notes, source, event_board_id, client_user_id, created_at
+            )
+            VALUES (
+                :order_id, :order_number, 'awaiting_customer', 
+                :start_date, :end_date, :rental_days,
+                :event_date, :event_location,
+                :total_price, :deposit_amount, 
+                :customer_name, :phone, :email,
+                :notes, 'event_tool', :board_id, :client_user_id, NOW()
+            )
+        """), {
+            "order_id": new_order_id,
+            "order_number": order_number,
+            "start_date": board["rental_start_date"],
+            "end_date": board["rental_end_date"],
+            "rental_days": rental_days,
+            "event_date": event_date,
+            "event_location": event_name,
+            "total_price": total_price,
+            "deposit_amount": deposit_amount,
+            "customer_name": customer_name,
+            "phone": phone,
+            "email": email,
+            "notes": notes_text,
+            "board_id": board_id,
+            "client_user_id": client_user_id
+        })
             # Якщо не вдалось - пробуємо без source/event_board_id
             logger.warning(f"[convert-to-order] Fallback INSERT without source/event_board_id: {insert_err}")
             db.execute(text("""

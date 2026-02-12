@@ -7,6 +7,37 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 12, 2026
 
+### Phase 3.3: Email Provider + Print + Expiration UI - COMPLETE ✅
+
+**Email Provider Abstraction - DONE ✅**
+- `/app/backend/services/email_provider.py` with:
+  - `EmailProvider` abstract base class
+  - `DummyEmailProvider` (default, logs without sending)
+  - `ResendEmailProvider` (requires RESEND_API_KEY)
+  - `SendGridEmailProvider` (requires SENDGRID_API_KEY)
+- Environment variables: `EMAIL_PROVIDER`, `RESEND_API_KEY`, `SENDGRID_API_KEY`, `EMAIL_FROM`
+- Factory function `get_email_provider()` with automatic fallback to Dummy
+
+**Print / PDF Button - DONE ✅**
+- "🖨️ Друк / PDF" button in DocumentPreviewModal
+- Opens HTML in new window with `window.print()` auto-trigger
+- Print CSS in `base.css` with:
+  - A4 page size, proper margins
+  - Page break controls
+  - `.no-print` class for hiding elements in print
+
+**Expiration UI Banners - DONE ✅**
+- **Agreements tab:** Full banner with:
+  - 🔴 Expired: red background, "Договір закінчився", CTA button
+  - ⚠️ Warning: amber background, "Закінчується через X днів"
+  - ✅ Active: emerald badge
+- **Order header:** Compact status badge
+  - `✅ активн.` / `⚠️ Xдн.` / `🔴 закінч.`
+
+**Test Report:** `/app/test_reports/iteration_6.json` - 13/13 backend tests passed
+
+---
+
 ### Phase 3.2+: Full Documents Lifecycle - COMPLETE ✅
 
 **P0: Manual Fields Form - DONE ✅**

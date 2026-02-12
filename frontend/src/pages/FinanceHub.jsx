@@ -279,9 +279,16 @@ export default function FinanceHub() {
   
   // Initial load
   useEffect(() => {
+    console.log("[FinanceHub] Initial load starting...");
     const loadAll = async () => {
       setLoading(true);
-      await Promise.all([loadOrders(), loadDeposits(), loadPayoutsStats(), loadPayerProfiles()]);
+      try {
+        console.log("[FinanceHub] Loading data...");
+        await Promise.all([loadOrders(), loadDeposits(), loadPayoutsStats(), loadPayerProfiles()]);
+        console.log("[FinanceHub] Data loaded successfully");
+      } catch (e) {
+        console.error("[FinanceHub] Load error:", e);
+      }
       setLoading(false);
     };
     loadAll();

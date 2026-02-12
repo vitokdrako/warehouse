@@ -86,38 +86,19 @@ class EventBoardItemUpdate(BaseModel):
 class OrderCreate(BaseModel):
     """Схема для створення замовлення з Ivent-tool
     
-    Більшість полів опціональні - дані автоматично підтягуються з:
-    - event_customers: ім'я, прізвище, телефон, email
-    - event_boards: назва події, дати, тип події
+    Мінімальний набір даних - все інше автоматично підтягується з:
+    - event_customers: email (обов'язково з токена)
+    - event_boards: назва події, дати оренди, дата події
     """
-    # Ці поля опціональні - беруться з профілю клієнта якщо не передані
+    # Контактні дані - можуть бути передані або взяті з профілю
     customer_name: Optional[str] = None
     phone: Optional[str] = None
     
-    # Доставка
-    delivery_address: Optional[str] = None
-    city: Optional[str] = None
-    delivery_type: str = "self_pickup"  # self_pickup, delivery, event_delivery
+    # Тип платника - єдиний обов'язковий вибір клієнта
+    payer_type: str = "individual"  # individual, fop, company
     
-    # Коментарі
+    # Коментар (опціонально)
     customer_comment: Optional[str] = None
-    
-    # Подія - опціонально, береться з мудборду якщо не передано
-    event_type: Optional[str] = None  # wedding, corporate, birthday, etc.
-    event_name: Optional[str] = None  # Назва події (наприклад: "Весілля Олени та Максима")
-    event_location: Optional[str] = None  # Місце проведення події
-    guests_count: Optional[int] = None
-    event_date: Optional[str] = None  # Дата події
-    event_time: Optional[str] = None  # Час події
-    
-    # Монтаж
-    setup_required: bool = False
-    setup_notes: Optional[str] = None
-    
-    # Платник
-    payer_type: str = "individual"  # individual, company
-    company_name: Optional[str] = None
-    company_edrpou: Optional[str] = None
 
 # ============================================================================
 # AUTH HELPERS

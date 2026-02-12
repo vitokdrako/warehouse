@@ -223,6 +223,72 @@ export default function FinanceHub() {
     }
   }, []);
   
+  // NEW: Use optimized payouts-stats-v2
+  const loadPayoutsStatsOptimized = useCallback(async () => {
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/payouts-stats-v2`);
+      const data = await res.json();
+      // Transform to match old format for backward compatibility
+      setPayoutsStats({
+        ...data,
+        // Ensure all expected fields exist
+        rent_cash_balance: data.rent_cash_balance || 0,
+        damage_cash_balance: data.damage_cash_balance || 0,
+        total_cash_balance: data.total_cash_balance || 0,
+        rent_bank_balance: data.rent_bank_balance || 0,
+        damage_bank_balance: data.damage_bank_balance || 0,
+        bank_balance: data.bank_balance || 0,
+      });
+    } catch (e) {
+      console.error("Load stats error:", e);
+      // Fallback to old endpoint
+      loadPayoutsStats();
+    }
+  }, [loadPayoutsStats]);
+  
+  // === SNAPSHOT API: One request instead of 5+ ===
+  const [orderSnapshot, setOrderSnapshot] = useState(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  
+  const loadOrderSnapshot = useCallback(async (orderId) => {
+    if (!orderId) return;
+    setSnapshotLoading(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/orders/${orderId}/snapshot`);
+      const data = await res.json();
+      
+      if (data.order_id) {
+        setOrderSnapshot(data);
+        // Update individual states for backward compatibility
+        setPayments(data.payments || []);
+        setDocuments(data.documents || []);
+        setDamageFees({
+          total_fee: data.damage?.total || 0,
+          paid_amount: data.damage?.paid || 0,
+          due_amount: data.damage?.due || 0,
+          items: data.damage?.items || []
+        });
+        setLateFeeData({
+          total: data.late?.total || 0,
+          paid: data.late?.paid || 0,
+          due: data.late?.due || 0,
+          items: data.late?.items || []
+        });
+        setSelectedPayerProfile(data.payer_profile || null);
+      }
+    } catch (e) {
+      console.error("Load snapshot error:", e);
+      // Fallback to individual requests
+      loadPayments(orderId);
+      loadDocuments(orderId);
+      loadDamageFees(orderId);
+      loadLateFees(orderId);
+      loadOrderPayer(orderId);
+    }
+    setSnapshotLoading(false);
+  }, []);
+  
+  // Keep old functions for fallback/compatibility
   const loadPayments = useCallback(async (orderId) => {
     if (!orderId) return;
     try {
@@ -320,43 +386,38 @@ export default function FinanceHub() {
     }
   }, []);
   
-  // Initial load
+  // Initial load - use optimized stats
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
-      await Promise.all([loadOrders(), loadDeposits(), loadPayoutsStats()]);
+      await Promise.all([loadOrders(), loadDeposits(), loadPayoutsStatsOptimized()]);
       setLoading(false);
     };
     loadAll();
   }, []);
   
-  // Load order-specific data when selection changes
+  // Load order-specific data when selection changes - USE SNAPSHOT API
   useEffect(() => {
     if (selectedOrderId) {
-      loadPayments(selectedOrderId);
-      loadDocuments(selectedOrderId);
-      loadDamageFees(selectedOrderId);
-      loadLateFees(selectedOrderId);
-      loadOrderPayer(selectedOrderId);
+      // Use snapshot API (1 request instead of 5)
+      loadOrderSnapshot(selectedOrderId);
     }
-  }, [selectedOrderId]);
+  }, [selectedOrderId, loadOrderSnapshot]);
   
   // Load payer profiles on mount
   useEffect(() => {
     loadPayerProfiles();
   }, []);
   
-  // Refresh all data
+  // Refresh all data - use optimized endpoints
   const refreshAll = useCallback(async () => {
     await Promise.all([
       loadOrders(),
       loadDeposits(),
-      loadPayoutsStats(),
-      selectedOrderId && loadPayments(selectedOrderId),
-      selectedOrderId && loadDamageFees(selectedOrderId),
-      selectedOrderId && loadLateFees(selectedOrderId)
+      loadPayoutsStatsOptimized(),
+      selectedOrderId && loadOrderSnapshot(selectedOrderId)
     ]);
-  }, [selectedOrderId]);
+  }, [selectedOrderId, loadOrderSnapshot, loadPayoutsStatsOptimized]);
   
   // Load all expenses for modal
   const loadAllExpenses = useCallback(async () => {

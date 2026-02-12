@@ -1,16 +1,28 @@
 """
 Email Provider Abstraction Layer
-Supports: Resend, SendGrid, Dummy (for testing)
+Supports: SMTP, Resend, SendGrid, Dummy (for testing)
 
 Usage:
     provider = get_email_provider()
     result = await provider.send(to, subject, html, attachments)
 
 Environment Variables:
-    EMAIL_PROVIDER=resend|sendgrid|dummy (default: dummy)
+    EMAIL_PROVIDER=smtp|resend|sendgrid|dummy (auto-detect if not set)
+    
+    # SMTP (recommended for own domain)
+    SMTP_HOST=mail.adm.tools
+    SMTP_PORT=465
+    SMTP_USERNAME=info@example.com
+    SMTP_PASSWORD=secret
+    SMTP_USE_SSL=True
+    SMTP_FROM_EMAIL=info@example.com
+    SMTP_FROM_NAME=Company Name
+    
+    # Resend
     RESEND_API_KEY=re_...
+    
+    # SendGrid
     SENDGRID_API_KEY=SG....
-    EMAIL_FROM=noreply@example.com
 """
 import os
 import asyncio

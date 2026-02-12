@@ -197,17 +197,19 @@ export default function FinanceHub() {
   
   // ===== DATA LOADING =====
   const loadOrders = useCallback(async () => {
+    console.log("[FinanceHub] loadOrders called");
     try {
       const res = await authFetch(`${BACKEND_URL}/api/manager/finance/orders-with-finance?limit=100`);
       const data = await res.json();
+      console.log("[FinanceHub] loadOrders response:", data.orders?.length);
       setOrders(data.orders || []);
-      if (data.orders?.length > 0 && !selectedOrderId) {
-        setSelectedOrderId(data.orders[0].order_id);
+      if (data.orders?.length > 0) {
+        setSelectedOrderId(prev => prev || data.orders[0].order_id);
       }
     } catch (e) {
       console.error("Load orders error:", e);
     }
-  }, [selectedOrderId]);
+  }, []);
   
   const loadDeposits = useCallback(async () => {
     try {

@@ -130,6 +130,7 @@ app.include_router(document_render.router)
 app.include_router(document_signatures.router)
 app.include_router(document_pdf.router)
 app.include_router(document_manual_fields.router)
+app.include_router(document_email.router)
 
 # Configure logging
 logging.basicConfig(

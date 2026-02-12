@@ -659,6 +659,29 @@ async def migrate_payment_annex_linking():
             results.append(f"document_emails subject/message: error - {str(e)}")
             db.rollback()
         
+        # === 4. ADD provider columns TO document_emails ===
+        try:
+            check = db.execute(text("""
+                SELECT 1 FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'document_emails'
+                AND COLUMN_NAME = 'provider'
+            """)).fetchone()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE document_emails 
+                    ADD COLUMN provider VARCHAR(50) DEFAULT 'dummy',
+                    ADD COLUMN provider_email_id VARCHAR(255)
+                """))
+                db.commit()
+                results.append("document_emails: added provider columns")
+            else:
+                results.append("document_emails: provider columns already exist")
+        except Exception as e:
+            results.append(f"document_emails provider: error - {str(e)}")
+            db.rollback()
+        
         db.close()
         
         return {

@@ -297,6 +297,7 @@ async def get_recent_emails(
         SELECT 
             de.id, de.document_id, de.sent_to, de.subject, de.sent_at,
             de.document_version, de.sent_by_user_name, de.status,
+            de.provider, de.provider_email_id,
             d.doc_type
         FROM document_emails de
         LEFT JOIN documents d ON d.id COLLATE utf8mb4_unicode_ci = de.document_id COLLATE utf8mb4_unicode_ci
@@ -315,7 +316,9 @@ async def get_recent_emails(
             "document_version": row[5],
             "sent_by": row[6],
             "status": row[7],
-            "doc_type": row[8]
+            "provider": row[8],
+            "provider_email_id": row[9],
+            "doc_type": row[10]
         })
     
     return {

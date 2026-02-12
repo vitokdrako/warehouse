@@ -1337,42 +1337,13 @@ async def convert_to_order(
             }
             notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
         
-        if data.delivery_address:
-            notes_parts.append(f"Адреса: {data.delivery_address}")
-        elif data.city:
-            notes_parts.append(f"Місто: {data.city}")
-        
-        # Подія - використовуємо автозаповнені значення
-        if event_name:
-            notes_parts.append(f"Назва події: {event_name}")
-        
-        if event_type:
-            event_labels = {
-                'wedding': 'Весілля',
-                'corporate': 'Корпоратив', 
-                'birthday': 'День народження',
-                'baby_shower': 'Baby Shower',
-                'graduation': 'Випускний',
-                'anniversary': 'Річниця',
-                'photoshoot': 'Фотосесія',
-                'other': 'Інше'
-            }
-            notes_parts.append(f"Тип події: {event_labels.get(event_type, event_type)}")
-        
-        if data.guests_count:
-            notes_parts.append(f"Кількість гостей: {data.guests_count}")
-        
-        # Монтаж
-        if data.setup_required:
-            notes_parts.append("Потрібен монтаж: Так")
-            if data.setup_notes:
-                notes_parts.append(f"Деталі монтажу: {data.setup_notes}")
-        
-        # Платник
-        if data.payer_type == "company" and data.company_name:
-            notes_parts.append(f"Платник: {data.company_name}")
-            if data.company_edrpou:
-                notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
+        # Тип платника
+        payer_labels = {
+            'individual': 'Фізична особа',
+            'fop': 'ФОП',
+            'company': 'Юридична особа'
+        }
+        notes_parts.append(f"Тип платника: {payer_labels.get(data.payer_type, data.payer_type)}")
         
         # Нотатки з мудборду
         if board.get("notes"):
@@ -1384,16 +1355,6 @@ async def convert_to_order(
         
         notes_text = "\n".join(notes_parts) if notes_parts else None
         
-        # event_time з запиту
-        event_time = data.event_time
-        
-        # event_location: використовуємо назву події + місце
-        event_location_text = data.event_location
-        if event_name and event_location_text:
-            event_location_text = f"{event_name} | {event_location_text}"
-        elif event_name:
-            event_location_text = event_name
-        
         # Створити order в RentalHub
         # source = 'event_tool' для позначення джерела
         # event_board_id = UUID борду для зв'язку
@@ -1401,7 +1362,7 @@ async def convert_to_order(
             INSERT INTO orders (
                 order_id, order_number, status, 
                 rental_start_date, rental_end_date, rental_days,
-                event_date, event_time, event_location,
+                event_date, event_location,
                 total_price, deposit_amount, 
                 customer_name, customer_phone, customer_email,
                 notes, source, event_board_id, created_at
@@ -1409,7 +1370,7 @@ async def convert_to_order(
             VALUES (
                 :order_id, :order_number, 'awaiting_customer', 
                 :start_date, :end_date, :rental_days,
-                :event_date, :event_time, :event_location,
+                :event_date, :event_location,
                 :total_price, :deposit_amount, 
                 :customer_name, :phone, :email,
                 :notes, 'event_tool', :board_id, NOW()
@@ -1421,13 +1382,12 @@ async def convert_to_order(
             "end_date": board["rental_end_date"],
             "rental_days": rental_days,
             "event_date": event_date,
-            "event_time": event_time,
-            "event_location": event_location_text,
+            "event_location": event_name,  # Назва події = місце/назва
             "total_price": total_price,
             "deposit_amount": deposit_amount,
-            "customer_name": customer_name,  # Автозаповнено з профілю або запиту
-            "phone": phone,  # Автозаповнено з профілю або запиту
-            "email": email,  # З профілю event_customer
+            "customer_name": customer_name,
+            "phone": phone,
+            "email": email,
             "notes": notes_text,
             "board_id": board_id
         })

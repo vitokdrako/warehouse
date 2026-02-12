@@ -267,3 +267,309 @@ async def migrate_finance_hub_v2():
             status_code=500,
             detail=f"Помилка міграції: {str(e)}"
         )
+
+
+@router.post("/documents-engine-v3")
+async def migrate_documents_engine_v3():
+    """
+    Phase 3: Documents Engine Migration
+    
+    Creates:
+    - master_agreements table (рамкові договори)
+    - order_annexes table (додатки до замовлень)
+    - Updates documents table (snapshot_json, is_legal, etc.)
+    - Updates orders table (active_annex_id)
+    
+    Safe to run multiple times.
+    """
+    try:
+        db = get_rh_db_sync()
+        results = []
+        
+        # === 1. CREATE master_agreements TABLE ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'master_agreements'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE master_agreements (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        payer_profile_id INT NOT NULL,
+                        contract_number VARCHAR(50) NOT NULL UNIQUE,
+                        template_version VARCHAR(20) DEFAULT 'v1',
+                        signed_at DATETIME NULL,
+                        valid_from DATE NOT NULL,
+                        valid_until DATE NOT NULL,
+                        status ENUM('draft', 'sent', 'signed', 'expired', 'cancelled') DEFAULT 'draft',
+                        snapshot_json JSON,
+                        pdf_path VARCHAR(500),
+                        note TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        
+                        INDEX idx_ma_payer (payer_profile_id),
+                        INDEX idx_ma_status (status),
+                        INDEX idx_ma_valid (valid_until),
+                        
+                        CONSTRAINT fk_ma_payer FOREIGN KEY (payer_profile_id) 
+                            REFERENCES payer_profiles(id) ON DELETE RESTRICT
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 
+                    COMMENT='Рамкові договори (Phase 3)'
+                """))
+                db.commit()
+                results.append("master_agreements: created")
+            else:
+                results.append("master_agreements: already exists")
+        except Exception as e:
+            results.append(f"master_agreements: error - {str(e)}")
+            db.rollback()
+        
+        # === 2. CREATE order_annexes TABLE ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'order_annexes'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE order_annexes (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        order_id INT NOT NULL,
+                        master_agreement_id INT NOT NULL,
+                        annex_number VARCHAR(50) NOT NULL,
+                        version INT DEFAULT 1,
+                        snapshot_json JSON,
+                        pdf_path VARCHAR(500),
+                        status ENUM('draft', 'generated', 'signed') DEFAULT 'draft',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        
+                        INDEX idx_annex_order (order_id),
+                        INDEX idx_annex_agreement (master_agreement_id),
+                        UNIQUE KEY uk_annex_order_version (order_id, version),
+                        
+                        CONSTRAINT fk_annex_order FOREIGN KEY (order_id) 
+                            REFERENCES orders(order_id) ON DELETE CASCADE,
+                        CONSTRAINT fk_annex_agreement FOREIGN KEY (master_agreement_id) 
+                            REFERENCES master_agreements(id) ON DELETE RESTRICT
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 
+                    COMMENT='Додатки до договорів (Phase 3)'
+                """))
+                db.commit()
+                results.append("order_annexes: created")
+            else:
+                results.append("order_annexes: already exists")
+        except Exception as e:
+            results.append(f"order_annexes: error - {str(e)}")
+            db.rollback()
+        
+        # === 3. ADD active_annex_id TO orders ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' 
+                AND COLUMN_NAME = 'active_annex_id'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE orders 
+                    ADD COLUMN active_annex_id INT NULL 
+                    COMMENT 'Активний додаток до договору'
+                """))
+                db.commit()
+                results.append("orders.active_annex_id: added")
+            else:
+                results.append("orders.active_annex_id: already exists")
+        except Exception as e:
+            results.append(f"orders.active_annex_id: error - {str(e)}")
+            db.rollback()
+        
+        # === 4. ADD snapshot_json TO documents ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'documents' 
+                AND COLUMN_NAME = 'snapshot_json'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE documents 
+                    ADD COLUMN snapshot_json JSON COMMENT 'Immutable snapshot of document data'
+                """))
+                db.commit()
+                results.append("documents.snapshot_json: added")
+            else:
+                results.append("documents.snapshot_json: already exists")
+        except Exception as e:
+            results.append(f"documents.snapshot_json: error - {str(e)}")
+            db.rollback()
+        
+        # === 5. ADD is_legal TO documents ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'documents' 
+                AND COLUMN_NAME = 'is_legal'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE documents 
+                    ADD COLUMN is_legal BOOLEAN DEFAULT FALSE 
+                    COMMENT 'TRUE = юридичний документ'
+                """))
+                db.commit()
+                results.append("documents.is_legal: added")
+            else:
+                results.append("documents.is_legal: already exists")
+        except Exception as e:
+            results.append(f"documents.is_legal: error - {str(e)}")
+            db.rollback()
+        
+        # === 6. ADD category TO documents ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'documents' 
+                AND COLUMN_NAME = 'category'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE documents 
+                    ADD COLUMN category VARCHAR(50) DEFAULT 'quote' 
+                    COMMENT 'quote|contract|annex|act|finance|operations'
+                """))
+                db.commit()
+                results.append("documents.category: added")
+            else:
+                results.append("documents.category: already exists")
+        except Exception as e:
+            results.append(f"documents.category: error - {str(e)}")
+            db.rollback()
+        
+        # === 7. ADD master_agreement_id TO documents ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'documents' 
+                AND COLUMN_NAME = 'master_agreement_id'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE documents 
+                    ADD COLUMN master_agreement_id INT NULL 
+                    COMMENT 'Reference to master agreement'
+                """))
+                db.commit()
+                results.append("documents.master_agreement_id: added")
+            else:
+                results.append("documents.master_agreement_id: already exists")
+        except Exception as e:
+            results.append(f"documents.master_agreement_id: error - {str(e)}")
+            db.rollback()
+        
+        # === 8. ADD annex_id TO documents ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'documents' 
+                AND COLUMN_NAME = 'annex_id'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE documents 
+                    ADD COLUMN annex_id INT NULL 
+                    COMMENT 'Reference to order annex'
+                """))
+                db.commit()
+                results.append("documents.annex_id: added")
+            else:
+                results.append("documents.annex_id: already exists")
+        except Exception as e:
+            results.append(f"documents.annex_id: error - {str(e)}")
+            db.rollback()
+        
+        # === 9. CREATE document_emails TABLE ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'document_emails'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE document_emails (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        document_id VARCHAR(100) NOT NULL,
+                        sent_to VARCHAR(255) NOT NULL,
+                        sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        status ENUM('sent', 'failed', 'opened') DEFAULT 'sent',
+                        error_message TEXT,
+                        
+                        INDEX idx_de_document (document_id),
+                        INDEX idx_de_sent_at (sent_at)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 
+                    COMMENT='Email log for documents'
+                """))
+                db.commit()
+                results.append("document_emails: created")
+            else:
+                results.append("document_emails: already exists")
+        except Exception as e:
+            results.append(f"document_emails: error - {str(e)}")
+            db.rollback()
+        
+        # === 10. CREATE document_signatures TABLE (for future) ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'document_signatures'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE document_signatures (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        document_id VARCHAR(100) NOT NULL,
+                        signature_image MEDIUMTEXT COMMENT 'Base64 signature',
+                        signer_name VARCHAR(255),
+                        signer_role VARCHAR(100),
+                        signed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        ip_address VARCHAR(50),
+                        user_agent TEXT,
+                        
+                        INDEX idx_ds_document (document_id)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 
+                    COMMENT='Digital signatures for documents'
+                """))
+                db.commit()
+                results.append("document_signatures: created")
+            else:
+                results.append("document_signatures: already exists")
+        except Exception as e:
+            results.append(f"document_signatures: error - {str(e)}")
+            db.rollback()
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "documents-engine-v3",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Documents Engine V3 migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )

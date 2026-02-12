@@ -84,25 +84,21 @@ class EventBoardItemUpdate(BaseModel):
     section: Optional[str] = None
 
 class OrderCreate(BaseModel):
-    """Схема для створення замовлення з Ivent-tool"""
-    customer_name: str
-    phone: str
-    delivery_address: Optional[str] = None
-    city: Optional[str] = None
-    delivery_type: str = "self_pickup"  # self_pickup, delivery, event_delivery
+    """Схема для створення замовлення з Ivent-tool
+    
+    Мінімальний набір даних - все інше автоматично підтягується з:
+    - event_customers: email (обов'язково з токена)
+    - event_boards: назва події, дати оренди, дата події
+    """
+    # Контактні дані - можуть бути передані або взяті з профілю
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    
+    # Тип платника - єдиний обов'язковий вибір клієнта
+    payer_type: str = "individual"  # individual, fop, company
+    
+    # Коментар (опціонально)
     customer_comment: Optional[str] = None
-    event_type: Optional[str] = None  # wedding, corporate, birthday, etc.
-    event_name: Optional[str] = None  # Назва події (наприклад: "Весілля Олени та Максима")
-    event_location: Optional[str] = None  # Місце проведення події
-    guests_count: Optional[int] = None
-    # Додаткові поля для Ivent-tool
-    event_date: Optional[str] = None  # Дата події (інформативна, може відрізнятися від оренди)
-    event_time: Optional[str] = None  # Час події
-    setup_required: bool = False  # Чи потрібен монтаж
-    setup_notes: Optional[str] = None  # Примітки по монтажу
-    payer_type: str = "individual"  # individual, company
-    company_name: Optional[str] = None
-    company_edrpou: Optional[str] = None
 
 # ============================================================================
 # AUTH HELPERS
@@ -1228,7 +1224,8 @@ async def convert_to_order(
         board_result = db.execute(text("""
             SELECT id, customer_id, board_name, notes, event_date, 
                    rental_start_date, rental_end_date, rental_days,
-                   status, created_at, updated_at, converted_to_order_id
+                   status, created_at, updated_at, converted_to_order_id,
+                   event_type
             FROM event_boards 
             WHERE id = :id AND customer_id = :customer_id
         """), {"id": board_id, "customer_id": customer["customer_id"]})
@@ -1242,15 +1239,44 @@ async def convert_to_order(
         board = {
             "id": board_row[0],
             "customer_id": board_row[1],
-            "name": board_row[2],  # board_name mapped to name for consistency
-            "description": board_row[3],  # notes mapped to description
+            "name": board_row[2],  # board_name - назва події/мудборду
+            "notes": board_row[3],  # нотатки мудборду
             "event_date": board_row[4],
             "rental_start_date": board_row[5],
             "rental_end_date": board_row[6],
             "rental_days": board_row[7],
             "status": board_row[8],
-            "converted_to_order_id": board_row[11]
+            "converted_to_order_id": board_row[11],
+            "event_type": board_row[12]  # тип події з мудборду
         }
+        
+        # ========================================
+        # АВТОМАТИЧНЕ ЗАПОВНЕННЯ ДАНИХ
+        # ========================================
+        
+        # Ім'я клієнта: з запиту або з профілю event_customer
+        customer_name = data.customer_name
+        if not customer_name:
+            firstname = customer.get("firstname", "")
+            lastname = customer.get("lastname", "")
+            customer_name = f"{firstname} {lastname}".strip() or "Клієнт EventTool"
+        
+        # Телефон: з запиту або з профілю
+        phone = data.phone or customer.get("telephone", "")
+        
+        # Email: завжди з профілю (авторизований користувач)
+        email = customer.get("email", "")
+        
+        # Назва події: з запиту або з мудборду (board_name)
+        event_name = data.event_name or board["name"]
+        
+        # Тип події: з запиту або з мудборду
+        event_type = data.event_type or board.get("event_type")
+        
+        # Дата події: з запиту або з мудборду
+        event_date = data.event_date or board["event_date"]
+        
+        logger.info(f"[convert-to-order] Auto-filled: name={customer_name}, phone={phone}, event={event_name}")
         
         if board["converted_to_order_id"]:
             raise HTTPException(status_code=400, detail="Board already converted to order")
@@ -1294,75 +1320,30 @@ async def convert_to_order(
         
         logger.info(f"[convert-to-order] Creating order {order_number} (id={new_order_id})")
         
-        # Підготувати notes з усією додатковою інформацією
-        # Включаємо delivery та інші дані, яких немає в окремих полях БД
+        # Підготувати notes - простий формат
         notes_parts = []
         
-        # Джерело замовлення
+        # Джерело та мудборд
         notes_parts.append("[Джерело: Ivent-tool]")
+        notes_parts.append(f"Мудборд: {board['name']}")
         
-        # Доставка
-        if data.delivery_type:
-            delivery_labels = {
-                'self_pickup': 'Самовивіз',
-                'delivery': 'Доставка',
-                'event_delivery': 'Доставка на подію'
-            }
-            notes_parts.append(f"Доставка: {delivery_labels.get(data.delivery_type, data.delivery_type)}")
+        # Тип платника
+        payer_labels = {
+            'individual': 'Фізична особа',
+            'fop': 'ФОП',
+            'company': 'Юридична особа'
+        }
+        notes_parts.append(f"Тип платника: {payer_labels.get(data.payer_type, data.payer_type)}")
         
-        if data.delivery_address:
-            notes_parts.append(f"Адреса: {data.delivery_address}")
-        elif data.city:
-            notes_parts.append(f"Місто: {data.city}")
-        
-        # Подія
-        if data.event_name:
-            notes_parts.append(f"Назва події: {data.event_name}")
-        
-        if data.event_type:
-            event_labels = {
-                'wedding': 'Весілля',
-                'corporate': 'Корпоратив', 
-                'birthday': 'День народження',
-                'baby_shower': 'Baby Shower',
-                'graduation': 'Випускний',
-                'anniversary': 'Річниця',
-                'photoshoot': 'Фотосесія',
-                'other': 'Інше'
-            }
-            notes_parts.append(f"Тип події: {event_labels.get(data.event_type, data.event_type)}")
-        
-        if data.guests_count:
-            notes_parts.append(f"Кількість гостей: {data.guests_count}")
-        
-        # Монтаж
-        if data.setup_required:
-            notes_parts.append("Потрібен монтаж: Так")
-            if data.setup_notes:
-                notes_parts.append(f"Деталі монтажу: {data.setup_notes}")
-        
-        # Платник
-        if data.payer_type == "company" and data.company_name:
-            notes_parts.append(f"Платник: {data.company_name}")
-            if data.company_edrpou:
-                notes_parts.append(f"ЄДРПОУ: {data.company_edrpou}")
+        # Нотатки з мудборду
+        if board.get("notes"):
+            notes_parts.append(f"---\nНотатки мудборду: {board['notes']}")
         
         # Коментар клієнта в кінці
         if data.customer_comment:
             notes_parts.append(f"---\nКоментар клієнта: {data.customer_comment}")
         
         notes_text = "\n".join(notes_parts) if notes_parts else None
-        
-        # Підготувати event_date та event_time
-        event_date = data.event_date or board["event_date"]
-        event_time = data.event_time
-        
-        # event_location: використовуємо назву події + місце
-        event_location_text = data.event_location
-        if data.event_name and event_location_text:
-            event_location_text = f"{data.event_name} | {event_location_text}"
-        elif data.event_name:
-            event_location_text = data.event_name
         
         # Створити order в RentalHub
         # source = 'event_tool' для позначення джерела
@@ -1371,7 +1352,7 @@ async def convert_to_order(
             INSERT INTO orders (
                 order_id, order_number, status, 
                 rental_start_date, rental_end_date, rental_days,
-                event_date, event_time, event_location,
+                event_date, event_location,
                 total_price, deposit_amount, 
                 customer_name, customer_phone, customer_email,
                 notes, source, event_board_id, created_at
@@ -1379,7 +1360,7 @@ async def convert_to_order(
             VALUES (
                 :order_id, :order_number, 'awaiting_customer', 
                 :start_date, :end_date, :rental_days,
-                :event_date, :event_time, :event_location,
+                :event_date, :event_location,
                 :total_price, :deposit_amount, 
                 :customer_name, :phone, :email,
                 :notes, 'event_tool', :board_id, NOW()
@@ -1391,13 +1372,12 @@ async def convert_to_order(
             "end_date": board["rental_end_date"],
             "rental_days": rental_days,
             "event_date": event_date,
-            "event_time": event_time,
-            "event_location": event_location_text,
+            "event_location": event_name,  # Назва події = місце/назва
             "total_price": total_price,
             "deposit_amount": deposit_amount,
-            "customer_name": data.customer_name,
-            "phone": data.phone,
-            "email": customer["email"],
+            "customer_name": customer_name,
+            "phone": phone,
+            "email": email,
             "notes": notes_text,
             "board_id": board_id
         })

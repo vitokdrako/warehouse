@@ -57,7 +57,9 @@ async def send_document_email(
     """
     Send document via email with PDF/HTML attachment.
     Logs the send in document_emails table for audit.
+    Uses configurable email provider (Resend/SendGrid/Dummy).
     """
+    from services.email_provider import get_email_provider, EmailResult
     
     # Get document info
     doc = db.execute(text("""
@@ -86,32 +88,29 @@ async def send_document_email(
         }
         subject = f"{doc_type_labels.get(doc_type, doc_type)} #{document_id}"
     
-    # Build default message if not provided
+    # Build email HTML body
     message = request.message or "Документ від FarforRent. Будь ласка, перегляньте вкладення."
     
-    # For now, we'll use a placeholder for actual email sending
-    # In production, this would integrate with SendGrid, Resend, or similar
-    email_sent = False
-    email_error = None
+    html_body = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #1e293b;">{subject}</h2>
+        <p style="color: #475569; line-height: 1.6;">{message}</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+        <p style="color: #94a3b8; font-size: 12px;">
+            Цей лист надіслано автоматично системою FarforRent.<br/>
+            Документ #{document_id} | Версія {doc_version}
+        </p>
+    </div>
+    """
     
-    try:
-        # TODO: Integrate actual email service
-        # Example with Resend:
-        # import resend
-        # resend.api_key = os.environ.get("RESEND_API_KEY")
-        # resend.Emails.send({
-        #     "from": "noreply@farforrent.com",
-        #     "to": request.to,
-        #     "subject": subject,
-        #     "html": message,
-        #     "attachments": [{"filename": f"{document_id}.pdf", "content": pdf_base64}]
-        # })
-        
-        # For now, mark as sent (simulated)
-        email_sent = True
-        
-    except Exception as e:
-        email_error = str(e)
+    # Send email via provider
+    provider = get_email_provider()
+    result: EmailResult = await provider.send(
+        to=request.to,
+        subject=subject,
+        html=html_body,
+        cc=request.cc
+    )
     
     # Log the email send attempt
     try:
@@ -119,15 +118,44 @@ async def send_document_email(
             INSERT INTO document_emails (
                 document_id, sent_to, subject, message,
                 sent_at, document_version, sent_by_user_id, sent_by_user_name,
-                status
+                status, provider, provider_email_id
             ) VALUES (
                 :doc_id, :to, :subject, :message,
                 NOW(), :version, :user_id, :user_name,
-                :status
+                :status, :provider, :provider_id
             )
         """), {
             "doc_id": document_id,
             "to": request.to,
+            "subject": subject,
+            "message": message,
+            "version": doc_version,
+            "user_id": request.sent_by_user_id,
+            "user_name": request.sent_by_user_name,
+            "status": "sent" if result.success else "failed",
+            "provider": result.provider,
+            "provider_id": result.email_id
+        })
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Still return success if email was sent but logging failed
+    
+    if not result.success:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Email sending failed: {result.error}"
+        )
+    
+    return {
+        "success": True,
+        "document_id": document_id,
+        "sent_to": request.to,
+        "subject": subject,
+        "document_version": doc_version,
+        "provider": result.provider,
+        "email_id": result.email_id
+    }
             "subject": subject,
             "message": message,
             "version": doc_version,

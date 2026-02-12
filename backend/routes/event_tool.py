@@ -1444,9 +1444,9 @@ async def convert_to_order(
             "event_location": event_location_text,
             "total_price": total_price,
             "deposit_amount": deposit_amount,
-            "customer_name": data.customer_name,
-            "phone": data.phone,
-            "email": customer["email"],
+            "customer_name": customer_name,  # Автозаповнено з профілю або запиту
+            "phone": phone,  # Автозаповнено з профілю або запиту
+            "email": email,  # З профілю event_customer
             "notes": notes_text,
             "board_id": board_id
         })

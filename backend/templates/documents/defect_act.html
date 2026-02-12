@@ -64,8 +64,8 @@
     У разі недостачі майна, описується якого саме майна не вистачає, його кількість.
   </p>
 
-  {% if meta.defect_notes %}
-    <p class="small"><b>Примітки:</b> {{ meta.defect_notes }}</p>
+  {% if meta.defect_notes or manual_fields.defect_notes %}
+    <p class="small"><b>Примітки:</b> {{ manual_fields.defect_notes or meta.defect_notes }}</p>
   {% endif %}
 
   {% if damage and damage.photos and damage.photos|length > 0 %}
@@ -79,9 +79,22 @@
 
   {% include "_partials/footer_sign.html" %}
 
+  {% if manual_fields.tenant_refused_to_sign %}
+  <div style="margin-top: 14px; padding: 10px; border: 2px solid #dc2626; background: #fef2f2;">
+    <p class="small" style="color: #dc2626; font-weight: bold; margin: 0;">
+      ⚠️ ОРЕНДАР ВІДМОВИВСЯ ВІД ПІДПИСУ
+    </p>
+    {% if manual_fields.refusal_witnesses %}
+    <p class="small" style="margin: 8px 0 0 0;">
+      Свідки відмови: <b>{{ manual_fields.refusal_witnesses }}</b>
+    </p>
+    {% endif %}
+  </div>
+  {% else %}
   <p class="small muted" style="margin-top: 14px;">
     (Якщо орендар відмовляється від підпису, робиться відповідна відмітка – «Орендар від підпису відмовився – підпис, печатка, ПІБ Особи Орендаря або третьої незацікавленої особи»)
   </p>
+  {% endif %}
 </div>
 </body>
 </html>

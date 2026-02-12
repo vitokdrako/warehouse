@@ -274,9 +274,11 @@ export default function FinanceHub() {
   }, []);
   
   const loadPayerProfiles = useCallback(async () => {
+    console.log("[FinanceHub] loadPayerProfiles called");
     try {
       const res = await authFetch(`${BACKEND_URL}/api/payer-profiles`);
       const data = await res.json();
+      console.log("[FinanceHub] loadPayerProfiles response:", data.profiles?.length);
       setPayerProfiles(data.profiles || []);
     } catch (e) {
       console.error("Load payer profiles error:", e);

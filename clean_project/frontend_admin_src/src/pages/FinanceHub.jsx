@@ -2088,6 +2088,8 @@ export default function FinanceHub() {
           </div>
         </div>
       )}
+      {/* END FINANCE VIEW */}
+      )}
     </div>
   );
 }

@@ -1844,6 +1844,8 @@ export default function FinanceHub() {
           </div>
         </div>
       </div>
+      )}
+      {/* END viewMode === "finance" */}
       
       {/* Expense Modal */}
       {showExpenseModal && (

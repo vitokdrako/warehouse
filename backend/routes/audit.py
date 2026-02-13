@@ -189,6 +189,20 @@ async def get_audit_items(
             product_state = row[18]
             last_audit_date = row[19]
             audit_status_db = row[20]  # ✅ from audit_records JOIN
+            # ✅ NEW: Extended attributes
+            height_cm = row[21]
+            width_cm = row[22]
+            depth_cm = row[23]
+            diameter_cm = row[24]
+            shape = row[25]
+            hashtags_json = row[26]
+            
+            # Parse hashtags from JSON
+            import json
+            try:
+                hashtags = json.loads(hashtags_json) if hashtags_json else []
+            except:
+                hashtags = []
             
             # ✅ FIXED: Повертаємо чисті значення zone, aisle, shelf
             # zone_str для відображення, zone_raw для редагування

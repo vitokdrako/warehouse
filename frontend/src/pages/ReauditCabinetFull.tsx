@@ -837,7 +837,6 @@ export default function ReauditCabinetFull({
                     <PillButton tone="slate" onClick={() => {
                       setIsEditing(true)
                       // Парсинг розміру "50x50x50" -> окремі поля
-                      const sizeParts = (selected.size || '').split('x')
                       setEditData({
                         name: selected.name,
                         code: selected.code,
@@ -845,9 +844,17 @@ export default function ReauditCabinetFull({
                         rentalPrice: selected.rentalPrice || 0,
                         color: selected.color || '',
                         material: selected.material || '',
-                        length: sizeParts[0] || '',
-                        width: sizeParts[1] || '',
-                        height: sizeParts[2] || '',
+                        // Розміри - пріоритет окремим полям, fallback на size
+                        height: selected.heightCm?.toString() || (selected.size?.split('x')[0]) || '',
+                        width: selected.widthCm?.toString() || (selected.size?.split('x')[1]) || '',
+                        depth: selected.depthCm?.toString() || (selected.size?.split('x')[2]) || '',
+                        diameter: selected.diameterCm?.toString() || '',
+                        // Категорії
+                        category: selected.categoryName || selected.category?.split(' · ')[0] || '',
+                        subcategory: selected.subcategoryName || selected.category?.split(' · ')[1] || '',
+                        // Форма та хештеги
+                        shape: selected.shape || '',
+                        hashtags: selected.hashtags || [],
                         qty: selected.qty,
                         zone: selected.zone || ''
                       })

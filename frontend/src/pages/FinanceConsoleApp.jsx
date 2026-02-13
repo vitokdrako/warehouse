@@ -2321,6 +2321,9 @@ export default function FinanceConsoleApp() {
           <TabBtn active={tab === "expenses"} onClick={() => setTab("expenses")}>
             Витрати
           </TabBtn>
+          <TabBtn active={tab === "clients"} onClick={() => setTab("clients")}>
+            👥 Клієнти
+          </TabBtn>
         </div>
 
         <div className="mt-4">

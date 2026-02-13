@@ -1329,6 +1329,193 @@ async def edit_item_full(
         rh_db.rollback()
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
+
+
+# ============================================================
+# HASHTAGS DICTIONARY API
+# ============================================================
+
+@router.get("/hashtags")
+async def list_hashtags(
+    category: Optional[str] = None,
+    rh_db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати список всіх хештегів зі словника
+    """
+    try:
+        sql = """
+            SELECT id, tag, display_name, category, usage_count, is_active
+            FROM product_hashtags_dict
+            WHERE is_active = TRUE
+        """
+        params = {}
+        
+        if category:
+            sql += " AND category = :category"
+            params['category'] = category
+        
+        sql += " ORDER BY category, usage_count DESC, tag"
+        
+        rows = rh_db.execute(text(sql), params).fetchall()
+        
+        return {
+            "hashtags": [
+                {
+                    "id": r[0],
+                    "tag": r[1],
+                    "display_name": r[2],
+                    "category": r[3],
+                    "usage_count": r[4],
+                    "is_active": r[5]
+                }
+                for r in rows
+            ]
+        }
+    except Exception as e:
+        return {"hashtags": [], "error": str(e)}
+
+
+@router.post("/hashtags")
+async def create_hashtag(
+    data: dict,
+    rh_db: Session = Depends(get_rh_db)
+):
+    """
+    Створити новий хештег в словнику
+    """
+    try:
+        tag = data.get('tag', '').lower().strip().replace(' ', '_').replace('#', '')
+        display_name = data.get('display_name', tag.replace('_', ' ').title())
+        category = data.get('category', 'general')
+        
+        if not tag:
+            raise HTTPException(status_code=400, detail="Хештег не може бути пустим")
+        
+        # Перевірити чи існує
+        existing = rh_db.execute(text("""
+            SELECT id FROM product_hashtags_dict WHERE tag = :tag
+        """), {"tag": tag}).fetchone()
+        
+        if existing:
+            return {"success": False, "error": "Такий хештег вже існує", "id": existing[0]}
+        
+        rh_db.execute(text("""
+            INSERT INTO product_hashtags_dict (tag, display_name, category)
+            VALUES (:tag, :display_name, :category)
+        """), {"tag": tag, "display_name": display_name, "category": category})
+        
+        new_id = rh_db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        rh_db.commit()
+        
+        return {
+            "success": True,
+            "id": new_id,
+            "tag": tag,
+            "display_name": display_name,
+            "category": category
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        rh_db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/hashtags/categories")
+async def list_hashtag_categories(rh_db: Session = Depends(get_rh_db)):
+    """
+    Отримати унікальні категорії хештегів
+    """
+    try:
+        rows = rh_db.execute(text("""
+            SELECT DISTINCT category, COUNT(*) as count
+            FROM product_hashtags_dict
+            WHERE is_active = TRUE
+            GROUP BY category
+            ORDER BY count DESC
+        """)).fetchall()
+        
+        return {
+            "categories": [
+                {"code": r[0], "count": r[1]}
+                for r in rows
+            ]
+        }
+    except Exception as e:
+        return {"categories": [], "error": str(e)}
+
+
+@router.get("/shapes")
+async def list_shapes(rh_db: Session = Depends(get_rh_db)):
+    """
+    Отримати унікальні форми виробів (для автозаповнення)
+    """
+    try:
+        rows = rh_db.execute(text("""
+            SELECT DISTINCT shape, COUNT(*) as count
+            FROM products
+            WHERE shape IS NOT NULL AND shape != ''
+            GROUP BY shape
+            ORDER BY count DESC
+        """)).fetchall()
+        
+        # Додамо базові форми якщо список порожній
+        base_shapes = [
+            "круглий", "квадратний", "прямокутний", "овальний",
+            "конусний", "циліндричний", "нестандартний"
+        ]
+        
+        shapes = [{"shape": r[0], "count": r[1]} for r in rows]
+        
+        if not shapes:
+            shapes = [{"shape": s, "count": 0} for s in base_shapes]
+        
+        return {"shapes": shapes}
+    except Exception as e:
+        return {"shapes": [], "error": str(e)}
+
+
+@router.get("/categories-list")
+async def list_categories_for_edit(rh_db: Session = Depends(get_rh_db)):
+    """
+    Отримати список категорій та підкатегорій для редагування товару
+    """
+    try:
+        # Категорії
+        cat_rows = rh_db.execute(text("""
+            SELECT DISTINCT category_name, COUNT(*) as count
+            FROM products
+            WHERE category_name IS NOT NULL AND category_name != ''
+            GROUP BY category_name
+            ORDER BY count DESC
+        """)).fetchall()
+        
+        # Підкатегорії згруповані по категоріях
+        subcat_rows = rh_db.execute(text("""
+            SELECT category_name, subcategory_name, COUNT(*) as count
+            FROM products
+            WHERE subcategory_name IS NOT NULL AND subcategory_name != ''
+            GROUP BY category_name, subcategory_name
+            ORDER BY category_name, count DESC
+        """)).fetchall()
+        
+        # Групуємо підкатегорії по категоріях
+        subcategories_by_cat = {}
+        for r in subcat_rows:
+            cat = r[0] or "Інше"
+            if cat not in subcategories_by_cat:
+                subcategories_by_cat[cat] = []
+            subcategories_by_cat[cat].append({"name": r[1], "count": r[2]})
+        
+        return {
+            "categories": [{"name": r[0], "count": r[1]} for r in cat_rows],
+            "subcategories_by_category": subcategories_by_cat
+        }
+    except Exception as e:
+        return {"categories": [], "subcategories_by_category": {}, "error": str(e)}
+
+
 # ============================================================
 
 @router.post("/items/{item_id}/send-to-wash")

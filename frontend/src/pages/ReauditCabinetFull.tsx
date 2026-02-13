@@ -237,6 +237,29 @@ export default function ReauditCabinetFull({
     }
   }
 
+  // Завантаження словників для редагування
+  const loadDictionaries = async () => {
+    try {
+      // Хештеги
+      const hashRes = await fetch(`${BACKEND_URL}/api/audit/hashtags`)
+      const hashData = await hashRes.json()
+      setHashtagsDict(hashData.hashtags || [])
+      
+      // Форми
+      const shapeRes = await fetch(`${BACKEND_URL}/api/audit/shapes`)
+      const shapeData = await shapeRes.json()
+      setShapesDict((shapeData.shapes || []).map((s: any) => s.shape))
+      
+      // Категорії
+      const catRes = await fetch(`${BACKEND_URL}/api/audit/categories-list`)
+      const catData = await catRes.json()
+      setCategoriesDict(catData.categories || [])
+      setSubcategoriesDict(catData.subcategories_by_category || {})
+    } catch (e) {
+      console.error('Error loading dictionaries:', e)
+    }
+  }
+
   const loadRentalHistory = async (itemId: string) => {
     setLoadingHistory(true)
     try {

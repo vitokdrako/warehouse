@@ -137,7 +137,6 @@ const Button = ({ children, variant = "primary", ...props }) => (
 
 // ===== MAIN COMPONENT =====
 export default function FinanceHub() {
-  const [viewMode, setViewMode] = useState("finance"); // "finance" or "clients"
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;

@@ -144,12 +144,27 @@ export default function ReauditCabinetFull({
     rentalPrice: 0,
     color: '',
     material: '',
-    length: '',
-    width: '',
+    // Розміри окремо
     height: '',
+    width: '',
+    depth: '',
+    diameter: '',
+    // Категорії
+    category: '',
+    subcategory: '',
+    // Форма та хештеги
+    shape: '',
+    hashtags: [] as string[],
     qty: 0,
     zone: ''
   })
+  
+  // Словники для автозаповнення
+  const [hashtagsDict, setHashtagsDict] = useState<{tag: string; display_name: string; category: string}[]>([])
+  const [shapesDict, setShapesDict] = useState<string[]>([])
+  const [categoriesDict, setCategoriesDict] = useState<{name: string; count: number}[]>([])
+  const [subcategoriesDict, setSubcategoriesDict] = useState<Record<string, {name: string; count: number}[]>>({})
+  const [newHashtag, setNewHashtag] = useState('')
 
   // Стан для пошкоджень
   const [showDamageForm, setShowDamageForm] = useState(false)

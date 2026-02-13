@@ -333,12 +333,17 @@ async def create_payer_profile(data: PayerProfileCreate, db: Session = Depends(g
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.put("/{profile_id}")
+@router.patch("/{profile_id}")
 async def update_payer_profile(profile_id: int, data: PayerProfileCreate, db: Session = Depends(get_rh_db)):
     """Оновити профіль платника"""
     ensure_table_exists(db)
     
-    if data.payer_type not in PAYER_TYPES:
-        raise HTTPException(status_code=400, detail=f"Невідомий тип платника: {data.payer_type}")
+    # Валідація типу
+    if data.type not in PAYER_TYPES:
+        raise HTTPException(status_code=400, detail=f"Невідомий тип платника: {data.type}")
+    
+    # Визначаємо is_vat_payer на основі tax_mode
+    is_vat = data.tax_mode == "vat"
     
     try:
         db.execute(text("""
@@ -354,26 +359,46 @@ async def update_payer_profile(profile_id: int, data: PayerProfileCreate, db: Se
                 is_vat_payer = :is_vat_payer,
                 phone = :phone,
                 email = :email,
-                note = :note
+                note = :note,
+                type = :type,
+                display_name = :display_name,
+                tax_mode = :tax_mode,
+                legal_name = :legal_name,
+                signatory_name = :signatory_name,
+                signatory_basis = :signatory_basis,
+                email_for_docs = :email_for_docs,
+                phone_for_docs = :phone_for_docs,
+                details_json = :details_json
             WHERE id = :id
         """), {
             "id": profile_id,
-            "payer_type": data.payer_type,
-            "company_name": data.company_name,
+            # Старі поля (для сумісності)
+            "payer_type": data.type,
+            "company_name": data.legal_name or data.display_name,
             "edrpou": data.edrpou,
             "iban": data.iban,
             "bank_name": data.bank_name,
-            "director_name": data.director_name,
+            "director_name": data.signatory_name,
             "address": data.address,
-            "tax_number": data.tax_number,
-            "is_vat_payer": data.is_vat_payer,
-            "phone": data.phone,
-            "email": data.email,
-            "note": data.note
+            "tax_number": data.edrpou,
+            "is_vat_payer": is_vat,
+            "phone": data.phone_for_docs,
+            "email": data.email_for_docs,
+            "note": data.note,
+            # Нові поля
+            "type": data.type,
+            "display_name": data.display_name,
+            "tax_mode": data.tax_mode,
+            "legal_name": data.legal_name,
+            "signatory_name": data.signatory_name,
+            "signatory_basis": data.signatory_basis,
+            "email_for_docs": data.email_for_docs,
+            "phone_for_docs": data.phone_for_docs,
+            "details_json": str(data.details_json) if data.details_json else None
         })
         db.commit()
         
-        return {"success": True}
+        return {"success": True, "id": profile_id}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

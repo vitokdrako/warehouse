@@ -17,6 +17,8 @@ interface AuditItem {
   description?: string
   careInstructions?: string
   category: string
+  categoryName?: string      // ✅ NEW: Окрема категорія для редагування
+  subcategoryName?: string   // ✅ NEW: Окрема підкатегорія
   zone: string  // ✅ Єдине поле для локації (напр. "6 / A / 12")
   qty: number
   status: AuditStatus
@@ -32,6 +34,14 @@ interface AuditItem {
   color?: string
   material?: string
   size?: string
+  // ✅ NEW: Розміри окремо
+  heightCm?: number
+  widthCm?: number
+  depthCm?: number
+  diameterCm?: number
+  // ✅ NEW: Форма та хештеги
+  shape?: string
+  hashtags?: string[]
   imageUrl?: string
   price?: number
   rentalPrice?: number

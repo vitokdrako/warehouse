@@ -1,4 +1,4 @@
-# 💼 Фінансовий Кабінет (FinanceHub) - Повний Воркфлоу
+# 💼 Фінансовий Кабінет (FinanceHub) - Повний Воркфлоу v2.0
 
 ## 📌 Огляд
 
@@ -8,561 +8,844 @@
 
 ---
 
-## 🗂️ Структура вкладок
+## 🎯 1. Джерело правди (Source of Truth)
 
-| # | ID | Назва | Опис |
-|---|---|---|---|
-| 1 | `operations` | 💰 Операції | Головна — список замовлень з фінансами |
-| 2 | `documents` | 📄 Документи | Генерація договорів, додатків, актів |
-| 3 | `cash` | 💵 Каси | Баланси готівкової та безготівкової кас |
-| 4 | `forecast` | 📊 План надходжень | Прогноз платежів від клієнтів |
-| 5 | `expenses` | 📉 Витрати | Облік операційних витрат |
-| 6 | `deposits` | 🔒 Депозити | Управління заставами клієнтів |
-| 7 | `analytics` | 📈 Аналітика | Фінансова звітність та графіки |
-| 8 | `clients` | 👥 Клієнти | CRM-lite: клієнти та платники |
+### Ключовий принцип:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    ДЖЕРЕЛО ПРАВДИ                                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  payer_profiles          = SOURCE OF TRUTH для реквізитів               │
+│  (живі дані)               Тут редагуються, тут актуальні               │
+│                                                                         │
+│  orders.payer_snapshot_json = "ЗАМОРОЖЕНА КОПІЯ" на момент ордера       │
+│  (архівна копія)            Документи беруть дані ЗВІДСИ                │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Чому це важливо:
+
+```
+Сценарій: Клієнт змінив IBAN після підписання договору
+
+❌ НЕПРАВИЛЬНО: Документи беруть дані з payer_profiles
+   → Старий договір показує новий IBAN = юридична проблема
+
+✅ ПРАВИЛЬНО: Документи беруть дані з payer_snapshot_json
+   → Старий договір показує IBAN який був на момент підпису
+   → Новий договір використає новий IBAN (новий snapshot)
+```
+
+### Момент створення snapshot:
+
+```
+POST /api/orders/{order_id}/assign-payer
+  body: { payer_profile_id: 5 }
+
+Backend робить:
+  1. Читає payer_profiles WHERE id = 5
+  2. Серіалізує в JSON
+  3. Записує в orders.payer_snapshot_json
+  4. Записує orders.payer_profile_id = 5
+```
 
 ---
 
-## 🏗️ Архітектура даних
+## 📜 2. Правильна модель документів: MA → Annex
 
-### База даних (MySQL)
+### Ключовий принцип:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        ОСНОВНІ ТАБЛИЦІ                          │
-├─────────────────────────────────────────────────────────────────┤
-│ orders              - Замовлення на прокат                      │
-│ client_users        - Клієнти (контактні особи)                 │
-│ payer_profiles      - Платники (юридичні/фіз особи)             │
-│ client_payer_links  - Зв'язок клієнтів з платниками             │
-├─────────────────────────────────────────────────────────────────┤
-│                      ФІНАНСОВІ ТАБЛИЦІ                          │
-├─────────────────────────────────────────────────────────────────┤
-│ fin_payments        - Платежі (оренда, застава, шкода)          │
-│ fin_deposit_holds   - Утримані застави                          │
-│ fin_expenses        - Витрати компанії                          │
-│ fin_accounts        - Рахунки (каси)                            │
-│ fin_ledger_entries  - Журнал подвійної бухгалтерії              │
-│ fin_transactions    - Транзакції                                │
-│ fin_vendors         - Постачальники                             │
-├─────────────────────────────────────────────────────────────────┤
-│                       HR ТАБЛИЦІ                                │
-├─────────────────────────────────────────────────────────────────┤
-│ rh_employees        - Співробітники                             │
-│ hr_payroll          - Зарплатні відомості                       │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│           MASTER AGREEMENT = ДОГОВІР ПЛАТНИКА, НЕ ОРДЕРА               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  Master Agreement (MA)                                                  │
+│  ├── Прив'язаний до: payer_profile_id                                   │
+│  ├── Термін дії: 12 місяців                                             │
+│  ├── Статус: draft → active → signed → expired                          │
+│  └── Один MA = багато Annexes від різних ордерів                        │
+│                                                                         │
+│  Annex (Додаток)                                                        │
+│  ├── Прив'язаний до: order_id + master_agreement_id                     │
+│  ├── Містить: позиції, дати, суми, депозит конкретного ордера           │
+│  └── Посилається на MA як на "рамковий договір"                         │
+│                                                                         │
+│  Issue/Return/Defect Acts                                               │
+│  └── Завжди прив'язані до: order_id                                     │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Структура таблиць:
 
-## 🔄 Детальний воркфлоу кожної вкладки
-
----
-
-### 1. 💰 Операції (Operations)
-
-**Мета:** Перегляд всіх замовлень з їх фінансовим станом, запис платежів.
-
-#### API Endpoints:
-```
-GET  /api/manager/finance/orders-with-finance?limit=100
-GET  /api/finance/orders/{orderId}/snapshot
-POST /api/finance/payments
-```
-
-#### Воркфлоу:
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                    ЗАВАНТАЖЕННЯ ДАНИХ                            │
-├──────────────────────────────────────────────────────────────────┤
-│ 1. Frontend викликає /api/manager/finance/orders-with-finance    │
-│ 2. Backend повертає список замовлень з:                          │
-│    - order_id, order_number, customer_name                       │
-│    - total_rental (сума оренди)                                  │
-│    - total_deposit (сума застави)                                │
-│    - rent_paid (оплачено за оренду)                              │
-│    - deposit_held (утримана застава)                             │
-│    - damage_total, damage_paid, damage_due (шкода)               │
-│ 3. Список відображається в таблиці зліва                         │
-└──────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│                    ВИБІР ЗАМОВЛЕННЯ                              │
-├──────────────────────────────────────────────────────────────────┤
-│ 1. Клік на рядок → selectedOrderId встановлюється                │
-│ 2. Викликається /api/finance/orders/{orderId}/snapshot           │
-│ 3. Справа відкривається панель з детальною інформацією:          │
-│    - Статус платежу (оплачено/частково/не оплачено)              │
-│    - Сума до сплати                                              │
-│    - Історія платежів                                            │
-└──────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│                    ЗАПИС ПЛАТЕЖУ                                 │
-├──────────────────────────────────────────────────────────────────┤
-│ 1. Вибрати тип платежу: rent / deposit / damage                  │
-│ 2. Вибрати метод: cash / bank / use_deposit                      │
-│ 3. Ввести суму                                                   │
-│ 4. POST /api/finance/payments                                    │
-│    {                                                             │
-│      "order_id": 7329,                                           │
-│      "payment_type": "rent",                                     │
-│      "method": "cash",                                           │
-│      "amount": 5000                                              │
-│    }                                                             │
-│ 5. Backend записує в fin_payments + fin_ledger_entries           │
-│ 6. Оновлюються баланси кас                                       │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-#### Структура таблиці fin_payments:
 ```sql
-CREATE TABLE fin_payments (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT,
-    payment_type ENUM('rent', 'deposit', 'damage'),
-    method ENUM('cash', 'bank', 'use_deposit'),
-    amount DECIMAL(12,2),
-    payer_name VARCHAR(200),
-    payer_contact VARCHAR(100),
-    note TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Master Agreement = договір з платником
+CREATE TABLE master_agreements (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    payer_profile_id INT NOT NULL,      -- ← Ключовий зв'язок!
+    agreement_number VARCHAR(50),
+    valid_from DATE,
+    valid_to DATE,                       -- +12 міс від valid_from
+    status ENUM('draft','active','signed','expired'),
+    pdf_path VARCHAR(255),
+    signed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (payer_profile_id) REFERENCES payer_profiles(id)
+);
+
+-- Annex = додаток до ордера, посилається на MA
+CREATE TABLE order_annexes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,               -- ← Конкретний ордер
+    master_agreement_id INT NOT NULL,    -- ← Посилання на MA
+    annex_number VARCHAR(50),
+    version INT DEFAULT 1,
+    status ENUM('draft','sent','signed'),
+    pdf_path VARCHAR(255),
+    created_at TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (master_agreement_id) REFERENCES master_agreements(id)
+);
+
+-- Orders має швидке посилання на актуальний annex
+ALTER TABLE orders ADD COLUMN active_annex_id INT;
+```
+
+### Візуалізація зв'язків:
+
+```
+┌─────────────────┐
+│ payer_profiles  │
+│ (id: 5)         │
+│ ТОВ "Декор"     │
+└────────┬────────┘
+         │
+         │ payer_profile_id = 5
+         ▼
+┌─────────────────────────────────────┐
+│        master_agreements            │
+│        (id: 10)                     │
+│        Договір №MA-2024-010         │
+│        valid_to: 2025-02-13         │
+└────────┬───────────────────┬────────┘
+         │                   │
+         │ master_agreement_id = 10
+         ▼                   ▼
+┌─────────────────┐  ┌─────────────────┐
+│  order_annexes  │  │  order_annexes  │
+│  order_id: 7329 │  │  order_id: 7445 │
+│  Додаток №1     │  │  Додаток №2     │
+└─────────────────┘  └─────────────────┘
+```
+
+---
+
+## 📋 3. Правила генерації документів (Policy Matrix)
+
+### По типу платника:
+
+| Тип платника | quote | invoice_offer | MA | Annex | Service Act |
+|--------------|-------|---------------|-----|-------|-------------|
+| `individual` | ✅ | ✅ | ⚠️* | ⚠️* | ⚠️* |
+| `fop` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `company` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `foreign` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `pending` | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+*⚠️ = можна дозволити для individual якщо є паспорт/адреса, або використати спрощений шаблон MA*
+
+### Алгоритм перевірки в коді:
+
+```python
+def can_generate_document(order, doc_type):
+    # Крок 1: Чи є платник?
+    if not order.payer_profile_id:
+        if doc_type in ['quote']:
+            return True  # quote можна без платника
+        return False
+    
+    # Крок 2: Отримуємо тип платника
+    payer = get_payer_profile(order.payer_profile_id)
+    
+    # Крок 3: Policy matrix
+    POLICY = {
+        'individual': ['quote', 'invoice_offer', 'ma', 'annex', 'service_act'],
+        'fop': ['quote', 'invoice_offer', 'ma', 'annex', 'service_act'],
+        'company': ['quote', 'invoice_offer', 'ma', 'annex', 'service_act'],
+        'foreign': ['quote'],
+        'pending': ['quote']
+    }
+    
+    return doc_type in POLICY.get(payer.type, [])
+```
+
+---
+
+## 🔄 4. Автоматичне підтягування платника при створенні ордера
+
+### Сценарій A: Клієнт вже існує (email знайдений)
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ EventTool → POST /api/event/boards/{id}/convert-to-order             │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│ 1. Отримуємо email з форми (vitokdrako@gmail.com)                    │
+│                                                                      │
+│ 2. Нормалізуємо email: lower(), trim()                               │
+│                                                                      │
+│ 3. Шукаємо client_user:                                              │
+│    SELECT * FROM client_users                                        │
+│    WHERE email_normalized = 'vitokdrako@gmail.com'                   │
+│                                                                      │
+│ 4. ЗНАЙДЕНО → client_user_id = 54                                    │
+│                                                                      │
+│ 5. Визначаємо дефолтного платника:                                   │
+│                                                                      │
+│    SELECT p.* FROM payer_profiles p                                  │
+│    JOIN client_payer_links l ON l.payer_profile_id = p.id            │
+│    WHERE l.client_user_id = 54                                       │
+│    ORDER BY l.is_default DESC, l.created_at ASC                      │
+│    LIMIT 1                                                           │
+│                                                                      │
+│    Варіанти:                                                         │
+│    ├── is_default = 1 → беремо його                                  │
+│    ├── рівно 1 платник → беремо його                                 │
+│    └── 0 або >1 без дефолту → payer_profile_id = NULL                │
+│                                                                      │
+│ 6. Створюємо ордер:                                                  │
+│    INSERT INTO orders (                                              │
+│      client_user_id,                                                 │
+│      payer_profile_id,                                               │
+│      payer_snapshot_json,  -- якщо є платник                         │
+│      ...                                                             │
+│    )                                                                 │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+### Сценарій B: Клієнт новий
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ Новий клієнт (email не знайдено)                                     │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│ 1. Створюємо client_user:                                            │
+│    INSERT INTO client_users (                                        │
+│      email, email_normalized, full_name, phone, source               │
+│    ) VALUES (                                                        │
+│      'new@email.com', 'new@email.com', 'Ім'я', '+380...', 'eventtool'│
+│    )                                                                 │
+│    → client_user_id = 56                                             │
+│                                                                      │
+│ 2. Створюємо "чернетку платника":                                    │
+│    INSERT INTO payer_profiles (                                      │
+│      type, display_name, tax_mode                                    │
+│    ) VALUES (                                                        │
+│      'individual',  -- або 'pending'                                 │
+│      'Ім'я клієнта',                                                 │
+│      'none'                                                          │
+│    )                                                                 │
+│    → payer_profile_id = 7                                            │
+│                                                                      │
+│ 3. Лінкуємо:                                                         │
+│    INSERT INTO client_payer_links (                                  │
+│      client_user_id, payer_profile_id, is_default                    │
+│    ) VALUES (56, 7, TRUE)                                            │
+│                                                                      │
+│ 4. Створюємо ордер з client_user_id = 56, payer_profile_id = 7       │
+│    + payer_snapshot_json                                             │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 👤 5. Розділення: Клієнт vs Платник
+
+### Ключовий принцип:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    КЛІЄНТ ≠ ПЛАТНИК                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  CLIENT_USER (Клієнт)           PAYER_PROFILE (Платник)                 │
+│  ═══════════════════            ════════════════════════                │
+│  • Контактна особа              • Юридичні реквізити                    │
+│  • Email, телефон, ім'я         • ЄДРПОУ, IBAN, адреса                  │
+│  • Може мати БАГАТО платників   • Може бути у БАГАТЬОХ клієнтів         │
+│                                                                         │
+│  Приклад:                                                               │
+│  Марина Петренко (агент)                                                │
+│  ├── ТОВ "Декор Плюс" (її клієнт 1)                                     │
+│  ├── ФОП Іванов І.І. (її клієнт 2)                                      │
+│  └── Особисто як фіз.особа (для власного весілля)                       │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Зв'язок через link-таблицю:
+
+```sql
+CREATE TABLE client_payer_links (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    client_user_id INT NOT NULL,
+    payer_profile_id INT NOT NULL,
+    is_default BOOLEAN DEFAULT FALSE,   -- ← Один дефолтний на клієнта
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE KEY (client_user_id, payer_profile_id)
 );
 ```
 
----
+### Візуалізація:
 
-### 2. 📄 Документи (Documents)
-
-**Мета:** Генерація юридичних документів для замовлень.
-
-#### API Endpoints:
 ```
-GET  /api/documents/policy/available?order_id={id}
-GET  /api/agreements
-POST /api/agreements/create
-GET  /api/annexes?order_id={id}
-POST /api/annexes/generate-for-order/{orderId}
-POST /api/documents/generate
-```
-
-#### Типи документів:
-| Код | Назва | Потребує платника? |
-|-----|-------|-------------------|
-| `quote` | Комерційна пропозиція | ❌ |
-| `invoice_offer` | Рахунок-оферта | ❌ |
-| `master_agreement` | Генеральний договір | ✅ |
-| `annex` | Додаток до договору | ✅ |
-| `service_act` | Акт наданих послуг | ✅ |
-| `damage_claim` | Претензія по шкоді | ✅ |
-
-#### Policy Matrix (логіка доступності):
-```javascript
-// Документи доступні тільки якщо є payer_profile_id
-if (!order.payer_profile_id) {
-  // Доступні тільки: quote, invoice_offer
-  // Недоступні: master_agreement, annex, service_act
-}
-```
-
-#### Воркфлоу генерації:
-```
-1. Вибрати замовлення
-2. GET /api/documents/policy/available?order_id={id}
-   → Повертає список доступних типів документів
-3. Вибрати тип документа
-4. POST /api/documents/generate
-   {
-     "order_id": 7329,
-     "doc_type": "annex",
-     "payer_id": 3
-   }
-5. Backend генерує PDF з шаблону
-6. Повертається URL для завантаження
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│     client_users                    payer_profiles                      │
+│     ════════════                    ════════════════                    │
+│                                                                         │
+│  ┌──────────────┐               ┌─────────────────────┐                 │
+│  │ id: 54       │               │ id: 5               │                 │
+│  │ Марина       │──────────────▶│ ТОВ "Декор Плюс"    │                 │
+│  │ Петренко     │    ┌─────────▶│ ЄДРПОУ: 12345678    │                 │
+│  └──────────────┘    │          └─────────────────────┘                 │
+│         │            │                                                  │
+│         │ is_default │          ┌─────────────────────┐                 │
+│         │ = TRUE     │          │ id: 6               │                 │
+│         └────────────┼─────────▶│ ФОП Іванов І.І.     │                 │
+│                      │          │ ЄДРПОУ: 87654321    │                 │
+│                      │          └─────────────────────┘                 │
+│                      │                                                  │
+│  ┌──────────────┐    │          ┌─────────────────────┐                 │
+│  │ id: 55       │    │          │ id: 7               │                 │
+│  │ Олег         │────┴─────────▶│ ФОП Іванов І.І.     │ ← Той самий!    │
+│  │ Коваленко    │               │ (бухгалтер Іванова) │                 │
+│  └──────────────┘               └─────────────────────┘                 │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 3. 💵 Каси (Cash)
+## 🔍 6. Алгоритм: "MA вже є чи треба створювати?"
 
-**Мета:** Перегляд балансів готівкової та безготівкової кас.
+### Коли менеджер натискає "Master Agreement" або "Generate Annex":
 
-#### API Endpoints:
-```
-GET /api/finance/payouts-stats-v2
-```
-
-#### Структура відповіді:
-```json
-{
-  "rent_cash": {
-    "income": 125000,
-    "expenses": 45000,
-    "deposits": 5000,
-    "balance": 85000
-  },
-  "rent_bank": {
-    "income": 80000,
-    "expenses": 20000,
-    "balance": 60000
-  },
-  "damage_cash": {
-    "income": 15000,
-    "expenses": 8000,
-    "balance": 7000
-  },
-  "total_damage_collected": 15000
-}
-```
-
-#### Логіка розрахунку:
-```
-rent_cash_balance = rent_cash_income - rent_cash_expenses + rent_cash_deposits
-damage_cash_balance = damage_cash_income - damage_cash_expenses + damage_cash_deposits
-```
-
----
-
-### 4. 📊 План надходжень (Forecast)
-
-**Мета:** Прогноз майбутніх платежів на основі активних замовлень.
-
-#### Воркфлоу:
-```
-1. Аналізує замовлення зі статусом != "completed"
-2. Рахує суми до оплати:
-   - Оренда: total_rental - rent_paid
-   - Застава: total_deposit - deposit_held
-3. Групує по тижнях/місяцях
-4. Відображає календар очікуваних платежів
+```python
+def get_or_create_ma_for_order(order_id):
+    """
+    Алгоритм визначення MA для ордера
+    """
+    order = get_order(order_id)
+    
+    # Крок 1: Перевірка наявності платника
+    if not order.payer_profile_id:
+        return {
+            "error": "no_payer",
+            "message": "Спочатку прив'яжіть платника до ордера"
+        }
+    
+    payer_id = order.payer_profile_id
+    
+    # Крок 2: Пошук активного MA для цього платника
+    active_ma = db.execute("""
+        SELECT * FROM master_agreements 
+        WHERE payer_profile_id = :payer_id
+          AND status IN ('active', 'signed')
+          AND valid_to >= CURDATE()
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, {"payer_id": payer_id}).fetchone()
+    
+    if active_ma:
+        # Крок 3a: MA знайдено → повертаємо його
+        return {
+            "ma_exists": True,
+            "master_agreement": active_ma,
+            "can_create_annex": True
+        }
+    else:
+        # Крок 3b: MA не знайдено → пропонуємо створити
+        return {
+            "ma_exists": False,
+            "message": "Для цього платника немає діючого договору",
+            "action": "create_ma",
+            "payer_profile_id": payer_id
+        }
 ```
 
----
+### UI Flow:
 
-### 5. 📉 Витрати (Expenses)
-
-**Мета:** Облік операційних витрат компанії.
-
-#### API Endpoints:
 ```
-GET  /api/finance/expenses/all?limit=200
-POST /api/finance/expenses/simple
-```
-
-#### Категорії витрат:
-```javascript
-const EXPENSE_CATEGORIES = [
-  { code: "TRANSPORT", label: "Транспорт" },
-  { code: "REPAIRS", label: "Ремонт обладнання" },
-  { code: "CLEANING", label: "Хімчистка/прання" },
-  { code: "PACKAGING", label: "Пакування" },
-  { code: "OFFICE", label: "Офіс" },
-  { code: "SALARY", label: "Зарплата" },
-  { code: "OTHER", label: "Інше" }
-];
-```
-
-#### Воркфлоу запису витрати:
-```
-1. Вибрати категорію
-2. Ввести суму та опис
-3. Вибрати бюджет: rent / damage
-4. Вибрати метод оплати: cash / bank
-5. POST /api/finance/expenses/simple
-   {
-     "category_code": "TRANSPORT",
-     "amount": 500,
-     "budget": "rent",
-     "method": "cash",
-     "description": "Доставка на захід"
-   }
-6. Backend створює запис в fin_expenses
-7. Оновлюється баланс відповідної каси
-```
-
-#### Структура таблиці fin_expenses:
-```sql
-CREATE TABLE fin_expenses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    category_code VARCHAR(50),
-    expense_type VARCHAR(50),
-    amount DECIMAL(12,2),
-    budget ENUM('rent', 'damage'),
-    method ENUM('cash', 'bank'),
-    description TEXT,
-    vendor_id INT,
-    order_id INT,
-    tx_id INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+┌──────────────────────────────────────────────────────────────────────┐
+│                     Documents Tab                                    │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Ордер #OC-7329                                                      │
+│  Платник: ТОВ "Декор Плюс"                                           │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │ 📜 Master Agreement                                             │ │
+│  │                                                                 │ │
+│  │ [MA знайдено]                                                   │ │
+│  │ ✅ Договір №MA-2024-010                                         │ │
+│  │    Діє до: 13.02.2025                                           │ │
+│  │    [Переглянути PDF]                                            │ │
+│  │                                                                 │ │
+│  │ [MA не знайдено]                                                │ │
+│  │ ⚠️ Для цього платника немає діючого договору                    │ │
+│  │    [Створити MA]                                                │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │ 📎 Annexes (Додатки)                                            │ │
+│  │                                                                 │ │
+│  │ [Disabled if no MA]                                             │ │
+│  │ ⚠️ Створіть спочатку Master Agreement                           │ │
+│  │                                                                 │ │
+│  │ [Enabled if MA exists]                                          │ │
+│  │ Додаток №1 v3 (signed) - 01.02.2024                             │ │
+│  │ [Згенерувати новий Annex]                                       │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### 6. 🔒 Депозити (Deposits)
+## 🎨 7. UX вибору платника в Documents Tab
 
-**Мета:** Управління заставами клієнтів.
+### Коли payer_profile_id пустий:
 
-#### API Endpoints:
 ```
-GET  /api/finance/deposits
-POST /api/finance/deposits/create
-POST /api/finance/deposits/{id}/use?amount={amount}
-POST /api/finance/deposits/{id}/refund?amount={amount}&method={method}
-```
-
-#### Статуси депозитів:
-| Статус | Опис |
-|--------|------|
-| `held` | Утримана (активна) |
-| `partially_used` | Частково використана |
-| `used` | Повністю використана |
-| `refunded` | Повернена |
-
-#### Воркфлоу депозиту:
-```
-┌────────────────────────────────────────────────────────────────┐
-│                 ЖИТТЄВИЙ ЦИКЛ ДЕПОЗИТУ                         │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  [Клієнт вносить заставу]                                      │
-│           │                                                    │
-│           ▼                                                    │
-│  ┌─────────────────┐                                           │
-│  │   held (5000)   │  ← Застава утримана                       │
-│  └────────┬────────┘                                           │
-│           │                                                    │
-│     ┌─────┴─────┐                                              │
-│     │           │                                              │
-│     ▼           ▼                                              │
-│  [Шкода]    [Без шкоди]                                        │
-│     │           │                                              │
-│     ▼           ▼                                              │
-│  ┌─────────┐  ┌─────────┐                                      │
-│  │  use    │  │ refund  │                                      │
-│  │ (2000)  │  │ (5000)  │                                      │
-│  └────┬────┘  └────┬────┘                                      │
-│       │            │                                           │
-│       ▼            ▼                                           │
-│  partially_used  refunded                                      │
-│       │                                                        │
-│       ▼                                                        │
-│  ┌─────────┐                                                   │
-│  │ refund  │ ← Повернення залишку                              │
-│  │ (3000)  │                                                   │
-│  └─────────┘                                                   │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                     Documents Tab                                    │
+├──────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Ордер #OC-7329                                                      │
+│  Клієнт: Марина Петренко                                             │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │ ⚠️ ПОТРІБЕН ПЛАТНИК ДЛЯ ДОГОВОРІВ                               │ │
+│  │                                                                 │ │
+│  │ Для генерації Master Agreement та Annex                         │ │
+│  │ оберіть платника з профілю клієнта                              │ │
+│  │                                                                 │ │
+│  │ ┌─────────────────────────────────────────────────────────────┐ │ │
+│  │ │ Платники Марини Петренко:                                   │ │ │
+│  │ │                                                             │ │ │
+│  │ │ ○ ТОВ "Декор Плюс" (ЄДРПОУ: 12345678) ⭐ дефолт             │ │ │
+│  │ │ ○ ФОП Іванов І.І. (ЄДРПОУ: 87654321)                        │ │ │
+│  │ │ ○ Фіз.особа Петренко М.В.                                   │ │ │
+│  │ │                                                             │ │ │
+│  │ │ [+ Створити нового платника]                                │ │ │
+│  │ └─────────────────────────────────────────────────────────────┘ │ │
+│  │                                                                 │ │
+│  │ ☐ Зробити обраного платника дефолтним                          │ │
+│  │                                                                 │ │
+│  │ [Обрати платника]                                               │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Структура таблиці fin_deposit_holds:
-```sql
-CREATE TABLE fin_deposit_holds (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT NOT NULL,
-    held_amount DECIMAL(12,2) DEFAULT 0,
-    used_amount DECIMAL(12,2) DEFAULT 0,
-    refunded_amount DECIMAL(12,2) DEFAULT 0,
-    status ENUM('held', 'partially_used', 'used', 'refunded'),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-```
+### При натисканні "Обрати платника":
 
----
+```python
+# POST /api/orders/{order_id}/assign-payer
+# body: { payer_profile_id: 5, set_as_default: true }
 
-### 7. 📈 Аналітика (Analytics)
-
-**Мета:** Фінансова звітність та візуалізація.
-
-#### Метрики:
-- Загальний дохід за період
-- Середній чек
-- Кількість замовлень
-- Рейтинг клієнтів за виручкою
-- Графік доходів по місяцях
-- Порівняння з попереднім періодом
-
----
-
-### 8. 👥 Клієнти (CRM Lite)
-
-**Мета:** Управління клієнтами та їх платіжними профілями.
-
-#### API Endpoints:
-```
-GET    /api/clients                     - Список клієнтів
-GET    /api/clients/{id}                - Деталі клієнта
-POST   /api/clients                     - Створити клієнта
-PATCH  /api/clients/{id}                - Оновити клієнта
-GET    /api/clients/{id}/payers         - Платники клієнта
-POST   /api/clients/{id}/payers/{pid}/link   - Прив'язати платника
-DELETE /api/clients/{id}/payers/{pid}/unlink - Відв'язати платника
-
-GET    /api/payer-profiles              - Список платників
-POST   /api/payer-profiles              - Створити платника
-PATCH  /api/payer-profiles/{id}         - Оновити платника
-```
-
-#### Модель даних Client-Payer:
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
-│  client_users   │     │  client_payer_links  │     │ payer_profiles  │
-├─────────────────┤     ├──────────────────────┤     ├─────────────────┤
-│ id              │◄────┤ client_user_id       │     │ id              │
-│ email           │     │ payer_profile_id     │────►│ type            │
-│ email_normalized│     │ is_default           │     │ display_name    │
-│ full_name       │     │ created_at           │     │ tax_mode        │
-│ phone           │     └──────────────────────┘     │ legal_name      │
-│ source          │                                  │ edrpou          │
-│ created_at      │                                  │ iban            │
-└─────────────────┘                                  │ bank_name       │
-                                                     │ address         │
-                                                     │ signatory_name  │
-                                                     │ signatory_basis │
-                                                     └─────────────────┘
-```
-
-#### Типи платників:
-| Type | Label | Документи |
-|------|-------|-----------|
-| `individual` | Фізична особа | quote, invoice_offer |
-| `fop` | ФОП | + master_agreement, annex, service_act |
-| `company` | ТОВ/ПП | + master_agreement, annex, service_act |
-| `foreign` | Нерезидент | quote, invoice_offer |
-| `pending` | Буде уточнено | quote |
-
-#### Режими оподаткування (tax_mode):
-| Mode | Опис | ПДВ |
-|------|------|-----|
-| `none` | Фіз особа | ❌ |
-| `simplified` | Спрощена система | ❌ |
-| `general` | Загальна система | ❌ |
-| `vat` | Платник ПДВ | ✅ |
-
-#### Воркфлоу створення платника:
-```
-1. Відкрити вкладку "Клієнти"
-2. Знайти клієнта в списку
-3. Натиснути "+ Платник"
-4. Заповнити форму:
-   - Тип: individual/fop/company
-   - Назва для відображення
-   - Режим оподаткування
-   - Юридична назва
-   - ЄДРПОУ/ІПН
-   - IBAN
-   - Банк
-   - Адреса
-   - Підписант
-5. POST /api/payer-profiles
-6. POST /api/clients/{clientId}/payers/{payerId}/link
-7. Платник прив'язаний до клієнта
+def assign_payer_to_order(order_id, payer_profile_id, set_as_default=False):
+    # 1. Отримуємо платника
+    payer = get_payer_profile(payer_profile_id)
+    
+    # 2. Створюємо snapshot
+    snapshot = {
+        "id": payer.id,
+        "type": payer.type,
+        "display_name": payer.display_name,
+        "legal_name": payer.legal_name,
+        "edrpou": payer.edrpou,
+        "iban": payer.iban,
+        "bank_name": payer.bank_name,
+        "address": payer.address,
+        "signatory_name": payer.signatory_name,
+        "signatory_basis": payer.signatory_basis,
+        "snapshot_date": datetime.now().isoformat()
+    }
+    
+    # 3. Оновлюємо ордер
+    db.execute("""
+        UPDATE orders SET 
+            payer_profile_id = :payer_id,
+            payer_snapshot_json = :snapshot
+        WHERE order_id = :order_id
+    """, {
+        "order_id": order_id,
+        "payer_id": payer_profile_id,
+        "snapshot": json.dumps(snapshot)
+    })
+    
+    # 4. Опціонально: оновлюємо дефолт
+    if set_as_default:
+        order = get_order(order_id)
+        # Скидаємо попередній дефолт
+        db.execute("""
+            UPDATE client_payer_links 
+            SET is_default = FALSE 
+            WHERE client_user_id = :client_id
+        """, {"client_id": order.client_user_id})
+        # Ставимо новий дефолт
+        db.execute("""
+            UPDATE client_payer_links 
+            SET is_default = TRUE 
+            WHERE client_user_id = :client_id 
+              AND payer_profile_id = :payer_id
+        """, {"client_id": order.client_user_id, "payer_id": payer_profile_id})
+    
+    db.commit()
+    
+    return {"success": True, "snapshot_created": True}
 ```
 
 ---
 
-## 🔗 Зв'язки з замовленнями
+## 🔧 8. Необхідні Backend Endpoints
 
-```
-┌─────────────┐
-│   orders    │
-├─────────────┤
-│ order_id    │
-│ ...         │
-│ client_user_id ────────────► client_users.id
-│ payer_profile_id ──────────► payer_profiles.id
-│ payer_snapshot_json ───────► JSON копія платника на момент замовлення
-└─────────────┘
-```
+### Нові/оновлені endpoints:
 
-#### Навіщо payer_snapshot_json?
-Якщо платник змінить реквізити після створення замовлення, в документах повинні залишитись старі дані. Тому при прив'язці платника до замовлення зберігається JSON-копія.
+```python
+# ============================================================
+# ASSIGN PAYER TO ORDER (з snapshot)
+# ============================================================
+
+@router.post("/orders/{order_id}/assign-payer")
+async def assign_payer_to_order(
+    order_id: int,
+    data: AssignPayerRequest,  # { payer_profile_id, set_as_default? }
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Прив'язує платника до ордера та створює snapshot.
+    Після цього можна генерувати MA/Annex.
+    """
+    # 1. Валідація
+    order = get_order(order_id)
+    payer = get_payer_profile(data.payer_profile_id)
+    
+    # 2. Створення snapshot
+    snapshot = create_payer_snapshot(payer)
+    
+    # 3. Оновлення ордера
+    update_order_payer(order_id, payer.id, snapshot)
+    
+    # 4. Опціонально: set_as_default
+    if data.set_as_default:
+        set_default_payer(order.client_user_id, payer.id)
+    
+    return {"success": True, "snapshot": snapshot}
+
+
+# ============================================================
+# GET SUGGESTED PAYER FOR ORDER
+# ============================================================
+
+@router.get("/orders/{order_id}/suggested-payer")
+async def get_suggested_payer(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Повертає рекомендованого платника для ордера
+    на основі client_user_id.
+    """
+    order = get_order(order_id)
+    
+    if not order.client_user_id:
+        return {"candidates": [], "suggested": None}
+    
+    # Отримуємо всіх платників клієнта
+    payers = get_client_payers(order.client_user_id)
+    
+    # Визначаємо рекомендованого
+    suggested = None
+    for p in payers:
+        if p.is_default:
+            suggested = p
+            break
+    
+    if not suggested and len(payers) == 1:
+        suggested = payers[0]
+    
+    return {
+        "candidates": payers,
+        "suggested": suggested,
+        "client_user_id": order.client_user_id
+    }
+
+
+# ============================================================
+# GET/CREATE MA FOR PAYER
+# ============================================================
+
+@router.get("/payer-profiles/{payer_id}/master-agreement")
+async def get_active_ma(payer_id: int, db: Session = Depends(get_rh_db)):
+    """
+    Повертає активний MA для платника або null.
+    """
+    ma = db.execute("""
+        SELECT * FROM master_agreements 
+        WHERE payer_profile_id = :payer_id
+          AND status IN ('active', 'signed')
+          AND valid_to >= CURDATE()
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, {"payer_id": payer_id}).fetchone()
+    
+    return {"master_agreement": ma, "exists": ma is not None}
+
+
+@router.post("/payer-profiles/{payer_id}/master-agreement")
+async def create_ma(payer_id: int, db: Session = Depends(get_rh_db)):
+    """
+    Створює новий MA для платника.
+    Використовує snapshot платника на момент створення.
+    """
+    payer = get_payer_profile(payer_id)
+    
+    # Policy check
+    if payer.type not in ['fop', 'company', 'individual']:
+        raise HTTPException(400, "MA недоступний для цього типу платника")
+    
+    # Створення MA
+    ma = create_master_agreement(payer)
+    
+    return {"master_agreement": ma, "success": True}
+
+
+# ============================================================
+# ANNEX GENERATION (вимагає MA)
+# ============================================================
+
+@router.post("/orders/{order_id}/annex")
+async def generate_annex(order_id: int, db: Session = Depends(get_rh_db)):
+    """
+    Генерує Annex для ордера.
+    Вимагає: payer_profile_id + активний MA.
+    """
+    order = get_order(order_id)
+    
+    # Перевірка платника
+    if not order.payer_profile_id:
+        raise HTTPException(400, "Спочатку прив'яжіть платника")
+    
+    # Пошук MA
+    ma = get_active_ma_for_payer(order.payer_profile_id)
+    if not ma:
+        raise HTTPException(400, "Спочатку створіть Master Agreement")
+    
+    # Генерація Annex
+    annex = create_annex(order_id, ma.id)
+    
+    return {"annex": annex, "master_agreement_id": ma.id}
+```
 
 ---
 
-## 📊 Повний ланцюг даних
+## ✨ 9. Красивий підсумковий воркфлоу
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                         ПОТІК ДАНИХ                                      │
+│                    ПОВНИЙ ЦИКЛ РОБОТИ З КЛІЄНТОМ                         │
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  [Клієнт робить замовлення]                                              │
-│           │                                                              │
-│           ▼                                                              │
-│  ┌─────────────────────┐                                                 │
-│  │      orders         │ ← order_id, customer_name, total_price          │
-│  └──────────┬──────────┘                                                 │
-│             │                                                            │
-│    ┌────────┼────────┐                                                   │
-│    │        │        │                                                   │
-│    ▼        ▼        ▼                                                   │
-│ [Оплата] [Застава] [Шкода]                                               │
-│    │        │        │                                                   │
-│    ▼        ▼        ▼                                                   │
-│ ┌──────┐ ┌───────────────┐ ┌───────────────────┐                         │
-│ │ fin_ │ │ fin_deposit_  │ │ product_damage_   │                         │
-│ │paymts│ │ holds         │ │ history           │                         │
-│ └──┬───┘ └───────┬───────┘ └─────────┬─────────┘                         │
-│    │             │                   │                                   │
-│    └─────────────┼───────────────────┘                                   │
-│                  │                                                       │
-│                  ▼                                                       │
-│         ┌────────────────┐                                               │
-│         │ fin_ledger_    │ ← Подвійна бухгалтерія                        │
-│         │ entries        │                                               │
-│         └────────┬───────┘                                               │
-│                  │                                                       │
-│                  ▼                                                       │
-│         ┌────────────────┐                                               │
-│         │ fin_accounts   │ ← Баланси кас                                 │
-│         │ (cash/bank)    │                                               │
-│         └────────────────┘                                               │
+│  1️⃣ КЛІЄНТ ЗАЛИШАЄ ЗАЯВКУ (EventTool / телефон / Viber)                  │
+│     │                                                                    │
+│     ▼                                                                    │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │ Система шукає client_user по email                                 │  │
+│  │ ├── Знайдено → використовуємо існуючого                            │  │
+│  │ └── Не знайдено → створюємо нового + базовий payer (individual)    │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│     │                                                                    │
+│     ▼                                                                    │
+│  2️⃣ СТВОРЮЄТЬСЯ ОРДЕР                                                    │
+│     │ • client_user_id = 54                                              │
+│     │ • payer_profile_id = дефолтний або NULL                            │
+│     │ • payer_snapshot_json = snapshot якщо є платник                    │
+│     │                                                                    │
+│     ▼                                                                    │
+│  3️⃣ МЕНЕДЖЕР ВІДКРИВАЄ ОРДЕР В FINANCE HUB                               │
+│     │                                                                    │
+│     ├──▶ [Якщо payer_profile_id = NULL]                                  │
+│     │    │                                                               │
+│     │    ▼                                                               │
+│     │    Блок "Оберіть платника"                                         │
+│     │    • Список платників клієнта                                      │
+│     │    • Кнопка "Створити нового"                                      │
+│     │    │                                                               │
+│     │    ▼                                                               │
+│     │    POST /api/orders/{id}/assign-payer                              │
+│     │    → payer_snapshot_json створюється                               │
+│     │                                                                    │
+│     └──▶ [Якщо payer_profile_id є]                                       │
+│          │                                                               │
+│          ▼                                                               │
+│  4️⃣ DOCUMENTS TAB                                                        │
+│     │                                                                    │
+│     ├──▶ Перевірка активного MA для payer_profile_id                     │
+│     │    │                                                               │
+│     │    ├── MA є → Кнопка "Згенерувати Annex"                           │
+│     │    │                                                               │
+│     │    └── MA немає → Кнопка "Створити MA"                             │
+│     │                   │                                                │
+│     │                   ▼                                                │
+│     │                   POST /api/payer-profiles/{id}/master-agreement   │
+│     │                                                                    │
+│     ▼                                                                    │
+│  5️⃣ ГЕНЕРАЦІЯ ДОКУМЕНТІВ                                                 │
+│     │                                                                    │
+│     │ Дані беруться з:                                                   │
+│     │ • orders.payer_snapshot_json (реквізити платника)                  │
+│     │ • orders.* (деталі ордера)                                         │
+│     │ • master_agreements.* (номер договору)                             │
+│     │                                                                    │
+│     ▼                                                                    │
+│  6️⃣ ДОКУМЕНТИ СТАБІЛЬНІ                                                  │
+│     │                                                                    │
+│     │ Навіть якщо платник потім змінить IBAN в payer_profiles,           │
+│     │ всі раніше згенеровані документи залишаться з старим IBAN          │
+│     │ (бо вони використовують snapshot)                                  │
+│     │                                                                    │
+│     ▼                                                                    │
+│  ✅ PROFIT!                                                               │
 │                                                                          │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🗂️ Файлова структура
+## 📊 Оновлена структура таблиць
 
-```
-/frontend/src/
-├── pages/
-│   └── FinanceHub.jsx           # Головний компонент фін.кабінету
-├── components/
-│   ├── ClientsTab.jsx           # Вкладка "Клієнти"
-│   ├── OrderFinancePanel.jsx    # Панель фінансів замовлення
-│   ├── ExpensesTab.jsx          # Вкладка "Витрати"
-│   ├── DepositsTab.jsx          # Вкладка "Депозити"
-│   ├── AnalyticsTab.jsx         # Вкладка "Аналітика"
-│   └── ForecastTab.jsx          # Вкладка "План надходжень"
+```sql
+-- Клієнти (контактні особи)
+CREATE TABLE client_users (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255),
+    email_normalized VARCHAR(255) UNIQUE,  -- lower(trim(email))
+    full_name VARCHAR(255),
+    phone VARCHAR(50),
+    company_hint VARCHAR(255),             -- Підказка "працює в..."
+    source ENUM('rentalhub', 'eventtool', 'manual'),
+    notes TEXT,
+    preferred_contact VARCHAR(50),         -- telegram/viber/whatsapp
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP ON UPDATE NOW()
+);
 
-/backend/routes/
-├── finance.py                   # Основні фінансові API
-├── clients.py                   # API клієнтів
-├── payer_profiles.py            # API платників
-├── documents.py                 # Генерація документів
-├── document_policy.py           # Логіка доступності документів
-└── orders.py                    # API замовлень
+-- Платники (юридичні реквізити)
+CREATE TABLE payer_profiles (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    type ENUM('individual', 'fop', 'company', 'foreign', 'pending'),
+    display_name VARCHAR(255) NOT NULL,    -- Назва для UI
+    tax_mode ENUM('none', 'simplified', 'general', 'vat'),
+    
+    -- Юридичні дані
+    legal_name VARCHAR(255),               -- Повна юр. назва
+    edrpou VARCHAR(20),                    -- ЄДРПОУ/ІПН
+    iban VARCHAR(50),
+    bank_name VARCHAR(255),
+    address TEXT,
+    
+    -- Підписант
+    signatory_name VARCHAR(255),           -- ПІБ директора
+    signatory_basis VARCHAR(100),          -- "Статуту" / "Довіреності №..."
+    
+    -- Контакти для документів
+    email_for_docs VARCHAR(255),
+    phone_for_docs VARCHAR(50),
+    
+    -- Метадані
+    details_json JSON,
+    note TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP ON UPDATE NOW()
+);
+
+-- Зв'язок клієнт ↔ платник (many-to-many)
+CREATE TABLE client_payer_links (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    client_user_id INT NOT NULL,
+    payer_profile_id INT NOT NULL,
+    is_default BOOLEAN DEFAULT FALSE,      -- Дефолтний для цього клієнта
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE KEY (client_user_id, payer_profile_id),
+    FOREIGN KEY (client_user_id) REFERENCES client_users(id),
+    FOREIGN KEY (payer_profile_id) REFERENCES payer_profiles(id)
+);
+
+-- Ордери (оновлені поля)
+ALTER TABLE orders ADD COLUMN client_user_id INT;
+ALTER TABLE orders ADD COLUMN payer_profile_id INT;
+ALTER TABLE orders ADD COLUMN payer_snapshot_json JSON;  -- FROZEN COPY!
+ALTER TABLE orders ADD COLUMN active_annex_id INT;
+
+-- Master Agreements (рамкові договори з платниками)
+CREATE TABLE master_agreements (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    payer_profile_id INT NOT NULL,         -- ← КЛЮЧОВИЙ ЗВ'ЯЗОК
+    payer_snapshot_json JSON,              -- Snapshot платника на момент MA
+    agreement_number VARCHAR(50) UNIQUE,
+    valid_from DATE NOT NULL,
+    valid_to DATE NOT NULL,                -- valid_from + 12 months
+    status ENUM('draft', 'active', 'signed', 'expired') DEFAULT 'draft',
+    pdf_path VARCHAR(500),
+    signed_at TIMESTAMP,
+    signed_by VARCHAR(255),
+    created_at TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (payer_profile_id) REFERENCES payer_profiles(id)
+);
+
+-- Annexes (додатки до ордерів)
+CREATE TABLE order_annexes (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,                 -- ← Конкретний ордер
+    master_agreement_id INT NOT NULL,      -- ← Посилання на MA
+    annex_number VARCHAR(50),
+    version INT DEFAULT 1,
+    status ENUM('draft', 'sent', 'signed') DEFAULT 'draft',
+    pdf_path VARCHAR(500),
+    created_at TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (order_id) REFERENCES orders(order_id),
+    FOREIGN KEY (master_agreement_id) REFERENCES master_agreements(id)
+);
 ```
 
 ---
 
-## ✅ Підсумок
+## 🗂️ 10. Вкладки Finance Hub (оновлено)
 
-Фінансовий кабінет RentalHub забезпечує:
-
-1. **Повний облік платежів** — оренда, застави, шкода
-2. **Управління касами** — готівка та безготівка окремо
-3. **CRM-lite функціонал** — клієнти та їх платники
-4. **Генерація документів** — з врахуванням типу платника
-5. **Подвійна бухгалтерія** — через ledger entries
-6. **Облік витрат** — категоризовані витрати з різних бюджетів
-7. **Аналітика** — звітність та прогнозування
+| # | Вкладка | Джерело даних | Пише в |
+|---|---------|---------------|--------|
+| 1 | 💰 Операції | orders + fin_payments | fin_payments, fin_ledger |
+| 2 | 📄 Документи | orders + master_agreements + annexes | master_agreements, order_annexes |
+| 3 | 💵 Каси | fin_ledger_entries (aggregated) | — |
+| 4 | 📊 План надходжень | orders (unpaid) | — |
+| 5 | 📉 Витрати | fin_expenses | fin_expenses, fin_ledger |
+| 6 | 🔒 Депозити | fin_deposit_holds | fin_deposit_holds |
+| 7 | 📈 Аналітика | all (aggregated) | — |
+| 8 | 👥 Клієнти | client_users + payer_profiles | client_users, payer_profiles, client_payer_links |
 
 ---
 
-*Документ створено: 13.02.2026*
-*Версія: 1.0*
+*Документ оновлено: 13.02.2026*
+*Версія: 2.0*

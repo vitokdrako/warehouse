@@ -733,6 +733,11 @@ export default function FinanceHub() {
             orderStats={orderStats}
           />
         )}
+        
+        {/* TAB: Clients */}
+        {activeTab === "clients" && (
+          <ClientsTab />
+        )}
       </div>
     </div>
   );

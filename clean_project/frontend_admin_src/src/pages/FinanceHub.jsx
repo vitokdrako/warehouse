@@ -824,9 +824,9 @@ export default function FinanceHub() {
           </div>
         </div>
 
-        {/* Mobile tabs - тепер 4 вкладки */}
+        {/* Mobile tabs */}
         <div className="mx-auto max-w-7xl px-4 pb-3 sm:hidden">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <Button variant={activeTabMobile === "kasy" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("kasy")}>
               Каси
             </Button>
@@ -836,20 +836,12 @@ export default function FinanceHub() {
             <Button variant={activeTabMobile === "actions" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("actions")}>
               Дії
             </Button>
-            <Button variant={activeTabMobile === "clients" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("clients")}>
-              Клієнти
-            </Button>
           </div>
         </div>
       </div>
 
-      {/* CLIENTS TAB - показується тільки на мобільному коли вибрано */}
-      <div className={cn("mx-auto max-w-7xl px-4 py-4", activeTabMobile !== "clients" && "hidden sm:hidden")}>
-        <ClientsTab />
-      </div>
-
-      {/* MAIN LAYOUT - показується завжди на desktop, на mobile тільки коли не clients */}
-      <div className={cn("mx-auto max-w-7xl px-4 py-4", activeTabMobile === "clients" && "hidden sm:block")}>
+      {/* Layout */}
+      <div className="mx-auto max-w-7xl px-4 py-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
           
           {/* LEFT: Каси + Ордери */}

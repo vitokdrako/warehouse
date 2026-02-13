@@ -271,36 +271,63 @@ async def create_payer_profile(data: PayerProfileCreate, db: Session = Depends(g
     """Створити новий профіль платника"""
     ensure_table_exists(db)
     
-    if data.payer_type not in PAYER_TYPES:
-        raise HTTPException(status_code=400, detail=f"Невідомий тип платника: {data.payer_type}")
+    # Валідація типу
+    if data.type not in PAYER_TYPES:
+        raise HTTPException(status_code=400, detail=f"Невідомий тип платника: {data.type}")
+    
+    # Визначаємо is_vat_payer на основі tax_mode
+    is_vat = data.tax_mode == "vat"
     
     try:
+        # Зберігаємо в таблицю з маппінгом нових полів на старі колонки
         db.execute(text("""
             INSERT INTO payer_profiles 
             (payer_type, company_name, edrpou, iban, bank_name, director_name, 
-             address, tax_number, is_vat_payer, phone, email, note)
+             address, tax_number, is_vat_payer, phone, email, note,
+             type, display_name, tax_mode, legal_name, signatory_name, signatory_basis,
+             email_for_docs, phone_for_docs, details_json)
             VALUES 
             (:payer_type, :company_name, :edrpou, :iban, :bank_name, :director_name,
-             :address, :tax_number, :is_vat_payer, :phone, :email, :note)
+             :address, :tax_number, :is_vat_payer, :phone, :email, :note,
+             :type, :display_name, :tax_mode, :legal_name, :signatory_name, :signatory_basis,
+             :email_for_docs, :phone_for_docs, :details_json)
         """), {
-            "payer_type": data.payer_type,
-            "company_name": data.company_name,
+            # Старі поля (для сумісності)
+            "payer_type": data.type,
+            "company_name": data.legal_name or data.display_name,
             "edrpou": data.edrpou,
             "iban": data.iban,
             "bank_name": data.bank_name,
-            "director_name": data.director_name,
+            "director_name": data.signatory_name,
             "address": data.address,
-            "tax_number": data.tax_number,
-            "is_vat_payer": data.is_vat_payer,
-            "phone": data.phone,
-            "email": data.email,
-            "note": data.note
+            "tax_number": data.edrpou,  # ІПН = ЄДРПОУ для ФОП
+            "is_vat_payer": is_vat,
+            "phone": data.phone_for_docs,
+            "email": data.email_for_docs,
+            "note": data.note,
+            # Нові поля
+            "type": data.type,
+            "display_name": data.display_name,
+            "tax_mode": data.tax_mode,
+            "legal_name": data.legal_name,
+            "signatory_name": data.signatory_name,
+            "signatory_basis": data.signatory_basis,
+            "email_for_docs": data.email_for_docs,
+            "phone_for_docs": data.phone_for_docs,
+            "details_json": str(data.details_json) if data.details_json else None
         })
         
         profile_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
         db.commit()
         
-        return {"success": True, "profile_id": profile_id}
+        # Повернути створений профіль
+        return {
+            "success": True, 
+            "id": profile_id,
+            "profile_id": profile_id,
+            "type": data.type,
+            "display_name": data.display_name
+        }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

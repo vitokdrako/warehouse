@@ -267,6 +267,8 @@ async def get_audit_items(
                 'description': html.unescape(description) if description else description,  # ✅ Декодувати HTML entities
                 'careInstructions': html.unescape(care_instructions) if care_instructions else None,  # ✅ Інструкція по догляду
                 'category': cat_full,
+                'categoryName': category_name,  # ✅ NEW: Окрема категорія
+                'subcategoryName': subcategory_name,  # ✅ NEW: Окрема підкатегорія
                 'zone': zone or '',  # ✅ Єдине поле для локації
                 'qty': quantity,  # ✅ From products table (single source of truth)
                 'status': item_status,  # ✅ Status from inventory_recount_status
@@ -282,6 +284,14 @@ async def get_audit_items(
                 'color': color,
                 'material': material,
                 'size': size,
+                # ✅ NEW: Розміри окремо
+                'heightCm': float(height_cm) if height_cm else None,
+                'widthCm': float(width_cm) if width_cm else None,
+                'depthCm': float(depth_cm) if depth_cm else None,
+                'diameterCm': float(diameter_cm) if diameter_cm else None,
+                # ✅ NEW: Форма та хештеги
+                'shape': shape,
+                'hashtags': hashtags,
                 'imageUrl': photo_url,
                 'price': float(price) if price else 0,
                 'rentalPrice': float(rental_price) if rental_price else 0,  # ✅ Ціна оренди за день

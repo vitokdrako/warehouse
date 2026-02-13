@@ -477,6 +477,226 @@ async def migrate_documents_engine_v3():
             db.rollback()
         
         # === 8. ADD annex_id TO documents ===
+
+
+@router.post("/products-extended-attributes")
+async def migrate_products_extended_attributes():
+    """
+    Розширення таблиці products новими атрибутами:
+    - Розміри окремими колонками (height, width, depth, diameter)
+    - Категорія/підкатегорія (редаговані)
+    - Форма виробу (shape)
+    - Хештеги (hashtags) для фільтрації
+    
+    Safe to run multiple times.
+    """
+    try:
+        db = get_rh_db_sync()
+        results = []
+        
+        # === 1. ADD height, width, depth, diameter columns ===
+        dimension_cols = [
+            ("height_cm", "DECIMAL(10,2)", "Висота в см"),
+            ("width_cm", "DECIMAL(10,2)", "Ширина в см"),
+            ("depth_cm", "DECIMAL(10,2)", "Глибина в см"),
+            ("diameter_cm", "DECIMAL(10,2)", "Діаметр в см"),
+        ]
+        
+        for col_name, col_type, col_desc in dimension_cols:
+            try:
+                check = db.execute(text(f"""
+                    SELECT COUNT(*) FROM information_schema.COLUMNS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'products' 
+                    AND COLUMN_NAME = '{col_name}'
+                """)).scalar()
+                
+                if not check:
+                    db.execute(text(f"""
+                        ALTER TABLE products ADD COLUMN {col_name} {col_type} DEFAULT NULL
+                        COMMENT '{col_desc}'
+                    """))
+                    db.commit()
+                    results.append(f"{col_name}: created")
+                else:
+                    results.append(f"{col_name}: already exists")
+            except Exception as e:
+                results.append(f"{col_name}: error - {str(e)}")
+                db.rollback()
+        
+        # === 2. ADD shape column (форма виробу) ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'products' 
+                AND COLUMN_NAME = 'shape'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE products ADD COLUMN shape VARCHAR(100) DEFAULT NULL
+                    COMMENT 'Форма виробу (круглий, квадратний, овальний...)'
+                """))
+                db.commit()
+                results.append("shape: created")
+            else:
+                results.append("shape: already exists")
+        except Exception as e:
+            results.append(f"shape: error - {str(e)}")
+            db.rollback()
+        
+        # === 3. ADD hashtags column (JSON array) ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'products' 
+                AND COLUMN_NAME = 'hashtags'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE products ADD COLUMN hashtags JSON DEFAULT NULL
+                    COMMENT 'Масив хештегів для фільтрації ["весілля", "вінтаж", "золото"]'
+                """))
+                db.commit()
+                results.append("hashtags: created")
+            else:
+                results.append("hashtags: already exists")
+        except Exception as e:
+            results.append(f"hashtags: error - {str(e)}")
+            db.rollback()
+        
+        # === 4. Ensure category_name and subcategory_name are editable ===
+        # (They should already exist from OpenCart sync, but let's make sure)
+        cat_cols = [
+            ("category_name", "VARCHAR(255)", "Назва категорії"),
+            ("subcategory_name", "VARCHAR(255)", "Назва підкатегорії"),
+        ]
+        
+        for col_name, col_type, col_desc in cat_cols:
+            try:
+                check = db.execute(text(f"""
+                    SELECT COUNT(*) FROM information_schema.COLUMNS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'products' 
+                    AND COLUMN_NAME = '{col_name}'
+                """)).scalar()
+                
+                if not check:
+                    db.execute(text(f"""
+                        ALTER TABLE products ADD COLUMN {col_name} {col_type} DEFAULT NULL
+                        COMMENT '{col_desc}'
+                    """))
+                    db.commit()
+                    results.append(f"{col_name}: created")
+                else:
+                    results.append(f"{col_name}: already exists")
+            except Exception as e:
+                results.append(f"{col_name}: error - {str(e)}")
+                db.rollback()
+        
+        # === 5. CREATE hashtags dictionary table ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_hashtags_dict'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE product_hashtags_dict (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        tag VARCHAR(100) NOT NULL UNIQUE,
+                        display_name VARCHAR(100),
+                        category VARCHAR(50) DEFAULT 'general',
+                        usage_count INT DEFAULT 0,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_tag (tag),
+                        INDEX idx_category (category)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                    COMMENT='Словник хештегів для фільтрації товарів'
+                """))
+                db.commit()
+                results.append("product_hashtags_dict: created")
+                
+                # Додати базові хештеги
+                base_tags = [
+                    ('весілля', 'Весілля', 'event'),
+                    ('корпоратив', 'Корпоратив', 'event'),
+                    ('день_народження', 'День народження', 'event'),
+                    ('вінтаж', 'Вінтаж', 'style'),
+                    ('модерн', 'Модерн', 'style'),
+                    ('класика', 'Класика', 'style'),
+                    ('бохо', 'Бохо', 'style'),
+                    ('мінімалізм', 'Мінімалізм', 'style'),
+                    ('золото', 'Золото', 'color'),
+                    ('срібло', 'Срібло', 'color'),
+                    ('білий', 'Білий', 'color'),
+                    ('чорний', 'Чорний', 'color'),
+                    ('скло', 'Скло', 'material'),
+                    ('метал', 'Метал', 'material'),
+                    ('дерево', 'Дерево', 'material'),
+                    ('тканина', 'Тканина', 'material'),
+                    ('преміум', 'Преміум', 'tier'),
+                    ('стандарт', 'Стандарт', 'tier'),
+                    ('економ', 'Економ', 'tier'),
+                ]
+                
+                for tag, display, cat in base_tags:
+                    try:
+                        db.execute(text("""
+                            INSERT INTO product_hashtags_dict (tag, display_name, category)
+                            VALUES (:tag, :display, :cat)
+                        """), {"tag": tag, "display": display, "cat": cat})
+                    except:
+                        pass
+                db.commit()
+                results.append("product_hashtags_dict: populated with base tags")
+            else:
+                results.append("product_hashtags_dict: already exists")
+        except Exception as e:
+            results.append(f"product_hashtags_dict: error - {str(e)}")
+            db.rollback()
+        
+        # === 6. Migrate existing size data to separate columns ===
+        try:
+            # Парсимо існуючі size (формат "50x50x50") в окремі колонки
+            db.execute(text("""
+                UPDATE products 
+                SET 
+                    height_cm = CAST(SUBSTRING_INDEX(size, 'x', 1) AS DECIMAL(10,2)),
+                    width_cm = CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(size, 'x', 2), 'x', -1) AS DECIMAL(10,2)),
+                    depth_cm = CAST(SUBSTRING_INDEX(size, 'x', -1) AS DECIMAL(10,2))
+                WHERE size IS NOT NULL 
+                AND size != ''
+                AND size LIKE '%x%x%'
+                AND height_cm IS NULL
+            """))
+            migrated = db.execute(text("SELECT ROW_COUNT()")).scalar()
+            db.commit()
+            results.append(f"size migration: {migrated} products updated")
+        except Exception as e:
+            results.append(f"size migration: error - {str(e)}")
+            db.rollback()
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "products-extended-attributes",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Products extended attributes migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )
+
         try:
             check = db.execute(text("""
                 SELECT COUNT(*) FROM information_schema.COLUMNS 

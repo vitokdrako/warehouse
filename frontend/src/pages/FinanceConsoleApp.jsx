@@ -5,9 +5,11 @@
  *   1. Ордери (CashDesk) — список + детальна панель
  *   2. Облік (Ledger) — журнал проводок
  *   3. Витрати (Expenses) — templates → due → post, one-off, payroll
+ *   4. Клієнти — CRM lite
  */
 import React, { useEffect, useMemo, useState } from "react";
 import CorporateHeader from "../components/CorporateHeader";
+import ClientsTab from "../components/ClientsTab";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 

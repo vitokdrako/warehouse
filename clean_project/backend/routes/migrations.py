@@ -476,7 +476,20 @@ async def migrate_documents_engine_v3():
             results.append(f"documents.master_agreement_id: error - {str(e)}")
             db.rollback()
         
-        # === 8. ADD annex_id TO documents ===
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "documents-engine-v3",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Documents Engine V3 migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )
 
 
 @router.post("/products-extended-attributes")

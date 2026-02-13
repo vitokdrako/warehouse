@@ -1180,7 +1180,8 @@ async def edit_item_full(
     rh_db: Session = Depends(get_rh_db)
 ):
     """
-    Повне редагування товару: назва, колір, матеріал, кількість, розташування
+    Повне редагування товару: назва, колір, матеріал, кількість, розташування,
+    категорія, підкатегорія, розміри (окремо), форма, хештеги
     Зберігає ТІЛЬКИ в RentalHub БД
     """
     try:
@@ -1221,10 +1222,70 @@ async def edit_item_full(
             update_params['material'] = data['material']
             changes.append(f"Матеріал: {data['material']}")
         
-        if 'size' in data:
-            update_fields.append("size = :size")
-            update_params['size'] = data['size']
-            changes.append(f"Розмір: {data['size']}")
+        # === НОВІ ПОЛЯ: Розміри окремо ===
+        if 'height' in data:
+            update_fields.append("height_cm = :height")
+            update_params['height'] = float(data['height']) if data['height'] else None
+            if data['height']:
+                changes.append(f"Висота: {data['height']} см")
+        
+        if 'width' in data:
+            update_fields.append("width_cm = :width")
+            update_params['width'] = float(data['width']) if data['width'] else None
+            if data['width']:
+                changes.append(f"Ширина: {data['width']} см")
+        
+        if 'depth' in data:
+            update_fields.append("depth_cm = :depth")
+            update_params['depth'] = float(data['depth']) if data['depth'] else None
+            if data['depth']:
+                changes.append(f"Глибина: {data['depth']} см")
+        
+        if 'diameter' in data:
+            update_fields.append("diameter_cm = :diameter")
+            update_params['diameter'] = float(data['diameter']) if data['diameter'] else None
+            if data['diameter']:
+                changes.append(f"Діаметр: {data['diameter']} см")
+        
+        # Також оновимо старе поле size для сумісності
+        if any(k in data for k in ['height', 'width', 'depth']):
+            h = data.get('height', '')
+            w = data.get('width', '')
+            d = data.get('depth', '')
+            size_parts = [str(x) for x in [h, w, d] if x]
+            if size_parts:
+                size_str = 'x'.join(size_parts)
+                update_fields.append("size = :size")
+                update_params['size'] = size_str
+        
+        # === НОВІ ПОЛЯ: Форма ===
+        if 'shape' in data:
+            update_fields.append("shape = :shape")
+            update_params['shape'] = data['shape']
+            if data['shape']:
+                changes.append(f"Форма: {data['shape']}")
+        
+        # === НОВІ ПОЛЯ: Категорія/Підкатегорія ===
+        if 'category' in data:
+            update_fields.append("category_name = :category")
+            update_params['category'] = data['category']
+            if data['category']:
+                changes.append(f"Категорія: {data['category']}")
+        
+        if 'subcategory' in data:
+            update_fields.append("subcategory_name = :subcategory")
+            update_params['subcategory'] = data['subcategory']
+            if data['subcategory']:
+                changes.append(f"Підкатегорія: {data['subcategory']}")
+        
+        # === НОВІ ПОЛЯ: Хештеги (JSON array) ===
+        if 'hashtags' in data:
+            import json
+            hashtags = data['hashtags'] if isinstance(data['hashtags'], list) else []
+            update_fields.append("hashtags = :hashtags")
+            update_params['hashtags'] = json.dumps(hashtags, ensure_ascii=False)
+            if hashtags:
+                changes.append(f"Хештеги: {', '.join(['#' + t for t in hashtags])}")
         
         if 'qty' in data and data['qty'] is not None:
             update_fields.append("quantity = :qty")

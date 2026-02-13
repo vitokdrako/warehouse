@@ -2354,6 +2354,8 @@ export default function FinanceConsoleApp() {
             <PayoutsTab reload={loadAll} loading={loading} />
           ) : tab === "ledger" ? (
             <LedgerTab ledger={ledger} reload={loadAll} loading={loading} />
+          ) : tab === "clients" ? (
+            <ClientsTab />
           ) : (
             <ExpensesTab reload={loadAll} loading={loading} />
           )}

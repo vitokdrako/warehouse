@@ -1,10 +1,11 @@
 /* eslint-disable */
 /**
  * Finance Hub 2.0 - Уніфікований фінансовий центр
- * Всі 4 вкладки в одному вікні з реальними даними
+ * Всі 5 вкладок в одному вікні з реальними даними
  */
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import CorporateHeader from "../components/CorporateHeader";
+import ClientsTab from "../components/ClientsTab";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 

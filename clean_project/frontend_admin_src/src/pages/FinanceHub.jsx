@@ -810,74 +810,48 @@ export default function FinanceHub() {
       {/* Finance Controls */}
       <div className="sticky top-[60px] z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-3">
-          {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-            <button
-              onClick={() => setViewMode("finance")}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-semibold transition",
-                viewMode === "finance"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              💰 Фінанси
-            </button>
-            <button
-              onClick={() => setViewMode("clients")}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-semibold transition",
-                viewMode === "clients"
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-600 hover:text-slate-900"
-              )}
-            >
-              👥 Клієнти
-            </button>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-extrabold">💰 Фінанси</span>
           </div>
 
-          {viewMode === "finance" && (
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:block text-xs text-slate-500">Місяць</div>
-              <Input
-                type="month"
-                value={month}
-                onChange={(e) => setMonth(e.target.value)}
-                className="w-[140px]"
-              />
-              <Button variant="ghost" onClick={refreshAll} className="!px-3">🔄</Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:block text-xs text-slate-500">Місяць</div>
+            <Input
+              type="month"
+              value={month}
+              onChange={(e) => setMonth(e.target.value)}
+              className="w-[140px]"
+            />
+            <Button variant="ghost" onClick={refreshAll} className="!px-3">🔄</Button>
+          </div>
         </div>
 
-        {/* Mobile tabs - only for finance view */}
-        {viewMode === "finance" && (
-          <div className="mx-auto max-w-7xl px-4 pb-3 sm:hidden">
-            <div className="grid grid-cols-3 gap-2">
-              <Button variant={activeTabMobile === "kasy" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("kasy")}>
-                Каси
-              </Button>
-              <Button variant={activeTabMobile === "order" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("order")}>
-                Ордер
-              </Button>
-              <Button variant={activeTabMobile === "actions" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("actions")}>
-                Дії
-              </Button>
-            </div>
+        {/* Mobile tabs - тепер 4 вкладки */}
+        <div className="mx-auto max-w-7xl px-4 pb-3 sm:hidden">
+          <div className="grid grid-cols-4 gap-2">
+            <Button variant={activeTabMobile === "kasy" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("kasy")}>
+              Каси
+            </Button>
+            <Button variant={activeTabMobile === "order" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("order")}>
+              Ордер
+            </Button>
+            <Button variant={activeTabMobile === "actions" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("actions")}>
+              Дії
+            </Button>
+            <Button variant={activeTabMobile === "clients" ? "primary" : "ghost"} onClick={() => setActiveTabMobile("clients")}>
+              Клієнти
+            </Button>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* CLIENTS VIEW */}
-      {viewMode === "clients" && (
-        <div className="mx-auto max-w-7xl px-4 py-4">
-          <ClientsTab />
-        </div>
-      )}
+      {/* CLIENTS TAB - показується тільки на мобільному коли вибрано */}
+      <div className={cn("mx-auto max-w-7xl px-4 py-4", activeTabMobile !== "clients" && "hidden sm:hidden")}>
+        <ClientsTab />
+      </div>
 
-      {/* FINANCE VIEW */}
-      {viewMode === "finance" && (
-      <div className="mx-auto max-w-7xl px-4 py-4">
+      {/* MAIN LAYOUT - показується завжди на desktop, на mobile тільки коли не clients */}
+      <div className={cn("mx-auto max-w-7xl px-4 py-4", activeTabMobile === "clients" && "hidden sm:block")}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-12">
           
           {/* LEFT: Каси + Ордери */}

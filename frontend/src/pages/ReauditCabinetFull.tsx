@@ -304,6 +304,7 @@ export default function ReauditCabinetFull({
     loadItems()
     loadStats()
     loadCategories()
+    loadDictionaries()  // ✅ Завантажити словники
   }, [q, categoryFilter, subcategoryFilter])
 
   // Перезавантажити при зміні фільтра статусу

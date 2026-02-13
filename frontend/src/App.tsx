@@ -20,7 +20,7 @@ import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
 import UniversalOpsCalendar from './pages/UniversalOpsCalendar';
 import CatalogBoard from './pages/CatalogBoard';
-import FinanceHub from './pages/FinanceHub';
+import FinanceConsoleApp from './pages/FinanceConsoleApp';  // ✅ Нова фінансова консоль з клієнтами
 // New unified workspace components
 import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';

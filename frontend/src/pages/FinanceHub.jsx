@@ -291,46 +291,35 @@ export default function FinanceHub() {
   // Initial load
   useEffect(() => {
     console.log("[FinanceHub] Initial load starting...");
-    let mounted = true;
+    const abortController = new AbortController();
     
     const loadAll = async () => {
       setLoading(true);
       try {
         console.log("[FinanceHub] Loading data...");
         
-        // Load in sequence to debug
-        console.log("[FinanceHub] >> loadOrders...");
-        await loadOrders();
-        console.log("[FinanceHub] << loadOrders done");
-        
-        if (!mounted) return;
-        
-        console.log("[FinanceHub] >> loadDeposits...");
-        await loadDeposits();
-        console.log("[FinanceHub] << loadDeposits done");
-        
-        if (!mounted) return;
-        
-        console.log("[FinanceHub] >> loadPayoutsStats...");
-        await loadPayoutsStats();
-        console.log("[FinanceHub] << loadPayoutsStats done");
-        
-        if (!mounted) return;
-        
-        console.log("[FinanceHub] >> loadPayerProfiles...");
-        await loadPayerProfiles();
-        console.log("[FinanceHub] << loadPayerProfiles done");
+        // Load all in parallel for speed
+        await Promise.all([
+          loadOrders(),
+          loadDeposits(),
+          loadPayoutsStats(),
+          loadPayerProfiles()
+        ]);
         
         console.log("[FinanceHub] Data loaded successfully");
       } catch (e) {
-        console.error("[FinanceHub] Load error:", e);
+        if (e.name !== 'AbortError') {
+          console.error("[FinanceHub] Load error:", e);
+        }
+      } finally {
+        // Always set loading to false when done
+        setLoading(false);
       }
-      if (mounted) setLoading(false);
     };
     
     loadAll();
     
-    return () => { mounted = false; };
+    return () => { abortController.abort(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   

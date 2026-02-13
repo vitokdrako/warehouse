@@ -95,7 +95,13 @@ async def get_audit_items(
                 p.cleaning_status,
                 p.product_state,
                 p.last_audit_date,
-                ar.status as audit_status
+                ar.status as audit_status,
+                p.height_cm,
+                p.width_cm,
+                p.depth_cm,
+                p.diameter_cm,
+                p.shape,
+                p.hashtags
             FROM products p
             LEFT JOIN (
                 SELECT product_id, status 

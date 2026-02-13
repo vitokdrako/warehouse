@@ -930,15 +930,54 @@ export default function ReauditCabinetFull({
                         />
                       </div>
                     </div>
+                    
+                    {/* ✅ NEW: Категорія та підкатегорія */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] text-corp-text-main mb-1">📁 Категорія</label>
+                        <input
+                          type="text"
+                          list="categories-list"
+                          value={editData.category}
+                          onChange={(e) => setEditData({...editData, category: e.target.value})}
+                          placeholder="Вази"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        />
+                        <datalist id="categories-list">
+                          {categoriesDict.map(c => (
+                            <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
+                          ))}
+                        </datalist>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-corp-text-main mb-1">📂 Підкатегорія</label>
+                        <input
+                          type="text"
+                          list="subcategories-list"
+                          value={editData.subcategory}
+                          onChange={(e) => setEditData({...editData, subcategory: e.target.value})}
+                          placeholder="Скляні вази"
+                          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        />
+                        <datalist id="subcategories-list">
+                          {(subcategoriesDict[editData.category] || []).map(s => (
+                            <option key={s.name} value={s.name}>{s.name} ({s.count})</option>
+                          ))}
+                        </datalist>
+                      </div>
+                    </div>
+                    
+                    {/* ✅ NEW: Розміри окремими полями */}
                     <div>
                       <label className="block text-[10px] text-corp-text-main mb-2">📏 Розміри (см)</label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-4 gap-2">
                         <div>
-                          <label className="block text-[9px] text-corp-text-muted mb-1">Довжина</label>
+                          <label className="block text-[9px] text-corp-text-muted mb-1">Висота</label>
                           <input
-                            type="text"
-                            value={editData.length}
-                            onChange={(e) => setEditData({...editData, length: e.target.value})}
+                            type="number"
+                            step="0.1"
+                            value={editData.height}
+                            onChange={(e) => setEditData({...editData, height: e.target.value})}
                             placeholder="50"
                             className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                           />
@@ -946,7 +985,8 @@ export default function ReauditCabinetFull({
                         <div>
                           <label className="block text-[9px] text-corp-text-muted mb-1">Ширина</label>
                           <input
-                            type="text"
+                            type="number"
+                            step="0.1"
                             value={editData.width}
                             onChange={(e) => setEditData({...editData, width: e.target.value})}
                             placeholder="50"
@@ -954,17 +994,122 @@ export default function ReauditCabinetFull({
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] text-corp-text-muted mb-1">Висота</label>
+                          <label className="block text-[9px] text-corp-text-muted mb-1">Глибина</label>
                           <input
-                            type="text"
-                            value={editData.height}
-                            onChange={(e) => setEditData({...editData, height: e.target.value})}
+                            type="number"
+                            step="0.1"
+                            value={editData.depth}
+                            onChange={(e) => setEditData({...editData, depth: e.target.value})}
                             placeholder="50"
+                            className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] text-corp-text-muted mb-1">⌀ Діаметр</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={editData.diameter}
+                            onChange={(e) => setEditData({...editData, diameter: e.target.value})}
+                            placeholder="30"
                             className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                           />
                         </div>
                       </div>
                     </div>
+                    
+                    {/* ✅ NEW: Форма виробу */}
+                    <div>
+                      <label className="block text-[10px] text-corp-text-main mb-1">🔷 Форма виробу</label>
+                      <input
+                        type="text"
+                        list="shapes-list"
+                        value={editData.shape}
+                        onChange={(e) => setEditData({...editData, shape: e.target.value})}
+                        placeholder="круглий, квадратний, овальний..."
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      />
+                      <datalist id="shapes-list">
+                        {shapesDict.map(s => <option key={s} value={s} />)}
+                      </datalist>
+                    </div>
+                    
+                    {/* ✅ NEW: Хештеги */}
+                    <div>
+                      <label className="block text-[10px] text-corp-text-main mb-1">#️⃣ Хештеги (для фільтрації)</label>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {editData.hashtags.map(tag => (
+                          <span 
+                            key={tag} 
+                            className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px]"
+                          >
+                            #{tag}
+                            <button 
+                              type="button"
+                              onClick={() => setEditData({
+                                ...editData, 
+                                hashtags: editData.hashtags.filter(t => t !== tag)
+                              })}
+                              className="text-blue-500 hover:text-blue-700"
+                            >×</button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          list="hashtags-list"
+                          value={newHashtag}
+                          onChange={(e) => setNewHashtag(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newHashtag.trim()) {
+                              e.preventDefault()
+                              const tag = newHashtag.toLowerCase().trim().replace(/[^a-zа-яіїєґ0-9_]/gi, '_')
+                              if (!editData.hashtags.includes(tag)) {
+                                setEditData({...editData, hashtags: [...editData.hashtags, tag]})
+                              }
+                              setNewHashtag('')
+                            }
+                          }}
+                          placeholder="Введіть тег і Enter"
+                          className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (newHashtag.trim()) {
+                              const tag = newHashtag.toLowerCase().trim().replace(/[^a-zа-яіїєґ0-9_]/gi, '_')
+                              if (!editData.hashtags.includes(tag)) {
+                                setEditData({...editData, hashtags: [...editData.hashtags, tag]})
+                              }
+                              setNewHashtag('')
+                            }
+                          }}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm"
+                        >+</button>
+                      </div>
+                      <datalist id="hashtags-list">
+                        {hashtagsDict.map(h => (
+                          <option key={h.tag} value={h.tag}>{h.display_name} ({h.category})</option>
+                        ))}
+                      </datalist>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        <span className="text-[9px] text-slate-400">Популярні:</span>
+                        {hashtagsDict.slice(0, 10).map(h => (
+                          <button
+                            key={h.tag}
+                            type="button"
+                            onClick={() => {
+                              if (!editData.hashtags.includes(h.tag)) {
+                                setEditData({...editData, hashtags: [...editData.hashtags, h.tag]})
+                              }
+                            }}
+                            className="text-[9px] text-blue-600 hover:underline"
+                          >#{h.tag}</button>
+                        ))}
+                      </div>
+                    </div>
+                    
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[10px] text-corp-text-main mb-1">📦 Кількість</label>
@@ -989,11 +1134,6 @@ export default function ReauditCabinetFull({
                     <div className="flex gap-2">
                       <PillButton tone="green" onClick={async () => {
                         try {
-                          // Об'єднати розміри в один рядок "50x50x50"
-                          const size = [editData.length, editData.width, editData.height]
-                            .filter(v => v && v.trim())
-                            .join('x')
-                          
                           const response = await fetch(`${BACKEND_URL}/api/audit/items/${selected.id}/edit-full`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
@@ -1004,7 +1144,16 @@ export default function ReauditCabinetFull({
                               rentalPrice: editData.rentalPrice,
                               color: editData.color,
                               material: editData.material,
-                              size: size,
+                              // ✅ NEW: Окремі поля розмірів
+                              height: editData.height,
+                              width: editData.width,
+                              depth: editData.depth,
+                              diameter: editData.diameter,
+                              // ✅ NEW: Категорія, форма, хештеги
+                              category: editData.category,
+                              subcategory: editData.subcategory,
+                              shape: editData.shape,
+                              hashtags: editData.hashtags,
                               qty: editData.qty,
                               zone: editData.zone,
                               actor: 'Реквізитор'

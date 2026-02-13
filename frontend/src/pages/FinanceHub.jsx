@@ -584,6 +584,7 @@ export default function FinanceHub() {
     { id: "expenses", label: "Витрати", icon: "📉" },
     { id: "deposits", label: "Депозити", icon: "🔒" },
     { id: "analytics", label: "Аналітика", icon: "📈" },
+    { id: "clients", label: "Клієнти", icon: "👥" },
   ];
   
   // ===== RENDER =====

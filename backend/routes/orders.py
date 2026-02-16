@@ -560,6 +560,7 @@ async def get_order_details(
     order["discount"] = round(discount_percent_db, 2)
     order["discount_percent"] = round(discount_percent_db, 2)
     order["service_fee"] = float(row[21]) if row[21] else 0
+    order["service_fee_name"] = row[22] or ""
     
     # Завантажити items
     items_result = db.execute(text("""

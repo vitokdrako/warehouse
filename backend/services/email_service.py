@@ -145,6 +145,7 @@ def send_document_email(
     """
     # Назви документів українською
     doc_names = {
+        "estimate": "Кошторис",
         "invoice_offer": "Рахунок-оферта",
         "contract_rent": "Договір оренди",
         "issue_act": "Акт передачі",

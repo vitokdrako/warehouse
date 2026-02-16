@@ -956,3 +956,7 @@ clean_project/front_event_tool_src/node_modules/.cache/default-development/0.pac
 *.env
 *.env.*
 clean_project/backend_full_20260216.zip
+-e 
+# Environment files
+*.env
+*.env.*

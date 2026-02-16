@@ -609,7 +609,9 @@ export default function FinanceHub() {
   ];
   
   // ===== RENDER =====
-  if (loading) {
+  // DEBUG: Skip loading check to see if content renders
+  const DEBUG_SKIP_LOADING = true;
+  if (loading && !DEBUG_SKIP_LOADING) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-slate-500">Завантаження...</div>

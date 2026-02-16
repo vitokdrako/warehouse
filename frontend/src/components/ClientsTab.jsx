@@ -783,11 +783,18 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
 export default function ClientsTab({ onSelectClientForOrder }) {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all, has_payer, no_payer
   const [selectedClient, setSelectedClient] = useState(null);
   const [showPayerModal, setShowPayerModal] = useState(false);
   const [quickCreateClientId, setQuickCreateClientId] = useState(null);
+
+  // Loading timeout - show content after 5 seconds even if loading
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingTimeout(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const loadClients = useCallback(async () => {
     setLoading(true);

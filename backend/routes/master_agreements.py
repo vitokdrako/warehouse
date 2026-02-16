@@ -407,6 +407,56 @@ async def get_active_agreement(payer_profile_id: int, db: Session = Depends(get_
 
 
 # ============================================================
+# GET ACTIVE AGREEMENT FOR CLIENT (NEW)
+# ============================================================
+
+@router.get("/client/{client_user_id}")
+async def get_client_agreement(client_user_id: int, db: Session = Depends(get_rh_db)):
+    """Get active agreement for client"""
+    
+    # First try to find signed agreement
+    result = db.execute(text("""
+        SELECT 
+            id, contract_number, valid_from, valid_until, signed_at, status, pdf_path
+        FROM master_agreements 
+        WHERE client_user_id = :cid 
+        AND status = 'signed'
+        AND valid_until >= CURDATE()
+        ORDER BY signed_at DESC
+        LIMIT 1
+    """), {"cid": client_user_id})
+    
+    row = result.fetchone()
+    
+    # If no signed, try to find draft
+    if not row:
+        result = db.execute(text("""
+            SELECT 
+                id, contract_number, valid_from, valid_until, signed_at, status, pdf_path
+            FROM master_agreements 
+            WHERE client_user_id = :cid 
+            AND status IN ('draft', 'sent')
+            ORDER BY created_at DESC
+            LIMIT 1
+        """), {"cid": client_user_id})
+        row = result.fetchone()
+    
+    if not row:
+        return {"exists": False, "message": "Договір не знайдено"}
+    
+    return {
+        "exists": True,
+        "id": row[0],
+        "contract_number": row[1],
+        "valid_from": row[2].isoformat() if row[2] else None,
+        "valid_until": row[3].isoformat() if row[3] else None,
+        "signed_at": row[4].isoformat() if row[4] else None,
+        "status": row[5],
+        "pdf_path": row[6]
+    }
+
+
+# ============================================================
 # SIGN AGREEMENT (mark as signed)
 # ============================================================
 

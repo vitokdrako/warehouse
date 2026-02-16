@@ -558,6 +558,14 @@ async def send_agreement(
     if not agreement:
         raise HTTPException(status_code=404, detail="Договір не знайдено")
     
+    # Parse snapshot
+    snapshot = None
+    if agreement[7]:  # snapshot_json field
+        try:
+            snapshot = json.loads(agreement[7]) if isinstance(agreement[7], str) else agreement[7]
+        except:
+            pass
+    
     # Prepare data for PDF
     agreement_data = {
         "id": agreement[0],
@@ -565,7 +573,8 @@ async def send_agreement(
         "status": agreement[2],
         "valid_from": agreement[3].isoformat() if agreement[3] else None,
         "valid_until": agreement[4].isoformat() if agreement[4] else None,
-        "signed_at": agreement[5].isoformat() if agreement[5] else None
+        "signed_at": agreement[5].isoformat() if agreement[5] else None,
+        "snapshot": snapshot
     }
     
     client_data = {
@@ -584,13 +593,13 @@ async def send_agreement(
         raise HTTPException(status_code=500, detail=f"Помилка генерації PDF: {pdf_result.get('error')}")
     
     # Prepare email
-    subject = f"Рамковий договір {agreement[1]} | FarforRent"
+    subject = f"Договір оренди № {agreement[1]} | FarforRent"
     html_body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; color: #333;">
-        <h2>Рамковий договір {agreement[1]}</h2>
+        <h2>Договір оренди № {agreement[1]}</h2>
         <p>Шановний(а) {client_data.get('full_name', 'клієнте')},</p>
-        <p>Надсилаємо вам Рамковий договір про надання послуг з оренди обладнання.</p>
+        <p>Надсилаємо вам Договір оренди обладнання.</p>
         <p><strong>Номер договору:</strong> {agreement[1]}</p>
         <p><strong>Дійсний до:</strong> {agreement_data.get('valid_until', '—')}</p>
         <p>Будь ласка, ознайомтесь з умовами договору у вкладеному PDF файлі.</p>

@@ -125,7 +125,11 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 ## Completed in Session 8
 - ✅ Bug fix: Duplicate MA UI removed from ClientsTab
 - ✅ Code cleanup: Removed unused `payerMAs` variable
-- ✅ Test report: /app/test_reports/iteration_8.json
+- ✅ PDF generation for Master Agreement (WeasyPrint + Jinja2)
+- ✅ HTML preview endpoint
+- ✅ PDF download endpoint
+- ✅ Email with PDF attachment
+- ✅ Test reports: /app/test_reports/iteration_8.json
 
 ## Pending Issues (P1-P2)
 - **P1:** `convert-to-order` endpoint unstable (needs testing after refactoring)

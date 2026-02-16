@@ -202,7 +202,13 @@ export default function FinanceHub() {
   const loadOrders = useCallback(async () => {
     console.log("[FinanceHub] loadOrders called");
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/manager/finance/orders-with-finance?limit=100`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const res = await authFetch(`${BACKEND_URL}/api/manager/finance/orders-with-finance?limit=100`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      console.log("[FinanceHub] loadOrders response status:", res.status);
       const data = await res.json();
       console.log("[FinanceHub] loadOrders response:", data.orders?.length);
       setOrders(data.orders || []);
@@ -210,31 +216,43 @@ export default function FinanceHub() {
         setSelectedOrderId(prev => prev || data.orders[0].order_id);
       }
     } catch (e) {
-      console.error("Load orders error:", e);
+      console.error("Load orders error:", e.name, e.message);
     }
   }, []);
   
   const loadDeposits = useCallback(async () => {
     console.log("[FinanceHub] loadDeposits called");
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/finance/deposits`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const res = await authFetch(`${BACKEND_URL}/api/finance/deposits`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      console.log("[FinanceHub] loadDeposits response status:", res.status);
       const data = await res.json();
       console.log("[FinanceHub] loadDeposits response:", Array.isArray(data) ? data.length : 0);
       setDeposits(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error("Load deposits error:", e);
+      console.error("Load deposits error:", e.name, e.message);
     }
   }, []);
   
   const loadPayoutsStats = useCallback(async () => {
     console.log("[FinanceHub] loadPayoutsStats called");
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/finance/payouts-stats-v2`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const res = await authFetch(`${BACKEND_URL}/api/finance/payouts-stats-v2`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      console.log("[FinanceHub] loadPayoutsStats response status:", res.status);
       const data = await res.json();
       console.log("[FinanceHub] loadPayoutsStats response:", data?.total_cash_balance);
       setPayoutsStats(data);
     } catch (e) {
-      console.error("Load stats error:", e);
+      console.error("Load stats error:", e.name, e.message);
     }
   }, []);
   

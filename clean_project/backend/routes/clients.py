@@ -28,6 +28,8 @@ class ClientCreate(BaseModel):
     notes: Optional[str] = None
     preferred_contact: Optional[str] = None  # telegram/viber/whatsapp/email/phone
     source: Optional[str] = "rentalhub"
+    payer_type: Optional[str] = "individual"  # individual, fop, fop_simple, tov
+    tax_id: Optional[str] = None  # ЄДРПОУ / ІПН
 
 class ClientUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -36,6 +38,9 @@ class ClientUpdate(BaseModel):
     notes: Optional[str] = None
     preferred_contact: Optional[str] = None
     is_active: Optional[bool] = None
+    payer_type: Optional[str] = None
+    tax_id: Optional[str] = None
+    bank_details: Optional[dict] = None  # {bank_name, iban, mfo}
 
 class ClientResponse(BaseModel):
     id: int
@@ -50,7 +55,15 @@ class ClientResponse(BaseModel):
     is_active: bool
     created_at: Optional[str]
     updated_at: Optional[str]
-    # Додаткові поля
+    # Нові поля платника
+    payer_type: Optional[str] = "individual"
+    tax_id: Optional[str] = None
+    bank_details: Optional[dict] = None
+    # MA info
+    has_agreement: Optional[bool] = False
+    agreement_status: Optional[str] = None
+    agreement_number: Optional[str] = None
+    # Статистика
     orders_count: Optional[int] = 0
     payers_count: Optional[int] = 0
     default_payer_id: Optional[int] = None
@@ -77,13 +90,18 @@ async def list_clients(
             c.id, c.email, c.email_normalized, c.full_name, c.phone,
             c.company_hint, c.source, c.notes, c.preferred_contact,
             c.is_active, c.created_at, c.updated_at,
+            c.payer_type, c.tax_id, c.bank_details,
             COUNT(DISTINCT o.order_id) as orders_count,
             COUNT(DISTINCT cpl.payer_profile_id) as payers_count,
             (SELECT payer_profile_id FROM client_payer_links 
-             WHERE client_user_id = c.id AND is_default = TRUE LIMIT 1) as default_payer_id
+             WHERE client_user_id = c.id AND is_default = TRUE LIMIT 1) as default_payer_id,
+            ma.id as ma_id, ma.contract_number as ma_number, ma.status as ma_status
         FROM client_users c
         LEFT JOIN orders o ON o.client_user_id = c.id
         LEFT JOIN client_payer_links cpl ON cpl.client_user_id = c.id
+        LEFT JOIN master_agreements ma ON ma.client_user_id = c.id 
+            AND ma.status IN ('draft', 'sent', 'signed')
+            AND (ma.valid_until IS NULL OR ma.valid_until >= CURDATE())
         WHERE 1=1
     """
     params = {}
@@ -109,6 +127,14 @@ async def list_clients(
     
     clients = []
     for row in result:
+        import json as json_lib
+        bank_details = None
+        if row[14]:
+            try:
+                bank_details = json_lib.loads(row[14]) if isinstance(row[14], str) else row[14]
+            except:
+                pass
+        
         clients.append({
             "id": row[0],
             "email": row[1],
@@ -122,9 +148,15 @@ async def list_clients(
             "is_active": bool(row[9]),
             "created_at": row[10].isoformat() if row[10] else None,
             "updated_at": row[11].isoformat() if row[11] else None,
-            "orders_count": row[12] or 0,
-            "payers_count": row[13] or 0,
-            "default_payer_id": row[14]
+            "payer_type": row[12] or "individual",
+            "tax_id": row[13],
+            "bank_details": bank_details,
+            "orders_count": row[15] or 0,
+            "payers_count": row[16] or 0,
+            "default_payer_id": row[17],
+            "has_agreement": bool(row[18]),
+            "agreement_number": row[19],
+            "agreement_status": row[20]
         })
     
     # Фільтр has_payer після агрегації
@@ -135,6 +167,87 @@ async def list_clients(
             clients = [c for c in clients if c["payers_count"] == 0]
     
     return clients
+
+
+# ============================================================================
+# FIND CLIENT BY NAME/PHONE (for order linking)
+# ============================================================================
+
+@router.get("/find-match")
+async def find_client_match(
+    name: Optional[str] = None,
+    phone: Optional[str] = None,
+    email: Optional[str] = None,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Знайти клієнта по імені, телефону або email.
+    Використовується для автоприв'язки ордерів до клієнтів.
+    """
+    if not name and not phone and not email:
+        return {"found": False, "message": "Вкажіть name, phone або email"}
+    
+    # Normalize phone (remove spaces, dashes, +38)
+    if phone:
+        phone_clean = phone.replace(" ", "").replace("-", "").replace("+38", "").replace("+", "")
+        if len(phone_clean) == 10:
+            phone_clean = phone_clean  # Ukrainian format without country code
+        phone_pattern = f"%{phone_clean[-9:]}%"  # Last 9 digits
+    
+    sql = """
+        SELECT 
+            c.id, c.email, c.full_name, c.phone, c.payer_type, c.tax_id,
+            ma.id as ma_id, ma.contract_number as ma_number, ma.status as ma_status
+        FROM client_users c
+        LEFT JOIN master_agreements ma ON ma.client_user_id = c.id 
+            AND ma.status IN ('draft', 'sent', 'signed')
+            AND (ma.valid_until IS NULL OR ma.valid_until >= CURDATE())
+        WHERE c.is_active = 1 AND (
+    """
+    
+    conditions = []
+    params = {}
+    
+    if email:
+        conditions.append("LOWER(TRIM(c.email)) = LOWER(TRIM(:email))")
+        params["email"] = email
+    
+    if phone:
+        conditions.append("c.phone LIKE :phone")
+        params["phone"] = phone_pattern
+    
+    if name:
+        # Fuzzy match by name
+        conditions.append("c.full_name LIKE :name")
+        params["name"] = f"%{name}%"
+    
+    sql += " OR ".join(conditions) + ") ORDER BY c.updated_at DESC LIMIT 5"
+    
+    result = db.execute(text(sql), params)
+    matches = []
+    
+    for row in result:
+        matches.append({
+            "id": row[0],
+            "email": row[1],
+            "full_name": row[2],
+            "phone": row[3],
+            "payer_type": row[4] or "individual",
+            "tax_id": row[5],
+            "has_agreement": bool(row[6]),
+            "agreement_number": row[7],
+            "agreement_status": row[8]
+        })
+    
+    if matches:
+        return {
+            "found": True,
+            "count": len(matches),
+            "best_match": matches[0],
+            "all_matches": matches
+        }
+    
+    return {"found": False, "message": "Клієнта не знайдено"}
 
 
 @router.get("/{client_id}")

@@ -8,6 +8,117 @@ from database_rentalhub import get_rh_db_sync
 import logging
 
 router = APIRouter(prefix="/api/migrations", tags=["migrations"])
+
+# ============================================================
+# CLIENT-BASED MASTER AGREEMENTS MIGRATION
+# ============================================================
+
+@router.post("/client-ma-structure")
+async def migrate_client_ma_structure():
+    """
+    Migrate to client-based Master Agreement structure:
+    1. Add payer_type to client_users
+    2. Add active_master_agreement_id to client_users
+    3. Add client_user_id to master_agreements
+    """
+    try:
+        db = get_rh_db_sync()
+        changes = []
+        
+        # 1. Add payer_type to client_users
+        check = db.execute(text("""
+            SELECT COUNT(*) FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'client_users' 
+            AND COLUMN_NAME = 'payer_type'
+        """)).fetchone()[0]
+        
+        if check == 0:
+            db.execute(text("""
+                ALTER TABLE client_users 
+                ADD COLUMN payer_type ENUM('individual', 'fop', 'fop_simple', 'tov') 
+                DEFAULT 'individual' AFTER phone
+            """))
+            db.commit()
+            changes.append("Added payer_type to client_users")
+        
+        # 2. Add active_master_agreement_id to client_users
+        check = db.execute(text("""
+            SELECT COUNT(*) FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'client_users' 
+            AND COLUMN_NAME = 'active_master_agreement_id'
+        """)).fetchone()[0]
+        
+        if check == 0:
+            db.execute(text("""
+                ALTER TABLE client_users 
+                ADD COLUMN active_master_agreement_id INT NULL AFTER payer_type
+            """))
+            db.commit()
+            changes.append("Added active_master_agreement_id to client_users")
+        
+        # 3. Add client_user_id to master_agreements
+        check = db.execute(text("""
+            SELECT COUNT(*) FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'master_agreements' 
+            AND COLUMN_NAME = 'client_user_id'
+        """)).fetchone()[0]
+        
+        if check == 0:
+            db.execute(text("""
+                ALTER TABLE master_agreements 
+                ADD COLUMN client_user_id INT NULL AFTER payer_profile_id
+            """))
+            db.commit()
+            changes.append("Added client_user_id to master_agreements")
+        
+        # 4. Add tax_id (ЄДРПОУ/ІПН) to client_users
+        check = db.execute(text("""
+            SELECT COUNT(*) FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'client_users' 
+            AND COLUMN_NAME = 'tax_id'
+        """)).fetchone()[0]
+        
+        if check == 0:
+            db.execute(text("""
+                ALTER TABLE client_users 
+                ADD COLUMN tax_id VARCHAR(20) NULL AFTER payer_type
+            """))
+            db.commit()
+            changes.append("Added tax_id to client_users")
+        
+        # 5. Add bank_details (JSON) to client_users
+        check = db.execute(text("""
+            SELECT COUNT(*) FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'client_users' 
+            AND COLUMN_NAME = 'bank_details'
+        """)).fetchone()[0]
+        
+        if check == 0:
+            db.execute(text("""
+                ALTER TABLE client_users 
+                ADD COLUMN bank_details JSON NULL AFTER tax_id
+            """))
+            db.commit()
+            changes.append("Added bank_details to client_users")
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "client-ma-structure",
+            "changes": changes if changes else ["All columns already exist"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Migration failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -477,6 +588,24 @@ async def migrate_documents_engine_v3():
             db.rollback()
         
         db.close()
+        
+        return {
+            "success": True,
+            "migration": "documents-engine-v3",
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Documents Engine V3 migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )
+
+
+# Видалено дубльовану міграцію document-workflow-v2 
+# (структура вже існує через documents-engine-v3)
+
         
         return {
             "success": True,

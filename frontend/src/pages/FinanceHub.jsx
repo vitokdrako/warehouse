@@ -1000,9 +1000,11 @@ function OperationsTab({
   const totals = useMemo(() => {
     if (!selectedOrder) return null;
     const discount = selectedOrder.discount_amount || 0;
-    const totalAfterDiscount = selectedOrder.total_rental - discount;
+    const serviceFee = selectedOrder.service_fee || 0;
+    const totalWithServiceFee = selectedOrder.total_rental + serviceFee;
+    const totalAfterDiscount = totalWithServiceFee - discount;
     const toPay = Math.max(0, totalAfterDiscount - (selectedOrder.rent_paid || 0));
-    return { discount, totalAfterDiscount, toPay };
+    return { discount, serviceFee, totalWithServiceFee, totalAfterDiscount, toPay };
   }, [selectedOrder]);
   
   return (

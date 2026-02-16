@@ -864,11 +864,12 @@ async def preview_annex(
     formatted_items = []
     total_qty = 0
     for item in items:
-        formatted_items.append({"name": item[3], "quantity": item[4], "total_rental": _format_currency(item[6]), "packing_type": None})
-        total_qty += item[4]
+        # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
+        formatted_items.append({"name": item[2], "quantity": item[3], "total_rental": _format_currency(item[5]), "packing_type": None})
+        total_qty += item[3]
     
-    client = {"name": order[3], "phone": order[4], "email": order[5], "payer_type": "individual", "director_name": None,
-              "contact_person": order[3], "contact_channel": "phone", "contact_value": order[4]}
+    client = {"name": order[3], "phone": order[4] or order[21], "email": order[5] or order[22], "payer_type": "individual", "director_name": None,
+              "contact_person": order[3], "contact_channel": "phone", "contact_value": order[4] or order[21]}
 
 
 # ============================================================

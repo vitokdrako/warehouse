@@ -557,7 +557,7 @@ def _get_order_with_items(db: Session, order_id: int):
             o.rental_start_date, o.rental_end_date,
             o.issue_date, o.return_date,
             o.status, o.total_price, o.deposit_amount, o.notes,
-            o.created_at, o.rental_days, o.delivery_method
+            o.created_at, o.rental_days
         FROM orders o WHERE o.order_id = :id
     """), {"id": order_id}).fetchone()
     

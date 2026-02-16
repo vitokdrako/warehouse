@@ -343,11 +343,6 @@
             <div class="val mono">{{ totals.rent_total_fmt or order.total_price_fmt or order.total_price }} грн</div>
           </div>
 
-          <div class="trow">
-            <div class="label">Завдаток</div>
-            <div class="val mono">{{ totals.deposit_total_fmt or order.deposit_amount_fmt or order.deposit_amount }} грн</div>
-          </div>
-
           {% if totals.discount_fmt or order.discount_amount or order.discount_percent %}
             <div class="trow">
               <div class="label">Знижка {{ order.discount_percent }}%</div>

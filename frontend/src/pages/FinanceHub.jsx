@@ -313,6 +313,47 @@ export default function FinanceHub() {
     }
   }, []);
   
+  // Load payer options for selected order
+  const loadOrderPayerOptions = useCallback(async (orderId) => {
+    if (!orderId) {
+      setOrderPayerOptions(null);
+      return;
+    }
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/payer-options`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrderPayerOptions(data);
+      }
+    } catch (e) {
+      console.error("Load order payer options error:", e);
+    }
+  }, []);
+  
+  // Set payer for order
+  const setOrderPayer = useCallback(async (orderId, payerId) => {
+    try {
+      setSaving(true);
+      const res = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/set-payer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payer_profile_id: payerId })
+      });
+      if (res.ok) {
+        await loadOrderPayerOptions(orderId);
+        await loadOrders();
+      } else {
+        const err = await res.json();
+        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
+      }
+    } catch (e) {
+      console.error("Set order payer error:", e);
+      alert("❌ Помилка встановлення платника");
+    } finally {
+      setSaving(false);
+    }
+  }, [loadOrderPayerOptions, loadOrders]);
+  
   // Initial load
   useEffect(() => {
     console.log("[FinanceHub] Initial load starting...");

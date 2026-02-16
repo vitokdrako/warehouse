@@ -1,74 +1,73 @@
 <analysis>**original_problem_statement:**
-The user's initial request was to fix a failing  endpoint, which evolved into a major architectural refactoring of the Client/Payer system. Now, the project has expanded further into a complete overhaul of the document management workflow.
+The user's initial request was to fix a failing  endpoint, which evolved into a major architectural refactoring of the Client/Payer system. The project's goal has now been redefined to make the document management workflow **client-centric**. The core principle is that a Master Agreement (MA) is tied directly to a Client () and not a Payer (). This simplifies the entire process, as all documents for an order can be generated based on the client's single, authoritative MA.
 
 **PRODUCT REQUIREMENTS:**
 
-1.  **Client/Payer Architecture (In Progress):** A Client is a contact (), while a Payer is a legal entity (). An order is linked to both.
-2.  **Finance Cabinet Clients Tab (Completed):** A CRM-lite tab in the main finance cabinet () to manage clients and their associated payers.
-3.  **Re-audit Cabinet Enhancement (Completed):** Added new fields to the product editing form in the re-audit cabinet:
-    *   Category and Subcategory (editable).
-    *   Dimensions split into separate DB columns: , , , .
-    *   A new  attribute.
-    *   A JSON-based  system with a dictionary table.
-4.  **Document Workflow Restructuring (NEW & In Progress):**
-    *   **Master Agreements (MA)** are tied to a , not an order, and are managed from the Clients tab.
-    *   **Order Documents** (Annex, Quote, Acts) are tied to an  and managed from the Operations tab within the specific order's card.
-    *   An **Annex** must always be linked to a signed Master Agreement.
-    *   The main Documents tab will be converted into a read-only Registry for searching and auditing.
-    *   The system should automatically suggest/assign a default payer when an order is created.
+1.  **Client-Centric Master Agreements (In Progress):** The Master Agreement is the responsibility of the . It is created and managed from the Clients tab.  are now just billing entities linked to a client.
+2.  **Smart Operations Tab (In Progress):** When an order is selected, the system should automatically find the corresponding  in the CRM based on the order's customer name/phone. It should then display the client's MA status and conditionally enable/disable document generation (e.g., an Annex can only be created if the client has a signed MA).
+3.  **Refined Clients Tab (In Progress):** This tab is the single source of truth for managing clients and their associated Master Agreements. The old logic of managing MAs on a per-payer basis is being removed.
+4.  **Registry Tab (Completed):** The old Documents tab, which was a document generator, has been converted into a read-only Registry used for searching and auditing all generated documents.
+5.  **Deployment Preparation (Completed):** The user requested that after major changes, the agent create a production frontend build and copy all updated backend and frontend files to the  directory for manual deployment.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The agent has successfully resolved the previous frontend build issues and has integrated the Clients tab into the primary finance cabinet component, . A major feature enhancement for the Re-audit Cabinet () was completed, including database migrations, API updates, and a new editing form UI for categories, dimensions, shape, and hashtags.
+The agent has executed a major architectural refactor. The database schema has been migrated to support a client-centric Master Agreement model (the  table was updated, and constraints on  were relaxed). The backend APIs (, , ) have been rewritten to reflect this new logic, including new endpoints for matching orders to clients.
 
-The agent has started the new, large-scale task of restructuring the document workflow. It has analyzed the user's requirements, planned the changes, and performed the initial database modifications by adding the  column to the  table and populating it for existing records. The backend API for master agreements () was found to exist and was confirmed to be working after fixing a syntax error in an unrelated migration file.
+On the frontend, the main  component has been significantly restructured. The tab layout was updated as per the user's request, converting the Documents tab into a read-only Registry. The Operations tab now contains logic to auto-find a client for a given order and display their MA status.
+
+The agent was in the process of debugging a UI duplication bug in the  component reported by the user, where both the new client-based MA and the old payer-based MA were being displayed simultaneously.
 
 **Last working item**:
--   **Last item agent was working:** Implementing the UI for the new document workflow. Specifically, adding a Master Agreement management block to the Payer Profile card within the  component. This involved adding new state variables, API call functions (, , ), and modifying the JSX to render the new UI block with conditional logic for creating and signing agreements.
+-   **Last item agent was working:** Fixing a UI duplication bug in . The user reported that when viewing a client, they saw two Master Agreement sections: one for the client (correct) and one for the client's payer (old logic). The agent correctly identified the cause as leftover code from the previous architecture and began removing the redundant UI block and its associated state and functions from the component.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. Once the UI work is complete, use the testing agent to verify that the new Master Agreement block appears correctly for each payer in the Clients tab, and that the Create and Sign buttons function as expected.
+-   **Which testing method agent to use?** Frontend testing agent. After the fix, the agent should take a screenshot of the  component to visually confirm that the duplicate UI block has been removed and only the client-level MA section remains. Then, use the testing agent to verify the functionality of the remaining MA block (create, view, sign).
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P1) The  endpoint is still unstable and failing in production.**
--   **Issue 2: (P2) Moodboard export is likely broken.**
--   **Issue 3: (P2) Recurring Calendar Timezone Bug.**
+-   **Issue 1: (P0) Duplicate Master Agreement UI in **
+-   **Issue 2: (P1)  endpoint is unstable.**
+-   **Issue 3: (P2) Moodboard export is likely broken.**
+-   **Issue 4: (P2) Recurring Calendar Timezone Bug.**
 
 **Issues Detail:**
--   **Issue 1: (P1) The  endpoint is still unstable and failing in production.**
-    -   **Attempted fixes:** Patches were applied in previous sessions, but the endpoint has not been tested since the major client/payer refactoring.
-    -   **Next debug checklist:** This is a lower priority until the document workflow refactoring is complete. Once done, perform a full end-to-end test of the  flow.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a core business function.
+-   **Issue 1: (P0) Duplicate Master Agreement UI in **
+    -   **Attempted fixes:** The agent identified the redundant code in  that was rendering the old payer-based MA block. The agent started editing the file to remove this block and clean up associated state variables and functions. The work is mid-edit.
+    -   **Next debug checklist:**
+        1.  Complete the edits in .
+        2.  Ensure the entire JSX block for the payer-level Master Agreement (previously lines ~832-899 within the payers map) is fully removed.
+        3.  Delete any unused state and functions related to the old payer-based MA logic (e.g.,  that took a ).
+        4.  Verify that the primary client-level MA block on the Контакт sub-tab still functions correctly.
+    -   **Why fix this issue and what will be achieved with the fix?** The duplicate UI is confusing for the user and displays conflicting information, undermining the new client-centric architecture. Fixing it is critical for user acceptance.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None
+
+-   **Issue 2: (P1)  endpoint is unstable.**
+    -   **Attempted fixes:** Patches were applied in previous sessions, but the endpoint has not been re-tested since the major architectural changes.
+    -   **Next debug checklist:** This task is de-prioritized until the document workflow refactoring is complete and verified by the user. A full end-to-end test will be required.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a core business function for converting prospects to orders.
     -   **Status:** NOT STARTED
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Both
     -   **Blocked on other issue:** In progress Task 1: Restructure Document Workflow
 
 **In progress Task List**:
--   **Task 1: (P0) Restructure Document Workflow.**
-    -   **Where to resume:** Continue the implementation in . The agent has added the logic and JSX for the Master Agreement block. The code needs to be finalized, verified for correctness (especially the  function closure), and tested.
-    -   **What will be achieved with this?** This is the first UI step towards the new document architecture, allowing users to manage Master Agreements directly from the payer's card.
+-   **Task 1: (P0) Finalize Document Workflow Refactor.**
+    -   **Where to resume:** Resume fixing the duplicate UI bug in . This is the last remaining piece of the UI refactor.
+    -   **What will be achieved with this?** This will complete the user's primary requirement of moving to a fully client-centric document management model.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on something:** None
+    -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
+
 -   **Upcoming Tasks:**
-    -   **(P0) Phase 2 (UI): Operations Tab Document Section.**
-        -   In , add a Documents section to the order details panel.
-        -   This section should show the linked Payer and Master Agreement.
-        -   Add buttons to generate order-specific documents (Annex, Quote, Acts).
-        -   Implement the policy matrix: Annex/Acts buttons are disabled unless  is set and an active, signed Master Agreement exists for that payer.
-    -   **(P0) Phase 3 (UX): Payer Selection in Order.**
-        -   In the order panel in , add a dropdown to select a Payer from the list of payers associated with the order's .
-        -   Implement the  endpoint.
-    -   **(P1) Phase 4 (Cleanup): Convert Documents Tab to Registry.**
-        -   Modify the main Documents tab to be a read-only Registry.
-        -   Remove all document generation buttons from this tab.
-        -   Focus on providing search, filtering, and status overview functionality.
-    -   **(P1) Phase 5: Stabilize  endpoint.** (See Issue 1)
+    -   **(P0) Generate PDF for Master Agreement:** Implement the backend functionality (likely using WeasyPrint) to generate a PDF of an MA.
+    -   **(P0) Email Master Agreement:** Add a feature to send the generated MA PDF to the client via email.
+    -   **(P1) Stabilize  endpoint:** (See Issue 2).
 
 -   **Future Tasks:**
     -   Implement real-time updates for the client cabinet.
@@ -79,87 +78,90 @@ The agent has started the new, large-scale task of restructuring the document wo
     -   Create an HR/Ops Module.
 
 **Completed work in this session**
--   **Finance Cabinet Clients Tab (DONE):**
-    -   Successfully added the Clients tab to the production  component, resolving all previous build and source code directory issues.
--   **Re-audit Cabinet Feature Enhancement (DONE):**
-    -   **Database:** Added , , , , ,  columns to the  table via a migration endpoint. Created  table.
-    -   **Backend:** Updated  to save the new fields. Updated  to return the new fields. Added new API endpoints to get dictionaries for hashtags, shapes, and categories.
-    -   **Frontend:** Overhauled the editing form in  to include inputs for all new fields, with dropdowns and autocompletion powered by the new dictionary APIs.
--   **Production Bugs (RESOLVED):**
-    -   Fixed a 500 error on  by correcting a mismatch between the Pydantic model and the function logic in .
--   **Document Workflow Restructuring (STARTED):**
-    -   **Database:** Verified schema and added the  column to  via direct SQL.
-    -   **Backend:** Verified the  endpoint exists and is functional.
+-   **Client-Centric Architecture Refactor (DONE):**
+    -   **Database:** Migrated the  table to add , , and other fields. Modified the  table to make  nullable, allowing MAs to be linked solely to a client.
+    -   **Backend:** Fully refactored the , , and  APIs to support the new client-centric model.
+-   **Finance Hub UI Overhaul (DONE):**
+    -   **Tab Reorganization:** Renamed the Documents tab to Реєстр (Registry) and adjusted the order of all main tabs in .
+    -   **Registry Tab:** Implemented a new, read-only  component that serves as a document archive with search and filter capabilities.
+    -   **Operations Tab Update:** The UI now automatically attempts to match a selected order to a CRM client and displays the client's MA status, which controls the availability of document generation buttons.
+-   **Deployment File Preparation (DONE):**
+    -   Generated a production frontend build and copied all updated backend and frontend files into the  directory for the user to deploy manually.
+
+**Earlier issues found/mentioned but not fixed**
+-   **Issue 1: Moodboard export is likely broken.**
+-   **Issue 2: Recurring Calendar Timezone Bug.**
+
+**Known issue recurrence from previous fork**
+-   The  endpoint is a long-standing, recurring issue that has been deprioritized during the current refactoring.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Direct DB Modification:** The user prefers the agent to perform schema changes and data migrations via direct SQL commands through a custom tool, after verifying what already exists.
--   **Document Workflow Architecture:** A three-tiered system where a  belongs to a , and an  belongs to an  but links back to the .
--   **Single Source of Truth:**  is the source of truth for billing details.  is an immutable copy for historical document accuracy.
+-   **Client-Centric Architecture:** The core logic has shifted. Master Agreements are now owned by , not . This is the new source of truth for the application's document workflow.
+-   **Auto-Matching:** The system attempts to automatically link an  (which only has a plain text ) to a structured  record by matching on name and/or phone.
+-   **Playwright Fetch Issue:** There is a persistent, known issue where data-loading  calls hang in the Playwright test environment, causing UI tests of data-heavy pages to fail by timing out on a loader. This is considered a testing environment artifact, as  tests confirm the backend is responsive.
 
 **key DB schema**
--   ****: (MODIFIED) Added , , , , ,  (JSON).
--   ****: (MODIFIED) Added  (FK to ).
--   ****: (EXISTING) uid=0(root) gid=0(root) groups=0(root), , , , .
--   ****: (EXISTING) uid=0(root) gid=0(root) groups=0(root), , .
+-   ****: (MODIFIED) Added ,  (FK to ), .
+-   ****: (MODIFIED)  is now NULLABLE;  is the primary foreign key.
+-   ****: Now uses  to determine MA status and available document actions.
 
 **All files of reference**
--   **/app/frontend/src/components/ClientsTab.jsx**: UI for managing clients, payers, and now Master Agreements. **(Currently being edited)**.
--   **/app/frontend/src/pages/FinanceHub.jsx**: The main, active finance cabinet component.
--   **/app/frontend/src/pages/ReauditCabinetFull.tsx**: The UI for the enhanced product re-audit/editing feature.
--   **/app/backend/routes/audit.py**: The backend API supporting the re-audit cabinet.
--   **/app/backend/routes/master_agreements.py**: The backend API for managing Master Agreements.
--   **/app/backend/routes/migrations.py**: Script for applying database schema changes.
+-   **/app/frontend/src/components/ClientsTab.jsx**: **(Currently being edited)** to fix the duplicate UI bug.
+-   **/app/frontend/src/pages/FinanceHub.jsx**: The main component for the finance cabinet, containing the restructured tabs and logic.
+-   **/app/backend/routes/master_agreements.py**: The backend API for MAs, now client-centric.
+-   **/app/backend/routes/clients.py**: The backend API for clients, with new fields and search logic.
+-   **/app/backend/routes/orders.py**: The backend API for orders, with new logic for linking clients to orders.
 
 **key api endpoints**
--   : Updates a product with all new attributes.
--   : Retrieves the dictionary of hashtags.
--   : Applies the new product fields to the DB.
--   : Lists master agreements.
--   : Gets the active MA for a specific payer.
+-   : Creates a Master Agreement (now accepts ).
+-   : Retrieves the active MA for a client.
+-   : Finds a potential client match based on an order's customer name.
+-   : Links an order to a .
 
 **Critical Info for New Agent**
--   **You must communicate in Ukrainian.**
--   **Priority 1 is the Document Workflow Restructuring.** Do not get sidetracked. Resume work on  to complete the Master Agreement UI block.
--   **Follow the user-approved plan:** Implement backend API changes for setting payers and generating annexes, then move to the UI changes in the Operations tab.
--   **Database Migrations:** The user prefers you to check the existing schema and apply changes with direct SQL queries via tools rather than re-running large migration scripts. Verify columns/tables before adding them.
+-   **Ви повинні спілкуватися українською мовою. (You must communicate in Ukrainian.)**
+-   **Your immediate priority is to fix the duplicate UI bug in .** This is a visual blocker for the user and must be resolved first. The goal is to have only one Master Agreement section per client, managed at the client level.
+-   **Be aware of the Playwright/fetch issue.** When testing UI with screenshots, data-loading pages may appear stuck on a loader. This is a known issue with the testing environment, not necessarily a bug in the code. Trust  tests for backend validation and review the frontend code logic. If a page hangs, you can temporarily comment out the loading gate () to verify that the rest of the UI renders correctly.
 
 **documents and test reports created in this job**
--   /app/clean_project/FINANCE_CABINET_WORKFLOW.md
--   /app/clean_project/DOCUMENT_WORKFLOW_RESTRUCTURE.md
+-   /app/memory/PRD.md
+-   /app/test_reports/iteration_7.json
+-   All updated backend and frontend files have been copied to .
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Asks for a description of the re-audit cabinet.
-2.  **User:** Requests major enhancements to the re-audit cabinet (new fields: category, dimensions, shape, hashtags).
-3.  **User:** Asks the agent to run the DB migration for the new product fields and create a new build.
-4.  **User:** Reports 520 errors after deployment, indicating the backend crashed.
-5.  **User:** Reports that after fixing the crash, the  field is not being saved.
-6.  **User:** Delivers a large, detailed new requirement to completely restructure the document workflow (MA on payers, Annexes on orders, etc.).
-7.  **Agent:** Creates a plan and asks for confirmation.
-8.  **User:** Approves the plan and provides a detailed, step-by-step implementation order (DB -> API -> UI).
-9.  **User:** Instructs the agent to perform DB schema changes by checking what exists and adding columns directly, not by duplicating tables.
-10. **Agent:** Starts the implementation by adding the  column to the DB and begins modifying the  UI.
+1.  **User:** Requests to prepare files for deployment to their hosting.
+2.  **User:** Reports that the Payer is not linked message is shown for an order that should have a linked payer, and asks for an explanation of how Annexes will be generated.
+3.  **Agent:** Explains the new client-centric architecture and asks the user to confirm the logic.
+4.  **User:** Provides a detailed, new requirement to change the architecture: MA should be on the client, not the payer. The client has a  attribute.
+5.  **Agent:** Asks for confirmation of the new, even more refined model.
+6.  **User:** Confirms the new model is correct.
+7.  **Agent:** Implements the new architecture (DB migration, backend API changes).
+8.  **User:** Asks the agent to update the frontend for the new logic.
+9.  **Agent:** Implements the frontend changes in  and .
+10. **User:** Reports the bug with duplicate Master Agreement sections in the client view and provides a screenshot.
 
 **Project Health Check:**
 -   **Broken:**
-    -    endpoint (untested, likely broken).
+    -    UI (duplicate information is displayed).
+    -    endpoint (status unknown after refactor).
     -   Moodboard export.
     -   Calendar Timezone.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **SMTP:** A custom  is implemented for sending emails via the user's own mail server.
+-   **SMTP:** A custom  is implemented for sending emails.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
+-   **Testing agent used after significant changes:** YES (for backend APIs, which passed).
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
--   **Known regressions:** None in this session.
+-   **Known regressions:** The UI in  has a regression where old and new logic are displayed together.
 
 **Credentials to test flow:**
 -   **RentalHub Admin:**  / 
 
 **What agent forgot to execute**
--   The agent correctly followed user instructions, pivoting multiple times based on feedback. The main forgotten items are the long-standing issues from the original handoff (, moodboard, calendar), which have been deprioritized in favor of the new, large-scale refactoring tasks.</analysis>
+The agent correctly prioritized the user's major refactoring requests. The main forgotten items are the long-standing issues (, moodboard, calendar), which have been consciously de-prioritized by both the agent and the user in favor of the new, large-scale architectural changes. The agent was actively fixing the most recent user-reported bug when the session ended.</analysis>

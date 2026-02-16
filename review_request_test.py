@@ -13,7 +13,7 @@ import sys
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://client-docs-mgmt.preview.emergentagent.com/api"
+BASE_URL = "https://doc-workflow-12.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"

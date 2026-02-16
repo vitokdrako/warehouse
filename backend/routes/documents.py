@@ -1053,24 +1053,6 @@ async def download_issue_act_pdf(
     
     return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Akt_vydachi_{order[1]}.pdf"})
 
-    
-    if order[2]:
-        client_row = db.execute(text("SELECT payer_type FROM client_users WHERE id = :id"), {"id": order[2]}).fetchone()
-        if client_row:
-            client["payer_type"] = client_row[0] or "individual"
-    
-    template_data = {
-        "annex": {"number": annex_number, "date": _format_date_ua(datetime.now())},
-        "agreement": agreement, "executor": executor, "client": client, "items": formatted_items,
-        "rental_days": rental_days,
-        "rental_start_date": _format_date_ua_long(order[6]), "rental_end_date": _format_date_ua_long(order[7]),
-        "issue_date": _format_date_ua_long(order[8] or order[6]), "return_date": _format_date_ua_long(order[9] or order[7]),
-        "totals": {"quantity": total_qty, "rental": _format_currency(order[11]), "deposit": _format_currency(order[12])}
-    }
-    
-    template = jinja_env.get_template("documents/annex.html")
-    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
-
 
 @router.get("/annex/{order_id}/pdf")
 async def download_annex_pdf(order_id: int, agreement_id: Optional[int] = Query(None), db: Session = Depends(get_rh_db)):

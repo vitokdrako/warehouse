@@ -667,13 +667,22 @@ async def preview_agreement(agreement_id: int, db: Session = Depends(get_rh_db))
             except:
                 pass
     
+    # Parse snapshot
+    snapshot = None
+    if agreement[7]:  # snapshot_json field
+        try:
+            snapshot = json.loads(agreement[7]) if isinstance(agreement[7], str) else agreement[7]
+        except:
+            pass
+    
     agreement_data = {
         "contract_number": agreement[1],
         "status": agreement[2],
         "valid_from": agreement[3].isoformat() if agreement[3] else None,
         "valid_until": agreement[4].isoformat() if agreement[4] else None,
         "signed_at": agreement[5].isoformat() if agreement[5] else None,
-        "signed_by": signed_by
+        "signed_by": signed_by,
+        "snapshot": snapshot
     }
     
     client_data = {

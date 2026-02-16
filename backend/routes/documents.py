@@ -575,7 +575,8 @@ def _get_order_with_items(db: Session, order_id: int):
             o.phone,              -- 21
             o.email,              -- 22
             o.discount_amount,    -- 23
-            o.discount_percent    -- 24
+            o.discount_percent,   -- 24
+            COALESCE(o.service_fee, 0) -- 25
         FROM orders o WHERE o.order_id = :id
     """), {"id": order_id}).fetchone()
     

@@ -956,7 +956,8 @@ function OperationsTab({
   searchQuery, setSearchQuery, saving, handlePayment, refreshAll,
   payoutsStats, depositsByCurrency, orderStats, generateDocument,
   selectedPayerProfile, payerProfiles, orderPayerOptions, setOrderPayer,
-  matchedClient, clientSearching, linkOrderToClient
+  matchedClient, clientPayers, selectedClientPayer, setSelectedClientPayer,
+  clientSearching, linkOrderToClient
 }) {
   // Payment form state
   const [payType, setPayType] = useState("rent");

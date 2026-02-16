@@ -7,6 +7,45 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 16, 2026
 
+### Estimate (Кошторис) Template Update - COMPLETE ✅ (Session 9)
+
+**Що було зроблено:**
+1. ✅ **Оновлено шаблон `quote.html`** - новий детальний дизайн Кошторису
+2. ✅ **Оновлено backend логіку** для нового шаблону:
+   - Розширено SQL-запит `_get_order_with_items()` для отримання всіх полів
+   - JOIN з таблицею `products` для отримання SKU
+   - Розрахунок totals (rent_total, deposit_total, grand_total)
+   - Форматування валюти у форматі `1 234,56`
+3. ✅ **Дані компанії** в футері (phone, email)
+4. ✅ **Зображення товарів** з таблиці `order_items.image_url`
+5. ✅ **Сумісність з іншими документами** - оновлено endpoints:
+   - `/api/documents/annex/{order_id}/preview`
+   - `/api/documents/invoice-offer/{order_id}/preview`
+   - `/api/documents/issue-act/{order_id}/preview`
+   - Та відповідні PDF endpoints
+
+**Структура даних для шаблону:**
+```python
+{
+  "order": {
+    "order_number", "customer_name", "customer_phone", "customer_email",
+    "rental_start_date", "rental_end_date", "rental_days",
+    "delivery_type_label", "city", "delivery_address", "event_type"
+  },
+  "items": [{
+    "product_name", "sku", "quantity", "price_per_day_fmt",
+    "total_rental_fmt", "deposit_fmt", "image_url"
+  }],
+  "totals": {
+    "rent_total_fmt", "deposit_total_fmt", "discount_fmt", "grand_total_fmt"
+  },
+  "company": {"phone", "email"},
+  "generated_at", "watermark"
+}
+```
+
+---
+
 ### Documents in Operations Tab - COMPLETE ✅ (Session 8)
 
 **Реалізовано:**

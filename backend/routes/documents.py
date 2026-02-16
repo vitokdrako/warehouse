@@ -908,7 +908,7 @@ async def preview_invoice_offer(
         "invoice_number": invoice_number,
         "invoice_date": datetime.now().strftime("%d.%m.%Y"),
         "executor": executor,
-        "client": {"name": order[3], "phone": order[4], "email": order[5], "tax_id": None},
+        "client": {"name": order[3], "phone": order[4] or order[21], "email": order[5] or order[22], "tax_id": None},
         "order": {
             "number": order[1],
             "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}",
@@ -945,15 +945,16 @@ async def download_invoice_offer_pdf(
     executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
     
-    formatted_items = [{"name": it[3], "quantity": it[4], "price_per_day": _format_currency(it[5]),
-                        "total_rental": _format_currency(it[6]), "deposit": _format_currency(it[8])} for it in items]
+    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
+    formatted_items = [{"name": it[2], "quantity": it[3], "price_per_day": _format_currency(it[4]),
+                        "total_rental": _format_currency(it[5]), "deposit": _format_currency(float(it[8] or it[4] or 0) * (it[3] or 1))} for it in items]
     
     invoice_number = f"Р-{datetime.now().strftime('%Y')}-{order[0]:06d}"
     
     template_data = {
         "invoice_number": invoice_number, "invoice_date": datetime.now().strftime("%d.%m.%Y"),
         "executor": executor,
-        "client": {"name": order[3], "phone": order[4], "email": order[5], "tax_id": None},
+        "client": {"name": order[3], "phone": order[4] or order[21], "email": order[5] or order[22], "tax_id": None},
         "order": {"number": order[1], "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}", "rental_days": rental_days, "delivery_method": "Самовивіз"},
         "items": formatted_items, "rental_days": rental_days,
         "totals": {"rental": _format_currency(order[11]), "deposit": _format_currency(order[12]), "discount": "0,00", "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))},

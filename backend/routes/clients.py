@@ -28,6 +28,8 @@ class ClientCreate(BaseModel):
     notes: Optional[str] = None
     preferred_contact: Optional[str] = None  # telegram/viber/whatsapp/email/phone
     source: Optional[str] = "rentalhub"
+    payer_type: Optional[str] = "individual"  # individual, fop, fop_simple, tov
+    tax_id: Optional[str] = None  # ЄДРПОУ / ІПН
 
 class ClientUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -36,6 +38,9 @@ class ClientUpdate(BaseModel):
     notes: Optional[str] = None
     preferred_contact: Optional[str] = None
     is_active: Optional[bool] = None
+    payer_type: Optional[str] = None
+    tax_id: Optional[str] = None
+    bank_details: Optional[dict] = None  # {bank_name, iban, mfo}
 
 class ClientResponse(BaseModel):
     id: int
@@ -50,7 +55,15 @@ class ClientResponse(BaseModel):
     is_active: bool
     created_at: Optional[str]
     updated_at: Optional[str]
-    # Додаткові поля
+    # Нові поля платника
+    payer_type: Optional[str] = "individual"
+    tax_id: Optional[str] = None
+    bank_details: Optional[dict] = None
+    # MA info
+    has_agreement: Optional[bool] = False
+    agreement_status: Optional[str] = None
+    agreement_number: Optional[str] = None
+    # Статистика
     orders_count: Optional[int] = 0
     payers_count: Optional[int] = 0
     default_payer_id: Optional[int] = None

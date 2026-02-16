@@ -45,11 +45,13 @@ export default function LeftRailFinance({
   discountAmount = 0,  // Сума знижки
   rentBeforeDiscount = 0, // Сума оренди до знижки
   serviceFee = 0,      // Додаткова послуга (мінімальне замовлення)
+  serviceFeeName = "", // Назва послуги
   onServiceFeeChange,  // Callback для зміни додаткової послуги
-  isEditable = false,  // Чи можна редагувати (на етапі очікування)
+  isEditable = true,   // Завжди редагується
 }) {
   const [editingServiceFee, setEditingServiceFee] = useState(false)
   const [serviceFeeInput, setServiceFeeInput] = useState(serviceFee || 0)
+  const [serviceFeeNameInput, setServiceFeeNameInput] = useState(serviceFeeName || "Мінімальний платіж")
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])
   const [deposit, setDeposit] = useState(null)

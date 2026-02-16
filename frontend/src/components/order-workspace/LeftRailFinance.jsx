@@ -227,54 +227,77 @@ export default function LeftRailFinance({
         </div>
         
         {/* Додаткова послуга (мінімальне замовлення) */}
-        {(isEditable || serviceFee > 0) && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-slate-600">Додаткова послуга</span>
-              {isEditable && !editingServiceFee ? (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-slate-600 text-sm font-medium">
+              {serviceFee > 0 ? (serviceFeeName || "Додаткова послуга") : "Додаткова послуга"}
+            </span>
+            {!editingServiceFee ? (
+              <button
+                onClick={() => { 
+                  setEditingServiceFee(true); 
+                  setServiceFeeInput(serviceFee || 0);
+                  setServiceFeeNameInput(serviceFeeName || "Мінімальний платіж");
+                }}
+                className="font-semibold text-amber-700 hover:underline text-sm"
+              >
+                {serviceFee > 0 ? `₴ ${fmtUA(serviceFee)}` : '+ Додати'}
+              </button>
+            ) : (
+              <span className="text-amber-600 text-xs">Редагування...</span>
+            )}
+          </div>
+          
+          {editingServiceFee && (
+            <div className="mt-2 space-y-2 bg-white p-2 rounded border border-amber-300">
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">Назва послуги</label>
+                <input
+                  type="text"
+                  value={serviceFeeNameInput}
+                  onChange={(e) => setServiceFeeNameInput(e.target.value)}
+                  placeholder="Мінімальний платіж"
+                  className="w-full px-2 py-1 text-sm border rounded"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 block mb-1">Сума (грн)</label>
+                <input
+                  type="number"
+                  value={serviceFeeInput}
+                  onChange={(e) => setServiceFeeInput(Number(e.target.value) || 0)}
+                  className="w-full px-2 py-1 text-sm border rounded"
+                  min="0"
+                  step="100"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => { setEditingServiceFee(true); setServiceFeeInput(serviceFee || 0); }}
-                  className="font-semibold text-amber-700 hover:underline"
+                  onClick={() => setEditingServiceFee(false)}
+                  className="px-3 py-1 text-xs bg-slate-200 text-slate-700 rounded hover:bg-slate-300"
                 >
-                  {serviceFee > 0 ? `₴ ${fmtUA(serviceFee)}` : '+ Додати'}
+                  Скасувати
                 </button>
-              ) : isEditable && editingServiceFee ? (
-                <div className="flex items-center gap-1">
-                  <span className="text-slate-500">₴</span>
-                  <input
-                    type="number"
-                    value={serviceFeeInput}
-                    onChange={(e) => setServiceFeeInput(Number(e.target.value) || 0)}
-                    className="w-20 px-2 py-1 text-sm border rounded text-right"
-                    min="0"
-                    step="100"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => {
-                      if (onServiceFeeChange) onServiceFeeChange(serviceFeeInput);
-                      setEditingServiceFee(false);
-                    }}
-                    className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                  >
-                    ✓
-                  </button>
-                  <button
-                    onClick={() => setEditingServiceFee(false)}
-                    className="px-2 py-1 text-xs bg-slate-300 text-slate-700 rounded hover:bg-slate-400"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <span className="font-semibold text-amber-700">₴ {fmtUA(serviceFee)}</span>
-              )}
+                <button
+                  onClick={() => {
+                    if (onServiceFeeChange) onServiceFeeChange(serviceFeeInput, serviceFeeNameInput);
+                    setEditingServiceFee(false);
+                  }}
+                  className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  Зберегти
+                </button>
+              </div>
             </div>
-            <div className="mt-1 text-xs text-amber-600">
+          )}
+          
+          {!editingServiceFee && serviceFee === 0 && (
+            <div className="text-xs text-amber-600">
               💡 Мінімальне замовлення 2000 грн
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Деталі оплат */}
         {payments.length > 0 && (

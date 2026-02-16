@@ -21,10 +21,10 @@ router = APIRouter(prefix="/api/agreements", tags=["master-agreements"])
 # ============================================================
 
 class MasterAgreementCreate(BaseModel):
-    client_user_id: Optional[int] = None  # NEW: Primary - link to client
+    client_user_id: Optional[int] = None  # Primary - link to client
     payer_profile_id: Optional[int] = None  # Legacy - for backward compatibility
-    template_version: str = "v1"
-    valid_from: Optional[str] = None  # ISO date, default = today
+    executor_type: str = "tov"  # "tov" = ТОВ ФАРФОР РЕНТ, "fop" = ФОП Николенко
+    contract_date: Optional[str] = None  # ISO date for contract, default = today
     valid_months: int = 12
     note: Optional[str] = None
 
@@ -36,17 +36,49 @@ class MasterAgreementUpdate(BaseModel):
 
 
 # ============================================================
-# HELPER: Generate Contract Number
+# EXECUTOR DATA
 # ============================================================
 
-def generate_contract_number(db: Session, year: int) -> str:
-    """Generate unique contract number: MA-YYYY-NNN"""
+EXECUTORS = {
+    "tov": {
+        "name": "ТОВ «ФАРФОР РЕНТ»",
+        "short_name": "ТОВ «ФАРФОР РЕНТ»",
+        "edrpou": "44651557",
+        "address": "02000, м. Київ, вул. Магнітогорська, буд. 1, корп. 34",
+        "bank": "АТ КБ «ПРИВАТБАНК»",
+        "iban": "UA913052990000026002015020709",
+        "director": "Драко В.А.",
+        "tax_status": "платник податку на прибуток на загальних умовах"
+    },
+    "fop": {
+        "name": "ФОП Николенко Наталя Станіславівна",
+        "short_name": "ФОП Николенко Н.С.",
+        "edrpou": "3256709285",  # IPN
+        "address": "02000, м. Київ, вул. Магнітогорська, буд. 1, корп. 34",
+        "bank": "АТ КБ «ПРИВАТБАНК»",
+        "iban": "UA213052990000026002025020709",
+        "director": None,  # FOP doesn't have director
+        "tax_status": "платник єдиного податку"
+    }
+}
+
+
+# ============================================================
+# HELPER: Generate Contract Number (new format: DDMMYYYY-N)
+# ============================================================
+
+def generate_contract_number(db: Session, contract_date: date) -> str:
+    """Generate unique contract number: DDMMYYYY-N"""
+    date_str = contract_date.strftime("%d%m%Y")
+    
+    # Count existing contracts for this date
     result = db.execute(text("""
-        SELECT COUNT(*) + 1 FROM master_agreements 
-        WHERE YEAR(created_at) = :year
-    """), {"year": year})
-    seq = result.fetchone()[0]
-    return f"MA-{year}-{seq:03d}"
+        SELECT COUNT(*) FROM master_agreements 
+        WHERE DATE(valid_from) = :contract_date
+    """), {"contract_date": contract_date})
+    seq = result.fetchone()[0] + 1
+    
+    return f"{date_str}-{seq}"
 
 
 # ============================================================

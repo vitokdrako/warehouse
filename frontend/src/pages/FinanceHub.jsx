@@ -1092,7 +1092,10 @@ function OperationsTab({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                 <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                   <div className="text-xs text-slate-500">Нараховано</div>
-                  <div className="text-lg font-bold">{money(selectedOrder.total_rental)}</div>
+                  <div className="text-lg font-bold">{money(totals?.totalWithServiceFee || selectedOrder.total_rental)}</div>
+                  {totals?.serviceFee > 0 && (
+                    <div className="text-xs text-amber-600">+ {selectedOrder.service_fee_name || "Дод. послуга"} {money(totals.serviceFee)}</div>
+                  )}
                   {totals?.discount > 0 && (
                     <div className="text-xs text-emerald-600">− знижка {money(totals.discount)}</div>
                   )}

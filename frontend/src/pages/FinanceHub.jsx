@@ -743,6 +743,8 @@ export default function FinanceHub() {
             generateDocument={generateDocument}
             selectedPayerProfile={selectedPayerProfile}
             payerProfiles={payerProfiles}
+            orderPayerOptions={orderPayerOptions}
+            setOrderPayer={setOrderPayer}
           />
         )}
         

@@ -488,8 +488,6 @@ async def get_latest_entity_document(
 
 # ============ Batch endpoint для паралельного завантаження версій ============
 
-from typing import List
-
 class LatestBatchRequest(BaseModel):
     """Запит на отримання останніх версій документів batch"""
     entity_type: str

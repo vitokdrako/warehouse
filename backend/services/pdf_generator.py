@@ -27,19 +27,47 @@ jinja_env = Environment(
     autoescape=True
 )
 
-# Executor (company) default data
-EXECUTOR_DATA = {
-    "name": "ТОВ «ФАРФОР РЕНТ»",
-    "edrpou": "44651557",
-    "address": "02000, м. Київ, вул. Магнітогорська, буд. 1, корп. 34",
-    "bank": "АТ КБ «ПРИВАТБАНК»",
-    "iban": "UA913052990000026002015020709",
-    "director": "Драко В.А."
+# Executor (company) default data - fallback if not in snapshot
+EXECUTORS = {
+    "tov": {
+        "name": "ТОВ «ФАРФОР РЕНТ»",
+        "short_name": "ТОВ «ФАРФОР РЕНТ»",
+        "edrpou": "44651557",
+        "address": "02000, м. Київ, вул. Магнітогорська, буд. 1, корп. 34",
+        "bank": "АТ КБ «ПРИВАТБАНК»",
+        "iban": "UA913052990000026002015020709",
+        "director": "Драко В.А.",
+        "tax_status": "платник податку на прибуток на загальних умовах"
+    },
+    "fop": {
+        "name": "ФОП Николенко Наталя Станіславівна",
+        "short_name": "ФОП Николенко Н.С.",
+        "edrpou": "3256709285",
+        "address": "02000, м. Київ, вул. Магнітогорська, буд. 1, корп. 34",
+        "bank": "АТ КБ «ПРИВАТБАНК»",
+        "iban": "UA213052990000026002025020709",
+        "director": None,
+        "tax_status": "платник єдиного податку"
+    }
 }
 
 
 def format_date_ua(date_str: str) -> str:
-    """Format ISO date to Ukrainian format"""
+    """Format ISO date to Ukrainian format: DD.MM.YYYY"""
+    if not date_str:
+        return "—"
+    try:
+        if isinstance(date_str, str):
+            dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        else:
+            dt = date_str
+        return dt.strftime("%d.%m.%Y")
+    except:
+        return date_str
+
+
+def format_date_ua_long(date_str: str) -> str:
+    """Format ISO date to Ukrainian long format: DD місяця YYYY"""
     if not date_str:
         return "—"
     try:
@@ -51,7 +79,7 @@ def format_date_ua(date_str: str) -> str:
             'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
             'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'
         ]
-        return f"{dt.day} {months[dt.month - 1]} {dt.year} р."
+        return f"{dt.day} {months[dt.month - 1]} {dt.year}"
     except:
         return date_str
 
@@ -65,7 +93,7 @@ def generate_master_agreement_pdf(
     Generate PDF for Master Agreement
     
     Args:
-        agreement_data: Agreement data from database
+        agreement_data: Agreement data from database (including snapshot_json)
         client_data: Client data from database
         output_filename: Optional custom filename
     
@@ -73,25 +101,46 @@ def generate_master_agreement_pdf(
         {"success": True, "pdf_path": "...", "pdf_bytes": bytes}
     """
     try:
+        # Get executor from snapshot or use default
+        snapshot = agreement_data.get("snapshot") or {}
+        executor_type = snapshot.get("executor_type") or agreement_data.get("template_version") or "tov"
+        executor = snapshot.get("executor") or EXECUTORS.get(executor_type, EXECUTORS["tov"])
+        
+        # Get client from snapshot or use provided data
+        snapshot_client = snapshot.get("client") or {}
+        client = {
+            "full_name": client_data.get("full_name") or snapshot_client.get("full_name") or "—",
+            "email": client_data.get("email") or snapshot_client.get("email") or "—",
+            "phone": client_data.get("phone") or snapshot_client.get("phone"),
+            "payer_type": client_data.get("payer_type") or snapshot_client.get("payer_type") or "individual",
+            "tax_id": client_data.get("tax_id") or snapshot_client.get("tax_id"),
+            "company_name": client_data.get("company_name") or snapshot_client.get("company_name"),
+            "director_name": client_data.get("director_name") or snapshot_client.get("director_name"),
+            "bank_details": None
+        }
+        
+        # Parse bank_details
+        bank_details = client_data.get("bank_details") or snapshot_client.get("bank_details")
+        if bank_details:
+            if isinstance(bank_details, str):
+                try:
+                    client["bank_details"] = json.loads(bank_details)
+                except:
+                    client["bank_details"] = None
+            else:
+                client["bank_details"] = bank_details
+        
         # Prepare template data
         template_data = {
             "contract_number": agreement_data.get("contract_number", "—"),
+            "contract_date": format_date_ua(snapshot.get("contract_date") or agreement_data.get("valid_from")),
             "valid_from": format_date_ua(agreement_data.get("valid_from")),
-            "valid_until": format_date_ua(agreement_data.get("valid_until")),
+            "valid_until": format_date_ua_long(agreement_data.get("valid_until")),
             "status": agreement_data.get("status", "draft"),
             "signed_at": format_date_ua(agreement_data.get("signed_at")) if agreement_data.get("signed_at") else None,
             "signed_by": agreement_data.get("signed_by"),
-            "executor": EXECUTOR_DATA,
-            "client": {
-                "name": client_data.get("full_name") or client_data.get("email", "—"),
-                "email": client_data.get("email", "—"),
-                "phone": client_data.get("phone"),
-                "payer_type": client_data.get("payer_type", "individual"),
-                "tax_id": client_data.get("tax_id"),
-                "bank_details": client_data.get("bank_details") if isinstance(client_data.get("bank_details"), dict) else (
-                    json.loads(client_data.get("bank_details")) if client_data.get("bank_details") else None
-                )
-            },
+            "executor": executor,
+            "client": client,
             "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
         }
         
@@ -103,7 +152,6 @@ def generate_master_agreement_pdf(
         font_config = FontConfiguration()
         html = HTML(string=html_content, base_url=str(TEMPLATES_DIR))
         
-        # Custom CSS for better PDF rendering
         css = CSS(string='''
             @page {
                 size: A4;
@@ -118,7 +166,8 @@ def generate_master_agreement_pdf(
         
         # Save to file
         if not output_filename:
-            output_filename = f"MA_{agreement_data.get('contract_number', 'unknown').replace('-', '_')}.pdf"
+            contract_num_safe = agreement_data.get('contract_number', 'unknown').replace('-', '_').replace('/', '_')
+            output_filename = f"Dogovir_{contract_num_safe}.pdf"
         
         pdf_path = PDF_OUTPUT_DIR / output_filename
         with open(pdf_path, 'wb') as f:
@@ -135,6 +184,8 @@ def generate_master_agreement_pdf(
         
     except Exception as e:
         logger.error(f"PDF generation error: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "success": False,
             "error": str(e)
@@ -147,33 +198,47 @@ def generate_master_agreement_html(
 ) -> str:
     """
     Generate HTML for Master Agreement (for preview)
-    
-    Args:
-        agreement_data: Agreement data from database
-        client_data: Client data from database
-    
-    Returns:
-        HTML string
     """
     try:
+        # Get executor from snapshot or use default
+        snapshot = agreement_data.get("snapshot") or {}
+        executor_type = snapshot.get("executor_type") or agreement_data.get("template_version") or "tov"
+        executor = snapshot.get("executor") or EXECUTORS.get(executor_type, EXECUTORS["tov"])
+        
+        # Get client from snapshot or use provided data
+        snapshot_client = snapshot.get("client") or {}
+        client = {
+            "full_name": client_data.get("full_name") or snapshot_client.get("full_name") or "—",
+            "email": client_data.get("email") or snapshot_client.get("email") or "—",
+            "phone": client_data.get("phone") or snapshot_client.get("phone"),
+            "payer_type": client_data.get("payer_type") or snapshot_client.get("payer_type") or "individual",
+            "tax_id": client_data.get("tax_id") or snapshot_client.get("tax_id"),
+            "company_name": client_data.get("company_name") or snapshot_client.get("company_name"),
+            "director_name": client_data.get("director_name") or snapshot_client.get("director_name"),
+            "bank_details": None
+        }
+        
+        # Parse bank_details
+        bank_details = client_data.get("bank_details") or snapshot_client.get("bank_details")
+        if bank_details:
+            if isinstance(bank_details, str):
+                try:
+                    client["bank_details"] = json.loads(bank_details)
+                except:
+                    client["bank_details"] = None
+            else:
+                client["bank_details"] = bank_details
+        
         template_data = {
             "contract_number": agreement_data.get("contract_number", "—"),
+            "contract_date": format_date_ua(snapshot.get("contract_date") or agreement_data.get("valid_from")),
             "valid_from": format_date_ua(agreement_data.get("valid_from")),
-            "valid_until": format_date_ua(agreement_data.get("valid_until")),
+            "valid_until": format_date_ua_long(agreement_data.get("valid_until")),
             "status": agreement_data.get("status", "draft"),
             "signed_at": format_date_ua(agreement_data.get("signed_at")) if agreement_data.get("signed_at") else None,
             "signed_by": agreement_data.get("signed_by"),
-            "executor": EXECUTOR_DATA,
-            "client": {
-                "name": client_data.get("full_name") or client_data.get("email", "—"),
-                "email": client_data.get("email", "—"),
-                "phone": client_data.get("phone"),
-                "payer_type": client_data.get("payer_type", "individual"),
-                "tax_id": client_data.get("tax_id"),
-                "bank_details": client_data.get("bank_details") if isinstance(client_data.get("bank_details"), dict) else (
-                    json.loads(client_data.get("bank_details")) if client_data.get("bank_details") else None
-                )
-            },
+            "executor": executor,
+            "client": client,
             "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
         }
         
@@ -182,4 +247,6 @@ def generate_master_agreement_html(
         
     except Exception as e:
         logger.error(f"HTML generation error: {e}")
+        import traceback
+        traceback.print_exc()
         return f"<html><body><h1>Помилка генерації</h1><p>{str(e)}</p></body></html>"

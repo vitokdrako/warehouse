@@ -713,6 +713,185 @@ async def preview_annex(
     
     client = {"name": order[3], "phone": order[4], "email": order[5], "payer_type": "individual", "director_name": None,
               "contact_person": order[3], "contact_channel": "phone", "contact_value": order[4]}
+
+
+# ============================================================
+# INVOICE OFFER (РАХУНОК-ОФЕРТА)
+# ============================================================
+
+@router.get("/invoice-offer/{order_id}/preview", response_class=HTMLResponse)
+async def preview_invoice_offer(
+    order_id: int,
+    executor_type: str = Query("tov", description="tov or fop"),
+    db: Session = Depends(get_rh_db)
+):
+    """Generate HTML preview of invoice offer (Рахунок-оферта)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
+    rental_days = order[15] or 1
+    
+    formatted_items = []
+    for item in items:
+        formatted_items.append({
+            "name": item[3],
+            "quantity": item[4],
+            "price_per_day": _format_currency(item[5]),
+            "total_rental": _format_currency(item[6]),
+            "deposit": _format_currency(item[8])
+        })
+    
+    invoice_number = f"Р-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    
+    template_data = {
+        "invoice_number": invoice_number,
+        "invoice_date": datetime.now().strftime("%d.%m.%Y"),
+        "executor": executor,
+        "client": {"name": order[3], "phone": order[4], "email": order[5], "tax_id": None},
+        "order": {
+            "number": order[1],
+            "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}",
+            "rental_days": rental_days,
+            "delivery_method": "Самовивіз"
+        },
+        "items": formatted_items,
+        "rental_days": rental_days,
+        "totals": {
+            "rental": _format_currency(order[11]),
+            "deposit": _format_currency(order[12]),
+            "discount": "0,00",
+            "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))
+        },
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+    }
+    
+    template = jinja_env.get_template("documents/invoice_offer.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/invoice-offer/{order_id}/pdf")
+async def download_invoice_offer_pdf(
+    order_id: int,
+    executor_type: str = Query("tov"),
+    db: Session = Depends(get_rh_db)
+):
+    """Download invoice offer as PDF"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
+    rental_days = order[15] or 1
+    
+    formatted_items = [{"name": it[3], "quantity": it[4], "price_per_day": _format_currency(it[5]),
+                        "total_rental": _format_currency(it[6]), "deposit": _format_currency(it[8])} for it in items]
+    
+    invoice_number = f"Р-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    
+    template_data = {
+        "invoice_number": invoice_number, "invoice_date": datetime.now().strftime("%d.%m.%Y"),
+        "executor": executor,
+        "client": {"name": order[3], "phone": order[4], "email": order[5], "tax_id": None},
+        "order": {"number": order[1], "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}", "rental_days": rental_days, "delivery_method": "Самовивіз"},
+        "items": formatted_items, "rental_days": rental_days,
+        "totals": {"rental": _format_currency(order[11]), "deposit": _format_currency(order[12]), "discount": "0,00", "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))},
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+    }
+    
+    template = jinja_env.get_template("documents/invoice_offer.html")
+    html_content = template.render(**template_data)
+    
+    font_config = WeasyFontConfig()
+    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 10mm; }', font_config=font_config)], font_config=font_config)
+    
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Rahunok_{order[1]}.pdf"})
+
+
+# ============================================================
+# ISSUE ACT (АКТ ВИДАЧІ)
+# ============================================================
+
+@router.get("/issue-act/{order_id}/preview", response_class=HTMLResponse)
+async def preview_issue_act(
+    order_id: int,
+    executor_type: str = Query("tov"),
+    db: Session = Depends(get_rh_db)
+):
+    """Generate HTML preview of issue act (Акт видачі)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
+    rental_days = order[15] or 1
+    
+    formatted_items = [{"name": it[3], "quantity": it[4]} for it in items]
+    total_qty = sum(it[4] for it in items)
+    
+    act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    
+    template_data = {
+        "act_number": act_number,
+        "act_date": datetime.now().strftime("%d.%m.%Y"),
+        "executor": executor,
+        "client": {"name": order[3], "phone": order[4], "contact_person": order[3]},
+        "order": {"number": order[1]},
+        "items": formatted_items,
+        "rental_days": rental_days,
+        "rental_start_date": _format_date_ua(order[6]),
+        "rental_end_date": _format_date_ua(order[7]),
+        "return_date": _format_date_ua(order[9] or order[7]),
+        "totals": {"items_count": len(items), "quantity": total_qty}
+    }
+    
+    template = jinja_env.get_template("documents/issue_act.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/issue-act/{order_id}/pdf")
+async def download_issue_act_pdf(
+    order_id: int,
+    executor_type: str = Query("tov"),
+    db: Session = Depends(get_rh_db)
+):
+    """Download issue act as PDF"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
+    rental_days = order[15] or 1
+    
+    formatted_items = [{"name": it[3], "quantity": it[4]} for it in items]
+    total_qty = sum(it[4] for it in items)
+    
+    act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    
+    template_data = {
+        "act_number": act_number, "act_date": datetime.now().strftime("%d.%m.%Y"),
+        "executor": executor,
+        "client": {"name": order[3], "phone": order[4], "contact_person": order[3]},
+        "order": {"number": order[1]},
+        "items": formatted_items, "rental_days": rental_days,
+        "rental_start_date": _format_date_ua(order[6]), "rental_end_date": _format_date_ua(order[7]),
+        "return_date": _format_date_ua(order[9] or order[7]),
+        "totals": {"items_count": len(items), "quantity": total_qty}
+    }
+    
+    template = jinja_env.get_template("documents/issue_act.html")
+    html_content = template.render(**template_data)
+    
+    font_config = WeasyFontConfig()
+    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 15mm; }', font_config=font_config)], font_config=font_config)
+    
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Akt_vydachi_{order[1]}.pdf"})
+
     
     if order[2]:
         client_row = db.execute(text("SELECT payer_type FROM client_users WHERE id = :id"), {"id": order[2]}).fetchone()

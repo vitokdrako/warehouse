@@ -665,8 +665,6 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
 # ANNEX (ДОДАТОК) - Quick Preview  
 # ============================================================
 
-from fastapi import Query
-
 @router.get("/annex/{order_id}/preview", response_class=HTMLResponse)
 async def preview_annex(
     order_id: int,

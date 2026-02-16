@@ -88,11 +88,21 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 - **Order** links to both client and payer
 
 ### Document Hierarchy
-1. **Master Agreement (MA)** → linked to `payer_profile` (creates in Clients tab)
+1. **Master Agreement (MA)** → linked to `client_users` (creates in Clients tab on "Контакт" sub-tab)
 2. **Order Annex** → linked to `order` AND `master_agreement` (creates in Operations)
 3. **Acts/Invoices** → linked to `order`, require signed MA for legal entities
 
+**NEW Client-Centric Model:**
+- MA прив'язується до клієнта (`client_users.active_master_agreement_id`), а не до платника
+- Платники (`payer_profiles`) — тільки біллінгові сутності
+- Один клієнт = один активний MA
+
 ---
+
+## Completed in Session 8
+- ✅ Bug fix: Duplicate MA UI removed from ClientsTab
+- ✅ Code cleanup: Removed unused `payerMAs` variable
+- ✅ Test report: /app/test_reports/iteration_8.json
 
 ## Pending Issues (P1-P2)
 - **P1:** `convert-to-order` endpoint unstable (needs testing after refactoring)

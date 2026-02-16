@@ -7,6 +7,32 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 16, 2026
 
+### Documents in Operations Tab - COMPLETE ✅ (Session 8)
+
+**Реалізовано:**
+1. ✅ **Блок "Документи"** у вкладці "Операції" з:
+   - Інформацією про клієнта та статус MA
+   - **Dropdown для вибору платника** (якщо клієнт має кілька платників)
+   - Кнопки документів з урахуванням типу платника
+
+2. ✅ **Кошторис** (Estimate):
+   - `GET /api/documents/estimate/{order_id}/preview` — HTML preview з фото товарів
+   - `GET /api/documents/estimate/{order_id}/pdf` — PDF завантаження
+   - Шаблон: `/app/backend/templates/documents/estimate.html`
+
+3. ✅ **Додаток** (Annex):
+   - `GET /api/documents/annex/{order_id}/preview?agreement_id=X` — HTML preview
+   - `GET /api/documents/annex/{order_id}/pdf?agreement_id=X` — PDF завантаження
+   - Шаблон: `/app/backend/templates/documents/annex.html`
+   - Прив'язується до рамкового договору
+
+4. ✅ **Вибір платника**:
+   - Клієнт може мати кілька платників (Фіз. особа, ФОП, ТОВ)
+   - Dropdown дозволяє обрати платника для документів
+   - Юридичні документи (Додаток, Акт виконаних робіт) доступні тільки для ФОП/ТОВ з підписаним MA
+
+---
+
 ### Bug Fix: Duplicate MA UI in ClientsTab - COMPLETE ✅ (Session 8)
 
 **Проблема:** У drawer клієнта відображалися два блоки "Рамковий договір" — один на вкладці "Контакт" (правильний, client-level MA) і один на вкладці "Платники" (застаріла логіка, payer-level MA).

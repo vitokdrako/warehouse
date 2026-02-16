@@ -1559,7 +1559,12 @@ function OperationsTab({
                         variant="outline"
                         size="sm"
                         className="w-full justify-start text-xs h-8"
-                        onClick={() => generateDocument('invoice_offer')}
+                        onClick={() => {
+                          if (selectedOrder) {
+                            const execType = effectivePayerType === 'fop' || effectivePayerType === 'fop_simple' ? 'fop' : 'tov';
+                            window.open(`${BACKEND_URL}/api/documents/invoice-offer/${selectedOrder.order_id}/preview?executor_type=${execType}`, '_blank');
+                          }
+                        }}
                         disabled={!selectedOrder}
                       >
                         💵 Рахунок-оферта

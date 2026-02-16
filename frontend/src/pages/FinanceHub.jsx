@@ -1537,12 +1537,6 @@ function OperationsTab({
                         )}
                       </>
                     )}
-                    
-                    {!currentPayer && orderPayerOptions?.client_id && (
-                      <div className="mt-2 p-2 bg-slate-50 rounded-lg text-xs text-slate-600">
-                        Оберіть платника вище для доступу до юр. документів.
-                      </div>
-                    )}
                   </div>
                 );
               })()}

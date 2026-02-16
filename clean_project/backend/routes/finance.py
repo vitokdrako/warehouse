@@ -1351,7 +1351,9 @@ async def get_orders_with_finance(
                 COALESCE((SELECT SUM(fee) FROM product_damage_history WHERE order_id = o.order_id), 0) as damage_total,
                 COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = o.order_id AND payment_type = 'damage'), 0) as damage_paid,
                 COALESCE(o.discount_amount, 0) as discount_amount,
-                COALESCE(o.discount_percent, 0) as discount_percent
+                COALESCE(o.discount_percent, 0) as discount_percent,
+                COALESCE(o.service_fee, 0) as service_fee,
+                o.service_fee_name
             FROM orders o
             LEFT JOIN fin_deposit_holds d ON d.order_id = o.order_id
             WHERE o.is_archived = FALSE
@@ -1371,6 +1373,8 @@ async def get_orders_with_finance(
             damage_due = max(0, damage_total - damage_paid)
             discount_amount = float(row[15] or 0)
             discount_percent = float(row[16] or 0)
+            service_fee = float(row[17] or 0)
+            service_fee_name = row[18] or ""
             
             orders.append({
                 "order_id": row[0],
@@ -1391,7 +1395,9 @@ async def get_orders_with_finance(
                 "damage_paid": damage_paid,
                 "damage_due": damage_due,
                 "discount_amount": discount_amount,
-                "discount_percent": discount_percent
+                "discount_percent": discount_percent,
+                "service_fee": service_fee,
+                "service_fee_name": service_fee_name
             })
         
         return {"orders": orders, "total": len(orders)}

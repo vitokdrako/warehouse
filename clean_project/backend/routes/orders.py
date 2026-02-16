@@ -496,7 +496,7 @@ async def get_order_details(
     # [8]status, [9]total_price, [10]deposit_amount, [11]total_loss_value, 
     # [12]rental_days, [13]notes, [14]created_at,
     # [15]discount_amount, [16]manager_id, [17]issue_time, [18]return_time,
-    # [19]manager_name, [20]discount_percent
+    # [19]manager_name, [20]discount_percent, [21]service_fee, [22]service_fee_name
     result = db.execute(text("""
         SELECT 
             o.order_id, o.order_number, o.customer_id, o.customer_name, 
@@ -505,7 +505,8 @@ async def get_order_details(
             o.rental_days, o.notes, o.created_at,
             o.discount_amount, o.manager_id, o.issue_time, o.return_time,
             CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, '')) as manager_name,
-            o.discount_percent
+            o.discount_percent, COALESCE(o.service_fee, 0) as service_fee,
+            o.service_fee_name
         FROM orders o
         LEFT JOIN users u ON o.manager_id = u.user_id
         WHERE o.order_id = :order_id
@@ -557,6 +558,9 @@ async def get_order_details(
     order["return_time"] = row[18] or "до 17:00"
     order["manager_name"] = (row[19] or "").strip()
     order["discount"] = round(discount_percent_db, 2)
+    order["discount_percent"] = round(discount_percent_db, 2)
+    order["service_fee"] = float(row[21]) if row[21] else 0
+    order["service_fee_name"] = row[22] or ""
     
     # Завантажити items
     items_result = db.execute(text("""
@@ -755,7 +759,7 @@ async def update_order(
         'rental_start_date', 'rental_end_date', 'issue_date', 'return_date', 
         'issue_time', 'return_time', 'status', 
         'total_price', 'deposit_amount', 'total_loss_value', 'rental_days', 'notes',
-        'discount', 'manager_comment', 'manager_id'
+        'discount', 'manager_comment', 'manager_id', 'service_fee', 'service_fee_name'
     ]
     
     # Маппінг полів frontend -> database (якщо назви різні)

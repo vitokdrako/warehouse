@@ -21,10 +21,10 @@ router = APIRouter(prefix="/api/agreements", tags=["master-agreements"])
 # ============================================================
 
 class MasterAgreementCreate(BaseModel):
-    client_user_id: Optional[int] = None  # NEW: Primary - link to client
+    client_user_id: Optional[int] = None  # Primary - link to client
     payer_profile_id: Optional[int] = None  # Legacy - for backward compatibility
-    template_version: str = "v1"
-    valid_from: Optional[str] = None  # ISO date, default = today
+    executor_type: str = "tov"  # "tov" = ТОВ ФАРФОР РЕНТ, "fop" = ФОП Николенко
+    contract_date: Optional[str] = None  # ISO date for contract, default = today
     valid_months: int = 12
     note: Optional[str] = None
 
@@ -36,17 +36,50 @@ class MasterAgreementUpdate(BaseModel):
 
 
 # ============================================================
-# HELPER: Generate Contract Number
+# EXECUTOR DATA
 # ============================================================
 
-def generate_contract_number(db: Session, year: int) -> str:
-    """Generate unique contract number: MA-YYYY-NNN"""
+EXECUTORS = {
+    "tov": {
+        "name": "ТОВ «ФАРФОР РЕНТ»",
+        "short_name": "ТОВ «ФАРФОР РЕНТ»",
+        "edrpou": "44651557",
+        "address": "02000, м. Київ, вул. Магнітогорська, буд. 1, корп. 34",
+        "bank": "АТ КБ «ПРИВАТБАНК»",
+        "iban": "UA913052990000026002015020709",
+        "director": "Драко В.А.",
+        "tax_status": "платник податку на прибуток на загальних умовах"
+    },
+    "fop": {
+        "name": "ФОП Николенко Наталя Станіславівна",
+        "short_name": "ФОП Николенко Н.С.",
+        "edrpou": "3606801844",
+        "address": "02000, м. Київ, вул. Магнітогорська, буд. 1, корп. 34",
+        "bank": "АТ «УНІВЕРСАЛ БАНК»",
+        "iban": "UA043220010000026003340091618",
+        "mfo": "322001",
+        "director": None,
+        "tax_status": "платник єдиного податку"
+    }
+}
+
+
+# ============================================================
+# HELPER: Generate Contract Number (new format: DDMMYYYY-N)
+# ============================================================
+
+def generate_contract_number(db: Session, contract_date: date) -> str:
+    """Generate unique contract number: DDMMYYYY-N"""
+    date_str = contract_date.strftime("%d%m%Y")
+    
+    # Count existing contracts for this date
     result = db.execute(text("""
-        SELECT COUNT(*) + 1 FROM master_agreements 
-        WHERE YEAR(created_at) = :year
-    """), {"year": year})
-    seq = result.fetchone()[0]
-    return f"MA-{year}-{seq:03d}"
+        SELECT COUNT(*) FROM master_agreements 
+        WHERE DATE(valid_from) = :contract_date
+    """), {"contract_date": contract_date})
+    seq = result.fetchone()[0] + 1
+    
+    return f"{date_str}-{seq}"
 
 
 # ============================================================
@@ -173,97 +206,62 @@ async def get_agreement(agreement_id: int, db: Session = Depends(get_rh_db)):
 async def create_agreement(data: MasterAgreementCreate, db: Session = Depends(get_rh_db)):
     """Create new master agreement for CLIENT"""
     
-    # Must have either client_user_id or payer_profile_id
-    if not data.client_user_id and not data.payer_profile_id:
-        raise HTTPException(status_code=400, detail="client_user_id or payer_profile_id required")
+    # Must have client_user_id
+    if not data.client_user_id:
+        raise HTTPException(status_code=400, detail="client_user_id required")
     
-    client = None
-    payer = None
+    # Get client data
+    client = db.execute(text("""
+        SELECT id, full_name, email, phone, payer_type, tax_id, bank_details
+        FROM client_users WHERE id = :id AND is_active = 1
+    """), {"id": data.client_user_id}).fetchone()
     
-    # Get client data if client_user_id provided
-    if data.client_user_id:
-        client = db.execute(text("""
-            SELECT id, full_name, email, phone, payer_type, tax_id, bank_details
-            FROM client_users WHERE id = :id AND is_active = 1
-        """), {"id": data.client_user_id}).fetchone()
-        
-        if not client:
-            raise HTTPException(status_code=400, detail="Client not found")
-        
-        # Check for existing active agreement for this CLIENT
-        existing = db.execute(text("""
-            SELECT id, contract_number FROM master_agreements 
-            WHERE client_user_id = :cid AND status IN ('draft', 'sent', 'signed')
-            AND (valid_until IS NULL OR valid_until >= CURDATE())
-        """), {"cid": data.client_user_id}).fetchone()
-        
-        if existing:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Активний договір вже існує: {existing[1]}"
-            )
+    if not client:
+        raise HTTPException(status_code=400, detail="Клієнта не знайдено")
     
-    # Legacy: payer_profile_id support
-    if data.payer_profile_id:
-        payer = db.execute(text("""
-            SELECT id, company_name, payer_type, director_name, edrpou, iban, bank_name, address
-            FROM payer_profiles WHERE id = :id AND is_active = 1
-        """), {"id": data.payer_profile_id}).fetchone()
-        
-        if not payer:
-            raise HTTPException(status_code=400, detail="Payer profile not found")
-        
-        # Check for existing active agreement for this PAYER
-        existing = db.execute(text("""
-            SELECT id, contract_number FROM master_agreements 
-            WHERE payer_profile_id = :pid AND status IN ('draft', 'sent', 'signed')
-            AND (valid_until IS NULL OR valid_until >= CURDATE())
-        """), {"pid": data.payer_profile_id}).fetchone()
-        
-        if existing:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Active agreement already exists: {existing[1]}"
-            )
+    # Check for existing active agreement for this CLIENT
+    existing = db.execute(text("""
+        SELECT id, contract_number FROM master_agreements 
+        WHERE client_user_id = :cid AND status IN ('draft', 'sent', 'signed')
+        AND (valid_until IS NULL OR valid_until >= CURDATE())
+    """), {"cid": data.client_user_id}).fetchone()
+    
+    if existing:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Активний договір вже існує: {existing[1]}"
+        )
+    
+    # Get executor data
+    executor_type = data.executor_type if data.executor_type in EXECUTORS else "tov"
+    executor = EXECUTORS[executor_type]
     
     # Calculate dates
-    valid_from = datetime.fromisoformat(data.valid_from).date() if data.valid_from else date.today()
-    valid_until = valid_from + timedelta(days=data.valid_months * 30)
+    contract_date = datetime.fromisoformat(data.contract_date).date() if data.contract_date else date.today()
+    valid_until = contract_date + timedelta(days=data.valid_months * 30)
     
-    # Generate contract number
-    contract_number = generate_contract_number(db, valid_from.year)
+    # Generate contract number (DDMMYYYY-N format)
+    contract_number = generate_contract_number(db, contract_date)
     
-    # Build snapshot
+    # Build snapshot with all contract data
     snapshot = {
         "contract_number": contract_number,
-        "valid_from": valid_from.isoformat(),
+        "contract_date": contract_date.isoformat(),
+        "valid_from": contract_date.isoformat(),
         "valid_until": valid_until.isoformat(),
-        "template_version": data.template_version,
-        "generated_at": datetime.now().isoformat()
-    }
-    
-    if client:
-        snapshot["client"] = {
+        "executor_type": executor_type,
+        "executor": executor,
+        "generated_at": datetime.now().isoformat(),
+        "client": {
             "id": client[0],
             "full_name": client[1],
             "email": client[2],
             "phone": client[3],
-            "payer_type": client[4],
+            "payer_type": client[4],  # individual, fop, tov
             "tax_id": client[5],
             "bank_details": json.loads(client[6]) if client[6] else None
         }
-    
-    if payer:
-        snapshot["payer"] = {
-            "id": payer[0],
-            "company_name": payer[1],
-            "payer_type": payer[2],
-            "director_name": payer[3],
-            "edrpou": payer[4],
-            "iban": payer[5],
-            "bank_name": payer[6],
-            "address": payer[7]
-        }
+    }
     
     try:
         db.execute(text("""
@@ -271,15 +269,14 @@ async def create_agreement(data: MasterAgreementCreate, db: Session = Depends(ge
                 client_user_id, payer_profile_id, contract_number, template_version,
                 valid_from, valid_until, status, snapshot_json, note
             ) VALUES (
-                :client_user_id, :payer_profile_id, :contract_number, :template_version,
+                :client_user_id, NULL, :contract_number, :executor_type,
                 :valid_from, :valid_until, 'draft', :snapshot_json, :note
             )
         """), {
             "client_user_id": data.client_user_id,
-            "payer_profile_id": data.payer_profile_id,
             "contract_number": contract_number,
-            "template_version": data.template_version,
-            "valid_from": valid_from,
+            "executor_type": executor_type,
+            "valid_from": contract_date,
             "valid_until": valid_until,
             "snapshot_json": json.dumps(snapshot, ensure_ascii=False),
             "note": data.note
@@ -292,7 +289,7 @@ async def create_agreement(data: MasterAgreementCreate, db: Session = Depends(ge
             "success": True,
             "agreement_id": agreement_id,
             "contract_number": contract_number,
-            "valid_from": valid_from.isoformat(),
+            "valid_from": contract_date.isoformat(),
             "valid_until": valid_until.isoformat()
         }
     except Exception as e:
@@ -532,45 +529,259 @@ async def create_agreement_simple(data: MasterAgreementCreate, db: Session = Dep
 
 
 # ============================================================
-# SEND AGREEMENT (mark as sent + email)
+# SEND AGREEMENT (mark as sent + email with PDF)
 # ============================================================
+
+class SendAgreementRequest(BaseModel):
+    email: str
 
 @router.post("/{agreement_id}/send")
 async def send_agreement(
     agreement_id: int,
-    email: str = Query(..., description="Email to send to"),
+    data: SendAgreementRequest,
     db: Session = Depends(get_rh_db)
 ):
-    """Mark agreement as sent and send email"""
+    """Send agreement PDF to email"""
+    from services.pdf_generator import generate_master_agreement_pdf
+    from services.email_service import send_email
     
-    # Get agreement
+    # Get agreement with client data
     agreement = db.execute(text("""
-        SELECT ma.id, ma.contract_number, ma.status, pp.email as payer_email
+        SELECT 
+            ma.id, ma.contract_number, ma.status, ma.valid_from, ma.valid_until,
+            ma.signed_at, ma.client_user_id, ma.snapshot_json,
+            cu.full_name, cu.email, cu.phone, cu.payer_type, cu.tax_id, cu.bank_details
         FROM master_agreements ma
-        LEFT JOIN payer_profiles pp ON pp.id = ma.payer_profile_id
+        LEFT JOIN client_users cu ON cu.id = ma.client_user_id
         WHERE ma.id = :id
     """), {"id": agreement_id}).fetchone()
     
     if not agreement:
-        raise HTTPException(status_code=404, detail="Agreement not found")
+        raise HTTPException(status_code=404, detail="Договір не знайдено")
     
+    # Parse snapshot
+    snapshot = None
+    if agreement[7]:  # snapshot_json field
+        try:
+            snapshot = json.loads(agreement[7]) if isinstance(agreement[7], str) else agreement[7]
+        except:
+            pass
+    
+    # Prepare data for PDF
+    agreement_data = {
+        "id": agreement[0],
+        "contract_number": agreement[1],
+        "status": agreement[2],
+        "valid_from": agreement[3].isoformat() if agreement[3] else None,
+        "valid_until": agreement[4].isoformat() if agreement[4] else None,
+        "signed_at": agreement[5].isoformat() if agreement[5] else None,
+        "snapshot": snapshot
+    }
+    
+    client_data = {
+        "full_name": agreement[8],
+        "email": agreement[9],
+        "phone": agreement[10],
+        "payer_type": agreement[11],
+        "tax_id": agreement[12],
+        "bank_details": agreement[13]
+    }
+    
+    # Generate PDF
+    pdf_result = generate_master_agreement_pdf(agreement_data, client_data)
+    
+    if not pdf_result.get("success"):
+        raise HTTPException(status_code=500, detail=f"Помилка генерації PDF: {pdf_result.get('error')}")
+    
+    # Prepare email
+    subject = f"Договір оренди № {agreement[1]} | FarforRent"
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333;">
+        <h2>Договір оренди № {agreement[1]}</h2>
+        <p>Шановний(а) {client_data.get('full_name', 'клієнте')},</p>
+        <p>Надсилаємо вам Договір оренди обладнання.</p>
+        <p><strong>Номер договору:</strong> {agreement[1]}</p>
+        <p><strong>Дійсний до:</strong> {agreement_data.get('valid_until', '—')}</p>
+        <p>Будь ласка, ознайомтесь з умовами договору у вкладеному PDF файлі.</p>
+        <p>Якщо у вас виникли питання, будь ласка, зв'яжіться з нами.</p>
+        <br>
+        <p>З повагою,<br>Команда FarforRent<br>info@farforrent.com.ua</p>
+    </body>
+    </html>
+    """
+    
+    # Send email with PDF attachment
+    email_result = send_email(
+        to_email=data.email,
+        subject=subject,
+        html_content=html_body,
+        attachments=[{
+            "filename": pdf_result["pdf_filename"],
+            "content": pdf_result["pdf_bytes"],
+            "content_type": "application/pdf"
+        }]
+    )
+    
+    if not email_result.get("success"):
+        raise HTTPException(status_code=500, detail=f"Помилка відправки email: {email_result.get('message')}")
+    
+    # Update status to 'sent' if was draft
     try:
-        # Update status
         db.execute(text("""
-            UPDATE master_agreements SET status = 'sent' WHERE id = :id AND status = 'draft'
+            UPDATE master_agreements 
+            SET status = 'sent' 
+            WHERE id = :id AND status = 'draft'
         """), {"id": agreement_id})
-        
-        # Log email send (actual email sending would be here)
-        # TODO: Integrate with email service
-        
         db.commit()
-        return {
-            "success": True, 
-            "message": f"Agreement {agreement[1]} marked as sent to {email}"
+    except:
+        pass  # Ignore if already sent
+    
+    return {
+        "success": True,
+        "message": f"Договір {agreement[1]} відправлено на {data.email}"
+    }
+
+
+# ============================================================
+# PREVIEW AGREEMENT (HTML)
+# ============================================================
+
+@router.get("/{agreement_id}/preview")
+async def preview_agreement(agreement_id: int, db: Session = Depends(get_rh_db)):
+    """Get HTML preview of agreement"""
+    from fastapi.responses import HTMLResponse
+    from services.pdf_generator import generate_master_agreement_html
+    
+    # Get agreement with client data
+    agreement = db.execute(text("""
+        SELECT 
+            ma.id, ma.contract_number, ma.status, ma.valid_from, ma.valid_until,
+            ma.signed_at, ma.client_user_id, ma.snapshot_json, ma.note,
+            cu.full_name, cu.email, cu.phone, cu.payer_type, cu.tax_id, cu.bank_details
+        FROM master_agreements ma
+        LEFT JOIN client_users cu ON cu.id = ma.client_user_id
+        WHERE ma.id = :id
+    """), {"id": agreement_id}).fetchone()
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Договір не знайдено")
+    
+    # Extract signed_by from note if present
+    signed_by = None
+    if agreement[8]:  # note field
+        note = agreement[8]
+        if "Підписано:" in note:
+            try:
+                signed_by = note.split("Підписано:")[1].strip().split("\n")[0]
+            except:
+                pass
+    
+    # Parse snapshot
+    snapshot = None
+    if agreement[7]:  # snapshot_json field
+        try:
+            snapshot = json.loads(agreement[7]) if isinstance(agreement[7], str) else agreement[7]
+        except:
+            pass
+    
+    agreement_data = {
+        "contract_number": agreement[1],
+        "status": agreement[2],
+        "valid_from": agreement[3].isoformat() if agreement[3] else None,
+        "valid_until": agreement[4].isoformat() if agreement[4] else None,
+        "signed_at": agreement[5].isoformat() if agreement[5] else None,
+        "signed_by": signed_by,
+        "snapshot": snapshot
+    }
+    
+    client_data = {
+        "full_name": agreement[9],
+        "email": agreement[10],
+        "phone": agreement[11],
+        "payer_type": agreement[12],
+        "tax_id": agreement[13],
+        "bank_details": agreement[14]
+    }
+    
+    html_content = generate_master_agreement_html(agreement_data, client_data)
+    
+    return HTMLResponse(content=html_content, media_type="text/html")
+
+
+# ============================================================
+# DOWNLOAD AGREEMENT PDF
+# ============================================================
+
+@router.get("/{agreement_id}/pdf")
+async def download_agreement_pdf(agreement_id: int, db: Session = Depends(get_rh_db)):
+    """Download agreement as PDF"""
+    from fastapi.responses import Response
+    from services.pdf_generator import generate_master_agreement_pdf
+    
+    # Get agreement with client data
+    agreement = db.execute(text("""
+        SELECT 
+            ma.id, ma.contract_number, ma.status, ma.valid_from, ma.valid_until,
+            ma.signed_at, ma.client_user_id, ma.snapshot_json, ma.note,
+            cu.full_name, cu.email, cu.phone, cu.payer_type, cu.tax_id, cu.bank_details
+        FROM master_agreements ma
+        LEFT JOIN client_users cu ON cu.id = ma.client_user_id
+        WHERE ma.id = :id
+    """), {"id": agreement_id}).fetchone()
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Договір не знайдено")
+    
+    # Extract signed_by from note if present
+    signed_by = None
+    if agreement[8]:
+        note = agreement[8]
+        if "Підписано:" in note:
+            try:
+                signed_by = note.split("Підписано:")[1].strip().split("\n")[0]
+            except:
+                pass
+    
+    # Parse snapshot
+    snapshot = None
+    if agreement[7]:  # snapshot_json field
+        try:
+            snapshot = json.loads(agreement[7]) if isinstance(agreement[7], str) else agreement[7]
+        except:
+            pass
+    
+    agreement_data = {
+        "contract_number": agreement[1],
+        "status": agreement[2],
+        "valid_from": agreement[3].isoformat() if agreement[3] else None,
+        "valid_until": agreement[4].isoformat() if agreement[4] else None,
+        "signed_at": agreement[5].isoformat() if agreement[5] else None,
+        "signed_by": signed_by,
+        "snapshot": snapshot
+    }
+    
+    client_data = {
+        "full_name": agreement[9],
+        "email": agreement[10],
+        "phone": agreement[11],
+        "payer_type": agreement[12],
+        "tax_id": agreement[13],
+        "bank_details": agreement[14]
+    }
+    
+    pdf_result = generate_master_agreement_pdf(agreement_data, client_data)
+    
+    if not pdf_result.get("success"):
+        raise HTTPException(status_code=500, detail=f"Помилка генерації PDF: {pdf_result.get('error')}")
+    
+    return Response(
+        content=pdf_result["pdf_bytes"],
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={pdf_result['pdf_filename']}"
         }
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+    )
 
 
 # ============================================================

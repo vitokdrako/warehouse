@@ -622,12 +622,14 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     deposit_total = 0.0
     
     for item in items:
-        # item: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
+        # item structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price, purchase_price]
         qty = item[3] or 1
-        price_per_day = float(item[4] or 0)
+        rental_price_day = float(item[4] or item[8] or 0)  # Use order price or product rental_price
         total_rental = float(item[5] or 0)
-        # Deposit = price * quantity (using rental_price from products or price as fallback)
-        deposit_per_item = float(item[8] or item[4] or 0) * qty
+        
+        # Deposit = 50% of purchase_price (item[9]) * quantity
+        purchase_price = float(item[9] or 0)
+        deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
         
         rent_total += total_rental
         deposit_total += deposit_per_item
@@ -636,8 +638,8 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "product_name": item[2],
             "sku": item[7] or "—",
             "quantity": qty,
-            "price_per_day_fmt": _format_currency(price_per_day),
-            "total_rental_fmt": _format_currency(total_rental),
+            "rental_price_fmt": _format_currency(rental_price_day),
+            "price_per_day_fmt": _format_currency(rental_price_day),
             "deposit_fmt": _format_currency(deposit_per_item),
             "image_url": item[6],
             "note": None
@@ -645,7 +647,8 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     
     # Calculate totals (use order values if available, otherwise calculated)
     order_rent = float(order[11] or 0) if order[11] else rent_total
-    order_deposit = float(order[12] or 0) if order[12] else deposit_total
+    # Use calculated deposit (50% of purchase price) instead of order deposit
+    order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
     grand_total = order_rent + order_deposit - discount_amount
@@ -695,8 +698,8 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "grand_total": grand_total
         },
         "company": {
-            "phone": "+38 (050) 415-23-23",
-            "email": "farfordecororenda@gmail.com"
+            "phone": "(097) 123 09 93, (093) 375 09 40",
+            "email": "info@farforrent.com.ua"
         },
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None  # Can be set to "ПОПЕРЕДНІЙ" or "ЗАТВЕРДЖЕНО"

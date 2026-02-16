@@ -878,7 +878,7 @@ export default function ClientsTab({ onSelectClientForOrder }) {
 
       {/* Clients List */}
       <Card title={`👥 Клієнти (${filteredClients.length})`}>
-        {loading ? (
+        {loading && !loadingTimeout ? (
           <div className="flex items-center justify-center h-32 text-slate-400">
             Завантаження...
           </div>

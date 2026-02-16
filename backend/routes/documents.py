@@ -645,7 +645,7 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
         "invoice_number": invoice_number,
         "invoice_date": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "client": {"name": order[3], "phone": order[4], "email": order[5]},
-        "order": {"number": order[1], "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}", "rental_days": rental_days, "delivery_method": order[16] or "Самовивіз"},
+        "order": {"number": order[1], "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}", "rental_days": rental_days, "delivery_method": "Самовивіз"},
         "items": formatted_items,
         "totals": {"rental": _format_currency(order[11]), "deposit": _format_currency(order[12]), "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))},
         "note": order[13], "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")

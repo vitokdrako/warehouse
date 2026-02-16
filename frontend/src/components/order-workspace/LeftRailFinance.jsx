@@ -44,7 +44,12 @@ export default function LeftRailFinance({
   discountPercent = 0, // Відсоток знижки
   discountAmount = 0,  // Сума знижки
   rentBeforeDiscount = 0, // Сума оренди до знижки
+  serviceFee = 0,      // Додаткова послуга (мінімальне замовлення)
+  onServiceFeeChange,  // Callback для зміни додаткової послуги
+  isEditable = false,  // Чи можна редагувати (на етапі очікування)
 }) {
+  const [editingServiceFee, setEditingServiceFee] = useState(false)
+  const [serviceFeeInput, setServiceFeeInput] = useState(serviceFee || 0)
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])
   const [deposit, setDeposit] = useState(null)

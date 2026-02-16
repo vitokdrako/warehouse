@@ -719,7 +719,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             </button>
                           </div>
                         </div>
-                      ))}
+                      )})}
                     </div>
                   )}
                 </div>

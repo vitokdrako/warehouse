@@ -653,9 +653,9 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
-    service_fee = float(order[25] or 0)  # Додаткова послуга
-    service_fee_name = order[26] or "Додаткова послуга"  # Назва послуги
-    # Разом до сплати = Оренда - Знижка + Послуга (БЕЗ завдатку - це окремий платіж)
+    service_fee = float(order[25] or 0)
+    service_fee_name = order[26] or "Додаткова послуга"
+    # Разом до сплати = Оренда - Знижка + Послуга (БЕЗ завдатку)
     grand_total = order_rent - discount_amount + service_fee
     
     # Delivery type label mapping

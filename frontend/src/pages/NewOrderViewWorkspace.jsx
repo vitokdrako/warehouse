@@ -789,9 +789,10 @@ export default function NewOrderViewWorkspace() {
             serviceFeeName={order?.service_fee_name || ""}
             onServiceFeeChange={async (fee, feeName) => {
               try {
+                const token = localStorage.getItem('token')
                 await fetch(`${BACKEND_URL}/api/orders/${orderId}`, {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                   body: JSON.stringify({ service_fee: fee, service_fee_name: feeName })
                 })
                 // Оновити локальний стан

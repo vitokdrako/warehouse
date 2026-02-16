@@ -173,6 +173,19 @@ export default function LeftRailFinance({
             <span className="text-slate-600">Оренда</span>
             <span className="font-semibold text-slate-800">₴ {fmtUA(rentAmount)}</span>
           </div>
+          
+          {/* Показати знижку якщо є */}
+          {discountPercent > 0 && (
+            <div className="mt-1 flex items-center justify-between text-xs">
+              <span className="text-green-600">
+                🏷️ Знижка {discountPercent}%
+              </span>
+              <span className="text-green-600 font-medium">
+                -₴ {fmtUA(discountAmount)}
+              </span>
+            </div>
+          )}
+          
           <div className="mt-1 flex items-center justify-between">
             <span className="text-xs text-slate-500">
               {rentStatus === 'paid' && '✅ Оплачено'}

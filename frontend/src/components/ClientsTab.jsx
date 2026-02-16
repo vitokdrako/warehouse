@@ -363,6 +363,10 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   const [showPayerModal, setShowPayerModal] = useState(false);
   const [editingPayer, setEditingPayer] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  // Master Agreement state
+  const [payerMAs, setPayerMAs] = useState({}); // { payerId: maData }
+  const [creatingMA, setCreatingMA] = useState(null); // payer_id being processed
 
   useEffect(() => {
     if (client?.id) {
@@ -378,6 +382,20 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
       if (payersRes.ok) {
         const data = await payersRes.json();
         setPayers(data);
+        
+        // Load MA for each payer
+        const maData = {};
+        for (const payer of data) {
+          try {
+            const maRes = await authFetch(`${BACKEND_URL}/api/agreements/active/${payer.id}`);
+            if (maRes.ok) {
+              maData[payer.id] = await maRes.json();
+            }
+          } catch (e) {
+            console.log(`No MA for payer ${payer.id}`);
+          }
+        }
+        setPayerMAs(maData);
       }
 
       // Load client details with orders

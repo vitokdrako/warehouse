@@ -609,9 +609,14 @@ export default function FinanceHub() {
   ];
   
   // ===== RENDER =====
-  // DEBUG: Skip loading check to see if content renders
-  const DEBUG_SKIP_LOADING = true;
-  if (loading && !DEBUG_SKIP_LOADING) {
+  // Show loading for max 5 seconds, then render anyway
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingTimeout(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  if (loading && !loadingTimeout) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-slate-500">Завантаження...</div>

@@ -532,45 +532,232 @@ async def create_agreement_simple(data: MasterAgreementCreate, db: Session = Dep
 
 
 # ============================================================
-# SEND AGREEMENT (mark as sent + email)
+# SEND AGREEMENT (mark as sent + email with PDF)
 # ============================================================
+
+class SendAgreementRequest(BaseModel):
+    email: str
 
 @router.post("/{agreement_id}/send")
 async def send_agreement(
     agreement_id: int,
-    email: str = Query(..., description="Email to send to"),
+    data: SendAgreementRequest,
     db: Session = Depends(get_rh_db)
 ):
-    """Mark agreement as sent and send email"""
+    """Send agreement PDF to email"""
+    from services.pdf_generator import generate_master_agreement_pdf
+    from services.email_service import send_email
     
-    # Get agreement
+    # Get agreement with client data
     agreement = db.execute(text("""
-        SELECT ma.id, ma.contract_number, ma.status, pp.email as payer_email
+        SELECT 
+            ma.id, ma.contract_number, ma.status, ma.valid_from, ma.valid_until,
+            ma.signed_at, ma.client_user_id, ma.snapshot_json,
+            cu.full_name, cu.email, cu.phone, cu.payer_type, cu.tax_id, cu.bank_details
         FROM master_agreements ma
-        LEFT JOIN payer_profiles pp ON pp.id = ma.payer_profile_id
+        LEFT JOIN client_users cu ON cu.id = ma.client_user_id
         WHERE ma.id = :id
     """), {"id": agreement_id}).fetchone()
     
     if not agreement:
-        raise HTTPException(status_code=404, detail="Agreement not found")
+        raise HTTPException(status_code=404, detail="Договір не знайдено")
     
+    # Prepare data for PDF
+    agreement_data = {
+        "id": agreement[0],
+        "contract_number": agreement[1],
+        "status": agreement[2],
+        "valid_from": agreement[3].isoformat() if agreement[3] else None,
+        "valid_until": agreement[4].isoformat() if agreement[4] else None,
+        "signed_at": agreement[5].isoformat() if agreement[5] else None
+    }
+    
+    client_data = {
+        "full_name": agreement[8],
+        "email": agreement[9],
+        "phone": agreement[10],
+        "payer_type": agreement[11],
+        "tax_id": agreement[12],
+        "bank_details": agreement[13]
+    }
+    
+    # Generate PDF
+    pdf_result = generate_master_agreement_pdf(agreement_data, client_data)
+    
+    if not pdf_result.get("success"):
+        raise HTTPException(status_code=500, detail=f"Помилка генерації PDF: {pdf_result.get('error')}")
+    
+    # Prepare email
+    subject = f"Рамковий договір {agreement[1]} | FarforRent"
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333;">
+        <h2>Рамковий договір {agreement[1]}</h2>
+        <p>Шановний(а) {client_data.get('full_name', 'клієнте')},</p>
+        <p>Надсилаємо вам Рамковий договір про надання послуг з оренди обладнання.</p>
+        <p><strong>Номер договору:</strong> {agreement[1]}</p>
+        <p><strong>Дійсний до:</strong> {agreement_data.get('valid_until', '—')}</p>
+        <p>Будь ласка, ознайомтесь з умовами договору у вкладеному PDF файлі.</p>
+        <p>Якщо у вас виникли питання, будь ласка, зв'яжіться з нами.</p>
+        <br>
+        <p>З повагою,<br>Команда FarforRent<br>info@farforrent.com.ua</p>
+    </body>
+    </html>
+    """
+    
+    # Send email with PDF attachment
+    email_result = send_email(
+        to_email=data.email,
+        subject=subject,
+        html_content=html_body,
+        attachments=[{
+            "filename": pdf_result["pdf_filename"],
+            "content": pdf_result["pdf_bytes"],
+            "content_type": "application/pdf"
+        }]
+    )
+    
+    if not email_result.get("success"):
+        raise HTTPException(status_code=500, detail=f"Помилка відправки email: {email_result.get('message')}")
+    
+    # Update status to 'sent' if was draft
     try:
-        # Update status
         db.execute(text("""
-            UPDATE master_agreements SET status = 'sent' WHERE id = :id AND status = 'draft'
+            UPDATE master_agreements 
+            SET status = 'sent' 
+            WHERE id = :id AND status = 'draft'
         """), {"id": agreement_id})
-        
-        # Log email send (actual email sending would be here)
-        # TODO: Integrate with email service
-        
         db.commit()
-        return {
-            "success": True, 
-            "message": f"Agreement {agreement[1]} marked as sent to {email}"
+    except:
+        pass  # Ignore if already sent
+    
+    return {
+        "success": True,
+        "message": f"Договір {agreement[1]} відправлено на {data.email}"
+    }
+
+
+# ============================================================
+# PREVIEW AGREEMENT (HTML)
+# ============================================================
+
+@router.get("/{agreement_id}/preview")
+async def preview_agreement(agreement_id: int, db: Session = Depends(get_rh_db)):
+    """Get HTML preview of agreement"""
+    from fastapi.responses import HTMLResponse
+    from services.pdf_generator import generate_master_agreement_html
+    
+    # Get agreement with client data
+    agreement = db.execute(text("""
+        SELECT 
+            ma.id, ma.contract_number, ma.status, ma.valid_from, ma.valid_until,
+            ma.signed_at, ma.client_user_id, ma.snapshot_json, ma.note,
+            cu.full_name, cu.email, cu.phone, cu.payer_type, cu.tax_id, cu.bank_details
+        FROM master_agreements ma
+        LEFT JOIN client_users cu ON cu.id = ma.client_user_id
+        WHERE ma.id = :id
+    """), {"id": agreement_id}).fetchone()
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Договір не знайдено")
+    
+    # Extract signed_by from note if present
+    signed_by = None
+    if agreement[8]:  # note field
+        note = agreement[8]
+        if "Підписано:" in note:
+            try:
+                signed_by = note.split("Підписано:")[1].strip().split("\n")[0]
+            except:
+                pass
+    
+    agreement_data = {
+        "contract_number": agreement[1],
+        "status": agreement[2],
+        "valid_from": agreement[3].isoformat() if agreement[3] else None,
+        "valid_until": agreement[4].isoformat() if agreement[4] else None,
+        "signed_at": agreement[5].isoformat() if agreement[5] else None,
+        "signed_by": signed_by
+    }
+    
+    client_data = {
+        "full_name": agreement[9],
+        "email": agreement[10],
+        "phone": agreement[11],
+        "payer_type": agreement[12],
+        "tax_id": agreement[13],
+        "bank_details": agreement[14]
+    }
+    
+    html_content = generate_master_agreement_html(agreement_data, client_data)
+    
+    return HTMLResponse(content=html_content, media_type="text/html")
+
+
+# ============================================================
+# DOWNLOAD AGREEMENT PDF
+# ============================================================
+
+@router.get("/{agreement_id}/pdf")
+async def download_agreement_pdf(agreement_id: int, db: Session = Depends(get_rh_db)):
+    """Download agreement as PDF"""
+    from fastapi.responses import Response
+    from services.pdf_generator import generate_master_agreement_pdf
+    
+    # Get agreement with client data
+    agreement = db.execute(text("""
+        SELECT 
+            ma.id, ma.contract_number, ma.status, ma.valid_from, ma.valid_until,
+            ma.signed_at, ma.client_user_id, ma.snapshot_json, ma.note,
+            cu.full_name, cu.email, cu.phone, cu.payer_type, cu.tax_id, cu.bank_details
+        FROM master_agreements ma
+        LEFT JOIN client_users cu ON cu.id = ma.client_user_id
+        WHERE ma.id = :id
+    """), {"id": agreement_id}).fetchone()
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Договір не знайдено")
+    
+    # Extract signed_by from note if present
+    signed_by = None
+    if agreement[8]:
+        note = agreement[8]
+        if "Підписано:" in note:
+            try:
+                signed_by = note.split("Підписано:")[1].strip().split("\n")[0]
+            except:
+                pass
+    
+    agreement_data = {
+        "contract_number": agreement[1],
+        "status": agreement[2],
+        "valid_from": agreement[3].isoformat() if agreement[3] else None,
+        "valid_until": agreement[4].isoformat() if agreement[4] else None,
+        "signed_at": agreement[5].isoformat() if agreement[5] else None,
+        "signed_by": signed_by
+    }
+    
+    client_data = {
+        "full_name": agreement[9],
+        "email": agreement[10],
+        "phone": agreement[11],
+        "payer_type": agreement[12],
+        "tax_id": agreement[13],
+        "bank_details": agreement[14]
+    }
+    
+    pdf_result = generate_master_agreement_pdf(agreement_data, client_data)
+    
+    if not pdf_result.get("success"):
+        raise HTTPException(status_code=500, detail=f"Помилка генерації PDF: {pdf_result.get('error')}")
+    
+    return Response(
+        content=pdf_result["pdf_bytes"],
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={pdf_result['pdf_filename']}"
         }
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+    )
 
 
 # ============================================================

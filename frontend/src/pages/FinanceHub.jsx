@@ -749,17 +749,11 @@ export default function FinanceHub() {
           />
         )}
         
-        {/* TAB: Documents */}
-        {activeTab === "documents" && (
-          <DocumentsTab
+        {/* TAB: Registry (read-only документи) */}
+        {activeTab === "registry" && (
+          <RegistryTab
             orders={orders}
-            selectedOrderId={selectedOrderId}
-            setSelectedOrderId={setSelectedOrderId}
-            selectedOrder={selectedOrder}
             documents={documents}
-            generateDocument={generateDocument}
-            selectedPayerProfile={selectedPayerProfile}
-            setSelectedPayerProfile={setSelectedPayerProfile}
             payerProfiles={payerProfiles}
           />
         )}

@@ -848,6 +848,9 @@ export default function FinanceHub() {
             payerProfiles={payerProfiles}
             orderPayerOptions={orderPayerOptions}
             setOrderPayer={setOrderPayer}
+            matchedClient={matchedClient}
+            clientSearching={clientSearching}
+            linkOrderToClient={linkOrderToClient}
           />
         )}
         

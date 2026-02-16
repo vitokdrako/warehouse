@@ -757,7 +757,7 @@ async def update_order(
         'rental_start_date', 'rental_end_date', 'issue_date', 'return_date', 
         'issue_time', 'return_time', 'status', 
         'total_price', 'deposit_amount', 'total_loss_value', 'rental_days', 'notes',
-        'discount', 'manager_comment', 'manager_id', 'service_fee'
+        'discount', 'manager_comment', 'manager_id', 'service_fee', 'service_fee_name'
     ]
     
     # Маппінг полів frontend -> database (якщо назви різні)

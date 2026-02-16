@@ -364,9 +364,9 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   const [editingPayer, setEditingPayer] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Master Agreement state
-  const [payerMAs, setPayerMAs] = useState({}); // { payerId: maData }
-  const [creatingMA, setCreatingMA] = useState(null); // payer_id being processed
+  // Master Agreement state (client-based only)
+  const [clientMA, setClientMA] = useState(null);
+  const [creatingMA, setCreatingMA] = useState(false);
 
   useEffect(() => {
     if (client?.id) {
@@ -377,33 +377,19 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   const loadClientData = async () => {
     setLoading(true);
     try {
-      // Load payers (legacy)
+      // Load payers (for display only, no MA logic)
       const payersRes = await authFetch(`${BACKEND_URL}/api/clients/${client.id}/payers`);
       if (payersRes.ok) {
         const data = await payersRes.json();
         setPayers(data);
-        
-        // Load MA for each payer (legacy support)
-        const maData = {};
-        for (const payer of data) {
-          try {
-            const maRes = await authFetch(`${BACKEND_URL}/api/agreements/active/${payer.id}`);
-            if (maRes.ok) {
-              maData[payer.id] = await maRes.json();
-            }
-          } catch (e) {
-            console.log(`No MA for payer ${payer.id}`);
-          }
-        }
-        setPayerMAs(maData);
       }
 
-      // Load client's own MA (new client-based approach)
+      // Load client's MA (new client-based approach)
       try {
         const clientMARes = await authFetch(`${BACKEND_URL}/api/agreements/client/${client.id}`);
         if (clientMARes.ok) {
-          const clientMA = await clientMARes.json();
-          setClientMA(clientMA);
+          const ma = await clientMARes.json();
+          setClientMA(ma);
         }
       } catch (e) {
         console.log("No client MA");
@@ -422,9 +408,6 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
       setLoading(false);
     }
   };
-
-  // Client MA state
-  const [clientMA, setClientMA] = useState(null);
 
   // === MASTER AGREEMENT FUNCTIONS (Client-based) ===
   const handleCreateClientMA = async () => {

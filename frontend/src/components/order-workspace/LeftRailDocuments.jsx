@@ -323,23 +323,49 @@ export default function LeftRailDocuments({
       return
     }
     
-    let docInfo = docVersions[docType]
-    let generatedData = null
-    
-    // Якщо документ не існує - спочатку генеруємо
-    // ОПТИМІЗАЦІЯ P1.2: Використовуємо повернені дані напряму, а не state
-    if (!docInfo?.exists) {
-      generatedData = await generateNewDocument(docType, false)  // false = не відкривати preview
-      if (!generatedData) {
-        alert('❌ Не вдалося згенерувати документ')
-        return
-      }
-    }
-    
     setSending(docType)
     setError(null)
     
     try {
+      // Для Кошторису - використовуємо спеціальний endpoint
+      if (docType === 'estimate') {
+        const emailResponse = await fetch(`${BACKEND_URL}/api/documents/estimate/${orderId}/send-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${getToken()}`
+          },
+          body: JSON.stringify({
+            recipient_email: customerEmail,
+            recipient_name: ''
+          })
+        })
+        
+        if (!emailResponse.ok) {
+          const errData = await emailResponse.json()
+          throw new Error(errData.detail || 'Помилка відправки email')
+        }
+        
+        const emailResult = await emailResponse.json()
+        alert(`✅ ${emailResult.message}`)
+        setSending(null)
+        return
+      }
+      
+      let docInfo = docVersions[docType]
+      let generatedData = null
+      
+      // Якщо документ не існує - спочатку генеруємо
+      // ОПТИМІЗАЦІЯ P1.2: Використовуємо повернені дані напряму, а не state
+      if (!docInfo?.exists) {
+        generatedData = await generateNewDocument(docType, false)  // false = не відкривати preview
+        if (!generatedData) {
+          alert('❌ Не вдалося згенерувати документ')
+          setSending(null)
+          return
+        }
+      }
+      
       // ОПТИМІЗАЦІЯ P1.2: Використовуємо ID з generatedData якщо щойно згенерували
       // Це вирішує race condition коли state ще не оновився
       const documentId = generatedData?.id || docInfo?.id

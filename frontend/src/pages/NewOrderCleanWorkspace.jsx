@@ -268,6 +268,8 @@ export default function NewOrderClean() {
             orderId={null}
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.estimatedDeposit}
+            discountPercent={discountPercent}
+            discountAmount={calculations.totalDiscount}
           />
           <LeftRailTimeline orderId={null} events={events} />
           

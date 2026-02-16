@@ -640,15 +640,16 @@ export default function FinanceHub() {
   };
   
   // ===== TABS CONFIG =====
+  // Нова структура: MA в Клієнтах, документи в Операціях, Документи → Реєстр
   const TABS = [
-    { id: "operations", label: "Операції", icon: "💰" },
-    { id: "documents", label: "Документи", icon: "📄" },
+    { id: "operations", label: "Операції", icon: "💰" },      // Головна: ордери + всі документи
+    { id: "clients", label: "Клієнти", icon: "👥" },          // Клієнти + Платники + MA
+    { id: "registry", label: "Реєстр", icon: "📄" },          // Архів документів (read-only)
     { id: "cash", label: "Каси", icon: "💵" },
-    { id: "forecast", label: "План надходжень", icon: "📊" },
-    { id: "expenses", label: "Витрати", icon: "📉" },
     { id: "deposits", label: "Депозити", icon: "🔒" },
+    { id: "expenses", label: "Витрати", icon: "📉" },
     { id: "analytics", label: "Аналітика", icon: "📈" },
-    { id: "clients", label: "Клієнти", icon: "👥" },
+    { id: "forecast", label: "План", icon: "📊" },
   ];
   
   // ===== RENDER =====

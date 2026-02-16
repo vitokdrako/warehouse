@@ -893,12 +893,13 @@ async def preview_invoice_offer(
     
     formatted_items = []
     for item in items:
+        # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
         formatted_items.append({
-            "name": item[3],
-            "quantity": item[4],
-            "price_per_day": _format_currency(item[5]),
-            "total_rental": _format_currency(item[6]),
-            "deposit": _format_currency(item[8])
+            "name": item[2],
+            "quantity": item[3],
+            "price_per_day": _format_currency(item[4]),
+            "total_rental": _format_currency(item[5]),
+            "deposit": _format_currency(float(item[8] or item[4] or 0) * (item[3] or 1))
         })
     
     invoice_number = f"Р-{datetime.now().strftime('%Y')}-{order[0]:06d}"

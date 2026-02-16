@@ -549,27 +549,54 @@ def _format_currency(value) -> str:
     return f"{float(value):,.2f}".replace(",", " ").replace(".", ",")
 
 def _get_order_with_items(db: Session, order_id: int):
-    """Get order with all items"""
+    """Get order with all items including extended fields for documents"""
     order = db.execute(text("""
         SELECT 
-            o.order_id, o.order_number, o.customer_id, o.customer_name,
-            o.customer_phone, o.customer_email, 
-            o.rental_start_date, o.rental_end_date,
-            o.issue_date, o.return_date,
-            o.status, o.total_price, o.deposit_amount, o.notes,
-            o.created_at, o.rental_days
+            o.order_id,           -- 0
+            o.order_number,       -- 1
+            o.customer_id,        -- 2
+            o.customer_name,      -- 3
+            o.customer_phone,     -- 4
+            o.customer_email,     -- 5
+            o.rental_start_date,  -- 6
+            o.rental_end_date,    -- 7
+            o.issue_date,         -- 8
+            o.return_date,        -- 9
+            o.status,             -- 10
+            o.total_price,        -- 11
+            o.deposit_amount,     -- 12
+            o.notes,              -- 13
+            o.created_at,         -- 14
+            o.rental_days,        -- 15
+            o.city,               -- 16
+            o.delivery_address,   -- 17
+            o.delivery_type,      -- 18
+            o.event_type,         -- 19
+            o.customer_comment,   -- 20
+            o.phone,              -- 21
+            o.email,              -- 22
+            o.discount_amount,    -- 23
+            o.discount_percent    -- 24
         FROM orders o WHERE o.order_id = :id
     """), {"id": order_id}).fetchone()
     
     if not order:
         return None, None
     
+    # Join with products to get SKU
     items = db.execute(text("""
         SELECT 
-            oi.id, oi.product_id, oi.product_name, oi.product_name,
-            oi.quantity, oi.price, oi.total_rental,
-            oi.price, oi.total_rental, oi.image_url
+            oi.id,                -- 0
+            oi.product_id,        -- 1
+            oi.product_name,      -- 2
+            oi.quantity,          -- 3
+            oi.price,             -- 4
+            oi.total_rental,      -- 5
+            oi.image_url,         -- 6
+            p.sku,                -- 7
+            p.rental_price        -- 8 (deposit often equals rental_price)
         FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.product_id
         WHERE oi.order_id = :id AND oi.status = 'active'
     """), {"id": order_id}).fetchall()
     

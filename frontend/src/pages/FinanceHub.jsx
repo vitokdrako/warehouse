@@ -825,7 +825,7 @@ function OperationsTab({
   orderDeposit, payments, damageFees, lateFeeData, timeline,
   searchQuery, setSearchQuery, saving, handlePayment, refreshAll,
   payoutsStats, depositsByCurrency, orderStats, generateDocument,
-  selectedPayerProfile, payerProfiles
+  selectedPayerProfile, payerProfiles, orderPayerOptions, setOrderPayer
 }) {
   // Payment form state
   const [payType, setPayType] = useState("rent");

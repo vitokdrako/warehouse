@@ -870,6 +870,24 @@ async def preview_annex(
     
     client = {"name": order[3], "phone": order[4] or order[21], "email": order[5] or order[22], "payer_type": "individual", "director_name": None,
               "contact_person": order[3], "contact_channel": "phone", "contact_value": order[4] or order[21]}
+    
+    # Check if client has payer_type
+    if order[2]:
+        client_row = db.execute(text("SELECT payer_type FROM client_users WHERE id = :id"), {"id": order[2]}).fetchone()
+        if client_row:
+            client["payer_type"] = client_row[0] or "individual"
+    
+    template_data = {
+        "annex": {"number": annex_number, "date": _format_date_ua(datetime.now())},
+        "agreement": agreement, "executor": executor, "client": client, "items": formatted_items,
+        "rental_days": rental_days,
+        "rental_start_date": _format_date_ua_long(order[6]), "rental_end_date": _format_date_ua_long(order[7]),
+        "issue_date": _format_date_ua_long(order[8] or order[6]), "return_date": _format_date_ua_long(order[9] or order[7]),
+        "totals": {"quantity": total_qty, "rental": _format_currency(order[11]), "deposit": _format_currency(order[12])}
+    }
+    
+    template = jinja_env.get_template("documents/annex.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
 # ============================================================

@@ -765,6 +765,7 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
     service_fee = float(order[25] or 0)
+    service_fee_name = order[26] or "Додаткова послуга"  # Назва послуги
     grand_total = order_rent + order_deposit + service_fee - discount_amount
     
     # Delivery type label

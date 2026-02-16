@@ -782,6 +782,9 @@ export default function NewOrderViewWorkspace() {
             orderId={orderId}
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.totalDeposit}
+            discountPercent={order?.discount_percent}
+            discountAmount={calculations.totalDiscount}
+            rentBeforeDiscount={calculations.totalRent}
           />
           <LeftRailDocuments
             orderId={orderId}

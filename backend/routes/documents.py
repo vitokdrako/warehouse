@@ -566,12 +566,11 @@ def _get_order_with_items(db: Session, order_id: int):
     
     items = db.execute(text("""
         SELECT 
-            oi.order_item_id, oi.inventory_id, oi.article, oi.item_name,
-            oi.quantity, oi.price_per_day, oi.total_rental_price,
-            oi.deposit_per_item, oi.total_deposit, i.image_url
+            oi.id, oi.product_id, oi.product_name, oi.product_name,
+            oi.quantity, oi.price, oi.total_rental,
+            oi.price, oi.total_rental, oi.image_url
         FROM order_items oi
-        LEFT JOIN inventory i ON i.inventory_id = oi.inventory_id
-        WHERE oi.order_id = :id
+        WHERE oi.order_id = :id AND oi.status = 'active'
     """), {"id": order_id}).fetchall()
     
     return order, items

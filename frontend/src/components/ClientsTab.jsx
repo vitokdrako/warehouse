@@ -377,13 +377,13 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   const loadClientData = async () => {
     setLoading(true);
     try {
-      // Load payers
+      // Load payers (legacy)
       const payersRes = await authFetch(`${BACKEND_URL}/api/clients/${client.id}/payers`);
       if (payersRes.ok) {
         const data = await payersRes.json();
         setPayers(data);
         
-        // Load MA for each payer
+        // Load MA for each payer (legacy support)
         const maData = {};
         for (const payer of data) {
           try {
@@ -396,6 +396,18 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
           }
         }
         setPayerMAs(maData);
+      }
+
+      // Load client's own MA (new client-based approach)
+      try {
+        const clientMARes = await authFetch(`${BACKEND_URL}/api/agreements/client/${client.id}`);
+        if (clientMARes.ok) {
+          const clientMA = await clientMARes.json();
+          setClientMA(clientMA);
+        }
+      } catch (e) {
+        console.log("No client MA");
+        setClientMA(null);
       }
 
       // Load client details with orders
@@ -411,7 +423,85 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
     }
   };
 
-  // === MASTER AGREEMENT FUNCTIONS ===
+  // Client MA state
+  const [clientMA, setClientMA] = useState(null);
+
+  // === MASTER AGREEMENT FUNCTIONS (Client-based) ===
+  const handleCreateClientMA = async () => {
+    setCreatingMA(client.id);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/agreements/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_user_id: client.id })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert(`✅ Рамковий договір ${data.contract_number} створено`);
+        loadClientData();
+      } else {
+        const err = await res.json();
+        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
+      }
+    } catch (err) {
+      console.error("Error creating MA:", err);
+      alert("❌ Помилка створення договору");
+    } finally {
+      setCreatingMA(null);
+    }
+  };
+
+  const handleSignClientMA = async (maId) => {
+    const signedBy = prompt("Хто підписує договір? (ПІБ)");
+    if (!signedBy) return;
+    
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/agreements/${maId}/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signed_by: signedBy })
+      });
+      if (res.ok) {
+        alert("✅ Договір підписано!");
+        loadClientData();
+      } else {
+        const err = await res.json();
+        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
+      }
+    } catch (err) {
+      console.error("Error signing MA:", err);
+      alert("❌ Помилка підписання");
+    }
+  };
+
+  const handlePreviewMA = async (maId) => {
+    // Open preview in new window
+    window.open(`${BACKEND_URL}/api/agreements/${maId}/preview`, '_blank');
+  };
+
+  const handleSendMAEmail = async (maId) => {
+    const email = prompt("Email для відправки:", client.email);
+    if (!email) return;
+    
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/agreements/${maId}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      if (res.ok) {
+        alert("✅ Договір відправлено на " + email);
+      } else {
+        const err = await res.json();
+        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
+      }
+    } catch (err) {
+      console.error("Error sending MA:", err);
+      alert("❌ Помилка відправки");
+    }
+  };
+
+  // Legacy payer-based MA functions
   const handleCreateMA = async (payerId) => {
     setCreatingMA(payerId);
     try {

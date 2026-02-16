@@ -1484,7 +1484,7 @@ function OperationsTab({
                   { id: "deposit_settlement_act", label: "💰 Акт взаєморозрахунків", needsMA: false },
                 ];
                 
-                // Legal entity specific docs (require MA)
+                // Legal entity specific docs (require MA for some)
                 const legalDocs = [
                   { id: "order_annex", label: "📎 Додаток до договору", needsMA: true },
                   { id: "invoice_legal", label: "📄 Рахунок (юр. особа)", needsMA: false },
@@ -1505,12 +1505,12 @@ function OperationsTab({
                       </Button>
                     ))}
                     
-                    {/* Legal entity section */}
-                    {currentPayer && (
+                    {/* Legal entity / FOP section */}
+                    {isLegalEntity && (
                       <>
                         <div className="border-t border-slate-100 mt-2 pt-2">
                           <div className="text-[10px] text-slate-500 mb-1">
-                            Юр. особа / ФОП:
+                            {payerType === 'tov' ? '🏢 ТОВ' : '🏪 ФОП'}:
                           </div>
                         </div>
                         
@@ -1532,7 +1532,7 @@ function OperationsTab({
                           <div className="mt-2 p-2 bg-amber-50 rounded-lg text-xs text-amber-700">
                             ⚠️ Для Додатку та Акту потрібен підписаний MA.
                             <br/>
-                            Перейдіть до вкладки "Клієнти" → платник → підписати договір.
+                            Перейдіть до вкладки "Клієнти" → створити договір.
                           </div>
                         )}
                       </>

@@ -904,13 +904,14 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
             "total_price": order_rent, "total_price_fmt": _format_currency(order_rent),
             "deposit_amount": order_deposit, "deposit_amount_fmt": _format_currency(order_deposit),
             "discount_amount": discount_amount, "discount_percent": discount_percent,
-            "service_fee": service_fee
+            "service_fee": service_fee, "service_fee_name": service_fee_name
         },
         "items": formatted_items,
         "totals": {
             "rent_total_fmt": _format_currency(order_rent), "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
+            "service_fee_name": service_fee_name if service_fee > 0 else None,
             "grand_total_fmt": _format_currency(grand_total), "grand_total": grand_total
         },
         "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},

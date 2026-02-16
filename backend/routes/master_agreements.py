@@ -288,7 +288,7 @@ async def create_agreement(data: MasterAgreementCreate, db: Session = Depends(ge
             "success": True,
             "agreement_id": agreement_id,
             "contract_number": contract_number,
-            "valid_from": valid_from.isoformat(),
+            "valid_from": contract_date.isoformat(),
             "valid_until": valid_until.isoformat()
         }
     except Exception as e:

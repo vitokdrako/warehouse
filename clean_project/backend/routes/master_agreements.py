@@ -315,11 +315,12 @@ async def update_agreement(
 
 @router.get("/active/{payer_profile_id}")
 async def get_active_agreement(payer_profile_id: int, db: Session = Depends(get_rh_db)):
-    """Get active (signed, not expired) agreement for payer"""
+    """Get active (signed, not expired) agreement for payer, or latest draft if none signed"""
     
+    # First try to find signed agreement
     result = db.execute(text("""
         SELECT 
-            id, contract_number, valid_from, valid_until, signed_at
+            id, contract_number, valid_from, valid_until, signed_at, status, pdf_path
         FROM master_agreements 
         WHERE payer_profile_id = :pid 
         AND status = 'signed'
@@ -329,8 +330,22 @@ async def get_active_agreement(payer_profile_id: int, db: Session = Depends(get_
     """), {"pid": payer_profile_id})
     
     row = result.fetchone()
+    
+    # If no signed, try to find draft
     if not row:
-        return {"exists": False, "message": "No active agreement"}
+        result = db.execute(text("""
+            SELECT 
+                id, contract_number, valid_from, valid_until, signed_at, status, pdf_path
+            FROM master_agreements 
+            WHERE payer_profile_id = :pid 
+            AND status IN ('draft', 'sent')
+            ORDER BY created_at DESC
+            LIMIT 1
+        """), {"pid": payer_profile_id})
+        row = result.fetchone()
+    
+    if not row:
+        return {"exists": False, "message": "No agreement found"}
     
     return {
         "exists": True,
@@ -338,8 +353,85 @@ async def get_active_agreement(payer_profile_id: int, db: Session = Depends(get_
         "contract_number": row[1],
         "valid_from": row[2].isoformat() if row[2] else None,
         "valid_until": row[3].isoformat() if row[3] else None,
-        "signed_at": row[4].isoformat() if row[4] else None
+        "signed_at": row[4].isoformat() if row[4] else None,
+        "status": row[5],
+        "pdf_path": row[6]
     }
+
+
+# ============================================================
+# SIGN AGREEMENT (mark as signed)
+# ============================================================
+
+class SignAgreementRequest(BaseModel):
+    signed_by: str
+    signed_at: Optional[str] = None  # ISO date, default = now
+
+@router.post("/{agreement_id}/sign")
+async def sign_agreement(
+    agreement_id: int,
+    data: SignAgreementRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """Sign a master agreement and set it as active for the payer"""
+    
+    # Get agreement
+    agreement = db.execute(text("""
+        SELECT id, payer_profile_id, contract_number, status
+        FROM master_agreements WHERE id = :id
+    """), {"id": agreement_id}).fetchone()
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Agreement not found")
+    
+    if agreement[3] not in ("draft", "sent"):
+        raise HTTPException(status_code=400, detail=f"Cannot sign agreement with status: {agreement[3]}")
+    
+    signed_at = datetime.fromisoformat(data.signed_at) if data.signed_at else datetime.now()
+    
+    try:
+        # Update agreement status
+        db.execute(text("""
+            UPDATE master_agreements 
+            SET status = 'signed', signed_at = :signed_at, note = CONCAT(IFNULL(note, ''), '\nПідписано: ', :signed_by)
+            WHERE id = :id
+        """), {
+            "id": agreement_id,
+            "signed_at": signed_at,
+            "signed_by": data.signed_by
+        })
+        
+        # Set as active for payer profile
+        db.execute(text("""
+            UPDATE payer_profiles 
+            SET active_master_agreement_id = :agreement_id
+            WHERE id = :payer_id
+        """), {
+            "agreement_id": agreement_id,
+            "payer_id": agreement[1]
+        })
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Agreement {agreement[2]} signed successfully",
+            "agreement_id": agreement_id,
+            "contract_number": agreement[2]
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# CREATE AGREEMENT (alternative endpoint - POST /api/agreements)
+# ============================================================
+
+@router.post("")
+async def create_agreement_simple(data: MasterAgreementCreate, db: Session = Depends(get_rh_db)):
+    """Create new master agreement (alias for /create)"""
+    return await create_agreement(data, db)
 
 
 # ============================================================

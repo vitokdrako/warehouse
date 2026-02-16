@@ -2775,3 +2775,134 @@ async def send_confirmation_email(
         "success": True,
         "message": "Email буде відправлено (функціонал потребує налаштування SMTP)"
     }
+
+
+# ============================================================
+# SET PAYER FOR ORDER
+# ============================================================
+
+class SetPayerRequest(BaseModel):
+    payer_profile_id: int
+
+@router.post("/{order_id}/set-payer")
+async def set_order_payer(
+    order_id: int,
+    data: SetPayerRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Встановити платника для замовлення.
+    Перевіряє, що платник існує та пов'язаний з клієнтом замовлення.
+    """
+    # Перевірити, що замовлення існує
+    order = db.execute(text("""
+        SELECT order_id, client_user_id, payer_profile_id 
+        FROM orders WHERE order_id = :order_id
+    """), {"order_id": order_id}).fetchone()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    # Перевірити, що платник існує
+    payer = db.execute(text("""
+        SELECT id, company_name FROM payer_profiles WHERE id = :payer_id
+    """), {"payer_id": data.payer_profile_id}).fetchone()
+    
+    if not payer:
+        raise HTTPException(status_code=404, detail="Платник не знайдений")
+    
+    # Перевірити, що платник пов'язаний з клієнтом замовлення
+    if order[1]:  # client_user_id
+        link = db.execute(text("""
+            SELECT 1 FROM client_payer_links 
+            WHERE client_user_id = :client AND payer_profile_id = :payer
+        """), {"client": order[1], "payer": data.payer_profile_id}).fetchone()
+        
+        if not link:
+            # Автоматично зв'язати, якщо ще не пов'язано
+            db.execute(text("""
+                INSERT INTO client_payer_links (client_user_id, payer_profile_id, is_default)
+                VALUES (:client, :payer, FALSE)
+            """), {"client": order[1], "payer": data.payer_profile_id})
+    
+    try:
+        # Оновити замовлення
+        db.execute(text("""
+            UPDATE orders 
+            SET payer_profile_id = :payer_id, updated_at = NOW()
+            WHERE order_id = :order_id
+        """), {"payer_id": data.payer_profile_id, "order_id": order_id})
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Платник встановлено: {payer[1]}",
+            "order_id": order_id,
+            "payer_profile_id": data.payer_profile_id,
+            "payer_name": payer[1]
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{order_id}/payer-options")
+async def get_order_payer_options(
+    order_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати список доступних платників для замовлення.
+    Повертає платників, пов'язаних з клієнтом замовлення.
+    """
+    # Отримати замовлення з client_user_id
+    order = db.execute(text("""
+        SELECT order_id, client_user_id, payer_profile_id, customer_name
+        FROM orders WHERE order_id = :order_id
+    """), {"order_id": order_id}).fetchone()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    client_id = order[1]
+    current_payer_id = order[2]
+    
+    payers = []
+    
+    if client_id:
+        # Отримати платників клієнта
+        result = db.execute(text("""
+            SELECT 
+                pp.id, pp.company_name, pp.payer_type, pp.edrpou,
+                cpl.is_default,
+                ma.id as ma_id, ma.contract_number, ma.status as ma_status
+            FROM client_payer_links cpl
+            JOIN payer_profiles pp ON pp.id = cpl.payer_profile_id
+            LEFT JOIN master_agreements ma ON ma.payer_profile_id = pp.id 
+                AND ma.status = 'signed' AND ma.valid_until >= CURDATE()
+            WHERE cpl.client_user_id = :client
+            ORDER BY cpl.is_default DESC, pp.company_name
+        """), {"client": client_id})
+        
+        for row in result.fetchall():
+            payers.append({
+                "id": row[0],
+                "name": row[1],
+                "type": row[2],
+                "edrpou": row[3],
+                "is_default": bool(row[4]),
+                "is_selected": row[0] == current_payer_id,
+                "has_signed_ma": bool(row[5]),
+                "ma_contract_number": row[6],
+                "ma_status": row[7]
+            })
+    
+    return {
+        "order_id": order_id,
+        "client_id": client_id,
+        "client_name": order[3],
+        "current_payer_id": current_payer_id,
+        "payers": payers
+    }
+

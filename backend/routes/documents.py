@@ -652,7 +652,8 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
-    grand_total = order_rent + order_deposit - discount_amount
+    service_fee = float(order[25] or 0)  # Додаткова послуга
+    grand_total = order_rent + order_deposit + service_fee - discount_amount
     
     # Delivery type label mapping
     delivery_type_labels = {
@@ -688,13 +689,15 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "deposit_amount": order_deposit,
             "deposit_amount_fmt": _format_currency(order_deposit),
             "discount_amount": discount_amount,
-            "discount_percent": discount_percent
+            "discount_percent": discount_percent,
+            "service_fee": service_fee
         },
         "items": formatted_items,
         "totals": {
             "rent_total_fmt": _format_currency(order_rent),
             "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "grand_total_fmt": _format_currency(grand_total),
             "grand_total": grand_total
         },

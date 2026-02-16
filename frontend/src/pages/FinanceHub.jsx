@@ -297,12 +297,18 @@ export default function FinanceHub() {
   const loadPayerProfiles = useCallback(async () => {
     console.log("[FinanceHub] loadPayerProfiles called");
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/payer-profiles`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const res = await authFetch(`${BACKEND_URL}/api/payer-profiles`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
+      console.log("[FinanceHub] loadPayerProfiles response status:", res.status);
       const data = await res.json();
       console.log("[FinanceHub] loadPayerProfiles response:", data.profiles?.length);
       setPayerProfiles(data.profiles || []);
     } catch (e) {
-      console.error("Load payer profiles error:", e);
+      console.error("Load payer profiles error:", e.name, e.message);
     }
   }, []);
   

@@ -314,8 +314,10 @@ class TestPayerProfilesAPI:
         assert response.status_code == 200
         
         data = response.json()
-        assert isinstance(data, list)
-        print(f"Found {len(data)} payer profiles")
+        # API returns {"profiles": [...], "total": N}
+        assert "profiles" in data
+        assert isinstance(data["profiles"], list)
+        print(f"Found {len(data['profiles'])} payer profiles")
     
     def test_create_payer_profile(self, auth_headers):
         """Test POST /api/payer-profiles - create new payer"""

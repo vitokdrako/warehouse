@@ -2739,3 +2739,257 @@ function AnalyticsTab({ orders, payoutsStats, deposits, orderStats }) {
     </div>
   );
 }
+
+
+// ============================================================
+// TAB: REGISTRY (read-only архів документів)
+// ============================================================
+function RegistryTab({ orders, documents, payerProfiles }) {
+  const [search, setSearch] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [masterAgreements, setMasterAgreements] = useState([]);
+  const [annexes, setAnnexes] = useState([]);
+  
+  // Load all agreements and annexes on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [agRes, anRes] = await Promise.all([
+          authFetch(`${BACKEND_URL}/api/agreements`),
+          authFetch(`${BACKEND_URL}/api/annexes`)
+        ]);
+        const agData = await agRes.json();
+        const anData = await anRes.json();
+        setMasterAgreements(agData.agreements || []);
+        setAnnexes(anData.annexes || []);
+      } catch (e) {
+        console.error("Registry load error:", e);
+      }
+    };
+    loadData();
+  }, []);
+  
+  const DOC_TYPES = [
+    { value: "all", label: "Всі типи" },
+    { value: "master_agreement", label: "Рамкові договори" },
+    { value: "annex", label: "Додатки" },
+    { value: "invoice", label: "Рахунки" },
+    { value: "act", label: "Акти" }
+  ];
+  
+  const STATUSES = [
+    { value: "all", label: "Всі статуси" },
+    { value: "draft", label: "Чернетка" },
+    { value: "signed", label: "Підписано" },
+    { value: "expired", label: "Закінчився" }
+  ];
+  
+  // Combine all documents
+  const allDocuments = useMemo(() => {
+    const docs = [];
+    
+    // Master agreements
+    masterAgreements.forEach(ma => {
+      docs.push({
+        id: `ma-${ma.id}`,
+        type: "master_agreement",
+        number: ma.contract_number,
+        date: ma.created_at,
+        status: ma.status,
+        payer: ma.payer?.company_name || "—",
+        payerId: ma.payer_profile_id,
+        orderId: null,
+        validUntil: ma.valid_until
+      });
+    });
+    
+    // Annexes
+    annexes.forEach(an => {
+      docs.push({
+        id: `an-${an.id}`,
+        type: "annex",
+        number: an.annex_number,
+        date: an.created_at,
+        status: an.status,
+        payer: "—",
+        payerId: an.payer_profile_id,
+        orderId: an.order_id,
+        validUntil: null
+      });
+    });
+    
+    return docs.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [masterAgreements, annexes]);
+  
+  // Filtered documents
+  const filtered = useMemo(() => {
+    return allDocuments.filter(doc => {
+      // Type filter
+      if (filterType !== "all" && doc.type !== filterType) return false;
+      // Status filter
+      if (filterStatus !== "all" && doc.status !== filterStatus) return false;
+      // Search
+      if (search) {
+        const s = search.toLowerCase();
+        if (!doc.number?.toLowerCase().includes(s) && 
+            !doc.payer?.toLowerCase().includes(s)) return false;
+      }
+      return true;
+    });
+  }, [allDocuments, filterType, filterStatus, search]);
+  
+  const getStatusBadge = (status) => {
+    const styles = {
+      draft: "bg-slate-100 text-slate-600",
+      signed: "bg-emerald-100 text-emerald-700",
+      expired: "bg-rose-100 text-rose-600",
+      sent: "bg-blue-100 text-blue-700"
+    };
+    const labels = {
+      draft: "Чернетка",
+      signed: "Підписано",
+      expired: "Закінчився",
+      sent: "Відправлено"
+    };
+    return (
+      <span className={cn("text-xs px-2 py-0.5 rounded-full", styles[status] || "bg-slate-100")}>
+        {labels[status] || status}
+      </span>
+    );
+  };
+  
+  const getTypeBadge = (type) => {
+    const styles = {
+      master_agreement: "bg-purple-100 text-purple-700",
+      annex: "bg-blue-100 text-blue-700",
+      invoice: "bg-amber-100 text-amber-700",
+      act: "bg-slate-100 text-slate-600"
+    };
+    const labels = {
+      master_agreement: "📋 Рамковий",
+      annex: "📎 Додаток",
+      invoice: "📄 Рахунок",
+      act: "📝 Акт"
+    };
+    return (
+      <span className={cn("text-xs px-2 py-0.5 rounded-full", styles[type] || "bg-slate-100")}>
+        {labels[type] || type}
+      </span>
+    );
+  };
+  
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <Card>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <Input
+              type="search"
+              placeholder="🔍 Пошук: номер, платник..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <select
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            {DOC_TYPES.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          <select
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm"
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
+            {STATUSES.map(s => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+      </Card>
+      
+      {/* Stats */}
+      <div className="grid grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
+          <div className="text-2xl font-bold text-slate-900">{allDocuments.length}</div>
+          <div className="text-xs text-slate-500">Всього</div>
+        </div>
+        <div className="bg-purple-50 rounded-xl border border-purple-200 p-4 text-center">
+          <div className="text-2xl font-bold text-purple-700">
+            {masterAgreements.length}
+          </div>
+          <div className="text-xs text-purple-600">Рамкових</div>
+        </div>
+        <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 text-center">
+          <div className="text-2xl font-bold text-blue-700">
+            {annexes.length}
+          </div>
+          <div className="text-xs text-blue-600">Додатків</div>
+        </div>
+        <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 text-center">
+          <div className="text-2xl font-bold text-emerald-700">
+            {allDocuments.filter(d => d.status === "signed").length}
+          </div>
+          <div className="text-xs text-emerald-600">Підписано</div>
+        </div>
+      </div>
+      
+      {/* Documents List */}
+      <Card title={`📄 Документи (${filtered.length})`}>
+        {filtered.length === 0 ? (
+          <div className="text-center py-8 text-slate-400">
+            <div className="text-4xl mb-2">📄</div>
+            <p>Документів не знайдено</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 -mx-4">
+            {filtered.slice(0, 100).map(doc => (
+              <div
+                key={doc.id}
+                className="px-4 py-3 hover:bg-slate-50 flex items-center gap-3"
+              >
+                {/* Type */}
+                <div className="flex-shrink-0">
+                  {getTypeBadge(doc.type)}
+                </div>
+                
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-slate-900">{doc.number}</div>
+                  <div className="text-xs text-slate-500">
+                    {doc.payer}
+                    {doc.orderId && <> · Ордер #{doc.orderId}</>}
+                  </div>
+                </div>
+                
+                {/* Date */}
+                <div className="text-xs text-slate-500 text-right flex-shrink-0">
+                  {new Date(doc.date).toLocaleDateString('uk-UA')}
+                  {doc.validUntil && (
+                    <div className="text-[10px]">до {new Date(doc.validUntil).toLocaleDateString('uk-UA')}</div>
+                  )}
+                </div>
+                
+                {/* Status */}
+                <div className="flex-shrink-0">
+                  {getStatusBadge(doc.status)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      
+      {/* Info banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
+        <strong>ℹ️ Це архів документів.</strong> Для генерації нових документів використовуйте вкладку "Операції" (для документів замовлення) або "Клієнти" (для рамкових договорів).
+      </div>
+    </div>
+  );
+}
+

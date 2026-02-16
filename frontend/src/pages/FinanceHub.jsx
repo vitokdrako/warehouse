@@ -1260,10 +1260,65 @@ function OperationsTab({
         {/* Quick Documents */}
         {selectedOrder && (
           <Card title="📄 Документи">
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* === PAYER SELECTION === */}
+              <div className="pb-3 border-b border-slate-100">
+                <div className="text-xs font-medium text-slate-600 mb-2">💳 Платник:</div>
+                {orderPayerOptions?.payers?.length > 0 ? (
+                  <select
+                    className="w-full h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm"
+                    value={orderPayerOptions.current_payer_id || ""}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setOrderPayer(selectedOrder.order_id, parseInt(e.target.value));
+                      }
+                    }}
+                    disabled={saving}
+                  >
+                    <option value="">— Обрати платника —</option>
+                    {orderPayerOptions.payers.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.has_signed_ma ? '✅' : '⚠️'} {p.is_default ? '(осн.)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="text-xs text-slate-500 italic">
+                    {orderPayerOptions?.client_id ? "Немає платників" : "Клієнт не прив'язаний"}
+                  </div>
+                )}
+                
+                {/* Current payer info */}
+                {orderPayerOptions?.current_payer_id && (
+                  <div className="mt-2 text-xs">
+                    {(() => {
+                      const payer = orderPayerOptions.payers?.find(p => p.id === orderPayerOptions.current_payer_id);
+                      if (!payer) return null;
+                      return (
+                        <>
+                          <div className="text-slate-600">
+                            Обрано: <span className="font-medium text-slate-800">{payer.name}</span>
+                          </div>
+                          {payer.has_signed_ma ? (
+                            <div className="text-emerald-600 mt-1">
+                              ✅ Рамковий договір: {payer.ma_contract_number}
+                            </div>
+                          ) : (
+                            <div className="text-amber-600 mt-1">
+                              ⚠️ Немає підписаного рамкового договору
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+              
+              {/* === DOCUMENT GENERATION === */}
               {selectedPayerProfile && (
                 <div className="text-xs text-slate-500 mb-2">
-                  Платник: <span className="font-medium text-slate-700">{selectedPayerProfile.company_name || "Фіз. особа"}</span>
+                  Профіль: <span className="font-medium text-slate-700">{selectedPayerProfile.company_name || "Фіз. особа"}</span>
                 </div>
               )}
               
@@ -1282,15 +1337,40 @@ function OperationsTab({
                 </Button>
               ))}
               
+              {/* Legal entity documents - only enabled if payer has signed MA */}
               {selectedPayerProfile && selectedPayerProfile.payer_type !== "individual" && (
                 <>
                   <div className="text-xs font-medium text-slate-600 mt-3 mb-1">Юр. особа:</div>
-                  <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => generateDocument("invoice_legal")}>
-                    📄 Рахунок (юр. особа)
-                  </Button>
-                  <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => generateDocument("service_act")}>
-                    📋 Акт виконаних робіт
-                  </Button>
+                  {(() => {
+                    const hasSignedMA = orderPayerOptions?.payers?.find(p => p.id === orderPayerOptions.current_payer_id)?.has_signed_ma;
+                    return (
+                      <>
+                        <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => generateDocument("invoice_legal")}>
+                          📄 Рахунок (юр. особа)
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start" 
+                          onClick={() => generateDocument("service_act")}
+                          disabled={!hasSignedMA}
+                          title={!hasSignedMA ? "Потрібен підписаний рамковий договір" : ""}
+                        >
+                          📋 Акт виконаних робіт {!hasSignedMA && "🔒"}
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-start" 
+                          onClick={() => generateDocument("order_annex")}
+                          disabled={!hasSignedMA}
+                          title={!hasSignedMA ? "Потрібен підписаний рамковий договір" : ""}
+                        >
+                          📎 Створити Додаток {!hasSignedMA && "🔒"}
+                        </Button>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </div>

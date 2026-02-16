@@ -582,18 +582,19 @@ def _get_order_with_items(db: Session, order_id: int):
     if not order:
         return None, None
     
-    # Join with products to get SKU
+    # Join with products to get SKU, rental_price and purchase_price
     items = db.execute(text("""
         SELECT 
             oi.id,                -- 0
             oi.product_id,        -- 1
             oi.product_name,      -- 2
             oi.quantity,          -- 3
-            oi.price,             -- 4
+            oi.price,             -- 4 (rental price per day from order)
             oi.total_rental,      -- 5
             oi.image_url,         -- 6
             p.sku,                -- 7
-            p.rental_price        -- 8 (deposit often equals rental_price)
+            p.rental_price,       -- 8 (rental price per day from product)
+            p.price               -- 9 (purchase price - for deposit calculation)
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.product_id
         WHERE oi.order_id = :id AND oi.status = 'active'

@@ -7,39 +7,61 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 16, 2026
 
-### Document Workflow Restructuring - IN PROGRESS
+### Finance Hub Tab Restructuring - COMPLETE ✅
 
-**Phase 1: Master Agreement UI in ClientsTab - DONE ✅**
-- **Backend:**
-  - `GET /api/agreements/active/{payer_id}` - Returns active/draft MA with status field
-  - `POST /api/agreements/create` - Creates new MA with contract_number
-  - `POST /api/agreements/{id}/sign` - Signs MA, sets as active for payer
-  - All MA APIs tested: 16/16 tests passed
-- **Frontend (ClientsTab.jsx):**
-  - MA block displays for each payer card
-  - Status badges: signed (green), draft (amber), none (dashed)
-  - "Create MA" button calls POST /api/agreements/create
-  - "Sign MA" button calls POST /api/agreements/{id}/sign
-  - MA data loaded via GET /api/agreements/active/{payer_id}
+**Нова структура вкладок (8 вкладок):**
 
-**Phase 2: Payer Selection & Documents in Operations Tab - DONE ✅**
-- **Backend:**
-  - `GET /api/orders/{order_id}/payer-options` - Lists payers for order's client with MA status
-  - `POST /api/orders/{order_id}/set-payer` - Sets payer for order
-- **Frontend (FinanceHub.jsx OperationsTab):**
-  - Payer dropdown in Documents card
-  - Shows current payer with MA status
-  - Legal documents (Акт, Додаток) disabled without signed MA
-  - Visual indicators: ✅ (has MA) / ⚠️ (no MA)
+| # | Вкладка | Іконка | Роль |
+|---|---------|--------|------|
+| 1 | **Операції** | 💰 | ГОЛОВНА: ордери + ВСІ документи ордера |
+| 2 | **Клієнти** | 👥 | CRM: клієнти + платники + Master Agreements |
+| 3 | **Реєстр** | 📄 | READ-ONLY архів документів (пошук/фільтри) |
+| 4 | **Каси** | 💵 | Готівкові операції |
+| 5 | **Депозити** | 🔒 | Застави |
+| 6 | **Витрати** | 📉 | Облік витрат |
+| 7 | **Аналітика** | 📈 | Статистика |
+| 8 | **План** | 📊 | План надходжень |
 
-**Phase 3: UX Improvements - TODO**
-- Auto-suggest default payer when creating order
-- Add "Link Client" flow for orders without client_user_id
+**Ключові зміни:**
+- ❌ Видалено вкладку "Документи" як генератор
+- ✅ Створено вкладку "Реєстр" (read-only архів)
+- ✅ Документи ордера тепер в Операціях
+- ✅ MA управління тільки в Клієнтах
 
-**Phase 4: Documents Tab → Registry - TODO**
-- Convert main Documents tab to read-only registry
-- Remove document generation buttons
-- Focus on search/filter/audit functionality
+---
+
+### Вкладка "Операції" - Документи ордера
+
+**Повний список документів:**
+- 📄 Кошторис (Quote)
+- 💵 Рахунок-оферта
+- 📝 Договір оренди
+- 📦 Акт видачі
+- 📦 Акт повернення
+- ⚠️ Дефектний акт
+- 💰 Акт взаєморозрахунків
+
+**Юр. особа / ФОП (потребують MA):**
+- 📎 Додаток до договору (🔒 без MA)
+- 📄 Рахунок (юр. особа)
+- 📋 Акт виконаних робіт (🔒 без MA)
+
+**Логіка:**
+- Dropdown платників - тільки пов'язані з клієнтом ордера
+- Annex/Act заблоковані якщо немає підписаного MA
+- CTA посилання на вкладку "Клієнти" для підписання MA
+
+---
+
+### Вкладка "Реєстр" - Архів документів
+
+**Функціонал:**
+- 🔍 Пошук по номеру/платнику
+- 📊 Фільтри: тип (Рамкові/Додатки/Рахунки/Акти), статус (Чернетка/Підписано/Закінчився)
+- 📈 Статистика: загальна кількість, по типах, підписані
+- ⚠️ Банер-нагадування: "Генерація документів в Операціях/Клієнтах"
+
+**Жодних кнопок "Створити"!**
 
 ---
 
@@ -52,16 +74,9 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 - **Order** links to both client and payer
 
 ### Document Hierarchy
-1. **Master Agreement (MA)** → linked to `payer_profile`
-2. **Order Annex** → linked to `order` AND `master_agreement`
+1. **Master Agreement (MA)** → linked to `payer_profile` (creates in Clients tab)
+2. **Order Annex** → linked to `order` AND `master_agreement` (creates in Operations)
 3. **Acts/Invoices** → linked to `order`, require signed MA for legal entities
-
-### Key Tables
-- `payer_profiles` - Payer entities with billing details
-- `master_agreements` - Contracts with status (draft/signed/expired)
-- `order_annexes` - Order-specific document references
-- `client_payer_links` - Client-Payer relationships
-- `orders.payer_profile_id` - Selected payer for order
 
 ---
 
@@ -79,34 +94,25 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ---
 
-## Previous Completed Work
+## API Endpoints
 
-### Phase 3.3: Email Provider + Print + Expiration UI - COMPLETE ✅
-- SMTP Email Provider configured and working
-- Print/PDF button with proper CSS
-- Contract expiration banners and warnings
+### Master Agreements
+- `GET /api/agreements` - List all
+- `GET /api/agreements/active/{payer_id}` - Get active MA for payer
+- `POST /api/agreements/create` - Create new draft
+- `POST /api/agreements/{id}/sign` - Sign and activate
 
-### Phase 3.2: Full Documents Lifecycle - COMPLETE ✅
-- Manual fields form per document type
-- Email workflow with audit trail
-- Payment ↔ Annex linking validation
+### Order Payer
+- `GET /api/orders/{order_id}/payer-options` - List payers for order's client
+- `POST /api/orders/{order_id}/set-payer` - Set payer for order
 
-### Finance Cabinet "Clients" Tab - COMPLETE ✅
-- CRM-lite tab in FinanceHub for managing clients and payers
-- Client list with payer status indicators
-- Quick actions for creating/editing payers
-
-### Re-audit Cabinet Enhancement - COMPLETE ✅
-- Added category/subcategory editing
-- Split dimensions into separate DB columns
-- New shape attribute with dictionary
-- JSON-based hashtags system
+### Registry
+- `GET /api/annexes` - List annexes
 
 ---
 
 ## Test Reports
 - `/app/test_reports/iteration_7.json` - MA APIs: 16/16 tests passed
-- Backend tests at `/app/backend/tests/test_master_agreements.py`
 
 ## Credentials
 - Admin: `vitokdrako@gmail.com` / `test123`

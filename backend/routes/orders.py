@@ -557,6 +557,8 @@ async def get_order_details(
     order["return_time"] = row[18] or "до 17:00"
     order["manager_name"] = (row[19] or "").strip()
     order["discount"] = round(discount_percent_db, 2)
+    order["discount_percent"] = round(discount_percent_db, 2)
+    order["service_fee"] = float(row[21]) if row[21] else 0
     
     # Завантажити items
     items_result = db.execute(text("""

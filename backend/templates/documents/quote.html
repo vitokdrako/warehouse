@@ -1,108 +1,371 @@
-<!DOCTYPE html>
+<!-- /backend/templates/documents/quote.html -->
+<!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <title>Кошторис (попередній розрахунок)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Кошторис — {{ order.order_number }}</title>
   <style>
-    {% include "_partials/base.css" %}
+    :root{
+      --ink:#111827;
+      --muted:#6B7280;
+      --line:#E5E7EB;
+      --soft:#F3F4F6;
+      --paper:#FFFFFF;
+      --accent:#0F172A;
+      --good:#16A34A;
+      --warn:#B45309;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#f6f7fb;color:var(--ink);font:14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif}
+    .page{
+      width:210mm;
+      min-height:297mm;
+      margin:12mm auto;
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:14px;
+      box-shadow:0 10px 30px rgba(15,23,42,.08);
+      overflow:hidden;
+    }
+    .pad{padding:18mm}
+    .topbar{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+      padding:16mm 18mm 10mm 18mm;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,#ffffff, #fbfbfd);
+    }
+    .brand{display:flex;align-items:flex-start;gap:12px}
+    .logo{
+      width:46px;height:46px;border-radius:12px;
+      background:var(--accent);
+      display:flex;align-items:center;justify-content:center;
+      color:white;font-weight:700;letter-spacing:.5px;
+      flex:none;
+    }
+    .brand h1{margin:0;font-size:16px;letter-spacing:.2px}
+    .brand .sub{margin-top:2px;color:var(--muted);font-size:12px}
+    .docmeta{min-width:280px;text-align:right}
+    .docmeta .title{font-size:20px;font-weight:750;margin:0}
+    .docmeta .row{margin-top:6px;color:var(--muted);font-size:12px}
+    .docmeta .pill{
+      display:inline-block;margin-top:10px;
+      padding:6px 10px;border-radius:999px;
+      background:var(--soft);border:1px solid var(--line);
+      color:var(--ink);font-size:12px;
+    }
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+    .card{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px 14px;
+      background:#fff;
+    }
+    .card h3{
+      margin:0 0 8px 0;
+      font-size:12px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:700;
+    }
+    .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px}
+    .k{color:var(--muted)}
+    .v{color:var(--ink);font-weight:600;word-break:break-word}
+    .v.normal{font-weight:500}
+    .hint{margin-top:8px;color:var(--muted);font-size:12px}
+
+    .sectionTitle{
+      margin:18px 0 10px 0;
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    thead th{
+      position:sticky;top:0;
+      background:var(--accent);
+      color:#fff;
+      font-size:12px;
+      font-weight:700;
+      padding:10px 10px;
+      text-align:left;
+      border-top-left-radius:10px;
+    }
+    thead th:last-child{border-top-left-radius:0;border-top-right-radius:10px}
+    tbody td{
+      padding:10px 10px;
+      border-bottom:1px solid var(--line);
+      vertical-align:middle;
+    }
+    tbody tr:last-child td{border-bottom:none}
+    .thumb{
+      width:44px;height:44px;border-radius:10px;
+      border:1px solid var(--line);
+      background:#fff;
+      object-fit:cover;
+      display:block;
+    }
+    .name{
+      font-weight:700;
+      margin:0;
+      font-size:13px;
+    }
+    .subrow{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:2px;
+    }
+    .mono{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+    .right{text-align:right}
+    .center{text-align:center}
+    .nowrap{white-space:nowrap}
+    .sku{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:var(--soft);
+      font-weight:700;
+      font-size:12px;
+    }
+
+    .bottomRow{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns: 1fr 360px;
+      gap:14px;
+      align-items:start;
+    }
+    .noteBox{
+      border:1px dashed var(--line);
+      border-radius:12px;
+      padding:12px 14px;
+      color:var(--muted);
+      font-size:12px;
+      background:#fff;
+    }
+    .totals{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px 14px;
+      background:linear-gradient(180deg,#ffffff,#fafafa);
+    }
+    .totals h3{
+      margin:0 0 10px 0;
+      font-size:12px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-weight:800;
+    }
+    .trow{display:flex;justify-content:space-between;gap:12px;padding:6px 0}
+    .trow .label{color:var(--muted)}
+    .trow .val{font-weight:800}
+    .divider{height:1px;background:var(--line);margin:8px 0}
+    .grand{
+      display:flex;justify-content:space-between;align-items:baseline;
+      padding-top:6px;
+    }
+    .grand .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:900}
+    .grand .val{font-size:18px;font-weight:900}
+
+    footer{
+      padding:10mm 18mm 14mm 18mm;
+      border-top:1px solid var(--line);
+      color:var(--muted);
+      font-size:11px;
+      display:flex;justify-content:space-between;gap:12px;
+      background:#fff;
+    }
+
+    /* Print */
+    @page { size: A4; margin: 10mm; }
+    @media print{
+      body{background:#fff}
+      .page{margin:0;border:none;border-radius:0;box-shadow:none}
+      thead{display:table-header-group;}
+      .docmeta .pill{border:1px solid #ddd}
+    }
   </style>
 </head>
 <body>
-{% if meta.watermark_text %}<div class="watermark">{{ meta.watermark_text }}</div>{% endif %}
-<div class="page">
-  {% include "_partials/header.html" %}
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">FD</div>
+        <div>
+          <h1>FarforDecorOrenda</h1>
+          <div class="sub">Оренда декору • Кошториси та документи</div>
+        </div>
+      </div>
 
-  <h1>КОШТОРИС (попередній розрахунок)</h1>
+      <div class="docmeta">
+        <p class="title">Кошторис</p>
+        <div class="row">№ <strong class="mono">{{ order.order_number }}</strong></div>
+        <div class="row">Згенеровано: <strong class="mono">{{ generated_at }}</strong></div>
 
-  <p class="row">
-    <span>Замовлення: <b>{{ order.order_number or "—" }}</b></span>
-    <span>Дата: <b>{{ meta.doc_day or "___" }} {{ meta.doc_month or "____________" }} {{ meta.doc_year or "202_" }}</b></span>
-  </p>
-
-  <p class="small muted center" style="margin-bottom: 14px;">
-    Цей кошторис не є юридичним документом і може змінюватися до моменту підтвердження замовлення.
-  </p>
-
-  <div class="section-title">Параметри оренди</div>
-  <p>Період: <b>{{ order.issue_date or "___" }} — {{ order.return_date or "___" }}</b> ({{ order.days or "___" }} днів)</p>
-  <p>Адреса отримання/повернення: <b>{{ order.warehouse_address or "м. Київ, вул. Будіндустрії 4" }}</b></p>
-
-  {% if tenant %}
-    <p>Клієнт: <b>{{ tenant.legal_name or tenant.name or "—" }}</b>
-      {% if tenant.contact_value %} • Контакт: {{ tenant.contact_value }}{% endif %}
-    </p>
-  {% endif %}
-
-  <div class="section-title">Позиції</div>
-  <table class="table">
-    <thead>
-      <tr>
-        <th style="width:35px;">№</th>
-        <th>Найменування</th>
-        <th style="width:55px;">К-ть</th>
-        <th style="width:120px;">Ціна (весь термін)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% if items and items|length > 0 %}
-        {% for it in items %}
-        <tr>
-          <td>{{ loop.index }}</td>
-          <td>{{ it.name }}</td>
-          <td>{{ it.qty }}</td>
-          <td>{{ it.rent_price_total or it.total_rental or "" }} грн</td>
-        </tr>
-        {% endfor %}
-      {% else %}
-        <tr><td colspan="4" class="muted center">Немає позицій</td></tr>
-      {% endif %}
-    </tbody>
-  </table>
-
-  <div class="hr"></div>
-
-  <div class="section-title">Підсумок</div>
-  <table style="width: auto; margin-top: 8px;">
-    <tr>
-      <td style="padding-right: 20px;">Ціна оренди (весь термін):</td>
-      <td><b>{{ totals.rent_total or "—" }}</b> грн</td>
-    </tr>
-    {% if totals.rent_per_day %}
-    <tr>
-      <td>Ціна оренди / день:</td>
-      <td><b>{{ totals.rent_per_day }}</b> грн</td>
-    </tr>
-    {% endif %}
-    <tr>
-      <td>Забезпечувальний платіж (застава):</td>
-      <td><b>{{ totals.deposit_security or "—" }}</b> грн</td>
-    </tr>
-    {% if totals.advance_payment %}
-    <tr>
-      <td>Передоплата:</td>
-      <td><b>{{ totals.advance_payment }}</b> грн</td>
-    </tr>
-    {% endif %}
-  </table>
-
-  {% if meta.quote_valid_until %}
-    <p class="small muted" style="margin-top: 12px;">Кошторис дійсний до: {{ meta.quote_valid_until }}</p>
-  {% endif %}
-
-  <div class="hr"></div>
-
-  <div class="sign-grid">
-    <div class="sign-box">
-      <div class="sign-label">Менеджер (підготовлено):</div>
-      <div class="sign-line"></div>
-      <div class="small">{{ meta.prepared_by_name or "" }}</div>
+        {# watermark/status pill - опціонально #}
+        {% if watermark %}
+          <div class="pill">{{ watermark }}</div>
+        {% else %}
+          <div class="pill">Попередній кошторис</div>
+        {% endif %}
+      </div>
     </div>
-    <div class="sign-box">
-      <div class="sign-label">Клієнт (ознайомлений):</div>
-      <div class="sign-line"></div>
-      <div class="small muted">—</div>
+
+    <div class="pad">
+      <div class="grid2">
+        <div class="card">
+          <h3>Замовник</h3>
+          <div class="kv">
+            <div class="k">ПІБ</div><div class="v">{{ order.customer_name or "—" }}</div>
+            <div class="k">Телефон</div><div class="v normal">{{ order.customer_phone or order.phone or "—" }}</div>
+            <div class="k">Email</div><div class="v normal">{{ order.customer_email or order.email or "—" }}</div>
+          </div>
+          {% if order.customer_comment %}
+            <div class="hint">Коментар: {{ order.customer_comment }}</div>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <h3>Деталі оренди</h3>
+          <div class="kv">
+            <div class="k">Період</div>
+            <div class="v">
+              <span class="mono">{{ order.rental_start_date }}</span> — <span class="mono">{{ order.rental_end_date }}</span>
+            </div>
+
+            <div class="k">Діб</div><div class="v"><span class="mono">{{ order.rental_days or "—" }}</span></div>
+
+            <div class="k">Отримання</div><div class="v normal">{{ order.delivery_type_label or order.delivery_type or "—" }}</div>
+
+            <div class="k">Місто</div><div class="v normal">{{ order.city or "—" }}</div>
+
+            <div class="k">Адреса</div><div class="v normal">{{ order.delivery_address or "—" }}</div>
+          </div>
+          {% if order.event_name or order.event_type or order.event_location %}
+            <div class="hint">
+              Подія:
+              {% if order.event_name %}<strong>{{ order.event_name }}</strong>{% endif %}
+              {% if order.event_type %} • {{ order.event_type }}{% endif %}
+              {% if order.event_location %} • {{ order.event_location }}{% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="sectionTitle">Перелік позицій</div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width:54px">Фото</th>
+            <th>Найменування</th>
+            <th style="width:110px" class="center">SKU</th>
+            <th style="width:70px" class="center">К-сть</th>
+            <th style="width:110px" class="right nowrap">Ціна/доба</th>
+            <th style="width:70px" class="center">Діб</th>
+            <th style="width:130px" class="right nowrap">Сума оренди</th>
+            <th style="width:130px" class="right nowrap">Завдаток</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+            <tr>
+              <td>
+                {% if item.image_url %}
+                  <img class="thumb" src="{{ item.image_url }}" alt="Фото" />
+                {% else %}
+                  <div class="thumb" style="display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-weight:700;">—</div>
+                {% endif %}
+              </td>
+
+              <td>
+                <div class="name">{{ item.product_name }}</div>
+                {% if item.note %}
+                  <div class="subrow">{{ item.note }}</div>
+                {% endif %}
+              </td>
+
+              <td class="center">
+                <span class="sku mono">{{ item.sku or "—" }}</span>
+              </td>
+
+              <td class="center mono">{{ item.quantity }}</td>
+
+              <td class="right mono">
+                {{ item.price_per_day_fmt or item.price_fmt or item.rental_price_fmt or item.price_per_day or item.price }}
+              </td>
+
+              <td class="center mono">
+                {{ order.rental_days or item.days or "—" }}
+              </td>
+
+              <td class="right mono">
+                {{ item.total_rental_fmt or item.total_fmt or item.total_rental or item.total }}
+              </td>
+
+              <td class="right mono">
+                {{ item.deposit_fmt or item.deposit_amount_fmt or item.deposit_amount or "—" }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="bottomRow">
+        <div class="noteBox">
+          <strong>Умови підтвердження:</strong>
+          кошторис підтверджується менеджером після узгодження наявності, логістики та деталей оренди.
+          <br/><br/>
+          <strong>Оплата:</strong> оренда та завдаток оплачуються згідно домовленостей та рахунку/оферти.
+          <br/>
+          <span style="color:var(--muted)">Цей документ є попереднім кошторисом і не є юридично зобов'язуючим.</span>
+        </div>
+
+        <div class="totals">
+          <h3>Підсумок</h3>
+
+          <div class="trow">
+            <div class="label">Оренда</div>
+            <div class="val mono">{{ totals.rent_total_fmt or order.total_price_fmt or order.total_price }}</div>
+          </div>
+
+          <div class="trow">
+            <div class="label">Завдаток</div>
+            <div class="val mono">{{ totals.deposit_total_fmt or order.deposit_amount_fmt or order.deposit_amount }}</div>
+          </div>
+
+          {% if totals.discount_fmt or order.discount_amount or order.discount_percent %}
+            <div class="trow">
+              <div class="label">Знижка</div>
+              <div class="val mono">{{ totals.discount_fmt or (order.discount_percent ~ "%") }}</div>
+            </div>
+          {% endif %}
+
+          <div class="divider"></div>
+
+          <div class="grand">
+            <div class="label">Разом</div>
+            <div class="val mono">{{ totals.grand_total_fmt or totals.grand_total or "—" }}</div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <footer>
+      <div>
+        FarforDecorOrenda • Оренда декору<br/>
+        {% if company.phone %}Тел: {{ company.phone }}{% endif %}
+        {% if company.email %} • Email: {{ company.email }}{% endif %}
+      </div>
+      <div style="text-align:right">
+        Документ згенеровано системою RentalHub<br/>
+        <span class="mono">{{ generated_at }}</span>
+      </div>
+    </footer>
   </div>
-</div>
 </body>
 </html>

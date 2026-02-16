@@ -291,35 +291,43 @@ export default function FinanceHub() {
   // Initial load
   useEffect(() => {
     console.log("[FinanceHub] Initial load starting...");
-    const abortController = new AbortController();
+    let isMounted = true;
     
     const loadAll = async () => {
+      if (!isMounted) return;
       setLoading(true);
       try {
         console.log("[FinanceHub] Loading data...");
         
         // Load all in parallel for speed
-        await Promise.all([
+        const results = await Promise.allSettled([
           loadOrders(),
           loadDeposits(),
           loadPayoutsStats(),
           loadPayerProfiles()
         ]);
         
+        // Log any failures
+        results.forEach((result, idx) => {
+          if (result.status === 'rejected') {
+            console.error(`[FinanceHub] Load ${idx} failed:`, result.reason);
+          }
+        });
+        
         console.log("[FinanceHub] Data loaded successfully");
       } catch (e) {
-        if (e.name !== 'AbortError') {
-          console.error("[FinanceHub] Load error:", e);
-        }
+        console.error("[FinanceHub] Load error:", e);
       } finally {
         // Always set loading to false when done
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     loadAll();
     
-    return () => { abortController.abort(); };
+    return () => { isMounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   

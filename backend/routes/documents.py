@@ -496,13 +496,25 @@ class LatestBatchRequest(BaseModel):
     doc_types: List[str]
 
 @router.post("/latest-batch")
+async def get_latest_batch(request: LatestBatchRequest, db: Session = Depends(get_rh_db)):
+    """Get latest versions of multiple document types in one request"""
+    results = {}
+    for doc_type in request.doc_types:
+        doc = get_latest_document(db, request.entity_type, request.entity_id, doc_type)
+        if doc:
+            results[doc_type] = {
+                "id": doc["id"],
+                "doc_number": doc["doc_number"],
+                "version": doc["version"],
+                "status": doc["status"]
+            }
+    return results
 
 
 # ============================================================
 # ESTIMATE (КОШТОРИС) - Quick Preview
 # ============================================================
 
-from typing import Optional
 from services.pdf_generator import jinja_env, EXECUTORS
 from weasyprint import HTML as WeasyHTML, CSS as WeasyCSS
 from weasyprint.text.fonts import FontConfiguration as WeasyFontConfig

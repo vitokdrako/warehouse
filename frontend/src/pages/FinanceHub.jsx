@@ -497,8 +497,15 @@ export default function FinanceHub() {
     if (selectedOrderId) {
       loadOrderSnapshot(selectedOrderId);
       loadOrderPayerOptions(selectedOrderId);
+      // Auto-search client for the selected order
+      const order = orders.find(o => o.order_id === selectedOrderId);
+      if (order) {
+        searchClientForOrder(order);
+      }
+    } else {
+      setMatchedClient(null);
     }
-  }, [selectedOrderId, loadOrderSnapshot, loadOrderPayerOptions]);
+  }, [selectedOrderId, loadOrderSnapshot, loadOrderPayerOptions, orders, searchClientForOrder]);
   
   // Load expenses when tab changes to expenses
   useEffect(() => {

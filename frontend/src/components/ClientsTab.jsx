@@ -585,37 +585,44 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                           </div>
                         )}
                         
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex gap-2 mt-2 flex-wrap">
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            className="flex-1 text-xs h-8"
+                            className="text-xs h-8"
                             onClick={() => handlePreviewMA(clientMA.id)}
                           >
                             👁 Переглянути
+                          </Button>
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-8"
+                            onClick={() => window.open(`${BACKEND_URL}/api/agreements/${clientMA.id}/pdf`, '_blank')}
+                          >
+                            📥 PDF
                           </Button>
                           
                           {clientMA.status === 'draft' && (
                             <Button
                               variant="primary"
                               size="sm"
-                              className="flex-1 text-xs h-8"
+                              className="text-xs h-8"
                               onClick={() => handleSignClientMA(clientMA.id)}
                             >
                               ✍️ Підписати
                             </Button>
                           )}
                           
-                          {clientMA.status !== 'signed' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 text-xs h-8"
-                              onClick={() => handleSendMAEmail(clientMA.id)}
-                            >
-                              📧 Email
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-xs h-8"
+                            onClick={() => handleSendMAEmail(clientMA.id)}
+                          >
+                            📧 Email
+                          </Button>
                         </div>
                       </div>
                     ) : (

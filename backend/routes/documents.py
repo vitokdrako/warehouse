@@ -611,7 +611,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "number": order[1],
             "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}",
             "rental_days": rental_days,
-            "delivery_method": order[16] or "Самовивіз"
+            "delivery_method": "Самовивіз"
         },
         "items": formatted_items,
         "totals": {

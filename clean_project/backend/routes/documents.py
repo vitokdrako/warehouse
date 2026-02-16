@@ -924,7 +924,8 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
         "watermark": None
     }
     
-    template = jinja_env.get_template("documents/quote.html")
+    # Use email-specific template with inline styles
+    template = jinja_env.get_template("documents/quote_email.html")
     html_content = template.render(**template_data)
     
     # Send email

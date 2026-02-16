@@ -1,0 +1,210 @@
+<!-- /backend/templates/documents/quote_email.html - Email version with inline styles -->
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Кошторис — {{ order.order_number }}</title>
+</head>
+<body style="margin:0;padding:0;background:#f6f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;line-height:1.4;color:#111827;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7fb;padding:20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(180deg, #f8f9fa, #f3f4f6);padding:24px 30px;border-bottom:1px solid #E5E7EB;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="60%" valign="top">
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="50" valign="top">
+                          <img src="https://customer-assets.emergentagent.com/job_docgen-hub-8/artifacts/qoruqs09_logo%20%281%29.svg" width="50" height="50" alt="Logo" style="display:block;" />
+                        </td>
+                        <td style="padding-left:12px;" valign="top">
+                          <div style="font-size:18px;font-weight:800;color:#111827;margin:0;">FarforDecorOrenda</div>
+                          <div style="font-size:11px;color:#6B7280;margin-top:4px;">м. Київ, вул. Будіндустрії, 4</div>
+                          <div style="font-size:11px;color:#6B7280;">Тел: (097) 123 09 93, (093) 375 09 40</div>
+                          <div style="font-size:11px;color:#6B7280;">info@farforrent.com.ua • www.farforrent.com.ua</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="40%" valign="top" align="right">
+                    <div style="font-size:22px;font-weight:800;color:#111827;">Кошторис</div>
+                    <div style="font-size:12px;color:#6B7280;margin-top:4px;">№ <strong>{{ order.order_number }}</strong></div>
+                    <div style="font-size:12px;color:#6B7280;">{{ generated_at }}</div>
+                    <div style="display:inline-block;margin-top:8px;padding:6px 12px;border-radius:20px;background:#F3F4F6;border:1px solid #E5E7EB;font-size:11px;font-weight:600;color:#111827;">
+                      {% if watermark %}{{ watermark }}{% else %}Попередній кошторис{% endif %}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding:24px 30px;">
+              
+              <!-- Customer & Rental Details -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                <tr>
+                  <td width="48%" valign="top" style="border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;background:#fff;">
+                    <div style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px;">ЗАМОВНИК</div>
+                    <table cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="80" style="font-size:13px;color:#6B7280;padding:3px 0;">ПІБ</td>
+                        <td style="font-size:13px;color:#111827;font-weight:600;padding:3px 0;">{{ order.customer_name or "—" }}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:#6B7280;padding:3px 0;">Телефон</td>
+                        <td style="font-size:13px;color:#111827;padding:3px 0;">{{ order.customer_phone or order.phone or "—" }}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:#6B7280;padding:3px 0;">Email</td>
+                        <td style="font-size:12px;color:#111827;padding:3px 0;">{{ order.customer_email or order.email or "—" }}</td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="4%"></td>
+                  <td width="48%" valign="top" style="border:1px solid #E5E7EB;border-radius:10px;padding:14px 16px;background:#fff;">
+                    <div style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:10px;">ДЕТАЛІ ОРЕНДИ</div>
+                    <table cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="80" style="font-size:13px;color:#6B7280;padding:3px 0;">Період</td>
+                        <td style="font-size:13px;color:#111827;font-weight:600;padding:3px 0;">{{ order.rental_start_date }} — {{ order.rental_end_date }}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:#6B7280;padding:3px 0;">Діб</td>
+                        <td style="font-size:13px;color:#111827;font-weight:600;padding:3px 0;">{{ order.rental_days or "—" }}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:13px;color:#6B7280;padding:3px 0;">Отримання</td>
+                        <td style="font-size:13px;color:#111827;padding:3px 0;">{{ order.delivery_type_label or "Самовивіз" }}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Items Title -->
+              <div style="font-size:13px;font-weight:800;color:#111827;margin:16px 0 12px 0;">Перелік позицій</div>
+
+              <!-- Items Table -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;">
+                <tr style="background:#f8f9fa;">
+                  <th style="padding:10px 8px;text-align:left;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Фото</th>
+                  <th style="padding:10px 8px;text-align:left;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Артикул</th>
+                  <th style="padding:10px 8px;text-align:left;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Найменування</th>
+                  <th style="padding:10px 8px;text-align:center;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">К-сть</th>
+                  <th style="padding:10px 8px;text-align:right;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Оренда/день</th>
+                  <th style="padding:10px 8px;text-align:right;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Завдаток</th>
+                </tr>
+                {% for item in items %}
+                <tr>
+                  <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;">
+                    {% if item.image_url %}
+                    <img src="{{ item.image_url }}" width="50" height="50" style="border-radius:6px;border:1px solid #E5E7EB;object-fit:cover;" alt="" />
+                    {% else %}
+                    <div style="width:50px;height:50px;background:#F3F4F6;border-radius:6px;border:1px solid #E5E7EB;text-align:center;line-height:50px;color:#9CA3AF;font-weight:700;">—</div>
+                    {% endif %}
+                  </td>
+                  <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;">
+                    <span style="display:inline-block;padding:4px 8px;border-radius:6px;border:1px solid #E5E7EB;background:#F3F4F6;font-weight:700;font-size:11px;">{{ item.sku or "—" }}</span>
+                  </td>
+                  <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;">
+                    <div style="font-weight:700;font-size:13px;color:#111827;">{{ item.product_name }}</div>
+                  </td>
+                  <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;text-align:center;font-weight:600;">{{ item.quantity }}</td>
+                  <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;text-align:right;">{{ item.rental_price_fmt or item.price_per_day_fmt or "—" }} грн</td>
+                  <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;text-align:right;">{{ item.deposit_fmt or "—" }} грн</td>
+                </tr>
+                {% endfor %}
+              </table>
+
+              <!-- Bottom Section -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;">
+                <tr>
+                  <td width="55%" valign="top" style="padding-right:15px;">
+                    <div style="border:1px dashed #E5E7EB;border-radius:10px;padding:14px 16px;background:#fff;font-size:11px;color:#6B7280;line-height:1.6;">
+                      <strong style="color:#111827;">Умови підтвердження:</strong> кошторис підтверджується менеджером після узгодження наявності, логістики та деталей оренди.<br/><br/>
+                      <strong style="color:#111827;">Оплата:</strong> оренда та завдаток оплачуються згідно домовленостей та рахунку/оферти.<br/><br/>
+                      <strong style="color:#111827;">Завдаток:</strong> становить 50% від вартості декору та повертається після повернення майна в належному стані.
+                    </div>
+                  </td>
+                  <td width="45%" valign="top">
+                    <div style="border:1px solid #E5E7EB;border-radius:12px;padding:16px;background:linear-gradient(180deg,#ffffff,#fafafa);">
+                      <div style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-bottom:12px;">ПІДСУМОК</div>
+                      
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="font-size:13px;color:#6B7280;padding:6px 0;">Оренда ({{ order.rental_days or 1 }} {{ 'день' if order.rental_days == 1 else 'днів' }})</td>
+                          <td style="font-size:13px;font-weight:700;text-align:right;padding:6px 0;">{{ totals.rent_total_fmt }} грн</td>
+                        </tr>
+                        {% if totals.discount_fmt or order.discount_percent %}
+                        <tr>
+                          <td style="font-size:13px;color:#6B7280;padding:6px 0;">Знижка {{ order.discount_percent }}%</td>
+                          <td style="font-size:13px;font-weight:700;text-align:right;padding:6px 0;color:#16A34A;">-{{ totals.discount_fmt }} грн</td>
+                        </tr>
+                        {% endif %}
+                        {% if totals.service_fee_fmt or order.service_fee %}
+                        <tr>
+                          <td style="font-size:13px;color:#6B7280;padding:6px 0;">{{ totals.service_fee_name or order.service_fee_name or "Додаткова послуга" }}</td>
+                          <td style="font-size:13px;font-weight:700;text-align:right;padding:6px 0;">{{ totals.service_fee_fmt }} грн</td>
+                        </tr>
+                        {% endif %}
+                      </table>
+                      
+                      <div style="height:1px;background:#E5E7EB;margin:12px 0;"></div>
+                      
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:900;padding:6px 0;">Разом за оренду</td>
+                          <td style="font-size:18px;font-weight:900;text-align:right;color:#111827;padding:6px 0;">{{ totals.grand_total_fmt }} грн</td>
+                        </tr>
+                      </table>
+                      
+                      <div style="height:1px;background:#E5E7EB;margin:12px 0;"></div>
+                      
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;padding:6px 0;">Завдаток (окремо)</td>
+                          <td style="font-size:16px;font-weight:800;text-align:right;color:#B45309;padding:6px 0;">{{ totals.deposit_total_fmt }} грн</td>
+                        </tr>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:16px 30px;border-top:1px solid #E5E7EB;background:#fff;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-size:10px;color:#6B7280;">
+                    FarforDecorOrenda • Оренда декору для заходів<br/>
+                    м. Київ, вул. Будіндустрії, 4<br/>
+                    Тел: {{ company.phone }} • {{ company.email }}
+                  </td>
+                  <td style="font-size:10px;color:#6B7280;text-align:right;">
+                    Документ згенеровано системою RentalHub<br/>
+                    {{ generated_at }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

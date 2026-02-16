@@ -1,73 +1,69 @@
 <analysis>**original_problem_statement:**
-The user's initial request was to fix a failing  endpoint, which evolved into a major architectural refactoring of the Client/Payer system. The project's goal has now been redefined to make the document management workflow **client-centric**. The core principle is that a Master Agreement (MA) is tied directly to a Client () and not a Payer (). This simplifies the entire process, as all documents for an order can be generated based on the client's single, authoritative MA.
+The user's initial request was to fix a failing  endpoint, which evolved into a major architectural refactoring of the Client/Payer system to make the document management workflow **client-centric**. A Master Agreement (MA) is now tied directly to a Client ().
+
+The project has further expanded to include a sophisticated document generation system. The user has provided specific requirements and templates for various documents, including the Master Agreement, Annex, and a detailed Estimate (Кошторис). The focus is now on building out this document generation capability within the Operations tab, allowing dynamic selection of a Payer for each order's documents.
 
 **PRODUCT REQUIREMENTS:**
 
-1.  **Client-Centric Master Agreements (In Progress):** The Master Agreement is the responsibility of the . It is created and managed from the Clients tab.  are now just billing entities linked to a client.
-2.  **Smart Operations Tab (In Progress):** When an order is selected, the system should automatically find the corresponding  in the CRM based on the order's customer name/phone. It should then display the client's MA status and conditionally enable/disable document generation (e.g., an Annex can only be created if the client has a signed MA).
-3.  **Refined Clients Tab (In Progress):** This tab is the single source of truth for managing clients and their associated Master Agreements. The old logic of managing MAs on a per-payer basis is being removed.
-4.  **Registry Tab (Completed):** The old Documents tab, which was a document generator, has been converted into a read-only Registry used for searching and auditing all generated documents.
-5.  **Deployment Preparation (Completed):** The user requested that after major changes, the agent create a production frontend build and copy all updated backend and frontend files to the  directory for manual deployment.
+1.  **Client-Centric Master Agreements (Completed):** The Master Agreement is managed from the Clients tab and is tied to a .
+2.  **Smart Operations Tab (In Progress):** When an order is selected, the system finds the corresponding . A new UI block allows the user to select one of the client's associated Payers from a dropdown. This selection dictates which entity's details are used for generating all subsequent documents for that order (e.g., Annex, Invoice, Estimate).
+3.  **Dynamic Document Generation (In Progress):** The system must generate various documents (Estimate, Annex, Invoice-Offer, Acts) based on detailed HTML templates provided by the user. This includes dynamic numbering, selectable lessors, and embedding product images in documents like the Estimate.
+4.  **Data Cleanup (Completed):** All old test agreements and annexes have been deleted from the database to prepare for live data.
+5.  **Lessor & Company Details Update (Completed):** The system now supports multiple lessors (ТОВ vs. ФОП) selectable during MA creation, and company details have been updated as per user specifications.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The agent has executed a major architectural refactor. The database schema has been migrated to support a client-centric Master Agreement model (the  table was updated, and constraints on  were relaxed). The backend APIs (, , ) have been rewritten to reflect this new logic, including new endpoints for matching orders to clients.
+The application has undergone a significant refactor to a client-centric model. The UI bug involving a duplicate Master Agreement section has been fixed and verified. The backend now supports generating PDFs for Master Agreements, emailing them, and allows for dynamic lessor selection (ТОВ vs. ФОП) and custom contract dates.
 
-On the frontend, the main  component has been significantly restructured. The tab layout was updated as per the user's request, converting the Documents tab into a read-only Registry. The Operations tab now contains logic to auto-find a client for a given order and display their MA status.
+The Operations tab in the  has been significantly enhanced. It now features a dedicated Документи (Documents) section that appears when an order is selected. This section includes a dropdown to choose the Payer for the documents and buttons to generate various document types like Кошторис (Estimate), Додаток (Annex), Рахунок-оферта (Invoice-Offer), and Акт видачі (Issue Act).
 
-The agent was in the process of debugging a UI duplication bug in the  component reported by the user, where both the new client-based MA and the old payer-based MA were being displayed simultaneously.
+The agent has created the backend endpoints and HTML templates for these new documents. However, after the user provided a new, much more detailed HTML template for the Estimate, the agent overwrote the old file but did not yet update the corresponding backend logic to supply the necessary data.
 
 **Last working item**:
--   **Last item agent was working:** Fixing a UI duplication bug in . The user reported that when viewing a client, they saw two Master Agreement sections: one for the client (correct) and one for the client's payer (old logic). The agent correctly identified the cause as leftover code from the previous architecture and began removing the redundant UI block and its associated state and functions from the component.
+-   **Last item agent was working:** The user pointed out that the agent was using a simple, incorrect template for the Estimate (Кошторис). The user then provided the correct, detailed HTML code. The agent correctly acknowledged this, overwrote the  file, and was about to update the backend logic to match this new template.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** N
--   **Which testing method agent to use?** Frontend testing agent. After the fix, the agent should take a screenshot of the  component to visually confirm that the duplicate UI block has been removed and only the client-level MA section remains. Then, use the testing agent to verify the functionality of the remaining MA block (create, view, sign).
+-   **Agent Testing Done:** N (for the new, correct template)
+-   **Which testing method agent to use?** Backend testing. The agent should use  to test the  endpoint and verify the generated HTML is correctly populated with all the data fields required by the new, complex  template.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0) Duplicate Master Agreement UI in **
+-   **Issue 1: (P0) Estimate (Кошторис) generation logic is outdated for the new template.**
 -   **Issue 2: (P1)  endpoint is unstable.**
 -   **Issue 3: (P2) Moodboard export is likely broken.**
 -   **Issue 4: (P2) Recurring Calendar Timezone Bug.**
 
 **Issues Detail:**
--   **Issue 1: (P0) Duplicate Master Agreement UI in **
-    -   **Attempted fixes:** The agent identified the redundant code in  that was rendering the old payer-based MA block. The agent started editing the file to remove this block and clean up associated state variables and functions. The work is mid-edit.
+-   **Issue 1: (P0) Estimate (Кошторис) generation logic is outdated for the new template.**
+    -   **Attempted fixes:** The agent successfully replaced the old  with the new, correct version provided by the user. However, the work stopped there.
     -   **Next debug checklist:**
-        1.  Complete the edits in .
-        2.  Ensure the entire JSX block for the payer-level Master Agreement (previously lines ~832-899 within the payers map) is fully removed.
-        3.  Delete any unused state and functions related to the old payer-based MA logic (e.g.,  that took a ).
-        4.  Verify that the primary client-level MA block on the Контакт sub-tab still functions correctly.
-    -   **Why fix this issue and what will be achieved with the fix?** The duplicate UI is confusing for the user and displays conflicting information, undermining the new client-centric architecture. Fixing it is critical for user acceptance.
-    -   **Status:** IN PROGRESS
+        1.  Analyze the new  to identify all required template variables (e.g., , , , , , ).
+        2.  Modify the function for the  endpoint in .
+        3.  Update the data-fetching logic within that function. It must now:
+            -   Calculate a  object (rent_total, deposit_total, grand_total, etc.) based on order items.
+            -   Fetch  for each item in the order, likely requiring a JOIN with the products table.
+            -   Fetch  details (phone, email) to be displayed in the footer.
+        4.  Update the final  rendering call to pass the complete, structured context dictionary to the template.
+        5.  Test the endpoint with  to ensure the generated HTML renders correctly with all data.
+    -   **Why fix this issue and what will be achieved with the fix?** This is critical to implementing the user's specific design for the Estimate document, a key part of the business workflow.
+    -   **Status:** NOT STARTED (The template file was replaced, but the necessary code changes have not been made).
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Should Test frontend/backend/both after fix?** Backend
     -   **Blocked on other issue:** None
 
--   **Issue 2: (P1)  endpoint is unstable.**
-    -   **Attempted fixes:** Patches were applied in previous sessions, but the endpoint has not been re-tested since the major architectural changes.
-    -   **Next debug checklist:** This task is de-prioritized until the document workflow refactoring is complete and verified by the user. A full end-to-end test will be required.
-    -   **Why fix this issue and what will be achieved with the fix?** This is a core business function for converting prospects to orders.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Both
-    -   **Blocked on other issue:** In progress Task 1: Restructure Document Workflow
-
 **In progress Task List**:
--   **Task 1: (P0) Finalize Document Workflow Refactor.**
-    -   **Where to resume:** Resume fixing the duplicate UI bug in . This is the last remaining piece of the UI refactor.
-    -   **What will be achieved with this?** This will complete the user's primary requirement of moving to a fully client-centric document management model.
+-   **Task 1: (P0) Implement correct Estimate (Кошторис) generation.**
+    -   **Where to resume:** The agent has just replaced the HTML template file. The next step is to modify the backend endpoint logic in  to collect and pass all the data required by the new template.
+    -   **What will be achieved with this?** The application will be able to generate the Estimate document exactly as designed by the user, including product images and detailed cost breakdowns.
     -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Should Test frontend/backend/both after fix?** Backend
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 
 -   **Upcoming Tasks:**
-    -   **(P0) Generate PDF for Master Agreement:** Implement the backend functionality (likely using WeasyPrint) to generate a PDF of an MA.
-    -   **(P0) Email Master Agreement:** Add a feature to send the generated MA PDF to the client via email.
-    -   **(P1) Stabilize  endpoint:** (See Issue 2).
+    -   **(P1) Implement remaining document templates:** The user has mentioned Акт повернення (Return Act), Дефектний акт (Defect Act), and Акт взаєморозрахунків (Mutual Settlement Act). The agent needs to get templates/requirements for these and implement them, following the established pattern.
+    -   **(P2) Stabilize  endpoint:** (See Issue 2).
 
 -   **Future Tasks:**
     -   Implement real-time updates for the client cabinet.
@@ -78,90 +74,93 @@ The agent was in the process of debugging a UI duplication bug in the  component
     -   Create an HR/Ops Module.
 
 **Completed work in this session**
--   **Client-Centric Architecture Refactor (DONE):**
-    -   **Database:** Migrated the  table to add , , and other fields. Modified the  table to make  nullable, allowing MAs to be linked solely to a client.
-    -   **Backend:** Fully refactored the , , and  APIs to support the new client-centric model.
--   **Finance Hub UI Overhaul (DONE):**
-    -   **Tab Reorganization:** Renamed the Documents tab to Реєстр (Registry) and adjusted the order of all main tabs in .
-    -   **Registry Tab:** Implemented a new, read-only  component that serves as a document archive with search and filter capabilities.
-    -   **Operations Tab Update:** The UI now automatically attempts to match a selected order to a CRM client and displays the client's MA status, which controls the availability of document generation buttons.
--   **Deployment File Preparation (DONE):**
-    -   Generated a production frontend build and copied all updated backend and frontend files into the  directory for the user to deploy manually.
+-   **Fixed Duplicate MA UI:** Resolved a UI bug in  where two Master Agreement sections were showing. Verified with testing agent and screenshots.
+-   **Implemented MA PDF Generation & Emailing:** Added backend endpoints and frontend buttons for creating, previewing, downloading, and emailing Master Agreement PDFs.
+-   **Enhanced MA Generation Logic:** The MA creation process now supports selectable lessors (ТОВ vs. ФОП), a custom contract date, and a new  numbering format. Company details were also updated.
+-   **Database Cleanup:** Deleted all test Master Agreements and Annexes from the database.
+-   **Implemented Operations Tab Document UI:** Reworked the  Operations tab to include a document generation panel with a Payer selection dropdown and buttons for creating various documents.
+-   **Created Initial Document Endpoints:** Set up backend routes and initial templates for Estimate, Annex, Invoice-Offer, and Issue Act.
 
 **Earlier issues found/mentioned but not fixed**
--   **Issue 1: Moodboard export is likely broken.**
--   **Issue 2: Recurring Calendar Timezone Bug.**
+-   **Issue 1:** Moodboard export is likely broken.
+-   **Issue 2:** Recurring Calendar Timezone Bug.
 
 **Known issue recurrence from previous fork**
--   The  endpoint is a long-standing, recurring issue that has been deprioritized during the current refactoring.
+-   The  endpoint is a long-standing, recurring issue.
+-   The Playwright test environment has a persistent timeout issue with  requests, making UI screenshot verification of data-loading components unreliable.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Client-Centric Architecture:** The core logic has shifted. Master Agreements are now owned by , not . This is the new source of truth for the application's document workflow.
--   **Auto-Matching:** The system attempts to automatically link an  (which only has a plain text ) to a structured  record by matching on name and/or phone.
--   **Playwright Fetch Issue:** There is a persistent, known issue where data-loading  calls hang in the Playwright test environment, causing UI tests of data-heavy pages to fail by timing out on a loader. This is considered a testing environment artifact, as  tests confirm the backend is responsive.
+-   **Client-Centric Architecture:** Core application logic is based on clients, with payers being secondary entities.
+-   **Dynamic PDF Generation:** Using  and  to create documents from HTML templates.
+-   **Data Snapshots in DB:** The  table now stores a JSON snapshot of key details (like lessor info) at the time of creation to ensure historical reports are accurate.
+-   **Complex Frontend State Management:** The main  component manages complex state, including the selected order, the matched client, the client's available payers, and the selected payer for document generation.
 
 **key DB schema**
--   ****: (MODIFIED) Added ,  (FK to ), .
--   ****: (MODIFIED)  is now NULLABLE;  is the primary foreign key.
--   ****: Now uses  to determine MA status and available document actions.
+-   ****: (MODIFIED) Added , , and a  (JSON) field.
+-   ****: Used to link multiple payer entities to a single client.
+-   ****: Existing table, now being used to store newly generated documents like Estimates and Annexes.
+-   All test data in  and  was truncated.
 
 **All files of reference**
--   **/app/frontend/src/components/ClientsTab.jsx**: **(Currently being edited)** to fix the duplicate UI bug.
--   **/app/frontend/src/pages/FinanceHub.jsx**: The main component for the finance cabinet, containing the restructured tabs and logic.
--   **/app/backend/routes/master_agreements.py**: The backend API for MAs, now client-centric.
--   **/app/backend/routes/clients.py**: The backend API for clients, with new fields and search logic.
--   **/app/backend/routes/orders.py**: The backend API for orders, with new logic for linking clients to orders.
+-   **/app/backend/routes/documents.py**: **(Needs modification)** The logic for the estimate endpoint must be updated.
+-   **/app/backend/templates/documents/quote.html**: **(Recently Updated)** The new, correct template for the Estimate document that must be populated.
+-   **/app/frontend/src/pages/FinanceHub.jsx**: Contains the heavily modified Operations tab UI for document generation.
+-   **/app/backend/routes/master_agreements.py**: Contains the logic for MA generation, PDF creation, and emailing.
 
 **key api endpoints**
--   : Creates a Master Agreement (now accepts ).
--   : Retrieves the active MA for a client.
--   : Finds a potential client match based on an order's customer name.
--   : Links an order to a .
+-   : (Modified) Creates an MA with  and .
+-   : (New) Generates a PDF of a specific Master Agreement.
+-   : (New) Generates an HTML preview of the Estimate. The logic for this endpoint is outdated.
+-   : (New) Generates an HTML preview of the Annex.
+-   : (New) Generates an HTML preview of the Invoice-Offer.
+-   : (New) Generates an HTML preview of the Issue Act.
+-   : (Ad-hoc) Endpoint created and used to delete all test agreements.
 
 **Critical Info for New Agent**
 -   **Ви повинні спілкуватися українською мовою. (You must communicate in Ukrainian.)**
--   **Your immediate priority is to fix the duplicate UI bug in .** This is a visual blocker for the user and must be resolved first. The goal is to have only one Master Agreement section per client, managed at the client level.
--   **Be aware of the Playwright/fetch issue.** When testing UI with screenshots, data-loading pages may appear stuck on a loader. This is a known issue with the testing environment, not necessarily a bug in the code. Trust  tests for backend validation and review the frontend code logic. If a page hangs, you can temporarily comment out the loading gate () to verify that the rest of the UI renders correctly.
+-   **Your immediate priority is to fix the Estimate (Кошторис) generation.** The user has provided a new, detailed HTML template. You must now update the backend logic in  to fetch and provide all the necessary data (including item images, calculated totals, company info) to this new template.
+-   All documents for an order (except the Master Agreement) are generated from the Operations tab. This workflow depends on the user first selecting an order, then selecting a Payer from the dropdown that appears.
+-   The Playwright testing environment has a known fetch/timeout issue. Do not get blocked by it. Trust  tests for backend validation and review frontend code logic to confirm changes.
 
 **documents and test reports created in this job**
--   /app/memory/PRD.md
--   /app/test_reports/iteration_7.json
--   All updated backend and frontend files have been copied to .
+-   /app/memory/PRD.md (updated multiple times)
+-   /app/test_reports/iteration_8.json
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Requests to prepare files for deployment to their hosting.
-2.  **User:** Reports that the Payer is not linked message is shown for an order that should have a linked payer, and asks for an explanation of how Annexes will be generated.
-3.  **Agent:** Explains the new client-centric architecture and asks the user to confirm the logic.
-4.  **User:** Provides a detailed, new requirement to change the architecture: MA should be on the client, not the payer. The client has a  attribute.
-5.  **Agent:** Asks for confirmation of the new, even more refined model.
-6.  **User:** Confirms the new model is correct.
-7.  **Agent:** Implements the new architecture (DB migration, backend API changes).
-8.  **User:** Asks the agent to update the frontend for the new logic.
-9.  **Agent:** Implements the frontend changes in  and .
-10. **User:** Reports the bug with duplicate Master Agreement sections in the client view and provides a screenshot.
+1.  **User:** Provides the correct, detailed HTML template for the Estimate (Кошторис), pointing out the agent's current template is wrong.
+2.  **Agent:** Acknowledges the mix-up, implements templates for Invoice-Offer and Issue Act, and asks to continue.
+3.  **User:** Confirms to continue.
+4.  **User:** Clarifies the core workflow: MAs are in the Clients tab, but all other documents (Estimate, Annex, etc.) are generated from the Operations tab, with the ability to switch between a client's different payers for a specific deal. Provides screenshots.
+5.  **Agent:** Implements the UI for payer selection and document generation in the Operations tab and verifies with a screenshot.
+6.  **User:** Asks to continue after seeing the progress.
+7.  **Agent:** Implements the backend logic and templates for Invoice-Offer and Issue Act.
+8.  **User:** Provides a screenshot with updated company details for one of the lessors (ФОП Николенко).
+9.  **Agent:** Updates the lessor details in the backend.
+10. **User:** Asks the agent to delete all existing test agreements from the database.
 
 **Project Health Check:**
 -   **Broken:**
-    -    UI (duplicate information is displayed).
+    -   The backend logic for Estimate (Кошторис) generation does not match the new user-provided template.
     -    endpoint (status unknown after refactor).
     -   Moodboard export.
     -   Calendar Timezone.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **SMTP:** A custom  is implemented for sending emails.
+-   **SMTPEmailProvider:** A custom implementation for sending emails.
+-   **WeasyPrint:** Used for converting HTML to PDF.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES (for backend APIs, which passed).
+-   **Testing agent used after significant changes:** YES, to verify the  bug fix.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
--   **Known regressions:** The UI in  has a regression where old and new logic are displayed together.
+-   **Known regressions:** The Estimate generation is effectively broken as it won't produce the user-desired output with the current backend logic.
 
 **Credentials to test flow:**
 -   **RentalHub Admin:**  / 
 
 **What agent forgot to execute**
-The agent correctly prioritized the user's major refactoring requests. The main forgotten items are the long-standing issues (, moodboard, calendar), which have been consciously de-prioritized by both the agent and the user in favor of the new, large-scale architectural changes. The agent was actively fixing the most recent user-reported bug when the session ended.</analysis>
+-   After replacing the  template file with the new one from the user, the agent failed to update the corresponding backend function in  to provide the complex data structure that the new template requires. This is the most critical oversight and the immediate next step.</analysis>

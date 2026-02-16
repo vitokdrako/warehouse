@@ -1103,10 +1103,11 @@ async def download_annex_pdf(order_id: int, agreement_id: Optional[int] = Query(
         count = db.execute(text("SELECT COUNT(*) FROM order_annexes WHERE master_agreement_id = :aid"), {"aid": agreement_id}).fetchone()[0]
         annex_number = count + 1
     
-    formatted_items = [{"name": it[3], "quantity": it[4], "total_rental": _format_currency(it[6]), "packing_type": None} for it in items]
-    total_qty = sum(it[4] for it in items)
+    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
+    formatted_items = [{"name": it[2], "quantity": it[3], "total_rental": _format_currency(it[5]), "packing_type": None} for it in items]
+    total_qty = sum(it[3] for it in items)
     
-    client = {"name": order[3], "payer_type": "individual", "director_name": None, "contact_person": order[3], "contact_channel": "phone", "contact_value": order[4]}
+    client = {"name": order[3], "payer_type": "individual", "director_name": None, "contact_person": order[3], "contact_channel": "phone", "contact_value": order[4] or order[21]}
     
     template_data = {
         "annex": {"number": annex_number, "date": _format_date_ua(datetime.now())},

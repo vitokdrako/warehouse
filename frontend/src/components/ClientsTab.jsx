@@ -729,12 +729,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {payers.map((payer) => {
-                        const maData = payerMAs[payer.id];
-                        const hasMA = maData?.exists;
-                        const ma = maData?.master_agreement || maData;
-                        
-                        return (
+                      {payers.map((payer) => (
                         <div
                           key={payer.id}
                           className={cn(
@@ -788,7 +783,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             </button>
                           </div>
                         </div>
-                      )})}
+                      ))}
                     </div>
                   )}
                 </div>

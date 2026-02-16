@@ -496,6 +496,287 @@ class LatestBatchRequest(BaseModel):
     doc_types: List[str]
 
 @router.post("/latest-batch")
+
+
+# ============================================================
+# ESTIMATE (КОШТОРИС) - Quick Preview
+# ============================================================
+
+from typing import Optional
+from services.pdf_generator import jinja_env, EXECUTORS
+from weasyprint import HTML as WeasyHTML, CSS as WeasyCSS
+from weasyprint.text.fonts import FontConfiguration as WeasyFontConfig
+
+def _format_date_ua(date_val) -> str:
+    """Format date to DD.MM.YYYY"""
+    if not date_val:
+        return "—"
+    if isinstance(date_val, str):
+        try:
+            date_val = datetime.fromisoformat(date_val.replace('Z', '+00:00'))
+        except:
+            return date_val
+    return date_val.strftime("%d.%m.%Y")
+
+def _format_date_ua_long(date_val) -> str:
+    """Format date to «DD» місяця YYYY року"""
+    if not date_val:
+        return "«____» ____________ 202_ року"
+    if isinstance(date_val, str):
+        try:
+            date_val = datetime.fromisoformat(date_val.replace('Z', '+00:00'))
+        except:
+            return date_val
+    months = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+              'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня']
+    return f"«{date_val.day}» {months[date_val.month - 1]} {date_val.year} року"
+
+def _format_currency(value) -> str:
+    """Format number as currency"""
+    if value is None:
+        return "0,00"
+    return f"{float(value):,.2f}".replace(",", " ").replace(".", ",")
+
+def _get_order_with_items(db: Session, order_id: int):
+    """Get order with all items"""
+    order = db.execute(text("""
+        SELECT 
+            o.order_id, o.order_number, o.customer_id, o.customer_name,
+            o.customer_phone, o.customer_email, 
+            o.rental_start_date, o.rental_end_date,
+            o.issue_date, o.return_date,
+            o.status, o.total_price, o.deposit_amount, o.notes,
+            o.created_at, o.rental_days, o.delivery_method
+        FROM orders o WHERE o.order_id = :id
+    """), {"id": order_id}).fetchone()
+    
+    if not order:
+        return None, None
+    
+    items = db.execute(text("""
+        SELECT 
+            oi.order_item_id, oi.inventory_id, oi.article, oi.item_name,
+            oi.quantity, oi.price_per_day, oi.total_rental_price,
+            oi.deposit_per_item, oi.total_deposit, i.image_url
+        FROM order_items oi
+        LEFT JOIN inventory i ON i.inventory_id = oi.inventory_id
+        WHERE oi.order_id = :id
+    """), {"id": order_id}).fetchall()
+    
+    return order, items
+
+
+@router.get("/estimate/{order_id}/preview", response_class=HTMLResponse)
+async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
+    """Generate HTML preview of estimate (Кошторис)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    rental_days = order[15] if order[15] else 1
+    if not rental_days and order[6] and order[7]:
+        rental_days = (order[7] - order[6]).days + 1
+    
+    formatted_items = []
+    for item in items:
+        formatted_items.append({
+            "name": item[3],
+            "sku": item[2] or "—",
+            "quantity": item[4],
+            "price_per_day": _format_currency(item[5]),
+            "total_rental": _format_currency(item[6]),
+            "deposit": _format_currency(item[8]),
+            "image": item[9] if item[9] else None
+        })
+    
+    invoice_number = f"K-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    
+    template_data = {
+        "invoice_number": invoice_number,
+        "invoice_date": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "client": {"name": order[3], "phone": order[4], "email": order[5]},
+        "order": {
+            "number": order[1],
+            "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}",
+            "rental_days": rental_days,
+            "delivery_method": order[16] or "Самовивіз"
+        },
+        "items": formatted_items,
+        "totals": {
+            "rental": _format_currency(order[11]),
+            "deposit": _format_currency(order[12]),
+            "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))
+        },
+        "note": order[13],
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+    }
+    
+    template = jinja_env.get_template("documents/estimate.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/estimate/{order_id}/pdf")
+async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db)):
+    """Download estimate as PDF"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    rental_days = order[15] or 1
+    formatted_items = [{"name": it[3], "sku": it[2] or "—", "quantity": it[4],
+                        "price_per_day": _format_currency(it[5]), "total_rental": _format_currency(it[6]),
+                        "deposit": _format_currency(it[8]), "image": it[9]} for it in items]
+    
+    invoice_number = f"K-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    template_data = {
+        "invoice_number": invoice_number,
+        "invoice_date": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "client": {"name": order[3], "phone": order[4], "email": order[5]},
+        "order": {"number": order[1], "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}", "rental_days": rental_days, "delivery_method": order[16] or "Самовивіз"},
+        "items": formatted_items,
+        "totals": {"rental": _format_currency(order[11]), "deposit": _format_currency(order[12]), "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))},
+        "note": order[13], "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+    }
+    
+    template = jinja_env.get_template("documents/estimate.html")
+    html_content = template.render(**template_data)
+    
+    font_config = WeasyFontConfig()
+    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 10mm; }', font_config=font_config)], font_config=font_config)
+    
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Koshtorys_{order[1]}.pdf"})
+
+
+# ============================================================
+# ANNEX (ДОДАТОК) - Quick Preview  
+# ============================================================
+
+from fastapi import Query
+
+@router.get("/annex/{order_id}/preview", response_class=HTMLResponse)
+async def preview_annex(
+    order_id: int,
+    agreement_id: Optional[int] = Query(None),
+    db: Session = Depends(get_rh_db)
+):
+    """Generate HTML preview of annex (Додаток)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    agreement = None
+    executor = EXECUTORS["tov"]
+    
+    if agreement_id:
+        agreement_row = db.execute(text("""
+            SELECT ma.id, ma.contract_number, ma.valid_from, ma.snapshot_json
+            FROM master_agreements ma WHERE ma.id = :id
+        """), {"id": agreement_id}).fetchone()
+        
+        if agreement_row:
+            agreement = {"id": agreement_row[0], "number": agreement_row[1], "date": _format_date_ua(agreement_row[2])}
+            if agreement_row[3]:
+                try:
+                    snapshot = json.loads(agreement_row[3]) if isinstance(agreement_row[3], str) else agreement_row[3]
+                    executor = snapshot.get("executor") or EXECUTORS.get(snapshot.get("executor_type", "tov"), EXECUTORS["tov"])
+                except:
+                    pass
+    
+    if not agreement:
+        agreement = {"number": "_____", "date": "«___» _______ 202_ р."}
+    
+    rental_days = order[15] or 1
+    if not rental_days and order[6] and order[7]:
+        rental_days = (order[7] - order[6]).days + 1
+    
+    annex_number = 1
+    if agreement_id:
+        count = db.execute(text("SELECT COUNT(*) FROM order_annexes WHERE master_agreement_id = :aid"), {"aid": agreement_id}).fetchone()[0]
+        annex_number = count + 1
+    
+    formatted_items = []
+    total_qty = 0
+    for item in items:
+        formatted_items.append({"name": item[3], "quantity": item[4], "total_rental": _format_currency(item[6]), "packing_type": None})
+        total_qty += item[4]
+    
+    client = {"name": order[3], "phone": order[4], "email": order[5], "payer_type": "individual", "director_name": None,
+              "contact_person": order[3], "contact_channel": "phone", "contact_value": order[4]}
+    
+    if order[2]:
+        client_row = db.execute(text("SELECT payer_type FROM client_users WHERE id = :id"), {"id": order[2]}).fetchone()
+        if client_row:
+            client["payer_type"] = client_row[0] or "individual"
+    
+    template_data = {
+        "annex": {"number": annex_number, "date": _format_date_ua(datetime.now())},
+        "agreement": agreement, "executor": executor, "client": client, "items": formatted_items,
+        "rental_days": rental_days,
+        "rental_start_date": _format_date_ua_long(order[6]), "rental_end_date": _format_date_ua_long(order[7]),
+        "issue_date": _format_date_ua_long(order[8] or order[6]), "return_date": _format_date_ua_long(order[9] or order[7]),
+        "totals": {"quantity": total_qty, "rental": _format_currency(order[11]), "deposit": _format_currency(order[12])}
+    }
+    
+    template = jinja_env.get_template("documents/annex.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/annex/{order_id}/pdf")
+async def download_annex_pdf(order_id: int, agreement_id: Optional[int] = Query(None), db: Session = Depends(get_rh_db)):
+    """Download annex as PDF"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    agreement = None
+    executor = EXECUTORS["tov"]
+    
+    if agreement_id:
+        agreement_row = db.execute(text("SELECT id, contract_number, valid_from, snapshot_json FROM master_agreements WHERE id = :id"), {"id": agreement_id}).fetchone()
+        if agreement_row:
+            agreement = {"number": agreement_row[1], "date": _format_date_ua(agreement_row[2])}
+            if agreement_row[3]:
+                try:
+                    snapshot = json.loads(agreement_row[3]) if isinstance(agreement_row[3], str) else agreement_row[3]
+                    executor = snapshot.get("executor") or EXECUTORS.get(snapshot.get("executor_type", "tov"), EXECUTORS["tov"])
+                except:
+                    pass
+    
+    if not agreement:
+        agreement = {"number": "_____", "date": "«___» _______ 202_ р."}
+    
+    rental_days = order[15] or 1
+    annex_number = 1
+    if agreement_id:
+        count = db.execute(text("SELECT COUNT(*) FROM order_annexes WHERE master_agreement_id = :aid"), {"aid": agreement_id}).fetchone()[0]
+        annex_number = count + 1
+    
+    formatted_items = [{"name": it[3], "quantity": it[4], "total_rental": _format_currency(it[6]), "packing_type": None} for it in items]
+    total_qty = sum(it[4] for it in items)
+    
+    client = {"name": order[3], "payer_type": "individual", "director_name": None, "contact_person": order[3], "contact_channel": "phone", "contact_value": order[4]}
+    
+    template_data = {
+        "annex": {"number": annex_number, "date": _format_date_ua(datetime.now())},
+        "agreement": agreement, "executor": executor, "client": client, "items": formatted_items,
+        "rental_days": rental_days,
+        "rental_start_date": _format_date_ua_long(order[6]), "rental_end_date": _format_date_ua_long(order[7]),
+        "issue_date": _format_date_ua_long(order[8] or order[6]), "return_date": _format_date_ua_long(order[9] or order[7]),
+        "totals": {"quantity": total_qty, "rental": _format_currency(order[11]), "deposit": _format_currency(order[12])}
+    }
+    
+    template = jinja_env.get_template("documents/annex.html")
+    html_content = template.render(**template_data)
+    
+    font_config = WeasyFontConfig()
+    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 15mm; }', font_config=font_config)], font_config=font_config)
+    
+    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Dodatok_{annex_number}_{order[1]}.pdf"})
+
 async def get_latest_documents_batch(
     request: LatestBatchRequest,
     db: Session = Depends(get_rh_db)

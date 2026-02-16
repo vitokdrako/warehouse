@@ -2847,6 +2847,55 @@ async def set_order_payer(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class LinkClientRequest(BaseModel):
+    client_user_id: int
+
+@router.post("/{order_id}/link-client")
+async def link_order_to_client(
+    order_id: int,
+    data: LinkClientRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Прив'язати замовлення до клієнта з CRM.
+    """
+    # Перевірити, що замовлення існує
+    order = db.execute(text("""
+        SELECT order_id, client_user_id FROM orders WHERE order_id = :order_id
+    """), {"order_id": order_id}).fetchone()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    # Перевірити, що клієнт існує
+    client = db.execute(text("""
+        SELECT id, full_name FROM client_users WHERE id = :client_id AND is_active = 1
+    """), {"client_id": data.client_user_id}).fetchone()
+    
+    if not client:
+        raise HTTPException(status_code=404, detail="Клієнт не знайдений")
+    
+    try:
+        db.execute(text("""
+            UPDATE orders 
+            SET client_user_id = :client_id, updated_at = NOW()
+            WHERE order_id = :order_id
+        """), {"client_id": data.client_user_id, "order_id": order_id})
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Ордер прив'язано до клієнта: {client[1]}",
+            "order_id": order_id,
+            "client_user_id": data.client_user_id,
+            "client_name": client[1]
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{order_id}/payer-options")
 async def get_order_payer_options(
     order_id: int,

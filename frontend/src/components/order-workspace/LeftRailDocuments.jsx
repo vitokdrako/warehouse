@@ -485,8 +485,16 @@ export default function LeftRailDocuments({
                   )}
                 </div>
                 
-                {/* Версія */}
-                {hasVersion && (
+                {/* Версія - для Кошторису завжди показуємо "Актуальний" */}
+                {doc.type === 'estimate' && (
+                  <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
+                    <span>✓ Актуальний</span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500">Генерується на льоту</span>
+                  </div>
+                )}
+                
+                {doc.type !== 'estimate' && hasVersion && (
                   <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
                     <span>✓ v{versionInfo.version}</span>
                     <span className="text-slate-400">•</span>
@@ -494,38 +502,38 @@ export default function LeftRailDocuments({
                   </div>
                 )}
                 
-                {!hasVersion && (
+                {doc.type !== 'estimate' && !hasVersion && (
                   <div className="text-xs text-slate-400 mb-2">
                     Документ ще не згенеровано
                   </div>
                 )}
                 
                 <div className="flex flex-wrap gap-1">
-                  {/* Перегляд (тільки якщо є версія) */}
+                  {/* Перегляд - для Кошторису завжди активний */}
                   <button
                     onClick={() => viewLastDocument(doc.type)}
-                    disabled={!hasVersion}
+                    disabled={doc.type !== 'estimate' && !hasVersion}
                     className={`
                       flex items-center gap-1 px-2 py-1 text-xs rounded
-                      ${hasVersion 
+                      ${doc.type === 'estimate' || hasVersion 
                         ? 'bg-white border hover:bg-slate-100' 
                         : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
                     `}
-                    title={hasVersion ? 'Переглянути останню версію' : 'Спочатку згенеруйте документ'}
+                    title={doc.type === 'estimate' ? 'Переглянути кошторис' : (hasVersion ? 'Переглянути останню версію' : 'Спочатку згенеруйте документ')}
                   >
                     <Eye className="w-3 h-3" />
                     Перегляд
                   </button>
                   
-                  {/* Генерувати */}
+                  {/* Генерувати - для Кошторису "Оновити" */}
                   <button
                     onClick={() => generateNewDocument(doc.type)}
                     disabled={generating === doc.type}
                     className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
-                    title="Генерувати нову версію"
+                    title={doc.type === 'estimate' ? 'Відкрити кошторис' : 'Генерувати нову версію'}
                   >
                     <RefreshCw className={`w-3 h-3 ${generating === doc.type ? 'animate-spin' : ''}`} />
-                    {generating === doc.type ? '...' : 'Генерувати'}
+                    {generating === doc.type ? '...' : (doc.type === 'estimate' ? 'Відкрити' : 'Генерувати')}
                   </button>
                   
                   {/* Друк */}

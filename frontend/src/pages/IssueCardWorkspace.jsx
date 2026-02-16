@@ -531,6 +531,8 @@ setTimeout(()=>window.print(),500);
               orderId={order?.order_id}
               rentAmount={totalRent}
               depositAmount={totalDeposit}
+              discountPercent={order?.discount_percent}
+              discountAmount={order?.discount_amount}
             />
             <LeftRailDocuments
               orderId={order?.order_id}

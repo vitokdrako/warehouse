@@ -31,77 +31,87 @@
     .pad{padding:18mm}
     .topbar{
       display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
-      padding:16mm 18mm 10mm 18mm;
+      padding:14mm 18mm 12mm 18mm;
       border-bottom:1px solid var(--line);
-      background:linear-gradient(180deg,#ffffff, #fbfbfd);
+      background:linear-gradient(180deg, #f8f9fa, #f3f4f6);
     }
-    .brand{display:flex;align-items:flex-start;gap:12px}
+    .brand{display:flex;align-items:flex-start;gap:14px}
     .logo{
-      width:46px;height:46px;border-radius:12px;
-      background:var(--accent);
-      display:flex;align-items:center;justify-content:center;
-      color:white;font-weight:700;letter-spacing:.5px;
+      width:60px;
+      height:60px;
       flex:none;
     }
-    .brand h1{margin:0;font-size:16px;letter-spacing:.2px}
-    .brand .sub{margin-top:2px;color:var(--muted);font-size:12px}
-    .docmeta{min-width:280px;text-align:right}
-    .docmeta .title{font-size:20px;font-weight:750;margin:0}
+    .logo img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+    }
+    .brand-info{display:flex;flex-direction:column;gap:2px}
+    .brand h1{margin:0;font-size:18px;letter-spacing:.2px;color:var(--ink);font-weight:800}
+    .brand .address{color:var(--muted);font-size:11px;line-height:1.4}
+    .brand .contacts{color:var(--muted);font-size:11px;line-height:1.4}
+    .brand .contacts a{color:var(--muted);text-decoration:none}
+    .docmeta{min-width:240px;text-align:right}
+    .docmeta .title{font-size:22px;font-weight:800;margin:0;color:var(--ink)}
     .docmeta .row{margin-top:6px;color:var(--muted);font-size:12px}
     .docmeta .pill{
       display:inline-block;margin-top:10px;
-      padding:6px 10px;border-radius:999px;
+      padding:6px 12px;border-radius:999px;
       background:var(--soft);border:1px solid var(--line);
-      color:var(--ink);font-size:12px;
+      color:var(--ink);font-size:11px;font-weight:600;
     }
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
     .card{
       border:1px solid var(--line);
       border-radius:12px;
-      padding:12px 14px;
+      padding:14px 16px;
       background:#fff;
     }
     .card h3{
-      margin:0 0 8px 0;
-      font-size:12px;
+      margin:0 0 10px 0;
+      font-size:11px;
       color:var(--muted);
       text-transform:uppercase;
-      letter-spacing:.08em;
+      letter-spacing:.1em;
       font-weight:700;
     }
-    .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px}
-    .k{color:var(--muted)}
-    .v{color:var(--ink);font-weight:600;word-break:break-word}
+    .kv{display:grid;grid-template-columns:100px 1fr;gap:6px 10px}
+    .k{color:var(--muted);font-size:13px}
+    .v{color:var(--ink);font-weight:600;word-break:break-word;font-size:13px}
     .v.normal{font-weight:500}
-    .hint{margin-top:8px;color:var(--muted);font-size:12px}
+    .hint{margin-top:8px;color:var(--muted);font-size:11px}
 
     .sectionTitle{
-      margin:18px 0 10px 0;
+      margin:20px 0 12px 0;
       font-size:13px;
       font-weight:800;
       letter-spacing:.02em;
+      color:var(--ink);
     }
 
     table{width:100%;border-collapse:separate;border-spacing:0}
     thead th{
       position:sticky;top:0;
-      background:var(--accent);
-      color:#fff;
-      font-size:12px;
+      background:#f8f9fa;
+      color:var(--ink);
+      font-size:11px;
       font-weight:700;
-      padding:10px 10px;
+      padding:12px 10px;
       text-align:left;
-      border-top-left-radius:10px;
+      border-bottom:2px solid var(--line);
+      text-transform:uppercase;
+      letter-spacing:.05em;
     }
-    thead th:last-child{border-top-left-radius:0;border-top-right-radius:10px}
+    thead th:first-child{border-top-left-radius:10px}
+    thead th:last-child{border-top-right-radius:10px}
     tbody td{
-      padding:10px 10px;
+      padding:12px 10px;
       border-bottom:1px solid var(--line);
       vertical-align:middle;
     }
     tbody tr:last-child td{border-bottom:none}
     .thumb{
-      width:44px;height:44px;border-radius:10px;
+      width:60px;height:60px;border-radius:8px;
       border:1px solid var(--line);
       background:#fff;
       object-fit:cover;
@@ -114,7 +124,7 @@
     }
     .subrow{
       color:var(--muted);
-      font-size:12px;
+      font-size:11px;
       margin-top:2px;
     }
     .mono{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
@@ -124,61 +134,63 @@
     .sku{
       display:inline-block;
       padding:4px 8px;
-      border-radius:999px;
+      border-radius:6px;
       border:1px solid var(--line);
       background:var(--soft);
       font-weight:700;
-      font-size:12px;
+      font-size:11px;
     }
 
     .bottomRow{
-      margin-top:14px;
+      margin-top:16px;
       display:grid;
-      grid-template-columns: 1fr 360px;
+      grid-template-columns: 1fr 340px;
       gap:14px;
       align-items:start;
     }
     .noteBox{
       border:1px dashed var(--line);
       border-radius:12px;
-      padding:12px 14px;
+      padding:14px 16px;
       color:var(--muted);
-      font-size:12px;
+      font-size:11px;
       background:#fff;
+      line-height:1.5;
     }
     .totals{
       border:1px solid var(--line);
       border-radius:14px;
-      padding:14px 14px;
+      padding:16px;
       background:linear-gradient(180deg,#ffffff,#fafafa);
     }
     .totals h3{
-      margin:0 0 10px 0;
-      font-size:12px;
+      margin:0 0 12px 0;
+      font-size:11px;
       color:var(--muted);
       text-transform:uppercase;
-      letter-spacing:.08em;
+      letter-spacing:.1em;
       font-weight:800;
     }
     .trow{display:flex;justify-content:space-between;gap:12px;padding:6px 0}
-    .trow .label{color:var(--muted)}
-    .trow .val{font-weight:800}
-    .divider{height:1px;background:var(--line);margin:8px 0}
+    .trow .label{color:var(--muted);font-size:13px}
+    .trow .val{font-weight:700;font-size:13px}
+    .divider{height:1px;background:var(--line);margin:10px 0}
     .grand{
       display:flex;justify-content:space-between;align-items:baseline;
-      padding-top:6px;
+      padding-top:8px;
     }
-    .grand .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:900}
-    .grand .val{font-size:18px;font-weight:900}
+    .grand .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:900}
+    .grand .val{font-size:20px;font-weight:900;color:var(--ink)}
 
     footer{
       padding:10mm 18mm 14mm 18mm;
       border-top:1px solid var(--line);
       color:var(--muted);
-      font-size:11px;
+      font-size:10px;
       display:flex;justify-content:space-between;gap:12px;
       background:#fff;
     }
+    footer a{color:var(--muted);text-decoration:none}
 
     /* Print */
     @page { size: A4; margin: 10mm; }
@@ -194,10 +206,17 @@
   <div class="page">
     <div class="topbar">
       <div class="brand">
-        <div class="logo">FD</div>
-        <div>
+        <div class="logo">
+          <img src="https://customer-assets.emergentagent.com/job_docgen-hub-8/artifacts/qoruqs09_logo%20%281%29.svg" alt="FarforDecorOrenda" />
+        </div>
+        <div class="brand-info">
           <h1>FarforDecorOrenda</h1>
-          <div class="sub">Оренда декору • Кошториси та документи</div>
+          <div class="address">м. Київ, вул. Будіндустрії, 4</div>
+          <div class="contacts">
+            Тел: (097) 123 09 93, (093) 375 09 40<br/>
+            <a href="mailto:info@farforrent.com.ua">info@farforrent.com.ua</a> • 
+            <a href="http://www.farforrent.com.ua">www.farforrent.com.ua</a>
+          </div>
         </div>
       </div>
 
@@ -206,7 +225,6 @@
         <div class="row">№ <strong class="mono">{{ order.order_number }}</strong></div>
         <div class="row">Згенеровано: <strong class="mono">{{ generated_at }}</strong></div>
 
-        {# watermark/status pill - опціонально #}
         {% if watermark %}
           <div class="pill">{{ watermark }}</div>
         {% else %}
@@ -222,7 +240,7 @@
           <div class="kv">
             <div class="k">ПІБ</div><div class="v">{{ order.customer_name or "—" }}</div>
             <div class="k">Телефон</div><div class="v normal">{{ order.customer_phone or order.phone or "—" }}</div>
-            <div class="k">Email</div><div class="v normal">{{ order.customer_email or order.email or "—" }}</div>
+            <div class="k">Email</div><div class="v normal" style="font-size:12px;overflow-wrap:break-word">{{ order.customer_email or order.email or "—" }}</div>
           </div>
           {% if order.customer_comment %}
             <div class="hint">Коментар: {{ order.customer_comment }}</div>
@@ -261,14 +279,12 @@
       <table>
         <thead>
           <tr>
-            <th style="width:54px">Фото</th>
+            <th style="width:72px">Фото</th>
+            <th style="width:100px">Артикул</th>
             <th>Найменування</th>
-            <th style="width:110px" class="center">SKU</th>
-            <th style="width:70px" class="center">К-сть</th>
-            <th style="width:110px" class="right nowrap">Ціна/доба</th>
-            <th style="width:70px" class="center">Діб</th>
-            <th style="width:130px" class="right nowrap">Сума оренди</th>
-            <th style="width:130px" class="right nowrap">Завдаток</th>
+            <th style="width:60px" class="center">К-сть</th>
+            <th style="width:120px" class="right nowrap">Оренда/день</th>
+            <th style="width:120px" class="right nowrap">Завдаток</th>
           </tr>
         </thead>
         <tbody>
@@ -283,32 +299,24 @@
               </td>
 
               <td>
+                <span class="sku mono">{{ item.sku or "—" }}</span>
+              </td>
+
+              <td>
                 <div class="name">{{ item.product_name }}</div>
                 {% if item.note %}
                   <div class="subrow">{{ item.note }}</div>
                 {% endif %}
               </td>
 
-              <td class="center">
-                <span class="sku mono">{{ item.sku or "—" }}</span>
-              </td>
-
               <td class="center mono">{{ item.quantity }}</td>
 
               <td class="right mono">
-                {{ item.price_per_day_fmt or item.price_fmt or item.rental_price_fmt or item.price_per_day or item.price }}
-              </td>
-
-              <td class="center mono">
-                {{ order.rental_days or item.days or "—" }}
+                {{ item.rental_price_fmt or item.price_per_day_fmt or "—" }} грн
               </td>
 
               <td class="right mono">
-                {{ item.total_rental_fmt or item.total_fmt or item.total_rental or item.total }}
-              </td>
-
-              <td class="right mono">
-                {{ item.deposit_fmt or item.deposit_amount_fmt or item.deposit_amount or "—" }}
+                {{ item.deposit_fmt or "—" }} грн
               </td>
             </tr>
           {% endfor %}
@@ -321,6 +329,8 @@
           кошторис підтверджується менеджером після узгодження наявності, логістики та деталей оренди.
           <br/><br/>
           <strong>Оплата:</strong> оренда та завдаток оплачуються згідно домовленостей та рахунку/оферти.
+          <br/><br/>
+          <strong>Завдаток:</strong> становить 50% від вартості декору та повертається після повернення майна в належному стані.
           <br/>
           <span style="color:var(--muted)">Цей документ є попереднім кошторисом і не є юридично зобов'язуючим.</span>
         </div>
@@ -329,13 +339,13 @@
           <h3>Підсумок</h3>
 
           <div class="trow">
-            <div class="label">Оренда</div>
-            <div class="val mono">{{ totals.rent_total_fmt or order.total_price_fmt or order.total_price }}</div>
+            <div class="label">Оренда ({{ order.rental_days or 1 }} {{ 'день' if order.rental_days == 1 else 'днів' }})</div>
+            <div class="val mono">{{ totals.rent_total_fmt or order.total_price_fmt or order.total_price }} грн</div>
           </div>
 
           <div class="trow">
             <div class="label">Завдаток</div>
-            <div class="val mono">{{ totals.deposit_total_fmt or order.deposit_amount_fmt or order.deposit_amount }}</div>
+            <div class="val mono">{{ totals.deposit_total_fmt or order.deposit_amount_fmt or order.deposit_amount }} грн</div>
           </div>
 
           {% if totals.discount_fmt or order.discount_amount or order.discount_percent %}
@@ -348,8 +358,8 @@
           <div class="divider"></div>
 
           <div class="grand">
-            <div class="label">Разом</div>
-            <div class="val mono">{{ totals.grand_total_fmt or totals.grand_total or "—" }}</div>
+            <div class="label">Разом до сплати</div>
+            <div class="val mono">{{ totals.grand_total_fmt or totals.grand_total or "—" }} грн</div>
           </div>
         </div>
       </div>
@@ -357,9 +367,9 @@
 
     <footer>
       <div>
-        FarforDecorOrenda • Оренда декору<br/>
-        {% if company.phone %}Тел: {{ company.phone }}{% endif %}
-        {% if company.email %} • Email: {{ company.email }}{% endif %}
+        FarforDecorOrenda • Оренда декору для заходів<br/>
+        м. Київ, вул. Будіндустрії, 4<br/>
+        Тел: {{ company.phone }} • {{ company.email }}
       </div>
       <div style="text-align:right">
         Документ згенеровано системою RentalHub<br/>

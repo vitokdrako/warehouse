@@ -477,6 +477,232 @@ async def migrate_documents_engine_v3():
             db.rollback()
         
         db.close()
+
+
+# ============================================================
+# DOCUMENT WORKFLOW RESTRUCTURE MIGRATION
+# ============================================================
+
+@router.post("/document-workflow-v2")
+async def migrate_document_workflow_v2():
+    """
+    Реструктуризація документообігу:
+    1. Створення таблиці master_agreements
+    2. Додавання payer_profiles.active_master_agreement_id
+    3. Додавання order_annexes.master_agreement_id
+    4. Індекси для швидкого пошуку
+    
+    Safe to run multiple times.
+    """
+    try:
+        db = get_rh_db_sync()
+        results = []
+        
+        # === 1. CREATE master_agreements TABLE ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'master_agreements'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE master_agreements (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        payer_profile_id INT NOT NULL,
+                        agreement_number VARCHAR(50) UNIQUE,
+                        version INT DEFAULT 1,
+                        valid_from DATE,
+                        valid_to DATE,
+                        status ENUM('draft', 'sent', 'signed', 'expired') DEFAULT 'draft',
+                        payer_snapshot_json JSON COMMENT 'Snapshot платника на момент підпису',
+                        pdf_path VARCHAR(500),
+                        signed_at TIMESTAMP NULL,
+                        signed_by VARCHAR(255),
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_payer_status (payer_profile_id, status),
+                        INDEX idx_agreement_number (agreement_number),
+                        INDEX idx_status (status),
+                        FOREIGN KEY (payer_profile_id) REFERENCES payer_profiles(id) ON DELETE CASCADE
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                    COMMENT='Рамкові договори (Master Agreements) прив''язані до платників'
+                """))
+                db.commit()
+                results.append("master_agreements: created")
+            else:
+                results.append("master_agreements: already exists")
+        except Exception as e:
+            results.append(f"master_agreements: error - {str(e)}")
+            db.rollback()
+        
+        # === 2. ADD active_master_agreement_id to payer_profiles ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'payer_profiles' 
+                AND COLUMN_NAME = 'active_master_agreement_id'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    ALTER TABLE payer_profiles 
+                    ADD COLUMN active_master_agreement_id INT NULL
+                    COMMENT 'Активний рамковий договір для цього платника'
+                """))
+                db.commit()
+                results.append("payer_profiles.active_master_agreement_id: created")
+            else:
+                results.append("payer_profiles.active_master_agreement_id: already exists")
+        except Exception as e:
+            results.append(f"payer_profiles.active_master_agreement_id: error - {str(e)}")
+            db.rollback()
+        
+        # === 3. ENSURE order_annexes TABLE EXISTS ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'order_annexes'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE order_annexes (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        order_id INT NOT NULL,
+                        master_agreement_id INT NOT NULL,
+                        annex_number VARCHAR(50),
+                        version INT DEFAULT 1,
+                        status ENUM('draft', 'sent', 'signed') DEFAULT 'draft',
+                        pdf_path VARCHAR(500),
+                        items_snapshot_json JSON COMMENT 'Snapshot позицій ордера',
+                        payer_snapshot_json JSON COMMENT 'Snapshot платника',
+                        total_amount DECIMAL(12,2),
+                        deposit_amount DECIMAL(12,2),
+                        rental_period_start DATE,
+                        rental_period_end DATE,
+                        signed_at TIMESTAMP NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_order (order_id),
+                        INDEX idx_ma (master_agreement_id),
+                        INDEX idx_status (status)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                    COMMENT='Додатки (Annexes) до ордерів, посилаються на Master Agreement'
+                """))
+                db.commit()
+                results.append("order_annexes: created")
+            else:
+                # Table exists, check for master_agreement_id column
+                check_col = db.execute(text("""
+                    SELECT COUNT(*) FROM information_schema.COLUMNS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'order_annexes' 
+                    AND COLUMN_NAME = 'master_agreement_id'
+                """)).scalar()
+                
+                if not check_col:
+                    db.execute(text("""
+                        ALTER TABLE order_annexes 
+                        ADD COLUMN master_agreement_id INT NULL
+                        COMMENT 'Посилання на рамковий договір'
+                        AFTER order_id
+                    """))
+                    db.commit()
+                    results.append("order_annexes.master_agreement_id: added")
+                else:
+                    results.append("order_annexes: already exists with master_agreement_id")
+        except Exception as e:
+            results.append(f"order_annexes: error - {str(e)}")
+            db.rollback()
+        
+        # === 4. CREATE order_documents TABLE (for Quote, Invoice, Acts) ===
+        try:
+            check = db.execute(text("""
+                SELECT COUNT(*) FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'order_documents'
+            """)).scalar()
+            
+            if not check:
+                db.execute(text("""
+                    CREATE TABLE order_documents (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        order_id INT NOT NULL,
+                        doc_type ENUM('quote', 'invoice_offer', 'issue_act', 'return_act', 'defect_act') NOT NULL,
+                        doc_number VARCHAR(50),
+                        version INT DEFAULT 1,
+                        status ENUM('draft', 'sent', 'signed', 'cancelled') DEFAULT 'draft',
+                        pdf_path VARCHAR(500),
+                        snapshot_json JSON COMMENT 'Snapshot даних на момент генерації',
+                        sent_at TIMESTAMP NULL,
+                        signed_at TIMESTAMP NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_by VARCHAR(100),
+                        INDEX idx_order (order_id),
+                        INDEX idx_type (doc_type),
+                        INDEX idx_status (status),
+                        INDEX idx_order_type (order_id, doc_type)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                    COMMENT='Документи ордера: Quote, Invoice, Acts'
+                """))
+                db.commit()
+                results.append("order_documents: created")
+            else:
+                results.append("order_documents: already exists")
+        except Exception as e:
+            results.append(f"order_documents: error - {str(e)}")
+            db.rollback()
+        
+        # === 5. ENSURE orders has required fields ===
+        order_fields = [
+            ("client_user_id", "INT NULL COMMENT 'Посилання на client_users'"),
+            ("payer_profile_id", "INT NULL COMMENT 'Посилання на payer_profiles'"),
+            ("payer_snapshot_json", "JSON COMMENT 'Snapshot платника на момент прив''язки'"),
+            ("active_annex_id", "INT NULL COMMENT 'Активний додаток (annex) для ордера'"),
+        ]
+        
+        for col_name, col_def in order_fields:
+            try:
+                check = db.execute(text(f"""
+                    SELECT COUNT(*) FROM information_schema.COLUMNS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'orders' 
+                    AND COLUMN_NAME = '{col_name}'
+                """)).scalar()
+                
+                if not check:
+                    db.execute(text(f"""
+                        ALTER TABLE orders ADD COLUMN {col_name} {col_def}
+                    """))
+                    db.commit()
+                    results.append(f"orders.{col_name}: added")
+                else:
+                    results.append(f"orders.{col_name}: already exists")
+            except Exception as e:
+                results.append(f"orders.{col_name}: error - {str(e)}")
+                db.rollback()
+        
+        db.close()
+        
+        return {
+            "success": True,
+            "migration": "document-workflow-v2",
+            "results": results,
+            "next_steps": [
+                "Run migration on production: POST /api/migrations/document-workflow-v2",
+                "Update ClientsTab with MA block",
+                "Update Operations with payer dropdown and documents section"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Document workflow migration failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка міграції: {str(e)}"
+        )
+
         
         return {
             "success": True,

@@ -17,7 +17,30 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 3. ✅ Блок MA тепер є тільки на вкладці "Контакт" (client-level)
 4. ✅ Вкладка "Платники" показує тільки інформацію про платників без MA
 
-**Тестування:** Backend 100% (11/11 тестів), Frontend візуально перевірено через скріншоти.
+---
+
+### PDF Generation & Email for Master Agreement - COMPLETE ✅ (Session 8)
+
+**Реалізовано:**
+1. ✅ **PDF генерація** через WeasyPrint + Jinja2 шаблон
+2. ✅ **HTML preview** в новому вікні браузера
+3. ✅ **Завантаження PDF** через кнопку
+4. ✅ **Email з PDF вкладенням** на email клієнта
+
+**Нові API endpoints:**
+- `GET /api/agreements/{id}/preview` - HTML preview
+- `GET /api/agreements/{id}/pdf` - Завантажити PDF
+- `POST /api/agreements/{id}/send` - Відправити на email з PDF
+
+**Нові файли:**
+- `/app/backend/services/pdf_generator.py` - PDF генератор
+- `/app/backend/templates/legal/master_agreement.html` - HTML шаблон
+
+**UI кнопки в ClientsTab:**
+- 👁 Переглянути (HTML preview)
+- 📥 PDF (завантажити)
+- ✍️ Підписати (для draft)
+- 📧 Email (відправити з PDF)
 
 ---
 

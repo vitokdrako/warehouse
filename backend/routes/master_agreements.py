@@ -1,6 +1,7 @@
 """
 Master Agreements API - Рамкові договори
 Phase 3: Documents Engine
+Updated: Now supports client_user_id (primary) and payer_profile_id (legacy)
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -20,7 +21,8 @@ router = APIRouter(prefix="/api/agreements", tags=["master-agreements"])
 # ============================================================
 
 class MasterAgreementCreate(BaseModel):
-    payer_profile_id: int
+    client_user_id: Optional[int] = None  # NEW: Primary - link to client
+    payer_profile_id: Optional[int] = None  # Legacy - for backward compatibility
     template_version: str = "v1"
     valid_from: Optional[str] = None  # ISO date, default = today
     valid_months: int = 12

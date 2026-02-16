@@ -15,16 +15,26 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 // Документи по статусах замовлення
 const DOCS_BY_STATUS = {
-  'pending': [],
-  'awaiting_customer': [],
-  'draft': [],
+  'pending': [
+    { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
+  ],
+  'awaiting_customer': [
+    { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
+  ],
+  'draft': [
+    { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
+  ],
   'confirmed': [
+    { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
     { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
   ],
   'processing': [
+    { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
+    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
     { type: 'picking_list', name: 'Лист комплектації', icon: '📦', printRequired: true, internal: true },
   ],
   'ready_for_issue': [
+    { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
     { type: 'issue_act', name: 'Акт передачі', icon: '📤', printRequired: true, critical: true, emailRequired: true },
   ],
   'issued': [

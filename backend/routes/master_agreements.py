@@ -315,11 +315,12 @@ async def update_agreement(
 
 @router.get("/active/{payer_profile_id}")
 async def get_active_agreement(payer_profile_id: int, db: Session = Depends(get_rh_db)):
-    """Get active (signed, not expired) agreement for payer"""
+    """Get active (signed, not expired) agreement for payer, or latest draft if none signed"""
     
+    # First try to find signed agreement
     result = db.execute(text("""
         SELECT 
-            id, contract_number, valid_from, valid_until, signed_at
+            id, contract_number, valid_from, valid_until, signed_at, status, pdf_path
         FROM master_agreements 
         WHERE payer_profile_id = :pid 
         AND status = 'signed'
@@ -329,8 +330,22 @@ async def get_active_agreement(payer_profile_id: int, db: Session = Depends(get_
     """), {"pid": payer_profile_id})
     
     row = result.fetchone()
+    
+    # If no signed, try to find draft
     if not row:
-        return {"exists": False, "message": "No active agreement"}
+        result = db.execute(text("""
+            SELECT 
+                id, contract_number, valid_from, valid_until, signed_at, status, pdf_path
+            FROM master_agreements 
+            WHERE payer_profile_id = :pid 
+            AND status IN ('draft', 'sent')
+            ORDER BY created_at DESC
+            LIMIT 1
+        """), {"pid": payer_profile_id})
+        row = result.fetchone()
+    
+    if not row:
+        return {"exists": False, "message": "No agreement found"}
     
     return {
         "exists": True,
@@ -338,7 +353,9 @@ async def get_active_agreement(payer_profile_id: int, db: Session = Depends(get_
         "contract_number": row[1],
         "valid_from": row[2].isoformat() if row[2] else None,
         "valid_until": row[3].isoformat() if row[3] else None,
-        "signed_at": row[4].isoformat() if row[4] else None
+        "signed_at": row[4].isoformat() if row[4] else None,
+        "status": row[5],
+        "pdf_path": row[6]
     }
 
 

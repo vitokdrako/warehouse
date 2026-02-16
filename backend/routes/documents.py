@@ -879,7 +879,9 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     order_rent = float(order[11] or 0) if order[11] else rent_total
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
-    grand_total = order_rent + order_deposit - discount_amount
+    discount_percent = order[24] or 0
+    service_fee = float(order[25] or 0)
+    grand_total = order_rent + order_deposit + service_fee - discount_amount
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
@@ -895,12 +897,14 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
             "event_type": order[19], "event_name": None, "event_location": None, "customer_comment": order[20],
             "total_price": order_rent, "total_price_fmt": _format_currency(order_rent),
             "deposit_amount": order_deposit, "deposit_amount_fmt": _format_currency(order_deposit),
-            "discount_amount": discount_amount, "discount_percent": order[24] or 0
+            "discount_amount": discount_amount, "discount_percent": discount_percent,
+            "service_fee": service_fee
         },
         "items": formatted_items,
         "totals": {
             "rent_total_fmt": _format_currency(order_rent), "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "grand_total_fmt": _format_currency(grand_total), "grand_total": grand_total
         },
         "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},

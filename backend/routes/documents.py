@@ -989,8 +989,9 @@ async def preview_issue_act(
     executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
     
-    formatted_items = [{"name": it[3], "quantity": it[4]} for it in items]
-    total_qty = sum(it[4] for it in items)
+    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
+    formatted_items = [{"name": it[2], "quantity": it[3]} for it in items]
+    total_qty = sum(it[3] for it in items)
     
     act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
     
@@ -998,7 +999,7 @@ async def preview_issue_act(
         "act_number": act_number,
         "act_date": datetime.now().strftime("%d.%m.%Y"),
         "executor": executor,
-        "client": {"name": order[3], "phone": order[4], "contact_person": order[3]},
+        "client": {"name": order[3], "phone": order[4] or order[21], "contact_person": order[3]},
         "order": {"number": order[1]},
         "items": formatted_items,
         "rental_days": rental_days,
@@ -1027,15 +1028,16 @@ async def download_issue_act_pdf(
     executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
     
-    formatted_items = [{"name": it[3], "quantity": it[4]} for it in items]
-    total_qty = sum(it[4] for it in items)
+    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
+    formatted_items = [{"name": it[2], "quantity": it[3]} for it in items]
+    total_qty = sum(it[3] for it in items)
     
     act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
     
     template_data = {
         "act_number": act_number, "act_date": datetime.now().strftime("%d.%m.%Y"),
         "executor": executor,
-        "client": {"name": order[3], "phone": order[4], "contact_person": order[3]},
+        "client": {"name": order[3], "phone": order[4] or order[21], "contact_person": order[3]},
         "order": {"number": order[1]},
         "items": formatted_items, "rental_days": rental_days,
         "rental_start_date": _format_date_ua(order[6]), "rental_end_date": _format_date_ua(order[7]),

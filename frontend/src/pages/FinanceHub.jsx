@@ -356,6 +356,99 @@ export default function FinanceHub() {
     }
   }, [loadOrderPayerOptions, loadOrders]);
   
+  // Auto-search for client by order's customer name/phone
+  const searchClientForOrder = useCallback(async (order) => {
+    if (!order) {
+      setMatchedClient(null);
+      return;
+    }
+    
+    // If order already has client_user_id, load that client
+    if (order.client_user_id) {
+      try {
+        const res = await authFetch(`${BACKEND_URL}/api/clients/${order.client_user_id}`);
+        if (res.ok) {
+          const client = await res.json();
+          // Also get MA status
+          const maRes = await authFetch(`${BACKEND_URL}/api/agreements/client/${order.client_user_id}`);
+          const maData = await maRes.json();
+          setMatchedClient({
+            ...client,
+            has_agreement: maData.exists,
+            agreement_status: maData.status,
+            agreement_number: maData.contract_number,
+            agreement_id: maData.id
+          });
+        }
+      } catch (e) {
+        console.error("Load client error:", e);
+      }
+      return;
+    }
+    
+    // Search by name/phone
+    const name = order.client_name || order.customer_name;
+    const phone = order.client_phone || order.customer_phone;
+    
+    if (!name && !phone) {
+      setMatchedClient(null);
+      return;
+    }
+    
+    setClientSearching(true);
+    try {
+      const params = new URLSearchParams();
+      if (name) params.append("name", name);
+      if (phone) params.append("phone", phone);
+      
+      const res = await authFetch(`${BACKEND_URL}/api/clients/find-match?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.found && data.best_match) {
+          setMatchedClient(data.best_match);
+        } else {
+          // No match - show "new client" option
+          setMatchedClient({
+            is_new: true,
+            suggested_name: name,
+            suggested_phone: phone
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Search client error:", e);
+    } finally {
+      setClientSearching(false);
+    }
+  }, []);
+  
+  // Link order to client
+  const linkOrderToClient = useCallback(async (orderId, clientId) => {
+    try {
+      setSaving(true);
+      const res = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/link-client`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_user_id: clientId })
+      });
+      if (res.ok) {
+        await loadOrders();
+        // Re-search to update matched client
+        const order = orders.find(o => o.order_id === orderId);
+        if (order) {
+          searchClientForOrder({ ...order, client_user_id: clientId });
+        }
+      } else {
+        const err = await res.json();
+        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
+      }
+    } catch (e) {
+      console.error("Link client error:", e);
+    } finally {
+      setSaving(false);
+    }
+  }, [loadOrders, orders, searchClientForOrder]);
+  
   // Initial load
   useEffect(() => {
     console.log("[FinanceHub] Initial load starting...");

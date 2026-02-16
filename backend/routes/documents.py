@@ -708,35 +708,111 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
 
 @router.get("/estimate/{order_id}/pdf")
 async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db)):
-    """Download estimate as PDF"""
+    """Download estimate (Кошторис) as PDF using new quote.html template"""
     
     order, items = _get_order_with_items(db, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
-    rental_days = order[15] or 1
-    formatted_items = [{"name": it[3], "sku": it[2] or "—", "quantity": it[4],
-                        "price_per_day": _format_currency(it[5]), "total_rental": _format_currency(it[6]),
-                        "deposit": _format_currency(it[8]), "image": it[9]} for it in items]
+    # Calculate rental days
+    rental_days = order[15] if order[15] else 1
+    if not rental_days and order[6] and order[7]:
+        rental_days = (order[7] - order[6]).days + 1
     
-    invoice_number = f"K-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    # Format items for template
+    formatted_items = []
+    rent_total = 0.0
+    deposit_total = 0.0
+    
+    for item in items:
+        qty = item[3] or 1
+        price_per_day = float(item[4] or 0)
+        total_rental = float(item[5] or 0)
+        deposit_per_item = float(item[8] or item[4] or 0) * qty
+        
+        rent_total += total_rental
+        deposit_total += deposit_per_item
+        
+        formatted_items.append({
+            "product_name": item[2],
+            "sku": item[7] or "—",
+            "quantity": qty,
+            "price_per_day_fmt": _format_currency(price_per_day),
+            "total_rental_fmt": _format_currency(total_rental),
+            "deposit_fmt": _format_currency(deposit_per_item),
+            "image_url": item[6],
+            "note": None
+        })
+    
+    # Calculate totals
+    order_rent = float(order[11] or 0) if order[11] else rent_total
+    order_deposit = float(order[12] or 0) if order[12] else deposit_total
+    discount_amount = float(order[23] or 0) if order[23] else 0
+    grand_total = order_rent + order_deposit - discount_amount
+    
+    # Delivery type label
+    delivery_type_labels = {
+        "self_pickup": "Самовивіз",
+        "delivery": "Доставка",
+        "self": "Самовивіз",
+        None: "Самовивіз"
+    }
+    delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
+    
     template_data = {
-        "invoice_number": invoice_number,
-        "invoice_date": datetime.now().strftime("%d.%m.%Y %H:%M"),
-        "client": {"name": order[3], "phone": order[4], "email": order[5]},
-        "order": {"number": order[1], "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}", "rental_days": rental_days, "delivery_method": "Самовивіз"},
+        "order": {
+            "order_number": order[1],
+            "customer_name": order[3],
+            "customer_phone": order[4] or order[21],
+            "customer_email": order[5] or order[22],
+            "phone": order[4] or order[21],
+            "email": order[5] or order[22],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days,
+            "delivery_type": order[18],
+            "delivery_type_label": delivery_type_label,
+            "city": order[16] or "—",
+            "delivery_address": order[17] or "—",
+            "event_type": order[19],
+            "event_name": None,
+            "event_location": None,
+            "customer_comment": order[20],
+            "total_price": order_rent,
+            "total_price_fmt": _format_currency(order_rent),
+            "deposit_amount": order_deposit,
+            "deposit_amount_fmt": _format_currency(order_deposit)
+        },
         "items": formatted_items,
-        "totals": {"rental": _format_currency(order[11]), "deposit": _format_currency(order[12]), "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))},
-        "note": order[13], "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+        "totals": {
+            "rent_total_fmt": _format_currency(order_rent),
+            "deposit_total_fmt": _format_currency(order_deposit),
+            "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "grand_total_fmt": _format_currency(grand_total),
+            "grand_total": grand_total
+        },
+        "company": {
+            "phone": "+38 (050) 415-23-23",
+            "email": "farfordecororenda@gmail.com"
+        },
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "watermark": None
     }
     
-    template = jinja_env.get_template("documents/estimate.html")
+    template = jinja_env.get_template("documents/quote.html")
     html_content = template.render(**template_data)
     
     font_config = WeasyFontConfig()
-    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 10mm; }', font_config=font_config)], font_config=font_config)
+    pdf_bytes = WeasyHTML(string=html_content).write_pdf(
+        stylesheets=[WeasyCSS(string='@page { size: A4; margin: 10mm; }', font_config=font_config)],
+        font_config=font_config
+    )
     
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Koshtorys_{order[1]}.pdf"})
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=Koshtorys_{order[1]}.pdf"}
+    )
 
 
 # ============================================================

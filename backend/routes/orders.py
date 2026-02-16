@@ -2858,8 +2858,8 @@ async def get_order_payer_options(
     """
     # Отримати замовлення з client_user_id
     order = db.execute(text("""
-        SELECT id, client_user_id, payer_profile_id, client_name
-        FROM orders WHERE id = :order_id
+        SELECT order_id, client_user_id, payer_profile_id, client_name
+        FROM orders WHERE order_id = :order_id
     """), {"order_id": order_id}).fetchone()
     
     if not order:

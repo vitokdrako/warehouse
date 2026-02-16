@@ -1,11 +1,12 @@
 """
 Documents API - генерація, перегляд та управління документами
 """
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, Query
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from datetime import datetime
+from typing import Optional, List
 import json
 
 from database_rentalhub import get_rh_db

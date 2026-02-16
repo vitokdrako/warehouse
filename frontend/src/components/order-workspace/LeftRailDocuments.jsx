@@ -151,6 +151,12 @@ export default function LeftRailDocuments({
 
   // Переглянути ОСТАННІЙ документ (без генерації)
   const viewLastDocument = async (docType) => {
+    // Для Кошторису - завжди відкриваємо прямий preview
+    if (docType === 'estimate') {
+      window.open(`${BACKEND_URL}/api/documents/estimate/${orderId}/preview`, '_blank')
+      return
+    }
+    
     const docInfo = docVersions[docType]
     
     if (!docInfo?.exists) {
@@ -175,6 +181,22 @@ export default function LeftRailDocuments({
   const generateNewDocument = async (docType, openPreview = true) => {
     setGenerating(docType)
     setError(null)
+    
+    // Для Кошторису - використовуємо прямий endpoint
+    if (docType === 'estimate') {
+      try {
+        if (openPreview) {
+          window.open(`${BACKEND_URL}/api/documents/estimate/${orderId}/preview`, '_blank')
+        }
+        setGenerating(null)
+        // Повертаємо fake data для Кошторису
+        return { id: null, doc_type: 'estimate', entity_id: orderId }
+      } catch (err) {
+        setError(err.message)
+        setGenerating(null)
+        return null
+      }
+    }
     
     const entityType = ISSUE_CARD_DOCS.includes(docType) ? 'issue' : 'order'
     const entityId = ISSUE_CARD_DOCS.includes(docType) ? (issueCardId || orderId) : orderId

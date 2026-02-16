@@ -785,6 +785,21 @@ export default function NewOrderViewWorkspace() {
             discountPercent={order?.discount_percent}
             discountAmount={calculations.totalDiscount}
             rentBeforeDiscount={calculations.totalRent}
+            serviceFee={order?.service_fee || 0}
+            onServiceFeeChange={async (fee) => {
+              try {
+                await fetch(`${BACKEND_URL}/api/orders/${orderId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+                  body: JSON.stringify({ service_fee: fee })
+                })
+                // Оновити локальний стан
+                setOrder(prev => ({ ...prev, service_fee: fee }))
+              } catch (err) {
+                console.error('Failed to update service fee:', err)
+              }
+            }}
+            isEditable={!decorOrderStatus}
           />
           <LeftRailDocuments
             orderId={orderId}

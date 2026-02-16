@@ -822,6 +822,100 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     )
 
 
+class SendEstimateEmailRequest(BaseModel):
+    recipient_email: str
+    recipient_name: Optional[str] = None
+
+
+@router.post("/estimate/{order_id}/send-email")
+async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, db: Session = Depends(get_rh_db)):
+    """Send estimate (Кошторис) via email"""
+    from services.email_service import send_document_email
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    # Generate HTML (same logic as preview)
+    rental_days = order[15] if order[15] else 1
+    if not rental_days and order[6] and order[7]:
+        rental_days = (order[7] - order[6]).days + 1
+    
+    formatted_items = []
+    rent_total = 0.0
+    deposit_total = 0.0
+    
+    for item in items:
+        qty = item[3] or 1
+        rental_price_day = float(item[4] or item[8] or 0)
+        total_rental = float(item[5] or 0)
+        purchase_price = float(item[9] or 0)
+        deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
+        
+        rent_total += total_rental
+        deposit_total += deposit_per_item
+        
+        formatted_items.append({
+            "product_name": item[2],
+            "sku": item[7] or "—",
+            "quantity": qty,
+            "rental_price_fmt": _format_currency(rental_price_day),
+            "price_per_day_fmt": _format_currency(rental_price_day),
+            "deposit_fmt": _format_currency(deposit_per_item),
+            "image_url": item[6],
+            "note": None
+        })
+    
+    order_rent = float(order[11] or 0) if order[11] else rent_total
+    order_deposit = deposit_total
+    discount_amount = float(order[23] or 0) if order[23] else 0
+    grand_total = order_rent + order_deposit - discount_amount
+    
+    delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
+    delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
+    
+    template_data = {
+        "order": {
+            "order_number": order[1], "customer_name": order[3],
+            "customer_phone": order[4] or order[21], "customer_email": order[5] or order[22],
+            "phone": order[4] or order[21], "email": order[5] or order[22],
+            "rental_start_date": _format_date_ua(order[6]), "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days, "delivery_type": order[18], "delivery_type_label": delivery_type_label,
+            "city": order[16] or "—", "delivery_address": order[17] or "—",
+            "event_type": order[19], "event_name": None, "event_location": None, "customer_comment": order[20],
+            "total_price": order_rent, "total_price_fmt": _format_currency(order_rent),
+            "deposit_amount": order_deposit, "deposit_amount_fmt": _format_currency(order_deposit),
+            "discount_amount": discount_amount, "discount_percent": order[24] or 0
+        },
+        "items": formatted_items,
+        "totals": {
+            "rent_total_fmt": _format_currency(order_rent), "deposit_total_fmt": _format_currency(order_deposit),
+            "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "grand_total_fmt": _format_currency(grand_total), "grand_total": grand_total
+        },
+        "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "watermark": None
+    }
+    
+    template = jinja_env.get_template("documents/quote.html")
+    html_content = template.render(**template_data)
+    
+    # Send email
+    result = send_document_email(
+        to_email=request.recipient_email,
+        document_type="estimate",
+        document_html=html_content,
+        order_number=order[1],
+        customer_name=request.recipient_name or order[3]
+    )
+    
+    if not result["success"]:
+        raise HTTPException(status_code=500, detail=result["message"])
+    
+    return {"success": True, "message": f"Кошторис відправлено на {request.recipient_email}"}
+
+
 # ============================================================
 # ANNEX (ДОДАТОК) - Quick Preview  
 # ============================================================

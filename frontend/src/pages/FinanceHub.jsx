@@ -191,6 +191,8 @@ export default function FinanceHub() {
   const [selectedPayerProfile, setSelectedPayerProfile] = useState(null);
   const [orderPayerOptions, setOrderPayerOptions] = useState(null); // Payer options for selected order
   const [matchedClient, setMatchedClient] = useState(null); // Auto-matched client for order
+  const [clientPayers, setClientPayers] = useState([]); // Payers linked to matched client
+  const [selectedClientPayer, setSelectedClientPayer] = useState(null); // Selected payer for documents
   const [clientSearching, setClientSearching] = useState(false);
   
   // Loading/UI states

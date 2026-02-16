@@ -365,8 +365,15 @@
           <div class="divider"></div>
 
           <div class="grand">
-            <div class="label">Разом до сплати</div>
+            <div class="label">Разом за оренду</div>
             <div class="val mono">{{ totals.grand_total_fmt or totals.grand_total or "—" }} грн</div>
+          </div>
+          
+          <div class="divider" style="margin:12px 0"></div>
+          
+          <div class="trow" style="padding:0">
+            <div class="label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Завдаток (окремо)</div>
+            <div class="val mono" style="font-size:16px;font-weight:800">{{ totals.deposit_total_fmt or order.deposit_amount_fmt }} грн</div>
           </div>
         </div>
       </div>

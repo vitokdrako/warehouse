@@ -39,8 +39,11 @@ const debounce = (fn, delay) => {
  */
 export default function LeftRailFinance({
   orderId,             // ID замовлення для завантаження реальних даних
-  rentAmount = 0,      // Очікувана сума оренди (fallback)
+  rentAmount = 0,      // Очікувана сума оренди (після знижки)
   depositAmount = 0,   // Очікувана сума застави (fallback)
+  discountPercent = 0, // Відсоток знижки
+  discountAmount = 0,  // Сума знижки
+  rentBeforeDiscount = 0, // Сума оренди до знижки
 }) {
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])

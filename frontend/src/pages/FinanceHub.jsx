@@ -362,6 +362,8 @@ export default function FinanceHub() {
   const searchClientForOrder = useCallback(async (order) => {
     if (!order) {
       setMatchedClient(null);
+      setClientPayers([]);
+      setSelectedClientPayer(null);
       return;
     }
     
@@ -374,6 +376,16 @@ export default function FinanceHub() {
           // Also get MA status
           const maRes = await authFetch(`${BACKEND_URL}/api/agreements/client/${order.client_user_id}`);
           const maData = await maRes.json();
+          
+          // Load client payers
+          const payersRes = await authFetch(`${BACKEND_URL}/api/clients/${order.client_user_id}/payers`);
+          const payersData = payersRes.ok ? await payersRes.json() : [];
+          setClientPayers(payersData);
+          
+          // Auto-select default payer or first payer
+          const defaultPayer = payersData.find(p => p.is_default) || payersData[0];
+          setSelectedClientPayer(defaultPayer || null);
+          
           setMatchedClient({
             ...client,
             has_agreement: maData.exists,
@@ -394,6 +406,8 @@ export default function FinanceHub() {
     
     if (!name && !phone) {
       setMatchedClient(null);
+      setClientPayers([]);
+      setSelectedClientPayer(null);
       return;
     }
     
@@ -408,6 +422,15 @@ export default function FinanceHub() {
         const data = await res.json();
         if (data.found && data.best_match) {
           setMatchedClient(data.best_match);
+          
+          // Load payers for matched client
+          if (data.best_match.id) {
+            const payersRes = await authFetch(`${BACKEND_URL}/api/clients/${data.best_match.id}/payers`);
+            const payersData = payersRes.ok ? await payersRes.json() : [];
+            setClientPayers(payersData);
+            const defaultPayer = payersData.find(p => p.is_default) || payersData[0];
+            setSelectedClientPayer(defaultPayer || null);
+          }
         } else {
           // No match - show "new client" option
           setMatchedClient({
@@ -415,6 +438,8 @@ export default function FinanceHub() {
             suggested_name: name,
             suggested_phone: phone
           });
+          setClientPayers([]);
+          setSelectedClientPayer(null);
         }
       }
     } catch (e) {

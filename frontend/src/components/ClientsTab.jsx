@@ -411,16 +411,34 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
 
   // === MASTER AGREEMENT FUNCTIONS (Client-based) ===
   const handleCreateClientMA = async () => {
+    // Show modal/prompt for executor type and date selection
+    const executorChoice = window.confirm(
+      "Виберіть Орендодавця:\n\n" +
+      "OK = ФОП Николенко Наталя Станіславівна\n" +
+      "Скасувати = ТОВ «ФАРФОР РЕНТ»"
+    );
+    
+    const executorType = executorChoice ? "fop" : "tov";
+    
+    // Ask for custom date
+    const today = new Date().toISOString().split('T')[0];
+    const customDate = prompt("Дата договору (РРРР-ММ-ДД):", today);
+    if (customDate === null) return; // Cancelled
+    
     setCreatingMA(client.id);
     try {
       const res = await authFetch(`${BACKEND_URL}/api/agreements/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ client_user_id: client.id })
+        body: JSON.stringify({ 
+          client_user_id: client.id,
+          executor_type: executorType,
+          contract_date: customDate || today
+        })
       });
       if (res.ok) {
         const data = await res.json();
-        alert(`✅ Рамковий договір ${data.contract_number} створено`);
+        alert(`✅ Договір оренди № ${data.contract_number} створено\n\nОрендодавець: ${executorType === 'fop' ? 'ФОП Николенко' : 'ТОВ ФАРФОР РЕНТ'}`);
         loadClientData();
       } else {
         const err = await res.json();

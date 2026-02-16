@@ -21,8 +21,8 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any, Optional
 
 # Configuration
-BASE_URL = "https://doc-workflow-12.preview.emergentagent.com/api"
-FRONTEND_URL = "https://doc-workflow-12.preview.emergentagent.com"
+BASE_URL = "https://docgen-hub-8.preview.emergentagent.com/api"
+FRONTEND_URL = "https://docgen-hub-8.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"

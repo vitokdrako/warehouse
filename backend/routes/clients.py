@@ -90,13 +90,18 @@ async def list_clients(
             c.id, c.email, c.email_normalized, c.full_name, c.phone,
             c.company_hint, c.source, c.notes, c.preferred_contact,
             c.is_active, c.created_at, c.updated_at,
+            c.payer_type, c.tax_id, c.bank_details,
             COUNT(DISTINCT o.order_id) as orders_count,
             COUNT(DISTINCT cpl.payer_profile_id) as payers_count,
             (SELECT payer_profile_id FROM client_payer_links 
-             WHERE client_user_id = c.id AND is_default = TRUE LIMIT 1) as default_payer_id
+             WHERE client_user_id = c.id AND is_default = TRUE LIMIT 1) as default_payer_id,
+            ma.id as ma_id, ma.contract_number as ma_number, ma.status as ma_status
         FROM client_users c
         LEFT JOIN orders o ON o.client_user_id = c.id
         LEFT JOIN client_payer_links cpl ON cpl.client_user_id = c.id
+        LEFT JOIN master_agreements ma ON ma.client_user_id = c.id 
+            AND ma.status IN ('draft', 'sent', 'signed')
+            AND (ma.valid_until IS NULL OR ma.valid_until >= CURDATE())
         WHERE 1=1
     """
     params = {}

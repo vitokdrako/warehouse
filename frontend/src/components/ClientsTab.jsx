@@ -619,6 +619,118 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
               {/* Contact Tab */}
               {activeTab === "contact" && (
                 <div className="space-y-4">
+                  {/* Client MA Block */}
+                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-4">
+                    <div className="text-sm font-medium text-purple-800 mb-2">📋 Рамковий договір</div>
+                    
+                    {clientMA?.exists ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full",
+                              clientMA.status === 'signed' ? "bg-emerald-100 text-emerald-700" :
+                              clientMA.status === 'draft' ? "bg-amber-100 text-amber-700" :
+                              clientMA.status === 'sent' ? "bg-blue-100 text-blue-700" :
+                              "bg-slate-100 text-slate-600"
+                            )}>
+                              {clientMA.status === 'signed' ? '✅ Підписано' :
+                               clientMA.status === 'draft' ? '⏳ Чернетка' :
+                               clientMA.status === 'sent' ? '📤 Відправлено' :
+                               clientMA.status}
+                            </span>
+                            <span className="text-sm font-medium text-slate-800 ml-2">{clientMA.contract_number}</span>
+                          </div>
+                        </div>
+                        
+                        {clientMA.valid_until && (
+                          <div className="text-xs text-slate-600">
+                            Дійсний до: {new Date(clientMA.valid_until).toLocaleDateString('uk-UA')}
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 text-xs h-8"
+                            onClick={() => handlePreviewMA(clientMA.id)}
+                          >
+                            👁 Переглянути
+                          </Button>
+                          
+                          {clientMA.status === 'draft' && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              className="flex-1 text-xs h-8"
+                              onClick={() => handleSignClientMA(clientMA.id)}
+                            >
+                              ✍️ Підписати
+                            </Button>
+                          )}
+                          
+                          {clientMA.status !== 'signed' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 text-xs h-8"
+                              onClick={() => handleSendMAEmail(clientMA.id)}
+                            >
+                              📧 Email
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-2">
+                        <p className="text-sm text-slate-600 mb-2">Договір не створено</p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleCreateClientMA}
+                          disabled={creatingMA === client.id}
+                          className="w-full"
+                        >
+                          {creatingMA === client.id ? "Створення..." : "📋 Створити договір"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Payer Type */}
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <div className="text-sm font-medium text-slate-700 mb-2">💳 Тип платника</div>
+                    <div className="flex gap-2 flex-wrap">
+                      {[
+                        { value: 'individual', label: '👤 Фіз. особа' },
+                        { value: 'fop', label: '🏪 ФОП' },
+                        { value: 'fop_simple', label: '🏪 ФОП (спрощ.)' },
+                        { value: 'tov', label: '🏢 ТОВ' }
+                      ].map(type => (
+                        <span
+                          key={type.value}
+                          className={cn(
+                            "text-xs px-3 py-1.5 rounded-full cursor-pointer transition",
+                            client.payer_type === type.value
+                              ? "bg-slate-900 text-white"
+                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+                          )}
+                          onClick={() => {
+                            // TODO: Update payer type
+                          }}
+                        >
+                          {type.label}
+                        </span>
+                      ))}
+                    </div>
+                    {client.tax_id && (
+                      <div className="mt-2 text-xs text-slate-600">
+                        ЄДРПОУ/ІПН: <span className="font-mono">{client.tax_id}</span>
+                      </div>
+                    )}
+                  </div>
+                
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs text-slate-500">Email</label>

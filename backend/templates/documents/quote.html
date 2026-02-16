@@ -350,8 +350,15 @@
 
           {% if totals.discount_fmt or order.discount_amount or order.discount_percent %}
             <div class="trow">
-              <div class="label">Знижка</div>
-              <div class="val mono">{{ totals.discount_fmt or (order.discount_percent ~ "%") }}</div>
+              <div class="label">Знижка {{ order.discount_percent }}%</div>
+              <div class="val mono" style="color:#16A34A">-{{ totals.discount_fmt or order.discount_amount }} грн</div>
+            </div>
+          {% endif %}
+
+          {% if totals.service_fee_fmt or order.service_fee %}
+            <div class="trow">
+              <div class="label">Додаткова послуга</div>
+              <div class="val mono">{{ totals.service_fee_fmt or order.service_fee }} грн</div>
             </div>
           {% endif %}
 

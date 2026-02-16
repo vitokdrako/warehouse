@@ -591,7 +591,12 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {payers.map((payer) => (
+                      {payers.map((payer) => {
+                        const maData = payerMAs[payer.id];
+                        const hasMA = maData?.exists;
+                        const ma = maData?.master_agreement || maData;
+                        
+                        return (
                         <div
                           key={payer.id}
                           className={cn(
@@ -621,8 +626,77 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                               ЄДРПОУ: {payer.edrpou}
                             </div>
                           )}
+                          
+                          {/* === MASTER AGREEMENT BLOCK === */}
+                          <div className="mt-3 pt-3 border-t border-slate-100">
+                            <div className="text-[10px] font-medium text-slate-500 uppercase mb-2">
+                              📜 Рамковий договір
+                            </div>
+                            
+                            {hasMA && ma?.contract_number ? (
+                              <div className={cn(
+                                "p-3 rounded-lg text-sm",
+                                ma.status === 'signed' ? "bg-emerald-50 border border-emerald-200" :
+                                ma.status === 'draft' ? "bg-amber-50 border border-amber-200" :
+                                "bg-slate-50 border border-slate-200"
+                              )}>
+                                <div className="flex items-center justify-between">
+                                  <div className="font-medium">
+                                    {ma.status === 'signed' ? '✅' : ma.status === 'draft' ? '⏳' : '⚠️'} 
+                                    {' '}{ma.contract_number}
+                                  </div>
+                                  <span className={cn(
+                                    "text-[10px] px-2 py-0.5 rounded-full",
+                                    ma.status === 'signed' ? "bg-emerald-200 text-emerald-800" :
+                                    ma.status === 'draft' ? "bg-amber-200 text-amber-800" :
+                                    "bg-slate-200 text-slate-600"
+                                  )}>
+                                    {ma.status === 'signed' ? 'Підписано' : ma.status === 'draft' ? 'Чернетка' : ma.status}
+                                  </span>
+                                </div>
+                                {ma.valid_until && (
+                                  <div className="text-xs text-slate-600 mt-1">
+                                    Діє до: {ma.valid_until || ma.valid_to}
+                                  </div>
+                                )}
+                                <div className="flex gap-2 mt-2">
+                                  {ma.pdf_path && (
+                                    <a 
+                                      href={ma.pdf_path} 
+                                      target="_blank" 
+                                      rel="noreferrer"
+                                      className="text-xs text-blue-600 hover:underline"
+                                    >
+                                      👁️ Переглянути
+                                    </a>
+                                  )}
+                                  {ma.status === 'draft' && (
+                                    <button
+                                      onClick={() => handleSignMA(ma.id)}
+                                      className="text-xs text-emerald-600 hover:underline"
+                                    >
+                                      ✍️ Підписати
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="p-3 rounded-lg bg-slate-50 border border-dashed border-slate-300">
+                                <div className="text-sm text-slate-500 mb-2">
+                                  ⚠️ Немає рамкового договору
+                                </div>
+                                <button
+                                  onClick={() => handleCreateMA(payer.id)}
+                                  disabled={creatingMA === payer.id}
+                                  className="text-xs text-blue-600 hover:underline disabled:text-slate-400"
+                                >
+                                  {creatingMA === payer.id ? '⏳ Створення...' : '📝 Створити договір'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
 
-                          <div className="flex gap-2 pt-2 border-t border-slate-100">
+                          <div className="flex gap-2 pt-3 mt-3 border-t border-slate-100">
                             <button
                               onClick={() => { setEditingPayer(payer); setShowPayerModal(true); }}
                               className="text-xs text-slate-600 hover:text-slate-900"

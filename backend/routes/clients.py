@@ -127,6 +127,14 @@ async def list_clients(
     
     clients = []
     for row in result:
+        import json as json_lib
+        bank_details = None
+        if row[14]:
+            try:
+                bank_details = json_lib.loads(row[14]) if isinstance(row[14], str) else row[14]
+            except:
+                pass
+        
         clients.append({
             "id": row[0],
             "email": row[1],
@@ -140,9 +148,15 @@ async def list_clients(
             "is_active": bool(row[9]),
             "created_at": row[10].isoformat() if row[10] else None,
             "updated_at": row[11].isoformat() if row[11] else None,
-            "orders_count": row[12] or 0,
-            "payers_count": row[13] or 0,
-            "default_payer_id": row[14]
+            "payer_type": row[12] or "individual",
+            "tax_id": row[13],
+            "bank_details": bank_details,
+            "orders_count": row[15] or 0,
+            "payers_count": row[16] or 0,
+            "default_payer_id": row[17],
+            "has_agreement": bool(row[18]),
+            "agreement_number": row[19],
+            "agreement_status": row[20]
         })
     
     # Фільтр has_payer після агрегації

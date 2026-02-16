@@ -171,29 +171,60 @@ async def get_agreement(agreement_id: int, db: Session = Depends(get_rh_db)):
 
 @router.post("/create")
 async def create_agreement(data: MasterAgreementCreate, db: Session = Depends(get_rh_db)):
-    """Create new master agreement"""
+    """Create new master agreement for CLIENT"""
     
-    # Validate payer profile exists
-    payer = db.execute(text("""
-        SELECT id, company_name, payer_type, director_name, edrpou, iban, bank_name, address
-        FROM payer_profiles WHERE id = :id AND is_active = 1
-    """), {"id": data.payer_profile_id}).fetchone()
+    # Must have either client_user_id or payer_profile_id
+    if not data.client_user_id and not data.payer_profile_id:
+        raise HTTPException(status_code=400, detail="client_user_id or payer_profile_id required")
     
-    if not payer:
-        raise HTTPException(status_code=400, detail="Payer profile not found")
+    client = None
+    payer = None
     
-    # Check for existing active agreement
-    existing = db.execute(text("""
-        SELECT id, contract_number FROM master_agreements 
-        WHERE payer_profile_id = :pid AND status IN ('draft', 'sent', 'signed')
-        AND (valid_until IS NULL OR valid_until >= CURDATE())
-    """), {"pid": data.payer_profile_id}).fetchone()
+    # Get client data if client_user_id provided
+    if data.client_user_id:
+        client = db.execute(text("""
+            SELECT id, full_name, email, phone, payer_type, tax_id, bank_details
+            FROM client_users WHERE id = :id AND is_active = 1
+        """), {"id": data.client_user_id}).fetchone()
+        
+        if not client:
+            raise HTTPException(status_code=400, detail="Client not found")
+        
+        # Check for existing active agreement for this CLIENT
+        existing = db.execute(text("""
+            SELECT id, contract_number FROM master_agreements 
+            WHERE client_user_id = :cid AND status IN ('draft', 'sent', 'signed')
+            AND (valid_until IS NULL OR valid_until >= CURDATE())
+        """), {"cid": data.client_user_id}).fetchone()
+        
+        if existing:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Активний договір вже існує: {existing[1]}"
+            )
     
-    if existing:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Active agreement already exists: {existing[1]}"
-        )
+    # Legacy: payer_profile_id support
+    if data.payer_profile_id:
+        payer = db.execute(text("""
+            SELECT id, company_name, payer_type, director_name, edrpou, iban, bank_name, address
+            FROM payer_profiles WHERE id = :id AND is_active = 1
+        """), {"id": data.payer_profile_id}).fetchone()
+        
+        if not payer:
+            raise HTTPException(status_code=400, detail="Payer profile not found")
+        
+        # Check for existing active agreement for this PAYER
+        existing = db.execute(text("""
+            SELECT id, contract_number FROM master_agreements 
+            WHERE payer_profile_id = :pid AND status IN ('draft', 'sent', 'signed')
+            AND (valid_until IS NULL OR valid_until >= CURDATE())
+        """), {"pid": data.payer_profile_id}).fetchone()
+        
+        if existing:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Active agreement already exists: {existing[1]}"
+            )
     
     # Calculate dates
     valid_from = datetime.fromisoformat(data.valid_from).date() if data.valid_from else date.today()
@@ -204,7 +235,26 @@ async def create_agreement(data: MasterAgreementCreate, db: Session = Depends(ge
     
     # Build snapshot
     snapshot = {
-        "payer": {
+        "contract_number": contract_number,
+        "valid_from": valid_from.isoformat(),
+        "valid_until": valid_until.isoformat(),
+        "template_version": data.template_version,
+        "generated_at": datetime.now().isoformat()
+    }
+    
+    if client:
+        snapshot["client"] = {
+            "id": client[0],
+            "full_name": client[1],
+            "email": client[2],
+            "phone": client[3],
+            "payer_type": client[4],
+            "tax_id": client[5],
+            "bank_details": json.loads(client[6]) if client[6] else None
+        }
+    
+    if payer:
+        snapshot["payer"] = {
             "id": payer[0],
             "company_name": payer[1],
             "payer_type": payer[2],
@@ -213,24 +263,19 @@ async def create_agreement(data: MasterAgreementCreate, db: Session = Depends(ge
             "iban": payer[5],
             "bank_name": payer[6],
             "address": payer[7]
-        },
-        "contract_number": contract_number,
-        "valid_from": valid_from.isoformat(),
-        "valid_until": valid_until.isoformat(),
-        "template_version": data.template_version,
-        "generated_at": datetime.now().isoformat()
-    }
+        }
     
     try:
         db.execute(text("""
             INSERT INTO master_agreements (
-                payer_profile_id, contract_number, template_version,
+                client_user_id, payer_profile_id, contract_number, template_version,
                 valid_from, valid_until, status, snapshot_json, note
             ) VALUES (
-                :payer_profile_id, :contract_number, :template_version,
+                :client_user_id, :payer_profile_id, :contract_number, :template_version,
                 :valid_from, :valid_until, 'draft', :snapshot_json, :note
             )
         """), {
+            "client_user_id": data.client_user_id,
             "payer_profile_id": data.payer_profile_id,
             "contract_number": contract_number,
             "template_version": data.template_version,

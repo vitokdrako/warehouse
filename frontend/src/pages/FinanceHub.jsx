@@ -1501,72 +1501,176 @@ function OperationsTab({
               
               {(() => {
                 const hasSignedMA = matchedClient?.agreement_status === 'signed';
-                const payerType = matchedClient?.payer_type || 'individual';
-                const isLegalEntity = ['fop', 'fop_simple', 'tov'].includes(payerType);
+                const clientPayerType = matchedClient?.payer_type || 'individual';
                 
-                // All document types for order
-                const docTypes = [
-                  { id: "quote", label: "📄 Кошторис (Quote)", needsMA: false },
-                  { id: "invoice_offer", label: "💵 Рахунок-оферта", needsMA: false },
-                  { id: "contract_rent", label: "📝 Договір оренди", needsMA: false },
-                  { id: "issue_act", label: "📦 Акт видачі", needsMA: false },
-                  { id: "return_act", label: "📦 Акт повернення", needsMA: false },
-                  { id: "defect_act", label: "⚠️ Дефектний акт", needsMA: false },
-                  { id: "deposit_settlement_act", label: "💰 Акт взаєморозрахунків", needsMA: false },
-                ];
+                // Determine effective payer type (from selected payer or client default)
+                const effectivePayerType = selectedClientPayer?.type || selectedClientPayer?.payer_type || clientPayerType;
+                const isLegalEntity = ['fop', 'fop_simple', 'tov'].includes(effectivePayerType);
                 
-                // Legal entity specific docs (require MA for some)
-                const legalDocs = [
-                  { id: "order_annex", label: "📎 Додаток до договору", needsMA: true },
-                  { id: "invoice_legal", label: "📄 Рахунок (юр. особа)", needsMA: false },
-                  { id: "service_act", label: "📋 Акт виконаних робіт", needsMA: true },
-                ];
+                const PAYER_TYPE_LABELS = {
+                  'individual': '👤 Фіз. особа',
+                  'fop': '🏪 ФОП',
+                  'fop_simple': '🏪 ФОП (спрощена)',
+                  'tov': '🏢 ТОВ'
+                };
                 
                 return (
-                  <div className="space-y-1">
-                    {docTypes.map(doc => (
+                  <div className="space-y-2">
+                    {/* Payer selector if client has multiple payers */}
+                    {clientPayers && clientPayers.length > 0 && (
+                      <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 mb-2">
+                        <div className="text-[10px] text-slate-500 mb-1">Платник для документів:</div>
+                        <select
+                          value={selectedClientPayer?.id || ''}
+                          onChange={(e) => {
+                            const payer = clientPayers.find(p => p.id === parseInt(e.target.value));
+                            setSelectedClientPayer(payer || null);
+                          }}
+                          className="w-full text-xs border border-slate-300 rounded px-2 py-1.5 bg-white"
+                        >
+                          <option value="">— {PAYER_TYPE_LABELS[clientPayerType]} (клієнт) —</option>
+                          {clientPayers.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.display_name || p.company_name} ({PAYER_TYPE_LABELS[p.type || p.payer_type]})
+                              {p.is_default && ' ⭐'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    
+                    {/* Base documents - always available */}
+                    <div className="space-y-1">
                       <Button
-                        key={doc.id}
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start text-xs h-8"
+                        onClick={() => {
+                          if (selectedOrder) {
+                            window.open(`${BACKEND_URL}/api/documents/estimate/${selectedOrder.order_id}/preview`, '_blank');
+                          }
+                        }}
+                        disabled={!selectedOrder}
+                      >
+                        📄 Кошторис
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start text-xs h-8"
+                        onClick={() => generateDocument('invoice_offer')}
+                        disabled={!selectedOrder}
+                      >
+                        💵 Рахунок-оферта
+                      </Button>
+                    </div>
+                    
+                    {/* Legal entity / FOP specific documents */}
+                    {isLegalEntity && hasSignedMA && (
+                      <div className="border-t border-slate-200 pt-2 mt-2 space-y-1">
+                        <div className="text-[10px] text-slate-500 mb-1">
+                          Юридичні документи ({PAYER_TYPE_LABELS[effectivePayerType]}):
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start text-xs h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          onClick={() => {
+                            if (selectedOrder && matchedClient?.agreement_id) {
+                              window.open(`${BACKEND_URL}/api/documents/annex/${selectedOrder.order_id}/preview?agreement_id=${matchedClient.agreement_id}`, '_blank');
+                            }
+                          }}
+                          disabled={!selectedOrder || !hasSignedMA}
+                        >
+                          📎 Додаток до договору
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start text-xs h-8"
+                          onClick={() => generateDocument('invoice_legal')}
+                          disabled={!selectedOrder}
+                        >
+                          📄 Рахунок (юр. особа)
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full justify-start text-xs h-8"
+                          onClick={() => generateDocument('service_act')}
+                          disabled={!selectedOrder || !hasSignedMA}
+                        >
+                          📋 Акт виконаних робіт
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* Acts - always available */}
+                    <div className="border-t border-slate-200 pt-2 mt-2 space-y-1">
+                      <div className="text-[10px] text-slate-500 mb-1">Акти:</div>
+                      
+                      <Button
                         variant="ghost"
                         size="sm"
                         className="w-full justify-start text-xs h-8"
-                        onClick={() => generateDocument(doc.id)}
+                        onClick={() => generateDocument('issue_act')}
+                        disabled={!selectedOrder}
                       >
-                        {doc.label}
+                        📦 Акт видачі
                       </Button>
-                    ))}
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-xs h-8"
+                        onClick={() => generateDocument('return_act')}
+                        disabled={!selectedOrder}
+                      >
+                        📦 Акт повернення
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-xs h-8"
+                        onClick={() => generateDocument('defect_act')}
+                        disabled={!selectedOrder}
+                      >
+                        ⚠️ Дефектний акт
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-xs h-8"
+                        onClick={() => generateDocument('deposit_settlement_act')}
+                        disabled={!selectedOrder}
+                      >
+                        💰 Акт взаєморозрахунків
+                      </Button>
+                    </div>
                     
-                    {/* Legal entity / FOP section */}
-                    {isLegalEntity && (
-                      <>
-                        <div className="border-t border-slate-100 mt-2 pt-2">
-                          <div className="text-[10px] text-slate-500 mb-1">
-                            {payerType === 'tov' ? '🏢 ТОВ' : '🏪 ФОП'}:
-                          </div>
-                        </div>
-                        
-                        {legalDocs.map(doc => (
-                          <Button
-                            key={doc.id}
-                            variant="ghost"
-                            size="sm"
-                            className="w-full justify-start text-xs h-8"
-                            onClick={() => generateDocument(doc.id)}
-                            disabled={doc.needsMA && !hasSignedMA}
-                            title={doc.needsMA && !hasSignedMA ? "Потрібен підписаний рамковий договір" : ""}
-                          >
-                            {doc.label} {doc.needsMA && !hasSignedMA && "🔒"}
-                          </Button>
-                        ))}
-                        
-                        {!hasSignedMA && (
-                          <div className="mt-2 p-2 bg-amber-50 rounded-lg text-xs text-amber-700">
-                            ⚠️ Для Додатку та Акту потрібен підписаний MA.
-                            <br/>
-                            Перейдіть до вкладки "Клієнти" → створити договір.
-                          </div>
-                        )}
-                      </>
+                    {/* Warning if FOP/TOV but no MA */}
+                    {isLegalEntity && !hasSignedMA && (
+                      <div className="mt-2 p-2 bg-amber-50 rounded-lg text-xs text-amber-700">
+                        ⚠️ Для Додатку та Акту виконаних робіт потрібен підписаний договір.
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-1 text-xs h-6 text-amber-700"
+                          onClick={() => {
+                            window.dispatchEvent(new CustomEvent('navigate-to-client', { 
+                              detail: { clientId: matchedClient.id }
+                            }));
+                          }}
+                        >
+                          Перейти до клієнта →
+                        </Button>
+                      </div>
                     )}
                   </div>
                 );

@@ -890,8 +890,9 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
     service_fee = float(order[25] or 0)
-    service_fee_name = order[26] or "Додаткова послуга"  # Назва послуги
-    grand_total = order_rent + order_deposit + service_fee - discount_amount
+    service_fee_name = order[26] or "Додаткова послуга"
+    # Разом до сплати = Оренда - Знижка + Послуга (БЕЗ завдатку)
+    grand_total = order_rent - discount_amount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")

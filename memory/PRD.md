@@ -1,295 +1,112 @@
 # RentalHub + Ivent-tool Project PRD
 
 ## Original Problem Statement
-Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus shifted to Finance Hub optimization and restructuring, then to Documents Engine.
+Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus shifted to Finance Hub optimization and restructuring, then to Documents Engine, and now to Client/Payer architecture and Document Workflow restructuring.
 
 ---
 
-## Latest Update: February 12, 2026
+## Latest Update: February 16, 2026
 
-### Phase 3.3: Email Provider + Print + Expiration UI - COMPLETE ✅
+### Document Workflow Restructuring - IN PROGRESS
 
-**Email Provider Abstraction - DONE ✅**
-- `/app/backend/services/email_provider.py` with:
-  - `EmailProvider` abstract base class
-  - `DummyEmailProvider` (logs without sending)
-  - `SMTPEmailProvider` ✅ **ACTIVE** (uses your SMTP config)
-  - `ResendEmailProvider` (requires RESEND_API_KEY)
-  - `SendGridEmailProvider` (requires SENDGRID_API_KEY)
-- Auto-detection: if SMTP_HOST configured → uses SMTP
-- Environment variables from your `.env`:
-  ```
-  SMTP_HOST=mail.adm.tools
-  SMTP_PORT=465
-  SMTP_USERNAME=info@farforrent.com.ua
-  SMTP_USE_SSL=True
-  SMTP_FROM_EMAIL=info@farforrent.com.ua
-  SMTP_FROM_NAME=FarforRent
-  ```
+**Phase 1: Master Agreement UI in ClientsTab - DONE ✅**
+- **Backend:**
+  - `GET /api/agreements/active/{payer_id}` - Returns active/draft MA with status field
+  - `POST /api/agreements/create` - Creates new MA with contract_number
+  - `POST /api/agreements/{id}/sign` - Signs MA, sets as active for payer
+  - All MA APIs tested: 16/16 tests passed
+- **Frontend (ClientsTab.jsx):**
+  - MA block displays for each payer card
+  - Status badges: signed (green), draft (amber), none (dashed)
+  - "Create MA" button calls POST /api/agreements/create
+  - "Sign MA" button calls POST /api/agreements/{id}/sign
+  - MA data loaded via GET /api/agreements/active/{payer_id}
 
-**SMTP Email Verified Working:**
-- Sent test email to vitokdrako@gmail.com ✅
-- Audit log created with provider=smtp, email_id, status=sent
+**Phase 2: Payer Selection & Documents in Operations Tab - DONE ✅**
+- **Backend:**
+  - `GET /api/orders/{order_id}/payer-options` - Lists payers for order's client with MA status
+  - `POST /api/orders/{order_id}/set-payer` - Sets payer for order
+- **Frontend (FinanceHub.jsx OperationsTab):**
+  - Payer dropdown in Documents card
+  - Shows current payer with MA status
+  - Legal documents (Акт, Додаток) disabled without signed MA
+  - Visual indicators: ✅ (has MA) / ⚠️ (no MA)
 
-**Print / PDF Button - DONE ✅**
-- "🖨️ Друк / PDF" button in DocumentPreviewModal
-- Opens HTML in new window with `window.print()` auto-trigger
-- Print CSS in `base.css` with:
-  - A4 page size, proper margins
-  - Page break controls
-  - `.no-print` class for hiding elements in print
+**Phase 3: UX Improvements - TODO**
+- Auto-suggest default payer when creating order
+- Add "Link Client" flow for orders without client_user_id
 
-**Expiration UI Banners - DONE ✅**
-- **Agreements tab:** Full banner with:
-  - 🔴 Expired: red background, "Договір закінчився", CTA button
-  - ⚠️ Warning: amber background, "Закінчується через X днів"
-  - ✅ Active: emerald badge
-- **Order header:** Compact status badge
-  - `✅ активн.` / `⚠️ Xдн.` / `🔴 закінч.`
-
-**Test Report:** `/app/test_reports/iteration_6.json` - 13/13 backend tests passed
+**Phase 4: Documents Tab → Registry - TODO**
+- Convert main Documents tab to read-only registry
+- Remove document generation buttons
+- Focus on search/filter/audit functionality
 
 ---
 
-### Phase 3.2+: Full Documents Lifecycle - COMPLETE ✅
+## Architecture
 
-**P0: Manual Fields Form - DONE ✅**
-- JSON schema per document type via `GET /api/documents/schema/{doc_type}`
-- ManualFieldsForm component with fields:
-  - `annex_to_contract`: contact_person, contact_channel, pickup_time, return_time
-  - `return_act`: condition_mode (radio), return_notes, defect_act_number
-  - `defect_act`: defect_notes, tenant_refused_to_sign (checkbox), refusal_witnesses
-  - `issue_act`: pickup_time, issue_notes
-- Form renders based on docType in DocumentPreviewModal
-- Templates updated to use manual_fields
+### Client/Payer Model
+- **Client** = Contact (`client_users` table)
+- **Payer** = Legal entity (`payer_profiles` table)
+- **Link** = `client_payer_links` (many-to-many)
+- **Order** links to both client and payer
 
-**P1: Email Workflow - DONE ✅**
-- "📧 Надіслати email" button in DocumentPreviewModal footer
-- Email modal with to/subject/message/attachPdf fields
-- `POST /api/documents/{id}/send-email` creates audit log
-- `GET /api/documents/{id}/email-history` returns send history
-- Full audit trail: sent_to, sent_by_user_id, sent_at, document_version
-- **NOTE: Email sending is MOCKED** - logs created but no actual SMTP integration
+### Document Hierarchy
+1. **Master Agreement (MA)** → linked to `payer_profile`
+2. **Order Annex** → linked to `order` AND `master_agreement`
+3. **Acts/Invoices** → linked to `order`, require signed MA for legal entities
 
-**P1: Payment ↔ Annex Linking - DONE ✅**
-- Added `annex_id` column to `fin_payments` table
-- Validation rule: `IF deal_mode = "rent" AND payment_type = "rent" THEN annex_id REQUIRED`
-- Returns 400 error with Ukrainian message if rent payment without annex_id
-
-**P1: Contract Expiration Warning - DONE ✅**
-- Checks `valid_until` date in master_agreements
-- Blocks annex creation for expired contracts (returns 400)
-- Adds warning to response if contract expires within 30 days
-
-**Bug Fixes Applied:**
-- Fixed route ordering (manual_fields/email routers before documents.router)
-- Added subject/message columns to document_emails table
-- Fixed collation mismatch in recent-emails query
-
-**Test Report:** `/app/test_reports/iteration_5.json` - 16/16 backend tests passed
+### Key Tables
+- `payer_profiles` - Payer entities with billing details
+- `master_agreements` - Contracts with status (draft/signed/expired)
+- `order_annexes` - Order-specific document references
+- `client_payer_links` - Client-Payer relationships
+- `orders.payer_profile_id` - Selected payer for order
 
 ---
 
-### Phase 3.2: Production Documents Features - COMPLETE ✅
-
-**DocumentPreviewModal Integration:**
-- Modal opens when clicking document buttons (quote, invoice_offer, contract_rent)
-- HTML renders in iframe with watermark "ЧЕРНЕТКА"
-- Sign button opens SignatureCanvas modal
-- PDF download button (falls back to HTML due to missing WeasyPrint deps)
-- Edit/Back button for modifying fields
-
-**New Templates Added:**
-- `invoice_offer.html` — Рахунок-оферта
-
-**Bug Fixes Applied:**
-- Fixed localStorage token key (`authToken` → `token`)
-- Fixed WeasyPrint import error (OSError handling)
-
-**Test Report:** `/app/test_reports/iteration_4.json` - 18/18 backend tests passed
-
----
-
-### Phase 3.1: Production Documents Engine - COMPLETE ✅
-
-**New Template-Based Document System:**
-
-#### Template Structure Created:
-```
-/backend/templates/documents/
-├── _partials/
-│   ├── base.css           # A4 styling, watermarks
-│   ├── header.html        # Document header
-│   └── footer_sign.html   # Signature blocks
-├── master_agreement.html  # Рамковий договір (full legal text)
-├── annex_to_contract.html # Додаток до договору
-├── issue_act.html         # Акт передачі
-├── return_act.html        # Акт повернення
-├── defect_act.html        # Дефектний акт
-├── quote.html             # Кошторис (non-legal)
-└── invoice_offer.html     # Рахунок-оферта
-
-/docs/
-└── document-data-mapping.md  # Field mapping specification
-```
-
-#### API Endpoints:
-- `POST /api/documents/render` — Render document from template (7 types)
-- `GET /api/documents/render/preview/{doc_type}` — HTML preview
-- `GET /api/documents/render/templates` — List available templates
-- `GET /api/documents/render/context/{doc_type}` — Get context data
-- `POST /api/documents/signatures/sign` — Sign document with canvas
-- `GET /api/documents/signatures/status/{doc_id}` — Get signature status
-
-#### Features Implemented:
-1. **Jinja2 Template Engine** — Renders HTML from templates
-2. **Data Context Builder** — Aggregates order, payer, agreement, items data
-3. **Watermark Support** — "ЧЕРНЕТКА" for draft, "ПІДПИСАНО" for signed
-4. **Ukrainian Date Formatting** — Day, month name (українською), year
-5. **Signature Storage** — document_signatures table ready
-6. **Legal Text** — Full contract text from client's legal documents
-
----
-
-### Phase 3: Documents Engine - COMPLETE ✅
-
-**Database Tables:**
-1. `master_agreements` — Рамкові договори (12-month contracts)
-2. `order_annexes` — Додатки до замовлень (immutable snapshots)
-3. `document_emails` — Email log
-4. `document_signatures` — Digital signatures
-
-**API Endpoints:**
-- `/api/agreements` — Master agreements CRUD
-- `/api/annexes` — Order annexes generation
-- `/api/documents/policy` — Policy matrix (19 doc types)
-
-**Frontend:**
-- FinanceHub DocumentsTab with 3 sub-tabs: Документи, Договори, Додатки
-- DocumentPreviewModal with iframe preview
-- SignatureCanvas for digital signatures
-
----
-
-### Phase 2: Finance Hub - COMPLETE ✅
-- 7-Tab Architecture
-- Snapshot API optimization
-- Deposit vs Advance separation
-
-### Phase 1: Backend Optimization - COMPLETE ✅
-- `/api/finance/orders/{id}/snapshot` endpoint
-- `/api/finance/payouts-stats-v2` optimized
-
----
-
-## Project Architecture
-
-```
-/app/
-├── backend/
-│   ├── routes/
-│   │   ├── finance.py
-│   │   ├── master_agreements.py
-│   │   ├── order_annexes.py
-│   │   ├── document_policy.py
-│   │   ├── document_render.py
-│   │   ├── document_signatures.py
-│   │   ├── document_manual_fields.py  # NEW: Manual fields schema
-│   │   ├── document_email.py          # NEW: Email workflow
-│   │   └── migrations.py
-│   ├── services/
-│   │   └── email_provider.py          # NEW: Email abstraction
-│   ├── templates/
-│   │   └── documents/
-│   │       ├── _partials/
-│   │       │   └── base.css           # Updated with print CSS
-│   │       ├── master_agreement.html
-│   │       ├── annex_to_contract.html
-│   │       ├── issue_act.html
-│   │       ├── return_act.html
-│   │       ├── defect_act.html
-│   │       ├── quote.html
-│   │       └── invoice_offer.html     # NEW
-│   └── server.py
-├── frontend/
-│   └── src/
-│       ├── pages/FinanceHub.jsx       # Updated with expiration banners
-│       └── components/
-│           ├── DocumentPreviewModal.jsx # Updated with print/email
-│           └── SignatureCanvas.jsx
-├── docs/
-│   └── document-data-mapping.md
-└── memory/
-    └── PRD.md
-```
-
----
-
-## Remaining Tasks
-
-### P0 - Critical (Next Steps):
-1. ~~**Frontend SignatureCanvas Component**~~ ✅ DONE
-2. ~~**Document Preview Modal**~~ ✅ DONE  
-3. ~~**Manual Fields Form**~~ ✅ DONE
-4. ~~**Email Provider Abstraction**~~ ✅ DONE
-5. ~~**Print/PDF Button**~~ ✅ DONE
-6. ~~**Expiration UI Banners**~~ ✅ DONE
-7. **Real Email Integration** — Set RESEND_API_KEY in .env
-7. **Real Email Integration** — Set RESEND_API_KEY in .env
-
-### P2 - Nice to Have:
-- **Playwright PDF Service** — Server-side PDF generation
-- **Document Version Viewer** — History of versions
-
----
-
-## Known Issues
-
-### P1 - Finance Tab Loading
-**Status:** IN PROGRESS — API returns 200 OK but frontend doesn't render orders (pre-existing)
-
-### P2 - Moodboard Export
-**Status:** BLOCKED — awaiting backend CORS fix deployment
-
-### P2 - Calendar Timezone Bug
-**Status:** NOT STARTED — recurring issue
-
-### P3 - Image 404s in Catalog
-**Status:** NOT STARTED
-
----
+## Pending Issues (P1-P2)
+- **P1:** `convert-to-order` endpoint unstable (needs testing after refactoring)
+- **P2:** Moodboard export likely broken
+- **P2:** Calendar timezone bug
 
 ## Future Tasks
-
-- **Database Refactoring** — Unify item status tables
-- **Full RBAC** — Role-based access control
-- **Monthly Financial Report** — PDF export
-- **Digital Signature Integration** — E-sign service
-- **HR/Ops Module** — Employee management
-
----
-
-## Test Credentials
-- **Admin:** vitokdrako@gmail.com / test123
-- **Test payer_profile_id:** 1 (Хук Тетяна, fop_simple)
-- **Test order_id:** 7325 (issued, has payer)
-- **Test agreement:** MA-2026-001 (signed)
+- Real-time updates for client cabinet
+- Unify NewOrderViewWorkspace and IssueCardWorkspace
+- Full RBAC implementation
+- Monthly Financial Report
+- HR/Ops Module
 
 ---
 
-## API Testing Examples
+## Previous Completed Work
 
-```bash
-# Render quote
-curl -X POST "$API/api/documents/render" \
-  -H "Content-Type: application/json" \
-  -d '{"doc_type": "quote", "order_id": 7325}'
+### Phase 3.3: Email Provider + Print + Expiration UI - COMPLETE ✅
+- SMTP Email Provider configured and working
+- Print/PDF button with proper CSS
+- Contract expiration banners and warnings
 
-# Preview annex
-curl "$API/api/documents/render/preview/annex_to_contract?order_id=7325"
+### Phase 3.2: Full Documents Lifecycle - COMPLETE ✅
+- Manual fields form per document type
+- Email workflow with audit trail
+- Payment ↔ Annex linking validation
 
-# Sign document
-curl -X POST "$API/api/documents/signatures/sign" \
-  -H "Content-Type: application/json" \
-  -d '{"document_id": "...", "signer_role": "tenant", "signature_png_base64": "..."}'
-```
+### Finance Cabinet "Clients" Tab - COMPLETE ✅
+- CRM-lite tab in FinanceHub for managing clients and payers
+- Client list with payer status indicators
+- Quick actions for creating/editing payers
+
+### Re-audit Cabinet Enhancement - COMPLETE ✅
+- Added category/subcategory editing
+- Split dimensions into separate DB columns
+- New shape attribute with dictionary
+- JSON-based hashtags system
+
+---
+
+## Test Reports
+- `/app/test_reports/iteration_7.json` - MA APIs: 16/16 tests passed
+- Backend tests at `/app/backend/tests/test_master_agreements.py`
+
+## Credentials
+- Admin: `vitokdrako@gmail.com` / `test123`

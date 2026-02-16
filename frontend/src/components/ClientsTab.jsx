@@ -485,10 +485,6 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   };
 
   // === OTHER CLIENT FUNCTIONS ===
-      alert("❌ Помилка підписання договору");
-    }
-  };
-
   const handleSetDefaultPayer = async (payerId) => {
     try {
       await authFetch(`${BACKEND_URL}/api/clients/${client.id}/payers/${payerId}/link?is_default=true`, {

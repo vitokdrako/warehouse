@@ -7,6 +7,20 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 16, 2026
 
+### Bug Fix: Duplicate MA UI in ClientsTab - COMPLETE ✅ (Session 8)
+
+**Проблема:** У drawer клієнта відображалися два блоки "Рамковий договір" — один на вкладці "Контакт" (правильний, client-level MA) і один на вкладці "Платники" (застаріла логіка, payer-level MA).
+
+**Виправлення:**
+1. ✅ Видалено дублюючий фрагмент коду (рядки 487-490)
+2. ✅ Видалено використання неіснуючої змінної `payerMAs` в `payers.map()`
+3. ✅ Блок MA тепер є тільки на вкладці "Контакт" (client-level)
+4. ✅ Вкладка "Платники" показує тільки інформацію про платників без MA
+
+**Тестування:** Backend 100% (11/11 тестів), Frontend візуально перевірено через скріншоти.
+
+---
+
 ### Finance Hub Tab Restructuring - COMPLETE ✅
 
 **Нова структура вкладок (8 вкладок):**

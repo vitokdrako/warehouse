@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Рамковий договір {{ contract_number }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm 15mm;
+            @top-right {
+                content: "Сторінка " counter(page) " з " counter(pages);
+                font-size: 9pt;
+                color: #666;
+            }
+        }
+        
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #1a365d;
+            padding-bottom: 15px;
+        }
+        
+        .header h1 {
+            font-size: 16pt;
+            color: #1a365d;
+            margin: 0 0 5px 0;
+        }
+        
+        .header h2 {
+            font-size: 12pt;
+            font-weight: normal;
+            color: #4a5568;
+            margin: 0;
+        }
+        
+        .contract-number {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #2c5282;
+            margin: 10px 0;
+        }
+        
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 5px;
+        }
+        
+        .meta-info div {
+            text-align: center;
+        }
+        
+        .meta-info .label {
+            font-size: 9pt;
+            color: #718096;
+            text-transform: uppercase;
+        }
+        
+        .meta-info .value {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #2d3748;
+        }
+        
+        .parties {
+            margin-bottom: 20px;
+        }
+        
+        .party {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f7fafc;
+            border-left: 3px solid #3182ce;
+        }
+        
+        .party-title {
+            font-weight: bold;
+            color: #2c5282;
+            margin-bottom: 5px;
+        }
+        
+        .party-details {
+            font-size: 10pt;
+        }
+        
+        .party-details p {
+            margin: 3px 0;
+        }
+        
+        .section {
+            margin-bottom: 15px;
+        }
+        
+        .section-title {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1a365d;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .section-content {
+            text-align: justify;
+        }
+        
+        .section-content p {
+            margin-bottom: 8px;
+        }
+        
+        .article {
+            margin-bottom: 15px;
+        }
+        
+        .article-num {
+            font-weight: bold;
+            color: #2c5282;
+        }
+        
+        ol {
+            padding-left: 20px;
+        }
+        
+        ol li {
+            margin-bottom: 5px;
+        }
+        
+        .signatures {
+            margin-top: 30px;
+            page-break-inside: avoid;
+        }
+        
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .signature-box {
+            width: 45%;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        
+        .signature-box .title {
+            font-weight: bold;
+            color: #2c5282;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .signature-line {
+            border-bottom: 1px solid #333;
+            height: 30px;
+            margin: 10px 0;
+        }
+        
+        .signature-label {
+            font-size: 9pt;
+            color: #718096;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 10pt;
+            font-weight: bold;
+        }
+        
+        .status-draft {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-signed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 9pt;
+            color: #718096;
+            text-align: center;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        table td {
+            padding: 5px;
+            vertical-align: top;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>РАМКОВИЙ ДОГОВІР</h1>
+        <h2>про надання послуг з оренди обладнання та декору</h2>
+        <div class="contract-number">№ {{ contract_number }}</div>
+        {% if status == 'signed' %}
+        <span class="status-badge status-signed">✓ ПІДПИСАНО</span>
+        {% else %}
+        <span class="status-badge status-draft">ЧЕРНЕТКА</span>
+        {% endif %}
+    </div>
+    
+    <table class="meta-info" style="margin-bottom: 20px;">
+        <tr>
+            <td style="text-align: center; width: 33%;">
+                <div class="label">Дата укладання</div>
+                <div class="value">{{ valid_from }}</div>
+            </td>
+            <td style="text-align: center; width: 33%;">
+                <div class="label">Дійсний до</div>
+                <div class="value">{{ valid_until }}</div>
+            </td>
+            <td style="text-align: center; width: 33%;">
+                <div class="label">Місто</div>
+                <div class="value">м. Київ</div>
+            </td>
+        </tr>
+    </table>
+    
+    <div class="parties">
+        <div class="party">
+            <div class="party-title">ВИКОНАВЕЦЬ:</div>
+            <div class="party-details">
+                <p><strong>{{ executor.name }}</strong></p>
+                <p>ЄДРПОУ: {{ executor.edrpou }}</p>
+                <p>Адреса: {{ executor.address }}</p>
+                <p>Банк: {{ executor.bank }}</p>
+                <p>IBAN: {{ executor.iban }}</p>
+                <p>Директор: {{ executor.director }}</p>
+            </div>
+        </div>
+        
+        <div class="party">
+            <div class="party-title">ЗАМОВНИК:</div>
+            <div class="party-details">
+                <p><strong>{{ client.name }}</strong></p>
+                {% if client.payer_type == 'individual' %}
+                <p>Фізична особа</p>
+                {% elif client.payer_type == 'fop' %}
+                <p>ФОП</p>
+                {% if client.tax_id %}<p>ІПН/ЄДРПОУ: {{ client.tax_id }}</p>{% endif %}
+                {% elif client.payer_type == 'tov' %}
+                <p>Юридична особа</p>
+                {% if client.tax_id %}<p>ЄДРПОУ: {{ client.tax_id }}</p>{% endif %}
+                {% endif %}
+                <p>Email: {{ client.email }}</p>
+                {% if client.phone %}<p>Телефон: {{ client.phone }}</p>{% endif %}
+                {% if client.bank_details %}
+                <p>IBAN: {{ client.bank_details.iban }}</p>
+                <p>Банк: {{ client.bank_details.bank_name }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">1. ПРЕДМЕТ ДОГОВОРУ</div>
+        <div class="section-content">
+            <p><span class="article-num">1.1.</span> Виконавець зобов'язується за Замовленнями Замовника надавати послуги з оренди обладнання, меблів, текстилю, декору та аксесуарів для проведення заходів (далі — «Майно»), а Замовник зобов'язується оплачувати такі послуги відповідно до умов цього Договору.</p>
+            <p><span class="article-num">1.2.</span> Конкретний перелік Майна, терміни та умови оренди визначаються в окремих Додатках (Замовленнях), що є невід'ємною частиною цього Договору.</p>
+            <p><span class="article-num">1.3.</span> Цей Договір є рамковим та встановлює загальні умови співпраці між Сторонами.</p>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">2. ПРАВА ТА ОБОВ'ЯЗКИ СТОРІН</div>
+        <div class="section-content">
+            <p><strong>2.1. Виконавець зобов'язується:</strong></p>
+            <ol>
+                <li>Надавати Майно в належному технічному та естетичному стані;</li>
+                <li>Здійснювати доставку та вивезення Майна у погоджені терміни;</li>
+                <li>Інформувати Замовника про правила експлуатації Майна;</li>
+                <li>Забезпечувати консультаційну підтримку.</li>
+            </ol>
+            
+            <p><strong>2.2. Замовник зобов'язується:</strong></p>
+            <ol>
+                <li>Своєчасно оплачувати послуги відповідно до виставлених рахунків;</li>
+                <li>Забезпечувати схоронність орендованого Майна;</li>
+                <li>Не передавати Майно третім особам без письмової згоди Виконавця;</li>
+                <li>Повернути Майно у стані, не гіршому ніж при отриманні, з урахуванням нормального зносу;</li>
+                <li>Негайно повідомляти про пошкодження або втрату Майна.</li>
+            </ol>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">3. ПОРЯДОК РОЗРАХУНКІВ</div>
+        <div class="section-content">
+            <p><span class="article-num">3.1.</span> Вартість послуг визначається у Додатках до цього Договору та/або в рахунках-офертах.</p>
+            <p><span class="article-num">3.2.</span> Оплата здійснюється у безготівковій формі на розрахунковий рахунок Виконавця протягом 3 (трьох) банківських днів з моменту виставлення рахунку, якщо інше не передбачено Замовленням.</p>
+            <p><span class="article-num">3.3.</span> Застава вноситься до початку оренди та повертається після повернення Майна у належному стані.</p>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">4. ВІДПОВІДАЛЬНІСТЬ СТОРІН</div>
+        <div class="section-content">
+            <p><span class="article-num">4.1.</span> У разі пошкодження або втрати Майна Замовник відшкодовує його вартість або вартість ремонту.</p>
+            <p><span class="article-num">4.2.</span> За порушення строків повернення Майна Замовник сплачує пеню у розмірі 1% від вартості оренди за кожен день прострочення.</p>
+            <p><span class="article-num">4.3.</span> Сторони звільняються від відповідальності за невиконання зобов'язань у разі дії форс-мажорних обставин.</p>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">5. СТРОК ДІЇ ДОГОВОРУ</div>
+        <div class="section-content">
+            <p><span class="article-num">5.1.</span> Договір набирає чинності з моменту підписання та діє до {{ valid_until }}.</p>
+            <p><span class="article-num">5.2.</span> Договір може бути пролонгований за взаємною згодою Сторін.</p>
+            <p><span class="article-num">5.3.</span> Кожна зі Сторін може розірвати Договір, повідомивши іншу Сторону не менш ніж за 30 днів.</p>
+        </div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">6. ЗАКЛЮЧНІ ПОЛОЖЕННЯ</div>
+        <div class="section-content">
+            <p><span class="article-num">6.1.</span> Усі спори вирішуються шляхом переговорів, а у разі недосягнення згоди — у судовому порядку.</p>
+            <p><span class="article-num">6.2.</span> Договір складено у двох примірниках, що мають однакову юридичну силу.</p>
+            <p><span class="article-num">6.3.</span> Обмін документами можливий в електронній формі з використанням електронного підпису або скан-копій з оригінальними підписами.</p>
+        </div>
+    </div>
+    
+    <div class="signatures">
+        <div class="section-title">РЕКВІЗИТИ ТА ПІДПИСИ СТОРІН</div>
+        <table>
+            <tr>
+                <td style="width: 48%; vertical-align: top;">
+                    <div class="signature-box">
+                        <div class="title">ВИКОНАВЕЦЬ</div>
+                        <p><strong>{{ executor.name }}</strong></p>
+                        <p>ЄДРПОУ: {{ executor.edrpou }}</p>
+                        <p>IBAN: {{ executor.iban }}</p>
+                        <p>Банк: {{ executor.bank }}</p>
+                        <p>Адреса: {{ executor.address }}</p>
+                        <br>
+                        <p>Директор: {{ executor.director }}</p>
+                        <div class="signature-line"></div>
+                        <div class="signature-label">підпис / М.П.</div>
+                    </div>
+                </td>
+                <td style="width: 4%;"></td>
+                <td style="width: 48%; vertical-align: top;">
+                    <div class="signature-box">
+                        <div class="title">ЗАМОВНИК</div>
+                        <p><strong>{{ client.name }}</strong></p>
+                        {% if client.tax_id %}
+                        <p>ІПН/ЄДРПОУ: {{ client.tax_id }}</p>
+                        {% endif %}
+                        {% if client.bank_details and client.bank_details.iban %}
+                        <p>IBAN: {{ client.bank_details.iban }}</p>
+                        <p>Банк: {{ client.bank_details.bank_name }}</p>
+                        {% endif %}
+                        <p>Email: {{ client.email }}</p>
+                        {% if client.phone %}
+                        <p>Тел: {{ client.phone }}</p>
+                        {% endif %}
+                        <br>
+                        {% if signed_by %}
+                        <p>Підписано: {{ signed_by }}</p>
+                        <p>Дата: {{ signed_at }}</p>
+                        {% else %}
+                        <div class="signature-line"></div>
+                        <div class="signature-label">підпис / М.П.</div>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="footer">
+        <p>Документ згенеровано системою RentalHub • {{ generated_at }}</p>
+    </div>
+</body>
+</html>

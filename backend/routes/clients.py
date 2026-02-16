@@ -169,6 +169,87 @@ async def list_clients(
     return clients
 
 
+# ============================================================================
+# FIND CLIENT BY NAME/PHONE (for order linking)
+# ============================================================================
+
+@router.get("/find-match")
+async def find_client_match(
+    name: Optional[str] = None,
+    phone: Optional[str] = None,
+    email: Optional[str] = None,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Знайти клієнта по імені, телефону або email.
+    Використовується для автоприв'язки ордерів до клієнтів.
+    """
+    if not name and not phone and not email:
+        return {"found": False, "message": "Вкажіть name, phone або email"}
+    
+    # Normalize phone (remove spaces, dashes, +38)
+    if phone:
+        phone_clean = phone.replace(" ", "").replace("-", "").replace("+38", "").replace("+", "")
+        if len(phone_clean) == 10:
+            phone_clean = phone_clean  # Ukrainian format without country code
+        phone_pattern = f"%{phone_clean[-9:]}%"  # Last 9 digits
+    
+    sql = """
+        SELECT 
+            c.id, c.email, c.full_name, c.phone, c.payer_type, c.tax_id,
+            ma.id as ma_id, ma.contract_number as ma_number, ma.status as ma_status
+        FROM client_users c
+        LEFT JOIN master_agreements ma ON ma.client_user_id = c.id 
+            AND ma.status IN ('draft', 'sent', 'signed')
+            AND (ma.valid_until IS NULL OR ma.valid_until >= CURDATE())
+        WHERE c.is_active = 1 AND (
+    """
+    
+    conditions = []
+    params = {}
+    
+    if email:
+        conditions.append("LOWER(TRIM(c.email)) = LOWER(TRIM(:email))")
+        params["email"] = email
+    
+    if phone:
+        conditions.append("c.phone LIKE :phone")
+        params["phone"] = phone_pattern
+    
+    if name:
+        # Fuzzy match by name
+        conditions.append("c.full_name LIKE :name")
+        params["name"] = f"%{name}%"
+    
+    sql += " OR ".join(conditions) + ") ORDER BY c.updated_at DESC LIMIT 5"
+    
+    result = db.execute(text(sql), params)
+    matches = []
+    
+    for row in result:
+        matches.append({
+            "id": row[0],
+            "email": row[1],
+            "full_name": row[2],
+            "phone": row[3],
+            "payer_type": row[4] or "individual",
+            "tax_id": row[5],
+            "has_agreement": bool(row[6]),
+            "agreement_number": row[7],
+            "agreement_status": row[8]
+        })
+    
+    if matches:
+        return {
+            "found": True,
+            "count": len(matches),
+            "best_match": matches[0],
+            "all_matches": matches
+        }
+    
+    return {"found": False, "message": "Клієнта не знайдено"}
+
+
 @router.get("/{client_id}")
 async def get_client(client_id: int, db: Session = Depends(get_rh_db)):
     """Отримати клієнта за ID з усіма деталями"""

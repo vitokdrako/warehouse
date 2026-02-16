@@ -1362,56 +1362,105 @@ function OperationsTab({
         {selectedOrder && (
           <Card title="📄 Документи">
             <div className="space-y-3">
-              {/* === PAYER SELECTION === */}
+              {/* === CLIENT STATUS === */}
               <div className="pb-3 border-b border-slate-100">
-                <div className="text-xs font-medium text-slate-600 mb-2">💳 Платник:</div>
-                {orderPayerOptions?.payers?.length > 0 ? (
-                  <select
-                    className="w-full h-9 rounded-lg border border-slate-200 bg-white px-2 text-sm"
-                    value={orderPayerOptions.current_payer_id || ""}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setOrderPayer(selectedOrder.order_id, parseInt(e.target.value));
-                      }
-                    }}
-                    disabled={saving}
-                  >
-                    <option value="">— Обрати платника —</option>
-                    {orderPayerOptions.payers.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} {p.has_signed_ma ? '✅' : '⚠️'} {p.is_default ? '(осн.)' : ''}
-                      </option>
-                    ))}
-                  </select>
+                <div className="text-xs font-medium text-slate-600 mb-2">👤 Клієнт:</div>
+                
+                {clientSearching ? (
+                  <div className="text-xs text-slate-500 animate-pulse">Пошук клієнта...</div>
+                ) : matchedClient?.is_new ? (
+                  // New client - not found in system
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    <div className="text-xs text-amber-700 font-medium">⚠️ Новий клієнт</div>
+                    <div className="text-xs text-amber-600 mt-1">
+                      {matchedClient.suggested_name || selectedOrder.client_name || selectedOrder.customer_name}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2 w-full text-xs h-7"
+                      onClick={() => {
+                        // Open create client modal or navigate to clients tab
+                        window.dispatchEvent(new CustomEvent('create-client-for-order', { 
+                          detail: { 
+                            name: matchedClient.suggested_name || selectedOrder.customer_name,
+                            phone: matchedClient.suggested_phone || selectedOrder.customer_phone,
+                            orderId: selectedOrder.order_id
+                          }
+                        }));
+                      }}
+                    >
+                      ➕ Створити клієнта
+                    </Button>
+                  </div>
+                ) : matchedClient ? (
+                  // Found client
+                  <div className="bg-slate-50 rounded-lg p-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-slate-800">{matchedClient.full_name}</div>
+                        <div className="text-xs text-slate-500">{matchedClient.email}</div>
+                        <div className="text-xs text-slate-500">
+                          {matchedClient.payer_type === 'individual' && '👤 Фіз. особа'}
+                          {matchedClient.payer_type === 'fop' && '🏪 ФОП'}
+                          {matchedClient.payer_type === 'fop_simple' && '🏪 ФОП (спрощена)'}
+                          {matchedClient.payer_type === 'tov' && '🏢 ТОВ'}
+                        </div>
+                      </div>
+                      {!selectedOrder.client_user_id && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => linkOrderToClient(selectedOrder.order_id, matchedClient.id)}
+                          disabled={saving}
+                        >
+                          Прив'язати
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* MA Status */}
+                    <div className="mt-2 pt-2 border-t border-slate-200">
+                      {matchedClient.has_agreement ? (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full",
+                              matchedClient.agreement_status === 'signed' ? "bg-emerald-100 text-emerald-700" :
+                              matchedClient.agreement_status === 'draft' ? "bg-amber-100 text-amber-700" :
+                              "bg-slate-100 text-slate-600"
+                            )}>
+                              {matchedClient.agreement_status === 'signed' ? '✅ MA підписано' :
+                               matchedClient.agreement_status === 'draft' ? '⏳ MA чернетка' :
+                               matchedClient.agreement_status}
+                            </span>
+                            <span className="text-xs text-slate-500 ml-2">{matchedClient.agreement_number}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-amber-600">
+                          ⚠️ Рамковий договір не створено
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="ml-2 text-xs h-6 text-amber-700"
+                            onClick={() => {
+                              // Navigate to clients tab to create MA
+                              window.dispatchEvent(new CustomEvent('navigate-to-client', { 
+                                detail: { clientId: matchedClient.id }
+                              }));
+                            }}
+                          >
+                            Створити →
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ) : (
                   <div className="text-xs text-slate-500 italic">
-                    {orderPayerOptions?.client_id ? "Немає платників" : "Клієнт не прив'язаний"}
-                  </div>
-                )}
-                
-                {/* Current payer info */}
-                {orderPayerOptions?.current_payer_id && (
-                  <div className="mt-2 text-xs">
-                    {(() => {
-                      const payer = orderPayerOptions.payers?.find(p => p.id === orderPayerOptions.current_payer_id);
-                      if (!payer) return null;
-                      return (
-                        <>
-                          <div className="text-slate-600">
-                            Обрано: <span className="font-medium text-slate-800">{payer.name}</span>
-                          </div>
-                          {payer.has_signed_ma ? (
-                            <div className="text-emerald-600 mt-1">
-                              ✅ Рамковий договір: {payer.ma_contract_number}
-                            </div>
-                          ) : (
-                            <div className="text-amber-600 mt-1">
-                              ⚠️ Немає підписаного рамкового договору
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
+                    Оберіть ордер для пошуку клієнта
                   </div>
                 )}
               </div>
@@ -1420,9 +1469,9 @@ function OperationsTab({
               <div className="text-xs font-medium text-slate-600 mb-2 mt-2">📄 Документи ордера:</div>
               
               {(() => {
-                const currentPayer = orderPayerOptions?.payers?.find(p => p.id === orderPayerOptions.current_payer_id);
-                const hasSignedMA = currentPayer?.has_signed_ma;
-                const isLegalEntity = currentPayer?.type && !["individual", "fop"].includes(currentPayer.type);
+                const hasSignedMA = matchedClient?.agreement_status === 'signed';
+                const payerType = matchedClient?.payer_type || 'individual';
+                const isLegalEntity = ['fop', 'fop_simple', 'tov'].includes(payerType);
                 
                 // All document types for order
                 const docTypes = [

@@ -496,7 +496,7 @@ async def get_order_details(
     # [8]status, [9]total_price, [10]deposit_amount, [11]total_loss_value, 
     # [12]rental_days, [13]notes, [14]created_at,
     # [15]discount_amount, [16]manager_id, [17]issue_time, [18]return_time,
-    # [19]manager_name, [20]discount_percent, [21]service_fee
+    # [19]manager_name, [20]discount_percent, [21]service_fee, [22]service_fee_name
     result = db.execute(text("""
         SELECT 
             o.order_id, o.order_number, o.customer_id, o.customer_name, 
@@ -505,7 +505,8 @@ async def get_order_details(
             o.rental_days, o.notes, o.created_at,
             o.discount_amount, o.manager_id, o.issue_time, o.return_time,
             CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, '')) as manager_name,
-            o.discount_percent, COALESCE(o.service_fee, 0) as service_fee
+            o.discount_percent, COALESCE(o.service_fee, 0) as service_fee,
+            o.service_fee_name
         FROM orders o
         LEFT JOIN users u ON o.manager_id = u.user_id
         WHERE o.order_id = :order_id

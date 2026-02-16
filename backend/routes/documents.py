@@ -692,7 +692,8 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "deposit_amount_fmt": _format_currency(order_deposit),
             "discount_amount": discount_amount,
             "discount_percent": discount_percent,
-            "service_fee": service_fee
+            "service_fee": service_fee,
+            "service_fee_name": service_fee_name
         },
         "items": formatted_items,
         "totals": {
@@ -700,6 +701,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
+            "service_fee_name": service_fee_name if service_fee > 0 else None,
             "grand_total_fmt": _format_currency(grand_total),
             "grand_total": grand_total
         },
@@ -799,7 +801,8 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
             "deposit_amount_fmt": _format_currency(order_deposit),
             "discount_amount": discount_amount,
             "discount_percent": discount_percent,
-            "service_fee": service_fee
+            "service_fee": service_fee,
+            "service_fee_name": service_fee_name
         },
         "items": formatted_items,
         "totals": {
@@ -807,6 +810,7 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
             "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
+            "service_fee_name": service_fee_name if service_fee > 0 else None,
             "grand_total_fmt": _format_currency(grand_total),
             "grand_total": grand_total
         },

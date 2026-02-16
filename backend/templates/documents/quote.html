@@ -357,7 +357,7 @@
 
           {% if totals.service_fee_fmt or order.service_fee %}
             <div class="trow">
-              <div class="label">Додаткова послуга</div>
+              <div class="label">{{ totals.service_fee_name or order.service_fee_name or "Додаткова послуга" }}</div>
               <div class="val mono">{{ totals.service_fee_fmt or order.service_fee }} грн</div>
             </div>
           {% endif %}

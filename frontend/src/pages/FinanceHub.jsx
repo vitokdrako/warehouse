@@ -401,8 +401,9 @@ export default function FinanceHub() {
   useEffect(() => {
     if (selectedOrderId) {
       loadOrderSnapshot(selectedOrderId);
+      loadOrderPayerOptions(selectedOrderId);
     }
-  }, [selectedOrderId, loadOrderSnapshot]);
+  }, [selectedOrderId, loadOrderSnapshot, loadOrderPayerOptions]);
   
   // Load expenses when tab changes to expenses
   useEffect(() => {

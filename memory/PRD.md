@@ -136,6 +136,7 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_8.json` - Bug fix verification: Backend 100% (11/11), MA duplication fixed
 - `/app/test_reports/iteration_7.json` - MA APIs: 16/16 tests passed
 
 ## Credentials

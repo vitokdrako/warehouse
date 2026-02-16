@@ -37,7 +37,6 @@ async def list_documents_for_entity(entity_type: str):
 # ============ Генерація документів ============
 
 from pydantic import BaseModel
-from typing import Optional
 
 class GenerateDocumentRequest(BaseModel):
     doc_type: str

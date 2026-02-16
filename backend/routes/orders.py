@@ -2796,8 +2796,8 @@ async def set_order_payer(
     """
     # Перевірити, що замовлення існує
     order = db.execute(text("""
-        SELECT id, client_user_id, payer_profile_id 
-        FROM orders WHERE id = :order_id
+        SELECT order_id, client_user_id, payer_profile_id 
+        FROM orders WHERE order_id = :order_id
     """), {"order_id": order_id}).fetchone()
     
     if not order:
@@ -2830,7 +2830,7 @@ async def set_order_payer(
         db.execute(text("""
             UPDATE orders 
             SET payer_profile_id = :payer_id, updated_at = NOW()
-            WHERE id = :order_id
+            WHERE order_id = :order_id
         """), {"payer_id": data.payer_profile_id, "order_id": order_id})
         
         db.commit()

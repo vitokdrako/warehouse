@@ -223,6 +223,56 @@ export default function LeftRailFinance({
             <div className="mt-1 text-xs text-slate-400">≈ ₴ {fmtUA(depositHeld)}</div>
           )}
         </div>
+        
+        {/* Додаткова послуга (мінімальне замовлення) */}
+        {(isEditable || serviceFee > 0) && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-600">Додаткова послуга</span>
+              {isEditable && !editingServiceFee ? (
+                <button
+                  onClick={() => { setEditingServiceFee(true); setServiceFeeInput(serviceFee || 0); }}
+                  className="font-semibold text-amber-700 hover:underline"
+                >
+                  {serviceFee > 0 ? `₴ ${fmtUA(serviceFee)}` : '+ Додати'}
+                </button>
+              ) : isEditable && editingServiceFee ? (
+                <div className="flex items-center gap-1">
+                  <span className="text-slate-500">₴</span>
+                  <input
+                    type="number"
+                    value={serviceFeeInput}
+                    onChange={(e) => setServiceFeeInput(Number(e.target.value) || 0)}
+                    className="w-20 px-2 py-1 text-sm border rounded text-right"
+                    min="0"
+                    step="100"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => {
+                      if (onServiceFeeChange) onServiceFeeChange(serviceFeeInput);
+                      setEditingServiceFee(false);
+                    }}
+                    className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                  >
+                    ✓
+                  </button>
+                  <button
+                    onClick={() => setEditingServiceFee(false)}
+                    className="px-2 py-1 text-xs bg-slate-300 text-slate-700 rounded hover:bg-slate-400"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <span className="font-semibold text-amber-700">₴ {fmtUA(serviceFee)}</span>
+              )}
+            </div>
+            <div className="mt-1 text-xs text-amber-600">
+              💡 Мінімальне замовлення 2000 грн
+            </div>
+          </div>
+        )}
 
         {/* Деталі оплат */}
         {payments.length > 0 && (

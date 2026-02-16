@@ -525,15 +525,15 @@ export default function LeftRailDocuments({
                     Перегляд
                   </button>
                   
-                  {/* Генерувати - для Кошторису "Оновити" */}
+                  {/* Генерувати - для Кошторису теж "Генерувати" */}
                   <button
                     onClick={() => generateNewDocument(doc.type)}
                     disabled={generating === doc.type}
                     className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
-                    title={doc.type === 'estimate' ? 'Відкрити кошторис' : 'Генерувати нову версію'}
+                    title={doc.type === 'estimate' ? 'Генерувати актуальний кошторис' : 'Генерувати нову версію'}
                   >
                     <RefreshCw className={`w-3 h-3 ${generating === doc.type ? 'animate-spin' : ''}`} />
-                    {generating === doc.type ? '...' : (doc.type === 'estimate' ? 'Відкрити' : 'Генерувати')}
+                    {generating === doc.type ? '...' : 'Генерувати'}
                   </button>
                   
                   {/* Друк */}

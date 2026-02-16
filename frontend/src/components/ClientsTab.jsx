@@ -484,50 +484,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
     }
   };
 
-  // Legacy payer-based MA functions
-  const handleCreateMA = async (payerId) => {
-    setCreatingMA(payerId);
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/agreements/create`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payer_profile_id: payerId })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        alert(`✅ Рамковий договір ${data.contract_number} створено (draft)`);
-        loadClientData();
-      } else {
-        const err = await res.json();
-        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
-      }
-    } catch (err) {
-      console.error("Error creating MA:", err);
-      alert("❌ Помилка створення договору");
-    } finally {
-      setCreatingMA(null);
-    }
-  };
-
-  const handleSignMA = async (maId) => {
-    const signedBy = prompt("Хто підписує договір? (ПІБ)");
-    if (!signedBy) return;
-    
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/agreements/${maId}/sign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signed_by: signedBy })
-      });
-      if (res.ok) {
-        alert("✅ Договір підписано та встановлено як активний");
-        loadClientData();
-      } else {
-        const err = await res.json();
-        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
-      }
-    } catch (err) {
-      console.error("Error signing MA:", err);
+  // === OTHER CLIENT FUNCTIONS ===
       alert("❌ Помилка підписання договору");
     }
   };

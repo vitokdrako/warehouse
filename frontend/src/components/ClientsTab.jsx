@@ -415,7 +415,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   const handleCreateMA = async (payerId) => {
     setCreatingMA(payerId);
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/agreements`, {
+      const res = await authFetch(`${BACKEND_URL}/api/agreements/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payer_profile_id: payerId })

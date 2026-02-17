@@ -8,8 +8,24 @@ from sqlalchemy import text
 from datetime import datetime
 from typing import Optional, List
 import json
+import os
 
 from database_rentalhub import get_rh_db
+
+# Base URL for images - use backend URL from environment
+BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL", "https://backrentalhub.farforrent.com.ua")
+
+def _get_full_image_url(image_url: str) -> str:
+    """Convert relative image path to full URL"""
+    if not image_url:
+        return None
+    # Already a full URL
+    if image_url.startswith("http://") or image_url.startswith("https://"):
+        return image_url
+    # Relative path - prepend backend URL
+    # Remove leading slash if present
+    image_path = image_url.lstrip("/")
+    return f"{BACKEND_BASE_URL}/{image_path}"
 from services.doc_engine.registry import DOC_REGISTRY, get_doc_config, get_docs_for_entity
 from services.doc_engine.data_builders import build_document_data
 from services.doc_engine.render import render_html, render_pdf, get_template_path
@@ -641,7 +657,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
             "deposit_fmt": _format_currency(deposit_per_item),
-            "image_url": item[6],
+            "image_url": _get_full_image_url(item[6]),
             "note": None
         })
     
@@ -747,7 +763,7 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
             "deposit_fmt": _format_currency(deposit_per_item),
-            "image_url": item[6], "note": None
+            "image_url": _get_full_image_url(item[6]), "note": None
         })
     
     order_rent = float(order[11] or 0) if order[11] else rent_total
@@ -839,7 +855,7 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
             "deposit_fmt": _format_currency(deposit_per_item),
-            "image_url": item[6],
+            "image_url": _get_full_image_url(item[6]),
             "note": None
         })
     

@@ -797,15 +797,6 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     html_content = html_content.replace('</body>', f'{print_script}</body>')
     
     return HTMLResponse(content=html_content, media_type="text/html")
-        stylesheets=[WeasyCSS(string='@page { size: A4; margin: 10mm; }', font_config=font_config)],
-        font_config=font_config
-    )
-    
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=Koshtorys_{order[1]}.pdf"}
-    )
 
 
 class SendEstimateEmailRequest(BaseModel):

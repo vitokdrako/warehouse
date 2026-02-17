@@ -716,31 +716,26 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
-@router.get("/estimate/{order_id}/pdf")
+@router.get("/estimate/{order_id}/pdf", response_class=HTMLResponse)
 async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db)):
-    """Download estimate (Кошторис) as PDF using new quote.html template"""
+    """Generate printable HTML for estimate (use browser Print to PDF)"""
     
     order, items = _get_order_with_items(db, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
-    # Calculate rental days
     rental_days = order[15] if order[15] else 1
     if not rental_days and order[6] and order[7]:
         rental_days = (order[7] - order[6]).days + 1
     
-    # Format items for template
     formatted_items = []
     rent_total = 0.0
     deposit_total = 0.0
     
     for item in items:
-        # item structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price, purchase_price]
         qty = item[3] or 1
         rental_price_day = float(item[4] or item[8] or 0)
         total_rental = float(item[5] or 0)
-        
-        # Deposit = 50% of purchase_price (item[9]) * quantity
         purchase_price = float(item[9] or 0)
         deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
         
@@ -748,86 +743,60 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
         deposit_total += deposit_per_item
         
         formatted_items.append({
-            "product_name": item[2],
-            "sku": item[7] or "—",
-            "quantity": qty,
+            "product_name": item[2], "sku": item[7] or "—", "quantity": qty,
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
             "deposit_fmt": _format_currency(deposit_per_item),
-            "image_url": item[6],
-            "note": None
+            "image_url": item[6], "note": None
         })
     
-    # Calculate totals
     order_rent = float(order[11] or 0) if order[11] else rent_total
-    order_deposit = deposit_total  # Use calculated deposit (50% of purchase price)
+    order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # Разом до сплати = Оренда - Знижка + Послуга (БЕЗ завдатку)
     grand_total = order_rent - discount_amount + service_fee
     
-    # Delivery type label
-    delivery_type_labels = {
-        "self_pickup": "Самовивіз",
-        "delivery": "Доставка",
-        "self": "Самовивіз",
-        None: "Самовивіз"
-    }
+    delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
     
     template_data = {
         "order": {
-            "order_number": order[1],
-            "customer_name": order[3],
-            "customer_phone": order[4] or order[21],
-            "customer_email": order[5] or order[22],
-            "phone": order[4] or order[21],
-            "email": order[5] or order[22],
-            "rental_start_date": _format_date_ua(order[6]),
-            "rental_end_date": _format_date_ua(order[7]),
-            "rental_days": rental_days,
-            "delivery_type": order[18],
-            "delivery_type_label": delivery_type_label,
-            "city": order[16] or "—",
-            "delivery_address": order[17] or "—",
-            "event_type": order[19],
-            "event_name": None,
-            "event_location": None,
-            "customer_comment": order[20],
-            "total_price": order_rent,
-            "total_price_fmt": _format_currency(order_rent),
-            "deposit_amount": order_deposit,
-            "deposit_amount_fmt": _format_currency(order_deposit),
-            "discount_amount": discount_amount,
-            "discount_percent": discount_percent,
-            "service_fee": service_fee,
-            "service_fee_name": service_fee_name
+            "order_number": order[1], "customer_name": order[3],
+            "customer_phone": order[4] or order[21], "customer_email": order[5] or order[22],
+            "phone": order[4] or order[21], "email": order[5] or order[22],
+            "rental_start_date": _format_date_ua(order[6]), "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days, "delivery_type": order[18], "delivery_type_label": delivery_type_label,
+            "city": order[16] or "—", "delivery_address": order[17] or "—",
+            "event_type": order[19], "event_name": None, "event_location": None, "customer_comment": order[20],
+            "total_price": order_rent, "total_price_fmt": _format_currency(order_rent),
+            "deposit_amount": order_deposit, "deposit_amount_fmt": _format_currency(order_deposit),
+            "discount_amount": discount_amount, "discount_percent": discount_percent,
+            "service_fee": service_fee, "service_fee_name": service_fee_name
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(order_rent),
-            "deposit_total_fmt": _format_currency(order_deposit),
+            "rent_total_fmt": _format_currency(order_rent), "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),
-            "grand_total": grand_total
+            "grand_total_fmt": _format_currency(grand_total), "grand_total": grand_total
         },
-        "company": {
-            "phone": "(097) 123 09 93, (093) 375 09 40",
-            "email": "info@farforrent.com.ua"
-        },
+        "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
-        "watermark": None
+        "watermark": None,
+        "auto_print": True  # Trigger print dialog
     }
     
     template = jinja_env.get_template("documents/quote.html")
     html_content = template.render(**template_data)
     
-    font_config = WeasyFontConfig()
-    pdf_bytes = WeasyHTML(string=html_content).write_pdf(
+    # Add auto-print script
+    print_script = '''<script>window.onload = function() { window.print(); }</script>'''
+    html_content = html_content.replace('</body>', f'{print_script}</body>')
+    
+    return HTMLResponse(content=html_content, media_type="text/html")
         stylesheets=[WeasyCSS(string='@page { size: A4; margin: 10mm; }', font_config=font_config)],
         font_config=font_config
     )

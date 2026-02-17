@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://docgen-hub-8.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://clientdocs-12.preview.emergentagent.com').rstrip('/')
 
 # Test order ID
 TEST_ORDER_ID = 7326

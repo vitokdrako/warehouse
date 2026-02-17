@@ -657,7 +657,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
             "deposit_fmt": _format_currency(deposit_per_item),
-            "image_url": item[6],
+            "image_url": _get_full_image_url(item[6]),
             "note": None
         })
     
@@ -763,7 +763,7 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
             "deposit_fmt": _format_currency(deposit_per_item),
-            "image_url": item[6], "note": None
+            "image_url": _get_full_image_url(item[6]), "note": None
         })
     
     order_rent = float(order[11] or 0) if order[11] else rent_total
@@ -855,7 +855,7 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
             "deposit_fmt": _format_currency(deposit_per_item),
-            "image_url": item[6],
+            "image_url": _get_full_image_url(item[6]),
             "note": None
         })
     

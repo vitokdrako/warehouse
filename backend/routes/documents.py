@@ -1068,10 +1068,11 @@ async def download_invoice_offer_pdf(
     template = jinja_env.get_template("documents/invoice_offer.html")
     html_content = template.render(**template_data)
     
-    font_config = WeasyFontConfig()
-    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 10mm; }', font_config=font_config)], font_config=font_config)
+    # Add auto-print script
+    print_script = '''<script>window.onload = function() { window.print(); }</script>'''
+    html_content = html_content.replace('</body>', f'{print_script}</body>')
     
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Rahunok_{order[1]}.pdf"})
+    return HTMLResponse(content=html_content, media_type="text/html")
 
 
 # ============================================================

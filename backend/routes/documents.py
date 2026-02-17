@@ -514,8 +514,6 @@ async def get_latest_batch(request: LatestBatchRequest, db: Session = Depends(ge
 # ============================================================
 
 from services.pdf_generator import jinja_env, EXECUTORS
-from weasyprint import HTML as WeasyHTML, CSS as WeasyCSS
-from weasyprint.text.fonts import FontConfiguration as WeasyFontConfig
 
 def _format_date_ua(date_val) -> str:
     """Format date to DD.MM.YYYY"""

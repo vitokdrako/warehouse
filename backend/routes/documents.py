@@ -695,8 +695,9 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "rental_days": rental_days,
             "delivery_type": order[18],
             "delivery_type_label": delivery_type_label,
-            "city": order[16] or "—",
-            "delivery_address": order[17] or "—",
+            # For self_pickup show company address
+            "city": order[16] if order[16] else ("Київ" if order[18] in ("self_pickup", "self", None) else "—"),
+            "delivery_address": order[17] if order[17] else ("вул. Будіндустрії, 4" if order[18] in ("self_pickup", "self", None) else "—"),
             "event_type": order[19],
             "event_name": None,
             "event_location": None,

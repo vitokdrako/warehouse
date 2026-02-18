@@ -140,6 +140,46 @@ def check_product_availability(
         })
     nearby_result.close()
     
+    # ========== ПЕРЕВІРКА ЧАСТКОВИХ ПОВЕРНЕНЬ ==========
+    # Товари з активними extensions (ще не повернуті після часткового повернення)
+    # Це ПОПЕРЕДЖЕННЯ - товар формально вільний, але фактично ще у клієнта
+    partial_return_query = """
+        SELECT 
+            oe.order_id,
+            o.order_number,
+            oe.qty,
+            oe.original_end_date,
+            DATEDIFF(CURDATE(), oe.original_end_date) as days_overdue,
+            oe.daily_rate,
+            oe.created_at
+        FROM order_extensions oe
+        JOIN orders o ON oe.order_id = o.order_id
+        WHERE oe.product_id = :product_id
+        AND oe.status = 'active'
+        ORDER BY oe.original_end_date DESC
+    """
+    
+    partial_return_result = db.execute(text(partial_return_query), {"product_id": product_id})
+    partial_return_warnings = []
+    partial_return_qty = 0  # Кількість товару що "зависла" в частковому поверненні
+    
+    for row in partial_return_result:
+        days_overdue = row[4] if row[4] else 0
+        partial_return_qty += row[2]  # qty
+        partial_return_warnings.append({
+            "order_id": row[0],
+            "order_number": row[1],
+            "qty": row[2],
+            "original_end_date": row[3].isoformat() if row[3] else None,
+            "days_overdue": days_overdue,
+            "daily_rate": float(row[5]) if row[5] else 0,
+            "warning": f"⚠️ Товар ще НЕ ПОВЕРНУТО! Прострочка {days_overdue} дн. Дата повернення невідома."
+        })
+    partial_return_result.close()
+    
+    has_partial_return_risk = len(partial_return_warnings) > 0
+    # ========== КІНЕЦЬ ПЕРЕВІРКИ ЧАСТКОВИХ ПОВЕРНЕНЬ ==========
+    
     available_qty = max(0, total_qty - reserved_qty)
     is_available = available_qty >= quantity
     
@@ -166,7 +206,11 @@ def check_product_availability(
         "requested_quantity": quantity,
         "is_available": is_available,
         "has_tight_schedule": has_tight_schedule,
-        "nearby_orders": nearby_orders
+        "nearby_orders": nearby_orders,
+        # Нові поля для часткових повернень
+        "has_partial_return_risk": has_partial_return_risk,
+        "partial_return_qty": partial_return_qty,
+        "partial_return_warnings": partial_return_warnings
     }
 
 
@@ -211,8 +255,13 @@ def check_order_availability(
         if not result["is_available"]:
             unavailable.append(result)
     
+    # Збираємо товари з ризиком часткового повернення
+    partial_return_risks = [r for r in results if r.get("has_partial_return_risk")]
+    
     return {
         "all_available": len(unavailable) == 0,
+        "has_partial_return_risks": len(partial_return_risks) > 0,
         "items": results,
-        "unavailable_items": unavailable
+        "unavailable_items": unavailable,
+        "partial_return_risk_items": partial_return_risks
     }

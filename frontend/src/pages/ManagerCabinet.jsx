@@ -388,7 +388,7 @@ function Column({ title, subtitle, children, tone }) {
   );
 }
 
-function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, mergeMode = false, isSelected = false, onToggleSelect }) {
+function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, mergeMode = false, isSelected = false, selectionIndex = -1, onToggleSelect }) {
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 });
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }) : '—';
   
@@ -437,8 +437,8 @@ function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, merge
                 <StatusIcon className="w-3 h-3" />
                 {status.label}
               </span>
-              {mergeMode && isSelected && (
-                <span className="text-xs font-bold text-amber-600">#{selectedForMerge?.indexOf(order.order_id) + 1 || '✓'}</span>
+              {mergeMode && isSelected && selectionIndex >= 0 && (
+                <span className="text-xs font-bold text-amber-600">#{selectionIndex + 1}</span>
               )}
             </div>
             <div className="text-sm font-medium text-slate-700 truncate">{order.customer_name}</div>

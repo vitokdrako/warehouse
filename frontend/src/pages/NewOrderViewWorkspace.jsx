@@ -745,6 +745,11 @@ export default function NewOrderViewWorkspace() {
     : customerStats?.total_orders > 3 ? 'regular' 
     : 'new'
   
+  // ✅ Footer - визначаємо чи показувати основну кнопку
+  // Статуси де замовлення вже в роботі - не показуємо "Відправити на збір"
+  const isInProgress = ['ready_for_issue', 'issued', 'on_rent', 'preparation', 'partial_return'].includes(decorOrderStatus)
+  const showPrimaryAction = !isInProgress
+  
   // === РЕНДЕР ===
   return (
     <OrderWorkspaceLayout

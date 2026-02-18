@@ -355,6 +355,45 @@ async def get_items_by_category(
                 "status": row[7]
             })
         
+        # ========== ЧАСТКОВІ ПОВЕРНЕННЯ ==========
+        # Товари що ще у клієнта (активні версії часткових повернень)
+        partial_return_dict = {}
+        try:
+            partial_return_result = db.execute(text("""
+                SELECT 
+                    prvi.product_id,
+                    prv.display_number,
+                    prv.customer_name,
+                    prv.customer_phone,
+                    prv.rental_end_date,
+                    prvi.qty,
+                    DATEDIFF(CURDATE(), prv.rental_end_date) as days_overdue
+                FROM partial_return_version_items prvi
+                JOIN partial_return_versions prv ON prvi.version_id = prv.version_id
+                WHERE prvi.product_id IN :product_ids
+                AND prvi.status = 'pending'
+                AND prv.status = 'active'
+            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
+            
+            for row in partial_return_result:
+                pid = row[0]
+                if pid not in partial_return_dict:
+                    partial_return_dict[pid] = {"qty": 0, "orders": []}
+                partial_return_dict[pid]["qty"] += row[5]
+                partial_return_dict[pid]["orders"].append({
+                    "order_number": row[1],
+                    "customer": row[2] or '',
+                    "phone": row[3],
+                    "return_date": str(row[4]) if row[4] else None,
+                    "qty": row[5],
+                    "days_overdue": row[6] or 0,
+                    "status": "partial_return"
+                })
+        except Exception as e:
+            # Таблиці можуть не існувати
+            pass
+        # ========== КІНЕЦЬ ЧАСТКОВИХ ПОВЕРНЕНЬ ==========
+        
         # Тепер НЕ потрібно окремо запитувати product_damage_history
         # Статус обробки беремо напряму з products.state та products.frozen_quantity
         # row[18] = state, row[19] = frozen_quantity
@@ -376,6 +415,11 @@ async def get_items_by_category(
             total_qty = row[8] or 0
             reserved_qty = reserved_dict.get(product_id, 0)
             in_rent_qty = in_rent_dict.get(product_id, 0)
+            
+            # ✅ Додаємо товари з часткових повернень до "в оренді"
+            partial_return_info = partial_return_dict.get(product_id, {"qty": 0, "orders": []})
+            partial_return_qty = partial_return_info["qty"]
+            in_rent_qty += partial_return_qty  # Рахуємо як "в оренді"
             
             # Отримуємо статус з products.state та frozen_quantity
             product_state = row[18] if len(row) > 18 else None  # state
@@ -423,8 +467,11 @@ async def get_items_by_category(
             if availability == 'on_laundry' and on_laundry_qty == 0:
                 continue
             
-            # Конфлікти на період
+            # Конфлікти на період - додаємо часткові повернення до who_has
             conflicts = who_has_dict.get(product_id, [])
+            # ✅ Додаємо записи про часткові повернення
+            for pr_order in partial_return_info["orders"]:
+                conflicts.append(pr_order)
             has_conflict = use_date_filter and (reserved_qty > 0 or in_rent_qty > 0)
             
             items.append({

@@ -236,6 +236,39 @@ export default function ManagerCabinet() {
               ))}
             </select>
             
+            <div className="h-6 w-px bg-slate-200 mx-1" />
+            
+            {/* ✅ Кнопка режиму об'єднання */}
+            <button
+              onClick={() => {
+                setMergeMode(!mergeMode);
+                if (mergeMode) setSelectedForMerge([]);
+              }}
+              className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                mergeMode 
+                  ? 'border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100' 
+                  : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {mergeMode ? '✕ Скасувати' : '🔗 Об\'єднати'}
+            </button>
+            
+            {/* ✅ Панель об'єднання */}
+            {mergeMode && selectedForMerge.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                <span className="text-sm text-amber-700">
+                  Вибрано: <b>{selectedForMerge.length}</b>
+                </span>
+                <button
+                  onClick={handleMergeOrders}
+                  disabled={selectedForMerge.length < 2}
+                  className="px-3 py-1 rounded bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Об'єднати →
+                </button>
+              </div>
+            )}
+            
             {/* Refresh Button */}
             <button
               onClick={fetchData}

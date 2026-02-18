@@ -141,22 +141,25 @@ def check_product_availability(
     nearby_result.close()
     
     # ========== ПЕРЕВІРКА ЧАСТКОВИХ ПОВЕРНЕНЬ ==========
-    # Товари з активними extensions (ще не повернуті після часткового повернення)
+    # Товари в активних версіях часткових повернень (ще не повернуті)
     # Це ПОПЕРЕДЖЕННЯ - товар формально вільний, але фактично ще у клієнта
+    # Використовуємо таблиці: partial_return_versions + partial_return_version_items
     partial_return_query = """
         SELECT 
-            oe.order_id,
-            o.order_number,
-            oe.qty,
-            oe.original_end_date,
-            DATEDIFF(CURDATE(), oe.original_end_date) as days_overdue,
-            oe.daily_rate,
-            oe.created_at
-        FROM order_extensions oe
-        JOIN orders o ON oe.order_id = o.order_id
-        WHERE oe.product_id = :product_id
-        AND oe.status = 'active'
-        ORDER BY oe.original_end_date DESC
+            prv.parent_order_id,
+            prv.display_number,
+            prvi.qty,
+            prv.rental_end_date,
+            DATEDIFF(CURDATE(), prv.rental_end_date) as days_overdue,
+            prvi.daily_rate,
+            prv.created_at,
+            prv.version_id
+        FROM partial_return_version_items prvi
+        JOIN partial_return_versions prv ON prvi.version_id = prv.version_id
+        WHERE prvi.product_id = :product_id
+        AND prvi.status = 'pending'
+        AND prv.status = 'active'
+        ORDER BY prv.rental_end_date DESC
     """
     
     partial_return_result = db.execute(text(partial_return_query), {"product_id": product_id})
@@ -168,11 +171,12 @@ def check_product_availability(
         partial_return_qty += row[2]  # qty
         partial_return_warnings.append({
             "order_id": row[0],
-            "order_number": row[1],
+            "order_number": row[1],  # display_number: OC-7304(1)
             "qty": row[2],
             "original_end_date": row[3].isoformat() if row[3] else None,
             "days_overdue": days_overdue,
             "daily_rate": float(row[5]) if row[5] else 0,
+            "version_id": row[7],
             "warning": f"⚠️ Товар ще НЕ ПОВЕРНУТО! Прострочка {days_overdue} дн. Дата повернення невідома."
         })
     partial_return_result.close()

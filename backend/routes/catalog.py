@@ -416,6 +416,11 @@ async def get_items_by_category(
             reserved_qty = reserved_dict.get(product_id, 0)
             in_rent_qty = in_rent_dict.get(product_id, 0)
             
+            # ✅ Додаємо товари з часткових повернень до "в оренді"
+            partial_return_info = partial_return_dict.get(product_id, {"qty": 0, "orders": []})
+            partial_return_qty = partial_return_info["qty"]
+            in_rent_qty += partial_return_qty  # Рахуємо як "в оренді"
+            
             # Отримуємо статус з products.state та frozen_quantity
             product_state = row[18] if len(row) > 18 else None  # state
             frozen_qty = row[19] if len(row) > 19 else 0  # frozen_quantity
@@ -462,8 +467,11 @@ async def get_items_by_category(
             if availability == 'on_laundry' and on_laundry_qty == 0:
                 continue
             
-            # Конфлікти на період
+            # Конфлікти на період - додаємо часткові повернення до who_has
             conflicts = who_has_dict.get(product_id, [])
+            # ✅ Додаємо записи про часткові повернення
+            for pr_order in partial_return_info["orders"]:
+                conflicts.append(pr_order)
             has_conflict = use_date_filter and (reserved_qty > 0 or in_rent_qty > 0)
             
             items.append({

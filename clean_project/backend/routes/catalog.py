@@ -145,14 +145,24 @@ async def get_items_by_category(
         elif rent_filter:
             # Знайти товари в оренді або резерві
             if availability == 'in_rent':
+                # Товари в реальній оренді
                 rent_sql = """
                     SELECT DISTINCT oi.product_id
                     FROM order_items oi
                     JOIN orders o ON oi.order_id = o.order_id
                     WHERE o.status IN ('issued', 'on_rent')
                 """
+                # + Товари в часткових поверненнях (pending)
+                partial_sql = """
+                    SELECT DISTINCT prvi.product_id
+                    FROM partial_return_version_items prvi
+                    JOIN partial_return_versions prv ON prvi.version_id = prv.version_id
+                    WHERE prvi.status = 'pending' AND prv.status = 'active'
+                """
+                # Об'єднуємо
+                combined_sql = f"SELECT product_id FROM ({rent_sql} UNION {partial_sql}) as combined"
             else:  # reserved
-                rent_sql = """
+                combined_sql = """
                     SELECT DISTINCT oi.product_id
                     FROM order_items oi
                     JOIN orders o ON oi.order_id = o.order_id
@@ -160,7 +170,11 @@ async def get_items_by_category(
                     AND o.rental_end_date >= CURDATE()
                 """
             
-            rent_result = db.execute(text(rent_sql)).fetchall()
+            try:
+                rent_result = db.execute(text(combined_sql)).fetchall()
+            except Exception:
+                # Fallback якщо таблиці часткових повернень не існують
+                rent_result = db.execute(text(rent_sql if availability == 'in_rent' else combined_sql)).fetchall()
             rent_product_ids = [row[0] for row in rent_result]
             
             if not rent_product_ids:

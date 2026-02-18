@@ -315,6 +315,7 @@ export default function ManagerCabinet() {
                     showProgress={false}
                     mergeMode={mergeMode}
                     isSelected={selectedForMerge.includes(order.order_id)}
+                    selectionIndex={selectedForMerge.indexOf(order.order_id)}
                     onToggleSelect={() => toggleMergeSelection(order.order_id)}
                   />
                 ))}
@@ -346,6 +347,7 @@ export default function ManagerCabinet() {
                     showProgress={true}
                     mergeMode={mergeMode}
                     isSelected={selectedForMerge.includes(order.order_id)}
+                    selectionIndex={selectedForMerge.indexOf(order.order_id)}
                     onToggleSelect={() => toggleMergeSelection(order.order_id)}
                   />
                 ))}

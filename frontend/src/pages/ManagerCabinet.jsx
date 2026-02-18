@@ -386,7 +386,7 @@ function Column({ title, subtitle, children, tone }) {
   );
 }
 
-function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false }) {
+function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, mergeMode = false, isSelected = false, onToggleSelect }) {
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 });
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }) : '—';
   
@@ -404,10 +404,30 @@ function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false }) {
   const packingProgress = order.packing_progress || 0;
   
   return (
-    <div className="rounded-xl border border-slate-200 bg-white hover:shadow-md transition-shadow">
+    <div 
+      className={`rounded-xl border bg-white hover:shadow-md transition-all ${
+        mergeMode && isSelected 
+          ? 'border-amber-400 ring-2 ring-amber-200 shadow-md' 
+          : 'border-slate-200'
+      } ${mergeMode ? 'cursor-pointer' : ''}`}
+      onClick={mergeMode ? onToggleSelect : undefined}
+    >
       {/* Header */}
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-start justify-between gap-2">
+          {/* ✅ Checkbox для режиму об'єднання */}
+          {mergeMode && (
+            <div className="flex items-center justify-center w-6 h-6 mr-2 mt-1">
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={onToggleSelect}
+                onClick={(e) => e.stopPropagation()}
+                className="w-5 h-5 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer"
+              />
+            </div>
+          )}
+          
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <span className="font-bold text-slate-800">{order.order_number}</span>
@@ -415,24 +435,30 @@ function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false }) {
                 <StatusIcon className="w-3 h-3" />
                 {status.label}
               </span>
+              {mergeMode && isSelected && (
+                <span className="text-xs font-bold text-amber-600">#{selectedForMerge?.indexOf(order.order_id) + 1 || '✓'}</span>
+              )}
             </div>
             <div className="text-sm font-medium text-slate-700 truncate">{order.customer_name}</div>
             <a 
               href={`tel:${order.customer_phone}`}
               className="text-xs text-corp-primary hover:underline"
+              onClick={(e) => mergeMode && e.preventDefault()}
             >
               {order.customer_phone}
             </a>
           </div>
           
-          {/* Edit Button */}
-          <button
-            onClick={onEdit}
-            className="p-2 rounded-lg bg-corp-primary text-white hover:bg-corp-primary-dark transition-colors"
-            title="Редагувати"
-          >
-            <Edit3 className="w-4 h-4" />
-          </button>
+          {/* Edit Button - приховуємо в режимі об'єднання */}
+          {!mergeMode && (
+            <button
+              onClick={onEdit}
+              className="p-2 rounded-lg bg-corp-primary text-white hover:bg-corp-primary-dark transition-colors"
+              title="Редагувати"
+            >
+              <Edit3 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
       

@@ -30,6 +30,10 @@ export default function ManagerCabinet() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [managerFilter, setManagerFilter] = useState('all');
   
+  // ✅ Режим об'єднання замовлень
+  const [mergeMode, setMergeMode] = useState(false);
+  const [selectedForMerge, setSelectedForMerge] = useState([]);
+  
   // Користувач
   const [user, setUser] = useState(null);
   

@@ -289,6 +289,10 @@ export default function NewOrderViewWorkspace() {
             } else if (item.available_quantity < item.requested_quantity) {
               conflictType = 'insufficient'
               level = 'error'
+            } else if (item.has_partial_return_risk) {
+              // ⚠️ НОВЕ: Товар у частковому поверненні - ще не повернувся
+              conflictType = 'partial_return_risk'
+              level = 'warning'
             } else if (item.has_tight_schedule) {
               conflictType = 'tight_schedule'
               level = 'warning'
@@ -306,7 +310,10 @@ export default function NewOrderViewWorkspace() {
                 available: item.available_quantity,
                 requested: item.requested_quantity,
                 // ✅ Додаємо детальну інформацію про конфліктуючі замовлення
-                nearbyOrders: item.nearby_orders || []
+                nearbyOrders: item.nearby_orders || [],
+                // ⚠️ НОВЕ: Інформація про часткові повернення
+                partialReturnWarnings: item.partial_return_warnings || [],
+                partialReturnQty: item.partial_return_qty || 0
               }
             }
             return null

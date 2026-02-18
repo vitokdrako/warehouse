@@ -820,9 +820,13 @@ export default function NewOrderViewWorkspace() {
         </>
       }
       
-      // Footer
-      onPrimaryAction={decorOrderStatus ? handleSendToAssembly : handleAcceptOrder}
-      primaryLabel={decorOrderStatus ? '📦 Відправити на збір' : 'Підтвердити та прийняти'}
+      // Footer - визначаємо чи показувати основну кнопку
+      // Статуси де замовлення вже в роботі - не показуємо "Відправити на збір"
+      const isInProgress = ['ready_for_issue', 'issued', 'on_rent', 'preparation', 'partial_return'].includes(decorOrderStatus)
+      const showPrimaryAction = !isInProgress
+      
+      onPrimaryAction={showPrimaryAction ? (decorOrderStatus ? handleSendToAssembly : handleAcceptOrder) : null}
+      primaryLabel={showPrimaryAction ? (decorOrderStatus ? '📦 Відправити на збір' : 'Підтвердити та прийняти') : null}
       primaryDisabled={saving || !canAccept}
       primaryDisabledReason={!canAccept ? 'Заповніть дати та позиції' : ''}
       onSave={handleSave}
@@ -833,11 +837,11 @@ export default function NewOrderViewWorkspace() {
           onClick: handleSendEmail,
           disabled: sendingEmail || !clientEmail
         },
-        { 
+        ...(isInProgress ? [] : [{ 
           label: '🚫 Відхилити', 
           onClick: () => navigate('/'), 
           variant: 'danger' 
-        }
+        }])
       ]}
     >
       {/* === WORKSPACE ZONES === */}

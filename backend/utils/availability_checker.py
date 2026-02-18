@@ -255,8 +255,13 @@ def check_order_availability(
         if not result["is_available"]:
             unavailable.append(result)
     
+    # Збираємо товари з ризиком часткового повернення
+    partial_return_risks = [r for r in results if r.get("has_partial_return_risk")]
+    
     return {
         "all_available": len(unavailable) == 0,
+        "has_partial_return_risks": len(partial_return_risks) > 0,
         "items": results,
-        "unavailable_items": unavailable
+        "unavailable_items": unavailable,
+        "partial_return_risk_items": partial_return_risks
     }

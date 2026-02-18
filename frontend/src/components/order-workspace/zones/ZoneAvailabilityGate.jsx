@@ -45,6 +45,7 @@ export default function ZoneAvailabilityGate({
       'insufficient': '❌ Недостатньо',
       'tight_schedule': '⚠️ Щільний графік',
       'low_stock': '📦 Малий запас',
+      'partial_return_risk': '🚨 Не повернуто з оренди',
     }
     return labels[type] || type
   }

@@ -313,6 +313,9 @@ export default function ManagerCabinet() {
                     onEdit={() => navigate(`/order/${order.order_id}/view`)}
                     onCancel={() => handleCancelByClient(order.order_id, order.order_number)}
                     showProgress={false}
+                    mergeMode={mergeMode}
+                    isSelected={selectedForMerge.includes(order.order_id)}
+                    onToggleSelect={() => toggleMergeSelection(order.order_id)}
                   />
                 ))}
               </div>
@@ -341,6 +344,9 @@ export default function ManagerCabinet() {
                     order={order}
                     onEdit={() => navigate(`/order/${order.order_id}/view`)}
                     showProgress={true}
+                    mergeMode={mergeMode}
+                    isSelected={selectedForMerge.includes(order.order_id)}
+                    onToggleSelect={() => toggleMergeSelection(order.order_id)}
                   />
                 ))}
               </div>

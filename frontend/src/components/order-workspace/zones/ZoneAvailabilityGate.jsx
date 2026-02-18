@@ -110,36 +110,45 @@ export default function ZoneAvailabilityGate({
           {conflicts.map((conflict, idx) => {
             const isExpanded = expandedConflicts.has(idx)
             const hasDetails = conflict.nearbyOrders && conflict.nearbyOrders.length > 0
+            const hasPartialReturns = conflict.partialReturnWarnings && conflict.partialReturnWarnings.length > 0
+            const isPartialReturnRisk = conflict.type === 'partial_return_risk'
             
             return (
               <div 
                 key={idx}
                 className={`rounded-lg border text-sm overflow-hidden ${
-                  conflict.level === 'error' ? 'bg-rose-50 border-rose-200' : 'bg-amber-50 border-amber-200'
+                  conflict.level === 'error' ? 'bg-rose-50 border-rose-200' : 
+                  isPartialReturnRisk ? 'bg-orange-50 border-orange-300' : 
+                  'bg-amber-50 border-amber-200'
                 }`}
               >
                 {/* Заголовок конфлікту */}
                 <div 
-                  className={`p-3 ${hasDetails ? 'cursor-pointer hover:bg-black/5' : ''}`}
-                  onClick={() => hasDetails && toggleExpand(idx)}
+                  className={`p-3 ${(hasDetails || hasPartialReturns) ? 'cursor-pointer hover:bg-black/5' : ''}`}
+                  onClick={() => (hasDetails || hasPartialReturns) && toggleExpand(idx)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <div className="font-medium text-slate-800 flex items-center gap-2">
                         {conflict.sku} — {conflict.name}
-                        {hasDetails && (
+                        {(hasDetails || hasPartialReturns) && (
                           <span className="text-slate-400">
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </span>
                         )}
                       </div>
                       <div className="text-xs mt-1 flex items-center gap-2 flex-wrap">
-                        <TonePill tone={conflict.level === 'error' ? 'danger' : 'warn'}>
+                        <TonePill tone={conflict.level === 'error' ? 'danger' : isPartialReturnRisk ? 'danger' : 'warn'}>
                           {getConflictLabel(conflict.type)}
                         </TonePill>
                         {hasDetails && !isExpanded && (
                           <span className="text-slate-500">
                             ({conflict.nearbyOrders.length} замовлень)
+                          </span>
+                        )}
+                        {hasPartialReturns && !isExpanded && (
+                          <span className="text-orange-600 font-medium">
+                            ({conflict.partialReturnQty} шт. ще у клієнта)
                           </span>
                         )}
                       </div>
@@ -150,6 +159,46 @@ export default function ZoneAvailabilityGate({
                     </div>
                   </div>
                 </div>
+                
+                {/* ⚠️ НОВЕ: Деталі часткових повернень */}
+                {isExpanded && hasPartialReturns && (
+                  <div className="border-t border-orange-200 bg-orange-50/50">
+                    <div className="px-3 py-2 text-xs text-orange-700 font-medium border-b border-orange-200 flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      Незавершені часткові повернення:
+                    </div>
+                    <div className="divide-y divide-orange-100">
+                      {conflict.partialReturnWarnings.map((pr, prIdx) => (
+                        <div 
+                          key={prIdx} 
+                          className="px-3 py-2 flex items-center justify-between gap-3 hover:bg-orange-100/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-orange-500" />
+                            <div>
+                              <div className="font-medium text-slate-700">
+                                Замовлення #{pr.order_number || pr.order_id}
+                              </div>
+                              <div className="text-xs text-orange-600 font-medium">
+                                {pr.qty} шт. • Прострочка {pr.days_overdue} днів
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right text-xs">
+                            <div className="text-slate-500">Мав повернути: {formatDate(pr.original_end_date)}</div>
+                            <div className="text-orange-600 font-bold">
+                              ⚠️ Дата повернення невідома!
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-3 py-2 bg-orange-100/50 text-xs text-orange-700 border-t border-orange-200">
+                      💡 <b>Увага:</b> Товар числиться доступним, але фактично ще не повернувся від клієнта. 
+                      Підтвердження замовлення несе ризик невиконання.
+                    </div>
+                  </div>
+                )}
                 
                 {/* Деталі конфліктів - розгорнуті */}
                 {isExpanded && hasDetails && (

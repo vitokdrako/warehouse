@@ -1105,6 +1105,12 @@ export default function FamiliesManager() {
     }
   }, [families])
 
+  // Mobile: switch to detail panel when family selected
+  const handleSelectFamily = (f) => {
+    setSelectedFamily(f)
+    setMobilePanel('detail')
+  }
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -1117,41 +1123,138 @@ export default function FamiliesManager() {
   }
 
   return (
-    <div className="h-full flex bg-slate-100">
-      {/* Left Column - Families List */}
-      <FamiliesList
-        families={families}
-        selectedId={selectedFamily?.id}
-        onSelect={(f) => setSelectedFamily(f)}
-        onCreate={handleCreateFamily}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        filterHasProducts={filterHasProducts}
-        onFilterChange={setFilterHasProducts}
-      />
+    <div className="h-full flex flex-col lg:flex-row bg-slate-100">
       
-      {/* Center Column - Family Detail */}
-      <FamilyDetail
-        family={{ ...selectedFamily, products: assignedProducts }}
-        onSave={handleSaveFamily}
-        onDelete={handleDeleteFamily}
-        saving={saving}
-        hasChanges={hasChanges}
-        pendingAdd={pendingAdd}
-        pendingRemove={pendingRemove}
-      />
-      
-      {/* Right Column - Product Binding */}
-      <ProductBindingPanel
-        familyId={selectedFamily?.id}
-        assignedProducts={assignedProducts}
-        allProducts={allProducts}
-        onAssign={handleAddProductLocal}
-        onRemove={handleRemoveProductLocal}
-        onMoveToFamily={handleMoveToFamily}
-        pendingAdd={pendingAdd}
-        pendingRemove={pendingRemove}
-      />
+      {/* Mobile Navigation Tabs */}
+      <div className="lg:hidden flex items-center bg-white border-b border-slate-200 px-2 py-2 gap-1">
+        <button
+          onClick={() => setMobilePanel('list')}
+          className={cls(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
+            mobilePanel === 'list'
+              ? "bg-amber-100 text-amber-700"
+              : "text-slate-600 hover:bg-slate-100"
+          )}
+        >
+          <Layers className="w-4 h-4" />
+          Сітки
+        </button>
+        <button
+          onClick={() => setMobilePanel('detail')}
+          disabled={!selectedFamily}
+          className={cls(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
+            mobilePanel === 'detail'
+              ? "bg-amber-100 text-amber-700"
+              : "text-slate-600 hover:bg-slate-100",
+            !selectedFamily && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          <Grid3X3 className="w-4 h-4" />
+          Деталі
+          {hasChanges && <span className="w-2 h-2 bg-emerald-500 rounded-full" />}
+        </button>
+        <button
+          onClick={() => setMobilePanel('add')}
+          disabled={!selectedFamily}
+          className={cls(
+            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
+            mobilePanel === 'add'
+              ? "bg-amber-100 text-amber-700"
+              : "text-slate-600 hover:bg-slate-100",
+            !selectedFamily && "opacity-50 cursor-not-allowed"
+          )}
+        >
+          <Plus className="w-4 h-4" />
+          Товари
+          {pendingAdd.length > 0 && (
+            <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-emerald-500 text-white text-xs rounded-full">
+              {pendingAdd.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Mobile: Selected family indicator */}
+      {selectedFamily && mobilePanel !== 'list' && (
+        <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200">
+          <button
+            onClick={() => setMobilePanel('list')}
+            className="p-1 hover:bg-amber-100 rounded"
+          >
+            <ChevronLeft className="w-5 h-5 text-amber-600" />
+          </button>
+          <span className="font-medium text-amber-800 truncate">{selectedFamily.name}</span>
+          <span className="text-xs text-amber-600 ml-auto">{assignedProducts.length} SKU</span>
+        </div>
+      )}
+
+      {/* Desktop: 3 columns | Mobile: Show active panel */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* Left Column - Families List */}
+        <div className={cls(
+          "h-full",
+          // Desktop: always show
+          "hidden lg:flex",
+          // Mobile: show only when panel is 'list'
+          mobilePanel === 'list' && "!flex w-full"
+        )}>
+          <FamiliesList
+            families={families}
+            selectedId={selectedFamily?.id}
+            onSelect={handleSelectFamily}
+            onCreate={handleCreateFamily}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            filterHasProducts={filterHasProducts}
+            onFilterChange={setFilterHasProducts}
+            isMobile={mobilePanel === 'list'}
+          />
+        </div>
+        
+        {/* Center Column - Family Detail */}
+        <div className={cls(
+          "h-full flex-1",
+          // Desktop: always show
+          "hidden lg:flex",
+          // Mobile: show only when panel is 'detail'
+          mobilePanel === 'detail' && "!flex w-full"
+        )}>
+          <FamilyDetail
+            family={{ ...selectedFamily, products: assignedProducts }}
+            onSave={handleSaveFamily}
+            onDelete={handleDeleteFamily}
+            saving={saving}
+            hasChanges={hasChanges}
+            pendingAdd={pendingAdd}
+            pendingRemove={pendingRemove}
+            isMobile={mobilePanel === 'detail'}
+          />
+        </div>
+        
+        {/* Right Column - Product Binding */}
+        <div className={cls(
+          "h-full",
+          // Desktop: always show
+          "hidden lg:flex",
+          // Mobile: show only when panel is 'add'
+          mobilePanel === 'add' && "!flex w-full"
+        )}>
+          <ProductBindingPanel
+            familyId={selectedFamily?.id}
+            assignedProducts={assignedProducts}
+            allProducts={allProducts}
+            onAssign={handleAddProductLocal}
+            onRemove={handleRemoveProductLocal}
+            onMoveToFamily={handleMoveToFamily}
+            pendingAdd={pendingAdd}
+            pendingRemove={pendingRemove}
+            isMobile={mobilePanel === 'add'}
+          />
+        </div>
+        
+      </div>
     </div>
   )
 }

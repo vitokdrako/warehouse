@@ -563,15 +563,15 @@ export default function ManagerDashboard() {
                   onClick={() => navigate(`/issue/${card.id}`)}
                 />
               ))}
-              {preparationCards.length > 4 && !showAllPreparation && (
+              {filterBySearch(preparationCards).length > 4 && !showAllPreparation && (
                 <button 
                   onClick={() => setShowAllPreparation(true)}
                   className="text-center py-3 text-sm text-blue-600 hover:text-blue-800 font-medium hover:bg-blue-50 rounded-lg transition-colors cursor-pointer w-full"
                 >
-                  +{preparationCards.length - 4} більше карток - Показати всі
+                  +{filterBySearch(preparationCards).length - 4} більше карток - Показати всі
                 </button>
               )}
-              {preparationCards.length > 4 && showAllPreparation && (
+              {filterBySearch(preparationCards).length > 4 && showAllPreparation && (
                 <button 
                   onClick={() => setShowAllPreparation(false)}
                   className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer w-full"
@@ -582,7 +582,7 @@ export default function ManagerDashboard() {
             </>
           ) : (
             <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
-              Немає карток на комплектації
+              {searchQuery ? 'Нічого не знайдено' : 'Немає карток на комплектації'}
             </div>
           )}
         </Column>
@@ -591,9 +591,9 @@ export default function ManagerDashboard() {
         <Column title="✅ Готові до видачі" subtitle="Скомплектовано → готово до передачі клієнту" tone="ok">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
-          ) : readyCards.length > 0 ? (
+          ) : filterBySearch(readyCards).length > 0 ? (
             <>
-              {(showAllReady ? readyCards : readyCards.slice(0, 4)).map(card => (
+              {(showAllReady ? filterBySearch(readyCards) : filterBySearch(readyCards).slice(0, 4)).map(card => (
                 <OrderCard 
                   key={card.id}
                   id={`#${card.order_id}`}
@@ -608,15 +608,15 @@ export default function ManagerDashboard() {
                   onClick={() => navigate(`/issue/${card.id}`)}
                 />
               ))}
-              {readyCards.length > 4 && !showAllReady && (
+              {filterBySearch(readyCards).length > 4 && !showAllReady && (
                 <button 
                   onClick={() => setShowAllReady(true)}
                   className="text-center py-3 text-sm text-blue-600 hover:text-blue-800 font-medium hover:bg-blue-50 rounded-lg transition-colors cursor-pointer w-full"
                 >
-                  +{readyCards.length - 4} більше карток - Показати всі
+                  +{filterBySearch(readyCards).length - 4} більше карток - Показати всі
                 </button>
               )}
-              {readyCards.length > 4 && showAllReady && (
+              {filterBySearch(readyCards).length > 4 && showAllReady && (
                 <button 
                   onClick={() => setShowAllReady(false)}
                   className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer w-full"

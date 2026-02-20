@@ -2,11 +2,11 @@
 /**
  * FamiliesManager - 3-колоночний інтерфейс керування розмірними сітками
  * 
- * Layout:
- * [Ліва колонка - Список Families] | [Центр - Family Detail + Матриця] | [Права - Прив'язка товарів]
+ * Layout Desktop: [Ліва - Список] | [Центр - Деталі] | [Права - Прив'язка]
+ * Layout Mobile: Tabs з переключенням між панелями
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, Plus, Trash2, Save, Grid3X3, List, X, AlertTriangle, Check, Move, ChevronRight, Package, Palette, Ruler } from 'lucide-react'
+import { Search, Plus, Trash2, Save, Grid3X3, List, X, AlertTriangle, Check, Move, ChevronRight, ChevronLeft, Package, Palette, Ruler, Layers, Settings } from 'lucide-react'
 import { getImageUrl, handleImageError } from '../../utils/imageHelper'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''

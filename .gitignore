@@ -1056,3 +1056,4 @@ clean_project/backend_full_20260216.zip
 # Environment files
 *.env
 *.env.*
+frontend/node_modules/.cache/default-development/11.pack_

@@ -136,6 +136,7 @@ const DamageItemCard = ({ item, isSelected, onClick, onPhotoClick }) => {
     const map = {
       wash: { icon: <Droplets className="w-4 h-4" />, label: "Мийка", color: "text-blue-600" },
       restoration: { icon: <Wrench className="w-4 h-4" />, label: "Реставрація", color: "text-orange-600" },
+      washing: { icon: <Droplets className="w-4 h-4" />, label: "Прання", color: "text-cyan-600" },
       laundry: { icon: <Sparkles className="w-4 h-4" />, label: "Хімчистка", color: "text-purple-600" },
     };
     return map[type] || { icon: null, label: type, color: "text-slate-600" };
@@ -143,6 +144,9 @@ const DamageItemCard = ({ item, isSelected, onClick, onPhotoClick }) => {
   
   const processing = getProcessingInfo();
   const isCompleted = item.processing_status === 'completed';
+  
+  // Показуємо опис забруднення та рівень ризику якщо є
+  const hasDamageInfo = item.damage_description || item.risk_level;
   
   return (
     <div 
@@ -170,6 +174,28 @@ const DamageItemCard = ({ item, isSelected, onClick, onPhotoClick }) => {
               {item.qty > 1 && <div className="text-xs text-slate-500">x{item.qty}</div>}
             </div>
           </div>
+          
+          {/* Опис забруднення та рівень ризику */}
+          {hasDamageInfo && (
+            <div className="mt-1.5 text-xs">
+              {item.damage_description && (
+                <div className="text-slate-600 truncate" title={item.damage_description}>
+                  💬 {item.damage_description}
+                </div>
+              )}
+              {item.risk_level && (
+                <span className={cls(
+                  "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5",
+                  item.risk_level === 'high' ? "bg-red-100 text-red-700" :
+                  item.risk_level === 'medium' ? "bg-amber-100 text-amber-700" :
+                  "bg-green-100 text-green-700"
+                )}>
+                  ⚠️ Ризик: {item.risk_level === 'high' ? 'Високий' : item.risk_level === 'medium' ? 'Середній' : 'Низький'}
+                </span>
+              )}
+            </div>
+          )}
+          
           <div className="flex items-center gap-2 mt-2">
             <span className={cls("flex items-center gap-1 text-xs font-medium", processing.color)}>
               {processing.icon}

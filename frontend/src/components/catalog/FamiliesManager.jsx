@@ -81,23 +81,44 @@ function FamiliesList({
   onSearchChange,
   filterHasProducts,
   onFilterChange,
+  categoryFilter,
+  onCategoryChange,
+  categories = [],
   isMobile = false
 }) {
   const filteredFamilies = useMemo(() => {
     return families.filter(f => {
-      // Пошук
+      const familyProducts = f.products || []
+      
+      // Пошук по назві набору, артикулу або назві товару
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
-        if (!f.name?.toLowerCase().includes(q) && !f.description?.toLowerCase().includes(q)) {
-          return false
-        }
+        const matchesFamily = f.name?.toLowerCase().includes(q) || f.description?.toLowerCase().includes(q)
+        const matchesProduct = familyProducts.some(p => 
+          p.sku?.toLowerCase().includes(q) || 
+          p.name?.toLowerCase().includes(q)
+        )
+        if (!matchesFamily && !matchesProduct) return false
       }
+      
+      // Фільтр по категорії
+      if (categoryFilter) {
+        const hasCategory = familyProducts.some(p => 
+          p.category === categoryFilter || 
+          p.category_name === categoryFilter
+        )
+        if (!hasCategory) return false
+      }
+      
       // Фільтр по наявності товарів
-      if (filterHasProducts === 'has' && (!f.products || f.products.length === 0)) return false
-      if (filterHasProducts === 'empty' && f.products && f.products.length > 0) return false
+      if (filterHasProducts === 'has' && familyProducts.length === 0) return false
+      if (filterHasProducts === 'empty' && familyProducts.length > 0) return false
+      
       return true
     })
-  }, [families, searchQuery, filterHasProducts])
+  }, [families, searchQuery, filterHasProducts, categoryFilter])
+
+  const hasActiveFilters = searchQuery || categoryFilter || filterHasProducts !== 'all'
 
   return (
     <div className={cls(
@@ -123,14 +144,30 @@ function FamiliesList({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Пошук..."
+            placeholder="Назва, артикул..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
           />
         </div>
         
-        {/* Filter */}
+        {/* Category Filter */}
+        {categories.length > 0 && (
+          <div className="mb-3">
+            <select
+              value={categoryFilter || ''}
+              onChange={(e) => onCategoryChange(e.target.value || null)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
+            >
+              <option value="">Всі категорії</option>
+              {categories.map(cat => (
+                <option key={cat.name} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        
+        {/* Quick Filters */}
         <div className="flex gap-1 flex-wrap">
           {[
             { value: 'all', label: 'Всі' },
@@ -151,6 +188,13 @@ function FamiliesList({
             </button>
           ))}
         </div>
+        
+        {/* Results count */}
+        {hasActiveFilters && (
+          <div className="mt-2 text-xs text-slate-500">
+            Знайдено: {filteredFamilies.length} з {families.length}
+          </div>
+        )}
       </div>
       
       {/* List */}

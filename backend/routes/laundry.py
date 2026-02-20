@@ -285,11 +285,13 @@ async def add_queue_items_to_batch(
 async def get_laundry_batches(
     status: Optional[str] = None,
     laundry_company: Optional[str] = None,
+    type: Optional[str] = None,
     db: Session = Depends(get_rh_db)
 ):
     """
     Отримати список партій
     Status: sent, partial_return, returned, completed
+    Type: washing, laundry (optional filter by batch_type)
     """
     sql = "SELECT * FROM laundry_batches WHERE 1=1"
     params = {}
@@ -300,6 +302,9 @@ async def get_laundry_batches(
     if laundry_company:
         sql += " AND laundry_company = :company"
         params['company'] = laundry_company
+    if type and type in ('washing', 'laundry'):
+        sql += " AND COALESCE(batch_type, 'laundry') = :batch_type"
+        params['batch_type'] = type
     
     sql += " ORDER BY sent_date DESC"
     

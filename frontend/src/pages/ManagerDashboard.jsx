@@ -546,9 +546,9 @@ export default function ManagerDashboard() {
         <Column title="📦 На комплектації" subtitle="Збір товарів + видача сьогодні" tone="ok">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
-          ) : preparationCards.length > 0 ? (
+          ) : filterBySearch(preparationCards).length > 0 ? (
             <>
-              {(showAllPreparation ? preparationCards : preparationCards.slice(0, 4)).map(card => (
+              {(showAllPreparation ? filterBySearch(preparationCards) : filterBySearch(preparationCards).slice(0, 4)).map(card => (
                 <OrderCard 
                   key={card.id}
                   id={`#${card.order_id}`}

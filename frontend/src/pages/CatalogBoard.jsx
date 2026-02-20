@@ -2045,7 +2045,9 @@ export default function CatalogBoard() {
             </main>
           </div>
         ) : activeTab === 'families' ? (
-          <FamiliesTab products={allProducts} />
+          <div className="h-[calc(100vh-130px)]">
+            <FamiliesManager />
+          </div>
         ) : (
           <SetsTab products={allProducts} />
         )}

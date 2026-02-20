@@ -599,13 +599,14 @@ function ProductBindingPanel({
   const categories = useMemo(() => {
     const cats = new Set()
     allProducts.forEach(p => {
-      if (p.category_name) cats.add(p.category_name)
+      if (p.category) cats.add(p.category)
     })
     return Array.from(cats).sort()
   }, [allProducts])
 
   const handleAddProduct = (product) => {
-    onAssign([product.product_id])
+    // Pass the whole product object for local add
+    onAssign(product)
   }
 
   const handleRemoveSelected = () => {

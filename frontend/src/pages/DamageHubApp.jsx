@@ -1194,11 +1194,15 @@ export default function DamageHubApp() {
             {/* ПРАЛЬНЯ Section - Прання і Хімчистка */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between bg-gradient-to-r from-cyan-50 to-purple-50 border-b border-slate-200 p-3">
-                <span className="font-semibold text-slate-800 flex items-center gap-2">
+                <button 
+                  onClick={() => setFullScreenModal({ isOpen: true, section: 'laundry' })}
+                  className="font-semibold text-slate-800 flex items-center gap-2 hover:text-slate-900 transition"
+                >
                   <Droplets className="w-4 h-4 text-cyan-600" />
                   <Sparkles className="w-4 h-4 text-purple-600" />
                   Пральня
-                </span>
+                  <span className="text-xs text-slate-500">↗</span>
+                </button>
                 <button onClick={() => toggleSection('laundry')}>
                   {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-600" />}
                 </button>

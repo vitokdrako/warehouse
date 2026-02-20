@@ -2052,16 +2052,110 @@ export default function DamageHubApp() {
                           ))}
                         </div>
                       )}
-                                }`}>
-                                  {batch.status === 'completed' ? 'Готово' : batch.status === 'sent' ? 'Відправлено' : batch.status}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Add Modal */}
+      {quickAddModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className={`px-5 py-4 border-b flex items-center justify-between ${
+              quickAddModal.queueType === 'washing' ? 'bg-cyan-50' : 'bg-purple-50'
+            }`}>
+              <div className="flex items-center gap-3">
+                {quickAddModal.queueType === 'washing' ? (
+                  <Droplets className="w-6 h-6 text-cyan-600" />
+                ) : (
+                  <Sparkles className="w-6 h-6 text-purple-600" />
+                )}
+                <div>
+                  <h2 className={`text-lg font-bold ${
+                    quickAddModal.queueType === 'washing' ? 'text-cyan-800' : 'text-purple-800'
+                  }`}>
+                    Додати в {quickAddModal.queueType === 'washing' ? 'прання' : 'хімчистку'}
+                  </h2>
+                  <p className="text-sm text-slate-500">Пошук товару в каталозі</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setQuickAddModal({ isOpen: false, queueType: null, searchQuery: '', searchResults: [], loading: false })}
+                className="p-2 hover:bg-white/50 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            
+            {/* Search input */}
+            <div className="p-4 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Введіть назву або SKU..."
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-400"
+                  value={quickAddModal.searchQuery}
+                  onChange={(e) => {
+                    const query = e.target.value;
+                    setQuickAddModal(prev => ({ ...prev, searchQuery: query }));
+                    handleQuickSearch(query);
+                  }}
+                  autoFocus
+                />
+              </div>
+            </div>
+            
+            {/* Search results */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {quickAddModal.loading ? (
+                <div className="text-center py-8 text-slate-400">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
+                  Пошук...
+                </div>
+              ) : quickAddModal.searchResults.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  {quickAddModal.searchQuery.length < 2 ? 
+                    "Введіть мінімум 2 символи для пошуку" : 
+                    "Товари не знайдено"
+                  }
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {quickAddModal.searchResults.map(product => (
+                    <div
+                      key={product.product_id || product.id}
+                      className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+                      onClick={() => handleQuickAddToQueue(product, quickAddModal.queueType)}
+                    >
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url.startsWith('http') ? product.image_url : `${BACKEND_URL}${product.image_url}`}
+                          alt={product.name || product.product_name}
+                          className="w-12 h-12 object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-slate-200 rounded-lg flex items-center justify-center">
+                          <Package className="w-6 h-6 text-slate-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-slate-800 truncate">{product.name || product.product_name}</div>
+                        <div className="text-sm text-slate-500">{product.sku} • {product.category}</div>
+                      </div>
+                      <button className={`px-3 py-1.5 rounded-lg font-medium text-sm ${
+                        quickAddModal.queueType === 'washing' 
+                          ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
+                          : 'bg-purple-500 text-white hover:bg-purple-600'
+                      }`}>
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

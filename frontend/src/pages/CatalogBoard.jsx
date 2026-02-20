@@ -2073,8 +2073,8 @@ export default function CatalogBoard() {
                     </div>
                   )}
                   
-                  {/* Кнопки режиму вибору */}
-                  <div className="ml-auto flex items-center gap-2">
+                  {/* Кнопки режиму вибору - hide on small mobile, show on larger */}
+                  <div className="hidden sm:flex ml-auto items-center gap-2 flex-shrink-0">
                     {dateFilterActive && (
                       <Badge variant="info">Фільтр по датах</Badge>
                     )}
@@ -2082,25 +2082,25 @@ export default function CatalogBoard() {
                     {selectionMode ? (
                       <button
                         onClick={clearSelection}
-                        className="px-4 py-2 rounded-lg font-medium text-sm bg-rose-100 text-rose-700 hover:bg-rose-200 flex items-center gap-2"
+                        className="px-3 py-1.5 rounded-lg font-medium text-xs lg:text-sm bg-rose-100 text-rose-700 hover:bg-rose-200 flex items-center gap-1"
                       >
-                        ✕ Скасувати вибір
+                        ✕ Скасувати
                       </button>
                     ) : (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => startSelectionMode('set')}
-                          className="px-4 py-2 rounded-lg font-medium text-sm bg-corp-primary/10 text-corp-primary hover:bg-corp-primary/20 flex items-center gap-2"
+                          className="px-3 py-1.5 rounded-lg font-medium text-xs lg:text-sm bg-corp-primary/10 text-corp-primary hover:bg-corp-primary/20 flex items-center gap-1"
                           title="Створити сет для оренди (комплект товарів)"
                         >
-                          🎁 Зібрати сет
+                          🎁 <span className="hidden lg:inline">Зібрати</span> сет
                         </button>
                         <button
                           onClick={() => startSelectionMode('family')}
-                          className="px-4 py-2 rounded-lg font-medium text-sm bg-amber-100 text-amber-700 hover:bg-amber-200 flex items-center gap-2"
+                          className="px-3 py-1.5 rounded-lg font-medium text-xs lg:text-sm bg-amber-100 text-amber-700 hover:bg-amber-200 flex items-center gap-1"
                           title="Об'єднати схожі товари (розмірна сітка)"
                         >
-                          📏 Зібрати набір
+                          📏 <span className="hidden lg:inline">Зібрати</span> набір
                         </button>
                       </div>
                     )}
@@ -2110,25 +2110,25 @@ export default function CatalogBoard() {
                 {/* Підказка про режим вибору */}
                 {selectionMode && (
                   <div className="mt-3 pt-3 border-t border-corp-border">
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-xs lg:text-sm">
                       <span>👆</span>
                       {selectionTarget === 'set' ? (
-                        <span className="text-corp-primary">Вибирайте товари для <strong>сету</strong> (комплект для оренди разом)</span>
+                        <span className="text-corp-primary">Вибирайте товари для <strong>сету</strong></span>
                       ) : (
-                        <span className="text-amber-700">Вибирайте товари для <strong>набору</strong> (розмірна сітка / варіації)</span>
+                        <span className="text-amber-700">Вибирайте товари для <strong>набору</strong></span>
                       )}
                     </div>
                   </div>
                 )}
               </div>
               
-              {/* Product grid */}
+              {/* Product grid - more columns on mobile */}
               {loading ? (
-                <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
+                <div className="bg-white rounded-xl border border-corp-border p-8 lg:p-12 text-center">
                   <div className="text-corp-text-muted">Завантаження...</div>
                 </div>
               ) : items.length === 0 ? (
-                <div className="bg-white rounded-xl border border-corp-border p-12 text-center">
+                <div className="bg-white rounded-xl border border-corp-border p-8 lg:p-12 text-center">
                   <div className="text-4xl mb-4">📦</div>
                   <div className="text-corp-text-muted mb-4">Товарів не знайдено</div>
                   <button onClick={resetAll} className="text-corp-primary hover:underline text-sm">
@@ -2136,7 +2136,7 @@ export default function CatalogBoard() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 lg:gap-3">
                   {items.map(item => (
                     <ProductCard
                       key={item.product_id}

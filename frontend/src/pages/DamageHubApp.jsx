@@ -583,6 +583,74 @@ export default function DamageHubApp() {
     }
   };
 
+  // Receive items from batch (partial return)
+  const handleReceiveItems = async (batchId, batchType) => {
+    const items = batchItemsCache[batchId] || [];
+    const itemsToReturn = [];
+    
+    for (const item of items) {
+      const key = `${batchId}_${item.id}`;
+      const qty = returnQuantities[key];
+      const remaining = (item.quantity || 1) - (item.returned_quantity || 0);
+      
+      if (qty && qty > 0 && qty <= remaining) {
+        itemsToReturn.push({
+          item_id: item.id,
+          returned_quantity: qty,
+          condition_after: 'good',
+          notes: ''
+        });
+      }
+    }
+    
+    if (itemsToReturn.length === 0) {
+      alert('Введіть кількість для повернення хоча б одного товару');
+      return;
+    }
+    
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}/receive-items`, {
+        method: 'POST',
+        body: JSON.stringify({
+          items: itemsToReturn,
+          received_by_id: 1, // TODO: get from auth context
+          received_by_name: 'Менеджер'
+        })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}`);
+      }
+      
+      const result = await res.json();
+      
+      // Clear return quantities for this batch
+      setReturnQuantities(prev => {
+        const newState = { ...prev };
+        for (const item of items) {
+          delete newState[`${batchId}_${item.id}`];
+        }
+        return newState;
+      });
+      
+      // Reload batch items
+      const updatedItems = await loadBatchItems(batchId, batchType);
+      setBatchItemsCache(prev => ({ ...prev, [batchId]: updatedItems }));
+      
+      // Refresh batches list
+      if (batchType === 'washing') {
+        await loadWashingBatches();
+      } else {
+        await loadLaundryBatches();
+      }
+      
+      alert(`✅ ${result.message}`);
+    } catch (e) {
+      alert(`❌ Помилка: ${e.message}`);
+    }
+  };
+
   // Track mount status
   const isMountedRef = React.useRef(true);
   

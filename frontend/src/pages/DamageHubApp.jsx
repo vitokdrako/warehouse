@@ -344,6 +344,19 @@ export default function DamageHubApp() {
     section: null // 'wash', 'restore', 'washing', 'laundry'
   });
   
+  // Expanded batches in modal
+  const [expandedBatches, setExpandedBatches] = useState({});
+  const [batchItemsCache, setBatchItemsCache] = useState({});
+  
+  // Quick add to queue modal
+  const [quickAddModal, setQuickAddModal] = useState({
+    isOpen: false,
+    queueType: null, // 'washing' | 'laundry'
+    searchQuery: '',
+    searchResults: [],
+    loading: false
+  });
+  
   // ============= DATA LOADING =============
   const loadOrderCases = useCallback(async () => {
     try {

@@ -1146,67 +1146,68 @@ export default function FamiliesManager() {
   return (
     <div className="h-full flex flex-col lg:flex-row bg-slate-100">
       
-      {/* Mobile Navigation Tabs */}
-      <div className="lg:hidden flex items-center bg-white border-b border-slate-200 px-2 py-2 gap-1">
+      {/* Mobile Navigation Tabs - fixed at top */}
+      <div className="lg:hidden flex items-center bg-white border-b border-slate-200 px-1.5 py-1.5 gap-1 shadow-sm">
         <button
           onClick={() => setMobilePanel('list')}
           className={cls(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
+            "flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors",
             mobilePanel === 'list'
               ? "bg-amber-100 text-amber-700"
               : "text-slate-600 hover:bg-slate-100"
           )}
         >
-          <Layers className="w-4 h-4" />
-          Сітки
+          <Layers className="w-3.5 h-3.5" />
+          <span>Сітки</span>
+          <span className="text-[10px] opacity-60">({families.length})</span>
         </button>
         <button
           onClick={() => setMobilePanel('detail')}
           disabled={!selectedFamily}
           className={cls(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
+            "flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors",
             mobilePanel === 'detail'
               ? "bg-amber-100 text-amber-700"
               : "text-slate-600 hover:bg-slate-100",
-            !selectedFamily && "opacity-50 cursor-not-allowed"
+            !selectedFamily && "opacity-40 cursor-not-allowed"
           )}
         >
-          <Grid3X3 className="w-4 h-4" />
-          Деталі
-          {hasChanges && <span className="w-2 h-2 bg-emerald-500 rounded-full" />}
+          <Grid3X3 className="w-3.5 h-3.5" />
+          <span>Деталі</span>
+          {hasChanges && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />}
         </button>
         <button
           onClick={() => setMobilePanel('add')}
           disabled={!selectedFamily}
           className={cls(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-colors",
+            "flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors",
             mobilePanel === 'add'
               ? "bg-amber-100 text-amber-700"
               : "text-slate-600 hover:bg-slate-100",
-            !selectedFamily && "opacity-50 cursor-not-allowed"
+            !selectedFamily && "opacity-40 cursor-not-allowed"
           )}
         >
-          <Plus className="w-4 h-4" />
-          Товари
+          <Plus className="w-3.5 h-3.5" />
+          <span>Товари</span>
           {pendingAdd.length > 0 && (
-            <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-emerald-500 text-white text-xs rounded-full">
+            <span className="min-w-[16px] h-[16px] flex items-center justify-center bg-emerald-500 text-white text-[10px] rounded-full">
               {pendingAdd.length}
             </span>
           )}
         </button>
       </div>
 
-      {/* Mobile: Selected family indicator */}
+      {/* Mobile: Selected family indicator - compact */}
       {selectedFamily && mobilePanel !== 'list' && (
-        <div className="lg:hidden flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200">
+        <div className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-amber-50 border-b border-amber-200">
           <button
             onClick={() => setMobilePanel('list')}
-            className="p-1 hover:bg-amber-100 rounded"
+            className="p-0.5 hover:bg-amber-100 rounded"
           >
-            <ChevronLeft className="w-5 h-5 text-amber-600" />
+            <ChevronLeft className="w-4 h-4 text-amber-600" />
           </button>
-          <span className="font-medium text-amber-800 truncate">{selectedFamily.name}</span>
-          <span className="text-xs text-amber-600 ml-auto">{assignedProducts.length} SKU</span>
+          <span className="font-medium text-amber-800 truncate text-sm flex-1">{selectedFamily.name}</span>
+          <span className="text-xs text-amber-600">{assignedProducts.length} SKU</span>
         </div>
       )}
 

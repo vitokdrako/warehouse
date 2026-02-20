@@ -504,19 +504,27 @@ export default function DamageHubApp() {
   }, [selectedBatchId, loadBatchItems]);
 
   // ============= HANDLERS =============
-  const handleSendTo = async (itemId, processingType) => {
+  const handleSendTo = async (itemId, processingType, damageInfo = {}) => {
     try {
       const endpoint = { 
         wash: "send-to-wash", 
         restoration: "send-to-restoration", 
-        laundry: "send-to-laundry", 
+        washing: "send-to-washing", // Прання
+        laundry: "send-to-laundry", // Хімчистка
         return_to_stock: "return-to-stock" 
       }[processingType];
       if (!endpoint) return;
       
+      // Передаємо опис забруднення та рівень ризику
+      const body = { 
+        notes: "Відправлено з кабінету шкоди",
+        damage_description: damageInfo.damage_description || null,
+        risk_level: damageInfo.risk_level || null
+      };
+      
       const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/${endpoint}`, {
         method: "POST",
-        body: JSON.stringify({ notes: "Відправлено з кабінету шкоди" })
+        body: JSON.stringify(body)
       });
       
       if (!res.ok) {
@@ -528,6 +536,7 @@ export default function DamageHubApp() {
       const messages = {
         wash: "✅ Товар відправлено на мийку",
         restoration: "✅ Товар відправлено на реставрацію",
+        washing: "✅ Товар додано в чергу прання",
         laundry: "✅ Товар додано в чергу хімчистки",
         return_to_stock: "✅ Товар повернуто на склад і доступний для оренди"
       };
@@ -537,6 +546,7 @@ export default function DamageHubApp() {
       await loadOrderCases();
       if (processingType === "wash") await loadWashItems();
       if (processingType === "restoration") await loadRestoreItems();
+      if (processingType === "washing") { await loadWashingQueue(); await loadWashingBatches(); }
       if (processingType === "laundry") { await loadLaundryQueue(); await loadLaundryBatches(); }
     } catch (e) {
       alert(`❌ Помилка: ${e.message || "Помилка відправки на обробку"}`);

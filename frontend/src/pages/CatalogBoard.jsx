@@ -1431,12 +1431,24 @@ function Sidebar({
       
       {/* Reset button */}
       <button
-        onClick={onResetAll}
+        onClick={() => {
+          onResetAll()
+          onMobileClose?.()
+        }}
         className="w-full py-2.5 text-sm text-corp-text-muted hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-corp-border transition-colors"
       >
         Скинути все
       </button>
+      
+      {/* Mobile Apply button */}
+      <button
+        onClick={onMobileClose}
+        className="lg:hidden w-full py-3 bg-corp-primary text-white font-medium rounded-lg hover:bg-corp-primary/90"
+      >
+        Застосувати
+      </button>
     </aside>
+    </>
   )
 }
 

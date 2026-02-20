@@ -958,7 +958,7 @@ function OrderCardWithArchive({ id, name, phone, rent, deposit, badge, onClick, 
   );
 }
 
-function NavCard({title, description, onClick}:{title:string, description:string, onClick:()=>void}){
+function NavCard({ title, description, onClick }) {
   return (
     <article 
       className="corp-card cursor-pointer hover:border-corp-primary group"

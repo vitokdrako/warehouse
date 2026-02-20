@@ -2222,44 +2222,44 @@ export default function DamageHubApp() {
         </div>
       )}
 
-      {/* Quick Add Modal */}
+      {/* Quick Add Modal - Mobile Responsive */}
       {quickAddModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
-            <div className={`px-5 py-4 border-b flex items-center justify-between ${
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] sm:max-h-[80vh] flex flex-col">
+            <div className={`px-4 sm:px-5 py-3 sm:py-4 border-b flex items-center justify-between ${
               quickAddModal.queueType === 'washing' ? 'bg-cyan-50' : 'bg-purple-50'
             }`}>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 {quickAddModal.queueType === 'washing' ? (
-                  <Droplets className="w-6 h-6 text-cyan-600" />
+                  <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 flex-shrink-0" />
                 ) : (
-                  <Sparkles className="w-6 h-6 text-purple-600" />
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 flex-shrink-0" />
                 )}
-                <div>
-                  <h2 className={`text-lg font-bold ${
+                <div className="min-w-0">
+                  <h2 className={`text-base sm:text-lg font-bold truncate ${
                     quickAddModal.queueType === 'washing' ? 'text-cyan-800' : 'text-purple-800'
                   }`}>
                     Додати в {quickAddModal.queueType === 'washing' ? 'прання' : 'хімчистку'}
                   </h2>
-                  <p className="text-sm text-slate-500">Пошук товару в каталозі</p>
+                  <p className="text-xs sm:text-sm text-slate-500">Пошук товару</p>
                 </div>
               </div>
               <button
                 onClick={() => setQuickAddModal({ isOpen: false, queueType: null, searchQuery: '', searchResults: [], loading: false })}
-                className="p-2 hover:bg-white/50 rounded-lg transition"
+                className="p-2 hover:bg-white/50 rounded-lg transition flex-shrink-0"
               >
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
             
             {/* Search input */}
-            <div className="p-4 border-b">
+            <div className="p-3 sm:p-4 border-b">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Введіть назву або SKU..."
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:border-slate-400"
+                  className="w-full pl-9 sm:pl-10 pr-4 py-2.5 text-base border border-slate-300 rounded-xl focus:outline-none focus:border-slate-400"
                   value={quickAddModal.searchQuery}
                   onChange={(e) => {
                     const query = e.target.value;
@@ -2272,43 +2272,43 @@ export default function DamageHubApp() {
             </div>
             
             {/* Search results */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
               {quickAddModal.loading ? (
-                <div className="text-center py-8 text-slate-400">
-                  <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
+                <div className="text-center py-6 sm:py-8 text-slate-400">
+                  <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 animate-spin mx-auto mb-2" />
                   Пошук...
                 </div>
               ) : quickAddModal.searchResults.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
+                <div className="text-center py-6 sm:py-8 text-slate-400 text-sm">
                   {quickAddModal.searchQuery.length < 2 ? 
-                    "Введіть мінімум 2 символи для пошуку" : 
+                    "Введіть мінімум 2 символи" : 
                     "Товари не знайдено"
                   }
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1.5 sm:space-y-2">
                   {quickAddModal.searchResults.map(product => (
                     <div
                       key={product.product_id || product.id}
-                      className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+                      className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-slate-50 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition cursor-pointer"
                       onClick={() => handleQuickAddToQueue(product, quickAddModal.queueType)}
                     >
                       {product.image_url ? (
                         <img
                           src={product.image_url.startsWith('http') ? product.image_url : `${BACKEND_URL}${product.image_url}`}
                           alt={product.name || product.product_name}
-                          className="w-12 h-12 object-cover rounded-lg"
+                          className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-slate-200 rounded-lg flex items-center justify-center">
-                          <Package className="w-6 h-6 text-slate-400" />
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Package className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-800 truncate">{product.name || product.product_name}</div>
-                        <div className="text-sm text-slate-500">{product.sku} • {product.category}</div>
+                        <div className="font-medium text-slate-800 truncate text-sm">{product.name || product.product_name}</div>
+                        <div className="text-xs text-slate-500 truncate">{product.sku} • {product.category}</div>
                       </div>
-                      <button className={`px-3 py-1.5 rounded-lg font-medium text-sm ${
+                      <button className={`p-2 sm:px-3 sm:py-1.5 rounded-lg font-medium text-sm flex-shrink-0 ${
                         quickAddModal.queueType === 'washing' 
                           ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
                           : 'bg-purple-500 text-white hover:bg-purple-600'

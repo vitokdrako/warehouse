@@ -329,9 +329,10 @@ export default function DamageHubApp() {
   // Photo modal
   const [photoModal, setPhotoModal] = useState({ isOpen: false, url: null, name: null });
   
-  // Laundry batch creation modal
+  // Laundry/Washing batch creation modal
   const [batchModal, setBatchModal] = useState({
     isOpen: false,
+    batchType: 'laundry', // 'washing' | 'laundry'
     selectedItems: [],
     companyName: '',
     complexity: 'normal' // 'light', 'normal', 'heavy'

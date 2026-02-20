@@ -949,6 +949,21 @@ export default function FamiliesManager() {
     
     setSaving(true)
     try {
+      // 0. Update name/description if changed
+      if (data.nameChanged || data.descriptionChanged) {
+        const updateResponse = await fetch(`${BACKEND_URL}/api/catalog/families/${selectedFamily.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            name: data.name, 
+            description: data.description 
+          })
+        })
+        if (!updateResponse.ok) {
+          console.warn('Failed to update family name/description')
+        }
+      }
+      
       // 1. Add pending products
       if (pendingAdd.length > 0) {
         const response = await fetch(`${BACKEND_URL}/api/catalog/families/${selectedFamily.id}/assign`, {

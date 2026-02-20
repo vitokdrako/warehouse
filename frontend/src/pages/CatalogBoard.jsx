@@ -1839,6 +1839,9 @@ export default function CatalogBoard() {
   const [dateFilterActive, setDateFilterActive] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   
+  // Mobile sidebar state
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  
   // === МУЛЬТИВИБІР ДЛЯ СТВОРЕННЯ НАБОРІВ ===
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectionTarget, setSelectionTarget] = useState('set') // 'set' | 'family'

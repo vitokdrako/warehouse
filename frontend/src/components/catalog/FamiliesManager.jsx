@@ -428,7 +428,7 @@ function MatrixView({ data, highlightedSku, onHighlight }) {
                                 highlightedSku === item.sku && 'ring-2 ring-amber-400 rounded-lg'
                               )}
                             >
-                              <div className="w-14 h-14 rounded-lg border border-slate-200 overflow-hidden bg-white hover:border-amber-400 transition-colors">
+                              <div className="w-14 h-14 rounded-lg border border-slate-200 overflow-hidden bg-white hover:border-amber-400 transition-colors relative">
                                 {item.cover ? (
                                   <img 
                                     src={getImageUrl(item.cover)} 

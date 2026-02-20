@@ -500,50 +500,25 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters - тільки пошук */}
       <section className="mx-auto max-w-7xl px-6 py-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Filter label="Менеджер">
-            <select className="corp-select">
-              <option>Всі</option>
-            </select>
-          </Filter>
-          <Filter label="Статус замовлення">
-            <select 
-              className="corp-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option>Всі</option>
-              <option>Нове</option>
-              <option>Видача</option>
-              <option>В оренді</option>
-            </select>
-          </Filter>
-          <Filter label="Фінанси">
-            <select className="corp-select">
-              <option>Всі</option>
-              <option>Очікує оплати</option>
-              <option>Закрито</option>
-            </select>
-          </Filter>
-          <Filter label="Пошук">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 max-w-md">
+            <label className="block text-xs font-medium text-slate-500 mb-1">Пошук</label>
             <input 
-              placeholder="Імʼя / телефон / №" 
-              className="corp-input"
+              placeholder="Номер ордеру / Ім'я / Телефон" 
+              className="corp-input w-full"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-          </Filter>
+          </div>
         </div>
       </section>
 
-      {/* KPIs */}
+      {/* KPIs - тільки Замовлення */}
       <section className="mx-auto max-w-7xl px-6">
-        <div className="grid grid-cols-3 md:grid-cols-3 gap-3">
+        <div className="max-w-md">
           <Kpi title="Замовлення" value={kpis.today.toString()} note={`${newOrders.length} нові / ${preparationCards.length} комплектації / ${readyCards.length} видач / ${returnOrders.length} повернення`}/>
-          <Kpi title="Виручка" value={`₴ ${kpis.revenue.toFixed(0)}`} note="з фін. кабінету"/>
-          <Kpi title="Застави в холді" value={kpis.deposits} note="кількість активних"/>
         </div>
       </section>
 

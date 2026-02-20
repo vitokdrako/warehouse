@@ -341,6 +341,19 @@ export default function ManagerDashboard() {
   const newOrders = orders; // Для сумісності з KPI
   
   // 2. В обробці (processing) - на комплектації
+  // Фільтрація карток по пошуку
+  const filterBySearch = (cards) => {
+    if (!searchQuery.trim()) return cards;
+    const q = searchQuery.toLowerCase().trim();
+    return cards.filter(card => {
+      const name = (card.customer_name || '').toLowerCase();
+      const phone = (card.customer_phone || '').toLowerCase();
+      const orderNum = String(card.order_id || card.id || '').toLowerCase();
+      const orderNumber = (card.order_number || '').toLowerCase();
+      return name.includes(q) || phone.includes(q) || orderNum.includes(q) || orderNumber.includes(q);
+    });
+  };
+
   const processingOrders = decorOrders.filter(o => o.status === 'processing');
   
   // 3. Готові до видачі - ВСІ замовлення що готові до видачі (різні варіанти статусів)

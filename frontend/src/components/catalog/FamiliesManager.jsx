@@ -916,35 +916,32 @@ export default function FamiliesManager() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterHasProducts, setFilterHasProducts] = useState('all')
 
-  // Load data
+  // Load data - families first, products lazy
   const loadData = useCallback(async () => {
     console.log('[FamiliesManager] loadData started')
     setLoading(true)
     try {
-      const [familiesRes, productsRes] = await Promise.all([
-        fetch(`${BACKEND_URL}/api/catalog/families`),
-        fetch(`${BACKEND_URL}/api/catalog?limit=1000`) // Reduced from 5000 for performance
-      ])
-      
-      console.log('[FamiliesManager] API responses:', { familiesRes: familiesRes.ok, productsRes: productsRes.ok })
-      
+      // Load families first (fast)
+      const familiesRes = await fetch(`${BACKEND_URL}/api/catalog/families`)
       if (familiesRes.ok) {
         const data = await familiesRes.json()
         console.log('[FamiliesManager] Families loaded:', data?.length || 0)
         setFamilies(data || [])
       }
       
+      // Families loaded - show UI
+      setLoading(false)
+      
+      // Then load products in background (slow)
+      const productsRes = await fetch(`${BACKEND_URL}/api/catalog?limit=1000`)
       if (productsRes.ok) {
         const data = await productsRes.json()
-        // API returns array directly, not {items: [...]}
         const items = Array.isArray(data) ? data : (data.items || [])
         console.log('[FamiliesManager] Products loaded:', items.length)
         setAllProducts(items)
       }
     } catch (error) {
       console.error('[FamiliesManager] Error loading data:', error)
-    } finally {
-      console.log('[FamiliesManager] loadData finished')
       setLoading(false)
     }
   }, [])

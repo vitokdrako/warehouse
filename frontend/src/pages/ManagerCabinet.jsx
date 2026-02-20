@@ -23,12 +23,14 @@ export default function ManagerCabinet() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [managers, setManagers] = useState([]);
+  const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
   const navigate = useNavigate();
   
   // Фільтри
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [managerFilter, setManagerFilter] = useState('all');
+  const [financeFilter, setFinanceFilter] = useState('all');
   
   // ✅ Режим об'єднання замовлень
   const [mergeMode, setMergeMode] = useState(false);
@@ -62,6 +64,20 @@ export default function ManagerCabinet() {
         const managersData = await managersRes.json();
         const staffList = Array.isArray(managersData) ? managersData : [];
         setManagers(staffList.filter(m => ['admin', 'manager', 'office_manager'].includes(m.role)));
+      }
+      
+      // Завантажити фінансові дані
+      try {
+        const financeRes = await authFetch(`${BACKEND_URL}/api/finance/cabinet`);
+        if (financeRes.ok) {
+          const fData = await financeRes.json();
+          setFinanceData({
+            revenue: fData.total_rental || fData.revenue || 0,
+            deposits: fData.active_deposits_count || fData.deposits || 0
+          });
+        }
+      } catch (e) {
+        console.log('Finance data not available');
       }
     } catch (error) {
       console.error('Error fetching data:', error);

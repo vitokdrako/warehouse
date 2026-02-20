@@ -513,25 +513,30 @@ export default function ManagerDashboard() {
         </div>
       </div>
 
-      {/* Filters - тільки пошук */}
+      {/* Пошук + Лічильник замовлень в один рядок */}
       <section className="mx-auto max-w-7xl px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 max-w-md">
-            <label className="block text-xs font-medium text-slate-500 mb-1">Пошук</label>
+        <div className="flex items-stretch gap-4">
+          {/* Пошук */}
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Пошук</label>
             <input 
               placeholder="Номер ордеру / Ім'я / Телефон" 
-              className="corp-input w-full"
+              className="w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-corp-primary focus:border-transparent"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-        </div>
-      </section>
-
-      {/* KPIs - тільки Замовлення */}
-      <section className="mx-auto max-w-7xl px-6">
-        <div className="max-w-md">
-          <Kpi title="Замовлення" value={kpis.today.toString()} note={`${newOrders.length} нові / ${preparationCards.length} комплектації / ${readyCards.length} видач / ${returnOrders.length} повернення`}/>
+          
+          {/* Лічильник замовлень */}
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">Замовлення</label>
+            <div className="h-12 px-4 rounded-xl border border-slate-200 bg-white flex items-center justify-between">
+              <span className="text-2xl font-bold text-slate-800">{kpis.today}</span>
+              <span className="text-xs text-slate-500">
+                {filterBySearch(newOrders).length} нові / {filterBySearch(preparationCards).length} компл. / {filterBySearch(readyCards).length} видач / {filterBySearch(returnOrders).length} поверн.
+              </span>
+            </div>
+          </div>
         </div>
       </section>
 

@@ -1961,26 +1961,63 @@ export default function DamageHubApp() {
                                 </div>
                               </div>
                               
-                              {/* Batch items - expanded */}
+                              {/* Batch items - expanded with return inputs */}
                               {expandedBatches[batch.id] && (
                                 <div className="border-t border-slate-200 bg-white p-2 space-y-1.5">
                                   {(batchItemsCache[batch.id] || batch.items || []).length === 0 ? (
                                     <div className="text-center py-2 text-slate-400 text-xs">Завантаження...</div>
                                   ) : (
-                                    (batchItemsCache[batch.id] || batch.items || []).map(item => (
-                                      <div key={item.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg text-xs">
-                                        <div className="flex-1 min-w-0">
-                                          <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
-                                          <div className="text-slate-500">{item.sku}</div>
-                                        </div>
-                                        <div className="text-right">
-                                          <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity} шт</div>
-                                          <div className={`text-[10px] ${(item.returned_quantity || 0) >= (item.quantity || 1) ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                            {(item.returned_quantity || 0) >= (item.quantity || 1) ? '✓ Повернуто' : 'Очікує'}
+                                    <>
+                                      {(batchItemsCache[batch.id] || batch.items || []).map(item => {
+                                        const remaining = (item.quantity || 1) - (item.returned_quantity || 0);
+                                        const inputKey = `${batch.id}_${item.id}`;
+                                        const isFullyReturned = remaining <= 0;
+                                        
+                                        return (
+                                          <div key={item.id} className={`flex items-center gap-2 p-2 rounded-lg text-xs ${isFullyReturned ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
+                                              <div className="text-slate-500">{item.sku}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <div className="text-right mr-2">
+                                                <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity} шт</div>
+                                              </div>
+                                              {!isFullyReturned && batch.status !== 'completed' && (
+                                                <input
+                                                  type="number"
+                                                  min="0"
+                                                  max={remaining}
+                                                  placeholder="0"
+                                                  value={returnQuantities[inputKey] || ''}
+                                                  onChange={(e) => {
+                                                    const val = Math.min(parseInt(e.target.value) || 0, remaining);
+                                                    setReturnQuantities(prev => ({ ...prev, [inputKey]: val > 0 ? val : '' }));
+                                                  }}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  className="w-14 px-2 py-1 text-center border border-slate-300 rounded text-xs focus:outline-none focus:border-cyan-400"
+                                                />
+                                              )}
+                                              {isFullyReturned && (
+                                                <span className="text-emerald-600 font-medium">✓</span>
+                                              )}
+                                            </div>
                                           </div>
-                                        </div>
-                                      </div>
-                                    ))
+                                        );
+                                      })}
+                                      
+                                      {/* Save button */}
+                                      {batch.status !== 'completed' && (batchItemsCache[batch.id] || []).some(item => 
+                                        (item.quantity || 1) - (item.returned_quantity || 0) > 0
+                                      ) && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleReceiveItems(batch.id, 'laundry'); }}
+                                          className="w-full mt-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium text-xs flex items-center justify-center gap-1"
+                                        >
+                                          <Check className="w-3.5 h-3.5" /> Зберегти зміни
+                                        </button>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               )}
@@ -2097,26 +2134,63 @@ export default function DamageHubApp() {
                                 </div>
                               </div>
                               
-                              {/* Batch items - expanded */}
+                              {/* Batch items - expanded with return inputs */}
                               {expandedBatches[batch.id] && (
                                 <div className="border-t border-slate-200 bg-white p-2 space-y-1.5">
                                   {(batchItemsCache[batch.id] || batch.items || []).length === 0 ? (
                                     <div className="text-center py-2 text-slate-400 text-xs">Завантаження...</div>
                                   ) : (
-                                    (batchItemsCache[batch.id] || batch.items || []).map(item => (
-                                      <div key={item.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg text-xs">
-                                        <div className="flex-1 min-w-0">
-                                          <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
-                                          <div className="text-slate-500">{item.sku}</div>
-                                        </div>
-                                        <div className="text-right">
-                                          <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity} шт</div>
-                                          <div className={`text-[10px] ${(item.returned_quantity || 0) >= (item.quantity || 1) ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                            {(item.returned_quantity || 0) >= (item.quantity || 1) ? '✓ Повернуто' : 'Очікує'}
+                                    <>
+                                      {(batchItemsCache[batch.id] || batch.items || []).map(item => {
+                                        const remaining = (item.quantity || 1) - (item.returned_quantity || 0);
+                                        const inputKey = `${batch.id}_${item.id}`;
+                                        const isFullyReturned = remaining <= 0;
+                                        
+                                        return (
+                                          <div key={item.id} className={`flex items-center gap-2 p-2 rounded-lg text-xs ${isFullyReturned ? 'bg-emerald-50' : 'bg-slate-50'}`}>
+                                            <div className="flex-1 min-w-0">
+                                              <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
+                                              <div className="text-slate-500">{item.sku}</div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                              <div className="text-right mr-2">
+                                                <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity} шт</div>
+                                              </div>
+                                              {!isFullyReturned && batch.status !== 'completed' && (
+                                                <input
+                                                  type="number"
+                                                  min="0"
+                                                  max={remaining}
+                                                  placeholder="0"
+                                                  value={returnQuantities[inputKey] || ''}
+                                                  onChange={(e) => {
+                                                    const val = Math.min(parseInt(e.target.value) || 0, remaining);
+                                                    setReturnQuantities(prev => ({ ...prev, [inputKey]: val > 0 ? val : '' }));
+                                                  }}
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  className="w-14 px-2 py-1 text-center border border-slate-300 rounded text-xs focus:outline-none focus:border-cyan-400"
+                                                />
+                                              )}
+                                              {isFullyReturned && (
+                                                <span className="text-emerald-600 font-medium">✓</span>
+                                              )}
+                                            </div>
                                           </div>
-                                        </div>
-                                      </div>
-                                    ))
+                                        );
+                                      })}
+                                      
+                                      {/* Save button */}
+                                      {batch.status !== 'completed' && (batchItemsCache[batch.id] || []).some(item => 
+                                        (item.quantity || 1) - (item.returned_quantity || 0) > 0
+                                      ) && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleReceiveItems(batch.id, 'laundry'); }}
+                                          className="w-full mt-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium text-xs flex items-center justify-center gap-1"
+                                        >
+                                          <Check className="w-3.5 h-3.5" /> Зберегти зміни
+                                        </button>
+                                      )}
+                                    </>
                                   )}
                                 </div>
                               )}

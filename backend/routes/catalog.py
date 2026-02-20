@@ -800,10 +800,9 @@ async def get_all_families(
                     p.rental_price,
                     p.price,
                     p.quantity,
-                    c.name as category_name,
+                    p.category_name,
                     p.family_id
                 FROM products p
-                LEFT JOIN oc_category_description c ON p.category_id = c.category_id AND c.language_id = 3
                 WHERE p.family_id = :family_id
                 ORDER BY p.sku
             """), {"family_id": family_id})

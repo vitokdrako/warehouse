@@ -402,7 +402,7 @@ export default function DamageHubApp() {
 
   const loadLaundryQueue = useCallback(async () => {
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/queue`);
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/queue?type=laundry`);
       const data = await res.json();
       setLaundryQueue(data.items || []);
     } catch (e) {
@@ -410,9 +410,19 @@ export default function DamageHubApp() {
     }
   }, []);
 
+  const loadWashingQueue = useCallback(async () => {
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/queue?type=washing`);
+      const data = await res.json();
+      setWashingQueue(data.items || []);
+    } catch (e) {
+      setWashingQueue([]);
+    }
+  }, []);
+
   const loadLaundryBatches = useCallback(async () => {
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches`);
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches?type=laundry`);
       const data = await res.json();
       setLaundryBatches(data.batches || data || []);
     } catch (e) {
@@ -420,7 +430,17 @@ export default function DamageHubApp() {
     }
   }, []);
 
-  const loadBatchItems = useCallback(async (batchId) => {
+  const loadWashingBatches = useCallback(async () => {
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches?type=washing`);
+      const data = await res.json();
+      setWashingBatches(data.batches || data || []);
+    } catch (e) {
+      setWashingBatches([]);
+    }
+  }, []);
+
+  const loadBatchItems = useCallback(async (batchId, batchType = 'laundry') => {
     if (!batchId) return;
     try {
       const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}`);

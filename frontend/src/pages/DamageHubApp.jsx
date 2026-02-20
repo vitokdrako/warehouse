@@ -789,10 +789,12 @@ export default function DamageHubApp() {
     archivedCases: archivedCases.length,
     washCount: washItems.filter(i => i.processing_status !== 'completed').length,
     restoreCount: restoreItems.filter(i => i.processing_status !== 'completed').length,
-    laundryQueue: laundryQueue.length,
-    activeBatches: laundryBatches.filter(b => b.status !== 'completed').length,
+    washingQueue: washingQueue.length, // Прання
+    laundryQueue: laundryQueue.length, // Хімчистка
+    washingBatches: washingBatches.filter(b => b.status !== 'completed').length,
+    laundryBatches: laundryBatches.filter(b => b.status !== 'completed').length,
     pendingAssignment: orderCases.reduce((sum, c) => sum + (c.pending_assignment || 0), 0)
-  }), [orderCases, archivedCases, washItems, restoreItems, laundryQueue, laundryBatches]);
+  }), [orderCases, archivedCases, washItems, restoreItems, washingQueue, laundryQueue, washingBatches, laundryBatches]);
 
   // ============= RENDER =============
   return (
@@ -801,7 +803,7 @@ export default function DamageHubApp() {
       
       <div className="max-w-[1600px] mx-auto p-4">
         {/* KPI Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-4">
           <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
             <div className="text-xs text-slate-500">Активні кейси</div>
             <div className="text-2xl font-bold text-slate-800">{stats.activeCases}</div>
@@ -818,13 +820,17 @@ export default function DamageHubApp() {
             <div className="text-xs text-orange-600 flex items-center gap-1"><Wrench className="w-3 h-3" /> Реставрація</div>
             <div className="text-2xl font-bold text-orange-700">{stats.restoreCount}</div>
           </div>
-          <div className="bg-purple-50 rounded-xl border border-purple-200 p-3">
-            <div className="text-xs text-purple-600 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Черга хімч.</div>
-            <div className="text-2xl font-bold text-purple-700">{stats.laundryQueue}</div>
+          <div className="bg-cyan-50 rounded-xl border border-cyan-200 p-3">
+            <div className="text-xs text-cyan-600 flex items-center gap-1"><Droplets className="w-3 h-3" /> Прання</div>
+            <div className="text-2xl font-bold text-cyan-700">{stats.washingQueue}</div>
           </div>
           <div className="bg-purple-50 rounded-xl border border-purple-200 p-3">
-            <div className="text-xs text-purple-600">Активні партії</div>
-            <div className="text-2xl font-bold text-purple-700">{stats.activeBatches}</div>
+            <div className="text-xs text-purple-600 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Хімчистка</div>
+            <div className="text-2xl font-bold text-purple-700">{stats.laundryQueue}</div>
+          </div>
+          <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-3">
+            <div className="text-xs text-indigo-600">Активні партії</div>
+            <div className="text-2xl font-bold text-indigo-700">{stats.washingBatches + stats.laundryBatches}</div>
           </div>
           <div className="bg-slate-100 rounded-xl border border-slate-200 p-3">
             <div className="text-xs text-slate-500 flex items-center gap-1"><Archive className="w-3 h-3" /> Архів</div>

@@ -922,7 +922,7 @@ export default function FamiliesManager() {
     try {
       const [familiesRes, productsRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/catalog/families`),
-        fetch(`${BACKEND_URL}/api/catalog?limit=5000`)
+        fetch(`${BACKEND_URL}/api/catalog?limit=1000`) // Reduced from 5000 for performance
       ])
       
       if (familiesRes.ok) {

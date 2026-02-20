@@ -459,10 +459,126 @@ export default function DamageHubApp() {
       const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}`);
       const data = await res.json();
       setBatchItems(data.items || []);
+      return data.items || [];
     } catch (e) {
       setBatchItems([]);
+      return [];
     }
   }, []);
+
+  // Toggle batch expansion and load items
+  const toggleBatchExpand = useCallback(async (batchId, batchType) => {
+    setExpandedBatches(prev => {
+      const isCurrentlyExpanded = prev[batchId];
+      if (isCurrentlyExpanded) {
+        // Collapse
+        return { ...prev, [batchId]: false };
+      } else {
+        // Expand and load items if not cached
+        if (!batchItemsCache[batchId]) {
+          loadBatchItems(batchId, batchType).then(items => {
+            setBatchItemsCache(prev => ({ ...prev, [batchId]: items }));
+          });
+        }
+        return { ...prev, [batchId]: true };
+      }
+    });
+  }, [loadBatchItems, batchItemsCache]);
+
+  // Delete completed batch
+  const handleDeleteBatch = async (batchId, batchType) => {
+    if (!confirm("Видалити цю партію? Ця дія незворотна.")) return;
+    
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}`, {
+        method: "DELETE"
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}`);
+      }
+      
+      // Refresh batches
+      if (batchType === 'washing') {
+        await loadWashingBatches();
+      } else {
+        await loadLaundryBatches();
+      }
+      
+      // Clear from cache
+      setBatchItemsCache(prev => {
+        const newCache = { ...prev };
+        delete newCache[batchId];
+        return newCache;
+      });
+      setExpandedBatches(prev => {
+        const newExpanded = { ...prev };
+        delete newExpanded[batchId];
+        return newExpanded;
+      });
+      
+      alert("✅ Партію видалено");
+    } catch (e) {
+      alert(`❌ Помилка: ${e.message}`);
+    }
+  };
+
+  // Quick search for products
+  const handleQuickSearch = async (query) => {
+    if (!query || query.length < 2) {
+      setQuickAddModal(prev => ({ ...prev, searchResults: [], loading: false }));
+      return;
+    }
+    
+    setQuickAddModal(prev => ({ ...prev, loading: true }));
+    
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/catalog?search=${encodeURIComponent(query)}&limit=20`);
+      const data = await res.json();
+      const products = data.products || data.items || [];
+      setQuickAddModal(prev => ({ ...prev, searchResults: products, loading: false }));
+    } catch (e) {
+      console.error("Search error:", e);
+      setQuickAddModal(prev => ({ ...prev, searchResults: [], loading: false }));
+    }
+  };
+
+  // Quick add product to queue
+  const handleQuickAddToQueue = async (product, queueType) => {
+    try {
+      // Create a quick damage record and send to queue
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
+        method: "POST",
+        body: JSON.stringify({
+          product_id: product.product_id,
+          sku: product.sku,
+          product_name: product.name || product.product_name,
+          category: product.category,
+          queue_type: queueType, // 'washing' or 'laundry'
+          notes: `Швидке додавання в ${queueType === 'washing' ? 'прання' : 'хімчистку'}`
+        })
+      });
+      
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}`);
+      }
+      
+      // Refresh queues
+      if (queueType === 'washing') {
+        await loadWashingQueue();
+      } else {
+        await loadLaundryQueue();
+      }
+      
+      // Close modal
+      setQuickAddModal({ isOpen: false, queueType: null, searchQuery: '', searchResults: [], loading: false });
+      alert(`✅ ${product.name || product.product_name} додано в чергу ${queueType === 'washing' ? 'прання' : 'хімчистки'}`);
+    } catch (e) {
+      alert(`❌ Помилка: ${e.message}`);
+    }
+  };
 
   // Track mount status
   const isMountedRef = React.useRef(true);

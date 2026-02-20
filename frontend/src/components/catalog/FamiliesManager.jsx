@@ -80,7 +80,8 @@ function FamiliesList({
   searchQuery,
   onSearchChange,
   filterHasProducts,
-  onFilterChange 
+  onFilterChange,
+  isMobile = false
 }) {
   const filteredFamilies = useMemo(() => {
     return families.filter(f => {
@@ -99,7 +100,10 @@ function FamiliesList({
   }, [families, searchQuery, filterHasProducts])
 
   return (
-    <div className="w-[340px] flex-shrink-0 bg-white border-r border-slate-200 flex flex-col h-full">
+    <div className={cls(
+      "bg-white flex flex-col h-full",
+      isMobile ? "w-full" : "w-[340px] flex-shrink-0 border-r border-slate-200"
+    )}>
       {/* Header */}
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-center justify-between mb-3">
@@ -109,7 +113,8 @@ function FamiliesList({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Створити
+            <span className={isMobile ? "hidden" : ""}>Створити</span>
+            {isMobile && <span>+</span>}
           </button>
         </div>
         
@@ -126,7 +131,7 @@ function FamiliesList({
         </div>
         
         {/* Filter */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           {[
             { value: 'all', label: 'Всі' },
             { value: 'has', label: 'З товарами' },

@@ -1476,7 +1476,7 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
     <div 
       onClick={handleClick}
       className={cls(
-        'bg-white rounded-xl border p-3 hover:shadow-md transition-all cursor-pointer group relative',
+        'bg-white rounded-xl border p-2 lg:p-3 hover:shadow-md transition-all cursor-pointer group relative',
         hasConflict ? 'border-rose-300 bg-rose-50/30' : 
         isSelected ? 'border-corp-primary border-2 bg-corp-primary/5 ring-2 ring-corp-primary/20' : 
         'border-corp-border'

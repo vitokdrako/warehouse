@@ -273,12 +273,15 @@ function FamilyDetail({
 
   if (!family) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-50">
-        <div className="text-center">
+      <div className={cls(
+        "flex items-center justify-center bg-slate-50",
+        isMobile ? "w-full h-full" : "flex-1"
+      )}>
+        <div className="text-center px-4">
           <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-4">
             <Grid3X3 className="w-8 h-8 text-slate-400" />
           </div>
-          <p className="text-slate-500">Виберіть розмірну сітку зліва</p>
+          <p className="text-slate-500">Виберіть розмірну сітку</p>
           <p className="text-sm text-slate-400 mt-1">або створіть нову</p>
         </div>
       </div>
@@ -286,11 +289,17 @@ function FamilyDetail({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
+    <div className={cls(
+      "flex flex-col bg-slate-50 overflow-hidden",
+      isMobile ? "w-full h-full" : "flex-1"
+    )}>
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
+      <div className="bg-white border-b border-slate-200 p-3 lg:p-4">
+        <div className={cls(
+          "gap-3",
+          isMobile ? "space-y-3" : "flex items-start justify-between gap-4"
+        )}>
+          <div className="flex-1 space-y-2">
             <input
               type="text"
               value={name}

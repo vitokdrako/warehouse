@@ -374,7 +374,7 @@ export default function ManagerDashboard() {
 
   return (
     <div className="min-h-screen bg-corp-bg-page font-montserrat">
-      <CorporateHeader cabinetName="Кабінет менеджера" />
+      <CorporateHeader cabinetName="Реквізиторська" />
       
       {/* Quick Actions Bar */}
       <div className="bg-white border-b border-corp-border">

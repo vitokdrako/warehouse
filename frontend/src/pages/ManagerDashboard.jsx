@@ -721,7 +721,7 @@ export default function ManagerDashboard() {
   );
 }
 
-function Filter({label, children}:{label:string, children:any}){
+function Filter({ label, children }) {
   return (
     <label className="flex flex-col gap-2">
       <span className="text-xs text-corp-text-muted uppercase tracking-wide font-medium">{label}</span>
@@ -730,11 +730,11 @@ function Filter({label, children}:{label:string, children:any}){
   );
 }
 
-function Kpi({title, value, note, tone}:{title:string,value:string,note?:string,tone?:'ok'|'warn'|'info'}){
-  const toneMap:any={
-    ok:'text-corp-success',
-    warn:'text-corp-warning',
-    info:'text-corp-primary'
+function Kpi({ title, value, note, tone }) {
+  const toneMap = {
+    ok: 'text-corp-success',
+    warn: 'text-corp-warning',
+    info: 'text-corp-primary'
   };
   return (
     <div className="corp-stat-card">

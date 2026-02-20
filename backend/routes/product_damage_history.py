@@ -1213,6 +1213,56 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
+@router.post("/{damage_id}/send-to-washing")
+async def send_to_washing(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
+    """
+    Додати товар до черги прання.
+    НЕ створює партію - лише позначає товар як 'washing' без batch_id.
+    Партія формується окремо через /api/laundry/queue/add-to-batch
+    """
+    try:
+        # Отримати інформацію про товар
+        damage_info = db.execute(text("""
+            SELECT product_id, sku, product_name, category, order_id, order_number, processing_type
+            FROM product_damage_history
+            WHERE id = :damage_id
+        """), {"damage_id": damage_id}).fetchone()
+        
+        if not damage_info:
+            raise HTTPException(status_code=404, detail="Damage record not found")
+        
+        # Перевірка чи товар вже відправлений на обробку
+        if damage_info[6] and damage_info[6] != 'none':
+            raise HTTPException(status_code=400, detail=f"Товар вже відправлено на {damage_info[6]}")
+        
+        notes = data.get("notes", "")
+        
+        # Оновити damage record - позначити як washing БЕЗ batch_id (черга)
+        db.execute(text("""
+            UPDATE product_damage_history
+            SET processing_type = 'washing',
+                processing_status = 'pending',
+                sent_to_processing_at = NOW(),
+                processing_notes = :notes,
+                laundry_batch_id = NULL,
+                laundry_item_id = NULL
+            WHERE id = :damage_id
+        """), {
+            "damage_id": damage_id,
+            "notes": notes or "Додано до черги прання"
+        })
+        
+        db.commit()
+        return {
+            "success": True,
+            "message": "Товар додано до черги прання"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
 @router.post("/{damage_id}/complete-processing")
 async def complete_processing(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """

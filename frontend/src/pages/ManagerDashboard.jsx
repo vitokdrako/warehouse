@@ -922,7 +922,7 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
   );
 }
 
-function OrderCardWithArchive({id,name,phone,rent,deposit,badge,onClick,order,onArchive}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:string,onClick:()=>void,order?:any,onArchive?:(orderId:number,orderNumber:string)=>void}){
+function OrderCardWithArchive({ id, name, phone, rent, deposit, badge, onClick, order, onArchive }) {
   return (
     <article onClick={onClick} className="relative cursor-pointer rounded-xl border border-slate-200 bg-white p-3 transition hover:border-teal-400 hover:shadow-lg">
       <div className="mb-2 flex items-center justify-between">

@@ -2003,9 +2003,18 @@ export default function CatalogBoard() {
         </div>
       </div>
       
-      <div className="max-w-[1800px] mx-auto px-4 py-4">
+      <div className="max-w-[1800px] mx-auto px-3 lg:px-4 py-3 lg:py-4">
         {activeTab === 'products' ? (
           <div className="flex gap-4">
+            {/* Mobile Filter Button - only on mobile */}
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="lg:hidden fixed bottom-4 right-4 z-30 flex items-center gap-2 px-4 py-3 bg-corp-primary text-white rounded-full shadow-lg hover:bg-corp-primary/90"
+            >
+              <Filter className="w-5 h-5" />
+              <span className="font-medium">Фільтри</span>
+            </button>
+            
             {/* Left Sidebar */}
             <Sidebar
               categories={categories}
@@ -2019,45 +2028,48 @@ export default function CatalogBoard() {
               setDateRange={setDateRange}
               onResetAll={resetAll}
               loading={categoriesLoading}
+              isMobileOpen={mobileSidebarOpen}
+              onMobileClose={() => setMobileSidebarOpen(false)}
             />
             
             {/* Right Content */}
-            <main className="flex-1 space-y-4">
-              {/* Stats bar */}
-              <div className="bg-white rounded-xl border border-corp-border p-4">
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="min-w-[60px]">
-                    <div className="text-xl font-bold text-corp-text-dark">{items.length}</div>
-                    <div className="text-xs text-corp-text-muted">Знайдено</div>
+            <main className="flex-1 space-y-3 lg:space-y-4 w-full lg:w-auto">
+              {/* Stats bar - mobile optimized */}
+              <div className="bg-white rounded-xl border border-corp-border p-3 lg:p-4">
+                {/* Mobile: horizontal scroll for stats */}
+                <div className="flex items-center gap-3 lg:gap-4 overflow-x-auto pb-2 lg:pb-0 -mx-1 px-1">
+                  <div className="min-w-[50px] lg:min-w-[60px] flex-shrink-0">
+                    <div className="text-lg lg:text-xl font-bold text-corp-text-dark">{items.length}</div>
+                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Знайдено</div>
                   </div>
-                  <div className="border-l border-corp-border pl-4 min-w-[70px]">
-                    <div className="text-xl font-bold text-emerald-600">{fmtUA(stats.available)}</div>
-                    <div className="text-xs text-corp-text-muted">Доступно</div>
+                  <div className="border-l border-corp-border pl-3 lg:pl-4 min-w-[55px] lg:min-w-[70px] flex-shrink-0">
+                    <div className="text-lg lg:text-xl font-bold text-emerald-600">{fmtUA(stats.available)}</div>
+                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Доступно</div>
                   </div>
-                  <div className="border-l border-corp-border pl-4 min-w-[60px]">
-                    <div className="text-xl font-bold text-amber-600">{fmtUA(stats.in_rent)}</div>
-                    <div className="text-xs text-corp-text-muted">Видано</div>
+                  <div className="border-l border-corp-border pl-3 lg:pl-4 min-w-[50px] lg:min-w-[60px] flex-shrink-0">
+                    <div className="text-lg lg:text-xl font-bold text-amber-600">{fmtUA(stats.in_rent)}</div>
+                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Видано</div>
                   </div>
-                  <div className="border-l border-corp-border pl-4 min-w-[60px]">
-                    <div className="text-xl font-bold text-sky-600">{fmtUA(stats.reserved)}</div>
-                    <div className="text-xs text-corp-text-muted">Резерв</div>
+                  <div className="border-l border-corp-border pl-3 lg:pl-4 min-w-[45px] lg:min-w-[60px] flex-shrink-0">
+                    <div className="text-lg lg:text-xl font-bold text-sky-600">{fmtUA(stats.reserved)}</div>
+                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Резерв</div>
                   </div>
-                  <div className="border-l border-corp-border pl-4 min-w-[60px]">
-                    <div className="text-xl font-bold text-blue-500">{fmtUA(stats.on_wash)}</div>
-                    <div className="text-xs text-corp-text-muted">Мийка</div>
+                  <div className="hidden sm:block border-l border-corp-border pl-3 lg:pl-4 min-w-[50px] lg:min-w-[60px] flex-shrink-0">
+                    <div className="text-lg lg:text-xl font-bold text-blue-500">{fmtUA(stats.on_wash)}</div>
+                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Мийка</div>
                   </div>
-                  <div className="border-l border-corp-border pl-4 min-w-[70px]">
-                    <div className="text-xl font-bold text-purple-600">{fmtUA(stats.on_restoration)}</div>
-                    <div className="text-xs text-corp-text-muted">Реставрація</div>
+                  <div className="hidden md:block border-l border-corp-border pl-3 lg:pl-4 min-w-[55px] lg:min-w-[70px] flex-shrink-0">
+                    <div className="text-lg lg:text-xl font-bold text-purple-600">{fmtUA(stats.on_restoration)}</div>
+                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Реставрація</div>
                   </div>
-                  <div className="border-l border-corp-border pl-4 min-w-[70px]">
-                    <div className="text-xl font-bold text-indigo-600">{fmtUA(stats.on_laundry)}</div>
-                    <div className="text-xs text-corp-text-muted">Хімчистка</div>
+                  <div className="hidden md:block border-l border-corp-border pl-3 lg:pl-4 min-w-[60px] lg:min-w-[70px] flex-shrink-0">
+                    <div className="text-lg lg:text-xl font-bold text-indigo-600">{fmtUA(stats.on_laundry)}</div>
+                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Хімчистка</div>
                   </div>
                   {conflictCount > 0 && (
-                    <div className="border-l border-corp-border pl-4">
-                      <div className="text-xl font-bold text-rose-600">{conflictCount}</div>
-                      <div className="text-xs text-corp-text-muted">Конфліктів</div>
+                    <div className="border-l border-corp-border pl-3 lg:pl-4 flex-shrink-0">
+                      <div className="text-lg lg:text-xl font-bold text-rose-600">{conflictCount}</div>
+                      <div className="text-[10px] lg:text-xs text-corp-text-muted">Конфліктів</div>
                     </div>
                   )}
                   

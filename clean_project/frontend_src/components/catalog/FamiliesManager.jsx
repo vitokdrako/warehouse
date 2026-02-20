@@ -827,12 +827,14 @@ export default function FamiliesManager() {
       
       if (familiesRes.ok) {
         const data = await familiesRes.json()
-        setFamilies(data)
+        setFamilies(data || [])
       }
       
       if (productsRes.ok) {
         const data = await productsRes.json()
-        setAllProducts(data.items || [])
+        // API returns array directly, not {items: [...]}
+        const items = Array.isArray(data) ? data : (data.items || [])
+        setAllProducts(items)
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -955,8 +957,14 @@ export default function FamiliesManager() {
   }
 
   // Get assigned products for selected family
+  // Products come directly from family.products (from API)
   const assignedProducts = useMemo(() => {
     if (!selectedFamily) return []
+    // First check if family has products array from API
+    if (selectedFamily.products && selectedFamily.products.length > 0) {
+      return selectedFamily.products
+    }
+    // Fallback: filter from allProducts by family_id
     return allProducts.filter(p => p.family_id === selectedFamily.id)
   }, [allProducts, selectedFamily])
 
@@ -965,10 +973,11 @@ export default function FamiliesManager() {
     if (selectedFamily) {
       const updated = families.find(f => f.id === selectedFamily.id)
       if (updated) {
-        setSelectedFamily({ ...updated, products: assignedProducts })
+        // Keep products from the updated family
+        setSelectedFamily({ ...updated })
       }
     }
-  }, [families, assignedProducts])
+  }, [families])
 
   if (loading) {
     return (
@@ -985,9 +994,9 @@ export default function FamiliesManager() {
     <div className="h-full flex bg-slate-100">
       {/* Left Column - Families List */}
       <FamiliesList
-        families={families.map(f => ({ ...f, products: allProducts.filter(p => p.family_id === f.id) }))}
+        families={families}
         selectedId={selectedFamily?.id}
-        onSelect={(f) => setSelectedFamily({ ...f, products: allProducts.filter(p => p.family_id === f.id) })}
+        onSelect={(f) => setSelectedFamily(f)}
         onCreate={handleCreateFamily}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

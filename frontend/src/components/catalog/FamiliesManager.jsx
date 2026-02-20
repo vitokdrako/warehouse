@@ -596,7 +596,8 @@ function ProductBindingPanel({
   onRemove,
   onMoveToFamily,
   pendingAdd = [],
-  pendingRemove = []
+  pendingRemove = [],
+  isMobile = false
 }) {
   const [activeTab, setActiveTab] = useState('add') // 'add' | 'assigned' | 'conflicts'
   const [searchQuery, setSearchQuery] = useState('')

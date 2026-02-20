@@ -470,6 +470,8 @@ export default function DamageHubApp() {
           loadOrderCases(),
           loadWashItems(),
           loadRestoreItems(),
+          loadWashingQueue(),
+          loadWashingBatches(),
           loadLaundryQueue(),
           loadLaundryBatches()
         ]);

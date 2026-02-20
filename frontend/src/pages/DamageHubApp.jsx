@@ -1855,30 +1855,30 @@ export default function DamageHubApp() {
 
               {/* ПРАЛЬНЯ - з двома підрозділами */}
               {fullScreenModal.section === 'laundry' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                   {/* ПРАННЯ */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-cyan-200">
-                      <h3 className="font-bold text-cyan-800 flex items-center gap-2 text-lg">
-                        <Droplets className="w-5 h-5" /> Прання
-                        <span className="px-2 py-0.5 bg-cyan-200 text-cyan-800 rounded-full text-sm ml-2">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-cyan-200">
+                      <h3 className="font-bold text-cyan-800 flex items-center gap-2 text-base sm:text-lg">
+                        <Droplets className="w-4 h-4 sm:w-5 sm:h-5" /> Прання
+                        <span className="px-2 py-0.5 bg-cyan-200 text-cyan-800 rounded-full text-xs sm:text-sm ml-1">
                           {washingQueue.length}
                         </span>
                       </h3>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         <button
                           onClick={() => setQuickAddModal({ isOpen: true, queueType: 'washing', searchQuery: '', searchResults: [], loading: false })}
-                          className="px-2 py-1.5 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition font-medium flex items-center gap-1 text-sm"
+                          className="px-2 py-1.5 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition font-medium flex items-center gap-1 text-xs sm:text-sm"
                           title="Додати напряму"
                         >
-                          <Plus className="w-4 h-4" />
+                          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                         {washingQueue.length > 0 && (
                           <button
                             onClick={() => openBatchModal('washing')}
-                            className="px-3 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium flex items-center gap-1.5 text-sm"
+                            className="px-2 sm:px-3 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium flex items-center gap-1 text-xs sm:text-sm"
                           >
-                            <Package className="w-4 h-4" /> Сформувати партію
+                            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Сформувати</span> Партію
                           </button>
                         )}
                       </div>
@@ -1886,23 +1886,23 @@ export default function DamageHubApp() {
                     
                     {/* Черга прання */}
                     <div>
-                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-2 text-sm">
-                        <Clock className="w-4 h-4 text-amber-500" /> Черга
+                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
+                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" /> Черга
                       </h4>
                       {washingQueue.length === 0 ? (
-                        <div className="text-center py-6 text-slate-400 bg-cyan-50/50 rounded-xl">
+                        <div className="text-center py-4 sm:py-6 text-slate-400 bg-cyan-50/50 rounded-xl text-sm">
                           Черга прання порожня
                         </div>
                       ) : (
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                        <div className="space-y-1.5 sm:space-y-2 max-h-36 sm:max-h-48 overflow-y-auto">
                           {washingQueue.map(item => (
-                            <div key={item.id} className="flex items-center gap-3 p-3 bg-cyan-50 rounded-xl border border-cyan-200">
+                            <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-cyan-50 rounded-xl border border-cyan-200">
                               <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-slate-800 truncate text-sm">{item.product_name}</div>
-                                <div className="text-xs text-slate-500">{item.sku}</div>
+                                <div className="font-medium text-slate-800 truncate text-xs sm:text-sm">{item.product_name}</div>
+                                <div className="text-[10px] sm:text-xs text-slate-500 truncate">{item.sku}</div>
                               </div>
-                              <span className="text-sm font-semibold text-cyan-600">{item.qty || 1} шт</span>
+                              <span className="text-xs sm:text-sm font-semibold text-cyan-600 flex-shrink-0">{item.qty || 1} шт</span>
                             </div>
                           ))}
                         </div>
@@ -1911,59 +1911,59 @@ export default function DamageHubApp() {
                     
                     {/* Партії прання */}
                     <div>
-                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-2 text-sm">
-                        <Package className="w-4 h-4 text-cyan-500" /> Партії ({washingBatches.length})
+                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
+                        <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-500" /> Партії ({washingBatches.length})
                       </h4>
                       {washingBatches.length === 0 ? (
-                        <div className="text-center py-4 text-slate-400 bg-slate-50 rounded-xl text-sm">
+                        <div className="text-center py-3 sm:py-4 text-slate-400 bg-slate-50 rounded-xl text-xs sm:text-sm">
                           Немає партій
                         </div>
                       ) : (
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                        <div className="space-y-1.5 sm:space-y-2 max-h-52 sm:max-h-64 overflow-y-auto">
                           {washingBatches.map(batch => (
                             <div key={batch.id} className="rounded-xl border-2 border-slate-200 overflow-hidden">
                               {/* Batch header - clickable */}
                               <div 
-                                className={`p-3 cursor-pointer transition flex items-center justify-between ${
+                                className={`p-2.5 sm:p-3 cursor-pointer transition flex items-center justify-between active:bg-slate-100 ${
                                   expandedBatches[batch.id] ? 'bg-cyan-50' : 'hover:bg-slate-50'
                                 }`}
                                 onClick={() => toggleBatchExpand(batch.id, 'washing')}
                               >
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
                                   {expandedBatches[batch.id] ? (
-                                    <ChevronDown className="w-4 h-4 text-cyan-500" />
+                                    <ChevronDown className="w-4 h-4 text-cyan-500 flex-shrink-0" />
                                   ) : (
-                                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                                    <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                                   )}
-                                  <div>
-                                    <div className="font-semibold text-slate-800 text-sm">{batch.laundry_company}</div>
-                                    <div className="text-xs text-slate-500">
-                                      {batch.batch_number} • {batch.total_items} шт • Повернуто: {batch.returned_items || 0}
+                                  <div className="min-w-0">
+                                    <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate">{batch.laundry_company}</div>
+                                    <div className="text-[10px] sm:text-xs text-slate-500 truncate">
+                                      {batch.batch_number} • {batch.total_items} шт • <span className="hidden sm:inline">Повернуто:</span> {batch.returned_items || 0}
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
                                     batch.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                                     batch.status === 'sent' ? 'bg-cyan-100 text-cyan-700' :
                                     'bg-slate-100 text-slate-700'
                                   }`}>
-                                    {batch.status === 'completed' ? 'Готово' : batch.status === 'sent' ? 'Відправлено' : batch.status}
+                                    {batch.status === 'completed' ? '✓' : batch.status === 'sent' ? 'Відпр.' : batch.status}
                                   </span>
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/api/laundry/batches/${batch.id}/print`, '_blank'); }}
-                                    className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+                                    onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/api/laundry/batches/${batch.id}/preview`, '_blank'); }}
+                                    className="p-1 sm:p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition"
                                     title="Друкувати"
                                   >
-                                    <Printer className="w-4 h-4" />
+                                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                   </button>
                                   {batch.status === 'completed' && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch.id, 'washing'); }}
-                                      className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition"
+                                      className="p-1 sm:p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition"
                                       title="Видалити партію"
                                     >
-                                      <Trash2 className="w-4 h-4" />
+                                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     </button>
                                   )}
                                 </div>
@@ -1985,11 +1985,11 @@ export default function DamageHubApp() {
                                           <div key={item.id} className={`flex items-center gap-2 p-2 rounded-lg text-xs ${isFullyReturned ? 'bg-emerald-50' : 'bg-slate-50'}`}>
                                             <div className="flex-1 min-w-0">
                                               <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
-                                              <div className="text-slate-500">{item.sku}</div>
+                                              <div className="text-slate-500 truncate">{item.sku}</div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                              <div className="text-right mr-2">
-                                                <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity} шт</div>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                              <div className="text-right">
+                                                <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity}</div>
                                               </div>
                                               {!isFullyReturned && batch.status !== 'completed' && (
                                                 <input
@@ -2003,7 +2003,7 @@ export default function DamageHubApp() {
                                                     setReturnQuantities(prev => ({ ...prev, [inputKey]: val > 0 ? val : '' }));
                                                   }}
                                                   onClick={(e) => e.stopPropagation()}
-                                                  className="w-14 px-2 py-1 text-center border border-slate-300 rounded text-xs focus:outline-none focus:border-cyan-400"
+                                                  className="w-12 sm:w-14 px-1 sm:px-2 py-1 text-center border border-slate-300 rounded text-xs focus:outline-none focus:border-cyan-400"
                                                 />
                                               )}
                                               {isFullyReturned && (
@@ -2022,7 +2022,7 @@ export default function DamageHubApp() {
                                           onClick={(e) => { e.stopPropagation(); handleReceiveItems(batch.id, 'washing'); }}
                                           className="w-full mt-2 px-3 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium text-xs flex items-center justify-center gap-1"
                                         >
-                                          <Check className="w-3.5 h-3.5" /> Зберегти зміни
+                                          <Check className="w-3.5 h-3.5" /> Зберегти
                                         </button>
                                       )}
                                     </>
@@ -2037,28 +2037,28 @@ export default function DamageHubApp() {
                   </div>
 
                   {/* ХІМЧИСТКА */}
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-purple-200">
-                      <h3 className="font-bold text-purple-800 flex items-center gap-2 text-lg">
-                        <Sparkles className="w-5 h-5" /> Хімчистка
-                        <span className="px-2 py-0.5 bg-purple-200 text-purple-800 rounded-full text-sm ml-2">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-purple-200">
+                      <h3 className="font-bold text-purple-800 flex items-center gap-2 text-base sm:text-lg">
+                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" /> Хімчистка
+                        <span className="px-2 py-0.5 bg-purple-200 text-purple-800 rounded-full text-xs sm:text-sm ml-1">
                           {laundryQueue.length}
                         </span>
                       </h3>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
                         <button
                           onClick={() => setQuickAddModal({ isOpen: true, queueType: 'laundry', searchQuery: '', searchResults: [], loading: false })}
-                          className="px-2 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition font-medium flex items-center gap-1 text-sm"
+                          className="px-2 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition font-medium flex items-center gap-1 text-xs sm:text-sm"
                           title="Додати напряму"
                         >
-                          <Plus className="w-4 h-4" />
+                          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                         {laundryQueue.length > 0 && (
                           <button
                             onClick={() => openBatchModal('laundry')}
-                            className="px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium flex items-center gap-1.5 text-sm"
+                            className="px-2 sm:px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium flex items-center gap-1 text-xs sm:text-sm"
                           >
-                            <Package className="w-4 h-4" /> Сформувати партію
+                            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Сформувати</span> Партію
                           </button>
                         )}
                       </div>
@@ -2066,23 +2066,23 @@ export default function DamageHubApp() {
                     
                     {/* Черга хімчистки */}
                     <div>
-                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-2 text-sm">
-                        <Clock className="w-4 h-4 text-amber-500" /> Черга
+                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
+                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" /> Черга
                       </h4>
                       {laundryQueue.length === 0 ? (
-                        <div className="text-center py-6 text-slate-400 bg-purple-50/50 rounded-xl">
+                        <div className="text-center py-4 sm:py-6 text-slate-400 bg-purple-50/50 rounded-xl text-sm">
                           Черга хімчистки порожня
                         </div>
                       ) : (
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                        <div className="space-y-1.5 sm:space-y-2 max-h-36 sm:max-h-48 overflow-y-auto">
                           {laundryQueue.map(item => (
-                            <div key={item.id} className="flex items-center gap-3 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                            <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-purple-50 rounded-xl border border-purple-200">
                               <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-slate-800 truncate text-sm">{item.product_name}</div>
-                                <div className="text-xs text-slate-500">{item.sku}</div>
+                                <div className="font-medium text-slate-800 truncate text-xs sm:text-sm">{item.product_name}</div>
+                                <div className="text-[10px] sm:text-xs text-slate-500 truncate">{item.sku}</div>
                               </div>
-                              <span className="text-sm font-semibold text-purple-600">{item.qty || 1} шт</span>
+                              <span className="text-xs sm:text-sm font-semibold text-purple-600 flex-shrink-0">{item.qty || 1} шт</span>
                             </div>
                           ))}
                         </div>
@@ -2091,59 +2091,59 @@ export default function DamageHubApp() {
                     
                     {/* Партії хімчистки */}
                     <div>
-                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-2 text-sm">
-                        <Package className="w-4 h-4 text-purple-500" /> Партії ({laundryBatches.length})
+                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
+                        <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-500" /> Партії ({laundryBatches.length})
                       </h4>
                       {laundryBatches.length === 0 ? (
-                        <div className="text-center py-4 text-slate-400 bg-slate-50 rounded-xl text-sm">
+                        <div className="text-center py-3 sm:py-4 text-slate-400 bg-slate-50 rounded-xl text-xs sm:text-sm">
                           Немає партій
                         </div>
                       ) : (
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                        <div className="space-y-1.5 sm:space-y-2 max-h-52 sm:max-h-64 overflow-y-auto">
                           {laundryBatches.map(batch => (
                             <div key={batch.id} className="rounded-xl border-2 border-slate-200 overflow-hidden">
                               {/* Batch header - clickable */}
                               <div 
-                                className={`p-3 cursor-pointer transition flex items-center justify-between ${
+                                className={`p-2.5 sm:p-3 cursor-pointer transition flex items-center justify-between active:bg-slate-100 ${
                                   expandedBatches[batch.id] ? 'bg-purple-50' : 'hover:bg-slate-50'
                                 }`}
                                 onClick={() => toggleBatchExpand(batch.id, 'laundry')}
                               >
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
                                   {expandedBatches[batch.id] ? (
-                                    <ChevronDown className="w-4 h-4 text-purple-500" />
+                                    <ChevronDown className="w-4 h-4 text-purple-500 flex-shrink-0" />
                                   ) : (
-                                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                                    <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
                                   )}
-                                  <div>
-                                    <div className="font-semibold text-slate-800 text-sm">{batch.laundry_company}</div>
-                                    <div className="text-xs text-slate-500">
-                                      {batch.batch_number} • {batch.total_items} шт • Повернуто: {batch.returned_items || 0}
+                                  <div className="min-w-0">
+                                    <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate">{batch.laundry_company}</div>
+                                    <div className="text-[10px] sm:text-xs text-slate-500 truncate">
+                                      {batch.batch_number} • {batch.total_items} шт • <span className="hidden sm:inline">Повернуто:</span> {batch.returned_items || 0}
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
                                     batch.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
                                     batch.status === 'sent' ? 'bg-purple-100 text-purple-700' :
                                     'bg-slate-100 text-slate-700'
                                   }`}>
-                                    {batch.status === 'completed' ? 'Готово' : batch.status === 'sent' ? 'Відправлено' : batch.status}
+                                    {batch.status === 'completed' ? '✓' : batch.status === 'sent' ? 'Відпр.' : batch.status}
                                   </span>
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/api/laundry/batches/${batch.id}/print`, '_blank'); }}
-                                    className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+                                    onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/api/laundry/batches/${batch.id}/preview`, '_blank'); }}
+                                    className="p-1 sm:p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition"
                                     title="Друкувати"
                                   >
-                                    <Printer className="w-4 h-4" />
+                                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                   </button>
                                   {batch.status === 'completed' && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch.id, 'laundry'); }}
-                                      className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition"
+                                      className="p-1 sm:p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition"
                                       title="Видалити партію"
                                     >
-                                      <Trash2 className="w-4 h-4" />
+                                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     </button>
                                   )}
                                 </div>
@@ -2165,11 +2165,11 @@ export default function DamageHubApp() {
                                           <div key={item.id} className={`flex items-center gap-2 p-2 rounded-lg text-xs ${isFullyReturned ? 'bg-emerald-50' : 'bg-slate-50'}`}>
                                             <div className="flex-1 min-w-0">
                                               <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
-                                              <div className="text-slate-500">{item.sku}</div>
+                                              <div className="text-slate-500 truncate">{item.sku}</div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                              <div className="text-right mr-2">
-                                                <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity} шт</div>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                              <div className="text-right">
+                                                <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity}</div>
                                               </div>
                                               {!isFullyReturned && batch.status !== 'completed' && (
                                                 <input
@@ -2183,7 +2183,7 @@ export default function DamageHubApp() {
                                                     setReturnQuantities(prev => ({ ...prev, [inputKey]: val > 0 ? val : '' }));
                                                   }}
                                                   onClick={(e) => e.stopPropagation()}
-                                                  className="w-14 px-2 py-1 text-center border border-slate-300 rounded text-xs focus:outline-none focus:border-cyan-400"
+                                                  className="w-12 sm:w-14 px-1 sm:px-2 py-1 text-center border border-slate-300 rounded text-xs focus:outline-none focus:border-purple-400"
                                                 />
                                               )}
                                               {isFullyReturned && (
@@ -2202,7 +2202,7 @@ export default function DamageHubApp() {
                                           onClick={(e) => { e.stopPropagation(); handleReceiveItems(batch.id, 'laundry'); }}
                                           className="w-full mt-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium text-xs flex items-center justify-center gap-1"
                                         >
-                                          <Check className="w-3.5 h-3.5" /> Зберегти зміни
+                                          <Check className="w-3.5 h-3.5" /> Зберегти
                                         </button>
                                       )}
                                     </>

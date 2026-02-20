@@ -1431,18 +1431,18 @@ export default function DamageHubApp() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="bg-purple-50 border-b border-purple-200 px-5 py-4 flex items-center justify-between">
+            <div className={`${batchModal.batchType === 'washing' ? 'bg-cyan-50 border-cyan-200' : 'bg-purple-50 border-purple-200'} border-b px-5 py-4 flex items-center justify-between`}>
               <div>
-                <h2 className="text-lg font-bold text-purple-800 flex items-center gap-2">
-                  <Package className="w-5 h-5" /> Формування партії
+                <h2 className={`text-lg font-bold ${batchModal.batchType === 'washing' ? 'text-cyan-800' : 'text-purple-800'} flex items-center gap-2`}>
+                  <Package className="w-5 h-5" /> Формування партії {batchModal.batchType === 'washing' ? 'прання' : 'хімчистки'}
                 </h2>
-                <p className="text-sm text-purple-600 mt-0.5">Оберіть товари та заповніть дані</p>
+                <p className={`text-sm ${batchModal.batchType === 'washing' ? 'text-cyan-600' : 'text-purple-600'} mt-0.5`}>Оберіть товари та заповніть дані</p>
               </div>
               <button 
-                onClick={() => setBatchModal({ isOpen: false, selectedItems: [], companyName: '', complexity: 'normal' })}
-                className="p-2 hover:bg-purple-100 rounded-lg transition"
+                onClick={() => setBatchModal({ isOpen: false, batchType: 'laundry', selectedItems: [], companyName: '', complexity: 'normal' })}
+                className={`p-2 ${batchModal.batchType === 'washing' ? 'hover:bg-cyan-100' : 'hover:bg-purple-100'} rounded-lg transition`}
               >
-                <X className="w-5 h-5 text-purple-600" />
+                <X className={`w-5 h-5 ${batchModal.batchType === 'washing' ? 'text-cyan-600' : 'text-purple-600'}`} />
               </button>
             </div>
             
@@ -1451,14 +1451,14 @@ export default function DamageHubApp() {
               {/* Company Name */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Назва хімчистки <span className="text-red-500">*</span>
+                  Назва {batchModal.batchType === 'washing' ? 'пральні' : 'хімчистки'} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={batchModal.companyName}
                   onChange={(e) => setBatchModal(prev => ({ ...prev, companyName: e.target.value }))}
-                  placeholder="Наприклад: Прана, Чистюля..."
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder={batchModal.batchType === 'washing' ? "Наприклад: Пральня №1..." : "Наприклад: Прана, Чистюля..."}
+                  className={`w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 ${batchModal.batchType === 'washing' ? 'focus:ring-cyan-500 focus:border-cyan-500' : 'focus:ring-purple-500 focus:border-purple-500'}`}
                 />
               </div>
               

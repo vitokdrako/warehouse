@@ -205,14 +205,24 @@ function FamilyDetail({
   const [description, setDescription] = useState('')
   const [viewMode, setViewMode] = useState('matrix') // 'matrix' | 'list'
   const [highlightedSku, setHighlightedSku] = useState(null)
+  const [originalName, setOriginalName] = useState('')
+  const [originalDescription, setOriginalDescription] = useState('')
 
   // Sync state when family changes
   useEffect(() => {
     if (family) {
       setName(family.name || '')
       setDescription(family.description || '')
+      setOriginalName(family.name || '')
+      setOriginalDescription(family.description || '')
     }
   }, [family?.id])
+
+  // Check if name/description changed
+  const nameChanged = name !== originalName
+  const descriptionChanged = description !== originalDescription
+  const hasTextChanges = nameChanged || descriptionChanged
+  const hasAnyChanges = hasChanges || hasTextChanges
 
   const products = family?.products || []
 

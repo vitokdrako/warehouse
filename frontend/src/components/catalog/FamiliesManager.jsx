@@ -295,86 +295,63 @@ function FamilyDetail({
     )}>
       {/* Header */}
       <div className="bg-white border-b border-slate-200 p-3 lg:p-4">
-        <div className={cls(
-          "gap-3",
-          isMobile ? "space-y-3" : "flex items-start justify-between gap-4"
-        )}>
-          <div className="flex-1 space-y-2">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Назва розмірної сітки"
-              className="text-xl font-semibold text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-amber-400 focus:outline-none w-full pb-1 transition-colors"
-            />
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Опис (опціонально)"
-              className="text-sm text-slate-500 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-amber-400 focus:outline-none w-full pb-1 transition-colors"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {hasAnyChanges && (
-              <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
-                <span className="text-amber-700 font-medium">Незбережені:</span>
-                {hasTextChanges && (
-                  <span className="text-blue-600">назва</span>
-                )}
-                {pendingAdd.length > 0 && (
-                  <span className="text-emerald-600">+{pendingAdd.length}</span>
-                )}
-                {pendingRemove.length > 0 && (
-                  <span className="text-rose-600">-{pendingRemove.length}</span>
-                )}
-              </div>
-            )}
-            <button
-              onClick={() => onSave({ name, description, nameChanged, descriptionChanged })}
-              disabled={saving || !hasAnyChanges || !name.trim()}
-              className={cls(
-                "flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                hasAnyChanges
-                  ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                  : "bg-slate-200 text-slate-500 cursor-not-allowed"
-              )}
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Зберігаю...' : hasAnyChanges ? 'Зберегти' : 'Збережено'}
-            </button>
-            <button
-              onClick={onDelete}
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-              title="Видалити"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+        {/* Name & Description inputs */}
+        <div className="space-y-2 mb-3">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Назва розмірної сітки"
+            className="text-lg lg:text-xl font-semibold text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-amber-400 focus:outline-none w-full pb-1 transition-colors"
+          />
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Опис (опціонально)"
+            className="text-sm text-slate-500 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-amber-400 focus:outline-none w-full pb-1 transition-colors"
+          />
         </div>
         
-        {/* Stats & View Toggle */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-4 text-sm">
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <Package className="w-4 h-4" />
-              <b>{products.length}</b> SKU
-            </span>
-            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
-              Σ {products.reduce((sum, p) => sum + (p.quantity || 0), 0)} шт
-            </span>
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <Palette className="w-4 h-4" />
-              <b>{matrixData.colors.filter(c => c !== 'Other').length || 0}</b> кольорів
-            </span>
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <Ruler className="w-4 h-4" />
-              <b>{matrixData.sizes.filter(s => s !== 'Other').length || 0}</b> розмірів
-            </span>
-          </div>
+        {/* Action buttons - responsive layout */}
+        <div className="flex flex-wrap items-center gap-2">
+          {hasAnyChanges && (
+            <div className="flex items-center gap-1.5 text-xs px-2 py-1 bg-amber-50 border border-amber-200 rounded-full">
+              <span className="text-amber-700 font-medium hidden sm:inline">Незбережені:</span>
+              {hasTextChanges && (
+                <span className="text-blue-600">✎</span>
+              )}
+              {pendingAdd.length > 0 && (
+                <span className="text-emerald-600">+{pendingAdd.length}</span>
+              )}
+              {pendingRemove.length > 0 && (
+                <span className="text-rose-600">-{pendingRemove.length}</span>
+              )}
+            </div>
+          )}
+          <button
+            onClick={() => onSave({ name, description, nameChanged, descriptionChanged })}
+            disabled={saving || !hasAnyChanges || !name.trim()}
+            className={cls(
+              "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+              hasAnyChanges
+                ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                : "bg-slate-200 text-slate-500 cursor-not-allowed"
+            )}
+          >
+            <Save className="w-4 h-4" />
+            <span className="hidden sm:inline">{saving ? 'Зберігаю...' : hasAnyChanges ? 'Зберегти' : 'Збережено'}</span>
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            title="Видалити"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
           
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+          {/* View Toggle - moved inline */}
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg ml-auto">
             <button
               onClick={() => setViewMode('matrix')}
               className={cls(
@@ -396,6 +373,25 @@ function FamilyDetail({
               <List className="w-4 h-4" />
             </button>
           </div>
+        </div>
+        
+        {/* Stats row - scrollable on mobile */}
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 overflow-x-auto pb-1 -mb-1">
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
+            <Package className="w-3.5 h-3.5" />
+            <b>{products.length}</b> SKU
+          </span>
+          <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium whitespace-nowrap">
+            Σ {products.reduce((sum, p) => sum + (p.quantity || 0), 0)} шт
+          </span>
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
+            <Palette className="w-3.5 h-3.5" />
+            <b>{matrixData.colors.filter(c => c !== 'Other').length || 0}</b>
+          </span>
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
+            <Ruler className="w-3.5 h-3.5" />
+            <b>{matrixData.sizes.filter(s => s !== 'Other').length || 0}</b>
+          </span>
         </div>
       </div>
       
@@ -684,22 +680,30 @@ function ProductBindingPanel({
       {/* Tabs */}
       <div className="flex border-b border-slate-200">
         {[
-          { id: 'add', label: isMobile ? 'Додати' : 'Додати', icon: Plus },
-          { id: 'assigned', label: isMobile ? `(${assignedProducts.length})` : `Прив'язані (${assignedProducts.length})`, icon: Check },
-          { id: 'conflicts', label: isMobile ? `(${conflicts.length})` : `Конфлікти (${conflicts.length})`, icon: AlertTriangle, highlight: conflicts.length > 0 },
+          { id: 'add', label: 'Додати', shortLabel: '+', icon: Plus },
+          { id: 'assigned', label: `Прив'язані`, count: assignedProducts.length, icon: Check },
+          { id: 'conflicts', label: `Конфлікти`, count: conflicts.length, icon: AlertTriangle, highlight: conflicts.length > 0 },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cls(
-              'flex-1 flex items-center justify-center gap-1.5 px-2 lg:px-3 py-3 text-sm font-medium transition-colors',
+              'flex-1 flex items-center justify-center gap-1 px-1.5 sm:px-3 py-2.5 text-xs sm:text-sm font-medium transition-colors',
               activeTab === tab.id
                 ? 'text-amber-600 border-b-2 border-amber-500 bg-amber-50/50'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
-            <tab.icon className={cls('w-4 h-4', tab.highlight && activeTab !== tab.id && 'text-rose-500')} />
-            <span className={isMobile && tab.id !== 'add' ? 'hidden sm:inline' : ''}>{tab.label}</span>
+            <tab.icon className={cls('w-3.5 h-3.5 sm:w-4 sm:h-4', tab.highlight && activeTab !== tab.id && 'text-rose-500')} />
+            <span className="hidden sm:inline">{tab.label}</span>
+            {tab.count !== undefined && (
+              <span className={cls(
+                'ml-0.5 text-[10px] sm:text-xs',
+                activeTab === tab.id ? 'text-amber-600' : 'text-slate-400'
+              )}>
+                ({tab.count})
+              </span>
+            )}
           </button>
         ))}
       </div>

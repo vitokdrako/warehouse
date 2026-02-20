@@ -204,11 +204,12 @@ function FamilyDetail({
   saving,
   hasChanges,
   pendingAdd = [],
-  pendingRemove = []
+  pendingRemove = [],
+  isMobile = false
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [viewMode, setViewMode] = useState('matrix') // 'matrix' | 'list'
+  const [viewMode, setViewMode] = useState('list') // 'matrix' | 'list' - default list for mobile
   const [highlightedSku, setHighlightedSku] = useState(null)
   const [originalName, setOriginalName] = useState('')
   const [originalDescription, setOriginalDescription] = useState('')

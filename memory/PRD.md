@@ -7,7 +7,7 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 20, 2026
 
-### Session 11 - DamageHub Refactoring (Пральня)
+### Session 11 - DamageHub Refactoring (Пральня) - CONTINUED
 
 **Що виконано:**
 
@@ -17,30 +17,30 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 - Модалка показує два стовпчики: **Прання** (зліва) та **Хімчистка** (справа)
 - Кожен стовпчик має секції: Черга та Партії
 
-#### 2. ✅ Кнопки "Прання" та "Хімчистка" на картках товарів
-- Додано окрему кнопку **Прання** (cyan колір) - відправляє товар в чергу прання
-- Кнопка **Хімчистка** (purple колір) - відправляє товар в чергу хімчистки  
-- Кнопки передають `damage_description` та `risk_level`
+#### 2. ✅ Розгортання партій
+- Партії тепер клікабельні та розгортаються показуючи список товарів
+- Стрілки ChevronRight/ChevronDown показують стан
+- Кеш batchItemsCache для швидкого перегляду
 
-#### 3. ✅ Backend endpoints
-- **POST `/api/product-damage-history/{id}/send-to-washing`** - новий endpoint для прання
-- **POST `/api/product-damage-history/{id}/send-to-laundry`** - існуючий endpoint для хімчистки
-- **GET `/api/laundry/queue?type=washing`** - черга прання
-- **GET `/api/laundry/queue?type=laundry`** - черга хімчистки
-- **GET `/api/laundry/batches?type=washing`** - партії прання
-- **GET `/api/laundry/batches?type=laundry`** - партії хімчистки
+#### 3. ✅ Кнопка видалення партій
+- Кнопка Trash2 (червона) з'являється тільки для партій зі статусом "Готово"
+- Підтвердження перед видаленням
+- Очищення кешу після видалення
 
-#### 4. ✅ Database changes
-- Додано `'washing'` до ENUM колонки `processing_type` в таблиці `product_damage_history`
-- Додано колонку `batch_type` до таблиці `laundry_batches`
+#### 4. ✅ Quick Add Modal - швидке додавання товарів
+- Кнопка **+** біля заголовків "Прання" та "Хімчистка"
+- Модалка пошуку товарів в каталозі
+- Backend endpoint: `POST /api/product-damage-history/quick-add-to-queue`
+- ⚠️ УВАГА: Залежить від повільного API каталогу (P1 blocker)
 
-#### 5. ✅ KPI Stats
-- Окремі стовпчики для "Прання" (cyan) та "Хімчистка" (purple) на верхній панелі
-- Показує кількість товарів в кожній черзі
+#### 5. ✅ Backend updates
+- **POST `/api/product-damage-history/quick-add-to-queue`** - новий endpoint
+- Підтримка `batch_type` в партіях
+- Розширений ENUM `processing_type` з `'washing'`
 
 ---
 
-### Session 10 - UI/UX Improvements
+### Known Issues
 
 **Що виконано:**
 

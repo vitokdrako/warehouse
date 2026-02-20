@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { getImageUrl, handleImageError } from '../utils/imageHelper'
 import CorporateHeader from '../components/CorporateHeader'
 import FamiliesManager from '../components/catalog/FamiliesManager'
+import { Filter, X, ChevronDown, ChevronUp } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 

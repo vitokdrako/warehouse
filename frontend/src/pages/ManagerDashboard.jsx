@@ -627,7 +627,7 @@ export default function ManagerDashboard() {
             </>
           ) : (
             <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
-              Немає готових карток
+              {searchQuery ? 'Нічого не знайдено' : 'Немає готових карток'}
             </div>
           )}
         </Column>
@@ -636,9 +636,9 @@ export default function ManagerDashboard() {
         <Column title="🔙 Повернення" subtitle="Видані замовлення, які очікують повернення" tone="warn">
           {loading ? (
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
-          ) : returnOrders.length > 0 ? (
+          ) : filterBySearch(returnOrders).length > 0 ? (
             <>
-              {(showAllReturns ? returnOrders : returnOrders.slice(0, 4)).map(card => (
+              {(showAllReturns ? filterBySearch(returnOrders) : filterBySearch(returnOrders).slice(0, 4)).map(card => (
                 <OrderCard 
                   key={card.id}
                   id={card.order_number}
@@ -651,15 +651,15 @@ export default function ManagerDashboard() {
                   onClick={() => navigate(`/return/${card.order_id}`)}
                 />
               ))}
-              {returnOrders.length > 4 && !showAllReturns && (
+              {filterBySearch(returnOrders).length > 4 && !showAllReturns && (
                 <button 
                   onClick={() => setShowAllReturns(true)}
                   className="text-center py-3 text-sm text-blue-600 hover:text-blue-800 font-medium hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                 >
-                  +{returnOrders.length - 4} більше замовлень - Показати всі
+                  +{filterBySearch(returnOrders).length - 4} більше замовлень - Показати всі
                 </button>
               )}
-              {returnOrders.length > 4 && showAllReturns && (
+              {filterBySearch(returnOrders).length > 4 && showAllReturns && (
                 <button 
                   onClick={() => setShowAllReturns(false)}
                   className="text-center py-3 text-sm text-corp-text-main hover:text-corp-text-dark font-medium hover:bg-slate-50 rounded-lg transition-colors cursor-pointer"
@@ -670,7 +670,7 @@ export default function ManagerDashboard() {
             </>
           ) : (
             <div className="rounded-2xl border border-slate-200 p-8 text-center text-slate-400">
-              Немає повернень сьогодні
+              {searchQuery ? 'Нічого не знайдено' : 'Немає повернень сьогодні'}
             </div>
           )}
         </Column>

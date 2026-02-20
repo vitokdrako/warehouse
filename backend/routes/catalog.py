@@ -788,10 +788,22 @@ async def get_all_families(
         for fam_row in families_result:
             family_id = fam_row[0]
             
-            # Отримати товари для кожного набору
+            # Отримати товари для кожного набору з усіма потрібними полями
             products_result = db.execute(text("""
-                SELECT p.product_id, p.sku, p.name, p.image_url
+                SELECT 
+                    p.product_id, 
+                    p.sku, 
+                    p.name, 
+                    p.image_url,
+                    p.color,
+                    p.material,
+                    p.rental_price,
+                    p.price,
+                    p.quantity,
+                    c.name as category_name,
+                    p.family_id
                 FROM products p
+                LEFT JOIN oc_category_description c ON p.category_id = c.category_id AND c.language_id = 3
                 WHERE p.family_id = :family_id
                 ORDER BY p.sku
             """), {"family_id": family_id})
@@ -802,7 +814,16 @@ async def get_all_families(
                     "product_id": prod_row[0],
                     "sku": prod_row[1],
                     "name": prod_row[2],
-                    "cover": normalize_image_url(prod_row[3])
+                    "cover": normalize_image_url(prod_row[3]),
+                    "image": normalize_image_url(prod_row[3]),
+                    "image_url": normalize_image_url(prod_row[3]),
+                    "color": prod_row[4],
+                    "material": prod_row[5],
+                    "rental_price": float(prod_row[6]) if prod_row[6] else 0,
+                    "price": float(prod_row[7]) if prod_row[7] else 0,
+                    "quantity": prod_row[8] or 0,
+                    "category_name": prod_row[9],
+                    "family_id": prod_row[10]
                 })
             
             families.append({

@@ -1169,7 +1169,9 @@ function Sidebar({
   dateRange,
   setDateRange,
   onResetAll,
-  loading 
+  loading,
+  isMobileOpen,
+  onMobileClose
 }) {
   // Get subcategories for selected category
   const subcategories = selectedCategory.category 
@@ -1178,92 +1180,170 @@ function Sidebar({
   
   const totalProducts = categories.reduce((sum, c) => sum + c.product_count, 0)
   
+  // Mobile collapsed sections
+  const [expandedSections, setExpandedSections] = useState({
+    dates: true,
+    category: true,
+    filters: false
+  })
+  
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+  
   return (
-    <aside className="w-72 flex-shrink-0 space-y-4">
-      {/* Date Range */}
-      <div className="bg-gradient-to-br from-sky-50 to-indigo-50 rounded-xl border border-sky-200 p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-lg">📅</span>
-          <h3 className="font-semibold text-corp-text-dark text-sm">Перевірка доступності</h3>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-corp-text-muted font-medium block mb-1">Дата початку</label>
-            <input
-              type="date"
-              value={dateRange.dateFrom}
-              onChange={(e) => setDateRange({ ...dateRange, dateFrom: e.target.value })}
-              className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 bg-white"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-corp-text-muted font-medium block mb-1">Дата закінчення</label>
-            <input
-              type="date"
-              value={dateRange.dateTo}
-              onChange={(e) => setDateRange({ ...dateRange, dateTo: e.target.value })}
-              min={dateRange.dateFrom}
-              className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 bg-white"
-            />
-          </div>
-          {dateRange.dateFrom && dateRange.dateTo && (
-            <div className="text-xs text-sky-700 bg-sky-100 rounded-lg px-3 py-2">
-              Період: {dateRange.dateFrom} — {dateRange.dateTo}
-            </div>
-          )}
-        </div>
-      </div>
+    <>
+      {/* Mobile overlay */}
+      {isMobileOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={onMobileClose}
+        />
+      )}
       
-      {/* Categories */}
-      <div className="bg-white rounded-xl border border-corp-border p-4">
-        <h3 className="font-semibold text-corp-text-dark text-sm mb-3">Категорія</h3>
-        <div className="space-y-3">
-          <select
-            value={selectedCategory.category || ''}
-            onChange={(e) => onSelectCategory({ category: e.target.value || null, subcategory: null })}
-            disabled={loading}
-            className="w-full rounded-lg border border-corp-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30 focus:border-corp-primary bg-white"
+      <aside className={cls(
+        "flex-shrink-0 space-y-3 lg:space-y-4 transition-all duration-300 z-50",
+        // Desktop: fixed width sidebar
+        "lg:w-72 lg:relative lg:translate-x-0",
+        // Mobile: slide-out panel
+        "fixed inset-y-0 left-0 w-[85%] max-w-[320px] bg-slate-50 lg:bg-transparent",
+        "overflow-y-auto p-4 lg:p-0",
+        isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
+        {/* Mobile header */}
+        <div className="lg:hidden flex items-center justify-between mb-4 pb-3 border-b border-slate-200">
+          <h2 className="font-semibold text-slate-800">Фільтри</h2>
+          <button 
+            onClick={onMobileClose}
+            className="p-2 hover:bg-slate-200 rounded-lg"
           >
-            <option value="">Всі категорії ({totalProducts})</option>
-            {categories.map(cat => (
-              <option key={cat.name} value={cat.name}>
-                {cat.name} ({cat.product_count})
-              </option>
-            ))}
-          </select>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* Date Range - collapsible on mobile */}
+        <div className="bg-gradient-to-br from-sky-50 to-indigo-50 rounded-xl border border-sky-200 overflow-hidden">
+          <button 
+            onClick={() => toggleSection('dates')}
+            className="w-full flex items-center justify-between p-3 lg:p-4"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📅</span>
+              <h3 className="font-semibold text-corp-text-dark text-sm">Перевірка доступності</h3>
+            </div>
+            <ChevronDown className={cls(
+              "w-4 h-4 text-slate-500 transition-transform lg:hidden",
+              expandedSections.dates && "rotate-180"
+            )} />
+          </button>
           
-          <div>
-            <label className="text-xs text-corp-text-muted font-medium block mb-1">Підкатегорія</label>
+          <div className={cls(
+            "px-3 lg:px-4 pb-3 lg:pb-4 space-y-3",
+            !expandedSections.dates && "hidden lg:block"
+          )}>
+            <div>
+              <label className="text-xs text-corp-text-muted font-medium block mb-1">Дата початку</label>
+              <input
+                type="date"
+                value={dateRange.dateFrom}
+                onChange={(e) => setDateRange({ ...dateRange, dateFrom: e.target.value })}
+                className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-corp-text-muted font-medium block mb-1">Дата закінчення</label>
+              <input
+                type="date"
+                value={dateRange.dateTo}
+                onChange={(e) => setDateRange({ ...dateRange, dateTo: e.target.value })}
+                min={dateRange.dateFrom}
+                className="w-full rounded-lg border border-sky-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-500 bg-white"
+              />
+            </div>
+            {dateRange.dateFrom && dateRange.dateTo && (
+              <div className="text-xs text-sky-700 bg-sky-100 rounded-lg px-3 py-2">
+                Період: {dateRange.dateFrom} — {dateRange.dateTo}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Categories - collapsible on mobile */}
+        <div className="bg-white rounded-xl border border-corp-border overflow-hidden">
+          <button 
+            onClick={() => toggleSection('category')}
+            className="w-full flex items-center justify-between p-3 lg:p-4"
+          >
+            <h3 className="font-semibold text-corp-text-dark text-sm">Категорія</h3>
+            <ChevronDown className={cls(
+              "w-4 h-4 text-slate-500 transition-transform lg:hidden",
+              expandedSections.category && "rotate-180"
+            )} />
+          </button>
+          
+          <div className={cls(
+            "px-3 lg:px-4 pb-3 lg:pb-4 space-y-3",
+            !expandedSections.category && "hidden lg:block"
+          )}>
             <select
-              value={selectedCategory.subcategory || ''}
-              onChange={(e) => onSelectCategory({ ...selectedCategory, subcategory: e.target.value || null })}
-              disabled={!selectedCategory.category || loading}
-              className={cls(
-                "w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30 bg-white",
-                !selectedCategory.category 
-                  ? "border-corp-border/50 text-corp-text-muted" 
-                  : "border-corp-border focus:border-corp-primary"
-              )}
+              value={selectedCategory.category || ''}
+              onChange={(e) => onSelectCategory({ category: e.target.value || null, subcategory: null })}
+              disabled={loading}
+              className="w-full rounded-lg border border-corp-border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30 focus:border-corp-primary bg-white"
             >
-              <option value="">
-                {selectedCategory.category 
-                  ? `Всі (${subcategories.reduce((s, sub) => s + sub.product_count, 0)})` 
-                  : 'Оберіть категорію'}
-              </option>
-              {subcategories.map(sub => (
-                <option key={sub.name} value={sub.name}>
-                  {sub.name} ({sub.product_count})
+              <option value="">Всі категорії ({totalProducts})</option>
+              {categories.map(cat => (
+                <option key={cat.name} value={cat.name}>
+                  {cat.name} ({cat.product_count})
                 </option>
               ))}
             </select>
+            
+            <div>
+              <label className="text-xs text-corp-text-muted font-medium block mb-1">Підкатегорія</label>
+              <select
+                value={selectedCategory.subcategory || ''}
+                onChange={(e) => onSelectCategory({ ...selectedCategory, subcategory: e.target.value || null })}
+                disabled={!selectedCategory.category || loading}
+                className={cls(
+                  "w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30 bg-white",
+                  !selectedCategory.category 
+                    ? "border-corp-border/50 text-corp-text-muted" 
+                    : "border-corp-border focus:border-corp-primary"
+                )}
+              >
+                <option value="">
+                  {selectedCategory.category 
+                    ? `Всі (${subcategories.reduce((s, sub) => s + sub.product_count, 0)})` 
+                    : 'Оберіть категорію'}
+                </option>
+                {subcategories.map(sub => (
+                  <option key={sub.name} value={sub.name}>
+                    {sub.name} ({sub.product_count})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* Filters */}
-      <div className="bg-white rounded-xl border border-corp-border p-4">
-        <h3 className="font-semibold text-corp-text-dark text-sm mb-3">Фільтри</h3>
-        <div className="space-y-3">
+        
+        {/* Filters - collapsed by default on mobile */}
+        <div className="bg-white rounded-xl border border-corp-border overflow-hidden">
+          <button 
+            onClick={() => toggleSection('filters')}
+            className="w-full flex items-center justify-between p-3 lg:p-4"
+          >
+            <h3 className="font-semibold text-corp-text-dark text-sm">Фільтри</h3>
+            <ChevronDown className={cls(
+              "w-4 h-4 text-slate-500 transition-transform lg:hidden",
+              expandedSections.filters && "rotate-180"
+            )} />
+          </button>
+          
+          <div className={cls(
+            "px-3 lg:px-4 pb-3 lg:pb-4 space-y-3",
+            !expandedSections.filters && "hidden lg:block"
+          )}>
           {/* Search */}
           <div>
             <label className="text-xs text-corp-text-muted font-medium block mb-1">Пошук</label>

@@ -712,6 +712,110 @@ async def delete_laundry_batch(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ==================== Print / Export Endpoints ====================
+
+@router.get("/batches/{batch_id}/print")
+async def get_batch_print_view(
+    batch_id: str,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати HTML view партії для друку.
+    Повертає повний HTML документ готовий для друку.
+    """
+    from jinja2 import Environment, FileSystemLoader
+    from fastapi.responses import HTMLResponse
+    import os
+    
+    # Get batch info
+    batch_result = db.execute(text("""
+        SELECT id, batch_number, laundry_company, status, sent_date, 
+               expected_return_date, total_items, returned_items, 
+               complexity, batch_type, created_at
+        FROM laundry_batches
+        WHERE id = :batch_id
+    """), {"batch_id": batch_id})
+    
+    batch_row = batch_result.fetchone()
+    if not batch_row:
+        raise HTTPException(status_code=404, detail="Партію не знайдено")
+    
+    batch = {
+        "id": batch_row[0],
+        "batch_number": batch_row[1],
+        "laundry_company": batch_row[2],
+        "status": batch_row[3],
+        "sent_date": batch_row[4].strftime("%d.%m.%Y") if batch_row[4] else "",
+        "expected_return_date": batch_row[5].strftime("%d.%m.%Y") if batch_row[5] else None,
+        "total_items": batch_row[6] or 0,
+        "returned_items": batch_row[7] or 0,
+        "complexity": batch_row[8] or "normal",
+        "batch_type": batch_row[9] or "laundry"
+    }
+    
+    # Get batch items
+    items_result = db.execute(text("""
+        SELECT 
+            li.id, li.product_id, li.product_name, li.sku, li.category,
+            li.quantity, li.returned_quantity, li.condition_before, li.notes,
+            pdh.order_number,
+            p.image_url
+        FROM laundry_items li
+        LEFT JOIN product_damage_history pdh ON li.damage_history_id = pdh.id
+        LEFT JOIN products p ON li.product_id = p.product_id
+        WHERE li.batch_id = :batch_id
+        ORDER BY li.created_at
+    """), {"batch_id": batch_id})
+    
+    items = []
+    for row in items_result:
+        items.append({
+            "id": row[0],
+            "product_id": row[1],
+            "product_name": row[2],
+            "sku": row[3],
+            "category": row[4],
+            "quantity": row[5] or 1,
+            "returned_quantity": row[6] or 0,
+            "condition_before": row[7],
+            "notes": row[8],
+            "order_number": row[9],
+            "image_url": row[10]
+        })
+    
+    # Determine colors based on batch type
+    if batch["batch_type"] == "washing":
+        batch_type_name = "Прання"
+        primary_color = "#0891b2"  # cyan-600
+        dark_color = "#0e7490"     # cyan-700
+        light_bg = "#ecfeff"       # cyan-50
+    else:
+        batch_type_name = "Хімчистка"
+        primary_color = "#9333ea"  # purple-600
+        dark_color = "#7e22ce"     # purple-700
+        light_bg = "#faf5ff"       # purple-50
+    
+    # Load and render template
+    templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "documents")
+    env = Environment(loader=FileSystemLoader(templates_dir))
+    template = env.get_template("laundry_batch.html")
+    
+    html = template.render(
+        batch=batch,
+        items=items,
+        batch_type_name=batch_type_name,
+        primary_color=primary_color,
+        dark_color=dark_color,
+        light_bg=light_bg,
+        company_name="FarforRent",
+        notes="",
+        generated_at=datetime.now().strftime("%d.%m.%Y %H:%M")
+    )
+    
+    return HTMLResponse(content=html)
+
+
 # ==================== Statistics Endpoints ====================
 
 @router.get("/statistics")

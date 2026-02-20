@@ -7,6 +7,39 @@ Enhance the "Damage Hub" and integrate "Ivent-tool" into RentalHub. Later focus 
 
 ## Latest Update: February 20, 2026
 
+### Session 11 - DamageHub Refactoring (Пральня)
+
+**Що виконано:**
+
+#### 1. ✅ Модалка "Пральня" (P0)
+- **Файл:** `/app/frontend/src/pages/DamageHubApp.jsx`
+- Заголовок "Пральня" тепер клікабельний та відкриває fullscreen модалку
+- Модалка показує два стовпчики: **Прання** (зліва) та **Хімчистка** (справа)
+- Кожен стовпчик має секції: Черга та Партії
+
+#### 2. ✅ Кнопки "Прання" та "Хімчистка" на картках товарів
+- Додано окрему кнопку **Прання** (cyan колір) - відправляє товар в чергу прання
+- Кнопка **Хімчистка** (purple колір) - відправляє товар в чергу хімчистки  
+- Кнопки передають `damage_description` та `risk_level`
+
+#### 3. ✅ Backend endpoints
+- **POST `/api/product-damage-history/{id}/send-to-washing`** - новий endpoint для прання
+- **POST `/api/product-damage-history/{id}/send-to-laundry`** - існуючий endpoint для хімчистки
+- **GET `/api/laundry/queue?type=washing`** - черга прання
+- **GET `/api/laundry/queue?type=laundry`** - черга хімчистки
+- **GET `/api/laundry/batches?type=washing`** - партії прання
+- **GET `/api/laundry/batches?type=laundry`** - партії хімчистки
+
+#### 4. ✅ Database changes
+- Додано `'washing'` до ENUM колонки `processing_type` в таблиці `product_damage_history`
+- Додано колонку `batch_type` до таблиці `laundry_batches`
+
+#### 5. ✅ KPI Stats
+- Окремі стовпчики для "Прання" (cyan) та "Хімчистка" (purple) на верхній панелі
+- Показує кількість товарів в кожній черзі
+
+---
+
 ### Session 10 - UI/UX Improvements
 
 **Що виконано:**

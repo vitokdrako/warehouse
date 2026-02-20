@@ -484,13 +484,21 @@ function ListView({ products, highlightedSku, onHighlight }) {
     return groups
   }, [products])
 
+  // Загальна кількість товарів у групі
+  const getTotalQty = (items) => items.reduce((sum, p) => sum + (p.quantity || 0), 0)
+
   return (
     <div className="space-y-4">
       {Object.entries(grouped).map(([size, items]) => (
         <div key={size} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
-            <span className="text-sm font-semibold text-slate-700">{size}</span>
-            <span className="ml-2 text-xs text-slate-500">({items.length} шт)</span>
+          <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <span className="text-sm font-semibold text-slate-700">{size}</span>
+              <span className="ml-2 text-xs text-slate-500">({items.length} SKU)</span>
+            </div>
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
+              {getTotalQty(items)} шт
+            </span>
           </div>
           <div className="p-3 flex flex-wrap gap-2">
             {items.map(item => (
@@ -504,12 +512,18 @@ function ListView({ products, highlightedSku, onHighlight }) {
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 )}
               >
-                <div className="w-10 h-10 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg border border-slate-200 overflow-hidden bg-slate-50 flex-shrink-0 relative">
                   {item.cover ? (
                     <img src={getImageUrl(item.cover)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-slate-300">
                       <Package className="w-4 h-4" />
+                    </div>
+                  )}
+                  {/* Бейдж кількості */}
+                  {item.quantity > 0 && (
+                    <div className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center px-0.5 bg-emerald-500 text-white text-[9px] font-bold rounded-full">
+                      {item.quantity}
                     </div>
                   )}
                 </div>

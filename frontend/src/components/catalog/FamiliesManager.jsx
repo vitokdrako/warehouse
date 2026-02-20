@@ -833,7 +833,12 @@ export default function FamiliesManager() {
   const [selectedFamily, setSelectedFamily] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
+  
+  // Pending changes (not yet saved to server)
+  const [pendingAdd, setPendingAdd] = useState([])      // Products to add
+  const [pendingRemove, setPendingRemove] = useState([]) // Products to remove
+  
+  const hasChanges = pendingAdd.length > 0 || pendingRemove.length > 0
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('')

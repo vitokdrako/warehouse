@@ -1287,6 +1287,9 @@ export default function FamiliesManager() {
             onSearchChange={setSearchQuery}
             filterHasProducts={filterHasProducts}
             onFilterChange={setFilterHasProducts}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            categories={categories}
             isMobile={mobilePanel === 'list'}
           />
         </div>

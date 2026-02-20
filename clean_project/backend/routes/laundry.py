@@ -777,8 +777,17 @@ async def get_batch_preview(
         ORDER BY li.created_at
     """), {"batch_id": batch_id})
     
+    # Base URL for images
+    base_url = "https://backrentalhub.farforrent.com.ua"
+    
     items = []
     for row in items_result:
+        image_url = row[10]
+        # Build full image URL
+        if image_url:
+            if not image_url.startswith('http'):
+                image_url = f"{base_url}/{image_url.lstrip('/')}"
+        
         items.append({
             "id": row[0],
             "product_id": row[1],
@@ -790,7 +799,7 @@ async def get_batch_preview(
             "condition_before": row[7],
             "notes": row[8],
             "order_number": row[9],
-            "image_url": row[10]
+            "image_url": image_url
         })
     
     # Determine colors based on batch type

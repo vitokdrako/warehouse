@@ -680,7 +680,7 @@ async def delete_laundry_batch(
         
         status = row[0]
         returned_items = row[1] or 0
-        total_items = row[2] or 0
+        # total_items = row[2] or 0  # Not used currently
         
         # Для completed партій - дозволяємо видалення
         # Для sent партій - тільки якщо не було повернень
@@ -720,9 +720,19 @@ async def get_batch_print_view(
     batch_id: str,
     db: Session = Depends(get_rh_db)
 ):
+    """Redirect to preview endpoint"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/api/laundry/batches/{batch_id}/preview")
+
+
+@router.get("/batches/{batch_id}/preview")
+async def get_batch_preview(
+    batch_id: str,
+    db: Session = Depends(get_rh_db)
+):
     """
-    Отримати HTML view партії для друку.
-    Повертає повний HTML документ готовий для друку.
+    Отримати HTML preview партії для друку.
+    Стилізовано як estimate документ.
     """
     from jinja2 import Environment, FileSystemLoader
     from fastapi.responses import HTMLResponse
@@ -759,10 +769,9 @@ async def get_batch_print_view(
         SELECT 
             li.id, li.product_id, li.product_name, li.sku, li.category,
             li.quantity, li.returned_quantity, li.condition_before, li.notes,
-            pdh.order_number,
+            NULL as order_number,
             p.image_url
         FROM laundry_items li
-        LEFT JOIN product_damage_history pdh ON li.damage_history_id = pdh.id
         LEFT JOIN products p ON li.product_id = p.product_id
         WHERE li.batch_id = :batch_id
         ORDER BY li.created_at
@@ -870,53 +879,7 @@ class QueueItemCreate(BaseModel):
     notes: Optional[str] = None
     source: Optional[str] = "damage_cabinet"  # damage_cabinet, return, manual
 
-@router.get("/queue")
-async def get_laundry_queue(db: Session = Depends(get_rh_db)):
-    """
-    Отримати чергу товарів для відправки в хімчистку
-    Використовуємо tasks з task_type='laundry_queue' та status='todo'
-    """
-    try:
-        result = db.execute(text("""
-            SELECT 
-                t.id, t.damage_id, t.order_id, t.order_number,
-                t.title, t.description, t.created_at, t.created_by
-            FROM tasks t
-            WHERE t.task_type = 'laundry_queue' AND t.status = 'todo'
-            ORDER BY t.created_at DESC
-        """))
-        
-        items = []
-        for row in result:
-            # Парсимо дані з title та description
-            title = row[4] or ''
-            description = row[5] or ''
-            
-            # Витягуємо SKU та product_name з title (формат: "Хімчистка: ProductName (SKU)")
-            product_name = title.replace('🧺 В чергу хімчистки: ', '').split(' (')[0] if '(' in title else title
-            sku = title.split('(')[-1].replace(')', '') if '(' in title else ''
-            
-            items.append({
-                "id": row[0],
-                "damage_id": row[1],
-                "order_id": row[2],
-                "order_number": row[3],
-                "product_id": None,
-                "product_name": product_name,
-                "sku": sku,
-                "category": "textile",
-                "quantity": 1,
-                "condition": "dirty",
-                "notes": description,
-                "source": "damage_cabinet",
-                "created_at": row[6].isoformat() if row[6] else None,
-                "created_by": row[7]
-            })
-        
-        return items
-    except Exception as e:
-        print(f"[Laundry] Queue error: {e}")
-        return []
+# Note: Primary queue endpoint is defined at line ~98 using product_damage_history table
 
 @router.post("/queue")
 async def add_to_laundry_queue(

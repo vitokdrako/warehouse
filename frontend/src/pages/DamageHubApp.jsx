@@ -638,10 +638,12 @@ export default function DamageHubApp() {
   };
 
   // Відкрити модалку формування партії
-  const openBatchModal = () => {
+  const openBatchModal = (batchType = 'laundry') => {
+    const queue = batchType === 'washing' ? washingQueue : laundryQueue;
     setBatchModal({
       isOpen: true,
-      selectedItems: laundryQueue.map(i => i.id), // За замовчуванням вибрати всі
+      batchType: batchType,
+      selectedItems: queue.map(i => i.id), // За замовчуванням вибрати всі
       companyName: '',
       complexity: 'normal'
     });
@@ -659,8 +661,9 @@ export default function DamageHubApp() {
 
   // Створити партію
   const handleCreateBatch = async () => {
+    const serviceName = batchModal.batchType === 'washing' ? 'пральні' : 'хімчистки';
     if (!batchModal.companyName.trim()) {
-      alert("Введіть назву хімчистки");
+      alert(`Введіть назву ${serviceName}`);
       return;
     }
     if (batchModal.selectedItems.length === 0) {
@@ -674,7 +677,8 @@ export default function DamageHubApp() {
         body: JSON.stringify({ 
           item_ids: batchModal.selectedItems, 
           laundry_company: batchModal.companyName.trim(),
-          complexity: batchModal.complexity
+          complexity: batchModal.complexity,
+          batch_type: batchModal.batchType
         })
       });
       

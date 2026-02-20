@@ -747,7 +747,8 @@ export default function NewOrderViewWorkspace() {
   
   // ✅ Footer - визначаємо чи показувати основну кнопку
   // Статуси де замовлення вже в роботі - не показуємо "Відправити на збір"
-  const isInProgress = ['ready_for_issue', 'issued', 'on_rent', 'preparation', 'partial_return'].includes(decorOrderStatus)
+  // processing = на комплектації, preparation = готується (legacy), ready_for_issue = готово до видачі
+  const isInProgress = ['processing', 'preparation', 'ready_for_issue', 'issued', 'on_rent', 'partial_return', 'returning', 'completed'].includes(decorOrderStatus)
   const showPrimaryAction = !isInProgress
   
   // === РЕНДЕР ===

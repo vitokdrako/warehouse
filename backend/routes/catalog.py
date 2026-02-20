@@ -874,6 +874,49 @@ async def create_family(
         )
 
 
+@router.put("/families/{family_id}")
+async def update_family(
+    family_id: int,
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Оновити назву/опис набору
+    """
+    try:
+        name = data.get("name")
+        description = data.get("description", "")
+        
+        if not name:
+            raise HTTPException(status_code=400, detail="Назва обов'язкова")
+        
+        db.execute(text("""
+            UPDATE product_families 
+            SET name = :name, description = :description
+            WHERE id = :family_id
+        """), {
+            "family_id": family_id,
+            "name": name,
+            "description": description
+        })
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "Набір оновлено"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Помилка: {str(e)}"
+        )
+
+
 @router.post("/families/{family_id}/assign")
 async def assign_products_to_family(
     family_id: int,

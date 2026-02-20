@@ -166,15 +166,17 @@ async def add_queue_items_to_batch(
     Body:
         - item_ids: list[str] - ID записів з product_damage_history
         - batch_id: str (optional) - ID існуючої партії, або створити нову
-        - laundry_company: str - назва хімчистки (для нової партії)
+        - laundry_company: str - назва хімчистки/пральні (для нової партії)
         - complexity: str - складність обробки ('light', 'normal', 'heavy')
         - expected_return_date: str (optional) - очікувана дата повернення
+        - batch_type: str - тип партії ('washing' або 'laundry')
     """
     item_ids = data.get("item_ids", [])
     batch_id = data.get("batch_id")
     laundry_company = data.get("laundry_company", "Хімчистка")
     complexity = data.get("complexity", "normal")  # light, normal, heavy
     expected_return_date = data.get("expected_return_date")
+    batch_type = data.get("batch_type", "laundry")  # washing or laundry
     
     # Отримати поточного користувача (якщо є)
     created_by = data.get("created_by", "system")
@@ -185,17 +187,18 @@ async def add_queue_items_to_batch(
     try:
         # Якщо партія не вказана - створити нову
         if not batch_id:
+            prefix = "WB" if batch_type == "washing" else "LB"
             batch_id = f"BATCH-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-            batch_number = f"LB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            batch_number = f"{prefix}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
             
             db.execute(text("""
                 INSERT INTO laundry_batches (
                     id, batch_number, laundry_company, status, sent_date, 
                     expected_return_date, total_items, returned_items, 
-                    complexity, created_by, created_at, updated_at
+                    complexity, batch_type, created_by, created_at, updated_at
                 ) VALUES (
                     :id, :batch_number, :company, 'sent', NOW(), :return_date,
-                    0, 0, :complexity, :created_by, NOW(), NOW()
+                    0, 0, :complexity, :batch_type, :created_by, NOW(), NOW()
                 )
             """), {
                 "id": batch_id,
@@ -203,6 +206,7 @@ async def add_queue_items_to_batch(
                 "company": laundry_company,
                 "return_date": expected_return_date,
                 "complexity": complexity,
+                "batch_type": batch_type,
                 "created_by": created_by
             })
         

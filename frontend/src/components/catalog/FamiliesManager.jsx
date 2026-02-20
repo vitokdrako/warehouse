@@ -1000,17 +1000,33 @@ export default function FamiliesManager() {
     }
   }
 
-  // Get assigned products for selected family
-  // Products come directly from family.products (from API)
+  // Get assigned products for selected family (including pending)
   const assignedProducts = useMemo(() => {
     if (!selectedFamily) return []
-    // First check if family has products array from API
+    
+    // Start with products from API
+    let products = []
     if (selectedFamily.products && selectedFamily.products.length > 0) {
-      return selectedFamily.products
+      products = [...selectedFamily.products]
+    } else {
+      products = allProducts.filter(p => p.family_id === selectedFamily.id)
     }
-    // Fallback: filter from allProducts by family_id
-    return allProducts.filter(p => p.family_id === selectedFamily.id)
-  }, [allProducts, selectedFamily])
+    
+    // Remove products that are in pendingRemove
+    products = products.filter(p => !pendingRemove.includes(p.product_id))
+    
+    // Add pending products (mark them as pending)
+    const pendingWithFlag = pendingAdd.map(p => ({ ...p, _isPending: true }))
+    products = [...products, ...pendingWithFlag]
+    
+    return products
+  }, [allProducts, selectedFamily, pendingAdd, pendingRemove])
+
+  // Clear pending when family changes
+  useEffect(() => {
+    setPendingAdd([])
+    setPendingRemove([])
+  }, [selectedFamily?.id])
 
   // Update selected family when families change
   useEffect(() => {

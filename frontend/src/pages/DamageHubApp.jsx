@@ -315,13 +315,16 @@ export default function DamageHubApp() {
   // Processing items
   const [washItems, setWashItems] = useState([]);
   const [restoreItems, setRestoreItems] = useState([]);
-  const [laundryQueue, setLaundryQueue] = useState([]);
-  const [laundryBatches, setLaundryBatches] = useState([]);
+  const [washingQueue, setWashingQueue] = useState([]); // Прання
+  const [laundryQueue, setLaundryQueue] = useState([]); // Хімчистка
+  const [washingBatches, setWashingBatches] = useState([]); // Партії прання
+  const [laundryBatches, setLaundryBatches] = useState([]); // Партії хімчистки
   const [selectedBatchId, setSelectedBatchId] = useState(null);
+  const [selectedBatchType, setSelectedBatchType] = useState(null); // 'washing' | 'laundry'
   const [batchItems, setBatchItems] = useState([]);
   
   // Expanded sections in right panel
-  const [expandedSections, setExpandedSections] = useState({ wash: true, restore: true, laundry: true });
+  const [expandedSections, setExpandedSections] = useState({ wash: true, restore: true, washing: true, laundry: true });
   
   // Photo modal
   const [photoModal, setPhotoModal] = useState({ isOpen: false, url: null, name: null });

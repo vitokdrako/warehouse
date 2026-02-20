@@ -1535,9 +1535,9 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
       </div>
       
       {/* Info */}
-      <div className="space-y-1">
-        <div className="text-xs text-corp-text-muted">{item.sku}</div>
-        <div className="font-medium text-corp-text-dark text-sm line-clamp-2 group-hover:text-corp-primary transition-colors min-h-[40px]">
+      <div className="space-y-0.5 lg:space-y-1">
+        <div className="text-[10px] lg:text-xs text-corp-text-muted">{item.sku}</div>
+        <div className="font-medium text-corp-text-dark text-xs lg:text-sm line-clamp-2 group-hover:text-corp-primary transition-colors min-h-[32px] lg:min-h-[40px]">
           {item.name}
         </div>
         

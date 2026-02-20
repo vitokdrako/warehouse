@@ -1793,14 +1793,23 @@ export default function DamageHubApp() {
                           {washingQueue.length}
                         </span>
                       </h3>
-                      {washingQueue.length > 0 && (
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => openBatchModal('washing')}
-                          className="px-3 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium flex items-center gap-1.5 text-sm"
+                          onClick={() => setQuickAddModal({ isOpen: true, queueType: 'washing', searchQuery: '', searchResults: [], loading: false })}
+                          className="px-2 py-1.5 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition font-medium flex items-center gap-1 text-sm"
+                          title="Додати напряму"
                         >
-                          <Package className="w-4 h-4" /> Сформувати партію
+                          <Plus className="w-4 h-4" />
                         </button>
-                      )}
+                        {washingQueue.length > 0 && (
+                          <button
+                            onClick={() => openBatchModal('washing')}
+                            className="px-3 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium flex items-center gap-1.5 text-sm"
+                          >
+                            <Package className="w-4 h-4" /> Сформувати партію
+                          </button>
+                        )}
+                      </div>
                     </div>
                     
                     {/* Черга прання */}
@@ -1838,36 +1847,72 @@ export default function DamageHubApp() {
                           Немає партій
                         </div>
                       ) : (
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
                           {washingBatches.map(batch => (
-                            <div 
-                              key={batch.id} 
-                              className={`p-3 rounded-xl border-2 cursor-pointer transition ${
-                                selectedBatchId === batch.id && selectedBatchType === 'washing'
-                                  ? 'border-cyan-500 bg-cyan-50' 
-                                  : 'border-slate-200 hover:border-cyan-300'
-                              }`}
-                              onClick={() => {
-                                setSelectedBatchId(batch.id);
-                                setSelectedBatchType('washing');
-                                loadBatchItems(batch.id, 'washing');
-                              }}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="font-semibold text-slate-800 text-sm">{batch.laundry_company}</div>
-                                  <div className="text-xs text-slate-500">
-                                    {batch.batch_number} • {batch.total_items} шт
+                            <div key={batch.id} className="rounded-xl border-2 border-slate-200 overflow-hidden">
+                              {/* Batch header - clickable */}
+                              <div 
+                                className={`p-3 cursor-pointer transition flex items-center justify-between ${
+                                  expandedBatches[batch.id] ? 'bg-cyan-50' : 'hover:bg-slate-50'
+                                }`}
+                                onClick={() => toggleBatchExpand(batch.id, 'washing')}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {expandedBatches[batch.id] ? (
+                                    <ChevronDown className="w-4 h-4 text-cyan-500" />
+                                  ) : (
+                                    <ChevronRight className="w-4 h-4 text-slate-400" />
+                                  )}
+                                  <div>
+                                    <div className="font-semibold text-slate-800 text-sm">{batch.laundry_company}</div>
+                                    <div className="text-xs text-slate-500">
+                                      {batch.batch_number} • {batch.total_items} шт • Повернуто: {batch.returned_items || 0}
+                                    </div>
                                   </div>
                                 </div>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                  batch.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                                  batch.status === 'sent' ? 'bg-cyan-100 text-cyan-700' :
-                                  'bg-slate-100 text-slate-700'
-                                }`}>
-                                  {batch.status === 'completed' ? 'Готово' : batch.status === 'sent' ? 'Відправлено' : batch.status}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    batch.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                                    batch.status === 'sent' ? 'bg-cyan-100 text-cyan-700' :
+                                    'bg-slate-100 text-slate-700'
+                                  }`}>
+                                    {batch.status === 'completed' ? 'Готово' : batch.status === 'sent' ? 'Відправлено' : batch.status}
+                                  </span>
+                                  {batch.status === 'completed' && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch.id, 'washing'); }}
+                                      className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition"
+                                      title="Видалити партію"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
+                              
+                              {/* Batch items - expanded */}
+                              {expandedBatches[batch.id] && (
+                                <div className="border-t border-slate-200 bg-white p-2 space-y-1.5">
+                                  {(batchItemsCache[batch.id] || batch.items || []).length === 0 ? (
+                                    <div className="text-center py-2 text-slate-400 text-xs">Завантаження...</div>
+                                  ) : (
+                                    (batchItemsCache[batch.id] || batch.items || []).map(item => (
+                                      <div key={item.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg text-xs">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
+                                          <div className="text-slate-500">{item.sku}</div>
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity} шт</div>
+                                          <div className={`text-[10px] ${(item.returned_quantity || 0) >= (item.quantity || 1) ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                            {(item.returned_quantity || 0) >= (item.quantity || 1) ? '✓ Повернуто' : 'Очікує'}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1884,10 +1929,18 @@ export default function DamageHubApp() {
                           {laundryQueue.length}
                         </span>
                       </h3>
-                      {laundryQueue.length > 0 && (
+                      <div className="flex items-center gap-2">
                         <button
-                          onClick={() => openBatchModal('laundry')}
-                          className="px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium flex items-center gap-1.5 text-sm"
+                          onClick={() => setQuickAddModal({ isOpen: true, queueType: 'laundry', searchQuery: '', searchResults: [], loading: false })}
+                          className="px-2 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition font-medium flex items-center gap-1 text-sm"
+                          title="Додати напряму"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                        {laundryQueue.length > 0 && (
+                          <button
+                            onClick={() => openBatchModal('laundry')}
+                            className="px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium flex items-center gap-1.5 text-sm"
                         >
                           <Package className="w-4 h-4" /> Сформувати партію
                         </button>

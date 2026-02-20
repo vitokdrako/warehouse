@@ -720,9 +720,19 @@ async def get_batch_print_view(
     batch_id: str,
     db: Session = Depends(get_rh_db)
 ):
+    """Redirect to preview endpoint"""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url=f"/api/laundry/batches/{batch_id}/preview")
+
+
+@router.get("/batches/{batch_id}/preview")
+async def get_batch_preview(
+    batch_id: str,
+    db: Session = Depends(get_rh_db)
+):
     """
-    Отримати HTML view партії для друку.
-    Повертає повний HTML документ готовий для друку.
+    Отримати HTML preview партії для друку.
+    Стилізовано як estimate документ.
     """
     from jinja2 import Environment, FileSystemLoader
     from fastapi.responses import HTMLResponse

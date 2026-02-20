@@ -1711,27 +1711,27 @@ export default function DamageHubApp() {
         </div>
       )}
 
-      {/* Full-screen Section Modal */}
+      {/* Full-screen Section Modal - Mobile Responsive */}
       {fullScreenModal.isOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className={`px-6 py-4 border-b flex items-center justify-between ${
+            <div className={`px-4 sm:px-6 py-3 sm:py-4 border-b flex items-center justify-between ${
               fullScreenModal.section === 'wash' ? 'bg-blue-50 border-blue-200' :
               fullScreenModal.section === 'restore' ? 'bg-orange-50 border-orange-200' :
               'bg-gradient-to-r from-cyan-50 to-purple-50 border-slate-200'
             }`}>
-              <div className="flex items-center gap-3">
-                {fullScreenModal.section === 'wash' && <Droplets className="w-6 h-6 text-blue-600" />}
-                {fullScreenModal.section === 'restore' && <Wrench className="w-6 h-6 text-orange-600" />}
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                {fullScreenModal.section === 'wash' && <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 flex-shrink-0" />}
+                {fullScreenModal.section === 'restore' && <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 flex-shrink-0" />}
                 {fullScreenModal.section === 'laundry' && (
-                  <>
-                    <Droplets className="w-6 h-6 text-cyan-600" />
-                    <Sparkles className="w-6 h-6 text-purple-600" />
-                  </>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600" />
+                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
+                  </div>
                 )}
-                <div>
-                  <h2 className={`text-xl font-bold ${
+                <div className="min-w-0">
+                  <h2 className={`text-lg sm:text-xl font-bold truncate ${
                     fullScreenModal.section === 'wash' ? 'text-blue-800' :
                     fullScreenModal.section === 'restore' ? 'text-orange-800' :
                     'text-slate-800'
@@ -1740,7 +1740,7 @@ export default function DamageHubApp() {
                     {fullScreenModal.section === 'restore' && 'Реставрація'}
                     {fullScreenModal.section === 'laundry' && 'Пральня'}
                   </h2>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-xs sm:text-sm text-slate-500 truncate">
                     {fullScreenModal.section === 'wash' && `${washItems.length} товарів`}
                     {fullScreenModal.section === 'restore' && `${restoreItems.length} товарів`}
                     {fullScreenModal.section === 'laundry' && `Прання: ${washingQueue.length}, Хімчистка: ${laundryQueue.length}`}
@@ -1749,53 +1749,53 @@ export default function DamageHubApp() {
               </div>
               <button 
                 onClick={() => setFullScreenModal({ isOpen: false, section: null })}
-                className="p-2 hover:bg-white/50 rounded-lg transition"
+                className="p-2 hover:bg-white/50 rounded-lg transition flex-shrink-0"
               >
-                <X className="w-6 h-6 text-slate-500" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-slate-500" />
               </button>
             </div>
             
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6">
               {/* МИЙКА */}
               {fullScreenModal.section === 'wash' && (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {washItems.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400">
-                      <Droplets className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                      <p className="text-lg">Немає товарів на мийці</p>
+                    <div className="text-center py-8 sm:py-12 text-slate-400">
+                      <Droplets className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 opacity-30" />
+                      <p className="text-base sm:text-lg">Немає товарів на мийці</p>
                     </div>
                   ) : (
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                       {washItems.map(item => (
-                        <div key={item.id} className={`flex items-center gap-3 p-4 rounded-xl border-2 transition ${
+                        <div key={item.id} className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl border-2 transition ${
                           item.processing_status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
                         }`}>
-                          <ProductPhoto item={item} size="md" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
+                          <ProductPhoto item={item} size="sm" className="sm:!w-14 sm:!h-14" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
-                            <div className="text-sm text-slate-500">{item.sku}</div>
-                            <div className="text-sm font-semibold text-blue-600">{item.qty || 1} шт</div>
+                            <div className="font-medium text-slate-800 truncate text-sm sm:text-base">{item.product_name}</div>
+                            <div className="text-xs sm:text-sm text-slate-500 truncate">{item.sku}</div>
+                            <div className="text-xs sm:text-sm font-semibold text-blue-600">{item.qty || 1} шт</div>
                             {item.processing_status === 'completed' && (
                               <span className="text-xs text-emerald-600 font-medium">✓ Готово</span>
                             )}
                           </div>
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-1.5 sm:gap-2 flex-shrink-0">
                             {item.processing_status !== 'completed' && (
                               <button
                                 onClick={() => handleComplete(item.id)}
-                                className="p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
+                                className="p-1.5 sm:p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
                                 title="Готово"
                               >
-                                <Check className="w-5 h-5" />
+                                <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                               </button>
                             )}
                             <button
                               onClick={() => handleRemoveFromList(item.id, 'wash')}
-                              className="p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
+                              className="p-1.5 sm:p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
                               title="Видалити"
                             >
-                              <X className="w-5 h-5" />
+                              <X className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
                           </div>
                         </div>
@@ -1807,43 +1807,43 @@ export default function DamageHubApp() {
 
               {/* РЕСТАВРАЦІЯ */}
               {fullScreenModal.section === 'restore' && (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {restoreItems.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400">
-                      <Wrench className="w-16 h-16 mx-auto mb-4 opacity-30" />
-                      <p className="text-lg">Немає товарів на реставрації</p>
+                    <div className="text-center py-8 sm:py-12 text-slate-400">
+                      <Wrench className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 opacity-30" />
+                      <p className="text-base sm:text-lg">Немає товарів на реставрації</p>
                     </div>
                   ) : (
-                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                       {restoreItems.map(item => (
-                        <div key={item.id} className={`flex items-center gap-3 p-4 rounded-xl border-2 transition ${
+                        <div key={item.id} className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl border-2 transition ${
                           item.processing_status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
                         }`}>
-                          <ProductPhoto item={item} size="md" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
+                          <ProductPhoto item={item} size="sm" className="sm:!w-14 sm:!h-14" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
-                            <div className="text-sm text-slate-500">{item.sku}</div>
-                            <div className="text-sm font-semibold text-orange-600">{item.qty || 1} шт</div>
+                            <div className="font-medium text-slate-800 truncate text-sm sm:text-base">{item.product_name}</div>
+                            <div className="text-xs sm:text-sm text-slate-500 truncate">{item.sku}</div>
+                            <div className="text-xs sm:text-sm font-semibold text-orange-600">{item.qty || 1} шт</div>
                             {item.processing_status === 'completed' && (
                               <span className="text-xs text-emerald-600 font-medium">✓ Готово</span>
                             )}
                           </div>
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-1.5 sm:gap-2 flex-shrink-0">
                             {item.processing_status !== 'completed' && (
                               <button
                                 onClick={() => handleComplete(item.id)}
-                                className="p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
+                                className="p-1.5 sm:p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
                                 title="Готово"
                               >
-                                <Check className="w-5 h-5" />
+                                <Check className="w-4 h-4 sm:w-5 sm:h-5" />
                               </button>
                             )}
                             <button
                               onClick={() => handleRemoveFromList(item.id, 'restore')}
-                              className="p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
+                              className="p-1.5 sm:p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
                               title="Видалити"
                             >
-                              <X className="w-5 h-5" />
+                              <X className="w-4 h-4 sm:w-5 sm:h-5" />
                             </button>
                           </div>
                         </div>

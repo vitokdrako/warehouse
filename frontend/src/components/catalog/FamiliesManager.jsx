@@ -197,7 +197,9 @@ function FamilyDetail({
   onSave, 
   onDelete,
   saving,
-  hasChanges 
+  hasChanges,
+  pendingAdd = [],
+  pendingRemove = []
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')

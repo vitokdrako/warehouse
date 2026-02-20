@@ -197,7 +197,9 @@ function FamilyDetail({
   onSave, 
   onDelete,
   saving,
-  hasChanges 
+  hasChanges,
+  pendingAdd = [],
+  pendingRemove = []
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -291,17 +293,28 @@ function FamilyDetail({
           
           <div className="flex items-center gap-2">
             {hasChanges && (
-              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
-                Незбережені зміни
-              </span>
+              <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
+                <span className="text-amber-700 font-medium">Незбережені зміни:</span>
+                {pendingAdd.length > 0 && (
+                  <span className="text-emerald-600">+{pendingAdd.length}</span>
+                )}
+                {pendingRemove.length > 0 && (
+                  <span className="text-rose-600">-{pendingRemove.length}</span>
+                )}
+              </div>
             )}
             <button
               onClick={() => onSave({ name, description })}
-              disabled={saving || !name.trim()}
-              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={saving || (!hasChanges && !name.trim())}
+              className={cls(
+                "flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+                hasChanges
+                  ? "bg-emerald-500 text-white hover:bg-emerald-600 animate-pulse"
+                  : "bg-slate-200 text-slate-500 cursor-not-allowed"
+              )}
             >
               <Save className="w-4 h-4" />
-              Зберегти
+              {saving ? 'Зберігаю...' : hasChanges ? `Зберегти (${pendingAdd.length + pendingRemove.length})` : 'Зберегти'}
             </button>
             <button
               onClick={onDelete}
@@ -553,12 +566,17 @@ function ProductBindingPanel({
   allProducts,
   onAssign,
   onRemove,
-  onMoveToFamily
+  onMoveToFamily,
+  pendingAdd = [],
+  pendingRemove = []
 }) {
   const [activeTab, setActiveTab] = useState('add') // 'add' | 'assigned' | 'conflicts'
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [selectedToRemove, setSelectedToRemove] = useState([])
+  
+  // IDs of pending products
+  const pendingAddIds = new Set(pendingAdd.map(p => p.product_id))
 
   // Товари доступні для додавання
   const availableProducts = useMemo(() => {
@@ -577,7 +595,7 @@ function ProductBindingPanel({
       }
       
       // Фільтр категорії
-      if (categoryFilter !== 'all' && p.category_name !== categoryFilter) {
+      if (categoryFilter !== 'all' && p.category !== categoryFilter) {
         return false
       }
       
@@ -594,13 +612,14 @@ function ProductBindingPanel({
   const categories = useMemo(() => {
     const cats = new Set()
     allProducts.forEach(p => {
-      if (p.category_name) cats.add(p.category_name)
+      if (p.category) cats.add(p.category)
     })
     return Array.from(cats).sort()
   }, [allProducts])
 
   const handleAddProduct = (product) => {
-    onAssign([product.product_id])
+    // Pass the whole product object for local add
+    onAssign(product)
   }
 
   const handleRemoveSelected = () => {
@@ -712,8 +731,14 @@ function ProductBindingPanel({
                 <span className="text-sm text-slate-500">
                   {selectedToRemove.length > 0 
                     ? `Вибрано: ${selectedToRemove.length}`
-                    : 'Виберіть для видалення'
+                    : `${assignedProducts.length} товарів`
                   }
+                  {pendingAdd.length > 0 && (
+                    <span className="ml-2 text-emerald-600">(+{pendingAdd.length} нових)</span>
+                  )}
+                  {pendingRemove.length > 0 && (
+                    <span className="ml-2 text-rose-600">(-{pendingRemove.length} видалити)</span>
+                  )}
                 </span>
                 {selectedToRemove.length > 0 && (
                   <button
@@ -736,6 +761,11 @@ function ProductBindingPanel({
                   selected={selectedToRemove.includes(product.product_id)}
                   onSelect={() => toggleRemoveSelection(product.product_id)}
                   showCheckbox
+                  badge={product._isPending && (
+                    <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                      + новий
+                    </span>
+                  )}
                 />
               ))}
               {assignedProducts.length === 0 && (
@@ -833,7 +863,12 @@ export default function FamiliesManager() {
   const [selectedFamily, setSelectedFamily] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [hasChanges, setHasChanges] = useState(false)
+  
+  // Pending changes (not yet saved to server)
+  const [pendingAdd, setPendingAdd] = useState([])      // Products to add
+  const [pendingRemove, setPendingRemove] = useState([]) // Products to remove
+  
+  const hasChanges = pendingAdd.length > 0 || pendingRemove.length > 0
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -895,17 +930,43 @@ export default function FamiliesManager() {
     }
   }
 
-  // Save family
+  // Save family - send all pending changes to server
   const handleSaveFamily = async (data) => {
     if (!selectedFamily) return
     
     setSaving(true)
     try {
-      // For now, we update by recreating (API limitation)
-      // In real app, you'd have PUT /families/{id}
-      setHasChanges(false)
-      alert('✅ Збережено')
+      // 1. Add pending products
+      if (pendingAdd.length > 0) {
+        const response = await fetch(`${BACKEND_URL}/api/catalog/families/${selectedFamily.id}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_ids: pendingAdd.map(p => p.product_id) })
+        })
+        if (!response.ok) {
+          throw new Error('Failed to add products')
+        }
+      }
+      
+      // 2. Remove pending products
+      for (const productId of pendingRemove) {
+        await fetch(`${BACKEND_URL}/api/catalog/products/${productId}/remove-family`, {
+          method: 'POST'
+        })
+      }
+      
+      // Clear pending changes
+      setPendingAdd([])
+      setPendingRemove([])
+      
+      // Reload data
       await loadData()
+      
+      // Re-select family to refresh
+      const updated = families.find(f => f.id === selectedFamily.id)
+      if (updated) setSelectedFamily(updated)
+      
+      alert(`✅ Збережено! Додано: ${pendingAdd.length}, Видалено: ${pendingRemove.length}`)
     } catch (error) {
       console.error('Error saving:', error)
       alert('Помилка збереження')
@@ -926,6 +987,8 @@ export default function FamiliesManager() {
       
       if (response.ok) {
         setSelectedFamily(null)
+        setPendingAdd([])
+        setPendingRemove([])
         await loadData()
       }
     } catch (error) {
@@ -934,62 +997,66 @@ export default function FamiliesManager() {
     }
   }
 
-  // Assign products to family
-  const handleAssignProducts = async (productIds) => {
-    if (!selectedFamily) return
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/catalog/families/${selectedFamily.id}/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_ids: productIds })
-      })
-      
-      if (response.ok) {
-        await loadData()
-        // Update selected family
-        const updated = families.find(f => f.id === selectedFamily.id)
-        if (updated) setSelectedFamily(updated)
-      }
-    } catch (error) {
-      console.error('Error assigning:', error)
+  // Add product to pending (locally, without API call)
+  const handleAddProductLocal = (product) => {
+    // Check if already in pending
+    if (pendingAdd.find(p => p.product_id === product.product_id)) return
+    // Check if in pendingRemove - just remove from there
+    if (pendingRemove.includes(product.product_id)) {
+      setPendingRemove(prev => prev.filter(id => id !== product.product_id))
+      return
     }
+    setPendingAdd(prev => [...prev, product])
   }
 
-  // Remove product from family
-  const handleRemoveProduct = async (productId) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/catalog/products/${productId}/remove-family`, {
-        method: 'POST'
-      })
-      
-      if (response.ok) {
-        await loadData()
-        // Update selected family
-        const updated = families.find(f => f.id === selectedFamily?.id)
-        if (updated) setSelectedFamily(updated)
-      }
-    } catch (error) {
-      console.error('Error removing:', error)
+  // Remove product locally (add to pendingRemove)
+  const handleRemoveProductLocal = (productId) => {
+    // If in pendingAdd - just remove from there
+    if (pendingAdd.find(p => p.product_id === productId)) {
+      setPendingAdd(prev => prev.filter(p => p.product_id !== productId))
+      return
+    }
+    // Otherwise add to pendingRemove
+    if (!pendingRemove.includes(productId)) {
+      setPendingRemove(prev => [...prev, productId])
     }
   }
 
   // Move product to current family (from another)
-  const handleMoveToFamily = async (productId) => {
-    await handleAssignProducts([productId])
+  const handleMoveToFamily = (productId) => {
+    const product = allProducts.find(p => p.product_id === productId)
+    if (product) {
+      handleAddProductLocal(product)
+    }
   }
 
-  // Get assigned products for selected family
-  // Products come directly from family.products (from API)
+  // Get assigned products for selected family (including pending)
   const assignedProducts = useMemo(() => {
     if (!selectedFamily) return []
-    // First check if family has products array from API
+    
+    // Start with products from API
+    let products = []
     if (selectedFamily.products && selectedFamily.products.length > 0) {
-      return selectedFamily.products
+      products = [...selectedFamily.products]
+    } else {
+      products = allProducts.filter(p => p.family_id === selectedFamily.id)
     }
-    // Fallback: filter from allProducts by family_id
-    return allProducts.filter(p => p.family_id === selectedFamily.id)
-  }, [allProducts, selectedFamily])
+    
+    // Remove products that are in pendingRemove
+    products = products.filter(p => !pendingRemove.includes(p.product_id))
+    
+    // Add pending products (mark them as pending)
+    const pendingWithFlag = pendingAdd.map(p => ({ ...p, _isPending: true }))
+    products = [...products, ...pendingWithFlag]
+    
+    return products
+  }, [allProducts, selectedFamily, pendingAdd, pendingRemove])
+
+  // Clear pending when family changes
+  useEffect(() => {
+    setPendingAdd([])
+    setPendingRemove([])
+  }, [selectedFamily?.id])
 
   // Update selected family when families change
   useEffect(() => {
@@ -1029,11 +1096,13 @@ export default function FamiliesManager() {
       
       {/* Center Column - Family Detail */}
       <FamilyDetail
-        family={selectedFamily}
+        family={{ ...selectedFamily, products: assignedProducts }}
         onSave={handleSaveFamily}
         onDelete={handleDeleteFamily}
         saving={saving}
         hasChanges={hasChanges}
+        pendingAdd={pendingAdd}
+        pendingRemove={pendingRemove}
       />
       
       {/* Right Column - Product Binding */}
@@ -1041,9 +1110,11 @@ export default function FamiliesManager() {
         familyId={selectedFamily?.id}
         assignedProducts={assignedProducts}
         allProducts={allProducts}
-        onAssign={handleAssignProducts}
-        onRemove={handleRemoveProduct}
+        onAssign={handleAddProductLocal}
+        onRemove={handleRemoveProductLocal}
         onMoveToFamily={handleMoveToFamily}
+        pendingAdd={pendingAdd}
+        pendingRemove={pendingRemove}
       />
     </div>
   )

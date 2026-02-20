@@ -827,12 +827,14 @@ export default function FamiliesManager() {
       
       if (familiesRes.ok) {
         const data = await familiesRes.json()
-        setFamilies(data)
+        setFamilies(data || [])
       }
       
       if (productsRes.ok) {
         const data = await productsRes.json()
-        setAllProducts(data.items || [])
+        // API returns array directly, not {items: [...]}
+        const items = Array.isArray(data) ? data : (data.items || [])
+        setAllProducts(items)
       }
     } catch (error) {
       console.error('Error loading data:', error)

@@ -1949,6 +1949,13 @@ export default function DamageHubApp() {
                                   }`}>
                                     {batch.status === 'completed' ? 'Готово' : batch.status === 'sent' ? 'Відправлено' : batch.status}
                                   </span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/api/laundry/batches/${batch.id}/print`, '_blank'); }}
+                                    className="p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+                                    title="Друкувати"
+                                  >
+                                    <Printer className="w-4 h-4" />
+                                  </button>
                                   {batch.status === 'completed' && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch.id, 'washing'); }}

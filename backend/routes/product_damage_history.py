@@ -1263,6 +1263,71 @@ async def send_to_washing(damage_id: str, data: dict, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
+@router.post("/quick-add-to-queue")
+async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
+    """
+    Швидке додавання товару в чергу прання або хімчистки.
+    Створює damage record без прив'язки до замовлення.
+    
+    Body params:
+        - product_id: str
+        - sku: str
+        - product_name: str
+        - category: str
+        - queue_type: 'washing' | 'laundry'
+        - notes: str (optional)
+    """
+    import uuid
+    
+    product_id = data.get("product_id")
+    sku = data.get("sku")
+    product_name = data.get("product_name")
+    category = data.get("category")
+    queue_type = data.get("queue_type", "laundry")
+    notes = data.get("notes", "")
+    
+    if not product_id or not sku:
+        raise HTTPException(status_code=400, detail="product_id та sku обов'язкові")
+    
+    if queue_type not in ('washing', 'laundry'):
+        raise HTTPException(status_code=400, detail="queue_type має бути 'washing' або 'laundry'")
+    
+    try:
+        damage_id = str(uuid.uuid4())
+        
+        db.execute(text("""
+            INSERT INTO product_damage_history (
+                id, product_id, sku, product_name, category,
+                qty, processed_qty, processing_type, processing_status,
+                damage_type, note, sent_to_processing_at, created_at
+            ) VALUES (
+                :id, :product_id, :sku, :product_name, :category,
+                1, 0, :processing_type, 'pending',
+                'quick_add', :notes, NOW(), NOW()
+            )
+        """), {
+            "id": damage_id,
+            "product_id": product_id,
+            "sku": sku,
+            "product_name": product_name,
+            "category": category,
+            "processing_type": queue_type,
+            "notes": notes
+        })
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "damage_id": damage_id,
+            "message": f"Товар додано до черги {queue_type}"
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
 @router.post("/{damage_id}/complete-processing")
 async def complete_processing(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """

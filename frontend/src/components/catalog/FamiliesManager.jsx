@@ -320,6 +320,9 @@ function FamilyDetail({
               <Package className="w-4 h-4" />
               <b>{products.length}</b> SKU
             </span>
+            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
+              Σ {products.reduce((sum, p) => sum + (p.quantity || 0), 0)} шт
+            </span>
             <span className="flex items-center gap-1.5 text-slate-600">
               <Palette className="w-4 h-4" />
               <b>{matrixData.colors.filter(c => c !== 'Other').length || 0}</b> кольорів

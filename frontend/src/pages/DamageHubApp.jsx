@@ -11,7 +11,7 @@
  */
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import CorporateHeader from "../components/CorporateHeader";
-import { X, Search, Archive, Package, Droplets, Wrench, Sparkles, ChevronDown, ChevronRight, RefreshCw, Eye, Check, AlertTriangle, Clock, Plus, Trash2 } from "lucide-react";
+import { X, Search, Archive, Package, Droplets, Wrench, Sparkles, ChevronDown, ChevronRight, RefreshCw, Eye, Check, AlertTriangle, Clock, Plus, Trash2, Printer } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 

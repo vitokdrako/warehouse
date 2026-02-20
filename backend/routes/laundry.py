@@ -95,11 +95,16 @@ def parse_item(row):
 # ==================== Queue Endpoints ====================
 
 @router.get("/queue")
-async def get_laundry_queue(db: Session = Depends(get_rh_db)):
+async def get_laundry_queue(type: str = "laundry", db: Session = Depends(get_rh_db)):
     """
-    Отримати чергу товарів для формування партії хімчистки.
-    Це товари з processing_type='laundry' які ще не додані в партію.
+    Отримати чергу товарів для формування партії прання або хімчистки.
+    Це товари з processing_type='washing' або 'laundry' які ще не додані в партію.
+    
+    Query params:
+        type: 'washing' або 'laundry' (default: 'laundry')
     """
+    processing_type = type if type in ('washing', 'laundry') else 'laundry'
+    
     result = db.execute(text("""
         SELECT 
             pdh.id,
@@ -118,11 +123,11 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
             p.image_url as product_image
         FROM product_damage_history pdh
         LEFT JOIN products p ON pdh.product_id = p.product_id
-        WHERE pdh.processing_type = 'laundry'
+        WHERE pdh.processing_type = :processing_type
         AND (pdh.laundry_batch_id IS NULL OR pdh.laundry_batch_id = '')
         AND (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0
         ORDER BY pdh.created_at ASC
-    """))
+    """), {"processing_type": processing_type}))
     
     items = []
     for row in result:

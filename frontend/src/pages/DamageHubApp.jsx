@@ -348,6 +348,9 @@ export default function DamageHubApp() {
   const [expandedBatches, setExpandedBatches] = useState({});
   const [batchItemsCache, setBatchItemsCache] = useState({});
   
+  // Return quantities for batch items (temp state for editing)
+  const [returnQuantities, setReturnQuantities] = useState({});
+  
   // Quick add to queue modal
   const [quickAddModal, setQuickAddModal] = useState({
     isOpen: false,

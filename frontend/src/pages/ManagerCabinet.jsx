@@ -212,6 +212,27 @@ export default function ManagerCabinet() {
     <div className="min-h-screen bg-corp-bg-page font-montserrat">
       <CorporateHeader cabinetName="Менеджерська" />
       
+      {/* KPIs */}
+      <section className="max-w-7xl mx-auto px-4 py-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="text-sm text-slate-500">Замовлення</div>
+            <div className="text-2xl font-bold text-slate-800">{filteredOrders.length}</div>
+            <div className="text-xs text-slate-400">{awaitingOrders.length} нові / {inProgressOrders.length} в роботі</div>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="text-sm text-slate-500">Виручка</div>
+            <div className="text-2xl font-bold text-emerald-600">₴ {financeData.revenue.toLocaleString()}</div>
+            <div className="text-xs text-slate-400">з фін. кабінету</div>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <div className="text-sm text-slate-500">Застави в холді</div>
+            <div className="text-2xl font-bold text-amber-600">{financeData.deposits}</div>
+            <div className="text-xs text-slate-400">кількість активних</div>
+          </div>
+        </div>
+      </section>
+      
       {/* Filters Bar */}
       <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
@@ -228,6 +249,18 @@ export default function ManagerCabinet() {
               />
             </div>
             
+            {/* Manager Filter */}
+            <select
+              value={managerFilter}
+              onChange={(e) => setManagerFilter(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+            >
+              <option value="all">Всі менеджери</option>
+              {managers.map(m => (
+                <option key={m.id} value={m.id}>{m.full_name}</option>
+              ))}
+            </select>
+            
             {/* Status Filter */}
             <select
               value={statusFilter}
@@ -240,16 +273,15 @@ export default function ManagerCabinet() {
               <option value="ready_for_issue">Готово до видачі</option>
             </select>
             
-            {/* Manager Filter */}
+            {/* Finance Filter */}
             <select
-              value={managerFilter}
-              onChange={(e) => setManagerFilter(e.target.value)}
+              value={financeFilter}
+              onChange={(e) => setFinanceFilter(e.target.value)}
               className="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
             >
-              <option value="all">Всі менеджери</option>
-              {managers.map(m => (
-                <option key={m.id} value={m.id}>{m.full_name}</option>
-              ))}
+              <option value="all">Фінанси: всі</option>
+              <option value="pending">Очікує оплати</option>
+              <option value="paid">Оплачено</option>
             </select>
             
             <div className="h-6 w-px bg-slate-200 mx-1" />

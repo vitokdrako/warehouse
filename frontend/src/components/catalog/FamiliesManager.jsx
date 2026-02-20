@@ -994,9 +994,9 @@ export default function FamiliesManager() {
     <div className="h-full flex bg-slate-100">
       {/* Left Column - Families List */}
       <FamiliesList
-        families={families.map(f => ({ ...f, products: allProducts.filter(p => p.family_id === f.id) }))}
+        families={families}
         selectedId={selectedFamily?.id}
-        onSelect={(f) => setSelectedFamily({ ...f, products: allProducts.filter(p => p.family_id === f.id) })}
+        onSelect={(f) => setSelectedFamily(f)}
         onCreate={handleCreateFamily}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

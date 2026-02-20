@@ -667,33 +667,39 @@ function ProductBindingPanel({
 
   if (!familyId) {
     return (
-      <div className="w-[420px] flex-shrink-0 bg-white border-l border-slate-200 flex items-center justify-center">
+      <div className={cls(
+        "bg-white flex items-center justify-center",
+        isMobile ? "w-full h-full" : "w-[420px] flex-shrink-0 border-l border-slate-200"
+      )}>
         <p className="text-slate-400 text-sm">Виберіть розмірну сітку</p>
       </div>
     )
   }
 
   return (
-    <div className="w-[420px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full">
+    <div className={cls(
+      "bg-white flex flex-col h-full",
+      isMobile ? "w-full" : "w-[420px] flex-shrink-0 border-l border-slate-200"
+    )}>
       {/* Tabs */}
       <div className="flex border-b border-slate-200">
         {[
-          { id: 'add', label: 'Додати', icon: Plus },
-          { id: 'assigned', label: `Прив'язані (${assignedProducts.length})`, icon: Check },
-          { id: 'conflicts', label: `Конфлікти (${conflicts.length})`, icon: AlertTriangle, highlight: conflicts.length > 0 },
+          { id: 'add', label: isMobile ? 'Додати' : 'Додати', icon: Plus },
+          { id: 'assigned', label: isMobile ? `(${assignedProducts.length})` : `Прив'язані (${assignedProducts.length})`, icon: Check },
+          { id: 'conflicts', label: isMobile ? `(${conflicts.length})` : `Конфлікти (${conflicts.length})`, icon: AlertTriangle, highlight: conflicts.length > 0 },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cls(
-              'flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors',
+              'flex-1 flex items-center justify-center gap-1.5 px-2 lg:px-3 py-3 text-sm font-medium transition-colors',
               activeTab === tab.id
                 ? 'text-amber-600 border-b-2 border-amber-500 bg-amber-50/50'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
             <tab.icon className={cls('w-4 h-4', tab.highlight && activeTab !== tab.id && 'text-rose-500')} />
-            {tab.label}
+            <span className={isMobile && tab.id !== 'add' ? 'hidden sm:inline' : ''}>{tab.label}</span>
           </button>
         ))}
       </div>

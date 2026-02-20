@@ -1,6 +1,6 @@
 """
 PDF Generator Service - генерація PDF документів
-Використовує WeasyPrint та Jinja2
+Використовує WeasyPrint та Jinja2 (якщо доступні)
 """
 import os
 import json
@@ -8,9 +8,25 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
-from weasyprint import HTML, CSS
-from weasyprint.text.fonts import FontConfiguration
 import logging
+
+logger = logging.getLogger(__name__)
+
+# WeasyPrint is optional - wrap in try-except to allow server to start without it
+WEASYPRINT_AVAILABLE = False
+HTML = None
+CSS = None
+FontConfiguration = None
+
+try:
+    from weasyprint import HTML as _HTML, CSS as _CSS
+    from weasyprint.text.fonts import FontConfiguration as _FontConfiguration
+    HTML = _HTML
+    CSS = _CSS
+    FontConfiguration = _FontConfiguration
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError) as e:
+    logger.warning(f"WeasyPrint not available: {e}. PDF generation will be disabled.")
 
 logger = logging.getLogger(__name__)
 

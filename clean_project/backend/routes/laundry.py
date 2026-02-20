@@ -95,11 +95,16 @@ def parse_item(row):
 # ==================== Queue Endpoints ====================
 
 @router.get("/queue")
-async def get_laundry_queue(db: Session = Depends(get_rh_db)):
+async def get_laundry_queue(type: str = "laundry", db: Session = Depends(get_rh_db)):
     """
-    Отримати чергу товарів для формування партії хімчистки.
-    Це товари з processing_type='laundry' які ще не додані в партію.
+    Отримати чергу товарів для формування партії прання або хімчистки.
+    Це товари з processing_type='washing' або 'laundry' які ще не додані в партію.
+    
+    Query params:
+        type: 'washing' або 'laundry' (default: 'laundry')
     """
+    processing_type = type if type in ('washing', 'laundry') else 'laundry'
+    
     result = db.execute(text("""
         SELECT 
             pdh.id,
@@ -118,11 +123,11 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
             p.image_url as product_image
         FROM product_damage_history pdh
         LEFT JOIN products p ON pdh.product_id = p.product_id
-        WHERE pdh.processing_type = 'laundry'
+        WHERE pdh.processing_type = :processing_type
         AND (pdh.laundry_batch_id IS NULL OR pdh.laundry_batch_id = '')
         AND (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0
         ORDER BY pdh.created_at ASC
-    """))
+    """), {"processing_type": processing_type})
     
     items = []
     for row in result:
@@ -161,15 +166,17 @@ async def add_queue_items_to_batch(
     Body:
         - item_ids: list[str] - ID записів з product_damage_history
         - batch_id: str (optional) - ID існуючої партії, або створити нову
-        - laundry_company: str - назва хімчистки (для нової партії)
+        - laundry_company: str - назва хімчистки/пральні (для нової партії)
         - complexity: str - складність обробки ('light', 'normal', 'heavy')
         - expected_return_date: str (optional) - очікувана дата повернення
+        - batch_type: str - тип партії ('washing' або 'laundry')
     """
     item_ids = data.get("item_ids", [])
     batch_id = data.get("batch_id")
     laundry_company = data.get("laundry_company", "Хімчистка")
     complexity = data.get("complexity", "normal")  # light, normal, heavy
     expected_return_date = data.get("expected_return_date")
+    batch_type = data.get("batch_type", "laundry")  # washing or laundry
     
     # Отримати поточного користувача (якщо є)
     created_by = data.get("created_by", "system")
@@ -180,17 +187,18 @@ async def add_queue_items_to_batch(
     try:
         # Якщо партія не вказана - створити нову
         if not batch_id:
+            prefix = "WB" if batch_type == "washing" else "LB"
             batch_id = f"BATCH-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-            batch_number = f"LB-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            batch_number = f"{prefix}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
             
             db.execute(text("""
                 INSERT INTO laundry_batches (
                     id, batch_number, laundry_company, status, sent_date, 
                     expected_return_date, total_items, returned_items, 
-                    complexity, created_by, created_at, updated_at
+                    complexity, batch_type, created_by, created_at, updated_at
                 ) VALUES (
                     :id, :batch_number, :company, 'sent', NOW(), :return_date,
-                    0, 0, :complexity, :created_by, NOW(), NOW()
+                    0, 0, :complexity, :batch_type, :created_by, NOW(), NOW()
                 )
             """), {
                 "id": batch_id,
@@ -198,6 +206,7 @@ async def add_queue_items_to_batch(
                 "company": laundry_company,
                 "return_date": expected_return_date,
                 "complexity": complexity,
+                "batch_type": batch_type,
                 "created_by": created_by
             })
         
@@ -280,11 +289,13 @@ async def add_queue_items_to_batch(
 async def get_laundry_batches(
     status: Optional[str] = None,
     laundry_company: Optional[str] = None,
+    type: Optional[str] = None,
     db: Session = Depends(get_rh_db)
 ):
     """
     Отримати список партій
     Status: sent, partial_return, returned, completed
+    Type: washing, laundry (optional filter by batch_type)
     """
     sql = "SELECT * FROM laundry_batches WHERE 1=1"
     params = {}
@@ -295,6 +306,9 @@ async def get_laundry_batches(
     if laundry_company:
         sql += " AND laundry_company = :company"
         params['company'] = laundry_company
+    if type and type in ('washing', 'laundry'):
+        sql += " AND COALESCE(batch_type, 'laundry') = :batch_type"
+        params['batch_type'] = type
     
     sql += " ORDER BY sent_date DESC"
     
@@ -649,13 +663,14 @@ async def delete_laundry_batch(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Видалити партію (тільки якщо статус 'sent' і не було повернень)
-    Автоматично розморозити товари
+    Видалити партію.
+    - Партії зі статусом 'completed' можна видалити без обмежень
+    - Партії зі статусом 'sent' можна видалити тільки якщо не було повернень
     """
     try:
         # Перевірити статус партії
         result = db.execute(
-            text("SELECT status, returned_items FROM laundry_batches WHERE id = :id"),
+            text("SELECT status, returned_items, total_items FROM laundry_batches WHERE id = :id"),
             {"id": batch_id}
         )
         row = result.fetchone()
@@ -663,41 +678,143 @@ async def delete_laundry_batch(
         if not row:
             raise HTTPException(status_code=404, detail="Партію не знайдено")
         
-        if row[0] != 'sent' or row[1] > 0:
+        status = row[0]
+        returned_items = row[1] or 0
+        total_items = row[2] or 0
+        
+        # Для completed партій - дозволяємо видалення
+        # Для sent партій - тільки якщо не було повернень
+        if status == 'sent' and returned_items > 0:
             raise HTTPException(
                 status_code=400,
-                detail="Можна видалити тільки партії зі статусом 'sent' без повернень"
+                detail="Не можна видалити партію зі статусом 'sent' якщо вже є повернення"
             )
-        
-        # Отримати товари партії
-        items_result = db.execute(
-            text("SELECT product_id, quantity FROM laundry_items WHERE batch_id = :batch_id"),
-            {"batch_id": batch_id}
-        )
-        
-        # Повернути товари на склад
-        for item_row in items_result:
-            db.execute(text("""
-                UPDATE products
-                SET quantity = quantity + :qty
-                WHERE product_id = :product_id
-            """), {
-                "qty": item_row[1],
-                "product_id": item_row[0]
-            })
         
         # Видалити товари партії
         db.execute(text("DELETE FROM laundry_items WHERE batch_id = :batch_id"), {"batch_id": batch_id})
+        
+        # Очистити посилання на партію в damage history
+        db.execute(text("""
+            UPDATE product_damage_history 
+            SET laundry_batch_id = NULL, laundry_item_id = NULL
+            WHERE laundry_batch_id = :batch_id
+        """), {"batch_id": batch_id})
         
         # Видалити партію
         db.execute(text("DELETE FROM laundry_batches WHERE id = :id"), {"id": batch_id})
         
         db.commit()
-        return {"message": "Партію видалено, товари повернуті на склад"}
+        return {"success": True, "message": "Партію видалено"}
     
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== Print / Export Endpoints ====================
+
+@router.get("/batches/{batch_id}/print")
+async def get_batch_print_view(
+    batch_id: str,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Отримати HTML view партії для друку.
+    Повертає повний HTML документ готовий для друку.
+    """
+    from jinja2 import Environment, FileSystemLoader
+    from fastapi.responses import HTMLResponse
+    import os
+    
+    # Get batch info
+    batch_result = db.execute(text("""
+        SELECT id, batch_number, laundry_company, status, sent_date, 
+               expected_return_date, total_items, returned_items, 
+               complexity, batch_type, created_at
+        FROM laundry_batches
+        WHERE id = :batch_id
+    """), {"batch_id": batch_id})
+    
+    batch_row = batch_result.fetchone()
+    if not batch_row:
+        raise HTTPException(status_code=404, detail="Партію не знайдено")
+    
+    batch = {
+        "id": batch_row[0],
+        "batch_number": batch_row[1],
+        "laundry_company": batch_row[2],
+        "status": batch_row[3],
+        "sent_date": batch_row[4].strftime("%d.%m.%Y") if batch_row[4] else "",
+        "expected_return_date": batch_row[5].strftime("%d.%m.%Y") if batch_row[5] else None,
+        "total_items": batch_row[6] or 0,
+        "returned_items": batch_row[7] or 0,
+        "complexity": batch_row[8] or "normal",
+        "batch_type": batch_row[9] or "laundry"
+    }
+    
+    # Get batch items
+    items_result = db.execute(text("""
+        SELECT 
+            li.id, li.product_id, li.product_name, li.sku, li.category,
+            li.quantity, li.returned_quantity, li.condition_before, li.notes,
+            pdh.order_number,
+            p.image_url
+        FROM laundry_items li
+        LEFT JOIN product_damage_history pdh ON li.damage_history_id = pdh.id
+        LEFT JOIN products p ON li.product_id = p.product_id
+        WHERE li.batch_id = :batch_id
+        ORDER BY li.created_at
+    """), {"batch_id": batch_id})
+    
+    items = []
+    for row in items_result:
+        items.append({
+            "id": row[0],
+            "product_id": row[1],
+            "product_name": row[2],
+            "sku": row[3],
+            "category": row[4],
+            "quantity": row[5] or 1,
+            "returned_quantity": row[6] or 0,
+            "condition_before": row[7],
+            "notes": row[8],
+            "order_number": row[9],
+            "image_url": row[10]
+        })
+    
+    # Determine colors based on batch type
+    if batch["batch_type"] == "washing":
+        batch_type_name = "Прання"
+        primary_color = "#0891b2"  # cyan-600
+        dark_color = "#0e7490"     # cyan-700
+        light_bg = "#ecfeff"       # cyan-50
+    else:
+        batch_type_name = "Хімчистка"
+        primary_color = "#9333ea"  # purple-600
+        dark_color = "#7e22ce"     # purple-700
+        light_bg = "#faf5ff"       # purple-50
+    
+    # Load and render template
+    templates_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "documents")
+    env = Environment(loader=FileSystemLoader(templates_dir))
+    template = env.get_template("laundry_batch.html")
+    
+    html = template.render(
+        batch=batch,
+        items=items,
+        batch_type_name=batch_type_name,
+        primary_color=primary_color,
+        dark_color=dark_color,
+        light_bg=light_bg,
+        company_name="FarforRent",
+        notes="",
+        generated_at=datetime.now().strftime("%d.%m.%Y %H:%M")
+    )
+    
+    return HTMLResponse(content=html)
+
 
 # ==================== Statistics Endpoints ====================
 

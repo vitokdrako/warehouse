@@ -943,6 +943,7 @@ function ProductMiniCard({ product, action, badge, selected, onSelect, showCheck
 export default function FamiliesManager() {
   const [families, setFamilies] = useState([])
   const [allProducts, setAllProducts] = useState([])
+  const [categories, setCategories] = useState([])
   const [selectedFamily, setSelectedFamily] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -959,6 +960,7 @@ export default function FamiliesManager() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [filterHasProducts, setFilterHasProducts] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState(null)
 
   // Load data - families first, products lazy
   const loadData = useCallback(async () => {
@@ -971,6 +973,13 @@ export default function FamiliesManager() {
         const data = await familiesRes.json()
         console.log('[FamiliesManager] Families loaded:', data?.length || 0)
         setFamilies(data || [])
+      }
+      
+      // Load categories
+      const categoriesRes = await fetch(`${BACKEND_URL}/api/catalog/categories`)
+      if (categoriesRes.ok) {
+        const data = await categoriesRes.json()
+        setCategories(Array.isArray(data) ? data : data.categories || [])
       }
       
       // Families loaded - show UI

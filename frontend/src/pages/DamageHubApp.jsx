@@ -1565,48 +1565,49 @@ export default function DamageHubApp() {
         onClose={() => setPhotoModal({ isOpen: false, url: null, name: null })}
       />
 
-      {/* Batch Creation Modal */}
+      {/* Batch Creation Modal - Mobile Responsive */}
       {batchModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className={`${batchModal.batchType === 'washing' ? 'bg-cyan-50 border-cyan-200' : 'bg-purple-50 border-purple-200'} border-b px-5 py-4 flex items-center justify-between`}>
-              <div>
-                <h2 className={`text-lg font-bold ${batchModal.batchType === 'washing' ? 'text-cyan-800' : 'text-purple-800'} flex items-center gap-2`}>
-                  <Package className="w-5 h-5" /> Формування партії {batchModal.batchType === 'washing' ? 'прання' : 'хімчистки'}
+            <div className={`${batchModal.batchType === 'washing' ? 'bg-cyan-50 border-cyan-200' : 'bg-purple-50 border-purple-200'} border-b px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between`}>
+              <div className="min-w-0 flex-1">
+                <h2 className={`text-base sm:text-lg font-bold ${batchModal.batchType === 'washing' ? 'text-cyan-800' : 'text-purple-800'} flex items-center gap-2`}>
+                  <Package className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" /> 
+                  <span className="truncate">Партія {batchModal.batchType === 'washing' ? 'прання' : 'хімчистки'}</span>
                 </h2>
-                <p className={`text-sm ${batchModal.batchType === 'washing' ? 'text-cyan-600' : 'text-purple-600'} mt-0.5`}>Оберіть товари та заповніть дані</p>
+                <p className={`text-xs sm:text-sm ${batchModal.batchType === 'washing' ? 'text-cyan-600' : 'text-purple-600'} mt-0.5`}>Оберіть товари та заповніть дані</p>
               </div>
               <button 
                 onClick={() => setBatchModal({ isOpen: false, batchType: 'laundry', selectedItems: [], companyName: '', complexity: 'normal' })}
-                className={`p-2 ${batchModal.batchType === 'washing' ? 'hover:bg-cyan-100' : 'hover:bg-purple-100'} rounded-lg transition`}
+                className={`p-2 ${batchModal.batchType === 'washing' ? 'hover:bg-cyan-100' : 'hover:bg-purple-100'} rounded-lg transition flex-shrink-0`}
               >
                 <X className={`w-5 h-5 ${batchModal.batchType === 'washing' ? 'text-cyan-600' : 'text-purple-600'}`} />
               </button>
             </div>
             
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5">
               {/* Company Name */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                   Назва {batchModal.batchType === 'washing' ? 'пральні' : 'хімчистки'} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={batchModal.companyName}
                   onChange={(e) => setBatchModal(prev => ({ ...prev, companyName: e.target.value }))}
-                  placeholder={batchModal.batchType === 'washing' ? "Наприклад: Пральня №1..." : "Наприклад: Прана, Чистюля..."}
-                  className={`w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 ${batchModal.batchType === 'washing' ? 'focus:ring-cyan-500 focus:border-cyan-500' : 'focus:ring-purple-500 focus:border-purple-500'}`}
+                  placeholder={batchModal.batchType === 'washing' ? "Пральня №1..." : "Прана, Чистюля..."}
+                  className={`w-full px-3 sm:px-4 py-2.5 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 ${batchModal.batchType === 'washing' ? 'focus:ring-cyan-500 focus:border-cyan-500' : 'focus:ring-purple-500 focus:border-purple-500'}`}
                 />
               </div>
               
               {/* Complexity */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                   Складність обробки
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                   {[
                     { value: 'light', label: 'Легка', color: 'emerald' },
                     { value: 'normal', label: 'Звичайна', color: 'blue' },
@@ -1615,7 +1616,7 @@ export default function DamageHubApp() {
                     <button
                       key={opt.value}
                       onClick={() => setBatchModal(prev => ({ ...prev, complexity: opt.value }))}
-                      className={`py-2.5 px-3 rounded-lg border-2 text-sm font-medium transition ${
+                      className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg border-2 text-xs sm:text-sm font-medium transition ${
                         batchModal.complexity === opt.value
                           ? opt.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                           : opt.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700'
@@ -1631,38 +1632,38 @@ export default function DamageHubApp() {
               
               {/* Items Selection */}
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                   <label className="text-sm font-medium text-slate-700">
-                    Оберіть товари <span className="text-slate-500">({batchModal.selectedItems.length} обрано)</span>
+                    Товари <span className="text-slate-500">({batchModal.selectedItems.length})</span>
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 text-xs">
                     <button
                       onClick={() => setBatchModal(prev => ({ ...prev, selectedItems: laundryQueue.map(i => i.id) }))}
-                      className="text-xs text-purple-600 hover:text-purple-800"
+                      className="text-purple-600 hover:text-purple-800"
                     >
-                      Обрати всі
+                      Всі
                     </button>
                     <span className="text-slate-300">|</span>
                     <button
                       onClick={() => setBatchModal(prev => ({ ...prev, selectedItems: [] }))}
-                      className="text-xs text-slate-500 hover:text-slate-700"
+                      className="text-slate-500 hover:text-slate-700"
                     >
                       Скинути
                     </button>
                   </div>
                 </div>
-                <div className="border border-slate-200 rounded-lg max-h-60 overflow-y-auto">
+                <div className="border border-slate-200 rounded-lg max-h-48 sm:max-h-60 overflow-y-auto">
                   {laundryQueue.map(item => (
                     <div
                       key={item.id}
                       onClick={() => toggleBatchItem(item.id)}
-                      className={`flex items-center gap-3 p-3 border-b border-slate-100 last:border-b-0 cursor-pointer transition ${
+                      className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 border-b border-slate-100 last:border-b-0 cursor-pointer transition active:bg-slate-100 ${
                         batchModal.selectedItems.includes(item.id)
                           ? 'bg-purple-50'
                           : 'hover:bg-slate-50'
                       }`}
                     >
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition flex-shrink-0 ${
                         batchModal.selectedItems.includes(item.id)
                           ? 'bg-purple-500 border-purple-500'
                           : 'border-slate-300'
@@ -1674,9 +1675,9 @@ export default function DamageHubApp() {
                       <ProductPhoto item={item} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-slate-500 truncate">
                           {item.sku} • {item.qty || item.remaining_qty || 1} шт
-                          {item.order_number && <span className="text-slate-400 ml-1">• #{item.order_number}</span>}
+                          {item.order_number && <span className="hidden sm:inline text-slate-400 ml-1">• #{item.order_number}</span>}
                         </div>
                       </div>
                     </div>
@@ -1685,24 +1686,24 @@ export default function DamageHubApp() {
               </div>
             </div>
             
-            {/* Footer */}
-            <div className="border-t border-slate-200 px-5 py-4 bg-slate-50 flex items-center justify-between">
-              <div className="text-sm text-slate-500">
+            {/* Footer - Mobile optimized */}
+            <div className="border-t border-slate-200 px-4 sm:px-5 py-3 sm:py-4 bg-slate-50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="text-sm text-slate-500 hidden sm:block">
                 Дата: <span className="font-medium text-slate-700">{new Date().toLocaleDateString('uk-UA')}</span>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <button
                   onClick={() => setBatchModal({ isOpen: false, selectedItems: [], companyName: '', complexity: 'normal' })}
-                  className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition font-medium"
+                  className="flex-1 sm:flex-none px-4 py-2.5 text-slate-600 hover:bg-slate-200 rounded-lg transition font-medium"
                 >
                   Скасувати
                 </button>
                 <button
                   onClick={handleCreateBatch}
                   disabled={!batchModal.companyName.trim() || batchModal.selectedItems.length === 0}
-                  className="px-5 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  <Package className="w-4 h-4" /> Створити партію
+                  <Package className="w-4 h-4" /> <span>Створити</span>
                 </button>
               </div>
             </div>

@@ -41,8 +41,8 @@ from datetime import datetime, date, timedelta
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://props-master-room.preview.emergentagent.com/api"
-FRONTEND_URL = "https://props-master-room.preview.emergentagent.com"
+BASE_URL = "https://laundry-print-view.preview.emergentagent.com/api"
+FRONTEND_URL = "https://laundry-print-view.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"

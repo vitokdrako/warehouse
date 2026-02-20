@@ -900,17 +900,43 @@ export default function FamiliesManager() {
     }
   }
 
-  // Save family
+  // Save family - send all pending changes to server
   const handleSaveFamily = async (data) => {
     if (!selectedFamily) return
     
     setSaving(true)
     try {
-      // For now, we update by recreating (API limitation)
-      // In real app, you'd have PUT /families/{id}
-      setHasChanges(false)
-      alert('✅ Збережено')
+      // 1. Add pending products
+      if (pendingAdd.length > 0) {
+        const response = await fetch(`${BACKEND_URL}/api/catalog/families/${selectedFamily.id}/assign`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_ids: pendingAdd.map(p => p.product_id) })
+        })
+        if (!response.ok) {
+          throw new Error('Failed to add products')
+        }
+      }
+      
+      // 2. Remove pending products
+      for (const productId of pendingRemove) {
+        await fetch(`${BACKEND_URL}/api/catalog/products/${productId}/remove-family`, {
+          method: 'POST'
+        })
+      }
+      
+      // Clear pending changes
+      setPendingAdd([])
+      setPendingRemove([])
+      
+      // Reload data
       await loadData()
+      
+      // Re-select family to refresh
+      const updated = families.find(f => f.id === selectedFamily.id)
+      if (updated) setSelectedFamily(updated)
+      
+      alert(`✅ Збережено! Додано: ${pendingAdd.length}, Видалено: ${pendingRemove.length}`)
     } catch (error) {
       console.error('Error saving:', error)
       alert('Помилка збереження')
@@ -931,6 +957,8 @@ export default function FamiliesManager() {
       
       if (response.ok) {
         setSelectedFamily(null)
+        setPendingAdd([])
+        setPendingRemove([])
         await loadData()
       }
     } catch (error) {
@@ -939,49 +967,37 @@ export default function FamiliesManager() {
     }
   }
 
-  // Assign products to family
-  const handleAssignProducts = async (productIds) => {
-    if (!selectedFamily) return
-
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/catalog/families/${selectedFamily.id}/assign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_ids: productIds })
-      })
-      
-      if (response.ok) {
-        await loadData()
-        // Update selected family
-        const updated = families.find(f => f.id === selectedFamily.id)
-        if (updated) setSelectedFamily(updated)
-      }
-    } catch (error) {
-      console.error('Error assigning:', error)
+  // Add product to pending (locally, without API call)
+  const handleAddProductLocal = (product) => {
+    // Check if already in pending
+    if (pendingAdd.find(p => p.product_id === product.product_id)) return
+    // Check if in pendingRemove - just remove from there
+    if (pendingRemove.includes(product.product_id)) {
+      setPendingRemove(prev => prev.filter(id => id !== product.product_id))
+      return
     }
+    setPendingAdd(prev => [...prev, product])
   }
 
-  // Remove product from family
-  const handleRemoveProduct = async (productId) => {
-    try {
-      const response = await fetch(`${BACKEND_URL}/api/catalog/products/${productId}/remove-family`, {
-        method: 'POST'
-      })
-      
-      if (response.ok) {
-        await loadData()
-        // Update selected family
-        const updated = families.find(f => f.id === selectedFamily?.id)
-        if (updated) setSelectedFamily(updated)
-      }
-    } catch (error) {
-      console.error('Error removing:', error)
+  // Remove product locally (add to pendingRemove)
+  const handleRemoveProductLocal = (productId) => {
+    // If in pendingAdd - just remove from there
+    if (pendingAdd.find(p => p.product_id === productId)) {
+      setPendingAdd(prev => prev.filter(p => p.product_id !== productId))
+      return
+    }
+    // Otherwise add to pendingRemove
+    if (!pendingRemove.includes(productId)) {
+      setPendingRemove(prev => [...prev, productId])
     }
   }
 
   // Move product to current family (from another)
-  const handleMoveToFamily = async (productId) => {
-    await handleAssignProducts([productId])
+  const handleMoveToFamily = (productId) => {
+    const product = allProducts.find(p => p.product_id === productId)
+    if (product) {
+      handleAddProductLocal(product)
+    }
   }
 
   // Get assigned products for selected family

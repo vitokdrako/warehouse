@@ -882,6 +882,9 @@ export default function FamiliesManager() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
+  // Mobile navigation: 'list' | 'detail' | 'add'
+  const [mobilePanel, setMobilePanel] = useState('list')
+  
   // Pending changes (not yet saved to server)
   const [pendingAdd, setPendingAdd] = useState([])      // Products to add
   const [pendingRemove, setPendingRemove] = useState([]) // Products to remove

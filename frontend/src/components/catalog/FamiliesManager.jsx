@@ -302,9 +302,12 @@ function FamilyDetail({
           </div>
           
           <div className="flex items-center gap-2">
-            {hasChanges && (
+            {hasAnyChanges && (
               <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
-                <span className="text-amber-700 font-medium">Незбережені зміни:</span>
+                <span className="text-amber-700 font-medium">Незбережені:</span>
+                {hasTextChanges && (
+                  <span className="text-blue-600">назва</span>
+                )}
                 {pendingAdd.length > 0 && (
                   <span className="text-emerald-600">+{pendingAdd.length}</span>
                 )}
@@ -314,17 +317,17 @@ function FamilyDetail({
               </div>
             )}
             <button
-              onClick={() => onSave({ name, description })}
-              disabled={saving || (!hasChanges && !name.trim())}
+              onClick={() => onSave({ name, description, nameChanged, descriptionChanged })}
+              disabled={saving || !hasAnyChanges || !name.trim()}
               className={cls(
                 "flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                hasChanges
-                  ? "bg-emerald-500 text-white hover:bg-emerald-600 animate-pulse"
+                hasAnyChanges
+                  ? "bg-emerald-500 text-white hover:bg-emerald-600"
                   : "bg-slate-200 text-slate-500 cursor-not-allowed"
               )}
             >
               <Save className="w-4 h-4" />
-              {saving ? 'Зберігаю...' : hasChanges ? `Зберегти (${pendingAdd.length + pendingRemove.length})` : 'Зберегти'}
+              {saving ? 'Зберігаю...' : hasAnyChanges ? 'Зберегти' : 'Збережено'}
             </button>
             <button
               onClick={onDelete}

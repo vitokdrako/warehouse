@@ -680,7 +680,7 @@ async def delete_laundry_batch(
         
         status = row[0]
         returned_items = row[1] or 0
-        total_items = row[2] or 0
+        # total_items = row[2] or 0  # Not used currently
         
         # Для completed партій - дозволяємо видалення
         # Для sent партій - тільки якщо не було повернень

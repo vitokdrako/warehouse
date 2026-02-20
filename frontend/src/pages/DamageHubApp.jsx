@@ -1191,120 +1191,152 @@ export default function DamageHubApp() {
               )}
             </div>
 
-            {/* ХІМЧИСТКА Section */}
+            {/* ПРАЛЬНЯ Section - Прання і Хімчистка */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between bg-purple-50 border-b border-purple-100 p-3">
-                <button
-                  onClick={() => setFullScreenModal({ isOpen: true, section: 'laundry' })}
-                  className="font-semibold text-purple-800 flex items-center gap-2 hover:text-purple-900"
-                >
-                  <Sparkles className="w-4 h-4" /> Хімчистка
-                  {laundryQueue.length > 0 && (
-                    <span className="px-1.5 py-0.5 bg-amber-200 text-amber-800 text-xs rounded-full">
-                      черга: {laundryQueue.length}
-                    </span>
-                  )}
-                  <span className="text-xs text-purple-500">↗</span>
+              <div className="flex items-center justify-between bg-gradient-to-r from-cyan-50 to-purple-50 border-b border-slate-200 p-3">
+                <span className="font-semibold text-slate-800 flex items-center gap-2">
+                  <Droplets className="w-4 h-4 text-cyan-600" />
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  Пральня
+                </span>
+                <button onClick={() => toggleSection('laundry')}>
+                  {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-600" />}
                 </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={openBatchModal}
-                    disabled={laundryQueue.length === 0}
-                    className={`text-xs px-3 py-1.5 rounded-lg transition font-medium flex items-center gap-1 ${
-                      laundryQueue.length > 0 
-                        ? 'bg-purple-500 text-white hover:bg-purple-600' 
-                        : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                    }`}
-                    title={laundryQueue.length === 0 ? "Черга порожня" : "Сформувати партію"}
-                  >
-                    <Package className="w-3 h-3" /> Партія
-                  </button>
-                  <button onClick={() => toggleSection('laundry')}>
-                    {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-purple-600" /> : <ChevronRight className="w-4 h-4 text-purple-600" />}
-                  </button>
-                </div>
               </div>
               
               {expandedSections.laundry && (
-                <div className="p-2 space-y-3">
-                  {/* Черга - товари що чекають на формування партії */}
-                  {laundryQueue.length > 0 && (
-                    <div className="bg-amber-50 rounded-lg p-2 border border-amber-200">
-                      <div className="flex items-center justify-between px-1 mb-2">
-                        <span className="text-xs font-semibold text-amber-700 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> Черга ({laundryQueue.length} поз.)
-                        </span>
-                      </div>
-                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                        {laundryQueue.map(item => (
-                          <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-amber-100">
-                            <ProductPhoto 
-                              item={item} 
-                              size="sm" 
-                              onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} 
-                            />
+                <div className="grid grid-cols-2 divide-x divide-slate-200">
+                  {/* ЛІВА ЧАСТИНА - ПРАННЯ */}
+                  <div className="p-3 space-y-3 bg-cyan-50/30">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-cyan-800 flex items-center gap-1.5 text-sm">
+                        <Droplets className="w-4 h-4" /> Прання
+                        {washingQueue.length > 0 && (
+                          <span className="px-1.5 py-0.5 bg-cyan-200 text-cyan-800 text-xs rounded-full ml-1">
+                            {washingQueue.length}
+                          </span>
+                        )}
+                      </span>
+                      <button
+                        onClick={() => openBatchModal('washing')}
+                        disabled={washingQueue.length === 0}
+                        className={`text-xs px-2 py-1 rounded-lg transition font-medium flex items-center gap-1 ${
+                          washingQueue.length > 0 
+                            ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <Package className="w-3 h-3" /> Партія
+                      </button>
+                    </div>
+                    
+                    {/* Черга прання */}
+                    {washingQueue.length > 0 && (
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                        {washingQueue.map(item => (
+                          <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-cyan-100 text-xs">
+                            <ProductPhoto item={item} size="xs" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
-                              <div className="text-xs text-slate-500">{item.sku} • <span className="font-medium text-amber-700">{item.qty || item.remaining_qty || 1} шт</span></div>
+                              <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
+                              <div className="text-slate-500">{item.sku}</div>
                             </div>
-                            {item.order_number && (
-                              <span className="text-xs text-slate-400">#{item.order_number}</span>
-                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Партії прання */}
+                    <div>
+                      <div className="text-xs font-semibold text-cyan-700 mb-1.5 flex items-center gap-1">
+                        <Package className="w-3 h-3" /> Партії ({washingBatches.length})
+                      </div>
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                        {washingBatches.length === 0 ? (
+                          <div className="text-center py-3 text-slate-400 text-xs">Немає партій</div>
+                        ) : washingBatches.map(batch => (
+                          <div 
+                            key={batch.id} 
+                            onClick={() => { setSelectedBatchId(batch.id); setSelectedBatchType('washing'); loadBatchItems(batch.id, 'washing'); }}
+                            className={`p-2 rounded-lg border cursor-pointer transition ${
+                              selectedBatchId === batch.id && selectedBatchType === 'washing'
+                                ? 'border-cyan-400 bg-cyan-100' 
+                                : 'border-cyan-200 bg-white hover:border-cyan-300'
+                            }`}
+                          >
+                            <div className="font-medium text-cyan-800 text-xs">{batch.batch_number}</div>
+                            <div className="text-[10px] text-slate-600">{batch.laundry_company}</div>
                           </div>
                         ))}
                       </div>
                     </div>
-                  )}
-                  
-                  {/* Партії */}
-                  <div>
-                    <div className="text-xs font-semibold text-purple-700 px-1 mb-2 flex items-center gap-1">
-                      <Package className="w-3 h-3" /> Партії ({laundryBatches.length})
-                    </div>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {laundryBatches.length === 0 ? (
-                        <div className="text-center py-4 text-slate-400 text-sm">Немає активних партій</div>
-                      ) : laundryBatches.map(batch => (
-                        <LaundryBatchCard
-                          key={batch.id}
-                          batch={batch}
-                          isSelected={batch.id === selectedBatchId}
-                          onClick={() => setSelectedBatchId(batch.id === selectedBatchId ? null : batch.id)}
-                        />
-                      ))}
-                    </div>
                   </div>
                   
-                  {/* Деталі обраної партії */}
-                  {selectedBatch && (
-                    <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <div className="font-bold text-purple-800 text-lg">{selectedBatch.batch_number}</div>
-                          <div className="text-sm text-purple-600">{selectedBatch.laundry_company}</div>
-                          {selectedBatch.sent_date && (
-                            <div className="text-xs text-slate-500 mt-1">
-                              Відправлено: {new Date(selectedBatch.sent_date).toLocaleDateString('uk-UA')}
-                            </div>
-                          )}
-                        </div>
-                        {selectedBatch.status !== 'completed' && (
-                          <button
-                            onClick={() => handleCloseBatch(selectedBatch.id)}
-                            className="text-xs px-3 py-1.5 bg-purple-200 text-purple-800 rounded-lg hover:bg-purple-300 transition"
-                          >
-                            Закрити партію
-                          </button>
+                  {/* ПРАВА ЧАСТИНА - ХІМЧИСТКА */}
+                  <div className="p-3 space-y-3 bg-purple-50/30">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-purple-800 flex items-center gap-1.5 text-sm">
+                        <Sparkles className="w-4 h-4" /> Хімчистка
+                        {laundryQueue.length > 0 && (
+                          <span className="px-1.5 py-0.5 bg-purple-200 text-purple-800 text-xs rounded-full ml-1">
+                            {laundryQueue.length}
+                          </span>
                         )}
+                      </span>
+                      <button
+                        onClick={() => openBatchModal('laundry')}
+                        disabled={laundryQueue.length === 0}
+                        className={`text-xs px-2 py-1 rounded-lg transition font-medium flex items-center gap-1 ${
+                          laundryQueue.length > 0 
+                            ? 'bg-purple-500 text-white hover:bg-purple-600' 
+                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        <Package className="w-3 h-3" /> Партія
+                      </button>
+                    </div>
+                    
+                    {/* Черга хімчистки */}
+                    {laundryQueue.length > 0 && (
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                        {laundryQueue.map(item => (
+                          <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-purple-100 text-xs">
+                            <ProductPhoto item={item} size="xs" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
+                              <div className="text-slate-500">{item.sku}</div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      
-                      {/* Товари в партії */}
-                      <div className="space-y-2">
-                        {batchItems.map(item => {
-                          const remaining = item.quantity - (item.returned_quantity || 0);
-                          return (
-                            <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-purple-100">
-                              <ProductPhoto 
+                    )}
+                    
+                    {/* Партії хімчистки */}
+                    <div>
+                      <div className="text-xs font-semibold text-purple-700 mb-1.5 flex items-center gap-1">
+                        <Package className="w-3 h-3" /> Партії ({laundryBatches.length})
+                      </div>
+                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                        {laundryBatches.length === 0 ? (
+                          <div className="text-center py-3 text-slate-400 text-xs">Немає партій</div>
+                        ) : laundryBatches.map(batch => (
+                          <div 
+                            key={batch.id} 
+                            onClick={() => { setSelectedBatchId(batch.id); setSelectedBatchType('laundry'); loadBatchItems(batch.id, 'laundry'); }}
+                            className={`p-2 rounded-lg border cursor-pointer transition ${
+                              selectedBatchId === batch.id && selectedBatchType === 'laundry'
+                                ? 'border-purple-400 bg-purple-100' 
+                                : 'border-purple-200 bg-white hover:border-purple-300'
+                            }`}
+                          >
+                            <div className="font-medium text-purple-800 text-xs">{batch.batch_number}</div>
+                            <div className="text-[10px] text-slate-600">{batch.laundry_company}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )} 
                                 item={item} 
                                 size="sm" 
                                 onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} 

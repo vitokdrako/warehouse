@@ -718,8 +718,14 @@ function ProductBindingPanel({
                 <span className="text-sm text-slate-500">
                   {selectedToRemove.length > 0 
                     ? `Вибрано: ${selectedToRemove.length}`
-                    : 'Виберіть для видалення'
+                    : `${assignedProducts.length} товарів`
                   }
+                  {pendingAdd.length > 0 && (
+                    <span className="ml-2 text-emerald-600">(+{pendingAdd.length} нових)</span>
+                  )}
+                  {pendingRemove.length > 0 && (
+                    <span className="ml-2 text-rose-600">(-{pendingRemove.length} видалити)</span>
+                  )}
                 </span>
                 {selectedToRemove.length > 0 && (
                   <button
@@ -742,6 +748,11 @@ function ProductBindingPanel({
                   selected={selectedToRemove.includes(product.product_id)}
                   onSelect={() => toggleRemoveSelection(product.product_id)}
                   showCheckbox
+                  badge={product._isPending && (
+                    <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                      + новий
+                    </span>
+                  )}
                 />
               ))}
               {assignedProducts.length === 0 && (

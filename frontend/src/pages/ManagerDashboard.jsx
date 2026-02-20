@@ -745,10 +745,10 @@ function Kpi({ title, value, note, tone }) {
   );
 }
 
-function Column({title, subtitle, children, tone}:{title:string,subtitle?:string,children:any,tone?:'ok'|'warn'|'info'}){
-  const ring:any={ok:'ring-emerald-100',warn:'ring-amber-100',info:'ring-slate-100'}
+function Column({ title, subtitle, children, tone }) {
+  const ring = { ok: 'ring-emerald-100', warn: 'ring-amber-100', info: 'ring-slate-100' }
   return (
-    <section className={`rounded-2xl border border-slate-200 p-4 shadow-sm ring-2 ${tone?ring[tone]:"ring-transparent"}`}>
+    <section className={`rounded-2xl border border-slate-200 p-4 shadow-sm ring-2 ${tone ? ring[tone] : "ring-transparent"}`}>
       <header className="mb-3 flex items-center justify-between">
         <div>
           <h3 className="text-base font-semibold leading-none">{title}</h3>
@@ -760,14 +760,14 @@ function Column({title, subtitle, children, tone}:{title:string,subtitle?:string
   );
 }
 
-function OrderCard({id,name,phone,rent,deposit,badge,onClick,order,onDateUpdate,onCancelByClient}:{id:string,name:string,phone:string,rent:string,deposit:string,badge:'new'|'issue'|'return'|'ready'|'issued'|'awaiting'|'processing'|'preparation'|'partial',onClick:()=>void,order?:any,onDateUpdate?:(orderId:string,issueDate:string,returnDate:string)=>void,onCancelByClient?:(orderId:number,orderNumber:string)=>void}){
-  const map:any={
-    new:{label:'Нове',css:'corp-badge corp-badge-info'},
-    awaiting:{label:'Очікує',css:'corp-badge corp-badge-warning'},
-    processing:{label:'В роботі',css:'corp-badge corp-badge-primary'},
-    preparation:{label:'На комплектації',css:'corp-badge corp-badge-gold'},
-    issue:{label:'Видача',css:'corp-badge corp-badge-success'},
-    return:{label:'Повернення',css:'corp-badge corp-badge-warning'},
+function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDateUpdate, onCancelByClient }) {
+  const map = {
+    new: { label: 'Нове', css: 'corp-badge corp-badge-info' },
+    awaiting: { label: 'Очікує', css: 'corp-badge corp-badge-warning' },
+    processing: { label: 'В роботі', css: 'corp-badge corp-badge-primary' },
+    preparation: { label: 'На комплектації', css: 'corp-badge corp-badge-gold' },
+    issue: { label: 'Видача', css: 'corp-badge corp-badge-success' },
+    return: { label: 'Повернення', css: 'corp-badge corp-badge-warning' },
     ready:{label:'Готово',css:'corp-badge corp-badge-success'},
     issued:{label:'Видано',css:'corp-badge corp-badge-success'},
     partial:{label:'⚠️ Часткове',css:'bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs font-medium'}

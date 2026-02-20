@@ -1518,26 +1518,31 @@ export default function DamageHubApp() {
             <div className={`px-6 py-4 border-b flex items-center justify-between ${
               fullScreenModal.section === 'wash' ? 'bg-blue-50 border-blue-200' :
               fullScreenModal.section === 'restore' ? 'bg-orange-50 border-orange-200' :
-              'bg-purple-50 border-purple-200'
+              'bg-gradient-to-r from-cyan-50 to-purple-50 border-slate-200'
             }`}>
               <div className="flex items-center gap-3">
                 {fullScreenModal.section === 'wash' && <Droplets className="w-6 h-6 text-blue-600" />}
                 {fullScreenModal.section === 'restore' && <Wrench className="w-6 h-6 text-orange-600" />}
-                {fullScreenModal.section === 'laundry' && <Sparkles className="w-6 h-6 text-purple-600" />}
+                {fullScreenModal.section === 'laundry' && (
+                  <>
+                    <Droplets className="w-6 h-6 text-cyan-600" />
+                    <Sparkles className="w-6 h-6 text-purple-600" />
+                  </>
+                )}
                 <div>
                   <h2 className={`text-xl font-bold ${
                     fullScreenModal.section === 'wash' ? 'text-blue-800' :
                     fullScreenModal.section === 'restore' ? 'text-orange-800' :
-                    'text-purple-800'
+                    'text-slate-800'
                   }`}>
                     {fullScreenModal.section === 'wash' && 'Мийка'}
                     {fullScreenModal.section === 'restore' && 'Реставрація'}
-                    {fullScreenModal.section === 'laundry' && 'Хімчистка'}
+                    {fullScreenModal.section === 'laundry' && 'Пральня'}
                   </h2>
                   <p className="text-sm text-slate-500">
                     {fullScreenModal.section === 'wash' && `${washItems.length} товарів`}
                     {fullScreenModal.section === 'restore' && `${restoreItems.length} товарів`}
-                    {fullScreenModal.section === 'laundry' && `Черга: ${laundryQueue.length}, Партій: ${laundryBatches.length}`}
+                    {fullScreenModal.section === 'laundry' && `Прання: ${washingQueue.length}, Хімчистка: ${laundryQueue.length}`}
                   </p>
                 </div>
               </div>

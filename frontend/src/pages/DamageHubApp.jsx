@@ -539,7 +539,8 @@ export default function DamageHubApp() {
     try {
       const res = await authFetch(`${BACKEND_URL}/api/catalog?search=${encodeURIComponent(query)}&limit=20`);
       const data = await res.json();
-      const products = data.products || data.items || [];
+      // API returns array directly, not { products: [...] }
+      const products = Array.isArray(data) ? data : (data.products || data.items || []);
       setQuickAddModal(prev => ({ ...prev, searchResults: products, loading: false }));
     } catch (e) {
       console.error("Search error:", e);

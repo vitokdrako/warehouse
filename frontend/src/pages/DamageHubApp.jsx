@@ -1027,25 +1027,31 @@ export default function DamageHubApp() {
                                 )}
                                 
                                 <button
-                                  onClick={() => handleSendTo(item.id, 'wash')}
+                                  onClick={() => handleSendTo(item.id, 'wash', { damage_description: item.damage_description, risk_level: item.risk_level })}
                                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
                                 >
                                   <Droplets className="w-3 h-3" /> Мийка
                                 </button>
                                 <button
-                                  onClick={() => handleSendTo(item.id, 'restoration')}
+                                  onClick={() => handleSendTo(item.id, 'restoration', { damage_description: item.damage_description, risk_level: item.risk_level })}
                                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition"
                                 >
                                   <Wrench className="w-3 h-3" /> Реставрація
                                 </button>
                                 <button
-                                  onClick={() => handleSendTo(item.id, 'laundry')}
+                                  onClick={() => handleSendTo(item.id, 'washing', { damage_description: item.damage_description, risk_level: item.risk_level })}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-cyan-50 text-cyan-600 rounded-lg hover:bg-cyan-100 transition"
+                                >
+                                  <Droplets className="w-3 h-3" /> Прання
+                                </button>
+                                <button
+                                  onClick={() => handleSendTo(item.id, 'laundry', { damage_description: item.damage_description, risk_level: item.risk_level })}
                                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition"
                                 >
                                   <Sparkles className="w-3 h-3" /> Хімчистка
                                 </button>
                                 <button
-                                  onClick={() => handleSendTo(item.id, 'return_to_stock')}
+                                  onClick={() => handleSendTo(item.id, 'return_to_stock', { damage_description: item.damage_description, risk_level: item.risk_level })}
                                   className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition"
                                 >
                                   <Package className="w-3 h-3" /> На склад

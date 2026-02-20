@@ -769,10 +769,9 @@ async def get_batch_preview(
         SELECT 
             li.id, li.product_id, li.product_name, li.sku, li.category,
             li.quantity, li.returned_quantity, li.condition_before, li.notes,
-            pdh.order_number,
+            NULL as order_number,
             p.image_url
         FROM laundry_items li
-        LEFT JOIN product_damage_history pdh ON li.damage_history_id = pdh.id
         LEFT JOIN products p ON li.product_id = p.product_id
         WHERE li.batch_id = :batch_id
         ORDER BY li.created_at

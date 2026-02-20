@@ -101,53 +101,21 @@
             padding-bottom: 3px;
         }
         
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 20px;
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
         }
         
-        .info-card {
+        .info-table td {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .info-table td:first-child {
+            width: 180px;
             background: #f9f9f9;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #eee;
-        }
-        
-        .info-card-label {
-            font-size: 9pt;
-            color: #888;
-            margin-bottom: 4px;
-        }
-        
-        .info-card-value {
-            font-size: 12pt;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 10pt;
-            font-weight: bold;
-        }
-        
-        .status-sent {
-            background: {{ light_bg }};
-            color: {{ primary_color }};
-        }
-        
-        .status-partial {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .status-completed {
-            background: #d4edda;
-            color: #155724;
+            font-weight: 500;
+            color: #555;
         }
         
         .items-table {
@@ -159,14 +127,14 @@
         .items-table th {
             background: {{ primary_color }};
             color: white;
-            padding: 10px 8px;
+            padding: 8px 5px;
             font-size: 9pt;
             text-align: center;
             border: 1px solid {{ dark_color }};
         }
         
         .items-table td {
-            padding: 10px 8px;
+            padding: 8px 5px;
             border: 1px solid #ddd;
             vertical-align: middle;
         }
@@ -205,6 +173,56 @@
             text-align: right;
         }
         
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 9pt;
+            font-weight: bold;
+        }
+        
+        .status-sent {
+            background: {{ light_bg }};
+            color: {{ primary_color }};
+        }
+        
+        .status-partial {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .totals {
+            margin-top: 15px;
+            margin-left: auto;
+            width: 300px;
+        }
+        
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+        }
+        
+        .totals-table tr:last-child {
+            background: {{ primary_color }};
+            color: white;
+            font-weight: bold;
+            font-size: 12pt;
+        }
+        
+        .totals-table tr:last-child td {
+            border-color: {{ dark_color }};
+        }
+        
         .checkbox-cell {
             width: 30px;
         }
@@ -232,41 +250,6 @@
             font-size: 14px;
         }
         
-        .summary {
-            margin-top: 20px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-        }
-        
-        .summary-card {
-            background: {{ light_bg }};
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            border: 2px solid {{ primary_color }};
-        }
-        
-        .summary-card-value {
-            font-size: 24pt;
-            font-weight: bold;
-            color: {{ primary_color }};
-        }
-        
-        .summary-card-label {
-            font-size: 10pt;
-            color: #666;
-            margin-top: 5px;
-        }
-        
-        .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #ddd;
-            font-size: 9pt;
-            color: #888;
-        }
-        
         .signature-area {
             margin-top: 40px;
             display: grid;
@@ -282,18 +265,20 @@
             color: #666;
         }
         
-        .notes-section {
-            margin-top: 20px;
-            padding: 15px;
+        .note {
             background: #fff8e1;
-            border-radius: 8px;
-            border: 1px solid #ffecb3;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 9pt;
+            margin-top: 15px;
         }
         
-        .notes-title {
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: #856404;
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            font-size: 9pt;
+            color: #888;
         }
     </style>
 </head>
@@ -304,7 +289,7 @@
         <tr>
             <td style="vertical-align: top;">
                 <div class="logo">FarforRent</div>
-                <div class="logo-subtitle">{{ batch_type_name }}</div>
+                <div class="logo-subtitle">Оренда декору</div>
             </td>
             <td style="text-align: right; vertical-align: top;">
                 <div class="batch-number">{{ batch.batch_number }}</div>
@@ -315,34 +300,45 @@
     
     <div class="title">Акт передачі - {{ batch_type_name }}</div>
     
-    <div class="info-grid">
-        <div class="info-card">
-            <div class="info-card-label">Виконавець</div>
-            <div class="info-card-value">{{ batch.laundry_company }}</div>
-        </div>
-        <div class="info-card">
-            <div class="info-card-label">Статус</div>
-            <div class="info-card-value">
-                <span class="status-badge {% if batch.status == 'sent' %}status-sent{% elif batch.status == 'partial_return' %}status-partial{% else %}status-completed{% endif %}">
-                    {% if batch.status == 'sent' %}Відправлено
-                    {% elif batch.status == 'partial_return' %}Частково повернено
-                    {% elif batch.status == 'completed' %}Завершено
-                    {% else %}{{ batch.status }}{% endif %}
-                </span>
-            </div>
-        </div>
-        <div class="info-card">
-            <div class="info-card-label">Очікуване повернення</div>
-            <div class="info-card-value">{{ batch.expected_return_date or '—' }}</div>
-        </div>
-        <div class="info-card">
-            <div class="info-card-label">Складність</div>
-            <div class="info-card-value">
-                {% if batch.complexity == 'light' %}Легка
-                {% elif batch.complexity == 'heavy' %}Важка
-                {% else %}Звичайна{% endif %}
-            </div>
-        </div>
+    <div class="section">
+        <div class="section-title">Інформація про партію</div>
+        <table class="info-table">
+            <tr>
+                <td>Номер партії:</td>
+                <td><strong>{{ batch.batch_number }}</strong></td>
+            </tr>
+            <tr>
+                <td>Виконавець:</td>
+                <td><strong>{{ batch.laundry_company }}</strong></td>
+            </tr>
+            <tr>
+                <td>Дата відправлення:</td>
+                <td>{{ batch.sent_date }}</td>
+            </tr>
+            <tr>
+                <td>Очікуване повернення:</td>
+                <td>{{ batch.expected_return_date or '—' }}</td>
+            </tr>
+            <tr>
+                <td>Складність:</td>
+                <td>
+                    {% if batch.complexity == 'light' %}Легка
+                    {% elif batch.complexity == 'heavy' %}Важка
+                    {% else %}Звичайна{% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Статус:</td>
+                <td>
+                    <span class="status-badge {% if batch.status == 'sent' %}status-sent{% elif batch.status == 'partial_return' %}status-partial{% else %}status-completed{% endif %}">
+                        {% if batch.status == 'sent' %}Відправлено
+                        {% elif batch.status == 'partial_return' %}Частково повернено
+                        {% elif batch.status == 'completed' %}Завершено
+                        {% else %}{{ batch.status }}{% endif %}
+                    </span>
+                </td>
+            </tr>
+        </table>
     </div>
     
     <div class="section">
@@ -393,25 +389,26 @@
         </table>
     </div>
     
-    <div class="summary">
-        <div class="summary-card">
-            <div class="summary-card-value">{{ batch.total_items }}</div>
-            <div class="summary-card-label">Всього товарів</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-card-value">{{ batch.returned_items or 0 }}</div>
-            <div class="summary-card-label">Повернуто</div>
-        </div>
-        <div class="summary-card">
-            <div class="summary-card-value">{{ batch.total_items - (batch.returned_items or 0) }}</div>
-            <div class="summary-card-label">Залишилось</div>
-        </div>
+    <div class="totals">
+        <table class="totals-table">
+            <tr>
+                <td>Всього товарів:</td>
+                <td class="text-right">{{ batch.total_items }} шт</td>
+            </tr>
+            <tr>
+                <td>Повернуто:</td>
+                <td class="text-right">{{ batch.returned_items or 0 }} шт</td>
+            </tr>
+            <tr>
+                <td>ЗАЛИШИЛОСЬ:</td>
+                <td class="text-right">{{ batch.total_items - (batch.returned_items or 0) }} шт</td>
+            </tr>
+        </table>
     </div>
     
     {% if notes %}
-    <div class="notes-section">
-        <div class="notes-title">Примітки:</div>
-        <div>{{ notes }}</div>
+    <div class="note">
+        <strong>Примітка:</strong> {{ notes }}
     </div>
     {% endif %}
     
@@ -426,6 +423,7 @@
     
     <div class="footer">
         <p>Документ згенеровано системою RentalHub • {{ generated_at }}</p>
+        <p>Цей документ є актом передачі товарів у {{ batch_type_name|lower }}.</p>
     </div>
 </body>
 </html>

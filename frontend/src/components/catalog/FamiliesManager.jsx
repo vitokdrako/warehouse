@@ -553,12 +553,17 @@ function ProductBindingPanel({
   allProducts,
   onAssign,
   onRemove,
-  onMoveToFamily
+  onMoveToFamily,
+  pendingAdd = [],
+  pendingRemove = []
 }) {
   const [activeTab, setActiveTab] = useState('add') // 'add' | 'assigned' | 'conflicts'
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [selectedToRemove, setSelectedToRemove] = useState([])
+  
+  // IDs of pending products
+  const pendingAddIds = new Set(pendingAdd.map(p => p.product_id))
 
   // Товари доступні для додавання
   const availableProducts = useMemo(() => {
@@ -577,7 +582,7 @@ function ProductBindingPanel({
       }
       
       // Фільтр категорії
-      if (categoryFilter !== 'all' && p.category_name !== categoryFilter) {
+      if (categoryFilter !== 'all' && p.category !== categoryFilter) {
         return false
       }
       

@@ -2011,8 +2011,8 @@ export default function DamageHubApp() {
                                         (item.quantity || 1) - (item.returned_quantity || 0) > 0
                                       ) && (
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); handleReceiveItems(batch.id, 'laundry'); }}
-                                          className="w-full mt-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium text-xs flex items-center justify-center gap-1"
+                                          onClick={(e) => { e.stopPropagation(); handleReceiveItems(batch.id, 'washing'); }}
+                                          className="w-full mt-2 px-3 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium text-xs flex items-center justify-center gap-1"
                                         >
                                           <Check className="w-3.5 h-3.5" /> Зберегти зміни
                                         </button>

@@ -340,7 +340,7 @@ export default function DamageHubApp() {
   // Full-screen section modals
   const [fullScreenModal, setFullScreenModal] = useState({
     isOpen: false,
-    section: null // 'wash', 'restore', 'laundry'
+    section: null // 'wash', 'restore', 'washing', 'laundry'
   });
   
   // ============= DATA LOADING =============

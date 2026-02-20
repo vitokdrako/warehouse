@@ -1065,6 +1065,7 @@ export default function DamageHubApp() {
                                 <Badge tone={item.processing_status === 'completed' ? 'ok' : 'info'}>
                                   {item.processing_type === 'wash' && '🧼 Мийка'}
                                   {item.processing_type === 'restoration' && '🔧 Реставрація'}
+                                  {item.processing_type === 'washing' && '🫧 Прання'}
                                   {item.processing_type === 'laundry' && '🧺 Хімчистка'}
                                   {item.processing_status === 'completed' && ' ✓'}
                                 </Badge>

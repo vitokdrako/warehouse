@@ -663,13 +663,14 @@ async def delete_laundry_batch(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Видалити партію (тільки якщо статус 'sent' і не було повернень)
-    Автоматично розморозити товари
+    Видалити партію.
+    - Партії зі статусом 'completed' можна видалити без обмежень
+    - Партії зі статусом 'sent' можна видалити тільки якщо не було повернень
     """
     try:
         # Перевірити статус партії
         result = db.execute(
-            text("SELECT status, returned_items FROM laundry_batches WHERE id = :id"),
+            text("SELECT status, returned_items, total_items FROM laundry_batches WHERE id = :id"),
             {"id": batch_id}
         )
         row = result.fetchone()
@@ -677,38 +678,36 @@ async def delete_laundry_batch(
         if not row:
             raise HTTPException(status_code=404, detail="Партію не знайдено")
         
-        if row[0] != 'sent' or row[1] > 0:
+        status = row[0]
+        returned_items = row[1] or 0
+        total_items = row[2] or 0
+        
+        # Для completed партій - дозволяємо видалення
+        # Для sent партій - тільки якщо не було повернень
+        if status == 'sent' and returned_items > 0:
             raise HTTPException(
                 status_code=400,
-                detail="Можна видалити тільки партії зі статусом 'sent' без повернень"
+                detail="Не можна видалити партію зі статусом 'sent' якщо вже є повернення"
             )
-        
-        # Отримати товари партії
-        items_result = db.execute(
-            text("SELECT product_id, quantity FROM laundry_items WHERE batch_id = :batch_id"),
-            {"batch_id": batch_id}
-        )
-        
-        # Повернути товари на склад
-        for item_row in items_result:
-            db.execute(text("""
-                UPDATE products
-                SET quantity = quantity + :qty
-                WHERE product_id = :product_id
-            """), {
-                "qty": item_row[1],
-                "product_id": item_row[0]
-            })
         
         # Видалити товари партії
         db.execute(text("DELETE FROM laundry_items WHERE batch_id = :batch_id"), {"batch_id": batch_id})
+        
+        # Очистити посилання на партію в damage history
+        db.execute(text("""
+            UPDATE product_damage_history 
+            SET laundry_batch_id = NULL, laundry_item_id = NULL
+            WHERE laundry_batch_id = :batch_id
+        """), {"batch_id": batch_id})
         
         # Видалити партію
         db.execute(text("DELETE FROM laundry_batches WHERE id = :id"), {"id": batch_id})
         
         db.commit()
-        return {"message": "Партію видалено, товари повернуті на склад"}
+        return {"success": True, "message": "Партію видалено"}
     
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

@@ -1066,11 +1066,13 @@ export default function FamiliesManager() {
       
       {/* Center Column - Family Detail */}
       <FamilyDetail
-        family={selectedFamily}
+        family={{ ...selectedFamily, products: assignedProducts }}
         onSave={handleSaveFamily}
         onDelete={handleDeleteFamily}
         saving={saving}
         hasChanges={hasChanges}
+        pendingAdd={pendingAdd}
+        pendingRemove={pendingRemove}
       />
       
       {/* Right Column - Product Binding */}
@@ -1078,9 +1080,11 @@ export default function FamiliesManager() {
         familyId={selectedFamily?.id}
         assignedProducts={assignedProducts}
         allProducts={allProducts}
-        onAssign={handleAssignProducts}
-        onRemove={handleRemoveProduct}
+        onAssign={handleAddProductLocal}
+        onRemove={handleRemoveProductLocal}
         onMoveToFamily={handleMoveToFamily}
+        pendingAdd={pendingAdd}
+        pendingRemove={pendingRemove}
       />
     </div>
   )

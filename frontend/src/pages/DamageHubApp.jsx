@@ -9,7 +9,7 @@
  * - БЕЗ фінансових дій (тільки інформування)
  * - Хімчистка з партіями та частковим поверненням
  */
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import CorporateHeader from "../components/CorporateHeader";
 import { X, Search, Archive, Package, Droplets, Wrench, Sparkles, ChevronDown, ChevronRight, RefreshCw, Eye, Check, AlertTriangle, Clock, Plus, Minus, Trash2, Printer } from "lucide-react";
 

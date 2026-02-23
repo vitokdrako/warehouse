@@ -1739,7 +1739,7 @@ export default function DamageHubApp() {
 
       {/* Batch Creation Modal - Mobile Responsive */}
       {batchModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[60] sm:p-4">
           <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className={`${batchModal.batchType === 'washing' ? 'bg-cyan-50 border-cyan-200' : 'bg-purple-50 border-purple-200'} border-b px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between`}>

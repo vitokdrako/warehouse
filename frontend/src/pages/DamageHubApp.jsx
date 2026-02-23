@@ -132,12 +132,13 @@ const PhotoModal = ({ isOpen, photoUrl, productName, onClose }) => {
 const DamageItemCard = ({ item, isSelected, onClick, onPhotoClick }) => {
   const getProcessingInfo = () => {
     const type = item.processing_type;
-    if (!type || type === 'none') return { icon: null, label: "Не розподілено", color: "text-amber-600" };
+    if (!type || type === 'none' || type === 'awaiting_assignment') return { icon: <Clock className="w-4 h-4" />, label: "Очікує розподілу", color: "text-amber-600" };
     const map = {
       wash: { icon: <Droplets className="w-4 h-4" />, label: "Мийка", color: "text-blue-600" },
       restoration: { icon: <Wrench className="w-4 h-4" />, label: "Реставрація", color: "text-orange-600" },
       washing: { icon: <Droplets className="w-4 h-4" />, label: "Прання", color: "text-cyan-600" },
       laundry: { icon: <Sparkles className="w-4 h-4" />, label: "Хімчистка", color: "text-purple-600" },
+      returned_to_stock: { icon: <Package className="w-4 h-4" />, label: "На склад", color: "text-emerald-600" },
     };
     return map[type] || { icon: null, label: type, color: "text-slate-600" };
   };

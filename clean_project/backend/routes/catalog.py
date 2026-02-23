@@ -136,7 +136,7 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description, p.state, p.frozen_quantity
+                    p.description, p.state, p.frozen_quantity, p.in_laundry
                 FROM products p
                 WHERE p.status = 1 AND p.state = :db_state AND COALESCE(p.frozen_quantity, 0) > 0
             """]
@@ -187,7 +187,7 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description, p.state, p.frozen_quantity
+                    p.description, p.state, p.frozen_quantity, p.in_laundry
                 FROM products p
                 WHERE p.status = 1 AND p.product_id IN :rent_ids
             """]
@@ -202,7 +202,7 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description, p.state, p.frozen_quantity
+                    p.description, p.state, p.frozen_quantity, p.in_laundry
                 FROM products p
                 WHERE p.status = 1
             """]
@@ -435,17 +435,23 @@ async def get_items_by_category(
             partial_return_qty = partial_return_info["qty"]
             in_rent_qty += partial_return_qty  # Рахуємо як "в оренді"
             
-            # Отримуємо статус з products.state та frozen_quantity
+            # Отримуємо статус з products.state та frozen_quantity, in_laundry
             product_state = row[18] if len(row) > 18 else None  # state
             frozen_qty = row[19] if len(row) > 19 else 0  # frozen_quantity
             frozen_qty = frozen_qty or 0
+            in_laundry_qty = row[20] if len(row) > 20 else 0  # in_laundry (на мийці)
+            in_laundry_qty = in_laundry_qty or 0
             
-            # Визначаємо кількість на обробці по типу з state
+            # Визначаємо кількість на обробці
             on_wash_qty = 0
             on_restoration_qty = 0
             on_laundry_qty = 0
             
-            if product_state == 'on_wash':
+            # Спочатку перевіряємо in_laundry (це пріоритет - реальні дані з обробки)
+            if in_laundry_qty > 0:
+                on_wash_qty = in_laundry_qty
+            # Потім дивимось на state для інших типів обробки
+            elif product_state == 'on_wash':
                 on_wash_qty = frozen_qty
             elif product_state == 'on_repair':
                 on_restoration_qty = frozen_qty
@@ -551,7 +557,8 @@ async def get_catalog_items(
             p.category_id, p.category_name, 
             p.subcategory_id, p.subcategory_name,
             p.quantity, p.zone, p.aisle, p.shelf,
-            p.family_id, pf.name as family_name, pf.description as family_description
+            p.family_id, pf.name as family_name, pf.description as family_description,
+            p.frozen_quantity, p.in_laundry, p.state
         FROM products p
         LEFT JOIN product_families pf ON p.family_id = pf.id
         WHERE p.status = 1
@@ -612,6 +619,11 @@ async def get_catalog_items(
         family_id = row[14] if len(row) > 14 else None
         family_name = row[15] if len(row) > 15 else None
         family_description = row[16] if len(row) > 16 else None
+        frozen_qty = row[17] if len(row) > 17 else 0
+        frozen_qty = frozen_qty or 0
+        in_laundry_qty = row[18] if len(row) > 18 else 0
+        in_laundry_qty = in_laundry_qty or 0
+        product_state = row[19] if len(row) > 19 else None
         
         normalized_image = normalize_image_url(row[4])
         product_id = row[0]
@@ -622,7 +634,10 @@ async def get_catalog_items(
         in_rent_qty = in_rent_dict.get(product_id, 0)
         in_restore_qty = in_restore_dict.get(product_id, 0)
         
-        available_qty = max(0, total_qty - reserved_qty - in_rent_qty)
+        # Визначити on_wash - prioritize in_laundry field
+        on_wash_qty = in_laundry_qty if in_laundry_qty > 0 else (frozen_qty if product_state == 'on_wash' else 0)
+        
+        available_qty = max(0, total_qty - reserved_qty - in_rent_qty - frozen_qty)
         
         items.append({
             "id": row[0],
@@ -636,6 +651,7 @@ async def get_catalog_items(
             "cover": normalized_image,
             "status": row[5],
             "state": "ok" if available_qty > 0 else "unavailable",
+            "product_state": product_state,
             "cat": row[7],  # Frontend очікує cat
             "category": row[7],
             "category_id": row[6],
@@ -650,6 +666,9 @@ async def get_catalog_items(
             "in_rent": in_rent_qty,
             "rented": in_rent_qty,
             "in_restore": in_restore_qty,
+            "on_wash": on_wash_qty,
+            "frozen_quantity": frozen_qty,
+            "in_laundry": in_laundry_qty,
             "location": {
                 "zone": row[11] or "",
                 "aisle": row[12] or "",

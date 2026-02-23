@@ -1262,7 +1262,7 @@ export default function DamageHubApp() {
                             )}
                             
                             {/* Processing Status */}
-                            {item.processing_type && item.processing_type !== 'none' && (
+                            {item.processing_type && item.processing_type !== 'none' && item.processing_type !== 'awaiting_assignment' && (
                               <div className="mt-2 flex items-center gap-2">
                                 <Badge tone={item.processing_status === 'completed' ? 'ok' : 'info'}>
                                   {item.processing_type === 'wash' && '🧼 Мийка'}

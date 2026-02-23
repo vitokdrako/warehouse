@@ -2142,13 +2142,21 @@ export default function DamageHubApp() {
                       ) : (
                         <div className="space-y-1.5 sm:space-y-2 max-h-36 sm:max-h-48 overflow-y-auto">
                           {laundryQueue.map(item => (
-                            <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-purple-50 rounded-xl border border-purple-200">
-                              <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-slate-800 truncate text-xs sm:text-sm">{item.product_name}</div>
-                                <div className="text-[10px] sm:text-xs text-slate-500 truncate">{item.sku}</div>
+                            <div key={item.id} className="flex flex-col gap-1.5 p-2.5 sm:p-3 bg-purple-50 rounded-xl border border-purple-200">
+                              <div className="flex items-center gap-2 sm:gap-3">
+                                <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-slate-800 truncate text-xs sm:text-sm">{item.product_name}</div>
+                                  <div className="text-[10px] sm:text-xs text-slate-500 truncate">{item.sku}</div>
+                                  {item.order_number && (
+                                    <div className="text-[10px] sm:text-xs font-medium text-purple-600">#{item.order_number}</div>
+                                  )}
+                                </div>
+                                <span className="text-xs sm:text-sm font-semibold text-purple-700 flex-shrink-0">{item.qty || 1} шт</span>
                               </div>
-                              <span className="text-xs sm:text-sm font-semibold text-purple-600 flex-shrink-0">{item.qty || 1} шт</span>
+                              {item.note && (
+                                <div className="text-[10px] sm:text-xs text-slate-500 italic pl-2">"{item.note}"</div>
+                              )}
                             </div>
                           ))}
                         </div>

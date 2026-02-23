@@ -1608,6 +1608,127 @@ export default function DamageHubApp() {
         </div>
       </div>
 
+      {/* Partial Complete Modal - Часткове завершення обробки */}
+      {partialCompleteModal.isOpen && partialCompleteModal.item && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="bg-emerald-50 border-b border-emerald-200 px-5 py-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-emerald-800 flex items-center gap-2">
+                  <Check className="w-5 h-5" /> Завершення обробки
+                </h2>
+                <p className="text-sm text-emerald-600 mt-0.5">Вкажіть кількість оброблених одиниць</p>
+              </div>
+              <button 
+                onClick={() => setPartialCompleteModal({ isOpen: false, item: null, qty: 0 })}
+                className="p-2 hover:bg-emerald-100 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-emerald-600" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-5 space-y-4">
+              {/* Товар */}
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                <ProductPhoto item={partialCompleteModal.item} size="md" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-slate-800">{partialCompleteModal.item.product_name}</div>
+                  <div className="text-sm text-slate-500">{partialCompleteModal.item.sku}</div>
+                  {partialCompleteModal.item.order_number && (
+                    <div className="text-sm font-medium text-blue-600">#{partialCompleteModal.item.order_number}</div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold text-slate-800">{partialCompleteModal.item.qty || 1} шт</div>
+                  <div className="text-xs text-slate-500">всього</div>
+                </div>
+              </div>
+              
+              {/* Інформація про пошкодження */}
+              {(partialCompleteModal.item.damage_type || partialCompleteModal.item.note) && (
+                <div className="bg-amber-50 rounded-lg p-3 text-sm">
+                  {partialCompleteModal.item.damage_type && (
+                    <div className="text-slate-700"><span className="font-medium">Причина:</span> {partialCompleteModal.item.damage_type}</div>
+                  )}
+                  {partialCompleteModal.item.note && (
+                    <div className="text-slate-600 mt-1 italic">"{partialCompleteModal.item.note}"</div>
+                  )}
+                </div>
+              )}
+              
+              {/* Кількість оброблених */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Скільки оброблено?
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.max(1, prev.qty - 1) }))}
+                    className="p-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition"
+                  >
+                    <Minus className="w-5 h-5" />
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max={partialCompleteModal.item.qty || 1}
+                    value={partialCompleteModal.qty}
+                    onChange={(e) => setPartialCompleteModal(prev => ({ 
+                      ...prev, 
+                      qty: Math.min(Math.max(1, parseInt(e.target.value) || 1), partialCompleteModal.item.qty || 1)
+                    }))}
+                    className="flex-1 text-center text-2xl font-bold p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.min((partialCompleteModal.item.qty || 1), prev.qty + 1) }))}
+                    className="p-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="text-center text-sm text-slate-500 mt-2">
+                  з {partialCompleteModal.item.qty || 1} шт
+                </div>
+              </div>
+              
+              {/* Швидкі кнопки */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.ceil((partialCompleteModal.item.qty || 1) / 2) }))}
+                  className="flex-1 py-2 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition"
+                >
+                  Половина ({Math.ceil((partialCompleteModal.item.qty || 1) / 2)})
+                </button>
+                <button
+                  onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: partialCompleteModal.item.qty || 1 }))}
+                  className="flex-1 py-2 text-sm bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition"
+                >
+                  Всі ({partialCompleteModal.item.qty || 1})
+                </button>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="bg-slate-50 border-t border-slate-200 px-5 py-4 flex gap-3">
+              <button
+                onClick={() => setPartialCompleteModal({ isOpen: false, item: null, qty: 0 })}
+                className="flex-1 py-3 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition"
+              >
+                Скасувати
+              </button>
+              <button
+                onClick={handlePartialComplete}
+                className="flex-1 py-3 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition"
+              >
+                ✓ Підтвердити ({partialCompleteModal.qty} шт)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Photo Modal */}
       <PhotoModal
         isOpen={photoModal.isOpen}

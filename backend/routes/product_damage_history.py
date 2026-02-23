@@ -119,11 +119,15 @@ async def create_damage_record(
     - photo_url: URL фото (опціонально)
     - note: Примітка (опціонально)
     - created_by: Хто зафіксував (опціонально)
-    - processing_type: 'none', 'wash', 'restoration', 'laundry'
+    - processing_type: 'awaiting_assignment', 'wash', 'restoration', 'washing', 'laundry', 'returned_to_stock'
+    
+    ВАЖЛИВО: За замовчуванням processing_type = 'awaiting_assignment' (очікує розподілу)
+    Це проміжний стан поки менеджер не обере тип обробки (мийка/прання/хімчистка/реставрація/на склад)
     """
     try:
         damage_id = str(uuid.uuid4())
-        processing_type = damage_data.get("processing_type", "none")
+        # За замовчуванням - очікує розподілу (проміжний стан)
+        processing_type = damage_data.get("processing_type", "awaiting_assignment")
         stage = damage_data.get("stage", "return")
         order_id = damage_data.get("order_id")
         product_id = damage_data.get("product_id")

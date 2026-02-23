@@ -435,17 +435,23 @@ async def get_items_by_category(
             partial_return_qty = partial_return_info["qty"]
             in_rent_qty += partial_return_qty  # Рахуємо як "в оренді"
             
-            # Отримуємо статус з products.state та frozen_quantity
+            # Отримуємо статус з products.state та frozen_quantity, in_laundry
             product_state = row[18] if len(row) > 18 else None  # state
             frozen_qty = row[19] if len(row) > 19 else 0  # frozen_quantity
             frozen_qty = frozen_qty or 0
+            in_laundry_qty = row[20] if len(row) > 20 else 0  # in_laundry (на мийці)
+            in_laundry_qty = in_laundry_qty or 0
             
-            # Визначаємо кількість на обробці по типу з state
+            # Визначаємо кількість на обробці
             on_wash_qty = 0
             on_restoration_qty = 0
             on_laundry_qty = 0
             
-            if product_state == 'on_wash':
+            # Спочатку перевіряємо in_laundry (це пріоритет - реальні дані з обробки)
+            if in_laundry_qty > 0:
+                on_wash_qty = in_laundry_qty
+            # Потім дивимось на state для інших типів обробки
+            elif product_state == 'on_wash':
                 on_wash_qty = frozen_qty
             elif product_state == 'on_repair':
                 on_restoration_qty = frozen_qty

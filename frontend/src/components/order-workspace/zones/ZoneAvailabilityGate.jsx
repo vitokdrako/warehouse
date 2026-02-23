@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import ZoneCard from '../ZoneCard'
 import TonePill from '../TonePill'
-import { ChevronDown, ChevronUp, Package, Clock, AlertTriangle, Wrench } from 'lucide-react'
+import { ChevronDown, ChevronUp, Package, Clock, AlertTriangle, Wrench, Droplets, Sparkles } from 'lucide-react'
 
 /**
  * Zone: Availability Gate - Перевірка доступності
@@ -12,9 +12,10 @@ import { ChevronDown, ChevronUp, Package, Clock, AlertTriangle, Wrench } from 'l
  * - Номер замовлення в якому товар
  * - Статус товару (в оренді, в чистці, ремонт)
  * - Дати оренди конфліктуючих замовлень
+ * - ⚠️ НОВЕ: Попередження про товари на обробці (мийка/прання/хімчистка/реставрація)
  */
 export default function ZoneAvailabilityGate({
-  conflicts = [],    // [{ sku, name, type, level, available, requested, nearbyOrders }]
+  conflicts = [],    // [{ sku, name, type, level, available, requested, nearbyOrders, processingWarnings }]
   isChecking = false,
   hasItems = false,
   hasDates = false,
@@ -46,6 +47,8 @@ export default function ZoneAvailabilityGate({
       'tight_schedule': '⚠️ Щільний графік',
       'low_stock': '📦 Малий запас',
       'partial_return_risk': '🚨 Не повернуто з оренди',
+      'processing_rush': '⏰ Потрібно поторопитися з обробкою',
+      'on_processing': '🧼 Товар на обробці',
     }
     return labels[type] || type
   }
@@ -73,6 +76,21 @@ export default function ZoneAvailabilityGate({
       case 'repair':
       case 'damaged':
         return <Wrench className="h-3.5 w-3.5 text-orange-500" />
+      default:
+        return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+    }
+  }
+  
+  const getProcessingIcon = (type) => {
+    switch(type) {
+      case 'on_wash':
+        return <Droplets className="h-3.5 w-3.5 text-blue-500" />
+      case 'on_laundry':
+        return <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+      case 'on_restoration':
+        return <Wrench className="h-3.5 w-3.5 text-orange-500" />
+      case 'awaiting_assignment':
+        return <Clock className="h-3.5 w-3.5 text-amber-500" />
       default:
         return <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
     }
@@ -111,34 +129,37 @@ export default function ZoneAvailabilityGate({
             const isExpanded = expandedConflicts.has(idx)
             const hasDetails = conflict.nearbyOrders && conflict.nearbyOrders.length > 0
             const hasPartialReturns = conflict.partialReturnWarnings && conflict.partialReturnWarnings.length > 0
+            const hasProcessingWarnings = conflict.processingWarnings && conflict.processingWarnings.length > 0
             const isPartialReturnRisk = conflict.type === 'partial_return_risk'
+            const isProcessingType = conflict.type === 'processing_rush' || conflict.type === 'on_processing'
             
             return (
               <div 
                 key={idx}
                 className={`rounded-lg border text-sm overflow-hidden ${
                   conflict.level === 'error' ? 'bg-rose-50 border-rose-200' : 
-                  isPartialReturnRisk ? 'bg-orange-50 border-orange-300' : 
+                  isPartialReturnRisk ? 'bg-orange-50 border-orange-300' :
+                  isProcessingType ? 'bg-cyan-50 border-cyan-300' :
                   'bg-amber-50 border-amber-200'
                 }`}
               >
                 {/* Заголовок конфлікту */}
                 <div 
-                  className={`p-3 ${(hasDetails || hasPartialReturns) ? 'cursor-pointer hover:bg-black/5' : ''}`}
-                  onClick={() => (hasDetails || hasPartialReturns) && toggleExpand(idx)}
+                  className={`p-3 ${(hasDetails || hasPartialReturns || hasProcessingWarnings) ? 'cursor-pointer hover:bg-black/5' : ''}`}
+                  onClick={() => (hasDetails || hasPartialReturns || hasProcessingWarnings) && toggleExpand(idx)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1">
                       <div className="font-medium text-slate-800 flex items-center gap-2">
                         {conflict.sku} — {conflict.name}
-                        {(hasDetails || hasPartialReturns) && (
+                        {(hasDetails || hasPartialReturns || hasProcessingWarnings) && (
                           <span className="text-slate-400">
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </span>
                         )}
                       </div>
                       <div className="text-xs mt-1 flex items-center gap-2 flex-wrap">
-                        <TonePill tone={conflict.level === 'error' ? 'danger' : isPartialReturnRisk ? 'danger' : 'warn'}>
+                        <TonePill tone={conflict.level === 'error' ? 'danger' : isPartialReturnRisk ? 'danger' : isProcessingType ? 'info' : 'warn'}>
                           {getConflictLabel(conflict.type)}
                         </TonePill>
                         {hasDetails && !isExpanded && (
@@ -151,16 +172,68 @@ export default function ZoneAvailabilityGate({
                             ({conflict.partialReturnQty} шт. ще у клієнта)
                           </span>
                         )}
+                        {hasProcessingWarnings && !isExpanded && (
+                          <span className="text-cyan-600 font-medium">
+                            ({conflict.onProcessing} шт. на обробці)
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="text-right text-xs shrink-0">
                       <div>Доступно: <b className={conflict.available === 0 ? 'text-red-600' : ''}>{conflict.available || 0}</b></div>
+                      {conflict.ready !== undefined && conflict.ready !== conflict.available && (
+                        <div>Готово: <b className="text-emerald-600">{conflict.ready || 0}</b></div>
+                      )}
+                      {conflict.onProcessing > 0 && (
+                        <div>На обробці: <b className="text-cyan-600">{conflict.onProcessing}</b></div>
+                      )}
                       <div>Запитано: <b>{conflict.requested || 0}</b></div>
                     </div>
                   </div>
                 </div>
                 
-                {/* ⚠️ НОВЕ: Деталі часткових повернень */}
+                {/* ⚠️ НОВЕ: Деталі товарів на обробці */}
+                {isExpanded && hasProcessingWarnings && (
+                  <div className="border-t border-cyan-200 bg-cyan-50/50">
+                    <div className="px-3 py-2 text-xs text-cyan-700 font-medium border-b border-cyan-200 flex items-center gap-1">
+                      <Droplets className="h-3.5 w-3.5" />
+                      Товари на обробці:
+                    </div>
+                    <div className="divide-y divide-cyan-100">
+                      {conflict.processingWarnings.map((pw, pwIdx) => (
+                        <div 
+                          key={pwIdx} 
+                          className="px-3 py-2 flex items-center justify-between gap-3 hover:bg-cyan-100/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            {getProcessingIcon(pw.type)}
+                            <div>
+                              <div className="font-medium text-slate-700">
+                                {pw.qty} шт.
+                              </div>
+                              <div className="text-xs text-cyan-600">
+                                {pw.type === 'on_wash' && 'На мийці/пранні/хімчистці'}
+                                {pw.type === 'on_laundry' && 'На хімчистці/пранні'}
+                                {pw.type === 'on_restoration' && 'На реставрації'}
+                                {pw.type === 'awaiting_assignment' && 'Очікує розподілу'}
+                                {pw.type === 'frozen' && 'Заморожено'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right text-xs text-cyan-600 font-medium">
+                            ⏰ Потрібно поторопитися!
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-3 py-2 bg-cyan-100/50 text-xs text-cyan-700 border-t border-cyan-200">
+                      💡 <b>Увага:</b> Товар на обробці (мийка/прання/хімчистка/реставрація). 
+                      Видача можлива, але потрібно терміново завершити обробку!
+                    </div>
+                  </div>
+                )}
+                
+                {/* ⚠️ Деталі часткових повернень */}
                 {isExpanded && hasPartialReturns && (
                   <div className="border-t border-orange-200 bg-orange-50/50">
                     <div className="px-3 py-2 text-xs text-orange-700 font-medium border-b border-orange-200 flex items-center gap-1">

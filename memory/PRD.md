@@ -17,12 +17,21 @@
 ## Core Requirements
 
 ### Damage Hub (Кабінет шкоди)
-- ✅ Розподіл товарів на категорії обробки: Мийка, Реставрація, Прання, Хімчистка
+- ✅ Розподіл товарів на категорії обробки: Мийка, Реставрація, Прання, Хімчистка, На склад
 - ✅ Формування партій прання/хімчистки
 - ✅ Часткове повернення товарів з партій
 - ✅ Видалення завершених партій
 - ✅ Друк актів передачі партій (endpoint `/preview`)
 - ✅ Мобільна адаптація модальних вікон
+- ✅ Проміжний стан `awaiting_assignment` для товарів що очікують розподілу
+- ✅ Endpoint `return-to-stock` для швидкого повернення на склад
+
+### Availability Check (Перевірка доступності)
+- ✅ Показує попередження про товари на обробці (мийка/прання/хімчистка/реставрація)
+- ✅ Враховує `frozen_quantity` та `in_laundry` з products
+- ✅ Показує `ready_quantity` (готова до видачі без обробки)
+- ✅ НЕ блокує видачу - тільки попередження
+- ✅ Типи попереджень: `on_wash`, `on_laundry`, `on_restoration`, `awaiting_assignment`
 
 ### Documents
 - ✅ Кошторис (estimate) - стилізований HTML документ
@@ -42,10 +51,12 @@
 ├── routes/
 │   ├── laundry.py          # Управління пранням/хімчисткою, партіями
 │   ├── catalog.py          # Каталог товарів (NEEDS OPTIMIZATION)
-│   └── product_damage_history.py  # Історія пошкоджень
+│   └── product_damage_history.py  # Історія пошкоджень + return-to-stock
+├── utils/
+│   └── availability_checker.py  # Перевірка доступності з processing warnings
 ├── templates/documents/
 │   ├── estimate.html       # Шаблон кошторису
-│   └── laundry_batch.html  # Шаблон акту передачі партії (UPDATED)
+│   └── laundry_batch.html  # Шаблон акту передачі партії
 └── database_rentalhub.py   # DB connection
 ```
 

@@ -802,10 +802,14 @@ export default function DamageHubApp() {
   const [partialCompleteModal, setPartialCompleteModal] = useState({ isOpen: false, item: null, qty: 0 });
   
   const openPartialCompleteModal = (item) => {
+    const totalQty = item.qty || 1;
+    const processedQty = item.processed_qty || 0;
+    const remainingQty = totalQty - processedQty;
+    
     setPartialCompleteModal({
       isOpen: true,
       item,
-      qty: item.qty || 1
+      qty: remainingQty  // Початкове значення = залишок
     });
   };
   

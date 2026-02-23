@@ -651,6 +651,7 @@ async def get_catalog_items(
             "cover": normalized_image,
             "status": row[5],
             "state": "ok" if available_qty > 0 else "unavailable",
+            "product_state": product_state,
             "cat": row[7],  # Frontend очікує cat
             "category": row[7],
             "category_id": row[6],
@@ -665,6 +666,9 @@ async def get_catalog_items(
             "in_rent": in_rent_qty,
             "rented": in_rent_qty,
             "in_restore": in_restore_qty,
+            "on_wash": on_wash_qty,
+            "frozen_quantity": frozen_qty,
+            "in_laundry": in_laundry_qty,
             "location": {
                 "zone": row[11] or "",
                 "aisle": row[12] or "",

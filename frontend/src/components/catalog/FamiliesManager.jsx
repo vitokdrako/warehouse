@@ -216,9 +216,12 @@ function FamiliesList({
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-slate-800 truncate">{family.name || 'Без назви'}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-200 text-slate-600 rounded">#{family.id}</span>
+                  <span className="font-medium text-slate-800 truncate">{family.name || 'Без назви'}</span>
+                </div>
                 <span className={cls(
-                  'px-2 py-0.5 text-xs font-medium rounded-full',
+                  'px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0',
                   family.products?.length > 0 
                     ? 'bg-emerald-100 text-emerald-700'
                     : 'bg-slate-100 text-slate-500'

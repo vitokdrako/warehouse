@@ -648,7 +648,7 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
                 o.customer_phone,
                 o.status as order_status,
                 COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = pdh.order_id AND payment_type = 'damage'), 0) as damage_paid,
-                SUM(CASE WHEN pdh.processing_type IS NULL OR pdh.processing_type = '' OR pdh.processing_type = 'none' THEN 1 ELSE 0 END) as pending_assignment,
+                SUM(CASE WHEN pdh.processing_type IS NULL OR pdh.processing_type = '' OR pdh.processing_type = 'none' OR pdh.processing_type = 'awaiting_assignment' THEN 1 ELSE 0 END) as pending_assignment,
                 SUM(CASE WHEN pdh.processing_status = 'completed' THEN 1 ELSE 0 END) as completed_count
             FROM product_damage_history pdh
             LEFT JOIN orders o ON o.order_id = pdh.order_id

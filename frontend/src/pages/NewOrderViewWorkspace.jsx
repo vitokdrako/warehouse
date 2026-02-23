@@ -290,8 +290,16 @@ export default function NewOrderViewWorkspace() {
               conflictType = 'insufficient'
               level = 'error'
             } else if (item.has_partial_return_risk) {
-              // ⚠️ НОВЕ: Товар у частковому поверненні - ще не повернувся
+              // ⚠️ Товар у частковому поверненні - ще не повернувся
               conflictType = 'partial_return_risk'
+              level = 'warning'
+            } else if (item.needs_processing_rush) {
+              // ⚠️ НОВЕ: Товар на обробці - потрібно поторопитися
+              conflictType = 'processing_rush'
+              level = 'warning'
+            } else if (item.has_processing_warning) {
+              // ⚠️ НОВЕ: Товар на обробці - попередження
+              conflictType = 'on_processing'
               level = 'warning'
             } else if (item.has_tight_schedule) {
               conflictType = 'tight_schedule'
@@ -309,11 +317,15 @@ export default function NewOrderViewWorkspace() {
                 level,
                 available: item.available_quantity,
                 requested: item.requested_quantity,
+                ready: item.ready_quantity,  // ✅ НОВЕ: Готово до видачі (без обробки)
+                onProcessing: item.on_processing_quantity || 0,  // ✅ НОВЕ: На обробці
                 // ✅ Додаємо детальну інформацію про конфліктуючі замовлення
                 nearbyOrders: item.nearby_orders || [],
-                // ⚠️ НОВЕ: Інформація про часткові повернення
+                // ⚠️ Інформація про часткові повернення
                 partialReturnWarnings: item.partial_return_warnings || [],
-                partialReturnQty: item.partial_return_qty || 0
+                partialReturnQty: item.partial_return_qty || 0,
+                // ⚠️ НОВЕ: Інформація про товари на обробці
+                processingWarnings: item.processing_warnings || []
               }
             }
             return null

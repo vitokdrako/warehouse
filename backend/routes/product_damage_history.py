@@ -1458,11 +1458,13 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
             "notes": data.get("notes", "")
         })
         
-        # Повернути товар на склад (збільшити quantity)
+        # Повернути товар на склад - зменшити in_laundry та frozen_quantity
         if product_id and completed_qty > 0:
+            # Зменшити in_laundry (кількість на мийці/пранні/хімчистці)
             db.execute(text("""
                 UPDATE products 
-                SET quantity = quantity + :qty
+                SET in_laundry = GREATEST(0, COALESCE(in_laundry, 0) - :qty),
+                    frozen_quantity = GREATEST(0, COALESCE(frozen_quantity, 0) - :qty)
                 WHERE product_id = :product_id
             """), {"product_id": product_id, "qty": completed_qty})
             
@@ -1470,8 +1472,9 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
             if is_fully_completed:
                 db.execute(text("""
                     UPDATE products 
-                    SET product_state = 'shelf'
+                    SET state = 'ok'
                     WHERE product_id = :product_id
+                    AND in_laundry <= 0 AND frozen_quantity <= 0
                 """), {"product_id": product_id})
                 
                 db.execute(text("""
@@ -1482,7 +1485,7 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
                     WHERE product_id = :product_id
                 """), {"product_id": product_id})
             
-            print(f"[DamageHistory] 🔓 Товар {product_id}: оброблено {completed_qty} шт, всього {new_processed}/{total_qty}")
+            print(f"[DamageHistory] 🔓 Товар {product_id}: оброблено {completed_qty} шт, всього {new_processed}/{total_qty}, in_laundry -={completed_qty}")
         
         db.commit()
         

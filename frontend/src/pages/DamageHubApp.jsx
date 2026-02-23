@@ -1372,22 +1372,45 @@ export default function DamageHubApp() {
                 <div className="max-h-48 overflow-y-auto p-2 space-y-2">
                   {washItems.length === 0 ? (
                     <div className="text-center py-4 text-slate-400 text-sm">Немає товарів</div>
-                  ) : washItems.map(item => (
+                  ) : washItems.map(item => {
+                    const processed = item.processed_qty || 0;
+                    const total = item.qty || 1;
+                    const remaining = total - processed;
+                    return (
                     <div key={item.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
                       <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
-                        <div className="text-xs text-slate-500">{item.sku} • <span className="font-medium">{item.qty || 1} шт</span></div>
+                        <div className="text-xs text-slate-500">
+                          {item.sku} • 
+                          {processed > 0 ? (
+                            <span className="font-medium">
+                              <span className="text-emerald-600">{processed}</span>/{total} шт
+                            </span>
+                          ) : (
+                            <span className="font-medium">{total} шт</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-1">
                         {item.processing_status !== 'completed' && (
-                          <button
-                            onClick={() => handleComplete(item.id)}
-                            className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
-                            title="Готово"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
+                          remaining > 1 ? (
+                            <button
+                              onClick={() => openPartialCompleteModal(item)}
+                              className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
+                              title="Оброблено..."
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleComplete(item.id)}
+                              className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
+                              title="Готово"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          )
                         )}
                         <button
                           onClick={() => handleRemoveFromList(item.id, 'wash')}
@@ -1398,7 +1421,7 @@ export default function DamageHubApp() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </div>

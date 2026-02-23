@@ -1216,7 +1216,7 @@ export default function DamageHubApp() {
                             </div>
                             
                             {/* Action Buttons */}
-                            {(!item.processing_type || item.processing_type === 'none') && view === 'active' && (
+                            {(!item.processing_type || item.processing_type === 'none' || item.processing_type === 'awaiting_assignment') && view === 'active' && (
                               <div className="flex flex-wrap gap-2 mt-3">
                                 {/* Кнопка списання для повної втрати */}
                                 {isLoss && (

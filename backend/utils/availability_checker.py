@@ -370,10 +370,18 @@ def check_order_availability(
     # Збираємо товари з ризиком часткового повернення
     partial_return_risks = [r for r in results if r.get("has_partial_return_risk")]
     
+    # Збираємо товари з попередженням про обробку
+    processing_warning_items = [r for r in results if r.get("has_processing_warning")]
+    needs_processing_rush_items = [r for r in results if r.get("needs_processing_rush")]
+    
     return {
         "all_available": len(unavailable) == 0,
         "has_partial_return_risks": len(partial_return_risks) > 0,
+        "has_processing_warnings": len(processing_warning_items) > 0,
+        "needs_processing_rush": len(needs_processing_rush_items) > 0,
         "items": results,
         "unavailable_items": unavailable,
-        "partial_return_risk_items": partial_return_risks
+        "partial_return_risk_items": partial_return_risks,
+        "processing_warning_items": processing_warning_items,
+        "processing_rush_items": needs_processing_rush_items
     }

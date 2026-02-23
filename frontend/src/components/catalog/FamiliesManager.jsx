@@ -989,7 +989,8 @@ export default function FamiliesManager() {
       setLoading(false)
       
       // Then load products in background (slow)
-      const productsRes = await fetch(`${BACKEND_URL}/api/catalog?limit=1000`)
+      // Збільшено ліміт до 10000 щоб охопити весь каталог
+      const productsRes = await fetch(`${BACKEND_URL}/api/catalog?limit=10000`)
       if (productsRes.ok) {
         const data = await productsRes.json()
         const items = Array.isArray(data) ? data : (data.items || [])

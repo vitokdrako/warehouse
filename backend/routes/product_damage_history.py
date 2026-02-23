@@ -209,7 +209,9 @@ async def create_damage_record(
             "note": damage_data.get("note"),
             "created_by": damage_data.get("created_by", "system"),
             "processing_type": processing_type,
-            "processing_status": "pending" if processing_type != "none" else "completed"
+            # awaiting_assignment та інші типи мають status = 'pending'
+            # returned_to_stock має status = 'completed' (одразу готово)
+            "processing_status": "completed" if processing_type == "returned_to_stock" else "pending"
         })
         
         # Заморозити товар при записі шкоди (не для pre_issue)

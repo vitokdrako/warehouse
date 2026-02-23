@@ -557,7 +557,8 @@ async def get_catalog_items(
             p.category_id, p.category_name, 
             p.subcategory_id, p.subcategory_name,
             p.quantity, p.zone, p.aisle, p.shelf,
-            p.family_id, pf.name as family_name, pf.description as family_description
+            p.family_id, pf.name as family_name, pf.description as family_description,
+            p.frozen_quantity, p.in_laundry, p.state
         FROM products p
         LEFT JOIN product_families pf ON p.family_id = pf.id
         WHERE p.status = 1

@@ -1862,12 +1862,23 @@ export default function DamageHubApp() {
                           {/* Кнопки дій */}
                           <div className="flex gap-2 mt-auto">
                             {item.processing_status !== 'completed' && (
-                              <button
-                                onClick={() => handleComplete(item.id)}
-                                className="flex-1 flex items-center justify-center gap-1 p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition text-sm font-medium"
-                              >
-                                <Check className="w-4 h-4" /> Готово
-                              </button>
+                              <>
+                                {(item.qty || 1) > 1 ? (
+                                  <button
+                                    onClick={() => openPartialCompleteModal(item)}
+                                    className="flex-1 flex items-center justify-center gap-1 p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition text-sm font-medium"
+                                  >
+                                    <Check className="w-4 h-4" /> Оброблено...
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleComplete(item.id)}
+                                    className="flex-1 flex items-center justify-center gap-1 p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition text-sm font-medium"
+                                  >
+                                    <Check className="w-4 h-4" /> Готово
+                                  </button>
+                                )}
+                              </>
                             )}
                             <button
                               onClick={() => handleRemoveFromList(item.id, 'wash')}

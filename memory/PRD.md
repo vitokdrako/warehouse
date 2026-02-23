@@ -1,151 +1,96 @@
-# RentalHub - Product Requirements Document
+# Rental Hub PRD
 
 ## Original Problem Statement
-Система управління орендою декору FarforRent (RentalHub) з модулями:
-- Управління каталогом та сім'ями товарів
-- Кабінет шкоди (Damage Hub) з розподілом на мийку, реставрацію, прання, хімчистку
-- Управління партіями прання/хімчистки
-- Друковані документи (кошториси, акти передачі)
-- Фінансовий модуль
-- Календар замовлень
+Система управління орендою товарів для FarforRent. Основні модулі: каталог товарів, замовлення, клієнтський кабінет, damage hub (обробка пошкоджених товарів).
 
 ## User Personas
-1. **Менеджер складу** - управління товарами, обробка шкоди, формування партій
-2. **Адміністратор** - повний доступ до системи
-3. **Клієнт** - перегляд кошторисів та актів
+- **Менеджер прокату:** Управляє замовленнями, видачею, поверненням, контролює стан товарів
+- **Адміністратор:** Повний доступ, управління каталогом, звіти, налаштування
+- **Клієнт:** Перегляд каталогу, статус замовлень через кабінет
 
 ## Core Requirements
+1. Каталог товарів з фільтрами по категоріях, кольору, матеріалу
+2. Перевірка доступності на конкретні дати
+3. Damage Hub для обробки пошкоджених товарів (wash, restoration, to_stock)
+4. Часткові повернення замовлень
+5. Система сетів (families) та наборів товарів
 
-### Damage Hub (Кабінет шкоди)
-- ✅ Розподіл товарів на категорії обробки: Мийка, Реставрація, Прання, Хімчистка, На склад
-- ✅ Формування партій прання/хімчистки
-- ✅ Часткове повернення товарів з партій
-- ✅ Видалення завершених партій
-- ✅ Друк актів передачі партій (endpoint `/preview`)
-- ✅ Мобільна адаптація модальних вікон
-- ✅ Проміжний стан `awaiting_assignment` для товарів що очікують розподілу
-- ✅ Endpoint `return-to-stock` для швидкого повернення на склад
+---
 
-### Availability Check (Перевірка доступності)
-- ✅ Показує попередження про товари на обробці (мийка/прання/хімчистка/реставрація)
-- ✅ Враховує `frozen_quantity` та `in_laundry` з products
-- ✅ Показує `ready_quantity` (готова до видачі без обробки)
-- ✅ НЕ блокує видачу - тільки попередження
-- ✅ Типи попереджень: `on_wash`, `on_laundry`, `on_restoration`, `awaiting_assignment`
+## What's Been Implemented
 
-### Documents
-- ✅ Кошторис (estimate) - стилізований HTML документ
-- ✅ Акт передачі партії (laundry_batch) - оновлено під стиль estimate
+### Session 2025-02-23
+- ✅ **family_id відображення на картках товарів** — виправлено API endpoint `/api/catalog/items-by-category`, тепер повертає family_id
+- ✅ **Damage Hub awaiting_assignment status** — проміжний статус для товарів що чекають обробки
+- ✅ **Availability Checker overhaul** — non-blocking warnings для товарів в обробці
+- ✅ **Partial Processing feature** — часткове завершення обробки (наприклад, помити 5 з 80 тарілок)
+- ✅ **Backend fix for partial processing** — оновлення aggregate counts (in_laundry, frozen_quantity)
+- ✅ **Multiple UI/UX fixes** — modal z-index, quantity display, debounce на Quick Add search
 
-### Known Issues (P1-P2)
-- 🔴 P1: Catalog API повільний `/api/catalog` - блокує FamiliesManager та Quick Add
-- 🟡 P2: `convert-to-order` endpoint нестабільний
-- 🟡 P2: Moodboard export може бути зламаний
-- 🟡 P2: Recurring Calendar Timezone Bug
+### Previous Sessions
+- Мобільна адаптація Families Manager та Products tab
+- Розділення dashboard по ролях
+- Система часткових повернень
+- Email templates (накладна, ТТН)
+
+---
 
 ## Architecture
 
-### Backend (FastAPI + MySQL)
 ```
-/app/backend/
-├── routes/
-│   ├── laundry.py          # Управління пранням/хімчисткою, партіями
-│   ├── catalog.py          # Каталог товарів (NEEDS OPTIMIZATION)
-│   └── product_damage_history.py  # Історія пошкоджень + return-to-stock
-├── utils/
-│   └── availability_checker.py  # Перевірка доступності з processing warnings
-├── templates/documents/
-│   ├── estimate.html       # Шаблон кошторису
-│   └── laundry_batch.html  # Шаблон акту передачі партії
-└── database_rentalhub.py   # DB connection
-```
-
-### Frontend (React)
-```
-/app/frontend/src/
-├── pages/
-│   ├── DamageHubApp.jsx    # Кабінет шкоди (UPDATED - awaiting_assignment status)
-│   └── NewOrderViewWorkspace.jsx  # Створення замовлення (UPDATED - processing warnings)
-└── components/
-    ├── catalog/
-    │   └── FamiliesManager.jsx  # Управління сім'ями (BLOCKED by slow API)
-    └── order-workspace/zones/
-        └── ZoneAvailabilityGate.jsx  # Показ конфліктів та processing warnings (UPDATED)
+/app/
+├── backend/
+│   ├── routes/
+│   │   ├── catalog.py       # MODIFIED: Added family_id to items-by-category
+│   │   ├── damage.py        # Damage Hub endpoints
+│   │   ├── laundry.py       # Processing endpoints with partial completion
+│   │   └── finance.py       # Financial reports
+│   └── utils/
+│       └── availability_checker.py  # Processing warnings logic
+└── frontend/
+    └── src/
+        ├── pages/
+        │   ├── CatalogBoard.jsx       # Products tab with family_id badge
+        │   ├── DamageHubApp.jsx       # Full Damage Hub UI
+        │   └── NewOrderViewWorkspace.jsx
+        └── components/
+            └── catalog/
+                └── FamiliesManager.jsx  # Sets management (slow due to API)
 ```
 
-## API Endpoints
+---
 
-### Availability Check
-- `POST /api/orders/check-availability` - Перевірка доступності товарів
-  - Повертає: `has_processing_warnings`, `processing_warnings`, `ready_quantity`, `on_processing_quantity`
-  - Попередження НЕ блокують видачу, тільки інформують
+## Prioritized Backlog
 
-### Laundry/Washing
-- `GET /api/laundry/queue?type=washing|laundry` - Черга товарів
-- `POST /api/laundry/queue/add-to-batch` - Додати в партію
-- `GET /api/laundry/batches?type=washing|laundry` - Список партій
-- `GET /api/laundry/batches/{id}` - Деталі партії
-- `GET /api/laundry/batches/{id}/preview` - HTML preview для друку ✅ NEW
-- `GET /api/laundry/batches/{id}/print` - Редірект на /preview
-- `POST /api/laundry/batches/{id}/receive-items` - Прийом товарів
-- `DELETE /api/laundry/batches/{id}` - Видалення партії
+### P0 - Critical
+- (none currently)
 
-## What's Been Implemented (December 2025 - February 2026)
+### P1 - High Priority
+1. **Optimize Catalog API** — `/api/catalog` та `/api/catalog/items-by-category` дуже повільні (20-35 секунд)
+2. **System Cleanup** — видалення 18 невикористаних таблиць та 7 застарілих файлів
+3. **FamiliesManager infinite loading** — blocked by slow Catalog API
 
-### Session: 2026-02-23
-1. **Проміжний стан `awaiting_assignment`**
-   - Коли товар потрапляє в Damage Hub → `processing_type = 'awaiting_assignment'`
-   - Показує статус "Очікує розподілу" замість "Не розподілено"
-   - Оновлено логіку в `product_damage_history.py`
+### P2 - Medium Priority
+- `convert-to-order` endpoint instability
+- Moodboard export functionality
+- Calendar timezone bug
+- Additional document templates (Акт повернення, Дефектний акт)
 
-2. **Перевірка товарів на обробці в Availability Checker**
-   - Оновлено `availability_checker.py`:
-     - Додано перевірку `frozen_quantity`, `in_laundry` та `state`
-     - Нові поля: `ready_quantity`, `on_processing_quantity`, `processing_warnings`
-     - Типи warnings: `on_wash`, `on_laundry`, `on_restoration`, `awaiting_assignment`
-   - Товари на обробці НЕ блокують видачу, тільки показують попередження
-
-3. **UI для показу processing warnings**
-   - Оновлено `ZoneAvailabilityGate.jsx`:
-     - Показує деталі товарів на обробці (кількість, тип)
-     - Cyan колір для processing warnings
-     - Expandable details секція
-   - Оновлено `NewOrderViewWorkspace.jsx`:
-     - Нові типи конфліктів: `processing_rush`, `on_processing`
-
-4. **Виправлено баг в NewOrderCleanWorkspace**
-   - `discountPercent` → `discount` (undefined variable fix)
-
-### Previous Sessions
-- Damage Hub refactor with separate Washing/Dry Cleaning workflows
-- Batch management (create, expand, delete, partial return)
-- Quick Add feature for queues
-- Project build for deployment
-
-## Next Tasks (Priority Order)
-
-### P1: Critical
-1. **Optimize Catalog API** - `/app/backend/routes/catalog.py`
-   - Investigate slow queries in `GET /api/catalog` and `GET /api/catalog/families`
-   - Add pagination, reduce data fetching, or improve indexing
-   - Unblocks: FamiliesManager, Quick Add in DamageHub
-
-### P2: Important
-2. Fix `convert-to-order` endpoint instability
-3. Fix Moodboard export
-4. Fix Calendar timezone bug
-5. Create email templates for documents
-
-### Future/Backlog
+### P3 - Future
 - Real-time updates for client cabinet
-- Unify `NewOrderViewWorkspace.jsx` and `IssueCardWorkspace.jsx`
-- Full Role-Based Access Control (RBAC)
-- Monthly Financial Report
+- Unify NewOrderViewWorkspace & IssueCardWorkspace
+- Full RBAC implementation
+- Monthly financial report
 - HR/Ops Module
 
-## Credentials
-- **RentalHub Admin:** `vitokdrako@gmail.com` / `test123`
+---
 
-## Technical Notes
-- User's DB connection is slow - avoid screenshot testing
-- User prefers Ukrainian language for communication
+## 3rd Party Integrations
+- **SMTPEmailProvider:** Custom SMTP for email sending
+- **OpenCart:** Product data synchronization
+
+## Test Credentials
+- **Admin:** vitokdrako@gmail.com / test123
+
+## Build Output
+Production frontend build: `/app/clean_project/frontend_build/`

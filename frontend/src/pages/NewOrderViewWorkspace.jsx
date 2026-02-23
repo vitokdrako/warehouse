@@ -253,7 +253,7 @@ export default function NewOrderViewWorkspace() {
       return
     }
     checkAvailability()
-  }, [issueDate, returnDate, items])
+  }, [issueDate, returnDate, items, decorOrderStatus])  // ✅ Додано decorOrderStatus для перевірки при зміні статусу
   
   const checkAvailability = async () => {
     setCheckingConflicts(true)

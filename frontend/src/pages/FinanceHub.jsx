@@ -1259,13 +1259,26 @@ function OperationsTab({
               {damageFees.items?.length > 0 && (
                 <div className="mb-3">
                   <div className="text-xs text-rose-700 mb-2 font-medium">Зафіксовано:</div>
-                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                    {damageFees.items.map((d, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm bg-white rounded-lg p-2">
-                        <span className="text-rose-800">{d.name} • {d.damage_type}</span>
-                        <span className="font-semibold text-rose-600">{money(d.fee)}</span>
-                      </div>
-                    ))}
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {damageFees.items.map((d, i) => {
+                      const qty = d.qty || 1
+                      const feePerItem = d.fee_per_item || (qty > 0 ? d.fee / qty : d.fee)
+                      return (
+                        <div key={i} className="flex items-center justify-between text-sm bg-white rounded-lg p-2">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-rose-800 font-medium">{d.name}</span>
+                            {qty > 1 && <span className="text-rose-600 font-bold ml-1">×{qty} шт</span>}
+                            <div className="text-xs text-rose-600/80 truncate">{d.damage_type}</div>
+                          </div>
+                          <div className="text-right flex-shrink-0 ml-2">
+                            <div className="font-semibold text-rose-600">{money(d.fee)}</div>
+                            {qty > 1 && (
+                              <div className="text-[10px] text-rose-500">{qty} × {money(feePerItem)}</div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                   <div className="mt-2 text-right text-sm">
                     <span className="text-rose-700">Всього: </span>

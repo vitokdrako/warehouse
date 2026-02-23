@@ -1643,8 +1643,13 @@ export default function DamageHubApp() {
       </div>
 
       {/* Partial Complete Modal - Часткове завершення обробки */}
-      {partialCompleteModal.isOpen && partialCompleteModal.item && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      {partialCompleteModal.isOpen && partialCompleteModal.item && (() => {
+        const totalQty = partialCompleteModal.item.qty || 1;
+        const processedQty = partialCompleteModal.item.processed_qty || 0;
+        const remainingQty = totalQty - processedQty;
+        
+        return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             {/* Header */}
             <div className="bg-emerald-50 border-b border-emerald-200 px-5 py-4 flex items-center justify-between">
@@ -1675,8 +1680,11 @@ export default function DamageHubApp() {
                   )}
                 </div>
                 <div className="text-right">
-                  <div className="text-lg font-bold text-slate-800">{partialCompleteModal.item.qty || 1} шт</div>
-                  <div className="text-xs text-slate-500">всього</div>
+                  <div className="text-lg font-bold text-amber-600">{remainingQty} шт</div>
+                  <div className="text-xs text-slate-500">залишилось</div>
+                  {processedQty > 0 && (
+                    <div className="text-xs text-emerald-600">{processedQty}/{totalQty} оброблено</div>
+                  )}
                 </div>
               </div>
               
@@ -1695,7 +1703,7 @@ export default function DamageHubApp() {
               {/* Кількість оброблених */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Скільки оброблено?
+                  Скільки оброблено зараз?
                 </label>
                 <div className="flex items-center gap-3">
                   <button
@@ -1707,39 +1715,39 @@ export default function DamageHubApp() {
                   <input
                     type="number"
                     min="1"
-                    max={partialCompleteModal.item.qty || 1}
+                    max={remainingQty}
                     value={partialCompleteModal.qty}
                     onChange={(e) => setPartialCompleteModal(prev => ({ 
                       ...prev, 
-                      qty: Math.min(Math.max(1, parseInt(e.target.value) || 1), partialCompleteModal.item.qty || 1)
+                      qty: Math.min(Math.max(1, parseInt(e.target.value) || 1), remainingQty)
                     }))}
                     className="flex-1 text-center text-2xl font-bold p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                   <button
-                    onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.min((partialCompleteModal.item.qty || 1), prev.qty + 1) }))}
+                    onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.min(remainingQty, prev.qty + 1) }))}
                     className="p-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition"
                   >
                     <Plus className="w-5 h-5" />
                   </button>
                 </div>
                 <div className="text-center text-sm text-slate-500 mt-2">
-                  з {partialCompleteModal.item.qty || 1} шт
+                  з {remainingQty} шт (залишилось)
                 </div>
               </div>
               
               {/* Швидкі кнопки */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.ceil((partialCompleteModal.item.qty || 1) / 2) }))}
+                  onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.ceil(remainingQty / 2) }))}
                   className="flex-1 py-2 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition"
                 >
-                  Половина ({Math.ceil((partialCompleteModal.item.qty || 1) / 2)})
+                  Половина ({Math.ceil(remainingQty / 2)})
                 </button>
                 <button
-                  onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: partialCompleteModal.item.qty || 1 }))}
+                  onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: remainingQty }))}
                   className="flex-1 py-2 text-sm bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition"
                 >
-                  Всі ({partialCompleteModal.item.qty || 1})
+                  Всі залишок ({remainingQty})
                 </button>
               </div>
             </div>
@@ -1756,12 +1764,12 @@ export default function DamageHubApp() {
                 onClick={handlePartialComplete}
                 className="flex-1 py-3 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition"
               >
-                ✓ Підтвердити ({partialCompleteModal.qty} шт)
+                ✓ Оброблено ({partialCompleteModal.qty} шт)
               </button>
             </div>
           </div>
         </div>
-      )}
+      )})()}
 
       {/* Photo Modal */}
       <PhotoModal

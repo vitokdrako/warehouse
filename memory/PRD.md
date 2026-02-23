@@ -90,20 +90,31 @@
 - `POST /api/laundry/batches/{id}/receive-items` - Прийом товарів
 - `DELETE /api/laundry/batches/{id}` - Видалення партії
 
-## What's Been Implemented (December 2025)
+## What's Been Implemented (December 2025 - February 2026)
 
-### Session: 2025-12-XX
-1. **Batch Print View Redesign**
-   - Created `/api/laundry/batches/{id}/preview` endpoint
-   - Updated `laundry_batch.html` template to match `estimate.html` style
-   - Professional brand-consistent document layout
+### Session: 2026-02-23
+1. **Проміжний стан `awaiting_assignment`**
+   - Коли товар потрапляє в Damage Hub → `processing_type = 'awaiting_assignment'`
+   - Показує статус "Очікує розподілу" замість "Не розподілено"
+   - Оновлено логіку в `product_damage_history.py`
 
-2. **Mobile Responsive Modals in DamageHub**
-   - Batch Creation Modal (`batchModal`) - mobile optimized
-   - Full-screen Section Modal (`fullScreenModal`) - mobile optimized
-   - Quick Add Modal (`quickAddModal`) - mobile optimized
-   - Bottom sheet pattern on mobile, centered on desktop
-   - Touch-friendly button sizes and spacing
+2. **Перевірка товарів на обробці в Availability Checker**
+   - Оновлено `availability_checker.py`:
+     - Додано перевірку `frozen_quantity`, `in_laundry` та `state`
+     - Нові поля: `ready_quantity`, `on_processing_quantity`, `processing_warnings`
+     - Типи warnings: `on_wash`, `on_laundry`, `on_restoration`, `awaiting_assignment`
+   - Товари на обробці НЕ блокують видачу, тільки показують попередження
+
+3. **UI для показу processing warnings**
+   - Оновлено `ZoneAvailabilityGate.jsx`:
+     - Показує деталі товарів на обробці (кількість, тип)
+     - Cyan колір для processing warnings
+     - Expandable details секція
+   - Оновлено `NewOrderViewWorkspace.jsx`:
+     - Нові типи конфліктів: `processing_rush`, `on_processing`
+
+4. **Виправлено баг в NewOrderCleanWorkspace**
+   - `discountPercent` → `discount` (undefined variable fix)
 
 ### Previous Sessions
 - Damage Hub refactor with separate Washing/Dry Cleaning workflows

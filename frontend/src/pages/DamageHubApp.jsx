@@ -755,7 +755,7 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleComplete = async (itemId, notes = "", processedQty = null) => {
+  const handleComplete = async (itemId, notes = "", completedQty = null) => {
     try {
       // Для quick_action товарів - використовуємо спеціальний endpoint
       if (String(itemId).startsWith('quick_')) {
@@ -769,8 +769,8 @@ export default function DamageHubApp() {
           notes: notes || "Обробку завершено"
         };
         // Якщо вказано кількість - часткове завершення
-        if (processedQty !== null) {
-          body.processed_qty = processedQty;
+        if (completedQty !== null) {
+          body.completed_qty = completedQty;
         }
         await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/complete-processing`, {
           method: "POST",
@@ -801,9 +801,9 @@ export default function DamageHubApp() {
   const handlePartialComplete = async () => {
     if (!partialCompleteModal.item) return;
     const item = partialCompleteModal.item;
-    const processedQty = partialCompleteModal.qty;
+    const completedQty = partialCompleteModal.qty;
     
-    if (processedQty <= 0) {
+    if (completedQty <= 0) {
       alert("Введіть кількість оброблених одиниць");
       return;
     }
@@ -812,8 +812,8 @@ export default function DamageHubApp() {
       await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/complete-processing`, {
         method: "POST",
         body: JSON.stringify({ 
-          notes: `Оброблено ${processedQty} з ${item.qty || 1} шт`,
-          processed_qty: processedQty
+          notes: `Оброблено ${completedQty} з ${item.qty || 1} шт`,
+          completed_qty: completedQty
         })
       });
       
@@ -822,7 +822,7 @@ export default function DamageHubApp() {
       await loadRestoreItems();
       await loadWashingQueue();
       await loadLaundryQueue();
-      alert(`✅ Оброблено ${processedQty} шт!`);
+      alert(`✅ Оброблено ${completedQty} шт!`);
     } catch (e) {
       console.error("Error partial complete:", e);
       alert("Помилка часткового завершення");

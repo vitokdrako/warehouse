@@ -277,37 +277,45 @@ export default function NewOrderViewWorkspace() {
         }))
       })
       
+      console.log('[Availability] Response:', response.data)
+      
       if (response.data?.items) {
         const foundConflicts = response.data.items
           .map(item => {
             let conflictType = null
             let level = 'warning'
             
+            // ✅ Спочатку перевіряємо processing warnings (важливіше ніж інші)
+            if (item.needs_processing_rush || item.has_processing_warning) {
+              // ⚠️ Товар на обробці - потрібно поторопитися
+              conflictType = item.needs_processing_rush ? 'processing_rush' : 'on_processing'
+              level = 'warning'
+            }
+            
+            // Потім перевіряємо критичні помилки (перезаписують warning)
             if (item.available_quantity === 0) {
               conflictType = 'out_of_stock'
               level = 'error'
             } else if (item.available_quantity < item.requested_quantity) {
               conflictType = 'insufficient'
               level = 'error'
-            } else if (item.has_partial_return_risk) {
-              // ⚠️ Товар у частковому поверненні - ще не повернувся
-              conflictType = 'partial_return_risk'
-              level = 'warning'
-            } else if (item.needs_processing_rush) {
-              // ⚠️ НОВЕ: Товар на обробці - потрібно поторопитися
-              conflictType = 'processing_rush'
-              level = 'warning'
-            } else if (item.has_processing_warning) {
-              // ⚠️ НОВЕ: Товар на обробці - попередження
-              conflictType = 'on_processing'
-              level = 'warning'
-            } else if (item.has_tight_schedule) {
-              conflictType = 'tight_schedule'
-              level = 'warning'
-            } else if (item.available_quantity < item.total_quantity * 0.2) {
-              conflictType = 'low_stock'
-              level = 'warning'
             }
+            
+            // Якщо немає критичних помилок, перевіряємо інші warnings
+            if (!conflictType) {
+              if (item.has_partial_return_risk) {
+                conflictType = 'partial_return_risk'
+                level = 'warning'
+              } else if (item.has_tight_schedule) {
+                conflictType = 'tight_schedule'
+                level = 'warning'
+              } else if (item.available_quantity < item.total_quantity * 0.2) {
+                conflictType = 'low_stock'
+                level = 'warning'
+              }
+            }
+            
+            console.log(`[Availability] Item ${item.sku}: type=${conflictType}, processing_warning=${item.has_processing_warning}, on_processing=${item.on_processing_quantity}`)
             
             if (conflictType) {
               return {
@@ -332,6 +340,7 @@ export default function NewOrderViewWorkspace() {
           })
           .filter(Boolean)
         
+        console.log('[Availability] Found conflicts:', foundConflicts)
         setConflicts(foundConflicts)
       } else {
         setConflicts([])

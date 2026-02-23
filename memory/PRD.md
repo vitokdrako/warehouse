@@ -64,13 +64,21 @@
 ```
 /app/frontend/src/
 ├── pages/
-│   └── DamageHubApp.jsx    # Кабінет шкоди (UPDATED - Mobile Responsive)
+│   ├── DamageHubApp.jsx    # Кабінет шкоди (UPDATED - awaiting_assignment status)
+│   └── NewOrderViewWorkspace.jsx  # Створення замовлення (UPDATED - processing warnings)
 └── components/
-    └── catalog/
-        └── FamiliesManager.jsx  # Управління сім'ями (BLOCKED by slow API)
+    ├── catalog/
+    │   └── FamiliesManager.jsx  # Управління сім'ями (BLOCKED by slow API)
+    └── order-workspace/zones/
+        └── ZoneAvailabilityGate.jsx  # Показ конфліктів та processing warnings (UPDATED)
 ```
 
 ## API Endpoints
+
+### Availability Check
+- `POST /api/orders/check-availability` - Перевірка доступності товарів
+  - Повертає: `has_processing_warnings`, `processing_warnings`, `ready_quantity`, `on_processing_quantity`
+  - Попередження НЕ блокують видачу, тільки інформують
 
 ### Laundry/Washing
 - `GET /api/laundry/queue?type=washing|laundry` - Черга товарів

@@ -277,7 +277,15 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
               <div className="text-xs text-amber-700 font-medium mb-1">Зафіксовані пошкодження:</div>
               {findings.map((f, idx) => (
                 <div key={idx} className="text-[11px] text-amber-800">
-                  • {f.category || f.type} - {f.kind || f.description} {f.fee > 0 && `(₴${f.fee})`}
+                  • {f.category || f.type} - {f.kind || f.description}
+                  {(f.qty || 1) > 1 && <span className="font-bold ml-1">{f.qty} шт</span>}
+                  {f.fee > 0 && (
+                    <span className="ml-1">
+                      (₴{f.fee}
+                      {(f.qty || 1) > 1 && ` = ${f.qty} шт × ₴${Math.round(f.fee / f.qty)}/шт`}
+                      )
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

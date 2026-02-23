@@ -1402,9 +1402,7 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
         <div className="flex items-center justify-between gap-1">
           <div className="text-[10px] lg:text-xs text-corp-text-muted">{item.sku}</div>
           {item.family_id && (
-            <span className="text-[10px] font-mono px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded" title={`Family ID: ${item.family_id}`}>
-              #{item.family_id}
-            </span>
+            <div className="text-[10px] lg:text-xs text-amber-600 font-medium">#{item.family_id}</div>
           )}
         </div>
         <div className="font-medium text-corp-text-dark text-xs lg:text-sm line-clamp-2 group-hover:text-corp-primary transition-colors min-h-[32px] lg:min-h-[40px]">

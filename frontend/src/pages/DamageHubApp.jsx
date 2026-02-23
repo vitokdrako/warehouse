@@ -1770,34 +1770,62 @@ export default function DamageHubApp() {
                   ) : (
                     <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                       {washItems.map(item => (
-                        <div key={item.id} className={`flex items-center gap-2 sm:gap-3 p-3 sm:p-4 rounded-xl border-2 transition ${
+                        <div key={item.id} className={`flex flex-col gap-2 p-3 sm:p-4 rounded-xl border-2 transition ${
                           item.processing_status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
                         }`}>
-                          <ProductPhoto item={item} size="sm" className="sm:!w-14 sm:!h-14" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium text-slate-800 truncate text-sm sm:text-base">{item.product_name}</div>
-                            <div className="text-xs sm:text-sm text-slate-500 truncate">{item.sku}</div>
-                            <div className="text-xs sm:text-sm font-semibold text-blue-600">{item.qty || 1} шт</div>
+                          {/* Заголовок з фото */}
+                          <div className="flex items-start gap-2 sm:gap-3">
+                            <ProductPhoto item={item} size="md" className="sm:!w-16 sm:!h-16" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-slate-800 text-sm sm:text-base leading-tight">{item.product_name}</div>
+                              <div className="text-xs text-slate-500">{item.sku}</div>
+                              {item.order_number && (
+                                <div className="text-xs font-medium text-blue-600 mt-0.5">#{item.order_number}</div>
+                              )}
+                              <div className="text-sm font-bold text-blue-700 mt-1">{item.qty || 1} шт</div>
+                            </div>
                             {item.processing_status === 'completed' && (
-                              <span className="text-xs text-emerald-600 font-medium">✓ Готово</span>
+                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">✓ Готово</span>
                             )}
                           </div>
-                          <div className="flex flex-col gap-1.5 sm:gap-2 flex-shrink-0">
+                          
+                          {/* Інформація про пошкодження */}
+                          {(item.damage_type || item.note) && (
+                            <div className="bg-slate-50 rounded-lg p-2 text-xs">
+                              {item.damage_type && (
+                                <div className="text-slate-600"><span className="font-medium">Тип:</span> {item.damage_type}</div>
+                              )}
+                              {item.note && (
+                                <div className="text-slate-500 mt-0.5 italic">"{item.note}"</div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Прогрес обробки */}
+                          {item.qty > 1 && (
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="text-slate-500">Оброблено:</span>
+                              <span className="font-bold text-emerald-600">{item.processed_qty || 0}</span>
+                              <span className="text-slate-400">з {item.qty}</span>
+                            </div>
+                          )}
+                          
+                          {/* Кнопки дій */}
+                          <div className="flex gap-2 mt-auto">
                             {item.processing_status !== 'completed' && (
                               <button
                                 onClick={() => handleComplete(item.id)}
-                                className="p-1.5 sm:p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
-                                title="Готово"
+                                className="flex-1 flex items-center justify-center gap-1 p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition text-sm font-medium"
                               >
-                                <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                                <Check className="w-4 h-4" /> Готово
                               </button>
                             )}
                             <button
                               onClick={() => handleRemoveFromList(item.id, 'wash')}
-                              className="p-1.5 sm:p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
+                              className="p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
                               title="Видалити"
                             >
-                              <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
                         </div>

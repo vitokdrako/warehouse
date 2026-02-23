@@ -73,7 +73,8 @@ export default function DamageModal({
     note: '',
     fee: 0,
     qty: 1,
-    photoName: ''
+    photoName: '',
+    sendTo: 'none'  // 'none' | 'wash' | 'restore' | 'laundry' | 'washing'
   })
   
   const [photos, setPhotos] = useState([])

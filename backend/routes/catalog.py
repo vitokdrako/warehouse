@@ -187,7 +187,7 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description, p.state, p.frozen_quantity, p.in_laundry
+                    p.description, p.state, p.frozen_quantity, p.in_laundry, p.family_id
                 FROM products p
                 WHERE p.status = 1 AND p.product_id IN :rent_ids
             """]

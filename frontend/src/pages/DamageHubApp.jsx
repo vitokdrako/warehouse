@@ -755,7 +755,7 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleComplete = async (itemId, notes = "") => {
+  const handleComplete = async (itemId, notes = "", processedQty = null) => {
     try {
       // Для quick_action товарів - використовуємо спеціальний endpoint
       if (String(itemId).startsWith('quick_')) {
@@ -765,9 +765,16 @@ export default function DamageHubApp() {
           body: JSON.stringify({ notes: notes || "Обробку завершено" })
         });
       } else {
+        const body = { 
+          notes: notes || "Обробку завершено"
+        };
+        // Якщо вказано кількість - часткове завершення
+        if (processedQty !== null) {
+          body.processed_qty = processedQty;
+        }
         await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/complete-processing`, {
           method: "POST",
-          body: JSON.stringify({ notes: notes || "Обробку завершено" })
+          body: JSON.stringify(body)
         });
       }
       
@@ -777,6 +784,48 @@ export default function DamageHubApp() {
     } catch (e) {
       console.error("Error completing:", e);
       alert("Помилка завершення обробки");
+    }
+  };
+  
+  // Модал для часткового завершення обробки
+  const [partialCompleteModal, setPartialCompleteModal] = useState({ isOpen: false, item: null, qty: 0 });
+  
+  const openPartialCompleteModal = (item) => {
+    setPartialCompleteModal({
+      isOpen: true,
+      item,
+      qty: item.qty || 1
+    });
+  };
+  
+  const handlePartialComplete = async () => {
+    if (!partialCompleteModal.item) return;
+    const item = partialCompleteModal.item;
+    const processedQty = partialCompleteModal.qty;
+    
+    if (processedQty <= 0) {
+      alert("Введіть кількість оброблених одиниць");
+      return;
+    }
+    
+    try {
+      await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/complete-processing`, {
+        method: "POST",
+        body: JSON.stringify({ 
+          notes: `Оброблено ${processedQty} з ${item.qty || 1} шт`,
+          processed_qty: processedQty
+        })
+      });
+      
+      setPartialCompleteModal({ isOpen: false, item: null, qty: 0 });
+      await loadWashItems();
+      await loadRestoreItems();
+      await loadWashingQueue();
+      await loadLaundryQueue();
+      alert(`✅ Оброблено ${processedQty} шт!`);
+    } catch (e) {
+      console.error("Error partial complete:", e);
+      alert("Помилка часткового завершення");
     }
   };
 

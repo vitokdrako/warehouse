@@ -320,7 +320,7 @@ async def get_order_full_history(
     
     # Damage history
     damage_result = db.execute(text("""
-        SELECT id, sku, note, severity, fee, stage, created_at, damage_type, product_name
+        SELECT id, sku, note, severity, fee, stage, created_at, damage_type, product_name, qty, fee_per_item, processing_type
         FROM product_damage_history
         WHERE order_id = :order_id
         ORDER BY created_at
@@ -328,26 +328,34 @@ async def get_order_full_history(
     
     damages = []
     for dm_row in damage_result:
+        qty = dm_row[9] or 1
+        fee = float(dm_row[4]) if dm_row[4] else 0.0
+        fee_per_item = float(dm_row[10]) if dm_row[10] else (fee / qty if qty > 0 else fee)
+        
         damage = {
             "id": dm_row[0],
             "sku": dm_row[1],
             "note": dm_row[2],
             "severity": dm_row[3],
-            "fee": float(dm_row[4]) if dm_row[4] else 0.0,
+            "fee": fee,
+            "fee_per_item": fee_per_item,
+            "qty": qty,
             "stage": dm_row[5],
             "created_at": dm_row[6].isoformat() if dm_row[6] else None,
             "damage_type": dm_row[7],
-            "product_name": dm_row[8]
+            "product_name": dm_row[8],
+            "processing_type": dm_row[11]
         }
         damages.append(damage)
         
         stage_label = "при видачі" if damage["stage"] == "pre_issue" else "при поверненні"
+        qty_label = f" x{qty}" if qty > 1 else ""
         timeline.append({
             "timestamp": damage["created_at"],
             "type": "damage",
             "action": damage["stage"],
             "title": f"🔴 Шкода ({stage_label})",
-            "details": f"{damage['sku']} · {damage['damage_type'] or damage['note'] or '—'}, Fee: ₴{damage['fee']}"
+            "details": f"{damage['sku']}{qty_label} · {damage['damage_type'] or damage['note'] or '—'}, Fee: ₴{fee}" + (f" ({qty} шт × ₴{fee_per_item:.0f})" if qty > 1 else "")
         })
     
     # Documents

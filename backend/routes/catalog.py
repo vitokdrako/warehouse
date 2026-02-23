@@ -619,6 +619,11 @@ async def get_catalog_items(
         family_id = row[14] if len(row) > 14 else None
         family_name = row[15] if len(row) > 15 else None
         family_description = row[16] if len(row) > 16 else None
+        frozen_qty = row[17] if len(row) > 17 else 0
+        frozen_qty = frozen_qty or 0
+        in_laundry_qty = row[18] if len(row) > 18 else 0
+        in_laundry_qty = in_laundry_qty or 0
+        product_state = row[19] if len(row) > 19 else None
         
         normalized_image = normalize_image_url(row[4])
         product_id = row[0]
@@ -629,7 +634,10 @@ async def get_catalog_items(
         in_rent_qty = in_rent_dict.get(product_id, 0)
         in_restore_qty = in_restore_dict.get(product_id, 0)
         
-        available_qty = max(0, total_qty - reserved_qty - in_rent_qty)
+        # Визначити on_wash - prioritize in_laundry field
+        on_wash_qty = in_laundry_qty if in_laundry_qty > 0 else (frozen_qty if product_state == 'on_wash' else 0)
+        
+        available_qty = max(0, total_qty - reserved_qty - in_rent_qty - frozen_qty)
         
         items.append({
             "id": row[0],

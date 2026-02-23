@@ -331,7 +331,8 @@ async def get_order_damage_history(
                 pdh.damage_type, pdh.damage_code, pdh.severity, pdh.fee,
                 pdh.photo_url, pdh.note, pdh.created_by, pdh.created_at,
                 pdh.processing_type, pdh.processing_status, pdh.sent_to_processing_at,
-                p.image_url as product_image
+                p.image_url as product_image,
+                pdh.qty, pdh.fee_per_item
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.order_id = :order_id
@@ -340,6 +341,10 @@ async def get_order_damage_history(
         
         history = []
         for row in result:
+            qty = row[20] if len(row) > 20 and row[20] else 1
+            fee_per_item = row[21] if len(row) > 21 and row[21] else 0
+            fee = float(row[11]) if row[11] else 0.0
+            
             history.append({
                 "id": row[0],
                 "product_id": row[1],
@@ -353,8 +358,10 @@ async def get_order_damage_history(
                 "damage_type": row[8],
                 "damage_code": row[9],
                 "severity": row[10],
-                "fee": float(row[11]) if row[11] else 0.0,
-                "charged_to_client": float(row[11]) > 0 if row[11] else False,
+                "fee": fee,
+                "fee_per_item": float(fee_per_item) if fee_per_item else (fee / qty if qty > 0 else fee),
+                "qty": qty,
+                "charged_to_client": fee > 0,
                 "photo_url": row[12],
                 "note": row[13],
                 "created_by": row[14],

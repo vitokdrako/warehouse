@@ -264,10 +264,38 @@ export default function DamageModal({
         created_by: userName,
         // Для повної втрати - обробити як втрату
         is_total_loss: isTotalLoss,
-        processing_type: isPreIssue ? 'none' : 'none'
+        // Processing type based on sendTo selection
+        processing_type: formData.sendTo && formData.sendTo !== 'none' 
+          ? (formData.sendTo === 'restore' ? 'restoration' : formData.sendTo)
+          : 'none',
+        processing_status: formData.sendTo && formData.sendTo !== 'none' ? 'pending' : null
       })
       
       console.log(`[DamageModal] Saved damage record for ${item.sku} at stage ${stage}`, response.data)
+      
+      // Якщо вибрано обробку - оновити стан товару
+      if (formData.sendTo && formData.sendTo !== 'none' && !isTotalLoss) {
+        try {
+          const damageId = response.data?.id || response.data?.damage_id
+          if (damageId) {
+            const endpoint = formData.sendTo === 'wash' ? 'send-to-wash'
+              : formData.sendTo === 'restore' ? 'send-to-restoration'
+              : formData.sendTo === 'washing' ? 'send-to-washing'
+              : formData.sendTo === 'laundry' ? 'send-to-laundry'
+              : null
+            
+            if (endpoint) {
+              await axios.post(`${BACKEND_URL}/api/product-damage-history/${damageId}/${endpoint}`, {
+                notes: formData.note || `Відправлено при поверненні замовлення ${order?.order_number || ''}`
+              })
+              console.log(`[DamageModal] Sent to ${formData.sendTo}: ${item.sku} x${formData.qty}`)
+            }
+          }
+        } catch (processErr) {
+          console.warn('[DamageModal] Failed to send to processing:', processErr)
+          // Не блокуємо - damage вже збережено
+        }
+      }
       
       // Якщо повна втрата - зменшити кількість товару
       if (isTotalLoss) {

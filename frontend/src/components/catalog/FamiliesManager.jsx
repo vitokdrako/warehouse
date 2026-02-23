@@ -785,7 +785,10 @@ function ProductBindingPanel({
             
             {/* Products List */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {availableProducts.filter(p => !p.family_id || p.family_id === familyId).slice(0, 100).map(product => (
+              {availableProducts
+                .filter(p => !p.family_id || p.family_id === familyId)
+                .slice(0, searchQuery ? 500 : 100)  // Показуємо більше при пошуку
+                .map(product => (
                 <ProductMiniCard
                   key={product.product_id}
                   product={product}
@@ -800,9 +803,14 @@ function ProductBindingPanel({
                   }
                 />
               ))}
-              {availableProducts.filter(p => !p.family_id).length === 0 && (
+              {availableProducts.filter(p => !p.family_id || p.family_id === familyId).length === 0 && (
                 <div className="text-center py-8 text-slate-400 text-sm">
                   {searchQuery ? 'Нічого не знайдено' : 'Всі товари вже прив\'язані'}
+                </div>
+              )}
+              {!searchQuery && availableProducts.filter(p => !p.family_id || p.family_id === familyId).length > 100 && (
+                <div className="text-center py-2 text-slate-400 text-xs">
+                  Показано 100 з {availableProducts.filter(p => !p.family_id || p.family_id === familyId).length}. Використайте пошук.
                 </div>
               )}
             </div>

@@ -1401,8 +1401,10 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
       <div className="space-y-0.5 lg:space-y-1">
         <div className="flex items-center justify-between gap-1">
           <div className="text-[10px] lg:text-xs text-corp-text-muted">{item.sku}</div>
-          {item.family_id && (
-            <div className="text-[10px] lg:text-xs text-amber-600 font-medium">#{item.family_id}</div>
+          {item.family_id !== null && item.family_id !== undefined && (
+            <div className="text-[10px] lg:text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">
+              сет #{item.family_id}
+            </div>
           )}
         </div>
         <div className="font-medium text-corp-text-dark text-xs lg:text-sm line-clamp-2 group-hover:text-corp-primary transition-colors min-h-[32px] lg:min-h-[40px]">

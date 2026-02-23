@@ -246,9 +246,17 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
                           {d.stage_label || (d.stage === 'pre_issue' ? 'До видачі' : d.stage === 'return' ? 'Повернення' : 'Аудит')}
                         </span>
                         {d.order_number && <span className="text-slate-400">#{d.order_number}</span>}
-                        {d.fee > 0 && <span className="text-red-600">₴{d.fee}</span>}
+                        {(d.qty || 1) > 1 && <span className="font-bold text-slate-700">{d.qty} шт</span>}
+                        {d.fee > 0 && <span className="text-red-600 font-medium">₴{d.fee}</span>}
                       </div>
-                      <div className="font-medium text-slate-700">{d.damage_type || d.type}</div>
+                      <div className="font-medium text-slate-700">
+                        {d.damage_type || d.type}
+                        {(d.qty || 1) > 1 && d.fee > 0 && (
+                          <span className="text-slate-400 font-normal ml-1">
+                            ({d.qty} шт × ₴{Math.round(d.fee / d.qty)}/шт)
+                          </span>
+                        )}
+                      </div>
                       {d.note && <div className="text-slate-500 truncate">{d.note}</div>}
                       <div className="text-slate-400">{d.created_at}</div>
                     </div>

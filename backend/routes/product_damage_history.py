@@ -222,19 +222,25 @@ async def create_damage_record(
             if is_total_loss:
                 # Повна втрата - товар списаний
                 new_state = 'written_off'
+            elif processing_type == "returned_to_stock":
+                # Повернуто на склад одразу - не заморожувати
+                new_state = None
             else:
                 # Звичайна шкода - товар заморожений до обробки
                 new_state = 'damaged'
             
-            db.execute(text("""
-                UPDATE products 
-                SET state = :state
-                WHERE product_id = :product_id
-            """), {
-                "product_id": product_id,
-                "state": new_state
-            })
-            print(f"[DamageHistory] 🔒 Товар {product_id} заморожено, state={new_state}")
+            if new_state:
+                db.execute(text("""
+                    UPDATE products 
+                    SET state = :state,
+                        frozen_quantity = COALESCE(frozen_quantity, 0) + :qty
+                    WHERE product_id = :product_id
+                """), {
+                    "product_id": product_id,
+                    "state": new_state,
+                    "qty": qty
+                })
+                print(f"[DamageHistory] 🔒 Товар {product_id} заморожено, state={new_state}, frozen_qty +{qty}")
         
         db.commit()
         

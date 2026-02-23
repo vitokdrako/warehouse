@@ -529,7 +529,15 @@ export default function DamageHubApp() {
   };
 
   // Quick search for products
+  // Debounce для пошуку
+  const searchTimeoutRef = useRef(null);
+  
   const handleQuickSearch = async (query) => {
+    // Очистити попередній таймаут
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
     if (!query || query.length < 2) {
       setQuickAddModal(prev => ({ ...prev, searchResults: [], loading: false }));
       return;
@@ -537,16 +545,19 @@ export default function DamageHubApp() {
     
     setQuickAddModal(prev => ({ ...prev, loading: true }));
     
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/catalog?search=${encodeURIComponent(query)}&limit=20`);
-      const data = await res.json();
-      // API returns array directly, not { products: [...] }
-      const products = Array.isArray(data) ? data : (data.products || data.items || []);
-      setQuickAddModal(prev => ({ ...prev, searchResults: products, loading: false }));
-    } catch (e) {
-      console.error("Search error:", e);
-      setQuickAddModal(prev => ({ ...prev, searchResults: [], loading: false }));
-    }
+    // Debounce 300ms
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const res = await authFetch(`${BACKEND_URL}/api/catalog?search=${encodeURIComponent(query)}&limit=20`);
+        const data = await res.json();
+        // API returns array directly, not { products: [...] }
+        const products = Array.isArray(data) ? data : (data.products || data.items || []);
+        setQuickAddModal(prev => ({ ...prev, searchResults: products, loading: false }));
+      } catch (e) {
+        console.error("Search error:", e);
+        setQuickAddModal(prev => ({ ...prev, searchResults: [], loading: false }));
+      }
+    }, 300);
   };
 
   // Quick add product to queue

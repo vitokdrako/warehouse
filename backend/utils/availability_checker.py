@@ -184,8 +184,110 @@ def check_product_availability(
     has_partial_return_risk = len(partial_return_warnings) > 0
     # ========== КІНЕЦЬ ПЕРЕВІРКИ ЧАСТКОВИХ ПОВЕРНЕНЬ ==========
     
+    # ========== ПЕРЕВІРКА ТОВАРІВ НА ОБРОБЦІ (МИЙКА/ПРАННЯ/ХІМЧИСТКА/РЕСТАВРАЦІЯ) ==========
+    # Товари на обробці НЕ БЛОКУЮТЬ видачу, але показують ПОПЕРЕДЖЕННЯ
+    # Менеджер може видати, але має знати що потрібно поторопитися з обробкою
+    
+    processing_query = """
+        SELECT 
+            p.frozen_quantity,
+            p.in_laundry,
+            p.state
+        FROM products p
+        WHERE p.product_id = :product_id
+    """
+    processing_result = db.execute(text(processing_query), {"product_id": product_id})
+    processing_row = processing_result.fetchone()
+    processing_result.close()
+    
+    frozen_qty = int(processing_row[0]) if processing_row and processing_row[0] else 0
+    in_laundry_qty = int(processing_row[1]) if processing_row and processing_row[1] else 0
+    product_state = processing_row[2] if processing_row else None
+    
+    # Визначаємо кількість на обробці
+    on_processing_qty = 0
+    processing_warnings = []
+    
+    # in_laundry - товари відправлені на мийку/прання/хімчистку
+    if in_laundry_qty > 0:
+        on_processing_qty = in_laundry_qty
+        processing_warnings.append({
+            "type": "on_wash",
+            "qty": in_laundry_qty,
+            "message": f"⚠️ {in_laundry_qty} шт на мийці/пранні/хімчистці - потрібно поторопитися з обробкою"
+        })
+    # frozen_quantity без in_laundry - товари заморожені (можливо на реставрації або очікують розподілу)
+    elif frozen_qty > 0:
+        on_processing_qty = frozen_qty
+        if product_state == 'on_repair':
+            processing_warnings.append({
+                "type": "on_restoration",
+                "qty": frozen_qty,
+                "message": f"⚠️ {frozen_qty} шт на реставрації - потрібно поторопитися з обробкою"
+            })
+        elif product_state == 'on_wash':
+            processing_warnings.append({
+                "type": "on_wash",
+                "qty": frozen_qty,
+                "message": f"⚠️ {frozen_qty} шт на мийці - потрібно поторопитися з обробкою"
+            })
+        elif product_state == 'on_laundry':
+            processing_warnings.append({
+                "type": "on_laundry", 
+                "qty": frozen_qty,
+                "message": f"⚠️ {frozen_qty} шт на хімчистці/пранні - потрібно поторопитися з обробкою"
+            })
+        elif product_state == 'damaged':
+            processing_warnings.append({
+                "type": "awaiting_assignment",
+                "qty": frozen_qty,
+                "message": f"⚠️ {frozen_qty} шт очікують розподілу в кабінеті шкоди - потрібно розподілити та обробити"
+            })
+        else:
+            # Інші випадки заморозки
+            processing_warnings.append({
+                "type": "frozen",
+                "qty": frozen_qty,
+                "message": f"⚠️ {frozen_qty} шт заморожено - перевірте статус в кабінеті шкоди"
+            })
+    
+    # Також перевіряємо product_damage_history на товари awaiting_assignment
+    awaiting_query = """
+        SELECT COALESCE(SUM(pdh.qty), 0) as awaiting_qty
+        FROM product_damage_history pdh
+        WHERE pdh.product_id = :product_id
+        AND pdh.processing_type = 'awaiting_assignment'
+        AND pdh.processing_status = 'pending'
+    """
+    awaiting_result = db.execute(text(awaiting_query), {"product_id": product_id})
+    awaiting_row = awaiting_result.fetchone()
+    awaiting_result.close()
+    awaiting_qty = int(awaiting_row[0]) if awaiting_row and awaiting_row[0] else 0
+    
+    if awaiting_qty > 0 and awaiting_qty != on_processing_qty:
+        # Є товари що очікують розподілу в damage history
+        if not any(w['type'] == 'awaiting_assignment' for w in processing_warnings):
+            processing_warnings.append({
+                "type": "awaiting_assignment",
+                "qty": awaiting_qty,
+                "message": f"⚠️ {awaiting_qty} шт очікують розподілу в кабінеті шкоди"
+            })
+            on_processing_qty = max(on_processing_qty, awaiting_qty)
+    
+    has_processing_warning = len(processing_warnings) > 0
+    # ========== КІНЕЦЬ ПЕРЕВІРКИ ТОВАРІВ НА ОБРОБЦІ ==========
+    
+    # Фактично доступна кількість = загальна - зарезервована
+    # Товари на обробці НЕ віднімаємо, бо їх можна видати з попередженням
     available_qty = max(0, total_qty - reserved_qty)
+    
+    # Але рахуємо "реально готову" кількість для інформування
+    ready_qty = max(0, total_qty - reserved_qty - on_processing_qty)
+    
     is_available = available_qty >= quantity
+    
+    # Якщо запитують більше ніж "реально готово", але менше ніж "доступно" - це warning
+    needs_processing_rush = is_available and (ready_qty < quantity) and on_processing_qty > 0
     
     # Визначити рівень ризику
     has_conflict = not is_available
@@ -207,6 +309,8 @@ def check_product_availability(
         "reserved_quantity": reserved_qty,
         "in_rent": on_rent_qty,
         "available_quantity": available_qty,
+        "ready_quantity": ready_qty,  # Кількість готова до видачі (без обробки)
+        "on_processing_quantity": on_processing_qty,  # Кількість на обробці
         "requested_quantity": quantity,
         "is_available": is_available,
         "has_tight_schedule": has_tight_schedule,
@@ -214,7 +318,11 @@ def check_product_availability(
         # Нові поля для часткових повернень
         "has_partial_return_risk": has_partial_return_risk,
         "partial_return_qty": partial_return_qty,
-        "partial_return_warnings": partial_return_warnings
+        "partial_return_warnings": partial_return_warnings,
+        # Нові поля для товарів на обробці
+        "has_processing_warning": has_processing_warning,
+        "needs_processing_rush": needs_processing_rush,
+        "processing_warnings": processing_warnings
     }
 
 

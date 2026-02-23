@@ -523,7 +523,8 @@ async def get_items_by_category(
                 "cleaning_status": row[15],
                 "product_state": product_state,  # Тепер з products.state
                 "description": row[17],
-                "who_has": conflicts
+                "who_has": conflicts,
+                "family_id": family_id
             })
         
         return {

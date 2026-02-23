@@ -134,6 +134,9 @@ export default function DamageModal({
         item?.name
       )
       
+      // Отримуємо кількість товару (з замовлення або за замовчуванням 1)
+      const itemQty = item?.quantity || item?.qty || 1
+      
       // Reset form when opening
       setFormData({
         category: autoCategory,
@@ -141,7 +144,7 @@ export default function DamageModal({
         severity: 'low',
         note: '',
         fee: 0,
-        qty: 1,
+        qty: itemQty,  // Автоматично встановлюємо кількість з товару
         photoName: ''
       })
       setPhotos([])

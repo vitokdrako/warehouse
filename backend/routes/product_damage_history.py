@@ -384,6 +384,54 @@ async def get_order_damage_history(
         raise HTTPException(status_code=500, detail=f"Помилка читання: {str(e)}")
 
 
+
+@router.patch("/{damage_id}")
+async def update_damage_record(
+    damage_id: str,
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """Оновити запис про пошкодження (qty, fee, fee_per_item, note)"""
+    try:
+        # Формуємо SET частину запиту
+        updates = []
+        params = {"damage_id": damage_id}
+        
+        if "qty" in data:
+            updates.append("qty = :qty")
+            params["qty"] = data["qty"]
+        
+        if "fee" in data:
+            updates.append("fee = :fee")
+            params["fee"] = data["fee"]
+            
+        if "fee_per_item" in data:
+            updates.append("fee_per_item = :fee_per_item")
+            params["fee_per_item"] = data["fee_per_item"]
+            
+        if "note" in data:
+            updates.append("note = :note")
+            params["note"] = data["note"]
+            
+        if "processing_type" in data:
+            updates.append("processing_type = :processing_type")
+            params["processing_type"] = data["processing_type"]
+        
+        if not updates:
+            return {"success": False, "message": "Немає даних для оновлення"}
+        
+        query = f"UPDATE product_damage_history SET {', '.join(updates)} WHERE id = :damage_id"
+        db.execute(text(query), params)
+        db.commit()
+        
+        return {"success": True, "message": "Запис оновлено"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка оновлення: {str(e)}")
+
+
+
 @router.get("/sku/{sku}")
 async def get_sku_damage_history(
     sku: str,

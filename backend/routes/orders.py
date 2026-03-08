@@ -1061,6 +1061,52 @@ async def create_order(
         "created_by_name": current_user.get("name")
     })
     
+    # ✅ Автоматично створити/оновити клієнта
+    try:
+        # Перевірити чи існує клієнт з таким телефоном або email
+        existing_client = db.execute(text("""
+            SELECT id FROM client_users 
+            WHERE phone = :phone OR (email = :email AND email IS NOT NULL AND email != '')
+            LIMIT 1
+        """), {
+            "phone": order.customer_phone,
+            "email": order.customer_email or ''
+        }).fetchone()
+        
+        if existing_client:
+            # Оновити ім'я якщо змінилось
+            db.execute(text("""
+                UPDATE client_users 
+                SET name = :name, updated_at = NOW()
+                WHERE id = :id
+            """), {
+                "id": existing_client[0],
+                "name": order.customer_name
+            })
+            client_id = existing_client[0]
+        else:
+            # Створити нового клієнта
+            db.execute(text("""
+                INSERT INTO client_users (name, phone, email, created_at, updated_at)
+                VALUES (:name, :phone, :email, NOW(), NOW())
+            """), {
+                "name": order.customer_name,
+                "phone": order.customer_phone,
+                "email": order.customer_email or None
+            })
+            client_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+        
+        # Прив'язати клієнта до замовлення
+        db.execute(text("""
+            UPDATE orders SET customer_id = :client_id WHERE order_id = :order_id
+        """), {
+            "client_id": client_id,
+            "order_id": order_id
+        })
+    except Exception as e:
+        print(f"[create_order] Error creating client: {e}")
+        # Не блокуємо створення замовлення якщо клієнт не створився
+    
     db.commit()
     
     return {

@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CorporateHeader from '../components/CorporateHeader';
-import { Search, Filter, ChevronDown, RefreshCw, Edit3, Eye, Clock, Package, CheckCircle, AlertTriangle, CreditCard, Banknote, Building2, X } from 'lucide-react';
+import ClientsTab from '../components/ClientsTab';
+import { Search, Filter, ChevronDown, RefreshCw, Edit3, Eye, Clock, Package, CheckCircle, AlertTriangle, CreditCard, Banknote, Building2, X, Users, FileText } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -25,6 +26,9 @@ export default function ManagerCabinet() {
   const [managers, setManagers] = useState([]);
   const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
   const navigate = useNavigate();
+  
+  // Вкладки: orders | clients
+  const [activeTab, setActiveTab] = useState('orders');
   
   // Фільтри
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,26 +216,61 @@ export default function ManagerCabinet() {
     <div className="min-h-screen bg-corp-bg-page font-montserrat">
       <CorporateHeader cabinetName="Менеджерська" />
       
-      {/* KPIs */}
-      <section className="max-w-7xl mx-auto px-4 py-4">
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="text-sm text-slate-500">Замовлення</div>
-            <div className="text-2xl font-bold text-slate-800">{filteredOrders.length}</div>
-            <div className="text-xs text-slate-400">{awaitingOrders.length} нові / {inProgressOrders.length} в роботі</div>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="text-sm text-slate-500">Виручка</div>
-            <div className="text-2xl font-bold text-emerald-600">₴ {financeData.revenue.toLocaleString()}</div>
-            <div className="text-xs text-slate-400">з фін. кабінету</div>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="text-sm text-slate-500">Застави в холді</div>
-            <div className="text-2xl font-bold text-amber-600">{financeData.deposits}</div>
-            <div className="text-xs text-slate-400">кількість активних</div>
-          </div>
+      {/* Tabs */}
+      <div className="max-w-7xl mx-auto px-4 pt-4">
+        <div className="flex gap-2 bg-slate-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'orders' 
+                ? 'bg-white text-slate-800 shadow-sm' 
+                : 'text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Замовлення
+          </button>
+          <button
+            onClick={() => setActiveTab('clients')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'clients' 
+                ? 'bg-white text-slate-800 shadow-sm' 
+                : 'text-slate-600 hover:text-slate-800'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            Клієнти
+          </button>
         </div>
-      </section>
+      </div>
+      
+      {/* Tab Content */}
+      {activeTab === 'clients' ? (
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <ClientsTab />
+        </div>
+      ) : (
+        <>
+          {/* KPIs */}
+          <section className="max-w-7xl mx-auto px-4 py-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="text-sm text-slate-500">Замовлення</div>
+                <div className="text-2xl font-bold text-slate-800">{filteredOrders.length}</div>
+                <div className="text-xs text-slate-400">{awaitingOrders.length} нові / {inProgressOrders.length} в роботі</div>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="text-sm text-slate-500">Виручка</div>
+                <div className="text-2xl font-bold text-emerald-600">₴ {financeData.revenue.toLocaleString()}</div>
+                <div className="text-xs text-slate-400">з фін. кабінету</div>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="text-sm text-slate-500">Застави в холді</div>
+                <div className="text-2xl font-bold text-amber-600">{financeData.deposits}</div>
+                <div className="text-xs text-slate-400">кількість активних</div>
+              </div>
+            </div>
+          </section>
       
       {/* Filters Bar */}
       <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
@@ -407,6 +446,8 @@ export default function ManagerCabinet() {
           </Column>
         </div>
       </main>
+        </>
+      )}
     </div>
   );
 }

@@ -421,10 +421,9 @@ async def create_payment(data: PaymentCreate):
     from datetime import datetime
     import os
     
-    # === P1: ANNEX VALIDATION ===
-    # IF deal_mode = "rent" AND payment_type = "rent" THEN annex_id REQUIRED
+    # === P1: ANNEX VALIDATION (optional for rent mode) ===
+    # IF deal_mode = "rent" AND payment_type = "rent" - try to use annex_id if available
     if data.payment_type == "rent" and data.order_id:
-        # Check if order is rent mode
         conn_check = pymysql.connect(
             host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
             port=int(os.environ.get('RH_DB_PORT', 3306)),
@@ -441,15 +440,11 @@ async def create_payment(data: PaymentCreate):
             """, (data.order_id,))
             order_row = cursor_check.fetchone()
             
+            # Тільки для режиму rent з договором - спробуємо взяти annex_id
             if order_row and order_row.get('deal_mode') == 'rent':
-                # Use provided annex_id or fall back to active_annex_id
                 if not data.annex_id and order_row.get('active_annex_id'):
                     data.annex_id = order_row['active_annex_id']
-                elif not data.annex_id:
-                    raise HTTPException(
-                        status_code=400, 
-                        detail="Для оренди (rent payment) потрібен annex_id. Спочатку створіть додаток до договору."
-                    )
+                # НЕ блокуємо оплату якщо немає annex_id - це опціонально
         finally:
             conn_check.close()
     

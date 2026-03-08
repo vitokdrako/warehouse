@@ -20,6 +20,7 @@ export default function ZoneClientForm({
   discount = 0,
   onUpdate,
   readOnly = false,
+  discountEditable = false, // Дозволяє редагувати знижку навіть коли readOnly=true
 }) {
   const [localName, setLocalName] = useState(clientName)
   const [localPhone, setLocalPhone] = useState(clientPhone)
@@ -175,7 +176,7 @@ export default function ZoneClientForm({
           
           <div>
             <label className="text-xs text-slate-500 block mb-1">Знижка (%)</label>
-            {readOnly ? (
+            {readOnly && !discountEditable ? (
               <div className="font-medium text-slate-800">{localDiscount}%</div>
             ) : (
               <input

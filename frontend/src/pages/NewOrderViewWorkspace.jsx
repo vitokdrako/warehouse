@@ -887,6 +887,7 @@ export default function NewOrderViewWorkspace() {
           setDiscount(data.discount)
         }}
         readOnly={!!decorOrderStatus && decorOrderStatus !== 'awaiting_customer'}
+        discountEditable={true}
       />
       
       {/* Дати */}

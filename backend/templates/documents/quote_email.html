@@ -101,7 +101,7 @@
                   <th style="padding:10px 8px;text-align:left;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Найменування</th>
                   <th style="padding:10px 8px;text-align:center;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">К-сть</th>
                   <th style="padding:10px 8px;text-align:right;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Оренда/день</th>
-                  <th style="padding:10px 8px;text-align:right;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Завдаток</th>
+                  <th style="padding:10px 8px;text-align:right;font-size:11px;font-weight:700;color:#111827;border-bottom:2px solid #E5E7EB;text-transform:uppercase;">Збиток</th>
                 </tr>
                 {% for item in items %}
                 <tr>
@@ -120,7 +120,7 @@
                   </td>
                   <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;text-align:center;font-weight:600;">{{ item.quantity }}</td>
                   <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;text-align:right;">{{ item.rental_price_fmt or item.price_per_day_fmt or "—" }} грн</td>
-                  <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;text-align:right;">{{ item.deposit_fmt or "—" }} грн</td>
+                  <td style="padding:10px 8px;border-bottom:1px solid #E5E7EB;vertical-align:middle;text-align:right;">{{ item.loss_fmt or item.deposit_fmt or "—" }} грн</td>
                 </tr>
                 {% endfor %}
               </table>
@@ -132,7 +132,8 @@
                     <div style="border:1px dashed #E5E7EB;border-radius:10px;padding:14px 16px;background:#fff;font-size:11px;color:#6B7280;line-height:1.6;">
                       <strong style="color:#111827;">Умови підтвердження:</strong> кошторис підтверджується менеджером після узгодження наявності, логістики та деталей оренди.<br/><br/>
                       <strong style="color:#111827;">Оплата:</strong> оренда та завдаток оплачуються згідно домовленостей та рахунку/оферти.<br/><br/>
-                      <strong style="color:#111827;">Завдаток:</strong> становить 50% від вартості декору та повертається після повернення майна в належному стані.
+                      <strong style="color:#111827;">Збиток:</strong> у разі втрати або пошкодження декору клієнт відшкодовує повну вартість товару.<br/>
+                      <strong style="color:#111827;">Завдаток:</strong> становить 50% від вартості збитку та повертається після повернення майна в належному стані.
                     </div>
                   </td>
                   <td width="45%" valign="top">
@@ -171,8 +172,12 @@
                       
                       <table width="100%" cellpadding="0" cellspacing="0">
                         <tr>
-                          <td style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;padding:6px 0;">Завдаток (окремо)</td>
-                          <td style="font-size:16px;font-weight:800;text-align:right;color:#B45309;padding:6px 0;">{{ totals.deposit_total_fmt }} грн</td>
+                          <td style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;padding:4px 0;">Збиток (повна вартість)</td>
+                          <td style="font-size:14px;font-weight:700;text-align:right;color:#111827;padding:4px 0;">{{ totals.loss_total_fmt }} грн</td>
+                        </tr>
+                        <tr>
+                          <td style="font-size:11px;color:#6B7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;padding:4px 0;">Завдаток (50%)</td>
+                          <td style="font-size:16px;font-weight:800;text-align:right;color:#B45309;padding:4px 0;">{{ totals.deposit_total_fmt }} грн</td>
                         </tr>
                       </table>
                     </div>

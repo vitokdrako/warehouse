@@ -636,6 +636,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     formatted_items = []
     rent_total = 0.0
     deposit_total = 0.0
+    loss_total = 0.0  # Загальна сума збитку
     
     for item in items:
         # item structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price, purchase_price]
@@ -643,12 +644,15 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         rental_price_day = float(item[4] or item[8] or 0)  # Use order price or product rental_price
         total_rental = float(item[5] or 0)
         
-        # Deposit = 50% of purchase_price (item[9]) * quantity
+        # Збиток = повна вартість товару (purchase_price * qty)
+        # Завдаток = 50% від збитку
         purchase_price = float(item[9] or 0)
-        deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
+        loss_per_item = purchase_price * qty  # Повна сума збитку
+        deposit_per_item = loss_per_item / 2 if loss_per_item > 0 else 0  # 50% = завдаток
         
         rent_total += total_rental
         deposit_total += deposit_per_item
+        loss_total += loss_per_item  # Загальна сума збитку
         
         formatted_items.append({
             "product_name": item[2],
@@ -656,7 +660,8 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "quantity": qty,
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
-            "deposit_fmt": _format_currency(deposit_per_item),
+            "loss_fmt": _format_currency(loss_per_item),  # Збиток (повна ціна)
+            "deposit_fmt": _format_currency(deposit_per_item),  # Завдаток (50%)
             "image_url": _get_full_image_url(item[6]),
             "note": None
         })
@@ -717,7 +722,8 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         "items": formatted_items,
         "totals": {
             "rent_total_fmt": _format_currency(rent_before_discount),  # Повна сума БЕЗ знижки
-            "deposit_total_fmt": _format_currency(order_deposit),
+            "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
+            "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50% від збитку)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
@@ -751,21 +757,25 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     formatted_items = []
     rent_total = 0.0
     deposit_total = 0.0
+    loss_total = 0.0  # Загальна сума збитку
     
     for item in items:
         qty = item[3] or 1
         rental_price_day = float(item[4] or item[8] or 0)
         total_rental = float(item[5] or 0)
         purchase_price = float(item[9] or 0)
-        deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
+        loss_per_item = purchase_price * qty  # Повна сума збитку
+        deposit_per_item = loss_per_item / 2 if loss_per_item > 0 else 0  # 50% = завдаток
         
         rent_total += total_rental
         deposit_total += deposit_per_item
+        loss_total += loss_per_item
         
         formatted_items.append({
             "product_name": item[2], "sku": item[7] or "—", "quantity": qty,
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
+            "loss_fmt": _format_currency(loss_per_item),  # Збиток (повна ціна)
             "deposit_fmt": _format_currency(deposit_per_item),
             "image_url": _get_full_image_url(item[6]), "note": None
         })
@@ -801,7 +811,8 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
         "items": formatted_items,
         "totals": {
             "rent_total_fmt": _format_currency(rent_before_discount),  # Повна сума БЕЗ знижки
-            "deposit_total_fmt": _format_currency(order_deposit),
+            "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
+            "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50%)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
@@ -846,16 +857,19 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     formatted_items = []
     rent_total = 0.0
     deposit_total = 0.0
+    loss_total = 0.0  # Загальна сума збитку
     
     for item in items:
         qty = item[3] or 1
         rental_price_day = float(item[4] or item[8] or 0)
         total_rental = float(item[5] or 0)
         purchase_price = float(item[9] or 0)
-        deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
+        loss_per_item = purchase_price * qty  # Повна сума збитку
+        deposit_per_item = loss_per_item / 2 if loss_per_item > 0 else 0  # 50% = завдаток
         
         rent_total += total_rental
         deposit_total += deposit_per_item
+        loss_total += loss_per_item
         
         formatted_items.append({
             "product_name": item[2],
@@ -863,6 +877,7 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
             "quantity": qty,
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
+            "loss_fmt": _format_currency(loss_per_item),  # Збиток (повна ціна)
             "deposit_fmt": _format_currency(deposit_per_item),
             "image_url": _get_full_image_url(item[6]),
             "note": None
@@ -899,7 +914,8 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
         "items": formatted_items,
         "totals": {
             "rent_total_fmt": _format_currency(rent_before_discount),  # Повна сума БЕЗ знижки
-            "deposit_total_fmt": _format_currency(order_deposit),
+            "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
+            "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50%)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,

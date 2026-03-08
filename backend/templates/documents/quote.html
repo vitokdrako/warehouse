@@ -284,7 +284,7 @@
             <th>Найменування</th>
             <th style="width:60px" class="center">К-сть</th>
             <th style="width:120px" class="right nowrap">Оренда/день</th>
-            <th style="width:120px" class="right nowrap">Завдаток</th>
+            <th style="width:120px" class="right nowrap">Збиток</th>
           </tr>
         </thead>
         <tbody>
@@ -316,7 +316,7 @@
               </td>
 
               <td class="right mono">
-                {{ item.deposit_fmt or "—" }} грн
+                {{ item.loss_fmt or item.deposit_fmt or "—" }} грн
               </td>
             </tr>
           {% endfor %}
@@ -330,7 +330,9 @@
           <br/><br/>
           <strong>Оплата:</strong> оренда та завдаток оплачуються згідно домовленостей та рахунку/оферти.
           <br/><br/>
-          <strong>Завдаток:</strong> становить 50% від вартості декору та повертається після повернення майна в належному стані.
+          <strong>Збиток:</strong> у разі втрати або пошкодження декору клієнт відшкодовує повну вартість товару.
+          <br/>
+          <strong>Завдаток:</strong> становить 50% від вартості збитку та повертається після повернення майна в належному стані.
           <br/>
           <span style="color:var(--muted)">Цей документ є попереднім кошторисом і не є юридично зобов'язуючим.</span>
         </div>
@@ -366,9 +368,14 @@
           
           <div class="divider" style="margin:12px 0"></div>
           
-          <div class="trow" style="padding:0">
-            <div class="label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Завдаток (окремо)</div>
-            <div class="val mono" style="font-size:16px;font-weight:800">{{ totals.deposit_total_fmt or order.deposit_amount_fmt }} грн</div>
+          <div class="trow" style="padding:4px 0">
+            <div class="label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Збиток (повна вартість)</div>
+            <div class="val mono" style="font-size:14px;font-weight:700">{{ totals.loss_total_fmt or "—" }} грн</div>
+          </div>
+          
+          <div class="trow" style="padding:4px 0">
+            <div class="label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Завдаток (50%)</div>
+            <div class="val mono" style="font-size:16px;font-weight:800;color:var(--warn)">{{ totals.deposit_total_fmt or order.deposit_amount_fmt }} грн</div>
           </div>
         </div>
       </div>

@@ -671,9 +671,9 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     service_fee_name = order[26] or "Додаткова послуга"
     
     # ВАЖЛИВО: order_rent (total_price) вже включає знижку!
-    # Тому grand_total = order_rent + service_fee (без повторного віднімання знижки)
-    # Знижка показується окремо для інформації, але не віднімається ще раз
-    grand_total = order_rent + service_fee
+    # Для відображення в кошторисі потрібно показати повну суму БЕЗ знижки
+    rent_before_discount = order_rent + discount_amount  # Повна сума оренди до знижки
+    grand_total = order_rent + service_fee  # Фінальна сума (вже зі знижкою)
     
     # Delivery type label mapping
     delivery_type_labels = {
@@ -716,12 +716,12 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(order_rent),
+            "rent_total_fmt": _format_currency(rent_before_discount),  # Повна сума БЕЗ знижки
             "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),
+            "grand_total_fmt": _format_currency(grand_total),  # Сума ЗІ знижкою
             "grand_total": grand_total
         },
         "company": {
@@ -776,7 +776,8 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     discount_percent = order[24] or 0
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # ВАЖЛИВО: order_rent вже включає знижку, не віднімаємо повторно
+    # ВАЖЛИВО: order_rent вже включає знижку
+    rent_before_discount = order_rent + discount_amount  # Повна сума до знижки
     grand_total = order_rent + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
@@ -799,11 +800,13 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(order_rent), "deposit_total_fmt": _format_currency(order_deposit),
+            "rent_total_fmt": _format_currency(rent_before_discount),  # Повна сума БЕЗ знижки
+            "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total), "grand_total": grand_total
+            "grand_total_fmt": _format_currency(grand_total),  # Сума ЗІ знижкою
+            "grand_total": grand_total
         },
         "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
@@ -871,7 +874,8 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     discount_percent = order[24] or 0
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # ВАЖЛИВО: order_rent вже включає знижку, не віднімаємо повторно
+    # ВАЖЛИВО: order_rent вже включає знижку
+    rent_before_discount = order_rent + discount_amount  # Повна сума до знижки
     grand_total = order_rent + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
@@ -894,11 +898,13 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(order_rent), "deposit_total_fmt": _format_currency(order_deposit),
+            "rent_total_fmt": _format_currency(rent_before_discount),  # Повна сума БЕЗ знижки
+            "deposit_total_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total), "grand_total": grand_total
+            "grand_total_fmt": _format_currency(grand_total),  # Сума ЗІ знижкою
+            "grand_total": grand_total
         },
         "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),

@@ -158,6 +158,27 @@ def parse_order_row(row, db: Session = None):
             print(f"[parse_order_row] Error calculating packing progress: {e}")
             packing_progress = 0
     
+    # ✅ Завантажити суми оплат для замовлення
+    paid_rent = 0.0
+    paid_deposit = 0.0
+    if db and row[0]:  # order_id exists
+        try:
+            payments_result = db.execute(text("""
+                SELECT 
+                    COALESCE(SUM(CASE WHEN ft.tx_type IN ('rent_payment', 'additional_payment') THEN ft.amount ELSE 0 END), 0) as paid_rent,
+                    COALESCE(SUM(CASE WHEN ft.tx_type = 'deposit_payment' THEN ft.amount ELSE 0 END), 0) as paid_deposit
+                FROM fin_transactions ft
+                WHERE ft.entity_type = 'order' AND ft.entity_id = :order_id
+            """), {"order_id": row[0]})
+            pay_row = payments_result.fetchone()
+            if pay_row:
+                paid_rent = float(pay_row[0]) if pay_row[0] else 0.0
+                paid_deposit = float(pay_row[1]) if pay_row[1] else 0.0
+        except Exception as e:
+            print(f"[parse_order_row] Error loading payments: {e}")
+            paid_rent = 0.0
+            paid_deposit = 0.0
+    
     # Визначимо індекси полів у row - залежить від того, скільки полів повернуто
     # Формат 1 (новий з issue_date/return_date): 16+ колонок
     # Формат 2 (з rental_days): 15 колонок - order_id, order_number, customer_id, customer_name, 
@@ -178,6 +199,7 @@ def parse_order_row(row, db: Session = None):
             "client_name": row[3],
             "customer_name": row[3],  # Alias для календаря
             "client_phone": row[4],
+            "customer_phone": row[4],
             "client_email": row[5],
             "rental_start_date": row[6].isoformat() if row[6] else None,
             "rental_end_date": row[7].isoformat() if row[7] else None,
@@ -190,7 +212,10 @@ def parse_order_row(row, db: Session = None):
             "manager_comment": row[13] if row[13] else None,
             "created_at": row[14].isoformat() if row[14] else None,
             "is_archived": bool(row[15]) if row[15] else False,
-            "items": items
+            "items": items,
+            "packing_progress": packing_progress,
+            "paid_rent": paid_rent,
+            "paid_deposit": paid_deposit
         }
     elif has_rental_days_format:
         # Формат з rental_days (15 колонок)
@@ -205,6 +230,7 @@ def parse_order_row(row, db: Session = None):
             "client_name": row[3],
             "customer_name": row[3],
             "client_phone": row[4],
+            "customer_phone": row[4],
             "client_email": row[5],
             "issue_date": row[6].isoformat() if row[6] else None,
             "return_date": row[7].isoformat() if row[7] else None,
@@ -221,7 +247,9 @@ def parse_order_row(row, db: Session = None):
             "created_at": row[14].isoformat() if row[14] else None,
             "is_archived": False,
             "items": items,
-            "packing_progress": packing_progress  # ✅ Прогрес комплектації
+            "packing_progress": packing_progress,
+            "paid_rent": paid_rent,
+            "paid_deposit": paid_deposit
         }
     else:
         # Старий формат (без issue_date та return_date)
@@ -233,6 +261,7 @@ def parse_order_row(row, db: Session = None):
             "client_name": row[3],
             "customer_name": row[3],
             "client_phone": row[4],
+            "customer_phone": row[4],
             "client_email": row[5],
             "issue_date": row[6].isoformat() if row[6] else None,
             "return_date": row[7].isoformat() if row[7] else None,
@@ -244,7 +273,9 @@ def parse_order_row(row, db: Session = None):
             "created_at": row[12].isoformat() if len(row) > 12 and row[12] else None,
             "is_archived": bool(row[13]) if len(row) > 13 else False,
             "items": items,
-            "packing_progress": packing_progress  # ✅ Прогрес комплектації
+            "packing_progress": packing_progress,
+            "paid_rent": paid_rent,
+            "paid_deposit": paid_deposit
         }
     
     return order_dict

@@ -669,8 +669,11 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     discount_percent = order[24] or 0
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # Разом до сплати = Оренда - Знижка + Послуга (БЕЗ завдатку)
-    grand_total = order_rent - discount_amount + service_fee
+    
+    # ВАЖЛИВО: order_rent (total_price) вже включає знижку!
+    # Тому grand_total = order_rent + service_fee (без повторного віднімання знижки)
+    # Знижка показується окремо для інформації, але не віднімається ще раз
+    grand_total = order_rent + service_fee
     
     # Delivery type label mapping
     delivery_type_labels = {
@@ -773,7 +776,8 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     discount_percent = order[24] or 0
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    grand_total = order_rent - discount_amount + service_fee
+    # ВАЖЛИВО: order_rent вже включає знижку, не віднімаємо повторно
+    grand_total = order_rent + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
@@ -867,8 +871,8 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     discount_percent = order[24] or 0
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # Разом до сплати = Оренда - Знижка + Послуга (БЕЗ завдатку)
-    grand_total = order_rent - discount_amount + service_fee
+    # ВАЖЛИВО: order_rent вже включає знижку, не віднімаємо повторно
+    grand_total = order_rent + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")

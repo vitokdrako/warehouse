@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CorporateHeader from '../components/CorporateHeader';
 import ClientsTab from '../components/ClientsTab';
+import ReturnColumn from '../components/ReturnColumn';
 import { Search, Filter, ChevronDown, RefreshCw, Edit3, Eye, Clock, Package, CheckCircle, AlertTriangle, CreditCard, Banknote, Building2, X, Users, FileText } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -217,7 +218,7 @@ export default function ManagerCabinet() {
       <CorporateHeader cabinetName="Менеджерська" />
       
       {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-4 pt-4">
+      <div className="max-w-[1600px] mx-auto px-4 pt-4">
         <div className="flex gap-2 bg-slate-100 p-1 rounded-xl w-fit">
           <button
             onClick={() => setActiveTab('orders')}
@@ -246,13 +247,13 @@ export default function ManagerCabinet() {
       
       {/* Tab Content */}
       {activeTab === 'clients' ? (
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-[1600px] mx-auto px-4 py-4">
           <ClientsTab />
         </div>
       ) : (
         <>
           {/* KPIs */}
-          <section className="max-w-7xl mx-auto px-4 py-4">
+          <section className="max-w-[1600px] mx-auto px-4 py-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-white rounded-xl border border-slate-200 p-4">
                 <div className="text-sm text-slate-500">Замовлення</div>
@@ -274,7 +275,7 @@ export default function ManagerCabinet() {
       
       {/* Filters Bar */}
       <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="max-w-[1600px] mx-auto px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
             {/* Search */}
             <div className="relative flex-1 min-w-[200px] max-w-md">
@@ -375,9 +376,9 @@ export default function ManagerCabinet() {
         </div>
       </div>
 
-      {/* Main Content - Two Columns */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Main Content - Three Columns */}
+      <main className="max-w-[1600px] mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Column 1: Awaiting Confirmation */}
           <Column 
@@ -444,6 +445,9 @@ export default function ManagerCabinet() {
               <EmptyState message="Немає активних замовлень" />
             )}
           </Column>
+
+          {/* Column 3: Returns / Settlement */}
+          <ReturnColumn onRefreshAll={fetchData} />
         </div>
       </main>
         </>

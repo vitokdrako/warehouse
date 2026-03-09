@@ -94,9 +94,7 @@ export default function ReturnColumn({ onRefreshAll }) {
             <ReturnOrderCard
               key={order.order_id}
               order={order}
-              isExpanded={expandedOrderId === order.order_id}
-              onToggle={() => toggleExpand(order.order_id)}
-              onActionComplete={handleRefresh}
+              onOpen={() => toggleExpand(order.order_id)}
             />
           ))
         ) : (
@@ -105,14 +103,23 @@ export default function ReturnColumn({ onRefreshAll }) {
           </div>
         )}
       </div>
+
+      {/* FULLSCREEN MODAL */}
+      {expandedOrderId && (
+        <FullscreenOrderModal
+          order={orders.find(o => o.order_id === expandedOrderId)}
+          onClose={() => setExpandedOrderId(null)}
+          onActionComplete={handleRefresh}
+        />
+      )}
     </section>
   );
 }
 
 // ============================================================
-// RETURN ORDER CARD — compact view same as ManagerOrderCard
+// RETURN ORDER CARD — compact card only, click opens modal
 // ============================================================
-function ReturnOrderCard({ order, isExpanded, onToggle, onActionComplete }) {
+function ReturnOrderCard({ order, onOpen }) {
   const statusConfig = {
     issued: { label: 'Видано', color: 'bg-blue-100 text-blue-700', icon: Package },
     returned: { label: 'Повернуто', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
@@ -125,10 +132,10 @@ function ReturnOrderCard({ order, isExpanded, onToggle, onActionComplete }) {
 
   return (
     <div 
-      className={`rounded-xl border bg-white transition-all ${isExpanded ? 'shadow-lg border-violet-300 ring-1 ring-violet-200' : 'border-slate-200 hover:shadow-md'}`}
+      className="rounded-xl border border-slate-200 bg-white hover:shadow-md hover:border-violet-300 transition-all cursor-pointer"
+      onClick={onOpen}
       data-testid={`return-card-${order.order_id}`}
     >
-      {/* Compact card — same layout as ManagerOrderCard */}
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -140,66 +147,99 @@ function ReturnOrderCard({ order, isExpanded, onToggle, onActionComplete }) {
               </span>
             </div>
             <div className="text-sm font-medium text-slate-700 truncate">{order.customer_name}</div>
-            <a 
-              href={`tel:${order.customer_phone}`}
-              className="text-xs text-blue-600 hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
+            <a href={`tel:${order.customer_phone}`} className="text-xs text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>
               {order.customer_phone}
             </a>
           </div>
           <button
-            onClick={onToggle}
-            className={`p-2 rounded-lg transition-colors ${isExpanded ? 'bg-violet-100 text-violet-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-            title={isExpanded ? 'Згорнути' : 'Розкрити'}
+            onClick={(e) => { e.stopPropagation(); onOpen(); }}
+            className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-violet-100 hover:text-violet-700 transition-colors"
+            title="Розкрити"
           >
-            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            <Eye className="w-4 h-4" />
           </button>
         </div>
       </div>
-
-      {/* Body — always visible compact info */}
       <div className="p-4">
         <div className="flex items-center gap-4 text-sm mb-3">
-          <div>
-            <span className="text-slate-500">Видача:</span>{' '}
-            <span className="font-medium">{fmtD(order.rental_start_date)}</span>
-          </div>
-          <div>
-            <span className="text-slate-500">Повернення:</span>{' '}
-            <span className="font-medium">{fmtD(order.rental_end_date)}</span>
-          </div>
+          <div><span className="text-slate-500">Видача:</span> <span className="font-medium">{fmtD(order.rental_start_date)}</span></div>
+          <div><span className="text-slate-500">Повернення:</span> <span className="font-medium">{fmtD(order.rental_end_date)}</span></div>
         </div>
-
         <div className="flex items-center gap-4 text-sm mb-2">
-          <div>
-            <span className="text-slate-500">Оренда:</span>{' '}
-            <span className="font-semibold text-slate-800">{money(order.total_rental)}</span>
-          </div>
-          <div>
-            <span className="text-slate-500">Застава:</span>{' '}
-            <span className="font-medium text-slate-700">{money(order.total_deposit || order.deposit_amount)}</span>
-          </div>
-          {order.discount > 0 && (
-            <span className="text-emerald-600 font-medium">-{order.discount}%</span>
-          )}
+          <div><span className="text-slate-500">Оренда:</span> <span className="font-semibold text-slate-800">{money(order.total_rental)}</span></div>
+          <div><span className="text-slate-500">Застава:</span> <span className="font-medium text-slate-700">{money(order.total_deposit || order.deposit_amount)}</span></div>
+          {order.discount > 0 && <span className="text-emerald-600 font-medium">-{order.discount}%</span>}
         </div>
-
         <div className="text-xs text-slate-500">
           {order.items?.length || 0} позицій
-          {order.manager_name && (
-            <span className="ml-2">· Менеджер: <b>{order.manager_name}</b></span>
-          )}
+          {order.manager_name && <span className="ml-2">· Менеджер: <b>{order.manager_name}</b></span>}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* EXPANDED — full order detail */}
-      {isExpanded && (
-        <ExpandedReturnDetail 
-          orderId={order.order_id} 
-          onActionComplete={onActionComplete}
-        />
-      )}
+// ============================================================
+// FULLSCREEN MODAL — complete order view
+// ============================================================
+function FullscreenOrderModal({ order, onClose, onActionComplete }) {
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  if (!order) return null;
+
+  const statusConfig = {
+    issued: { label: 'Видано', color: 'bg-blue-100 text-blue-700', icon: Package },
+    returned: { label: 'Повернуто', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
+    partial_return: { label: 'Часткове', color: 'bg-amber-100 text-amber-700', icon: ArrowLeftRight },
+  };
+  const status = statusConfig[order.status] || { label: order.status, icon: AlertTriangle, color: 'bg-slate-100 text-slate-700' };
+  const StatusIcon = status.icon;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center" data-testid={`return-modal-${order.order_id}`}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      
+      {/* Modal */}
+      <div className="relative w-full max-w-4xl mx-4 mt-6 mb-6 max-h-[calc(100vh-48px)] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        {/* Sticky Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-xl font-bold text-slate-800">{order.order_number}</span>
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
+              <StatusIcon className="w-3.5 h-3.5" />
+              {status.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="text-right text-sm">
+              <div className="font-medium text-slate-800">{order.customer_name}</div>
+              <a href={`tel:${order.customer_phone}`} className="text-xs text-blue-600 hover:underline">{order.customer_phone}</a>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition-colors"
+              data-testid="return-modal-close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto">
+          <ExpandedReturnDetail 
+            orderId={order.order_id}
+            order={order}
+            onActionComplete={onActionComplete}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -207,7 +247,7 @@ function ReturnOrderCard({ order, isExpanded, onToggle, onActionComplete }) {
 // ============================================================
 // EXPANDED DETAIL — Full order view with items, versions, damage, finance
 // ============================================================
-function ExpandedReturnDetail({ orderId, onActionComplete }) {
+function ExpandedReturnDetail({ orderId, order: orderSummary, onActionComplete }) {
   const [loading, setLoading] = useState(true);
   const [orderDetail, setOrderDetail] = useState(null);
   const [snapshot, setSnapshot] = useState(null);
@@ -349,352 +389,370 @@ function ExpandedReturnDetail({ orderId, onActionComplete }) {
   });
 
   return (
-    <div className="border-t-2 border-violet-200" data-testid={`return-detail-${orderId}`}>
-
-      {/* ============ 1. ORDER ITEMS WITH IMAGES ============ */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="text-xs font-bold text-slate-600 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
-          <Package className="w-3.5 h-3.5" />
-          Товари замовлення ({items.length})
-        </div>
-        <div className="space-y-2">
-          {items.map((item, i) => {
-            const sku = item.sku || item.article;
-            const hasDamage = damageMap[sku];
-            const isReturned = returnedSkus.has(sku) || returnedSkus.has(String(item.inventory_id));
-
-            return (
-              <div
-                key={i}
-                className={`flex gap-3 p-2.5 rounded-lg border transition-colors ${
-                  hasDamage 
-                    ? 'border-rose-200 bg-rose-50/60' 
-                    : isReturned 
-                      ? 'border-emerald-200 bg-emerald-50/40'
-                      : 'border-slate-100 bg-slate-50/50'
-                }`}
-              >
-                {/* Thumbnail */}
-                <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0 border border-slate-200">
-                  {(item.image || item.photo) ? (
-                    <img 
-                      src={item.image || item.photo} 
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }}
-                    />
-                  ) : null}
-                  <div className={`w-full h-full items-center justify-center text-slate-400 ${(item.image || item.photo) ? 'hidden' : 'flex'}`}>
-                    <ImageOff className="w-5 h-5" />
-                  </div>
-                </div>
-
-                {/* Item details */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1 rounded">{sku}</span>
-                    {isReturned && !hasDamage && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">повернуто</span>
-                    )}
-                    {hasDamage && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold">шкода</span>
-                    )}
-                  </div>
-                  <div className="text-sm font-medium text-slate-800 truncate mt-0.5">{item.name}</div>
-                  <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
-                    <span>×{item.qty || item.quantity}</span>
-                    <span>{money(item.price_per_day)}/день</span>
-                    <span className="font-semibold text-slate-700">{money(item.total_rental)}</span>
-                  </div>
-                  {/* Inline damage details */}
-                  {hasDamage && damageMap[sku].map((d, di) => (
-                    <div key={di} className="mt-1.5 text-xs text-rose-700 bg-rose-100/60 rounded px-2 py-1">
-                      <span className="font-medium">{d.damage_type}</span>
-                      {d.qty > 0 && <span> ×{d.qty}</span>}
-                      <span className="float-right font-bold">{money(d.fee)}</span>
-                      {d.note && <div className="text-rose-500 text-[11px] mt-0.5">{d.note}</div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+    <div data-testid={`return-detail-${orderId}`}>
+      {/* Order dates & info bar */}
+      <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-6 text-sm flex-wrap">
+        <div><span className="text-slate-500">Видача:</span> <span className="font-semibold">{fmtDate(orderSummary?.rental_start_date)}</span></div>
+        <div><span className="text-slate-500">Повернення:</span> <span className="font-semibold">{fmtDate(orderSummary?.rental_end_date)}</span></div>
+        <div><span className="text-slate-500">Оренда:</span> <span className="font-bold text-slate-800">{money(orderSummary?.total_rental)}</span></div>
+        <div><span className="text-slate-500">Застава:</span> <span className="font-semibold">{money(orderSummary?.total_deposit || orderSummary?.deposit_amount)}</span></div>
+        {orderSummary?.manager_name && <div><span className="text-slate-500">Менеджер:</span> <span className="font-medium">{orderSummary.manager_name}</span></div>}
       </div>
 
-      {/* ============ 2. RETURN CARD (requisitors data) ============ */}
-      {returnCards.length > 0 && returnCards[0] && (
-        <div className="px-4 pt-3">
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <div className="text-xs font-bold text-slate-600 mb-2">Перевірка реквізиторами</div>
-            <div className="grid grid-cols-4 gap-2 text-center text-xs">
-              <div>
-                <div className="font-bold text-lg text-emerald-600">{returnCards[0].items_ok || 0}</div>
-                <div className="text-slate-500">OK</div>
-              </div>
-              <div>
-                <div className="font-bold text-lg text-amber-600">{returnCards[0].items_dirty || 0}</div>
-                <div className="text-slate-500">Брудні</div>
-              </div>
-              <div>
-                <div className="font-bold text-lg text-rose-600">{returnCards[0].items_damaged || 0}</div>
-                <div className="text-slate-500">Пошкоджені</div>
-              </div>
-              <div>
-                <div className="font-bold text-lg text-red-700">{returnCards[0].items_missing || 0}</div>
-                <div className="text-slate-500">Відсутні</div>
-              </div>
-            </div>
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-0">
+        
+        {/* LEFT: Items (3/5 width) */}
+        <div className="lg:col-span-3 p-6 lg:border-r border-slate-200">
+          <div className="text-xs font-bold text-slate-600 mb-4 flex items-center gap-1.5 uppercase tracking-wide">
+            <Package className="w-3.5 h-3.5" />
+            Товари замовлення ({items.length})
           </div>
-        </div>
-      )}
+          <div className="space-y-3">
+            {items.map((item, i) => {
+              const sku = item.sku || item.article;
+              const hasDamage = damageMap[sku];
+              const isReturned = returnedSkus.has(sku) || returnedSkus.has(String(item.inventory_id));
 
-      {/* ============ 3. PARTIAL RETURN VERSIONS (timeline) ============ */}
-      {hasVersions && (
-        <div className="px-4 pt-4">
-          <div className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-            <Layers className="w-3.5 h-3.5" />
-            Етапи повернення ({versions.length})
-          </div>
-          <div className="space-y-2">
-            {versions.map((v) => (
-              <VersionCard
-                key={v.version_id}
-                version={v}
-                isExpanded={expandedVersion === v.version_id}
-                onToggle={() => setExpandedVersion(prev => prev === v.version_id ? null : v.version_id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ============ 4. DAMAGE SUMMARY ============ */}
-      {damage && damage.items?.length > 0 && (
-        <div className="px-4 pt-4">
-          <div className="text-xs font-bold text-rose-600 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-            <AlertTriangle className="w-3.5 h-3.5" />
-            Загальна шкода
-          </div>
-          <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
-            <div className="flex justify-between text-sm">
-              <span className="text-rose-700">Всього:</span>
-              <span className="font-bold text-rose-800">{money(damage.total)}</span>
-            </div>
-            {damage.paid > 0 && (
-              <div className="flex justify-between text-xs mt-1">
-                <span className="text-emerald-600">Оплачено:</span>
-                <span className="text-emerald-700 font-medium">{money(damage.paid)}</span>
-              </div>
-            )}
-            {damage.due > 0 && (
-              <div className="flex justify-between text-sm mt-1">
-                <span className="text-rose-600 font-medium">До сплати:</span>
-                <span className="font-bold text-rose-700">{money(damage.due)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ============ 5. FINANCIAL SUMMARY ============ */}
-      {totals && (
-        <div className="px-4 pt-4">
-          <div className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-            <DollarSign className="w-3.5 h-3.5" />
-            Фінанси
-          </div>
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-600">Оренда</span>
-              <div>
-                <span className="font-semibold">{money(totals.rental_after_discount)}</span>
-                {totals.discount > 0 && <span className="text-xs text-emerald-600 ml-1">(-{money(totals.discount)})</span>}
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600">Оплачено</span>
-              <span className="font-semibold text-emerald-600">{money(totals.rent_paid + totals.advance_paid)}</span>
-            </div>
-            {totals.rent_due > 0 && (
-              <div className="flex justify-between">
-                <span className="text-amber-600 font-medium">Борг (оренда)</span>
-                <span className="font-bold text-amber-600">{money(totals.rent_due)}</span>
-              </div>
-            )}
-            <div className="pt-2 border-t border-slate-200">
-              <div className="flex justify-between">
-                <span className="text-slate-600">Застава (очік.)</span>
-                <span className="font-semibold">{money(totals.deposit_expected)}</span>
-              </div>
-              {deposit && (
-                <>
-                  <div className="flex justify-between mt-1">
-                    <span className="text-slate-600">Прийнято</span>
-                    <span className="font-semibold">
-                      {deposit.currency !== 'UAH' 
-                        ? `${deposit.currency === 'USD' ? '$' : '€'}${fmtUA(deposit.actual_amount)}` 
-                        : money(deposit.held_amount)
-                      }
-                    </span>
-                  </div>
-                  {deposit.used_amount > 0 && (
-                    <div className="flex justify-between text-xs mt-1">
-                      <span className="text-rose-500">Утримано</span>
-                      <span className="text-rose-600">-{money(deposit.used_amount)}</span>
-                    </div>
-                  )}
-                  {deposit.refunded_amount > 0 && (
-                    <div className="flex justify-between text-xs mt-1">
-                      <span className="text-blue-500">Повернуто</span>
-                      <span className="text-blue-600">{money(deposit.refunded_amount)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between mt-1 font-medium">
-                    <span className="text-slate-700">Доступно</span>
-                    <span className="text-emerald-600">{money(depositAvailable)}</span>
-                  </div>
-                </>
-              )}
-            </div>
-            {totals.grand_total_due > 0 ? (
-              <div className="pt-2 border-t border-slate-200 flex justify-between font-bold">
-                <span className="text-slate-800">Загальний борг</span>
-                <span className="text-red-600">{money(totals.grand_total_due)}</span>
-              </div>
-            ) : (
-              <div className="pt-2 border-t border-slate-200 flex justify-between font-bold">
-                <span className="text-slate-800">Статус</span>
-                <span className="text-emerald-600">Все оплачено</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ============ 6. PAYMENT HISTORY ============ */}
-      {payments.length > 0 && (
-        <div className="px-4 pt-3">
-          <div className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wide">Оплати</div>
-          <div className="space-y-1">
-            {payments.slice(0, 6).map((p) => {
-              const typeLabels = { rent: 'Оренда', additional: 'Донарах.', damage: 'Шкода', deposit: 'Застава', late: 'Простр.', advance: 'Передпл.' };
               return (
-                <div key={p.id} className="flex items-center justify-between text-xs bg-slate-50 rounded px-2.5 py-1.5">
-                  <div>
-                    <span className="text-slate-700 font-medium">{typeLabels[p.payment_type] || p.payment_type}</span>
-                    <span className="text-slate-400 ml-1.5">{p.method === 'cash' ? 'готівка' : 'безготівка'}</span>
+                <div
+                  key={i}
+                  className={`flex gap-4 p-3 rounded-xl border transition-colors ${
+                    hasDamage 
+                      ? 'border-rose-200 bg-rose-50/60' 
+                      : isReturned 
+                        ? 'border-emerald-200 bg-emerald-50/40'
+                        : 'border-slate-100 bg-slate-50/50'
+                  }`}
+                >
+                  {/* Thumbnail */}
+                  <div className="w-20 h-20 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0 border border-slate-200">
+                    {(item.image || item.photo) ? (
+                      <img 
+                        src={item.image || item.photo} 
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }}
+                      />
+                    ) : null}
+                    <div className={`w-full h-full items-center justify-center text-slate-400 ${(item.image || item.photo) ? 'hidden' : 'flex'}`}>
+                      <ImageOff className="w-6 h-6" />
+                    </div>
                   </div>
-                  <span className="font-bold text-emerald-700">+{money(p.amount)}</span>
+
+                  {/* Item details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{sku}</span>
+                      {isReturned && !hasDamage && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">повернуто</span>
+                      )}
+                      {hasDamage && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold">шкода</span>
+                      )}
+                    </div>
+                    <div className="text-base font-medium text-slate-800 mt-1">{item.name}</div>
+                    <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
+                      <span>Кількість: <b className="text-slate-700">{item.qty || item.quantity}</b></span>
+                      <span>{money(item.price_per_day)}/день</span>
+                      <span className="font-bold text-slate-700">{money(item.total_rental)}</span>
+                    </div>
+                    {hasDamage && damageMap[sku].map((d, di) => (
+                      <div key={di} className="mt-2 text-sm text-rose-700 bg-rose-100/70 rounded-lg px-3 py-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold">{d.damage_type}</span>
+                          <span className="font-bold">{money(d.fee)}</span>
+                        </div>
+                        {d.qty > 0 && <span className="text-xs text-rose-600">Кількість: {d.qty}</span>}
+                        {d.note && <div className="text-xs text-rose-500 mt-1">{d.note}</div>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
-      )}
 
-      {/* ============ 7. ACTIONS ============ */}
-      <div className="px-4 py-4 space-y-2">
-        {!showPayForm ? (
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowPayForm(true)}
-              className="flex-1 py-2.5 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors flex items-center justify-center gap-1.5"
-              data-testid={`pay-btn-${orderId}`}
-            >
-              <Banknote className="w-4 h-4" />
-              Прийняти оплату
-            </button>
-            {deposit && depositAvailable > 0 && (
-              <button
-                onClick={handleDepositRefund}
-                disabled={saving}
-                className="py-2.5 px-3 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors disabled:opacity-50"
-                data-testid={`refund-deposit-btn-${orderId}`}
-                title="Повернути заставу"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-            )}
-            {deposit && depositAvailable > 0 && damage?.due > 0 && (
-              <button
-                onClick={handleDepositUse}
-                disabled={saving}
-                className="py-2.5 px-3 text-sm font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors disabled:opacity-50"
-                data-testid={`use-deposit-btn-${orderId}`}
-                title="Утримати із застави за шкоду"
-              >
-                <Shield className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-slate-600">Прийняти оплату</span>
-              <button onClick={() => setShowPayForm(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-4 h-4" />
-              </button>
+        {/* RIGHT: Return info, Damage, Finance, Actions (2/5 width) */}
+        <div className="lg:col-span-2 p-6 space-y-5">
+
+          {/* Return Card (requisitors) */}
+          {returnCards.length > 0 && returnCards[0] && (
+            <div>
+              <div className="text-xs font-bold text-slate-600 mb-2 uppercase tracking-wide">Перевірка реквізиторами</div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <div className="grid grid-cols-4 gap-3 text-center">
+                  <div>
+                    <div className="font-bold text-2xl text-emerald-600">{returnCards[0].items_ok || 0}</div>
+                    <div className="text-xs text-slate-500">OK</div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-2xl text-amber-600">{returnCards[0].items_dirty || 0}</div>
+                    <div className="text-xs text-slate-500">Брудні</div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-2xl text-rose-600">{returnCards[0].items_damaged || 0}</div>
+                    <div className="text-xs text-slate-500">Пошкоджені</div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-2xl text-red-700">{returnCards[0].items_missing || 0}</div>
+                    <div className="text-xs text-slate-500">Відсутні</div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={payType} onChange={(e) => setPayType(e.target.value)}
-                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white"
-                data-testid={`pay-type-${orderId}`}
-              >
-                <option value="rent">Оренда</option>
-                <option value="damage">Шкода</option>
-                <option value="late">Прострочення</option>
-                <option value="additional">Донарахування</option>
-              </select>
-              <select
-                value={payMethod} onChange={(e) => setPayMethod(e.target.value)}
-                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white"
-                data-testid={`pay-method-${orderId}`}
-              >
-                <option value="cash">Готівка</option>
-                <option value="bank">Безготівка</option>
-              </select>
+          )}
+
+          {/* Partial Return Versions */}
+          {hasVersions && (
+            <div>
+              <div className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                <Layers className="w-3.5 h-3.5" />
+                Етапи повернення ({versions.length})
+              </div>
+              <div className="space-y-2">
+                {versions.map((v) => (
+                  <VersionCard
+                    key={v.version_id}
+                    version={v}
+                    isExpanded={expandedVersion === v.version_id}
+                    onToggle={() => setExpandedVersion(prev => prev === v.version_id ? null : v.version_id)}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <input
-                type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)}
-                placeholder="Сума ₴"
-                className="flex-1 text-sm border border-slate-300 rounded-lg px-3 py-1.5"
-                data-testid={`pay-amount-${orderId}`}
-              />
-              <button
-                onClick={handlePayment}
-                disabled={saving || !payAmount || Number(payAmount) <= 0}
-                className="px-4 py-1.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50"
-                data-testid={`pay-submit-${orderId}`}
-              >
-                {saving ? '...' : 'OK'}
-              </button>
+          )}
+
+          {/* Damage Summary */}
+          {damage && damage.items?.length > 0 && (
+            <div>
+              <div className="text-xs font-bold text-rose-600 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Загальна шкода
+              </div>
+              <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-rose-700">Всього:</span>
+                  <span className="font-bold text-rose-800 text-lg">{money(damage.total)}</span>
+                </div>
+                {damage.paid > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-emerald-600">Оплачено:</span>
+                    <span className="text-emerald-700 font-medium">{money(damage.paid)}</span>
+                  </div>
+                )}
+                {damage.due > 0 && (
+                  <div className="flex justify-between text-sm font-medium">
+                    <span className="text-rose-600">До сплати:</span>
+                    <span className="font-bold text-rose-700">{money(damage.due)}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            {/* Quick amount buttons */}
-            {(totals?.rent_due > 0 || damage?.due > 0) && (
-              <div className="flex gap-1.5 flex-wrap">
-                {totals?.rent_due > 0 && (
+          )}
+
+          {/* Financial Summary */}
+          {totals && (
+            <div>
+              <div className="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+                <DollarSign className="w-3.5 h-3.5" />
+                Фінанси
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Оренда</span>
+                  <div>
+                    <span className="font-semibold">{money(totals.rental_after_discount)}</span>
+                    {totals.discount > 0 && <span className="text-xs text-emerald-600 ml-1">(-{money(totals.discount)})</span>}
+                  </div>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Оплачено</span>
+                  <span className="font-semibold text-emerald-600">{money(totals.rent_paid + totals.advance_paid)}</span>
+                </div>
+                {totals.rent_due > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-amber-600 font-medium">Борг (оренда)</span>
+                    <span className="font-bold text-amber-600">{money(totals.rent_due)}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-slate-200 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Застава (очік.)</span>
+                    <span className="font-semibold">{money(totals.deposit_expected)}</span>
+                  </div>
+                  {deposit && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Прийнято</span>
+                        <span className="font-semibold">
+                          {deposit.currency !== 'UAH' 
+                            ? `${deposit.currency === 'USD' ? '$' : '€'}${fmtUA(deposit.actual_amount)}` 
+                            : money(deposit.held_amount)
+                          }
+                        </span>
+                      </div>
+                      {deposit.used_amount > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-rose-500">Утримано</span>
+                          <span className="text-rose-600">-{money(deposit.used_amount)}</span>
+                        </div>
+                      )}
+                      {deposit.refunded_amount > 0 && (
+                        <div className="flex justify-between text-xs">
+                          <span className="text-blue-500">Повернуто</span>
+                          <span className="text-blue-600">{money(deposit.refunded_amount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-medium">
+                        <span className="text-slate-700">Доступно</span>
+                        <span className="text-emerald-600">{money(depositAvailable)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {totals.grand_total_due > 0 ? (
+                  <div className="pt-2 border-t border-slate-200 flex justify-between font-bold">
+                    <span className="text-slate-800">Загальний борг</span>
+                    <span className="text-red-600 text-lg">{money(totals.grand_total_due)}</span>
+                  </div>
+                ) : (
+                  <div className="pt-2 border-t border-slate-200 flex justify-between font-bold">
+                    <span className="text-slate-800">Статус</span>
+                    <span className="text-emerald-600">Все оплачено</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Payment History */}
+          {payments.length > 0 && (
+            <div>
+              <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Історія оплат</div>
+              <div className="space-y-1">
+                {payments.slice(0, 8).map((p) => {
+                  const typeLabels = { rent: 'Оренда', additional: 'Донарах.', damage: 'Шкода', deposit: 'Застава', late: 'Простр.', advance: 'Передпл.' };
+                  return (
+                    <div key={p.id} className="flex items-center justify-between text-xs bg-slate-50 rounded-lg px-3 py-2">
+                      <div>
+                        <span className="text-slate-700 font-medium">{typeLabels[p.payment_type] || p.payment_type}</span>
+                        <span className="text-slate-400 ml-1.5">{p.method === 'cash' ? 'готівка' : 'безготівка'}</span>
+                      </div>
+                      <span className="font-bold text-emerald-700">+{money(p.amount)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ACTIONS */}
+          <div className="space-y-2 pt-2">
+            {!showPayForm ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowPayForm(true)}
+                  className="flex-1 py-3 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-center gap-2"
+                  data-testid={`pay-btn-${orderId}`}
+                >
+                  <Banknote className="w-4 h-4" />
+                  Прийняти оплату
+                </button>
+                {deposit && depositAvailable > 0 && (
                   <button
-                    onClick={() => { setPayType('rent'); setPayAmount(String(totals.rent_due)); }}
-                    className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 font-medium"
+                    onClick={handleDepositRefund}
+                    disabled={saving}
+                    className="py-3 px-4 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    data-testid={`refund-deposit-btn-${orderId}`}
+                    title="Повернути заставу"
                   >
-                    Борг оренди: {money(totals.rent_due)}
+                    <RotateCcw className="w-4 h-4" />
+                    Повернути
                   </button>
                 )}
-                {damage?.due > 0 && (
+                {deposit && depositAvailable > 0 && damage?.due > 0 && (
                   <button
-                    onClick={() => { setPayType('damage'); setPayAmount(String(damage.due)); }}
-                    className="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full hover:bg-rose-200 font-medium"
+                    onClick={handleDepositUse}
+                    disabled={saving}
+                    className="py-3 px-4 text-sm font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    data-testid={`use-deposit-btn-${orderId}`}
+                    title="Утримати із застави за шкоду"
                   >
-                    Шкода: {money(damage.due)}
+                    <Shield className="w-4 h-4" />
+                    Утримати
                   </button>
+                )}
+              </div>
+            ) : (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold text-slate-700">Прийняти оплату</span>
+                  <button onClick={() => setShowPayForm(false)} className="text-slate-400 hover:text-slate-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <select
+                    value={payType} onChange={(e) => setPayType(e.target.value)}
+                    className="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                    data-testid={`pay-type-${orderId}`}
+                  >
+                    <option value="rent">Оренда</option>
+                    <option value="damage">Шкода</option>
+                    <option value="late">Прострочення</option>
+                    <option value="additional">Донарахування</option>
+                  </select>
+                  <select
+                    value={payMethod} onChange={(e) => setPayMethod(e.target.value)}
+                    className="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white"
+                    data-testid={`pay-method-${orderId}`}
+                  >
+                    <option value="cash">Готівка</option>
+                    <option value="bank">Безготівка</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number" value={payAmount} onChange={(e) => setPayAmount(e.target.value)}
+                    placeholder="Сума ₴"
+                    className="flex-1 text-sm border border-slate-300 rounded-lg px-3 py-2"
+                    data-testid={`pay-amount-${orderId}`}
+                  />
+                  <button
+                    onClick={handlePayment}
+                    disabled={saving || !payAmount || Number(payAmount) <= 0}
+                    className="px-6 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors disabled:opacity-50"
+                    data-testid={`pay-submit-${orderId}`}
+                  >
+                    {saving ? '...' : 'OK'}
+                  </button>
+                </div>
+                {(totals?.rent_due > 0 || damage?.due > 0) && (
+                  <div className="flex gap-2 flex-wrap">
+                    {totals?.rent_due > 0 && (
+                      <button
+                        onClick={() => { setPayType('rent'); setPayAmount(String(totals.rent_due)); }}
+                        className="text-xs px-3 py-1 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 font-medium"
+                      >
+                        Борг оренди: {money(totals.rent_due)}
+                      </button>
+                    )}
+                    {damage?.due > 0 && (
+                      <button
+                        onClick={() => { setPayType('damage'); setPayAmount(String(damage.due)); }}
+                        className="text-xs px-3 py-1 bg-rose-100 text-rose-700 rounded-full hover:bg-rose-200 font-medium"
+                      >
+                        Шкода: {money(damage.due)}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

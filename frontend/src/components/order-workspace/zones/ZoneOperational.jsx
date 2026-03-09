@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import ZoneCard from '../ZoneCard'
 import axios from 'axios'
-import { Plus, X, Percent, DollarSign, CreditCard, Banknote, Building2, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, X, Percent, DollarSign, Banknote, Building2, Check, ChevronDown, ChevronUp } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
@@ -470,22 +470,21 @@ export default function ZoneOperational({
                     </div>
                     
                     {/* Payment Method */}
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-2">
                       {[
                         { key: 'cash', icon: Banknote, label: 'Готівка', color: 'emerald' },
-                        { key: 'card', icon: CreditCard, label: 'Картка', color: 'blue' },
-                        { key: 'bank', icon: Building2, label: 'IBAN', color: 'purple' }
+                        { key: 'bank', icon: Building2, label: 'Безготівка', color: 'blue' }
                       ].map(({ key, icon: Icon, label, color }) => (
                         <button
                           key={key}
                           onClick={() => setPaymentMethod(key)}
-                          className={`flex-1 py-1.5 text-xs rounded-lg flex items-center justify-center gap-1 transition-all ${
+                          className={`flex-1 py-2 text-sm rounded-lg flex items-center justify-center gap-1.5 transition-all ${
                             paymentMethod === key
-                              ? `bg-${color}-100 text-${color}-700 border-2 border-${color}-300`
-                              : 'bg-slate-50 border border-slate-200 text-slate-500'
+                              ? `bg-${color}-100 text-${color}-700 border-2 border-${color}-300 font-medium`
+                              : 'bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100'
                           }`}
                         >
-                          <Icon className="w-3.5 h-3.5" />
+                          <Icon className="w-4 h-4" />
                           {label}
                         </button>
                       ))}

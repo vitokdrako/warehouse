@@ -201,8 +201,10 @@ function ReturnDetailPanel({ order, onActionComplete }) {
   const [snapshot, setSnapshot] = useState(null);
   const [versions, setVersions] = useState([]);
   const [returnCard, setReturnCard] = useState(null);
+  const [orderDetail, setOrderDetail] = useState(null);
   const [expandedVersion, setExpandedVersion] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showItems, setShowItems] = useState(true);
 
   // Payment form
   const [payType, setPayType] = useState('rent');
@@ -218,10 +220,11 @@ function ReturnDetailPanel({ order, onActionComplete }) {
     const load = async () => {
       setLoading(true);
       try {
-        const [snapshotRes, versionsRes, returnCardRes] = await Promise.allSettled([
+        const [snapshotRes, versionsRes, returnCardRes, orderRes] = await Promise.allSettled([
           authFetch(`${BACKEND_URL}/api/finance/orders/${orderId}/snapshot`),
           authFetch(`${BACKEND_URL}/api/return-versions/order/${orderId}/versions`),
           authFetch(`${BACKEND_URL}/api/return-cards/by-order/${orderId}`),
+          authFetch(`${BACKEND_URL}/api/orders/${orderId}`),
         ]);
 
         if (mounted) {
@@ -234,6 +237,9 @@ function ReturnDetailPanel({ order, onActionComplete }) {
           }
           if (returnCardRes.status === 'fulfilled' && returnCardRes.value.ok) {
             setReturnCard(await returnCardRes.value.json());
+          }
+          if (orderRes.status === 'fulfilled' && orderRes.value.ok) {
+            setOrderDetail(await orderRes.value.json());
           }
         }
       } catch (e) {
@@ -358,6 +364,83 @@ function ReturnDetailPanel({ order, onActionComplete }) {
 
   return (
     <div className="border-t border-slate-100" data-testid={`return-detail-${orderId}`}>
+      {/* === ORDER ITEMS WITH IMAGES === */}
+      {orderDetail?.items?.length > 0 && (
+        <div className="px-4 pt-4">
+          <button
+            onClick={() => setShowItems(v => !v)}
+            className="w-full flex items-center justify-between mb-2"
+          >
+            <span className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5" />
+              ЗАМОВЛЕННЯ ({orderDetail.items.length} позицій)
+            </span>
+            {showItems ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
+          </button>
+          {showItems && (
+            <div className="space-y-2">
+              {orderDetail.items.map((item, i) => {
+                // Check if this item has damage
+                const itemDamage = (damage?.items || []).find(d => 
+                  d.sku === item.sku || d.product_id === item.inventory_id
+                );
+                // Check return status from return card items
+                const returnedItems = returnCard?.items_returned || [];
+                const isReturned = returnedItems.some(ri => 
+                  (ri.sku || ri.product_id) === (item.sku || item.inventory_id)
+                );
+
+                return (
+                  <div key={i} className={`flex items-start gap-3 p-2 rounded-lg border ${
+                    itemDamage ? 'border-rose-200 bg-rose-50/50' : 'border-slate-100 bg-slate-50/50'
+                  }`}>
+                    {/* Image */}
+                    <div className="w-14 h-14 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
+                      {item.image || item.photo ? (
+                        <img 
+                          src={item.image || item.photo} 
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                          <Package className="w-5 h-5" />
+                        </div>
+                      )}
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-mono text-slate-500">{item.sku}</span>
+                        {isReturned && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">повернуто</span>
+                        )}
+                        {itemDamage && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700 font-medium">шкода</span>
+                        )}
+                      </div>
+                      <div className="text-sm font-medium text-slate-800 truncate">{item.name}</div>
+                      <div className="flex items-center gap-3 mt-0.5 text-xs text-slate-500">
+                        <span>×{item.qty || item.quantity}</span>
+                        <span>{money(item.price_per_day)}/день</span>
+                        <span className="font-medium text-slate-700">{money(item.total_rental)}</span>
+                      </div>
+                      {itemDamage && (
+                        <div className="mt-1 text-xs text-rose-600">
+                          {itemDamage.damage_type}: <span className="font-semibold">{money(itemDamage.fee)}</span>
+                          {itemDamage.note && <span className="text-rose-500 ml-1">— {itemDamage.note}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* === PARTIAL RETURN VERSIONS === */}
       {hasVersions && (
         <div className="px-4 pt-4">

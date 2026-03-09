@@ -170,10 +170,53 @@ function ReturnOrderCard({ order, onOpen }) {
           <div><span className="text-slate-500">Застава:</span> <span className="font-medium text-slate-700">{money(order.total_deposit || order.deposit_amount)}</span></div>
           {order.discount > 0 && <span className="text-emerald-600 font-medium">-{order.discount}%</span>}
         </div>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-slate-500 mb-2">
           {order.items?.length || 0} позицій
           {order.manager_name && <span className="ml-2">· Менеджер: <b>{order.manager_name}</b></span>}
         </div>
+
+        {/* Finance status row */}
+        {(() => {
+          const paidRent = order.paid_rent || 0;
+          const totalRent = order.total_after_discount || order.total_rental || 0;
+          const rentDue = Math.max(0, totalRent - paidRent);
+          const paidDeposit = order.paid_deposit || 0;
+          const totalDeposit = order.total_deposit || order.deposit_amount || 0;
+          const allPaid = rentDue <= 0 && paidRent > 0;
+          
+          return (
+            <div className="pt-2 border-t border-slate-100 space-y-1.5">
+              {/* Rent progress */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-500">Оплата оренди</span>
+                <span className={`font-semibold ${allPaid ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {allPaid ? '✓ Оплачено' : `${money(paidRent)} / ${money(totalRent)}`}
+                </span>
+              </div>
+              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${allPaid ? 'bg-emerald-500' : 'bg-amber-500'}`}
+                  style={{ width: `${Math.min(100, totalRent > 0 ? (paidRent / totalRent) * 100 : 0)}%` }}
+                />
+              </div>
+              {/* Debt highlight */}
+              {rentDue > 0 && (
+                <div className="text-xs font-bold text-red-600 bg-red-50 rounded-lg px-2 py-1 text-center">
+                  Борг: {money(rentDue)}
+                </div>
+              )}
+              {/* Deposit status */}
+              {totalDeposit > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Застава</span>
+                  <span className={`font-semibold ${paidDeposit >= totalDeposit ? 'text-emerald-600' : 'text-amber-600'}`}>
+                    {paidDeposit >= totalDeposit ? '✓ Прийнято' : `${money(paidDeposit)} / ${money(totalDeposit)}`}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

@@ -880,6 +880,9 @@ export default function NewOrderViewWorkspace() {
       
       {/* Операційна */}
       <ZoneOperational
+        orderId={orderId}
+        orderNumber={order?.order_number}
+        customerName={clientName}
         managerId={managerId}
         managerName={managerName}
         discountPercent={discount}
@@ -887,6 +890,13 @@ export default function NewOrderViewWorkspace() {
         serviceFee={serviceFee}
         serviceFeeName={serviceFeeName}
         totalBeforeDiscount={items.reduce((sum, item) => sum + (item.rental_price * item.qty * rentalDays), 0)}
+        totalRent={order?.total_after_discount || order?.total_rental || calculations.rentAfterDiscount || 0}
+        totalDeposit={order?.total_deposit || order?.deposit_amount || calculations.totalDeposit || 0}
+        paidRent={order?.paid_rent || 0}
+        paidDeposit={order?.paid_deposit || 0}
+        payments={order?.payments || []}
+        showPayment={decorOrderStatus && decorOrderStatus !== 'awaiting_customer'}
+        onPaymentSuccess={() => loadOrder()}
         onUpdate={(data) => {
           setManagerId(data.managerId)
           setManagerName(data.managerName)
@@ -940,22 +950,6 @@ export default function NewOrderViewWorkspace() {
         onRemoveItem={handleRemoveItem}
         highlightedItems={newlyAddedItems}  // Підсвітка нових позицій
       />
-      
-      {/* Фінансовий статус - тільки для узгоджених замовлень */}
-      {decorOrderStatus && decorOrderStatus !== 'awaiting_customer' && (
-        <ZonePaymentStatus
-          orderId={orderId}
-          orderNumber={order?.order_number}
-          customerName={clientName}
-          totalRent={order?.total_after_discount || order?.total_rental || 0}
-          totalDeposit={order?.total_deposit || order?.deposit_amount || 0}
-          paidRent={order?.paid_rent || 0}
-          paidDeposit={order?.paid_deposit || 0}
-          payments={order?.payments || []}
-          onPaymentSuccess={() => loadOrder()}
-          readOnly={decorOrderStatus === 'completed' || decorOrderStatus === 'cancelled'}
-        />
-      )}
       
       {/* Документи переміщено в LeftRailDocuments */}
       

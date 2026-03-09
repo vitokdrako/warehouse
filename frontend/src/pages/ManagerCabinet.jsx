@@ -73,12 +73,25 @@ export default function ManagerCabinet() {
       
       // Завантажити фінансові дані
       try {
-        const financeRes = await authFetch(`${BACKEND_URL}/api/finance/cabinet`);
+        const financeRes = await authFetch(`${BACKEND_URL}/api/finance/hub/overview`);
         if (financeRes.ok) {
           const fData = await financeRes.json();
+          const monthRevenue = fData.month?.revenue?.total || 0;
+          // Count active deposits across all currencies
+          const deps = fData.deposits || {};
+          let depositsCount = 0;
+          let depositsUAH = 0;
+          Object.values(deps).forEach(d => {
+            depositsCount += d.count || 0;
+            depositsUAH += d.uah_equivalent || d.available || 0;
+          });
           setFinanceData({
-            revenue: fData.total_rental || fData.revenue || 0,
-            deposits: fData.active_deposits_count || fData.deposits || 0
+            revenue: monthRevenue,
+            deposits: depositsCount,
+            depositsUAH: depositsUAH,
+            cash: fData.cash?.balance || 0,
+            bank: fData.bank?.balance || 0,
+            depositsByCurrency: deps,
           });
         }
       } catch (e) {
@@ -261,14 +274,24 @@ export default function ManagerCabinet() {
                 <div className="text-xs text-slate-400">{awaitingOrders.length} нові / {inProgressOrders.length} в роботі</div>
               </div>
               <div className="bg-white rounded-xl border border-slate-200 p-4">
-                <div className="text-sm text-slate-500">Виручка</div>
-                <div className="text-2xl font-bold text-emerald-600">₴ {financeData.revenue.toLocaleString()}</div>
-                <div className="text-xs text-slate-400">з фін. кабінету</div>
+                <div className="text-sm text-slate-500">Виручка (місяць)</div>
+                <div className="text-2xl font-bold text-emerald-600">₴{(financeData.revenue || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}</div>
+                <div className="text-xs text-slate-400 flex items-center gap-3">
+                  <span>Готівка: ₴{(financeData.cash || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}</span>
+                  <span>Безготівка: ₴{(financeData.bank || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}</span>
+                </div>
               </div>
               <div className="bg-white rounded-xl border border-slate-200 p-4">
                 <div className="text-sm text-slate-500">Застави в холді</div>
-                <div className="text-2xl font-bold text-amber-600">{financeData.deposits}</div>
-                <div className="text-xs text-slate-400">кількість активних</div>
+                <div className="text-2xl font-bold text-amber-600">{financeData.deposits || 0}</div>
+                <div className="text-xs text-slate-400">
+                  {financeData.depositsByCurrency && Object.entries(financeData.depositsByCurrency).map(([cur, d]) => (
+                    <span key={cur} className="mr-2">
+                      {cur === 'USD' ? '$' : cur === 'EUR' ? '€' : '₴'}{(d.available || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                    </span>
+                  ))}
+                  {(!financeData.depositsByCurrency || Object.keys(financeData.depositsByCurrency).length === 0) && 'кількість активних'}
+                </div>
               </div>
             </div>
           </section>

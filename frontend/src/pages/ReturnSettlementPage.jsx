@@ -468,7 +468,7 @@ export default function ReturnSettlementPage() {
           {/* RIGHT: Finance sidebar (1/3) */}
           <div className="space-y-5">
             {/* Overall Summary */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 sticky top-[85px]">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
               <div className="text-xs font-bold text-slate-600 mb-3 flex items-center gap-1.5 uppercase tracking-wide">
                 <DollarSign className="w-3.5 h-3.5" />
                 Загальний розрахунок
@@ -643,7 +643,7 @@ export default function ReturnSettlementPage() {
               </div>
             </div>
 
-            {/* Defect Act & Close Order */}
+            {/* Defect Act & Close Order — INSIDE same sticky card */}
             <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
               <div className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
                 <FileText className="w-3.5 h-3.5" />
@@ -696,7 +696,6 @@ export default function ReturnSettlementPage() {
                       });
                       if (res.ok) {
                         setOrderDetail(prev => ({ ...prev, status: 'completed' }));
-                        alert('Замовлення закрито');
                       } else {
                         const err = await res.json().catch(() => ({}));
                         alert(`Помилка: ${err.detail || 'Не вдалося закрити'}`);
@@ -713,7 +712,6 @@ export default function ReturnSettlementPage() {
                 </button>
               )}
 
-              {/* Already closed */}
               {orderDetail.status === 'completed' && (
                 <div className="text-center py-3 text-sm font-semibold text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-200">
                   <CheckCircle className="w-4 h-4 inline mr-1.5" />
@@ -721,10 +719,9 @@ export default function ReturnSettlementPage() {
                 </div>
               )}
 
-              {/* Can't close - has debt */}
               {totals && totals.grand_total_due > 0 && orderDetail.status !== 'completed' && (
                 <div className="text-center py-2 text-xs text-slate-500">
-                  Для закриття ордера потрібно погасити борг
+                  Для закриття потрібно погасити борг
                 </div>
               )}
             </div>

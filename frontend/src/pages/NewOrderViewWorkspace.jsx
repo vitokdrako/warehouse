@@ -30,6 +30,7 @@ import {
   ZoneDocuments,
   ZoneEventInfo,
   ZonePaymentStatus,
+  ZoneOperational,
 } from '../components/order-workspace/zones'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
@@ -53,6 +54,9 @@ export default function NewOrderViewWorkspace() {
   const [managerId, setManagerId] = useState(null)
   const [managerName, setManagerName] = useState('')
   const [discount, setDiscount] = useState(0)
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const [serviceFee, setServiceFee] = useState(0)
+  const [serviceFeeName, setServiceFeeName] = useState('')
   
   // Дати
   const [issueDate, setIssueDate] = useState('')
@@ -174,7 +178,10 @@ export default function NewOrderViewWorkspace() {
         setClientName(decorOrder.client_name || '')
         setClientPhone(decorOrder.client_phone || '')
         setClientEmail(decorOrder.client_email || '')
-        setDiscount(decorOrder.discount || 0)
+        setDiscount(decorOrder.discount || decorOrder.discount_percent || 0)
+        setDiscountAmount(decorOrder.discount_amount || 0)
+        setServiceFee(decorOrder.service_fee || 0)
+        setServiceFeeName(decorOrder.service_fee_name || '')
         setManagerId(decorOrder.manager_id || null)
         setManagerName(decorOrder.manager_name || '')
         
@@ -520,9 +527,11 @@ export default function NewOrderViewWorkspace() {
         return_time: returnTime,
         rental_days: rentalDays,
         manager_comment: managerNotes,
-        discount: discount, // ✅ FIXED: Відсоток знижки (%)
-        discount_amount: calculations.discountAmount, // Сума знижки в грн
+        discount: discount, // Відсоток знижки (%)
+        discount_amount: discountAmount || calculations.discountAmount, // Сума знижки в грн
         manager_id: managerId,
+        service_fee: serviceFee, // Додаткова послуга - сума
+        service_fee_name: serviceFeeName, // Додаткова послуга - назва
         // Фінансові дані - ДЖЕРЕЛО ПРАВДИ
         total_price: calculations.rentAfterDiscount,
         deposit_amount: calculations.totalDeposit,
@@ -869,26 +878,24 @@ export default function NewOrderViewWorkspace() {
     >
       {/* === WORKSPACE ZONES === */}
       
-      {/* Клієнт */}
-      <ZoneClientForm
-        clientName={clientName}
-        clientPhone={clientPhone}
-        clientEmail={clientEmail}
-        clientType={clientType}
+      {/* Операційна */}
+      <ZoneOperational
         managerId={managerId}
         managerName={managerName}
-        discount={discount}
+        discountPercent={discount}
+        discountAmount={discountAmount}
+        serviceFee={serviceFee}
+        serviceFeeName={serviceFeeName}
+        totalBeforeDiscount={items.reduce((sum, item) => sum + (item.rental_price * item.qty * rentalDays), 0)}
         onUpdate={(data) => {
-          setClientName(data.name)
-          setClientPhone(data.phone)
-          setClientEmail(data.email)
-          setClientType(data.type)
           setManagerId(data.managerId)
           setManagerName(data.managerName)
-          setDiscount(data.discount)
+          setDiscount(data.discountPercent)
+          setDiscountAmount(data.discountAmount)
+          setServiceFee(data.serviceFee)
+          setServiceFeeName(data.serviceFeeName)
         }}
-        readOnly={!!decorOrderStatus && decorOrderStatus !== 'awaiting_customer'}
-        discountEditable={true}
+        readOnly={decorOrderStatus === 'completed' || decorOrderStatus === 'cancelled'}
       />
       
       {/* Дати */}

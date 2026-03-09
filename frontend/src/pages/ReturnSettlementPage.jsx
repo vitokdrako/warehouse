@@ -10,7 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Package, AlertTriangle, CheckCircle, Clock, Layers,
   DollarSign, Shield, RotateCcw, Banknote, X, ImageOff, 
-  ArrowLeftRight, CalendarDays, Timer
+  ArrowLeftRight, CalendarDays, Timer, FileText, Lock
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -641,6 +641,92 @@ export default function ReturnSettlementPage() {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Defect Act & Close Order */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3">
+              <div className="text-xs font-bold text-slate-600 uppercase tracking-wide flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" />
+                Документи та дії
+              </div>
+
+              {/* Generate Defect Act */}
+              {damage && damage.total > 0 && (
+                <button
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
+                      const res = await authFetch(`${BACKEND_URL}/api/documents/generate`, {
+                        method: 'POST',
+                        body: JSON.stringify({ doc_type: 'defect_act', entity_type: 'order', entity_id: String(orderId) }),
+                      });
+                      if (res.ok) {
+                        const data = await res.json();
+                        if (data.pdf_url) {
+                          window.open(data.pdf_url, '_blank');
+                        } else {
+                          alert('Дефектний акт згенеровано');
+                        }
+                      } else {
+                        const err = await res.json().catch(() => ({}));
+                        alert(`Помилка: ${err.detail || 'Не вдалося згенерувати'}`);
+                      }
+                    } catch (e) { alert(`Помилка: ${e.message}`); }
+                    finally { setSaving(false); }
+                  }}
+                  disabled={saving}
+                  className="w-full py-3 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  data-testid="generate-defect-act"
+                >
+                  <FileText className="w-4 h-4" />
+                  Дефектний акт
+                </button>
+              )}
+
+              {/* Close Order - only when everything is paid */}
+              {totals && totals.grand_total_due <= 0 && orderDetail.status !== 'completed' && (
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('Закрити замовлення? Після цього зміни неможливі.')) return;
+                    setSaving(true);
+                    try {
+                      const res = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/status`, {
+                        method: 'PUT',
+                        body: JSON.stringify({ status: 'completed' }),
+                      });
+                      if (res.ok) {
+                        setOrderDetail(prev => ({ ...prev, status: 'completed' }));
+                        alert('Замовлення закрито');
+                      } else {
+                        const err = await res.json().catch(() => ({}));
+                        alert(`Помилка: ${err.detail || 'Не вдалося закрити'}`);
+                      }
+                    } catch (e) { alert(`Помилка: ${e.message}`); }
+                    finally { setSaving(false); }
+                  }}
+                  disabled={saving}
+                  className="w-full py-3 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  data-testid="close-order-btn"
+                >
+                  <Lock className="w-4 h-4" />
+                  Закрити замовлення
+                </button>
+              )}
+
+              {/* Already closed */}
+              {orderDetail.status === 'completed' && (
+                <div className="text-center py-3 text-sm font-semibold text-emerald-600 bg-emerald-50 rounded-xl border border-emerald-200">
+                  <CheckCircle className="w-4 h-4 inline mr-1.5" />
+                  Замовлення закрито
+                </div>
+              )}
+
+              {/* Can't close - has debt */}
+              {totals && totals.grand_total_due > 0 && orderDetail.status !== 'completed' && (
+                <div className="text-center py-2 text-xs text-slate-500">
+                  Для закриття ордера потрібно погасити борг
+                </div>
+              )}
             </div>
           </div>
         </div>

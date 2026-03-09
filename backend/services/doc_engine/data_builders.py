@@ -118,8 +118,13 @@ def build_document_data(db: Session, doc_type: str, entity_id: str, options: dic
     # Order modification documents
     modification_docs = ["order_modification"]
     
+    # Defect act - uses damage settlement data builder
+    defect_docs = ["defect_act"]
+    
     if doc_type in return_docs:
         return build_return_data(db, entity_id, options)
+    elif doc_type in defect_docs:
+        return build_defect_act_data(db, entity_id, options)
     elif doc_type in damage_settlement_docs:
         return build_damage_settlement_data(db, entity_id, options)
     elif doc_type in modification_docs:
@@ -565,6 +570,93 @@ def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> d
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "options": options
     }
+
+
+
+def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
+    """
+    Збирає дані для Дефектного акту.
+    Шаблон defect_act.html очікує: meta, landlord, tenant, agreement, order, damage.
+    """
+    result = db.execute(text("""
+        SELECT order_id, order_number, status, customer_name, customer_phone,
+               total_price, deposit_amount, rental_start_date, rental_end_date,
+               damage_fee, master_agreement_id
+        FROM orders WHERE order_id = :order_id
+    """), {"order_id": order_id})
+    
+    order_row = result.fetchone()
+    if not order_row:
+        raise ValueError(f"Order not found: {order_id}")
+    
+    # Get master agreement number
+    agreement_number = ""
+    if order_row[10]:
+        agr = db.execute(text("SELECT agreement_number FROM master_agreements WHERE id = :id"), {"id": order_row[10]}).fetchone()
+        if agr:
+            agreement_number = agr[0] or ""
+    
+    # Get damage items
+    damage_result = db.execute(text("""
+        SELECT pdh.product_name, pdh.sku, pdh.damage_type, pdh.severity,
+               pdh.fee, pdh.note, pdh.qty, pdh.fee_per_item
+        FROM product_damage_history pdh
+        WHERE pdh.order_id = :order_id
+        ORDER BY pdh.created_at
+    """), {"order_id": order_id})
+    
+    damage_type_names = {
+        "broken": "Зламано", "scratched": "Подряпано", "stained": "Плями",
+        "chipped": "Відколото", "cracked": "Тріщина", "missing": "Відсутнє",
+        "dirty": "Забруднено", "other": "Інше"
+    }
+    
+    damage_rows = []
+    total_fee = 0
+    for row in damage_result:
+        fee = float(row[4] or 0)
+        total_fee += fee
+        damage_rows.append({
+            "name": row[0] or "",
+            "sku": row[1] or "",
+            "description": f"{damage_type_names.get(row[2], row[2] or '')}. {row[5] or ''}".strip(". "),
+            "amount": fee,
+            "fee": fee,
+            "qty": int(row[6] or 1),
+        })
+    
+    now = datetime.now()
+    months_ua = ["січня","лютого","березня","квітня","травня","червня",
+                 "липня","серпня","вересня","жовтня","листопада","грудня"]
+    
+    return {
+        "meta": {
+            "act_day": now.strftime("%d"),
+            "act_month": months_ua[now.month - 1],
+            "act_year": now.strftime("%Y"),
+        },
+        "landlord": {
+            "name": "FarforDecorOrenda",
+            "legal_name": "ФОП Николенко Наталя Станіславівна",
+        },
+        "tenant": {
+            "legal_name": order_row[3] or "",
+            "signer_name": order_row[3] or "",
+            "signer_role": "",
+        },
+        "agreement": {
+            "contract_number": agreement_number,
+        },
+        "order": {
+            "order_number": order_row[1] or f"OC-{order_row[0]}",
+        },
+        "damage": {
+            "rows": damage_rows,
+            "total": total_fee,
+        },
+        "generated_at": now.strftime("%d.%m.%Y %H:%M"),
+    }
+
 
 
 def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dict:

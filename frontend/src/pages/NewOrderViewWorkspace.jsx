@@ -29,6 +29,7 @@ import {
   ZoneNotes,
   ZoneDocuments,
   ZoneEventInfo,
+  ZonePaymentStatus,
 } from '../components/order-workspace/zones'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
@@ -932,6 +933,22 @@ export default function NewOrderViewWorkspace() {
         onRemoveItem={handleRemoveItem}
         highlightedItems={newlyAddedItems}  // Підсвітка нових позицій
       />
+      
+      {/* Фінансовий статус - тільки для узгоджених замовлень */}
+      {decorOrderStatus && decorOrderStatus !== 'awaiting_customer' && (
+        <ZonePaymentStatus
+          orderId={orderId}
+          orderNumber={order?.order_number}
+          customerName={clientName}
+          totalRent={order?.total_after_discount || order?.total_rental || 0}
+          totalDeposit={order?.total_deposit || order?.deposit_amount || 0}
+          paidRent={order?.paid_rent || 0}
+          paidDeposit={order?.paid_deposit || 0}
+          payments={order?.payments || []}
+          onPaymentSuccess={() => loadOrder()}
+          readOnly={decorOrderStatus === 'completed' || decorOrderStatus === 'cancelled'}
+        />
+      )}
       
       {/* Документи переміщено в LeftRailDocuments */}
       

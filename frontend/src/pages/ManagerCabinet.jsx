@@ -482,21 +482,11 @@ function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, merge
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 });
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' }) : '—';
   
-  // Стани для оплати
-  const [showPaymentSection, setShowPaymentSection] = useState(false);
-  const [paymentType, setPaymentType] = useState('rent'); // 'rent' | 'deposit'
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [paymentComment, setPaymentComment] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  
   // Розрахунок оплачених сум (з order.payments якщо є)
   const paidRent = order.paid_rent || 0;
   const paidDeposit = order.paid_deposit || 0;
   const totalRent = order.total_after_discount || order.total_rental || 0;
   const totalDeposit = order.total_deposit || order.deposit_amount || 0;
-  const remainingRent = Math.max(0, totalRent - paidRent);
-  const remainingDeposit = Math.max(0, totalDeposit - paidDeposit);
   
   // Статус бейджі
   const statusConfig = {
@@ -640,189 +630,38 @@ function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, merge
           </div>
         )}
         
-        {/* === PAYMENT SECTION (only for in-progress orders) === */}
+        {/* Compact Payment Status (only for in-progress orders) */}
         {showProgress && ['processing', 'ready_for_issue'].includes(order.status) && (
           <div className="mt-3 pt-3 border-t border-slate-100">
-            {/* Payment Status Summary */}
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3">
               <div className="flex-1">
                 <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-slate-500">Оренда</span>
-                  <span className={`font-medium ${paidRent >= totalRent ? 'text-emerald-600' : 'text-slate-700'}`}>
-                    ₴{fmtUA(paidRent)} / ₴{fmtUA(totalRent)}
+                  <span className="text-slate-500">💰 Оплата</span>
+                  <span className={`font-medium ${
+                    paidRent >= totalRent && paidDeposit >= totalDeposit 
+                      ? 'text-emerald-600' 
+                      : 'text-amber-600'
+                  }`}>
+                    {paidRent >= totalRent && paidDeposit >= totalDeposit 
+                      ? '✓ Оплачено' 
+                      : `₴${fmtUA(paidRent + paidDeposit)} / ₴${fmtUA(totalRent + totalDeposit)}`
+                    }
                   </span>
                 </div>
                 <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div 
-                    className={`h-full rounded-full transition-all ${paidRent >= totalRent ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                    style={{ width: `${Math.min(100, (paidRent / totalRent) * 100 || 0)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-slate-500">Застава</span>
-                  <span className={`font-medium ${paidDeposit >= totalDeposit ? 'text-emerald-600' : 'text-amber-600'}`}>
-                    ₴{fmtUA(paidDeposit)} / ₴{fmtUA(totalDeposit)}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all ${paidDeposit >= totalDeposit ? 'bg-emerald-500' : 'bg-amber-500'}`}
-                    style={{ width: `${Math.min(100, (paidDeposit / totalDeposit) * 100 || 0)}%` }}
+                    className={`h-full rounded-full transition-all ${
+                      paidRent >= totalRent && paidDeposit >= totalDeposit 
+                        ? 'bg-emerald-500' 
+                        : 'bg-blue-500'
+                    }`}
+                    style={{ 
+                      width: `${Math.min(100, ((paidRent + paidDeposit) / (totalRent + totalDeposit)) * 100 || 0)}%` 
+                    }}
                   />
                 </div>
               </div>
             </div>
-            
-            {/* Payment Button / Form Toggle */}
-            {!showPaymentSection ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowPaymentSection(true); }}
-                className="w-full py-2 text-sm font-medium text-corp-primary bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <CreditCard className="w-4 h-4" />
-                Прийняти оплату
-              </button>
-            ) : (
-              <div className="bg-slate-50 rounded-lg p-3 space-y-3" onClick={(e) => e.stopPropagation()}>
-                {/* Payment Type */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setPaymentType('rent'); setPaymentAmount(remainingRent > 0 ? remainingRent.toString() : ''); }}
-                    className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
-                      paymentType === 'rent' 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    Оренда (₴{fmtUA(remainingRent)})
-                  </button>
-                  <button
-                    onClick={() => { setPaymentType('deposit'); setPaymentAmount(remainingDeposit > 0 ? remainingDeposit.toString() : ''); }}
-                    className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
-                      paymentType === 'deposit' 
-                        ? 'bg-amber-500 text-white' 
-                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    Застава (₴{fmtUA(remainingDeposit)})
-                  </button>
-                </div>
-                
-                {/* Amount Input */}
-                <div>
-                  <label className="text-xs text-slate-500 block mb-1">Сума</label>
-                  <input
-                    type="number"
-                    value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
-                    placeholder="0"
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                
-                {/* Payment Method */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPaymentMethod('cash')}
-                    className={`flex-1 py-2 text-xs rounded-lg flex items-center justify-center gap-1 transition-colors ${
-                      paymentMethod === 'cash' ? 'bg-emerald-100 text-emerald-700 border-2 border-emerald-300' : 'bg-white border border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <Banknote className="w-3 h-3" /> Готівка
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('card')}
-                    className={`flex-1 py-2 text-xs rounded-lg flex items-center justify-center gap-1 transition-colors ${
-                      paymentMethod === 'card' ? 'bg-blue-100 text-blue-700 border-2 border-blue-300' : 'bg-white border border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <CreditCard className="w-3 h-3" /> Картка
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod('bank')}
-                    className={`flex-1 py-2 text-xs rounded-lg flex items-center justify-center gap-1 transition-colors ${
-                      paymentMethod === 'bank' ? 'bg-purple-100 text-purple-700 border-2 border-purple-300' : 'bg-white border border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    <Building2 className="w-3 h-3" /> IBAN
-                  </button>
-                </div>
-                
-                {/* Comment */}
-                <input
-                  type="text"
-                  value={paymentComment}
-                  onChange={(e) => setPaymentComment(e.target.value)}
-                  placeholder="Коментар (опціонально)"
-                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg"
-                />
-                
-                {/* Action Buttons */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setShowPaymentSection(false);
-                      setPaymentAmount('');
-                      setPaymentComment('');
-                    }}
-                    className="flex-1 py-2 text-sm text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
-                  >
-                    Скасувати
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!paymentAmount || parseFloat(paymentAmount) <= 0) {
-                        alert('Введіть суму оплати');
-                        return;
-                      }
-                      setIsProcessing(true);
-                      try {
-                        const token = localStorage.getItem('token');
-                        const user = JSON.parse(localStorage.getItem('user') || '{}');
-                        const res = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/finance/payments`, {
-                          method: 'POST',
-                          headers: { 
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                          },
-                          body: JSON.stringify({
-                            order_id: order.order_id,
-                            payment_type: paymentType,
-                            method: paymentMethod,
-                            amount: parseFloat(paymentAmount),
-                            note: paymentComment || null,
-                            payer_name: order.customer_name,
-                            payer_contact: order.customer_phone,
-                            accepted_by_id: user.id || null,
-                            accepted_by_name: user.name || user.full_name || null
-                          })
-                        });
-                        if (res.ok) {
-                          alert(`✅ Оплату ₴${fmtUA(paymentAmount)} прийнято!`);
-                          setShowPaymentSection(false);
-                          setPaymentAmount('');
-                          setPaymentComment('');
-                          if (onPaymentSuccess) onPaymentSuccess();
-                        } else {
-                          const err = await res.json();
-                          alert(`❌ Помилка: ${err.detail || 'Не вдалося зберегти оплату'}`);
-                        }
-                      } catch (e) {
-                        alert(`❌ Помилка: ${e.message}`);
-                      } finally {
-                        setIsProcessing(false);
-                      }
-                    }}
-                    disabled={isProcessing || !paymentAmount}
-                    className="flex-1 py-2 text-sm font-medium text-white bg-emerald-500 rounded-lg hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
-                  >
-                    {isProcessing ? '⏳' : '✓'} Прийняти
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

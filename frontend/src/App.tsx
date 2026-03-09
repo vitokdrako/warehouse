@@ -28,6 +28,7 @@ import IssueCardWorkspace from './pages/IssueCardWorkspace';
 import ReturnOrderWorkspace from './pages/ReturnOrderWorkspace';
 import ReturnVersionWorkspace from './pages/ReturnVersionWorkspace';  // ✅ Версії повернення
 import PartialReturnVersionWorkspace from './pages/PartialReturnVersionWorkspace';  // ✅ НОВА версіонована система
+import ReturnSettlementPage from './pages/ReturnSettlementPage';  // ✅ Сторінка розрахунку повернення
 import ArchivedOrderWorkspace from './pages/ArchivedOrderWorkspace';
 import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
 // Other pages
@@ -326,6 +327,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <PartialReturnVersionWorkspace />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* ✅ Сторінка розрахунку повернення */}
+          <Route 
+            path="/order/:id/return-settlement" 
+            element={
+              <ProtectedRoute>
+                <ReturnSettlementPage />
               </ProtectedRoute>
             } 
           />

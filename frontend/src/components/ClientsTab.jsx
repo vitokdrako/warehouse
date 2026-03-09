@@ -1103,26 +1103,30 @@ export default function ClientsTab({ onSelectClientForOrder }) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+      {/* Header - Search & Filter */}
       <Card>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <Input
+        <div className="flex flex-col sm:flex-row gap-3 items-center">
+          <div className="relative flex-1 w-full">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
+            <input
+              data-testid="clients-search-input"
               type="search"
-              placeholder="🔍 Пошук: email, ім'я, телефон..."
+              placeholder="Пошук: email, ім'я, телефон..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white pl-10 pr-4 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 placeholder:text-slate-400"
             />
           </div>
-          <Select
+          <select
+            data-testid="clients-filter-select"
+            className="h-11 w-full sm:w-48 flex-shrink-0 rounded-xl border-2 border-slate-300 bg-white px-3 text-sm outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
             value={filter}
-            onChange={setFilter}
-            options={[
-              { value: "all", label: "Всі клієнти" },
-              { value: "has_payer", label: "✓ Є платник" },
-              { value: "no_payer", label: "⚠ Без платника" }
-            ]}
-          />
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">Всі клієнти</option>
+            <option value="has_payer">✓ Є платник</option>
+            <option value="no_payer">⚠ Без платника</option>
+          </select>
         </div>
       </Card>
 

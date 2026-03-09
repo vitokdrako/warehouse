@@ -1,96 +1,68 @@
-# Rental Hub PRD
+# Damage Hub / Rental Hub - PRD
 
 ## Original Problem Statement
-Система управління орендою товарів для FarforRent. Основні модулі: каталог товарів, замовлення, клієнтський кабінет, damage hub (обробка пошкоджених товарів).
+Fix bugs and improve functionality in the "Damage Hub" rental management application. The app manages orders, clients, catalog items, documents (quotes, estimates), and payments for a decoration rental business.
 
-## User Personas
-- **Менеджер прокату:** Управляє замовленнями, видачею, поверненням, контролює стан товарів
-- **Адміністратор:** Повний доступ, управління каталогом, звіти, налаштування
-- **Клієнт:** Перегляд каталогу, статус замовлень через кабінет
-
-## Core Requirements
-1. Каталог товарів з фільтрами по категоріях, кольору, матеріалу
-2. Перевірка доступності на конкретні дати
-3. Damage Hub для обробки пошкоджених товарів (wash, restoration, to_stock)
-4. Часткові повернення замовлень
-5. Система сетів (families) та наборів товарів
-
----
+## Core Architecture
+- **Frontend**: React (CRA) + Tailwind CSS
+- **Backend**: FastAPI + PostgreSQL (external OpenCart DB sync)
+- **Key Pages**: Manager Cabinet, Order View, Catalog, Damage Hub, Calendar
 
 ## What's Been Implemented
 
-### Session 2025-02-23
-- ✅ **family_id відображення на картках товарів** — виправлено API endpoint `/api/catalog/items-by-category`, тепер повертає family_id
-- ✅ **Damage Hub awaiting_assignment status** — проміжний статус для товарів що чекають обробки
-- ✅ **Availability Checker overhaul** — non-blocking warnings для товарів в обробці
-- ✅ **Partial Processing feature** — часткове завершення обробки (наприклад, помити 5 з 80 тарілок)
-- ✅ **Backend fix for partial processing** — оновлення aggregate counts (in_laundry, frozen_quantity)
-- ✅ **Multiple UI/UX fixes** — modal z-index, quantity display, debounce на Quick Add search
+### Session 1-N (Previous sessions)
+- Full order management workflow with Kanban columns
+- Document generation (quotes, estimates) with PDF/email
+- Catalog management with families/sets
+- Calendar with booking visualization
+- Moodboard feature
+- Client management (CRUD, search, notes)
+- Payment processing within orders
+- Master Agreement generation per client
+- Order merging functionality
 
-### Previous Sessions
-- Мобільна адаптація Families Manager та Products tab
-- Розділення dashboard по ролях
-- Система часткових повернень
-- Email templates (накладна, ТТН)
-
----
-
-## Architecture
-
-```
-/app/
-├── backend/
-│   ├── routes/
-│   │   ├── catalog.py       # MODIFIED: Added family_id to items-by-category
-│   │   ├── damage.py        # Damage Hub endpoints
-│   │   ├── laundry.py       # Processing endpoints with partial completion
-│   │   └── finance.py       # Financial reports
-│   └── utils/
-│       └── availability_checker.py  # Processing warnings logic
-└── frontend/
-    └── src/
-        ├── pages/
-        │   ├── CatalogBoard.jsx       # Products tab with family_id badge
-        │   ├── DamageHubApp.jsx       # Full Damage Hub UI
-        │   └── NewOrderViewWorkspace.jsx
-        └── components/
-            └── catalog/
-                └── FamiliesManager.jsx  # Sets management (slow due to API)
-```
-
----
+### Current Session (2026-03-09)
+- **Fixed**: Search bar visibility in ClientsTab.jsx - search input now prominent with search icon, proper border, and filter dropdown constrained to fixed width
 
 ## Prioritized Backlog
 
-### P0 - Critical
+### P0 (Critical)
 - (none currently)
 
-### P1 - High Priority
-1. **Optimize Catalog API** — `/api/catalog` та `/api/catalog/items-by-category` дуже повільні (20-35 секунд)
-2. **System Cleanup** — видалення 18 невикористаних таблиць та 7 застарілих файлів
-3. **FamiliesManager infinite loading** — blocked by slow Catalog API
+### P1 (High)
+- Optimize Catalog API (`/api/catalog`) - performance bottleneck causing FamiliesManager infinite loading
+- System cleanup - delete 18 unused tables and 7 obsolete files (pending user approval)
 
-### P2 - Medium Priority
-- `convert-to-order` endpoint instability
-- Moodboard export functionality
-- Calendar timezone bug
-- Additional document templates (Акт повернення, Дефектний акт)
+### P2 (Medium)
+- Implement document templates: "Act of Return", "Defect Act"
+- Fix `convert-to-order` endpoint instability
+- Fix Calendar timezone bug
+- Fix Moodboard export
+- Create email templates for other documents
+- General backend performance optimization
 
-### P3 - Future
+### P3 (Backlog/Future)
+- Unify `NewOrderViewWorkspace.jsx` and `IssueCardWorkspace.jsx`
 - Real-time updates for client cabinet
-- Unify NewOrderViewWorkspace & IssueCardWorkspace
 - Full RBAC implementation
-- Monthly financial report
+- Monthly Financial Report
 - HR/Ops Module
 
----
+## Key Files
+- `/app/frontend/src/components/ClientsTab.jsx` - Client CRM tab
+- `/app/frontend/src/pages/ManagerCabinet.jsx` - Manager dashboard
+- `/app/frontend/src/pages/NewOrderViewWorkspace.jsx` - Order detail view
+- `/app/frontend/src/components/order-workspace/zones/ZoneOperational.jsx` - Order operations
+- `/app/backend/routes/catalog.py` - Catalog API (NEEDS OPTIMIZATION)
+- `/app/backend/routes/documents.py` - Document generation
+- `/app/backend/routes/orders.py` - Order management
+- `/app/backend/routes/clients.py` - Client management
 
-## 3rd Party Integrations
-- **SMTPEmailProvider:** Custom SMTP for email sending
-- **OpenCart:** Product data synchronization
+## Credentials
+- Admin: `vitokdrako@gmail.com` / `test123`
 
-## Test Credentials
-- **Admin:** vitokdrako@gmail.com / test123
-
-## Build Output
-Production frontend build: `/app/clean_project/frontend_build/`
+## Known Issues
+- FamiliesManager infinite loading (catalog API too slow)
+- convert-to-order endpoint unstable
+- Moodboard export likely broken
+- Calendar timezone bug

@@ -581,7 +581,7 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
     result = db.execute(text("""
         SELECT order_id, order_number, status, customer_name, customer_phone,
                total_price, deposit_amount, rental_start_date, rental_end_date,
-               damage_fee, master_agreement_id
+               damage_fee
         FROM orders WHERE order_id = :order_id
     """), {"order_id": order_id})
     
@@ -589,12 +589,14 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
     if not order_row:
         raise ValueError(f"Order not found: {order_id}")
     
-    # Get master agreement number
+    # Get master agreement number if exists
     agreement_number = ""
-    if order_row[10]:
-        agr = db.execute(text("SELECT agreement_number FROM master_agreements WHERE id = :id"), {"id": order_row[10]}).fetchone()
+    try:
+        agr = db.execute(text("SELECT agreement_number FROM master_agreements WHERE client_name = :name ORDER BY id DESC LIMIT 1"), {"name": order_row[3]}).fetchone()
         if agr:
             agreement_number = agr[0] or ""
+    except:
+        pass
     
     # Get damage items
     damage_result = db.execute(text("""

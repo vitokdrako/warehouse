@@ -81,7 +81,7 @@ async def list_clients(
     source: Optional[str] = None,
     has_payer: Optional[bool] = None,
     skip: int = 0,
-    limit: int = 50,
+    limit: int = 500,  # Збільшено ліміт для завантаження всіх клієнтів
     db: Session = Depends(get_rh_db)
 ):
     """Список клієнтів з пошуком та фільтрами"""

@@ -662,10 +662,10 @@ export default function ReturnSettlementPage() {
                       });
                       if (res.ok) {
                         const data = await res.json();
-                        if (data.pdf_url) {
-                          window.open(data.pdf_url, '_blank');
-                        } else {
-                          alert('Дефектний акт згенеровано');
+                        if (data.preview_url) {
+                          window.open(`${BACKEND_URL}${data.preview_url}`, '_blank');
+                        } else if (data.document_id) {
+                          window.open(`${BACKEND_URL}/api/documents/${data.document_id}/preview`, '_blank');
                         }
                       } else {
                         const err = await res.json().catch(() => ({}));

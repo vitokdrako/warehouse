@@ -43,6 +43,7 @@ export default function ReturnSettlementPage() {
   const [versions, setVersions] = useState([]);
   const [versionItems, setVersionItems] = useState({});
   const [saving, setSaving] = useState(false);
+  const [charges, setCharges] = useState(null);
 
   // Payment form
   const [showPayForm, setShowPayForm] = useState(false);
@@ -56,14 +57,16 @@ export default function ReturnSettlementPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [orderRes, snapshotRes, versionsRes] = await Promise.allSettled([
+        const [orderRes, snapshotRes, versionsRes, chargesRes] = await Promise.allSettled([
           authFetch(`${BACKEND_URL}/api/orders/${orderId}`),
           authFetch(`${BACKEND_URL}/api/finance/orders/${orderId}/snapshot`),
           authFetch(`${BACKEND_URL}/api/return-versions/order/${orderId}/versions`),
+          authFetch(`${BACKEND_URL}/api/finance/order/${orderId}/charges`),
         ]);
         if (mounted) {
           if (orderRes.status === 'fulfilled' && orderRes.value.ok) setOrderDetail(await orderRes.value.json());
           if (snapshotRes.status === 'fulfilled' && snapshotRes.value.ok) setSnapshot(await snapshotRes.value.json());
+          if (chargesRes.status === 'fulfilled' && chargesRes.value.ok) setCharges(await chargesRes.value.json());
           if (versionsRes.status === 'fulfilled' && versionsRes.value.ok) {
             const v = await versionsRes.value.json();
             const vers = v.versions || [];
@@ -93,6 +96,29 @@ export default function ReturnSettlementPage() {
   const reloadSnapshot = async () => {
     const res = await authFetch(`${BACKEND_URL}/api/finance/orders/${orderId}/snapshot`);
     if (res.ok) setSnapshot(await res.json());
+  };
+
+  const reloadCharges = async () => {
+    const res = await authFetch(`${BACKEND_URL}/api/finance/order/${orderId}/charges`);
+    if (res.ok) setCharges(await res.json());
+  };
+
+  const handleAddLateFee = async (amount, note) => {
+    if (!amount || amount <= 0) return;
+    setSaving(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/order/${orderId}/charges/add`, {
+        method: 'POST',
+        body: JSON.stringify({ type: 'late', amount, note }),
+      });
+      if (res.ok) {
+        await Promise.all([reloadSnapshot(), reloadCharges()]);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Помилка: ${err.detail || 'Не вдалося нарахувати'}`);
+      }
+    } catch (e) { alert(`Помилка: ${e.message}`); }
+    finally { setSaving(false); }
   };
 
   const getUser = () => JSON.parse(localStorage.getItem("user") || "{}");
@@ -494,13 +520,52 @@ export default function ReturnSettlementPage() {
                     </div>
                   )}
 
-                  {/* Late fees total */}
-                  {parts.some(p => p.lateFee > 0) && (
-                    <div className="flex justify-between font-medium pt-2 border-t border-slate-100">
-                      <span className="text-red-600 flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> Прострочка</span>
-                      <span className="text-red-600">{money(parts.reduce((s, p) => s + p.lateFee, 0))}</span>
-                    </div>
-                  )}
+                  {/* Late fees — from charges API + calculated */}
+                  {(() => {
+                    const calcLate = parts.reduce((s, p) => s + p.lateFee, 0);
+                    const chargesLate = charges?.late;
+                    const lateTotal = chargesLate?.total || 0;
+                    const latePaid = chargesLate?.paid || 0;
+                    const lateDue = chargesLate?.due || 0;
+                    const hasLate = calcLate > 0 || lateTotal > 0;
+                    
+                    if (!hasLate) return null;
+                    return (
+                      <div className="pt-2 border-t border-slate-100 space-y-1">
+                        <div className="flex justify-between font-medium">
+                          <span className="text-red-600 flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> Прострочка</span>
+                          <span className="text-red-600">{money(lateTotal || calcLate)}</span>
+                        </div>
+                        {latePaid > 0 && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-emerald-500">Оплачено</span>
+                            <span className="text-emerald-600">{money(latePaid)}</span>
+                          </div>
+                        )}
+                        {lateDue > 0 && (
+                          <div className="flex justify-between text-xs font-medium">
+                            <span className="text-red-500">До сплати</span>
+                            <span className="text-red-600">{money(lateDue)}</span>
+                          </div>
+                        )}
+                        {/* Button to add calculated late fee if not yet charged */}
+                        {calcLate > 0 && lateTotal === 0 && (
+                          <button
+                            onClick={() => {
+                              const note = parts.filter(p => p.lateDays > 0).map(p => `${p.displayNumber}: ${p.lateDays} дн.`).join(', ');
+                              handleAddLateFee(calcLate, `Прострочка: ${note}`);
+                            }}
+                            disabled={saving}
+                            className="w-full mt-1 py-2 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                            data-testid="add-late-fee-btn"
+                          >
+                            <Timer className="w-3 h-3" />
+                            Нарахувати {money(calcLate)}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Damage */}
                   {damage && damage.total > 0 && (
@@ -636,6 +701,7 @@ export default function ReturnSettlementPage() {
                       <div className="flex gap-1.5 flex-wrap">
                         {totals?.rent_due > 0 && <button onClick={() => { setPayType('rent'); setPayAmount(String(totals.rent_due)); }} className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 font-medium">Борг: {money(totals.rent_due)}</button>}
                         {damage?.due > 0 && <button onClick={() => { setPayType('damage'); setPayAmount(String(damage.due)); }} className="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full hover:bg-rose-200 font-medium">Шкода: {money(damage.due)}</button>}
+                        {charges?.late?.due > 0 && <button onClick={() => { setPayType('late'); setPayAmount(String(charges.late.due)); }} className="text-[10px] px-2 py-0.5 bg-red-100 text-red-700 rounded-full hover:bg-red-200 font-medium">Простр: {money(charges.late.due)}</button>}
                       </div>
                     )}
                   </div>

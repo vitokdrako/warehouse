@@ -343,6 +343,33 @@
         </tbody>
       </table>
 
+      <!-- LATE FEES -->
+      {% if late and late.rows and late.rows|length > 0 %}
+      <div class="sectionTitle" style="color:var(--danger)">Нарахування за прострочення повернення</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px" class="center">№</th>
+            <th>Опис</th>
+            <th style="width:130px" class="right nowrap">Сума</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in late.rows %}
+          <tr>
+            <td class="center mono">{{ loop.index }}</td>
+            <td>{{ l.note }}</td>
+            <td class="right mono nowrap">{{ "%.2f"|format(l.amount or 0) }} грн</td>
+          </tr>
+          {% endfor %}
+          <tr class="total-row">
+            <td colspan="2" class="right" style="text-transform:uppercase;letter-spacing:.05em;font-size:12px">Прострочення:</td>
+            <td class="right mono nowrap" style="color:var(--danger);font-size:16px">{{ "%.2f"|format(late.total or 0) }} грн</td>
+          </tr>
+        </tbody>
+      </table>
+      {% endif %}
+
       <!-- BOTTOM -->
       <div class="bottomRow">
         <div class="noteBox">
@@ -359,14 +386,20 @@
           <h3>До відшкодування</h3>
           {% if damage and damage.rows %}
             <div class="trow">
-              <div class="label">Позицій</div>
-              <div class="val mono">{{ damage.rows|length }}</div>
+              <div class="label">Шкода ({{ damage.rows|length }} поз.)</div>
+              <div class="val mono">{{ "%.2f"|format(damage.total or 0) }} грн</div>
             </div>
-            <div class="divider"></div>
           {% endif %}
+          {% if late and late.total > 0 %}
+            <div class="trow">
+              <div class="label">Прострочення</div>
+              <div class="val mono">{{ "%.2f"|format(late.total or 0) }} грн</div>
+            </div>
+          {% endif %}
+          <div class="divider"></div>
           <div class="grand">
             <div class="label">Всього</div>
-            <div class="val mono">{{ "%.2f"|format(damage.total or 0) }} грн</div>
+            <div class="val mono">{{ "%.2f"|format(grand_total or damage.total or 0) }} грн</div>
           </div>
         </div>
       </div>

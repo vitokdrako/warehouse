@@ -627,6 +627,24 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
             "qty": int(row[6] or 1),
         })
     
+    # Get late fees
+    late_result = db.execute(text("""
+        SELECT amount, status, note FROM fin_payments 
+        WHERE order_id = :order_id AND payment_type = 'late'
+        ORDER BY occurred_at
+    """), {"order_id": order_id})
+    
+    late_rows = []
+    late_total = 0
+    for row in late_result:
+        amt = float(row[0] or 0)
+        late_total += amt
+        late_rows.append({
+            "note": row[2] or "Прострочення повернення",
+            "amount": amt,
+            "status": row[1],
+        })
+    
     now = datetime.now()
     months_ua = ["січня","лютого","березня","квітня","травня","червня",
                  "липня","серпня","вересня","жовтня","листопада","грудня"]
@@ -656,6 +674,11 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
             "rows": damage_rows,
             "total": total_fee,
         },
+        "late": {
+            "rows": late_rows,
+            "total": late_total,
+        },
+        "grand_total": total_fee + late_total,
         "generated_at": now.strftime("%d.%m.%Y %H:%M"),
     }
 

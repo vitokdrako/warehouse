@@ -416,7 +416,7 @@ DOC_REGISTRY = {
         "name_en": "Defect Act",
         "entity_type": "order",
         "series": "DEF",
-        "template": "defect_act.html",
+        "template": "defect_act/v1.html",
         "requirements": ["order_id"],
         "description": "Акт фіксації дефектів/пошкоджень повернутого декору",
         "trigger_stage": "after_return",

@@ -528,6 +528,7 @@ async def get_order_details(
     # [12]rental_days, [13]notes, [14]created_at,
     # [15]discount_amount, [16]manager_id, [17]issue_time, [18]return_time,
     # [19]manager_name, [20]discount_percent, [21]service_fee, [22]service_fee_name
+    # [23]client_notes
     result = db.execute(text("""
         SELECT 
             o.order_id, o.order_number, o.customer_id, o.customer_name, 
@@ -537,9 +538,11 @@ async def get_order_details(
             o.discount_amount, o.manager_id, o.issue_time, o.return_time,
             CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, '')) as manager_name,
             o.discount_percent, COALESCE(o.service_fee, 0) as service_fee,
-            o.service_fee_name
+            o.service_fee_name,
+            c.notes as client_notes
         FROM orders o
         LEFT JOIN users u ON o.manager_id = u.user_id
+        LEFT JOIN client_users c ON o.customer_id = c.id
         WHERE o.order_id = :order_id
     """), {"order_id": order_id})
     
@@ -592,6 +595,7 @@ async def get_order_details(
     order["discount_percent"] = round(discount_percent_db, 2)
     order["service_fee"] = float(row[21]) if row[21] else 0
     order["service_fee_name"] = row[22] or ""
+    order["client_notes"] = row[23] if len(row) > 23 else None  # Нотатки про клієнта
     
     # Завантажити items
     items_result = db.execute(text("""

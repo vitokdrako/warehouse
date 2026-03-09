@@ -34,6 +34,7 @@ class ClientCreate(BaseModel):
 class ClientUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    email: Optional[str] = None
     company_hint: Optional[str] = None
     notes: Optional[str] = None
     preferred_contact: Optional[str] = None
@@ -419,6 +420,18 @@ async def update_client(client_id: int, data: ClientUpdate, db: Session = Depend
     if data.is_active is not None:
         updates.append("is_active = :active")
         params["active"] = data.is_active
+    if data.payer_type is not None:
+        updates.append("payer_type = :payer_type")
+        params["payer_type"] = data.payer_type if data.payer_type else None
+    if data.tax_id is not None:
+        updates.append("tax_id = :tax_id")
+        params["tax_id"] = data.tax_id if data.tax_id else None
+    if data.email is not None:
+        updates.append("email = :email")
+        params["email"] = data.email
+        # Оновити також нормалізований email
+        updates.append("email_normalized = :email_normalized")
+        params["email_normalized"] = data.email.lower().strip() if data.email else None
     
     if updates:
         sql = f"UPDATE client_users SET {', '.join(updates)} WHERE id = :id"

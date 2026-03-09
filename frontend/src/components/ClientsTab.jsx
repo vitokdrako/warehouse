@@ -364,6 +364,19 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   const [editingPayer, setEditingPayer] = useState(null);
   const [loading, setLoading] = useState(true);
   
+  // Edit client state
+  const [isEditingClient, setIsEditingClient] = useState(false);
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    phone: '',
+    email: '',
+    company_hint: '',
+    notes: '',
+    payer_type: '',
+    tax_id: ''
+  });
+  const [savingClient, setSavingClient] = useState(false);
+  
   // Master Agreement state (client-based only)
   const [clientMA, setClientMA] = useState(null);
   const [creatingMA, setCreatingMA] = useState(false);
@@ -371,8 +384,51 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   useEffect(() => {
     if (client?.id) {
       loadClientData();
+      // Initialize edit form with client data
+      setEditForm({
+        full_name: client.full_name || client.name || '',
+        phone: client.phone || '',
+        email: client.email || '',
+        company_hint: client.company_hint || '',
+        notes: client.notes || '',
+        payer_type: client.payer_type || '',
+        tax_id: client.tax_id || ''
+      });
     }
   }, [client?.id]);
+
+  // === SAVE CLIENT ===
+  const handleSaveClient = async () => {
+    setSavingClient(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/clients/${client.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          full_name: editForm.full_name,
+          phone: editForm.phone,
+          email: editForm.email,
+          company_hint: editForm.company_hint,
+          notes: editForm.notes,
+          payer_type: editForm.payer_type || null,
+          tax_id: editForm.tax_id || null
+        })
+      });
+      if (res.ok) {
+        alert("✅ Клієнта оновлено");
+        setIsEditingClient(false);
+        onUpdate?.();
+        loadClientData();
+      } else {
+        const err = await res.json();
+        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
+      }
+    } catch (err) {
+      console.error("Error saving client:", err);
+      alert("❌ Помилка збереження");
+    } finally {
+      setSavingClient(false);
+    }
+  };
 
   const loadClientData = async () => {
     setLoading(true);
@@ -573,164 +629,289 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
               {/* Contact Tab */}
               {activeTab === "contact" && (
                 <div className="space-y-4">
-                  {/* Client MA Block */}
-                  <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-4">
-                    <div className="text-sm font-medium text-purple-800 mb-2">📋 Рамковий договір</div>
-                    
-                    {clientMA?.exists ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className={cn(
-                              "text-xs px-2 py-0.5 rounded-full",
-                              clientMA.status === 'signed' ? "bg-emerald-100 text-emerald-700" :
-                              clientMA.status === 'draft' ? "bg-amber-100 text-amber-700" :
-                              clientMA.status === 'sent' ? "bg-blue-100 text-blue-700" :
-                              "bg-slate-100 text-slate-600"
-                            )}>
-                              {clientMA.status === 'signed' ? '✅ Підписано' :
-                               clientMA.status === 'draft' ? '⏳ Чернетка' :
-                               clientMA.status === 'sent' ? '📤 Відправлено' :
-                               clientMA.status}
-                            </span>
-                            <span className="text-sm font-medium text-slate-800 ml-2">{clientMA.contract_number}</span>
-                          </div>
+                  {/* Edit/View Toggle Button */}
+                  <div className="flex justify-end">
+                    <Button
+                      variant={isEditingClient ? "danger" : "ghost"}
+                      size="sm"
+                      onClick={() => {
+                        if (isEditingClient) {
+                          // Cancel editing - reset form
+                          setEditForm({
+                            full_name: client.full_name || client.name || '',
+                            phone: client.phone || '',
+                            email: client.email || '',
+                            company_hint: client.company_hint || '',
+                            notes: client.notes || '',
+                            payer_type: client.payer_type || '',
+                            tax_id: client.tax_id || ''
+                          });
+                        }
+                        setIsEditingClient(!isEditingClient);
+                      }}
+                    >
+                      {isEditingClient ? "✕ Скасувати" : "✏️ Редагувати"}
+                    </Button>
+                  </div>
+
+                  {/* Edit Form or View Mode */}
+                  {isEditingClient ? (
+                    <div className="space-y-4 bg-blue-50 border border-blue-100 rounded-xl p-4">
+                      <div className="text-sm font-medium text-blue-800 mb-2">📝 Редагування клієнта</div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-slate-600 block mb-1">Ім'я *</label>
+                          <input
+                            type="text"
+                            value={editForm.full_name}
+                            onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            placeholder="ПІБ клієнта"
+                          />
                         </div>
+                        <div>
+                          <label className="text-xs text-slate-600 block mb-1">Телефон *</label>
+                          <input
+                            type="text"
+                            value={editForm.phone}
+                            onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            placeholder="+380..."
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-600 block mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={editForm.email}
+                            onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            placeholder="email@example.com"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-600 block mb-1">Компанія</label>
+                          <input
+                            type="text"
+                            value={editForm.company_hint}
+                            onChange={(e) => setEditForm({...editForm, company_hint: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            placeholder="Назва компанії"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-600 block mb-1">ЄДРПОУ/ІПН</label>
+                          <input
+                            type="text"
+                            value={editForm.tax_id}
+                            onChange={(e) => setEditForm({...editForm, tax_id: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-mono"
+                            placeholder="12345678"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-600 block mb-1">Тип платника</label>
+                          <select
+                            value={editForm.payer_type}
+                            onChange={(e) => setEditForm({...editForm, payer_type: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                          >
+                            <option value="">Не вказано</option>
+                            <option value="individual">Фіз. особа</option>
+                            <option value="fop">ФОП</option>
+                            <option value="fop_simple">ФОП (спрощ.)</option>
+                            <option value="tov">ТОВ</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="text-xs text-slate-600 block mb-1">Нотатки (видно в замовленнях)</label>
+                        <textarea
+                          value={editForm.notes}
+                          onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm min-h-[100px]"
+                          placeholder="Особливості клієнта, важливі примітки..."
+                        />
+                      </div>
+                      
+                      <Button
+                        variant="success"
+                        onClick={handleSaveClient}
+                        disabled={savingClient || !editForm.full_name || !editForm.phone}
+                        className="w-full"
+                      >
+                        {savingClient ? "Збереження..." : "💾 Зберегти зміни"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Client MA Block */}
+                      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-4">
+                        <div className="text-sm font-medium text-purple-800 mb-2">📋 Рамковий договір</div>
                         
-                        {clientMA.valid_until && (
-                          <div className="text-xs text-slate-600">
-                            Дійсний до: {new Date(clientMA.valid_until).toLocaleDateString('uk-UA')}
+                        {clientMA?.exists ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className={cn(
+                                  "text-xs px-2 py-0.5 rounded-full",
+                                  clientMA.status === 'signed' ? "bg-emerald-100 text-emerald-700" :
+                                  clientMA.status === 'draft' ? "bg-amber-100 text-amber-700" :
+                                  clientMA.status === 'sent' ? "bg-blue-100 text-blue-700" :
+                                  "bg-slate-100 text-slate-600"
+                                )}>
+                                  {clientMA.status === 'signed' ? '✅ Підписано' :
+                                   clientMA.status === 'draft' ? '⏳ Чернетка' :
+                                   clientMA.status === 'sent' ? '📤 Відправлено' :
+                                   clientMA.status}
+                                </span>
+                                <span className="text-sm font-medium text-slate-800 ml-2">{clientMA.contract_number}</span>
+                              </div>
+                            </div>
+                            
+                            {clientMA.valid_until && (
+                              <div className="text-xs text-slate-600">
+                                Дійсний до: {new Date(clientMA.valid_until).toLocaleDateString('uk-UA')}
+                              </div>
+                            )}
+                            
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-8"
+                                onClick={() => handlePreviewMA(clientMA.id)}
+                              >
+                                👁 Переглянути
+                              </Button>
+                              
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-8"
+                                onClick={() => window.open(`${BACKEND_URL}/api/agreements/${clientMA.id}/pdf`, '_blank')}
+                              >
+                                📥 PDF
+                              </Button>
+                              
+                              {clientMA.status === 'draft' && (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  className="text-xs h-8"
+                                  onClick={() => handleSignClientMA(clientMA.id)}
+                                >
+                                  ✍️ Підписати
+                                </Button>
+                              )}
+                              
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-8"
+                                onClick={() => handleSendMAEmail(clientMA.id)}
+                              >
+                                📧 Email
+                              </Button>
+                            </div>
                           </div>
-                        )}
-                        
-                        <div className="flex gap-2 mt-2 flex-wrap">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-8"
-                            onClick={() => handlePreviewMA(clientMA.id)}
-                          >
-                            👁 Переглянути
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-8"
-                            onClick={() => window.open(`${BACKEND_URL}/api/agreements/${clientMA.id}/pdf`, '_blank')}
-                          >
-                            📥 PDF
-                          </Button>
-                          
-                          {clientMA.status === 'draft' && (
+                        ) : (
+                          <div className="text-center py-2">
+                            <p className="text-sm text-slate-600 mb-2">Договір не створено</p>
                             <Button
                               variant="primary"
                               size="sm"
-                              className="text-xs h-8"
-                              onClick={() => handleSignClientMA(clientMA.id)}
+                              onClick={handleCreateClientMA}
+                              disabled={creatingMA === client.id}
+                              className="w-full"
                             >
-                              ✍️ Підписати
+                              {creatingMA === client.id ? "Створення..." : "📋 Створити договір"}
                             </Button>
-                          )}
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-xs h-8"
-                            onClick={() => handleSendMAEmail(clientMA.id)}
-                          >
-                            📧 Email
-                          </Button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Payer Type */}
+                      <div className="bg-slate-50 rounded-xl p-4">
+                        <div className="text-sm font-medium text-slate-700 mb-2">💳 Тип платника</div>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { value: 'individual', label: '👤 Фіз. особа' },
+                            { value: 'fop', label: '🏪 ФОП' },
+                            { value: 'fop_simple', label: '🏪 ФОП (спрощ.)' },
+                            { value: 'tov', label: '🏢 ТОВ' }
+                          ].map(type => (
+                            <span
+                              key={type.value}
+                              className={cn(
+                                "text-xs px-3 py-1.5 rounded-full cursor-pointer transition",
+                                client.payer_type === type.value
+                                  ? "bg-slate-900 text-white"
+                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+                              )}
+                              onClick={() => {
+                                // TODO: Update payer type
+                              }}
+                            >
+                              {type.label}
+                            </span>
+                          ))}
+                        </div>
+                        {client.tax_id && (
+                          <div className="mt-2 text-xs text-slate-600">
+                            ЄДРПОУ/ІПН: <span className="font-mono">{client.tax_id}</span>
+                          </div>
+                        )}
+                      </div>
+                    
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs text-slate-500">Email</label>
+                          <p className="font-medium">{client.email}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-500">Телефон</label>
+                          <p className="font-medium">{client.phone || "—"}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-500">Джерело</label>
+                          <p className="font-medium">{client.source || "rentalhub"}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-500">Компанія (підказка)</label>
+                          <p className="font-medium">{client.company_hint || "—"}</p>
                         </div>
                       </div>
-                    ) : (
-                      <div className="text-center py-2">
-                        <p className="text-sm text-slate-600 mb-2">Договір не створено</p>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={handleCreateClientMA}
-                          disabled={creatingMA === client.id}
-                          className="w-full"
-                        >
-                          {creatingMA === client.id ? "Створення..." : "📋 Створити договір"}
-                        </Button>
+                      
+                      {/* Notes Block - Always visible */}
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <div className="text-sm font-medium text-amber-800 mb-2">📝 Нотатки про клієнта</div>
+                        {client.notes ? (
+                          <p className="text-sm text-amber-900 whitespace-pre-wrap">{client.notes}</p>
+                        ) : (
+                          <p className="text-sm text-amber-600 italic">Нотаток немає. Натисніть "Редагувати" щоб додати.</p>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  
-                  {/* Payer Type */}
-                  <div className="bg-slate-50 rounded-xl p-4">
-                    <div className="text-sm font-medium text-slate-700 mb-2">💳 Тип платника</div>
-                    <div className="flex gap-2 flex-wrap">
-                      {[
-                        { value: 'individual', label: '👤 Фіз. особа' },
-                        { value: 'fop', label: '🏪 ФОП' },
-                        { value: 'fop_simple', label: '🏪 ФОП (спрощ.)' },
-                        { value: 'tov', label: '🏢 ТОВ' }
-                      ].map(type => (
-                        <span
-                          key={type.value}
-                          className={cn(
-                            "text-xs px-3 py-1.5 rounded-full cursor-pointer transition",
-                            client.payer_type === type.value
-                              ? "bg-slate-900 text-white"
-                              : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                          )}
-                          onClick={() => {
-                            // TODO: Update payer type
-                          }}
-                        >
-                          {type.label}
-                        </span>
-                      ))}
-                    </div>
-                    {client.tax_id && (
-                      <div className="mt-2 text-xs text-slate-600">
-                        ЄДРПОУ/ІПН: <span className="font-mono">{client.tax_id}</span>
+                      
+                      <div className="pt-4 border-t border-slate-100">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <div className="text-2xl font-bold text-slate-900">{client.orders_count || 0}</div>
+                            <div className="text-xs text-slate-500">Замовлень</div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-slate-900">{payers.length}</div>
+                            <div className="text-xs text-slate-500">Платників</div>
+                          </div>
+                          <div>
+                            <PayerStatusBadge status={payers.some(p => p.type !== "pending") ? "ok" : (payers.length > 0 ? "pending" : "missing")} />
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-slate-500">Email</label>
-                      <p className="font-medium">{client.email}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500">Телефон</label>
-                      <p className="font-medium">{client.phone || "—"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500">Джерело</label>
-                      <p className="font-medium">{client.source || "rentalhub"}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500">Компанія (підказка)</label>
-                      <p className="font-medium">{client.company_hint || "—"}</p>
-                    </div>
-                  </div>
-                  {client.notes && (
-                    <div>
-                      <label className="text-xs text-slate-500">Нотатки</label>
-                      <p className="text-sm bg-slate-50 rounded-xl p-3">{client.notes}</p>
-                    </div>
+                    </>
                   )}
-                  <div className="pt-4 border-t border-slate-100">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-2xl font-bold text-slate-900">{client.orders_count || 0}</div>
-                        <div className="text-xs text-slate-500">Замовлень</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-slate-900">{payers.length}</div>
-                        <div className="text-xs text-slate-500">Платників</div>
-                      </div>
-                      <div>
-                        <PayerStatusBadge status={payers.some(p => p.type !== "pending") ? "ok" : (payers.length > 0 ? "pending" : "missing")} />
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
 

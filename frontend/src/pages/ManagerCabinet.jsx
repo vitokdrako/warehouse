@@ -626,6 +626,13 @@ function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, merge
           </div>
         )}
         
+        {/* Client notes (from client profile) */}
+        {order.client_notes && (
+          <div className="mt-3 p-2 bg-purple-50 border border-purple-200 rounded-lg text-xs text-purple-800">
+            📋 <span className="font-medium">Примітка про клієнта:</span> {order.client_notes}
+          </div>
+        )}
+        
         {/* Customer comment */}
         {order.customer_comment && (
           <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">

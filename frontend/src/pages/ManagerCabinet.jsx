@@ -273,7 +273,7 @@ export default function ManagerCabinet() {
                 <div className="text-2xl font-bold text-slate-800">{filteredOrders.length}</div>
                 <div className="text-xs text-slate-400">{awaitingOrders.length} нові / {inProgressOrders.length} в роботі</div>
               </div>
-              <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="bg-white rounded-xl border border-slate-200 p-4 cursor-pointer hover:ring-2 hover:ring-emerald-200 hover:shadow-md transition-all" onClick={() => window.open('/kasa', '_blank')} data-testid="kpi-revenue">
                 <div className="text-sm text-slate-500">Виручка (місяць)</div>
                 <div className="text-2xl font-bold text-emerald-600">₴{(financeData.revenue || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}</div>
                 <div className="text-xs text-slate-400 flex items-center gap-3">

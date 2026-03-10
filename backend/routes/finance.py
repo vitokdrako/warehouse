@@ -2546,3 +2546,251 @@ async def get_payouts_stats_optimized(db: Session = Depends(get_rh_db)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================================
+# KASA (CASH REGISTER) - 3-column view
+# ============================================================
+
+@router.get("/kasa")
+async def get_kasa_data(
+    period: str = "month",
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Каса — три колонки:
+    1. Дохід (оплати оренди): готівка/безготівка, ордер, дата
+    2. Депозити: прийняті/повернуті/утримані
+    3. Витрати: опис, сума, метод, дата
+    """
+    try:
+        # Date filter
+        date_filter_payments = ""
+        date_filter_expenses = ""
+        date_filter_deposits = ""
+        params = {}
+        
+        if period == "day":
+            date_filter_payments = "AND p.occurred_at >= CURDATE()"
+            date_filter_expenses = "AND e.occurred_at >= CURDATE()"
+            date_filter_deposits = "AND d.opened_at >= CURDATE()"
+        elif period == "week":
+            date_filter_payments = "AND p.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+            date_filter_expenses = "AND e.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+            date_filter_deposits = "AND d.opened_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+        elif period == "month":
+            date_filter_payments = "AND MONTH(p.occurred_at) = MONTH(CURDATE()) AND YEAR(p.occurred_at) = YEAR(CURDATE())"
+            date_filter_expenses = "AND MONTH(e.occurred_at) = MONTH(CURDATE()) AND YEAR(e.occurred_at) = YEAR(CURDATE())"
+            date_filter_deposits = "AND MONTH(d.opened_at) = MONTH(CURDATE()) AND YEAR(d.opened_at) = YEAR(CURDATE())"
+        elif period == "all":
+            pass  # no filter
+        
+        # === 1. INCOME (rent/damage/late/additional payments) ===
+        income_rows = db.execute(text(f"""
+            SELECT p.id, p.payment_type, p.method, p.amount, p.currency,
+                   p.occurred_at, p.note, p.status,
+                   p.accepted_by_name, p.description,
+                   o.order_number, o.customer_name, p.order_id
+            FROM fin_payments p
+            LEFT JOIN orders o ON o.order_id = p.order_id
+            WHERE p.payment_type IN ('rent', 'additional', 'damage', 'late')
+            AND p.status IN ('completed', 'confirmed')
+            {date_filter_payments}
+            ORDER BY p.occurred_at DESC
+        """))
+        
+        income = []
+        income_cash_total = 0
+        income_bank_total = 0
+        for r in income_rows:
+            amt = float(r[3] or 0)
+            method = r[2] or 'cash'
+            if method == 'cash':
+                income_cash_total += amt
+            else:
+                income_bank_total += amt
+            
+            type_labels = {"rent": "Оренда", "additional": "Донарахування", "damage": "Шкода", "late": "Прострочення"}
+            income.append({
+                "id": r[0],
+                "type": r[1],
+                "type_label": type_labels.get(r[1], r[1]),
+                "method": method,
+                "amount": amt,
+                "currency": r[4] or "UAH",
+                "date": r[5].isoformat() if r[5] else None,
+                "note": r[6],
+                "status": r[7],
+                "accepted_by": r[8],
+                "description": r[9],
+                "order_number": r[10],
+                "customer_name": r[11],
+                "order_id": r[12],
+            })
+        
+        # === 2. DEPOSITS ===
+        deposit_rows = db.execute(text(f"""
+            SELECT d.id, d.order_id, d.held_amount, d.actual_amount, d.currency,
+                   d.exchange_rate, d.used_amount, d.refunded_amount, d.status,
+                   d.opened_at, d.closed_at, d.note,
+                   o.order_number, o.customer_name,
+                   d.expected_amount
+            FROM fin_deposit_holds d
+            LEFT JOIN orders o ON o.order_id = d.order_id
+            WHERE 1=1 {date_filter_deposits}
+            ORDER BY d.opened_at DESC
+        """))
+        
+        deposits = []
+        deposits_held_total = 0
+        deposits_refunded_total = 0
+        deposits_used_total = 0
+        for r in deposit_rows:
+            held = float(r[2] or 0)
+            actual = float(r[3] or 0) if r[3] else held
+            used = float(r[6] or 0)
+            refunded = float(r[7] or 0)
+            available = held - used - refunded
+            currency = r[4] or 'UAH'
+            
+            deposits_held_total += held
+            deposits_refunded_total += refunded
+            deposits_used_total += used
+            
+            deposits.append({
+                "id": r[0],
+                "order_id": r[1],
+                "held_amount": held,
+                "actual_amount": actual,
+                "currency": currency,
+                "exchange_rate": float(r[5]) if r[5] else 1.0,
+                "used_amount": used,
+                "refunded_amount": refunded,
+                "available": max(0, available),
+                "status": r[8],
+                "opened_at": r[9].isoformat() if r[9] else None,
+                "closed_at": r[10].isoformat() if r[10] else None,
+                "note": r[11],
+                "order_number": r[12],
+                "customer_name": r[13],
+                "expected_amount": float(r[14] or 0),
+            })
+        
+        # Deposit payments (to know cash/bank)
+        dep_payments = db.execute(text(f"""
+            SELECT p.method, SUM(p.amount) as total
+            FROM fin_payments p
+            WHERE p.payment_type = 'deposit'
+            AND p.status IN ('completed', 'confirmed')
+            {date_filter_payments}
+            GROUP BY p.method
+        """))
+        dep_by_method = {}
+        for r in dep_payments:
+            dep_by_method[r[0] or 'cash'] = float(r[1] or 0)
+        
+        # === 3. EXPENSES ===
+        expense_rows = db.execute(text(f"""
+            SELECT e.id, e.expense_type, c.code, c.name, e.amount, e.currency,
+                   e.method, e.occurred_at, e.note, e.status, e.order_id
+            FROM fin_expenses e
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE e.status = 'posted'
+            {date_filter_expenses}
+            ORDER BY e.occurred_at DESC
+        """))
+        
+        expenses = []
+        expenses_cash_total = 0
+        expenses_bank_total = 0
+        for r in expense_rows:
+            amt = float(r[4] or 0)
+            method = r[6] or 'cash'
+            if method == 'cash':
+                expenses_cash_total += amt
+            else:
+                expenses_bank_total += amt
+            
+            expenses.append({
+                "id": r[0],
+                "expense_type": r[1],
+                "category_code": r[2],
+                "category_name": r[3] or "Без категорії",
+                "amount": amt,
+                "currency": r[5] or "UAH",
+                "method": method,
+                "date": r[7].isoformat() if r[7] else None,
+                "note": r[8],
+                "status": r[9],
+                "order_id": r[10],
+            })
+        
+        # Refund payments (to show in expenses column)
+        refund_rows = db.execute(text(f"""
+            SELECT p.id, p.method, p.amount, p.occurred_at, p.note,
+                   o.order_number, o.customer_name, p.order_id
+            FROM fin_payments p
+            LEFT JOIN orders o ON o.order_id = p.order_id
+            WHERE p.payment_type = 'refund'
+            AND p.status IN ('completed', 'confirmed')
+            {date_filter_payments}
+            ORDER BY p.occurred_at DESC
+        """))
+        
+        refunds = []
+        for r in refund_rows:
+            amt = float(r[2] or 0)
+            method = r[1] or 'cash'
+            if method == 'cash':
+                expenses_cash_total += amt
+            else:
+                expenses_bank_total += amt
+            refunds.append({
+                "id": r[0],
+                "method": method,
+                "amount": amt,
+                "date": r[3].isoformat() if r[3] else None,
+                "note": r[4],
+                "order_number": r[5],
+                "customer_name": r[6],
+                "order_id": r[7],
+            })
+        
+        return {
+            "period": period,
+            "income": {
+                "items": income,
+                "cash_total": income_cash_total,
+                "bank_total": income_bank_total,
+                "total": income_cash_total + income_bank_total,
+                "count": len(income),
+            },
+            "deposits": {
+                "items": deposits,
+                "held_total": deposits_held_total,
+                "refunded_total": deposits_refunded_total,
+                "used_total": deposits_used_total,
+                "available_total": deposits_held_total - deposits_refunded_total - deposits_used_total,
+                "cash_received": dep_by_method.get('cash', 0),
+                "bank_received": dep_by_method.get('bank', 0),
+                "count": len(deposits),
+            },
+            "expenses": {
+                "items": expenses,
+                "refunds": refunds,
+                "cash_total": expenses_cash_total,
+                "bank_total": expenses_bank_total,
+                "total": expenses_cash_total + expenses_bank_total,
+                "count": len(expenses) + len(refunds),
+            },
+            "summary": {
+                "net_cash": income_cash_total - expenses_cash_total,
+                "net_bank": income_bank_total - expenses_bank_total,
+                "net_total": (income_cash_total + income_bank_total) - (expenses_cash_total + expenses_bank_total),
+            }
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

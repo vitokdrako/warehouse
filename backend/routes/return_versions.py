@@ -369,6 +369,22 @@ async def get_active_versions(
     """
     ensure_version_tables(db)
     
+    # Auto-close stuck versions (completed/cancelled orders or 0 items)
+    try:
+        db.execute(text("""
+            UPDATE partial_return_versions v
+            LEFT JOIN orders o ON v.parent_order_id = o.order_id
+            SET v.status = 'completed'
+            WHERE v.status = 'active'
+            AND (
+                o.status IN ('completed', 'cancelled', 'archived')
+                OR (SELECT COUNT(*) FROM partial_return_version_items WHERE version_id = v.version_id) = 0
+            )
+        """))
+        db.commit()
+    except Exception:
+        db.rollback()
+    
     versions = db.execute(text("""
         SELECT v.version_id, v.parent_order_id, v.display_number,
                v.customer_name, v.customer_phone,

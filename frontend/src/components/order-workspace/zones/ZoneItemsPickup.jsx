@@ -78,13 +78,11 @@ function CompactItemCard({
   
   // Packaging options
   const packagingOptions = [
-    { key: 'cover', label: 'Чохол' },
-    { key: 'box', label: 'Коробка' },
-    { key: 'stretch', label: 'Стретч' },
-    { key: 'black_case', label: 'Чорний кейс' },
-    { key: 'foam', label: 'Поролон' },
-    { key: 'paper', label: 'Папір' },
-    { key: 'bubble', label: 'Бульбашка' },
+    { key: 'native_cover', label: 'Рідний чохол' },
+    { key: 'native_box', label: 'Рідна коробка' },
+    { key: 'felt', label: 'Войлок' },
+    { key: 'special', label: 'Спец. пакування' },
+    { key: 'other', label: 'Інше' },
   ]
   
   const selectedPackaging = packagingOptions.filter(p => item.packaging?.[p.key]).map(p => p.label)
@@ -400,16 +398,27 @@ function CompactItemCard({
                   className={`
                     flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors
                     ${item.packaging?.[opt.key] ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}
+                    ${opt.key === 'other' ? 'col-span-2' : ''}
                   `}
                 >
                   <input 
                     type="checkbox" 
-                    checked={item.packaging?.[opt.key] || false} 
-                    onChange={(e) => !readOnly && onPackagingChange?.(item.id, opt.key, e.target.checked)} 
+                    checked={!!item.packaging?.[opt.key]} 
+                    onChange={(e) => !readOnly && onPackagingChange?.(item.id, opt.key, opt.key === 'other' ? (e.target.checked ? (item.packaging?.other_text || '') || true : false) : e.target.checked)} 
                     disabled={readOnly}
                     className="w-5 h-5 rounded" 
                   />
                   <span className="text-sm font-medium">{opt.label}</span>
+                  {opt.key === 'other' && item.packaging?.other && (
+                    <input
+                      type="text"
+                      value={item.packaging?.other_text || ''}
+                      onChange={(e) => !readOnly && onPackagingChange?.(item.id, 'other_text', e.target.value)}
+                      placeholder="Опишіть пакування..."
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 ml-1 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-emerald-400"
+                    />
+                  )}
                 </label>
               ))}
             </div>

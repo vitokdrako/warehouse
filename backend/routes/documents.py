@@ -1133,6 +1133,39 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
     executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
     
+    # Load per-item packaging from issue_cards
+    item_packaging_map = {}
+    ITEM_PACK_LABELS = {
+        "native_cover": "Рідний чохол",
+        "native_box": "Рідна коробка",
+        "felt": "Войлок",
+        "special": "Спец. пакування",
+        # "other" handled separately with other_text
+        # Legacy keys
+        "cover": "Чохол",
+        "box": "Коробка",
+    }
+    try:
+        ic_row = db.execute(text("""
+            SELECT items FROM issue_cards WHERE order_id = :oid ORDER BY id DESC LIMIT 1
+        """), {"oid": order_id}).fetchone()
+        if ic_row and ic_row[0]:
+            ic_items = json.loads(ic_row[0]) if isinstance(ic_row[0], str) else ic_row[0]
+            for ic_item in ic_items:
+                item_id = ic_item.get("id")
+                pkg = ic_item.get("packaging", {})
+                if item_id and pkg:
+                    labels = []
+                    for key, label in ITEM_PACK_LABELS.items():
+                        if pkg.get(key):
+                            labels.append(label)
+                    if pkg.get("other"):
+                        other_text = pkg.get("other_text", "")
+                        labels.append(f"Інше: {other_text}" if other_text else "Інше")
+                    item_packaging_map[item_id] = labels
+    except Exception:
+        pass
+    
     # Format items with full details
     formatted_items = []
     total_qty = 0
@@ -1140,6 +1173,10 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
         qty = it[3] or 1
         total_qty += qty
         sku = it[7] or "—"
+        item_id = it[0]  # order_items.id
+        
+        # Per-item packaging
+        pack_labels = item_packaging_map.get(item_id, [])
         
         # Load damage history for this product by SKU
         damages = []
@@ -1169,7 +1206,9 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
             "quantity": qty,
             "image_url": _get_full_image_url(it[6]),
             "damages": damages,
-            "has_damage": len(damages) > 0
+            "has_damage": len(damages) > 0,
+            "packaging_labels": pack_labels,
+            "has_packaging": len(pack_labels) > 0,
         })
     
     # Load packaging

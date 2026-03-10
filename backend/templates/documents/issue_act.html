@@ -267,7 +267,8 @@
             <th style="width:100px">Артикул</th>
             <th>Найменування</th>
             <th style="width:60px" class="center">К-сть</th>
-            <th style="width:130px">Стан</th>
+            <th style="width:110px">Стан</th>
+            <th style="width:140px">Пакування</th>
           </tr>
         </thead>
         <tbody>
@@ -298,6 +299,15 @@
                   <span class="status-warn">{{ item.damages|length }} дефект(ів)</span>
                 {% else %}
                   <span class="status-ok">Без дефектів</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if item.has_packaging %}
+                  {% for lbl in item.packaging_labels %}
+                    <div style="font-size:11px;color:var(--ink);">{{ lbl }}</div>
+                  {% endfor %}
+                {% else %}
+                  <span style="color:var(--muted);font-size:11px;">—</span>
                 {% endif %}
               </td>
             </tr>

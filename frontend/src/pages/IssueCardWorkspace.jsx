@@ -160,7 +160,7 @@ export default function IssueCardWorkspace() {
         deposit: parseFloat(p.deposit || 0),
         serials: p.serials || [],
         scanned: p.scanned || [],
-        packaging: p.packaging || { cover: false, box: false, stretch: false, black_case: false },
+        packaging: p.packaging || {},
         location: { zone: p.location?.zone || '', state: p.location?.state || 'shelf' },
         pre_damage: p.pre_damage || [],
         damage_history: p.damage_history || [],

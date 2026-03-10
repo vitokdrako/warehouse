@@ -177,7 +177,7 @@ export default function DamageModal({
   
   const stageLabels = {
     'pre_issue': 'ДО видачі (фіксація)',
-    'return': '📥 При поверненні',
+    'return': 'При поверненні',
     'audit': 'При аудиті'
   }
   
@@ -338,7 +338,7 @@ export default function DamageModal({
       
     } catch (error) {
       console.error('[DamageModal] Error saving:', error)
-      alert('❌ Помилка збереження пошкодження')
+      alert('Помилка збереження пошкодження')
     } finally {
       setSaving(false)
     }
@@ -371,7 +371,7 @@ export default function DamageModal({
           {/* Інформаційний банер */}
           <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 px-3 py-2">
             <div className="flex items-start gap-2">
-              <span className="text-lg">ℹ️</span>
+              <span className="text-lg"></span>
               <div className="text-xs text-blue-700">
                 <strong>Тільки фіксація!</strong> Ця шкода НЕ буде нарахована клієнту.
                 <br />Вкажіть опис та додайте фото для документації.
@@ -404,7 +404,7 @@ export default function DamageModal({
                         <div className="font-medium text-amber-900">{d.damage_type || 'Пошкодження'}</div>
                         {d.note && <div className="text-slate-600 mt-0.5">{d.note}</div>}
                         <div className="text-slate-400 mt-1 flex items-center gap-2">
-                          <span>👤 {d.created_by || 'Невідомо'}</span>
+                          <span>{d.created_by || 'Невідомо'}</span>
                           <span>•</span>
                           <span>{d.created_at}</span>
                         </div>
@@ -461,7 +461,7 @@ export default function DamageModal({
                         <div className="font-medium text-slate-900">{d.damage_type || d.type || 'Пошкодження'}</div>
                         {d.note && <div className="text-slate-600 mt-0.5">{d.note}</div>}
                         <div className="text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
-                          <span>👤 {d.created_by || 'Невідомо'}</span>
+                          <span>{d.created_by || 'Невідомо'}</span>
                           <span>•</span>
                           <span>{d.created_at}</span>
                         </div>
@@ -709,11 +709,11 @@ export default function DamageModal({
               <div className="text-slate-500 mb-2 text-sm">Відправити на обробку</div>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {[
-                  { value: 'none', label: 'Ні', icon: '➖', color: 'slate' },
-                  { value: 'wash', label: 'Мийка', icon: '🧼', color: 'blue' },
-                  { value: 'restore', label: 'Реставрація', icon: '🔧', color: 'orange' },
-                  { value: 'washing', label: 'Прання', icon: '🫧', color: 'cyan' },
-                  { value: 'laundry', label: 'Хімчистка', icon: '✨', color: 'purple' },
+                  { value: 'none', label: 'Ні', icon: '', color: 'slate' },
+                  { value: 'wash', label: 'Мийка', icon: '', color: 'blue' },
+                  { value: 'restore', label: 'Реставрація', icon: '', color: 'orange' },
+                  { value: 'washing', label: 'Прання', icon: '', color: 'cyan' },
+                  { value: 'laundry', label: 'Хімчистка', icon: '', color: 'purple' },
                 ].map(opt => (
                   <button
                     key={opt.value}
@@ -736,7 +736,7 @@ export default function DamageModal({
               </div>
               {formData.sendTo && formData.sendTo !== 'none' && (
                 <div className="mt-2 text-xs text-slate-500 bg-slate-50 rounded-lg p-2">
-                  ℹ️ {formData.qty} шт буде відправлено на {
+                  {formData.qty} шт буде відправлено на {
                     formData.sendTo === 'wash' ? 'мийку' :
                     formData.sendTo === 'restore' ? 'реставрацію' :
                     formData.sendTo === 'washing' ? 'прання' :
@@ -781,7 +781,7 @@ export default function DamageModal({
         {/* History Section - ПОВНА ІСТОРІЯ ПОШКОДЖЕНЬ ТОВАРУ */}
         {(damageHistory.length > 0 || (item.pre_damage?.length > 0) || (existingHistory?.length > 0)) && (
           <div className="mt-4">
-            <Card title={`📜 Історія пошкоджень товару (${damageHistory.length || (item.pre_damage?.length || 0) + (existingHistory?.length || 0)})`}>
+            <Card title={`Історія пошкоджень товару (${damageHistory.length || (item.pre_damage?.length || 0) + (existingHistory?.length || 0)})`}>
               <div className="max-h-48 overflow-auto text-sm space-y-2">
                 {damageHistory.length > 0 ? (
                   damageHistory.map(d => (
@@ -812,7 +812,7 @@ export default function DamageModal({
                         <div className="font-medium">{d.damage_type || d.type || '—'}</div>
                         {d.note && <div className="text-slate-600">{d.note}</div>}
                         <div className="text-slate-400 mt-1">
-                          {d.created_at} {d.created_by && `· 👤 ${d.created_by}`}
+                          {d.created_at} {d.created_by && `· ${d.created_by}`}
                         </div>
                       </div>
                     </div>
@@ -827,8 +827,8 @@ export default function DamageModal({
                         </Badge> · 
                         {d.fee > 0 ? `₴${d.fee}` : 'Без нарахування'} · {d.note || '—'}
                         <div className="text-slate-400 mt-0.5">
-                          {d.at?.slice(0,16)} {d.photoName? `· 📷 ${d.photoName}`:''} 
-                          {d.created_by && ` · 👤 ${d.created_by}`}
+                          {d.at?.slice(0,16)} {d.photoName? `· ${d.photoName}`:''} 
+                          {d.created_by && ` · ${d.created_by}`}
                         </div>
                       </li>
                     ))}

@@ -527,30 +527,6 @@ setTimeout(()=>window.print(),500);
               email={clientEmail}
               tier="regular"
             />
-            <LeftRailFinance
-              orderId={order?.order_id}
-              rentAmount={totalRent}
-              depositAmount={totalDeposit}
-              discountPercent={order?.discount_percent}
-              discountAmount={order?.discount_amount}
-              serviceFee={order?.service_fee || 0}
-              serviceFeeName={order?.service_fee_name || ""}
-              onServiceFeeChange={async (fee, feeName) => {
-                try {
-                  const token = localStorage.getItem('token')
-                  await fetch(`${BACKEND_URL}/api/orders/${order?.order_id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ service_fee: fee, service_fee_name: feeName })
-                  })
-                  // Reload order data
-                  loadData()
-                } catch (err) {
-                  console.error('Failed to update service fee:', err)
-                }
-              }}
-              isEditable={true}
-            />
             <LeftRailDocuments
               orderId={order?.order_id}
               orderNumber={order?.order_number}

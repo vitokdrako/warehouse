@@ -169,6 +169,12 @@ export default function LeftRailDocuments({
       return
     }
     
+    // Для Акту передачі - завжди відкриваємо прямий preview
+    if (docType === 'issue_act') {
+      window.open(`${BACKEND_URL}/api/documents/issue-act/${orderId}/preview?executor_type=tov`, '_blank')
+      return
+    }
+    
     const docInfo = docVersions[docType]
     
     if (!docInfo?.exists) {
@@ -203,6 +209,21 @@ export default function LeftRailDocuments({
         setGenerating(null)
         // Повертаємо fake data для Кошторису
         return { id: null, doc_type: 'estimate', entity_id: orderId }
+      } catch (err) {
+        setError(err.message)
+        setGenerating(null)
+        return null
+      }
+    }
+    
+    // Для Акту передачі - використовуємо прямий endpoint
+    if (docType === 'issue_act') {
+      try {
+        if (openPreview) {
+          window.open(`${BACKEND_URL}/api/documents/issue-act/${orderId}/preview?executor_type=tov`, '_blank')
+        }
+        setGenerating(null)
+        return { id: null, doc_type: 'issue_act', entity_id: orderId }
       } catch (err) {
         setError(err.message)
         setGenerating(null)

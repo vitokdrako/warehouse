@@ -1777,14 +1777,14 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
                 -- Готівка
                 (SELECT COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0) 
                  - COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
-                 FROM fin_payments WHERE status = 'completed') as cash_balance,
+                 FROM fin_payments WHERE status IN ('completed', 'confirmed')) as cash_balance,
                 -- Безготівка
                 (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0)
                  - COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
-                 FROM fin_payments WHERE status = 'completed') as bank_balance,
+                 FROM fin_payments WHERE status IN ('completed', 'confirmed')) as bank_balance,
                 -- Виручка цей місяць
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-                 WHERE status = 'completed' AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())) as month_revenue,
+                 WHERE status IN ('completed', 'confirmed') AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())) as month_revenue,
                 -- Витрати цей місяць
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_expenses 
                  WHERE status = 'posted' AND MONTH(occurred_at) = MONTH(CURRENT_DATE()) AND YEAR(occurred_at) = YEAR(CURRENT_DATE())) as month_expenses,
@@ -1803,8 +1803,8 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
                 COALESCE(SUM(used_amount), 0) as used,
                 COALESCE(SUM(refunded_amount), 0) as refunded,
                 COUNT(*) as cnt
-            FROM fin_deposits
-            WHERE status IN ('held', 'partial')
+            FROM fin_deposit_holds
+            WHERE status IN ('held', 'partial', 'holding', 'partially_used')
             GROUP BY currency
         """))
         

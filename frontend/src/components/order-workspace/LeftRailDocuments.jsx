@@ -603,8 +603,8 @@ export default function LeftRailDocuments({
                   )}
                 </div>
                 
-                {/* Версія - для Кошторису завжди показуємо "Актуальний" */}
-                {doc.type === 'estimate' && (
+                {/* Версія - для документів на льоту завжди показуємо "Актуальний" */}
+                {['estimate', 'issue_act', 'picking_list'].includes(doc.type) && (
                   <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
                     <span>✓ Актуальний</span>
                     <span className="text-slate-400">•</span>
@@ -612,7 +612,7 @@ export default function LeftRailDocuments({
                   </div>
                 )}
                 
-                {doc.type !== 'estimate' && hasVersion && (
+                {!['estimate', 'issue_act', 'picking_list'].includes(doc.type) && hasVersion && (
                   <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
                     <span>✓ v{versionInfo.version}</span>
                     <span className="text-slate-400">•</span>
@@ -620,24 +620,24 @@ export default function LeftRailDocuments({
                   </div>
                 )}
                 
-                {doc.type !== 'estimate' && !hasVersion && (
+                {!['estimate', 'issue_act', 'picking_list'].includes(doc.type) && !hasVersion && (
                   <div className="text-xs text-slate-400 mb-2">
                     Документ ще не згенеровано
                   </div>
                 )}
                 
                 <div className="flex flex-wrap gap-1">
-                  {/* Перегляд - для Кошторису завжди активний */}
+                  {/* Перегляд - для документів на льоту завжди активний */}
                   <button
                     onClick={() => viewLastDocument(doc.type)}
-                    disabled={doc.type !== 'estimate' && !hasVersion}
+                    disabled={!['estimate', 'issue_act', 'picking_list'].includes(doc.type) && !hasVersion}
                     className={`
                       flex items-center gap-1 px-2 py-1 text-xs rounded
-                      ${doc.type === 'estimate' || hasVersion 
+                      ${['estimate', 'issue_act', 'picking_list'].includes(doc.type) || hasVersion 
                         ? 'bg-white border hover:bg-slate-100' 
                         : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
                     `}
-                    title={doc.type === 'estimate' ? 'Переглянути кошторис' : (hasVersion ? 'Переглянути останню версію' : 'Спочатку згенеруйте документ')}
+                    title={['estimate', 'issue_act', 'picking_list'].includes(doc.type) ? 'Переглянути документ' : (hasVersion ? 'Переглянути останню версію' : 'Спочатку згенеруйте документ')}
                   >
                     <Eye className="w-3 h-3" />
                     Перегляд

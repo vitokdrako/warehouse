@@ -181,7 +181,7 @@ export default function DamageModal({
     'audit': '📋 При аудиті'
   }
   
-  const handleSave = async () => {
+  const handleSave = async (compareOnly = false) => {
     // Для pre_issue обов'язковий тільки опис
     if (!isPreIssue && !formData.kindCode) {
       alert('Оберіть тип пошкодження')
@@ -206,7 +206,6 @@ export default function DamageModal({
         try {
           const formDataUpload = new FormData()
           formDataUpload.append('file', photos[0])
-          // Передаємо order_number та sku для формування імені файлу
           if (order?.order_number) {
             formDataUpload.append('order_number', order.order_number)
           }
@@ -222,11 +221,9 @@ export default function DamageModal({
           
           if (uploadResponse.data.success) {
             uploadedPhotoUrl = uploadResponse.data.url
-            console.log(`[DamageModal] Photo uploaded: ${uploadedPhotoUrl}`)
           }
         } catch (uploadErr) {
           console.warn('[DamageModal] Photo upload failed:', uploadErr)
-          // Продовжуємо без фото
         }
       }
       
@@ -241,84 +238,81 @@ export default function DamageModal({
         qty: formData.qty,
         at: new Date().toISOString(),
         photoName: uploadedPhotoUrl || formData.photoName,
-        created_by: userName
-      }
-      
-      // Визначаємо чи це повна втрата
-      const isTotalLoss = formData.kindCode === 'TOTAL_LOSS'
-      
-      // Save to damage history API
-      const response = await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
-        product_id: item.inventory_id || item.id,
-        sku: item.sku,
-        product_name: item.name,
-        category: formData.category,
-        order_id: order?.order_id,
-        order_number: order?.order_number,
-        stage: stage,
-        damage_type: isPreIssue ? 'Існуюча шкода' : (selectedKind?.label || formData.kindCode),
-        damage_code: isPreIssue ? 'pre_existing' : formData.kindCode,
-        severity: formData.severity,
-        fee: totalFee,
-        fee_per_item: isPreIssue ? 0 : formData.fee,
-        qty: formData.qty,
-        photo_url: uploadedPhotoUrl || formData.photoName,
-        note: formData.note,
         created_by: userName,
-        // Для повної втрати - обробити як втрату
-        is_total_loss: isTotalLoss,
-        // Processing type based on sendTo selection
-        processing_type: formData.sendTo && formData.sendTo !== 'none' 
-          ? (formData.sendTo === 'restore' ? 'restoration' : formData.sendTo)
-          : 'none',
-        processing_status: formData.sendTo && formData.sendTo !== 'none' ? 'pending' : null
-      })
+        compare_only: compareOnly,
+      }
       
-      console.log(`[DamageModal] Saved damage record for ${item.sku} at stage ${stage}`, response.data)
+      if (!compareOnly) {
+        // === ПОВНИЙ ЗАПИС: зберігаємо в стан декору ===
+        const isTotalLoss = formData.kindCode === 'TOTAL_LOSS'
       
-      // Якщо вибрано обробку - оновити стан товару
-      if (formData.sendTo && formData.sendTo !== 'none' && !isTotalLoss) {
-        try {
-          const damageId = response.data?.id || response.data?.damage_id
-          if (damageId) {
-            const endpoint = formData.sendTo === 'wash' ? 'send-to-wash'
-              : formData.sendTo === 'restore' ? 'send-to-restoration'
-              : formData.sendTo === 'washing' ? 'send-to-washing'
-              : formData.sendTo === 'laundry' ? 'send-to-laundry'
-              : null
-            
-            if (endpoint) {
-              await axios.post(`${BACKEND_URL}/api/product-damage-history/${damageId}/${endpoint}`, {
-                notes: formData.note || `Відправлено при поверненні замовлення ${order?.order_number || ''}`
-              })
-              console.log(`[DamageModal] Sent to ${formData.sendTo}: ${item.sku} x${formData.qty}`)
+        // Save to damage history API
+        const response = await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
+          product_id: item.inventory_id || item.id,
+          sku: item.sku,
+          product_name: item.name,
+          category: formData.category,
+          order_id: order?.order_id,
+          order_number: order?.order_number,
+          stage: stage,
+          damage_type: isPreIssue ? 'Існуюча шкода' : (selectedKind?.label || formData.kindCode),
+          damage_code: isPreIssue ? 'pre_existing' : formData.kindCode,
+          severity: formData.severity,
+          fee: totalFee,
+          fee_per_item: isPreIssue ? 0 : formData.fee,
+          qty: formData.qty,
+          photo_url: uploadedPhotoUrl || formData.photoName,
+          note: formData.note,
+          created_by: userName,
+          is_total_loss: isTotalLoss,
+          processing_type: formData.sendTo && formData.sendTo !== 'none' 
+            ? (formData.sendTo === 'restore' ? 'restoration' : formData.sendTo)
+            : 'none',
+          processing_status: formData.sendTo && formData.sendTo !== 'none' ? 'pending' : null
+        })
+        
+        // Якщо вибрано обробку - оновити стан товару
+        if (formData.sendTo && formData.sendTo !== 'none' && !isTotalLoss) {
+          try {
+            const damageId = response.data?.id || response.data?.damage_id
+            if (damageId) {
+              const endpoint = formData.sendTo === 'wash' ? 'send-to-wash'
+                : formData.sendTo === 'restore' ? 'send-to-restoration'
+                : formData.sendTo === 'washing' ? 'send-to-washing'
+                : formData.sendTo === 'laundry' ? 'send-to-laundry'
+                : null
+              
+              if (endpoint) {
+                await axios.post(`${BACKEND_URL}/api/product-damage-history/${damageId}/${endpoint}`, {
+                  notes: formData.note || `Відправлено при поверненні замовлення ${order?.order_number || ''}`
+                })
+              }
             }
+          } catch (processErr) {
+            console.warn('[DamageModal] Failed to send to processing:', processErr)
           }
-        } catch (processErr) {
-          console.warn('[DamageModal] Failed to send to processing:', processErr)
-          // Не блокуємо - damage вже збережено
+        }
+        
+        // Якщо повна втрата - зменшити кількість товару
+        if (isTotalLoss) {
+          try {
+            await axios.post(`${BACKEND_URL}/api/partial-returns/process-loss`, {
+              product_id: item.inventory_id || item.id,
+              sku: item.sku,
+              name: item.name,
+              qty: formData.qty,
+              loss_amount: totalFee,
+              order_id: order?.order_id,
+              order_number: order?.order_number
+            })
+          } catch (lossErr) {
+            console.warn('[DamageModal] Failed to process loss:', lossErr)
+          }
         }
       }
+      // === кінець повного запису ===
       
-      // Якщо повна втрата - зменшити кількість товару
-      if (isTotalLoss) {
-        try {
-          await axios.post(`${BACKEND_URL}/api/partial-returns/process-loss`, {
-            product_id: item.inventory_id || item.id,
-            sku: item.sku,
-            name: item.name,
-            qty: formData.qty,
-            loss_amount: totalFee,
-            order_id: order?.order_id,
-            order_number: order?.order_number
-          })
-          console.log(`[DamageModal] Processed total loss: ${item.sku} x${formData.qty}`)
-        } catch (lossErr) {
-          console.warn('[DamageModal] Failed to process loss:', lossErr)
-        }
-      }
-      
-      // Call parent callback
+      // Call parent callback (завжди — і для порівняння, і для стану декору)
       if (onSave) {
         onSave(damageRecord)
       }
@@ -327,14 +321,19 @@ export default function DamageModal({
       
       // Success notification
       if (window.toast) {
-        window.toast({ 
-          title: isPreIssue ? '📝 Зафіксовано' : '✅ Успіх', 
-          description: isPreIssue 
-            ? `Існуючу шкоду зафіксовано (не нараховується клієнту). Виявив: ${userName}`
-            : response.data?.charged_to_client 
-              ? `Шкоду зафіксовано та нараховано клієнту: ₴${totalFee}`
-              : 'Шкоду зафіксовано (вже була при видачі - не нараховується)'
-        })
+        if (compareOnly) {
+          window.toast({ 
+            title: 'Зафіксовано для порівняння', 
+            description: `Шкоду зафіксовано в рамках замовлення (НЕ впливає на стан декору)`
+          })
+        } else {
+          window.toast({ 
+            title: isPreIssue ? 'Зафіксовано' : 'Успіх', 
+            description: isPreIssue 
+              ? `Шкоду зафіксовано в стані декору. Виявив: ${userName}`
+              : `Шкоду зафіксовано в стані декору та нараховано: ₴${totalFee}`
+          })
+        }
       }
       
     } catch (error) {
@@ -515,8 +514,15 @@ export default function DamageModal({
               <PillButton tone='slate' onClick={onClose}>
                 Скасувати
               </PillButton>
-              <PillButton tone='blue' onClick={handleSave} disabled={saving || !formData.note.trim()}>
-                {saving ? '⏳ Збереження...' : '📝 Зафіксувати шкоду'}
+              <button
+                onClick={() => handleSave(true)}
+                disabled={saving || !formData.note.trim()}
+                className="rounded-full px-4 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white disabled:bg-amber-300"
+              >
+                {saving ? 'Збереження...' : 'Для порівняння'}
+              </button>
+              <PillButton tone='blue' onClick={() => handleSave(false)} disabled={saving || !formData.note.trim()}>
+                {saving ? 'Збереження...' : 'В стан декору'}
               </PillButton>
             </div>
           </div>
@@ -759,8 +765,15 @@ export default function DamageModal({
             <PillButton tone='slate' onClick={onClose}>
               Скасувати
             </PillButton>
-            <PillButton tone='green' onClick={handleSave} disabled={saving}>
-              {saving ? '⏳ Збереження...' : 'Зафіксувати'}
+            <button
+              onClick={() => handleSave(true)}
+              disabled={saving}
+              className="rounded-full px-4 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white disabled:bg-amber-300"
+            >
+              {saving ? 'Збереження...' : 'Для порівняння'}
+            </button>
+            <PillButton tone='green' onClick={() => handleSave(false)} disabled={saving}>
+              {saving ? 'Збереження...' : 'В стан декору'}
             </PillButton>
           </div>
         </div>

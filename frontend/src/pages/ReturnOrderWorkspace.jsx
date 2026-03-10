@@ -624,11 +624,6 @@ export default function ReturnOrderWorkspace() {
               email={clientEmail}
               tier="regular"
             />
-            <LeftRailFinance
-              orderId={order?.order_id}
-              rentAmount={totalRent}
-              depositAmount={totalDeposit}
-            />
             <LeftRailDocuments
               orderId={order?.order_id}
               orderNumber={order?.order_number}

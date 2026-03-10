@@ -127,7 +127,7 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
           
           {/* Локація */}
           {item.location?.zone && item.location.zone !== 'None' && (
-            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">📍{item.location.zone}</span>
+            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">{item.location.zone}</span>
           )}
         </div>
       </div>
@@ -146,7 +146,7 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
           {photoUrl ? (
             <img src={photoUrl} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs">📦</div>
+            <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs">—</div>
           )}
         </div>
         
@@ -211,7 +211,7 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
                 Історія пошкоджень ({damageHistory.length})
               </div>
               <div className="text-[10px] text-red-600 mb-1.5">
-                ⚠️ Перевірте ці дефекти перед прийманням
+                Перевірте ці дефекти перед прийманням
               </div>
               <div className="space-y-1.5 max-h-[150px] overflow-y-auto">
                 {damageHistory.slice(0, 5).map((d, idx) => {

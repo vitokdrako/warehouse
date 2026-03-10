@@ -176,9 +176,9 @@ export default function DamageModal({
   }
   
   const stageLabels = {
-    'pre_issue': '📦 ДО видачі (фіксація)',
+    'pre_issue': 'ДО видачі (фіксація)',
     'return': '📥 При поверненні',
-    'audit': '📋 При аудиті'
+    'audit': 'При аудиті'
   }
   
   const handleSave = async (compareOnly = false) => {
@@ -354,7 +354,7 @@ export default function DamageModal({
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-blue-800">
-                📦 Фіксація шкоди ДО видачі
+                Фіксація шкоди ДО видачі
               </h3>
               <p className="text-xs text-blue-600 mt-1">
                 {item.sku} · {item.name}
@@ -383,7 +383,7 @@ export default function DamageModal({
           {preIssueDamages.length > 0 && (
             <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-amber-600">📋</span>
+                <span className="text-amber-600"></span>
                 <span className="text-sm font-semibold text-amber-800">
                   Вже зафіксовано для цього замовлення ({preIssueDamages.length})
                 </span>
@@ -420,7 +420,7 @@ export default function DamageModal({
           {damageHistory.length > 0 && (
             <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-red-600">⚠️</span>
+                <span className="text-red-600"></span>
                 <span className="text-sm font-semibold text-red-800">
                   Історія пошкоджень товару ({damageHistory.length})
                 </span>
@@ -553,7 +553,7 @@ export default function DamageModal({
         {stage === 'return' && preIssueDamages.length > 0 && (
           <div className="mb-4 rounded-xl bg-blue-50 border border-blue-200 p-3">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-blue-600">📦</span>
+              <span className="text-blue-600"></span>
               <span className="text-sm font-semibold text-blue-800">
                 Шкода з етапу видачі ({preIssueDamages.length}) — не нараховується повторно
               </span>
@@ -602,7 +602,7 @@ export default function DamageModal({
               </select>
               {formData.kindCode === 'TOTAL_LOSS' && (
                 <div className="mt-1 text-xs text-red-600 font-medium">
-                  ⚠️ Товар буде списано з залишків!
+                  Товар буде списано з залишків!
                 </div>
               )}
             </div>
@@ -675,7 +675,7 @@ export default function DamageModal({
           {formData.qty > 1 && formData.fee > 0 && (
             <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
               <div className="flex items-center justify-between">
-                <span className="text-amber-800 text-sm">💰 Загальна сума:</span>
+                <span className="text-amber-800 text-sm">Загальна сума:</span>
                 <span className="text-amber-900 font-bold text-lg">
                   ₴ {(formData.fee * formData.qty).toLocaleString('uk-UA')}
                 </span>

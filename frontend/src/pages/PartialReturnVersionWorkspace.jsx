@@ -205,7 +205,7 @@ export default function PartialReturnVersionWorkspace() {
       setDamageFee(prev => prev + (damageData.amount || 0))
       
       setDamageModal({ open: false, item: null })
-      toast({ title: '✅ Шкоду зафіксовано' })
+      toast({ title: 'Шкоду зафіксовано' })
       
     } catch (err) {
       console.error('[VersionWorkspace] Error saving damage:', err)
@@ -221,7 +221,7 @@ export default function PartialReturnVersionWorkspace() {
   const handleChargeLate = async () => {
     if (!financeSummary || financeSummary.calculated_late_fee <= 0) {
       toast({
-        title: '⚠️ Увага',
+        title: 'Увага',
         description: 'Немає прострочення для нарахування',
         variant: 'destructive'
       })
@@ -259,7 +259,7 @@ export default function PartialReturnVersionWorkspace() {
       }))
       
       toast({
-        title: '✅ Прострочення нараховано',
+        title: 'Прострочення нараховано',
         description: `₴${amount.toFixed(2)} додано до фінансової системи`
       })
       
@@ -309,7 +309,7 @@ export default function PartialReturnVersionWorkspace() {
         
         const result = await response.json()
         toast({ 
-          title: '✅ Створено нову версію', 
+          title: 'Створено нову версію', 
           description: result.display_number 
         })
         
@@ -348,7 +348,7 @@ export default function PartialReturnVersionWorkspace() {
       
       setIsCompleted(true)
       toast({ 
-        title: '✅ Версію закрито', 
+        title: 'Версію закрито', 
         description: 'Всі товари прийнято' 
       })
       
@@ -421,9 +421,9 @@ export default function PartialReturnVersionWorkspace() {
               version?.status === 'returned' ? 'bg-green-100 text-green-800' :
               'bg-slate-100 text-slate-600'
             }`}>
-              {version?.status === 'active' ? '⏳ Активна' :
+              {version?.status === 'active' ? 'Активна' :
                version?.status === 'returned' ? '✓ Закрита' :
-               '📦 Архів'}
+               'Архів'}
             </span>
             
             {/* Кнопка завершення */}
@@ -487,7 +487,7 @@ export default function PartialReturnVersionWorkspace() {
             
             {/* Інфо про замовлення */}
             <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="font-semibold text-slate-800 mb-3">📋 Інформація</h3>
+              <h3 className="font-semibold text-slate-800 mb-3">Інформація</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Оригінал:</span>

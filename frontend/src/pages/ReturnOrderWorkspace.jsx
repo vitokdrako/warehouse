@@ -243,7 +243,7 @@ export default function ReturnOrderWorkspace() {
     enabled: !loading && !!orderId,
     onSectionUpdate: (data) => {
       toast({
-        title: '🔄 Зміни від іншого користувача',
+        title: 'Зміни від іншого користувача',
         description: `${data.updated_by_name} оновив ${data.section}`,
       })
     },
@@ -277,7 +277,7 @@ export default function ReturnOrderWorkspace() {
   useEffect(() => {
     if (hasNewChanges && lastModifiedBy) {
       toast({
-        title: '🔄 Дані оновлено',
+        title: 'Дані оновлено',
         description: `${lastModifiedBy} зберіг зміни`,
       })
       dismissChanges()
@@ -388,7 +388,7 @@ export default function ReturnOrderWorkspace() {
         })
       }
       
-      toast({ title: '✅ Збережено', description: 'Прогрес повернення збережено' })
+      toast({ title: 'Збережено', description: 'Прогрес повернення збережено' })
     } catch (err) {
       console.error('Save error:', err)
       toast({ title: 'Помилка збереження', variant: 'destructive' })
@@ -401,7 +401,7 @@ export default function ReturnOrderWorkspace() {
   const completeReturn = async () => {
     if (!canComplete) {
       toast({
-        title: '⚠️ Увага',
+        title: 'Увага',
         description: 'Перевірте всі позиції та серійні номери',
         variant: 'destructive'
       })
@@ -449,7 +449,7 @@ export default function ReturnOrderWorkspace() {
       
       if (itemsToAccept.length === 0) {
         toast({
-          title: '⚠️ Увага',
+          title: 'Увага',
           description: 'Відмітьте товари які повернено',
           variant: 'destructive'
         })
@@ -482,13 +482,13 @@ export default function ReturnOrderWorkspace() {
       if (result.all_completed) {
         setIsReturnCompleted(true)
         toast({ 
-          title: '✅ Замовлення закрито', 
+          title: 'Замовлення закрито', 
           description: `Нараховано прострочення: ₴${result.total_late_fee?.toFixed(2) || '0.00'}` 
         })
         setTimeout(() => navigate('/manager'), 2000)
       } else {
         toast({ 
-          title: '📦 Товари прийнято', 
+          title: 'Товари прийнято', 
           description: result.message
         })
         // Перезавантажити дані
@@ -533,7 +533,7 @@ export default function ReturnOrderWorkspace() {
       // Перезавантажити дані (залишаємося на сторінці)
       loadOrder()
     } else {
-      toast({ title: '✅ Успіх', description: 'Повернення завершено' })
+      toast({ title: 'Успіх', description: 'Повернення завершено' })
       setTimeout(() => navigate('/manager'), 2000)
     }
   }
@@ -572,7 +572,7 @@ export default function ReturnOrderWorkspace() {
         ...prev
       ])
       
-      toast({ title: '✅ Успіх', description: 'Повернення завершено' })
+      toast({ title: 'Успіх', description: 'Повернення завершено' })
       setTimeout(() => navigate('/manager'), 2000)
       
     } catch (err) {
@@ -636,7 +636,7 @@ export default function ReturnOrderWorkspace() {
         
         // Footer
         onPrimaryAction={completeReturn}
-        primaryLabel="✅ Завершити приймання"
+        primaryLabel="Завершити приймання"
         primaryDisabled={saving || !canComplete}
         primaryDisabledReason={!canComplete ? 'Перевірте всі позиції' : ''}
         showSave={true}
@@ -709,7 +709,7 @@ export default function ReturnOrderWorkspace() {
         onVersionCreated={(newOrderId, redirectUrl) => {
           // Редірект на нове замовлення (версію)
           toast({
-            title: '✅ Створено часткове повернення',
+            title: 'Створено часткове повернення',
             description: `Перенаправлення на нове замовлення...`
           })
           navigate(redirectUrl || `/return/${newOrderId}`)

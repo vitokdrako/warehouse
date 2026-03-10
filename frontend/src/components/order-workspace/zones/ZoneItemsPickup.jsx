@@ -121,7 +121,7 @@ function CompactItemCard({
             </span>
           )}
           {item.location?.zone && item.location.zone !== 'None' && (
-            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">📍{item.location.zone}</span>
+            <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">{item.location.zone}</span>
           )}
         </div>
       </div>
@@ -140,7 +140,7 @@ function CompactItemCard({
           {photoUrl ? (
             <img src={photoUrl} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs">📦</div>
+            <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs">—</div>
           )}
         </div>
         

@@ -81,7 +81,7 @@ export default function ReturnVersionWorkspace() {
     
     if (itemsToAccept.length === 0) {
       toast({
-        title: '⚠️ Увага',
+        title: 'Увага',
         description: 'Вкажіть кількість повернутих товарів',
         variant: 'destructive'
       })
@@ -95,7 +95,7 @@ export default function ReturnVersionWorkspace() {
       })
       
       toast({
-        title: '✅ Товари прийнято',
+        title: 'Товари прийнято',
         description: res.data.message
       })
       
@@ -107,7 +107,7 @@ export default function ReturnVersionWorkspace() {
         if (confirm(`Залишилось ${res.data.remaining_items.length} позицій.\n\nСтворити нову версію?`)) {
           const nextRes = await axios.post(`${BACKEND_URL}/api/return-versions/${versionId}/create-next`)
           toast({
-            title: '✅ Створено нову версію',
+            title: 'Створено нову версію',
             description: nextRes.data.new_order_number
           })
           navigate(`/return-version/${nextRes.data.new_version_id}`)
@@ -136,7 +136,7 @@ export default function ReturnVersionWorkspace() {
   const handleChargeFee = async () => {
     if (chargeAmount <= 0) {
       toast({
-        title: '⚠️ Увага',
+        title: 'Увага',
         description: 'Вкажіть суму для нарахування',
         variant: 'destructive'
       })
@@ -151,7 +151,7 @@ export default function ReturnVersionWorkspace() {
       })
       
       toast({
-        title: '✅ Прострочення нараховано',
+        title: 'Прострочення нараховано',
         description: `₴${fmtMoney(chargeAmount)}`
       })
       
@@ -181,7 +181,7 @@ export default function ReturnVersionWorkspace() {
       })
       
       toast({
-        title: '✅ Прострочення списано',
+        title: 'Прострочення списано',
       })
       
       loadVersion()
@@ -255,7 +255,7 @@ export default function ReturnVersionWorkspace() {
                 ? 'bg-green-100 text-green-700' 
                 : 'bg-amber-100 text-amber-700'
             }`}>
-              {version.status === 'returned' ? '✓ Повернено' : '⏳ Очікує'}
+              {version.status === 'returned' ? 'Повернено' : 'Очікує'}
             </div>
           </div>
 
@@ -293,7 +293,7 @@ export default function ReturnVersionWorkspace() {
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
               >
-                {acceptMode ? 'Скасувати' : '📦 Прийняти товари'}
+                {acceptMode ? 'Скасувати' : 'Прийняти товари'}
               </button>
             )}
           </div>

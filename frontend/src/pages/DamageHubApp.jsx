@@ -2,16 +2,16 @@
 /**
  * DamageHubApp - Кабінет шкоди
  * 
- * Три колонки: Мийка | Реставрація | Пральня
+ * Три колонки: Мийка | Реставрація | Пральня (черга + партії)
  * Декор летить одразу з повернення у відповідну чергу
  */
 import React, { useState, useEffect, useCallback } from "react";
 import CorporateHeader from "../components/CorporateHeader";
-import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, Eye, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, ChevronDown, ChevronRight, Plus, Clock, ArrowRight } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString("uk-UA") : "—";
 const fmtTime = (d) => d ? new Date(d).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString("uk-UA") : "—";
 
 const authFetch = async (url, options = {}) => {
   const token = localStorage.getItem("token");
@@ -173,6 +173,211 @@ const QueueColumn = ({ title, icon: Icon, iconColor, items, loading, onComplete,
   );
 };
 
+// ============= BATCH CARD =============
+const BatchCard = ({ batch, onToggle, isOpen }) => {
+  const statusColors = {
+    sent: 'bg-blue-50 text-blue-700 border-blue-200',
+    partial_return: 'bg-amber-50 text-amber-700 border-amber-200',
+    returned: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    completed: 'bg-slate-50 text-slate-600 border-slate-200',
+  };
+  const statusLabels = {
+    sent: 'Відправлено',
+    partial_return: 'Часткове повернення',
+    returned: 'Повернено',
+    completed: 'Завершено',
+  };
+  
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <button onClick={onToggle} className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition text-left">
+        {isOpen ? <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm text-slate-800 truncate">{batch.batch_number}</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statusColors[batch.status] || statusColors.sent}`}>
+              {statusLabels[batch.status] || batch.status}
+            </span>
+          </div>
+          <div className="text-[11px] text-slate-500 flex gap-2">
+            <span>{batch.laundry_company}</span>
+            <span>·</span>
+            <span>{fmtDate(batch.sent_date)}</span>
+            <span>·</span>
+            <span>{batch.returned_items || 0}/{batch.total_items} шт</span>
+          </div>
+        </div>
+      </button>
+      {isOpen && batch.items?.length > 0 && (
+        <div className="px-3 pb-3 space-y-1.5 border-t border-slate-100">
+          {batch.items.map(item => (
+            <div key={item.id} className="flex items-center gap-2 py-1.5 text-xs">
+              {item.product_image ? (
+                <img src={getPhotoUrl(item)} className="w-8 h-8 rounded-md object-cover border" alt="" onError={e => e.target.style.display='none'} />
+              ) : (
+                <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center"><Package className="w-3 h-3 text-slate-400"/></div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="truncate font-medium text-slate-700">{item.product_name}</div>
+                <div className="text-slate-500 font-mono">{item.sku} · {item.returned_quantity || 0}/{item.quantity} шт</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============= LAUNDRY COLUMN (з партіями) =============
+const LaundryColumn = ({ items, loading, onComplete, onPhotoClick, completing, searchQuery, batches, batchesLoading, onCreateBatch, onRefreshBatches }) => {
+  const [tab, setTab] = useState('queue'); // queue | batches
+  const [openBatch, setOpenBatch] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showBatchForm, setShowBatchForm] = useState(false);
+  const [batchCompany, setBatchCompany] = useState('');
+  const [batchType, setBatchType] = useState('laundry');
+
+  const filtered = searchQuery
+    ? items.filter(i =>
+        (i.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (i.sku || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (i.order_number || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : items;
+
+  // Items not yet in a batch
+  const queueItems = filtered.filter(i => !i.laundry_batch_id);
+  const pendingCount = queueItems.length;
+  const activeBatches = (batches || []).filter(b => b.status !== 'completed');
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleCreateBatch = async () => {
+    if (selectedIds.size === 0 || !batchCompany.trim()) return;
+    await onCreateBatch(Array.from(selectedIds), batchCompany, batchType);
+    setSelectedIds(new Set());
+    setShowBatchForm(false);
+    setBatchCompany('');
+  };
+
+  return (
+    <div className="flex flex-col h-full min-w-0">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-100 text-purple-600">
+              <Shirt className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="font-bold text-slate-800 text-sm">Пральня</div>
+              <div className="text-[11px] text-slate-500">
+                {pendingCount > 0 && <span className="text-amber-600 font-medium">{pendingCount} в черзі</span>}
+                {activeBatches.length > 0 && pendingCount > 0 && ' · '}
+                {activeBatches.length > 0 && <span className="text-purple-600 font-medium">{activeBatches.length} партій</span>}
+              </div>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+            {items.length}
+          </span>
+        </div>
+        {/* Tabs */}
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-0.5">
+          <button onClick={() => setTab('queue')} className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${tab === 'queue' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            Черга ({queueItems.length})
+          </button>
+          <button onClick={() => setTab('batches')} className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${tab === 'batches' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+            Партії ({activeBatches.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50/50">
+        {loading || batchesLoading ? (
+          <div className="text-center py-12 text-slate-400 text-sm">Завантаження...</div>
+        ) : tab === 'queue' ? (
+          <>
+            {/* Batch creation toolbar */}
+            {queueItems.length > 0 && (
+              <div className="mb-2">
+                {selectedIds.size > 0 && !showBatchForm && (
+                  <button onClick={() => setShowBatchForm(true)} className="w-full px-3 py-2 rounded-lg text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 flex items-center justify-center gap-1.5">
+                    <Plus className="w-3.5 h-3.5" /> Сформувати партію ({selectedIds.size})
+                  </button>
+                )}
+                {showBatchForm && (
+                  <div className="p-3 rounded-xl border border-purple-200 bg-purple-50 space-y-2">
+                    <input
+                      type="text"
+                      value={batchCompany}
+                      onChange={e => setBatchCompany(e.target.value)}
+                      placeholder="Назва пральні / хімчистки..."
+                      className="w-full px-3 py-2 text-sm border rounded-lg"
+                    />
+                    <div className="flex gap-2">
+                      <select value={batchType} onChange={e => setBatchType(e.target.value)} className="flex-1 px-2 py-1.5 text-xs border rounded-lg">
+                        <option value="laundry">Хімчистка</option>
+                        <option value="washing">Прання</option>
+                      </select>
+                      <button onClick={handleCreateBatch} disabled={!batchCompany.trim()} className="px-4 py-1.5 rounded-lg text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50">
+                        Створити
+                      </button>
+                      <button onClick={() => setShowBatchForm(false)} className="px-3 py-1.5 rounded-lg text-xs border hover:bg-white">
+                        Ні
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {queueItems.length === 0 ? (
+              <div className="text-center py-12">
+                <Shirt className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <div className="text-slate-400 text-sm">{searchQuery ? 'Нічого не знайдено' : 'Черга порожня'}</div>
+              </div>
+            ) : (
+              queueItems.map(item => (
+                <div key={item.id} className="flex gap-2 items-start">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    className="mt-4 w-4 h-4 rounded flex-shrink-0"
+                  />
+                  <div className="flex-1">
+                    <QueueItemCard item={item} onComplete={onComplete} onPhotoClick={onPhotoClick} completing={completing} />
+                  </div>
+                </div>
+              ))
+            )}
+          </>
+        ) : (
+          /* Batches tab */
+          activeBatches.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <div className="text-slate-400 text-sm">Немає активних партій</div>
+            </div>
+          ) : (
+            activeBatches.map(batch => (
+              <BatchCard key={batch.id} batch={batch} isOpen={openBatch === batch.id} onToggle={() => setOpenBatch(openBatch === batch.id ? null : batch.id)} />
+            ))
+          )
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ============= PHOTO MODAL =============
 const PhotoModal = ({ isOpen, photoUrl, productName, onClose }) => {
   if (!isOpen) return null;
@@ -195,6 +400,8 @@ export default function DamageHubApp() {
   const [washItems, setWashItems] = useState([]);
   const [restoreItems, setRestoreItems] = useState([]);
   const [laundryItems, setLaundryItems] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
   
   const [photoModal, setPhotoModal] = useState({ isOpen: false, url: null, name: null });
 
@@ -221,7 +428,22 @@ export default function DamageHubApp() {
     }
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  const loadBatches = useCallback(async () => {
+    setBatchesLoading(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches`);
+      if (res.ok) {
+        const data = await res.json();
+        setBatches(data || []);
+      }
+    } catch (e) {
+      console.error("Batches load error:", e);
+    } finally {
+      setBatchesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAll(); loadBatches(); }, [loadAll, loadBatches]);
 
   const handleComplete = async (itemId) => {
     setCompleting(itemId);
@@ -237,6 +459,26 @@ export default function DamageHubApp() {
       console.error("Complete error:", e);
     } finally {
       setCompleting(null);
+    }
+  };
+
+  const handleCreateBatch = async (itemIds, company, batchType) => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/queue/add-to-batch`, {
+        method: "POST",
+        body: JSON.stringify({
+          item_ids: itemIds,
+          laundry_company: company,
+          batch_type: batchType,
+          created_by: user.name || user.firstname || 'system'
+        })
+      });
+      if (res.ok) {
+        await Promise.all([loadAll(), loadBatches()]);
+      }
+    } catch (e) {
+      console.error("Create batch error:", e);
     }
   };
 
@@ -311,16 +553,17 @@ export default function DamageHubApp() {
           
           {/* Пральня */}
           <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col" data-testid="laundry-column">
-            <QueueColumn
-              title="Пральня"
-              icon={Shirt}
-              iconColor="bg-purple-100 text-purple-600"
+            <LaundryColumn
               items={laundryItems}
               loading={loading}
               onComplete={handleComplete}
               onPhotoClick={openPhoto}
               completing={completing}
               searchQuery={searchQuery}
+              batches={batches}
+              batchesLoading={batchesLoading}
+              onCreateBatch={handleCreateBatch}
+              onRefreshBatches={loadBatches}
             />
           </div>
         </div>

@@ -25,6 +25,7 @@ import {
   ZoneItemsReturn,
   ZoneReturnFees,
   ZoneRequisitors,
+  ZonePackagingReturn,
 } from '../components/order-workspace/zones'
 // FinanceStatusCard тепер тільки в LeftRailFinance
 
@@ -64,6 +65,7 @@ export default function ReturnOrderWorkspace() {
   const [lateFee, setLateFee] = useState(0)
   const [cleaningFee, setCleaningFee] = useState(0)
   const [damageFee, setDamageFee] = useState(0)
+  const [packagingFee, setPackagingFee] = useState(0)
   
   // Нотатки та таймлайн
   const [notes, setNotes] = useState('')
@@ -319,7 +321,7 @@ export default function ReturnOrderWorkspace() {
   }
 
   // === РОЗРАХУНКИ ===
-  const totalFees = lateFee + cleaningFee + damageFee
+  const totalFees = lateFee + cleaningFee + damageFee + packagingFee
   const allReturned = useMemo(() => items.every(it => it.returned_qty >= it.rented_qty), [items])
   const allSerialsOk = useMemo(() => items.every(it => 
     it.serials.length === 0 || it.ok_serials.length >= it.rented_qty
@@ -675,15 +677,10 @@ export default function ReturnOrderWorkspace() {
           isCompleted={isReturnCompleted}
         />
         
-        {/* Нарахування штрафів */}
-        <ZoneReturnFees
-          lateFee={lateFee}
-          cleaningFee={cleaningFee}
-          damageFee={damageFee}
-          onSetLateFee={setLateFee}
-          onSetCleaningFee={setCleaningFee}
-          onSetDamageFee={setDamageFee}
-          readOnly={false}
+        {/* Повернення тари */}
+        <ZonePackagingReturn
+          orderId={orderId}
+          onChargeChange={(total) => setPackagingFee(total)}
         />
         
         {/* Документи переміщено в LeftRailDocuments */}

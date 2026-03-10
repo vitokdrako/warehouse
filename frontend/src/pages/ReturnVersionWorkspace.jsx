@@ -12,6 +12,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useToast } from '../hooks/use-toast'
 import axios from 'axios'
 import CorporateHeader from '../components/CorporateHeader'
+import ZonePackagingReturn from '../components/order-workspace/zones/ZonePackagingReturn'
 import { ArrowLeft, Package, Clock, DollarSign, Check, AlertTriangle, Plus, X } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
@@ -258,7 +259,7 @@ export default function ReturnVersionWorkspace() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="bg-slate-50 rounded-xl p-3">
               <div className="text-xs text-slate-500 mb-1">Клієнт</div>
               <div className="font-medium">{version.customer_name}</div>
@@ -268,41 +269,14 @@ export default function ReturnVersionWorkspace() {
               <div className="text-xs text-slate-500 mb-1">Дата повернення</div>
               <div className="font-medium">{version.original_return_date}</div>
             </div>
-            <div className="bg-amber-50 rounded-xl p-3">
-              <div className="text-xs text-amber-600 mb-1">Прострочення</div>
-              <div className="font-bold text-amber-700">{version.days_overdue} днів</div>
-            </div>
-            <div className="bg-amber-50 rounded-xl p-3">
-              <div className="text-xs text-amber-600 mb-1">Сума</div>
-              <div className="font-bold text-amber-700">₴ {fmtMoney(version.calculated_total_fee)}</div>
-              <div className="text-xs text-amber-600">₴{fmtMoney(version.daily_fee)}/день</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Статус нарахування */}
-        {version.fee_status !== 'pending' && (
-          <div className={`rounded-2xl border p-4 mb-6 ${
-            version.fee_status === 'charged' 
-              ? 'bg-green-50 border-green-200' 
-              : 'bg-slate-50 border-slate-200'
-          }`}>
-            {version.fee_status === 'charged' ? (
-              <div className="flex items-center gap-3">
-                <Check className="w-5 h-5 text-green-600" />
-                <div>
-                  <div className="font-medium text-green-800">Прострочення нараховано</div>
-                  <div className="text-sm text-green-600">₴{fmtMoney(version.manager_fee)}</div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
-                <X className="w-5 h-5 text-slate-500" />
-                <div className="font-medium text-slate-600">Прострочення списано</div>
+            {version.days_overdue > 0 && (
+              <div className="bg-amber-50 rounded-xl p-3">
+                <div className="text-xs text-amber-600 mb-1">Прострочення</div>
+                <div className="font-bold text-amber-700">{version.days_overdue} днів</div>
               </div>
             )}
           </div>
-        )}
+        </div>
 
         {/* Товари */}
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-6">
@@ -393,6 +367,12 @@ export default function ReturnVersionWorkspace() {
           </div>
         </div>
 
+        {/* Повернення тари */}
+        <ZonePackagingReturn
+          orderId={version.parent_order_id || parseInt(versionId)}
+          onChargeChange={() => {}}
+        />
+
         {/* Кнопки дій */}
         {version.status === 'active' && (
           <div className="flex flex-wrap gap-3">
@@ -404,98 +384,10 @@ export default function ReturnVersionWorkspace() {
               >
                 {saving ? 'Збереження...' : '✓ Підтвердити приймання'}
               </button>
-            ) : (
-              <>
-                {version.fee_status === 'pending' && (
-                  <>
-                    <button
-                      onClick={() => setChargeModal(true)}
-                      className="flex-1 py-3 bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-700 flex items-center justify-center gap-2"
-                    >
-                      <DollarSign className="w-5 h-5" />
-                      Нарахувати прострочення
-                    </button>
-                    <button
-                      onClick={handleWaiveFee}
-                      disabled={saving}
-                      className="px-6 py-3 border border-slate-200 text-slate-600 rounded-xl font-medium hover:bg-slate-50"
-                    >
-                      Списати
-                    </button>
-                  </>
-                )}
-              </>
-            )}
+            ) : null}
           </div>
         )}
       </div>
-
-      {/* Модалка нарахування */}
-      {chargeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">Нарахувати прострочення</h3>
-            
-            <div className="space-y-4">
-              <div className="bg-amber-50 rounded-xl p-4">
-                <div className="text-sm text-amber-600 mb-1">Розрахунок системи</div>
-                <div className="text-2xl font-bold text-amber-700">
-                  ₴ {fmtMoney(version.calculated_total_fee)}
-                </div>
-                <div className="text-sm text-amber-600">
-                  {version.days_overdue} днів × ₴{fmtMoney(version.daily_fee)}/день
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Сума для нарахування
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₴</span>
-                  <input
-                    type="number"
-                    value={chargeAmount}
-                    onChange={(e) => setChargeAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full pl-8 pr-4 py-3 border border-slate-200 rounded-xl text-lg font-medium"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Коментар (опціонально)
-                </label>
-                <input
-                  type="text"
-                  value={chargeNotes}
-                  onChange={(e) => setChargeNotes(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-xl"
-                  placeholder="Напр: Знижка постійному клієнту"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setChargeModal(false)}
-                className="flex-1 py-2.5 border border-slate-200 rounded-xl font-medium text-slate-600 hover:bg-slate-50"
-              >
-                Скасувати
-              </button>
-              <button
-                onClick={handleChargeFee}
-                disabled={saving}
-                className="flex-1 py-2.5 bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-700 disabled:opacity-50"
-              >
-                {saving ? 'Збереження...' : 'Нарахувати'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -28,6 +28,7 @@ import {
   ZoneItemsReturn,
   ZoneReturnFees,
   ZoneRequisitors,
+  ZonePackagingReturn,
 } from '../components/order-workspace/zones'
 
 import DamageModal from '../components/DamageModal'
@@ -63,6 +64,7 @@ export default function PartialReturnVersionWorkspace() {
   const [lateFee, setLateFee] = useState(0)
   const [cleaningFee, setCleaningFee] = useState(0)
   const [damageFee, setDamageFee] = useState(0)
+  const [packagingFee, setPackagingFee] = useState(0)
   
   // Фінансовий summary
   const [financeSummary, setFinanceSummary] = useState(null)
@@ -373,7 +375,7 @@ export default function PartialReturnVersionWorkspace() {
     )
   }
   
-  const totalFees = lateFee + cleaningFee + damageFee
+  const totalFees = lateFee + cleaningFee + damageFee + packagingFee
   const totalReturned = items.reduce((s, i) => s + i.returned_qty, 0)
   const totalRented = items.reduce((s, i) => s + i.rented_qty, 0)
   const canComplete = totalReturned > 0
@@ -541,74 +543,17 @@ export default function PartialReturnVersionWorkspace() {
               readOnly={isCompleted}
               isCompleted={isCompleted}
             />
-          </div>
-          
-          {/* Права колонка - Нарахування */}
-          <div className="lg:col-span-3 space-y-4">
-            {/* Нарахування */}
-            <ZoneReturnFees
-              lateFee={lateFee}
-              cleaningFee={cleaningFee}
-              damageFee={damageFee}
-              onSetLateFee={setLateFee}
-              onSetCleaningFee={setCleaningFee}
-              onSetDamageFee={setDamageFee}
+            
+            {/* Повернення тари */}
+            <ZonePackagingReturn
+              orderId={version?.parent_order_id}
+              onChargeChange={(total) => setPackagingFee(total)}
               readOnly={isCompleted}
             />
-            
-            {/* Підсумок */}
-            <div className="bg-white rounded-xl border border-slate-200 p-4">
-              <h3 className="font-semibold text-slate-800 mb-3">💵 Підсумок</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Добова ставка:</span>
-                  <span className="text-slate-800">₴{version?.total_price?.toFixed(2) || '0.00'}</span>
-                </div>
-                {financeSummary?.days_overdue > 0 && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">× {financeSummary.days_overdue} дн. прострочення:</span>
-                      <span className="text-red-600 font-medium">₴{financeSummary.calculated_late_fee?.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-400">Нараховано в фін систему:</span>
-                      <span className={financeSummary.charged_amount > 0 ? 'text-green-600' : 'text-slate-400'}>
-                        ₴{financeSummary.charged_amount?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                    {financeSummary.paid_amount > 0 && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Оплачено:</span>
-                        <span className="text-green-600">₴{financeSummary.paid_amount?.toFixed(2)}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-                {totalFees > 0 && (
-                  <div className="flex justify-between pt-2 border-t border-slate-100">
-                    <span className="text-slate-700 font-medium">До оплати:</span>
-                    <span className="text-lg font-bold text-slate-800">₴{totalFees.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Кнопка нарахування прострочення */}
-              {!isCompleted && financeSummary?.calculated_late_fee > 0 && financeSummary?.charged_amount < financeSummary?.calculated_late_fee && (
-                <button
-                  onClick={handleChargeLate}
-                  disabled={saving}
-                  className="w-full mt-4 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:bg-slate-300 disabled:cursor-not-allowed font-medium transition-colors"
-                >
-                  {saving ? 'Обробка...' : `💰 Нарахувати прострочення ₴${(financeSummary.calculated_late_fee - financeSummary.charged_amount).toFixed(2)}`}
-                </button>
-              )}
-              
-              {financeSummary?.charged_amount >= financeSummary?.calculated_late_fee && financeSummary?.calculated_late_fee > 0 && (
-                <div className="mt-4 text-center text-sm text-green-600 bg-green-50 rounded-lg py-2">
-                  ✓ Прострочення нараховано у фін систему
-                </div>
-              )}
-            </div>
+          </div>
+          
+          {/* Права колонка */}
+          <div className="lg:col-span-3 space-y-4">
           </div>
         </div>
       </main>

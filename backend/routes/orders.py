@@ -3241,3 +3241,40 @@ async def save_packaging(order_id: int, data: dict, db: Session = Depends(get_rh
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# PACKAGING RETURN
+# ============================================================
+
+@router.get("/{order_id}/packaging-return")
+async def get_packaging_return(order_id: int, db: Session = Depends(get_rh_db)):
+    """Get returned packaging quantities."""
+    try:
+        rows = db.execute(text("""
+            SELECT item_key, returned_quantity FROM order_packaging
+            WHERE order_id = :oid AND returned_quantity > 0
+        """), {"oid": order_id}).fetchall()
+        returned = {r[0]: r[1] for r in rows}
+        return {"order_id": order_id, "returned": returned}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{order_id}/packaging-return")
+async def save_packaging_return(order_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """Save returned packaging quantities."""
+    returned = data.get("returned", {})
+    try:
+        for key, qty in returned.items():
+            qty = int(qty)
+            db.execute(text("""
+                UPDATE order_packaging SET returned_quantity = :qty
+                WHERE order_id = :oid AND item_key = :key
+            """), {"oid": order_id, "key": key, "qty": qty})
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+

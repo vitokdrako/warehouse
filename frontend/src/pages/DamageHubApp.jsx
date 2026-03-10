@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import CorporateHeader from "../components/CorporateHeader";
 import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "../utils/imageHelper";
-import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, ChevronDown, ChevronRight, Plus, Clock, ArrowRight } from "lucide-react";
+import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, ChevronDown, ChevronRight, Plus, Clock, ArrowRight, Printer } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 const fmtTime = (d) => d ? new Date(d).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -221,6 +221,10 @@ const QueueColumn = ({ title, icon: Icon, iconColor, queueType, items, loading, 
   const pendingCount = items.filter(i => i.processing_status === 'pending').length;
   const inProgressCount = items.filter(i => i.processing_status === 'in_progress').length;
 
+  const openPrintList = () => {
+    window.open(`${BACKEND_URL}/api/documents/processing-list/${queueType}/preview`, '_blank');
+  };
+
   return (
     <div className="flex flex-col h-full min-w-0">
       {/* Header */}
@@ -240,7 +244,15 @@ const QueueColumn = ({ title, icon: Icon, iconColor, queueType, items, loading, 
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={openPrintList}
+              disabled={items.length === 0}
+              className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 transition disabled:opacity-30"
+              title="Друк списку"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setShowAdd(!showAdd)}
               className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
@@ -304,6 +316,11 @@ const BatchCard = ({ batch, onToggle, isOpen }) => {
     returned: 'Повернено',
     completed: 'Завершено',
   };
+
+  const openBatchPrint = (e) => {
+    e.stopPropagation();
+    window.open(`${BACKEND_URL}/api/documents/laundry-batch/${batch.id}/preview`, '_blank');
+  };
   
   return (
     <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -324,6 +341,13 @@ const BatchCard = ({ batch, onToggle, isOpen }) => {
             <span>{batch.returned_items || 0}/{batch.total_items} шт</span>
           </div>
         </div>
+        <button
+          onClick={openBatchPrint}
+          className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex-shrink-0"
+          title="Друк списку партії"
+        >
+          <Printer className="w-3.5 h-3.5" />
+        </button>
       </button>
       {isOpen && batch.items?.length > 0 && (
         <div className="px-3 pb-3 space-y-1.5 border-t border-slate-100">
@@ -404,6 +428,14 @@ const LaundryColumn = ({ items, loading, onComplete, onDelete, onPhotoClick, com
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.open(`${BACKEND_URL}/api/documents/processing-list/laundry/preview`, '_blank')}
+              disabled={items.length === 0}
+              className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 transition disabled:opacity-30"
+              title="Друк списку пральні"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
             <button
               onClick={() => setShowAdd(!showAdd)}
               className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 transition"

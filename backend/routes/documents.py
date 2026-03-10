@@ -1523,3 +1523,126 @@ async def get_document_history(
         "total_versions": len(versions),
         "versions": versions
     }
+
+
+# ============================================================
+# PROCESSING QUEUE LISTS (Списки мийки / реставрації / партій)
+# ============================================================
+
+@router.get("/processing-list/{queue_type}/preview", response_class=HTMLResponse)
+async def preview_processing_list(queue_type: str, db: Session = Depends(get_rh_db)):
+    """Generate HTML list of items in processing queue (wash/restoration)"""
+    
+    if queue_type not in ('wash', 'restoration', 'laundry'):
+        raise HTTPException(status_code=400, detail="queue_type must be 'wash', 'restoration' or 'laundry'")
+    
+    titles = {'wash': 'Мийка', 'restoration': 'Реставрація', 'laundry': 'Пральня'}
+    
+    rows = db.execute(text("""
+        SELECT pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.damage_type,
+               pdh.note, pdh.created_at, pdh.created_by, pdh.order_number,
+               pdh.photo_url, pdh.processing_status, pdh.qty,
+               p.image_url AS product_image
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON p.product_id = pdh.product_id
+        WHERE pdh.processing_type = :ptype
+          AND pdh.processing_status IN ('pending', 'in_progress')
+        ORDER BY pdh.created_at DESC
+    """), {"ptype": queue_type}).fetchall()
+    
+    items = []
+    for r in rows:
+        items.append({
+            "sku": r[2] or "—",
+            "name": r[3] or "—",
+            "damage_type": r[4] or "—",
+            "note": r[5] or "",
+            "created_at": r[6].strftime("%d.%m.%Y %H:%M") if r[6] else "—",
+            "created_by": r[7] or "—",
+            "order_number": r[8] or "—",
+            "image_url": _get_full_image_url(r[12] or r[9]),
+            "status": r[10] or "pending",
+            "qty": r[11] or 1,
+        })
+    
+    template_data = {
+        "title": titles.get(queue_type, queue_type),
+        "queue_type": queue_type,
+        "items": items,
+        "total_count": len(items),
+        "total_qty": sum(i["qty"] for i in items),
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+    }
+    
+    template = jinja_env.get_template("documents/processing_list.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/laundry-batch/{batch_id}/preview", response_class=HTMLResponse)
+async def preview_laundry_batch(batch_id: str, db: Session = Depends(get_rh_db)):
+    """Generate HTML list of items in a laundry batch"""
+    
+    batch_row = db.execute(text("""
+        SELECT id, batch_number, laundry_company, status, sent_date, 
+               total_items, returned_items, created_by, batch_type, notes
+        FROM laundry_batches WHERE id = :bid
+    """), {"bid": batch_id}).fetchone()
+    
+    if not batch_row:
+        raise HTTPException(status_code=404, detail="Партію не знайдено")
+    
+    items_rows = db.execute(text("""
+        SELECT li.id, li.damage_id, li.product_name, li.sku, li.quantity,
+               li.returned_quantity, li.notes,
+               pdh.damage_type, pdh.order_number, pdh.created_by as sent_by,
+               p.image_url AS product_image
+        FROM laundry_batch_items li
+        LEFT JOIN product_damage_history pdh ON pdh.id = li.damage_id
+        LEFT JOIN products p ON p.product_id = pdh.product_id
+        WHERE li.batch_id = :bid
+        ORDER BY li.product_name
+    """), {"bid": batch_id}).fetchall()
+    
+    items = []
+    for r in items_rows:
+        items.append({
+            "name": r[2] or "—",
+            "sku": r[3] or "—",
+            "quantity": r[4] or 1,
+            "returned_qty": r[5] or 0,
+            "notes": r[6] or "",
+            "damage_type": r[7] or "—",
+            "order_number": r[8] or "—",
+            "sent_by": r[9] or "—",
+            "image_url": _get_full_image_url(r[10]),
+        })
+    
+    status_labels = {
+        'sent': 'Відправлено',
+        'partial_return': 'Часткове повернення',
+        'returned': 'Повернено',
+        'completed': 'Завершено',
+    }
+    batch_type_labels = {'laundry': 'Хімчистка', 'washing': 'Прання'}
+    
+    template_data = {
+        "title": f"Партія {batch_type_labels.get(batch_row[8], 'Пральня')}",
+        "batch": {
+            "number": batch_row[1],
+            "company": batch_row[2],
+            "status": status_labels.get(batch_row[3], batch_row[3]),
+            "sent_date": batch_row[4].strftime("%d.%m.%Y") if batch_row[4] else "—",
+            "total_items": batch_row[5] or 0,
+            "returned_items": batch_row[6] or 0,
+            "created_by": batch_row[7] or "—",
+            "batch_type": batch_type_labels.get(batch_row[8], batch_row[8] or "—"),
+            "notes": batch_row[9] or "",
+        },
+        "items": items,
+        "total_qty": sum(i["quantity"] for i in items),
+        "total_returned": sum(i["returned_qty"] for i in items),
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+    }
+    
+    template = jinja_env.get_template("documents/processing_list.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")

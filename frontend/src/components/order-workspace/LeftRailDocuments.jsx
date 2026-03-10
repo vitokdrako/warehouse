@@ -175,6 +175,12 @@ export default function LeftRailDocuments({
       return
     }
     
+    // Для Листа комплектації - завжди відкриваємо прямий preview
+    if (docType === 'picking_list') {
+      window.open(`${BACKEND_URL}/api/documents/picking-list/${orderId}/preview`, '_blank')
+      return
+    }
+    
     const docInfo = docVersions[docType]
     
     if (!docInfo?.exists) {
@@ -224,6 +230,21 @@ export default function LeftRailDocuments({
         }
         setGenerating(null)
         return { id: null, doc_type: 'issue_act', entity_id: orderId }
+      } catch (err) {
+        setError(err.message)
+        setGenerating(null)
+        return null
+      }
+    }
+    
+    // Для Листа комплектації - використовуємо прямий endpoint
+    if (docType === 'picking_list') {
+      try {
+        if (openPreview) {
+          window.open(`${BACKEND_URL}/api/documents/picking-list/${orderId}/preview`, '_blank')
+        }
+        setGenerating(null)
+        return { id: null, doc_type: 'picking_list', entity_id: orderId }
       } catch (err) {
         setError(err.message)
         setGenerating(null)

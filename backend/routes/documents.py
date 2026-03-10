@@ -1260,6 +1260,71 @@ async def download_issue_act_pdf(
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
+
+# ============================================================
+# PICKING LIST (ЛИСТ КОМПЛЕКТАЦІЇ)
+# ============================================================
+
+@router.get("/picking-list/{order_id}/preview", response_class=HTMLResponse)
+async def preview_picking_list(order_id: int, db: Session = Depends(get_rh_db)):
+    """Generate HTML preview of picking list (Лист комплектації)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    rental_days = order[15] or 1
+    
+    # Format items with full details + location from products
+    formatted_items = []
+    total_qty = 0
+    for it in items:
+        qty = it[3] or 1
+        total_qty += qty
+        
+        # Get location from products table
+        location = "—"
+        if it[1]:
+            try:
+                loc_row = db.execute(text("""
+                    SELECT zone, aisle, shelf FROM products WHERE product_id = :pid
+                """), {"pid": it[1]}).fetchone()
+                if loc_row:
+                    parts = [str(x) for x in [loc_row[0], loc_row[1], loc_row[2]] if x]
+                    location = "-".join(parts) if parts else "—"
+            except Exception:
+                pass
+        
+        formatted_items.append({
+            "name": it[2],
+            "sku": it[7] or "—",
+            "quantity": qty,
+            "image_url": _get_full_image_url(it[6]),
+            "location": location,
+        })
+    
+    template_data = {
+        "order": {
+            "number": order[1],
+            "customer_name": order[3],
+            "customer_phone": order[4] or order[21],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days,
+        },
+        "items": formatted_items,
+        "totals": {"items_count": len(items), "quantity": total_qty},
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "company": {
+            "phone": "(097) 123 09 93, (093) 375 09 40",
+            "email": "info@farforrent.com.ua"
+        },
+    }
+    
+    template = jinja_env.get_template("documents/picking_list.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
 @router.get("/annex/{order_id}/pdf")
 async def download_annex_pdf(order_id: int, agreement_id: Optional[int] = Query(None), db: Session = Depends(get_rh_db)):
     """Download annex as PDF"""

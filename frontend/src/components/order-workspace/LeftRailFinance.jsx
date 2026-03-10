@@ -49,13 +49,17 @@ export default function LeftRailFinance({
   onServiceFeeChange,  // Callback для зміни додаткової послуги
   isEditable = true,   // Завжди редагується
 }) {
-  const [editingServiceFee, setEditingServiceFee] = useState(false)
-  const [serviceFeeInput, setServiceFeeInput] = useState(serviceFee || 0)
-  const [serviceFeeNameInput, setServiceFeeNameInput] = useState(serviceFeeName || "Мінімальний платіж")
   const [loading, setLoading] = useState(true)
   const [payments, setPayments] = useState([])
   const [deposit, setDeposit] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  
+  // Multiple additional services
+  const [services, setServices] = useState([])
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newServiceName, setNewServiceName] = useState('')
+  const [newServiceAmount, setNewServiceAmount] = useState('')
+  const [savingService, setSavingService] = useState(null)
   
   // Ref для debounced функції
   const debouncedRefreshRef = useRef(null)
@@ -72,12 +76,13 @@ export default function LeftRailFinance({
     // ОПТИМІЗАЦІЯ P0.1: Використовуємо новий endpoint для одного депозиту
     Promise.all([
       authFetch(`${BACKEND_URL}/api/finance/payments?order_id=${orderId}`).then(r => r.json()),
-      authFetch(`${BACKEND_URL}/api/finance/deposit-hold?order_id=${orderId}`).then(r => r.json())
+      authFetch(`${BACKEND_URL}/api/finance/deposit-hold?order_id=${orderId}`).then(r => r.json()),
+      authFetch(`${BACKEND_URL}/api/orders/${orderId}/additional-services`).then(r => r.json()).catch(() => [])
     ])
-    .then(([paymentsData, depositData]) => {
+    .then(([paymentsData, depositData, servicesData]) => {
       setPayments(paymentsData.payments || [])
-      // depositData вже є депозитом для цього замовлення або null
       setDeposit(depositData || null)
+      setServices(Array.isArray(servicesData) ? servicesData : [])
       setLoading(false)
     })
     .catch(err => {
@@ -226,75 +231,128 @@ export default function LeftRailFinance({
           )}
         </div>
         
-        {/* Додаткова послуга (мінімальне замовлення) */}
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-slate-600 text-sm font-medium">
-              {serviceFee > 0 ? (serviceFeeName || "Додаткова послуга") : "Додаткова послуга"}
-            </span>
-            {!editingServiceFee ? (
+        {/* Додаткові послуги (множинні) */}
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3" data-testid="additional-services-block">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-slate-600 text-sm font-medium">Додаткові послуги</span>
+            {isEditable && (
               <button
-                onClick={() => { 
-                  setEditingServiceFee(true); 
-                  setServiceFeeInput(serviceFee || 0);
-                  setServiceFeeNameInput(serviceFeeName || "Мінімальний платіж");
-                }}
-                className="font-semibold text-amber-700 hover:underline text-sm"
+                onClick={() => setShowAddForm(true)}
+                className="text-xs text-amber-700 hover:text-amber-900 font-medium"
+                data-testid="add-service-btn"
               >
-                {serviceFee > 0 ? `₴ ${fmtUA(serviceFee)}` : '+ Додати'}
+                + Додати
               </button>
-            ) : (
-              <span className="text-amber-600 text-xs">Редагування...</span>
             )}
           </div>
           
-          {editingServiceFee && (
-            <div className="mt-2 space-y-2 bg-white p-2 rounded border border-amber-300">
+          {/* Список послуг */}
+          {services.length > 0 ? (
+            <div className="space-y-1.5 mb-2">
+              {services.map(svc => (
+                <div key={svc.id} className="flex items-center justify-between bg-white rounded-lg px-2 py-1.5 border border-amber-100" data-testid={`service-${svc.id}`}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-slate-700 truncate">{svc.name}</div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-amber-700">₴{fmtUA(svc.amount)}</span>
+                    {isEditable && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm(`Видалити "${svc.name}"?`)) return
+                          setSavingService(svc.id)
+                          try {
+                            const token = localStorage.getItem('token')
+                            await fetch(`${BACKEND_URL}/api/orders/${orderId}/additional-services/${svc.id}`, {
+                              method: 'DELETE',
+                              headers: { 'Authorization': `Bearer ${token}` }
+                            })
+                            setServices(prev => prev.filter(s => s.id !== svc.id))
+                            if (onServiceFeeChange) onServiceFeeChange()
+                          } catch (e) { console.error(e) }
+                          finally { setSavingService(null) }
+                        }}
+                        disabled={savingService === svc.id}
+                        className="p-0.5 text-slate-400 hover:text-red-500 transition-colors"
+                        data-testid={`delete-service-${svc.id}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div className="text-xs text-amber-600 font-medium pt-1">
+                Всього: ₴{fmtUA(services.reduce((sum, s) => sum + (s.amount || 0), 0))}
+              </div>
+            </div>
+          ) : !showAddForm && (
+            <div className="text-xs text-amber-600 mb-1">Немає додаткових послуг</div>
+          )}
+          
+          {/* Форма додавання */}
+          {showAddForm && (
+            <div className="mt-2 space-y-2 bg-white p-2 rounded border border-amber-300" data-testid="add-service-form">
               <div>
                 <label className="text-xs text-slate-500 block mb-1">Назва послуги</label>
                 <input
                   type="text"
-                  value={serviceFeeNameInput}
-                  onChange={(e) => setServiceFeeNameInput(e.target.value)}
-                  placeholder="Мінімальний платіж"
-                  className="w-full px-2 py-1 text-sm border rounded"
+                  value={newServiceName}
+                  onChange={(e) => setNewServiceName(e.target.value)}
+                  placeholder="Напр. Мінімальне замовлення"
+                  className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-amber-400 focus:border-amber-400"
                   autoFocus
+                  data-testid="new-service-name"
                 />
               </div>
               <div>
                 <label className="text-xs text-slate-500 block mb-1">Сума (грн)</label>
                 <input
                   type="number"
-                  value={serviceFeeInput}
-                  onChange={(e) => setServiceFeeInput(Number(e.target.value) || 0)}
-                  className="w-full px-2 py-1 text-sm border rounded"
+                  value={newServiceAmount}
+                  onChange={(e) => setNewServiceAmount(e.target.value)}
+                  className="w-full px-2 py-1.5 text-sm border rounded focus:ring-1 focus:ring-amber-400 focus:border-amber-400"
                   min="0"
                   step="100"
+                  placeholder="0"
+                  data-testid="new-service-amount"
                 />
               </div>
               <div className="flex gap-2 justify-end">
                 <button
-                  onClick={() => setEditingServiceFee(false)}
-                  className="px-3 py-1 text-xs bg-slate-200 text-slate-700 rounded hover:bg-slate-300"
+                  onClick={() => { setShowAddForm(false); setNewServiceName(''); setNewServiceAmount(''); }}
+                  className="px-3 py-1.5 text-xs bg-slate-200 text-slate-700 rounded hover:bg-slate-300"
+                  data-testid="cancel-add-service"
                 >
                   Скасувати
                 </button>
                 <button
-                  onClick={() => {
-                    if (onServiceFeeChange) onServiceFeeChange(serviceFeeInput, serviceFeeNameInput);
-                    setEditingServiceFee(false);
+                  onClick={async () => {
+                    if (!newServiceName.trim() || !newServiceAmount || Number(newServiceAmount) <= 0) return
+                    setSavingService('new')
+                    try {
+                      const token = localStorage.getItem('token')
+                      const res = await fetch(`${BACKEND_URL}/api/orders/${orderId}/additional-services`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ name: newServiceName.trim(), amount: Number(newServiceAmount) })
+                      })
+                      if (res.ok) {
+                        const data = await res.json()
+                        setServices(prev => [...prev, { id: data.id, name: newServiceName.trim(), amount: Number(newServiceAmount) }])
+                        setNewServiceName(''); setNewServiceAmount(''); setShowAddForm(false)
+                        if (onServiceFeeChange) onServiceFeeChange()
+                      }
+                    } catch (e) { console.error(e) }
+                    finally { setSavingService(null) }
                   }}
-                  className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                  disabled={savingService === 'new' || !newServiceName.trim() || !newServiceAmount || Number(newServiceAmount) <= 0}
+                  className="px-3 py-1.5 text-xs bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 font-medium"
+                  data-testid="save-service-btn"
                 >
-                  Зберегти
+                  {savingService === 'new' ? '...' : 'Зберегти'}
                 </button>
               </div>
-            </div>
-          )}
-          
-          {!editingServiceFee && serviceFee === 0 && (
-            <div className="text-xs text-amber-600">
-              💡 Мінімальне замовлення 2000 грн
             </div>
           )}
         </div>

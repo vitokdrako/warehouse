@@ -3089,3 +3089,106 @@ async def get_order_payer_options(
         "payers": payers
     }
 
+
+# ============================================================
+# ADDITIONAL SERVICES CRUD
+# ============================================================
+
+@router.get("/{order_id}/additional-services")
+async def get_additional_services(order_id: int, db: Session = Depends(get_rh_db)):
+    """Get all additional services for an order."""
+    try:
+        rows = db.execute(text("""
+            SELECT id, order_id, name, amount, created_at
+            FROM order_additional_services
+            WHERE order_id = :oid
+            ORDER BY id ASC
+        """), {"oid": order_id}).fetchall()
+        
+        return [
+            {"id": r[0], "order_id": r[1], "name": r[2], "amount": float(r[3] or 0), "created_at": r[4].isoformat() if r[4] else None}
+            for r in rows
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{order_id}/additional-services")
+async def add_additional_service(order_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """Add a new additional service to an order."""
+    name = data.get("name", "").strip()
+    amount = float(data.get("amount", 0))
+    
+    if not name:
+        raise HTTPException(status_code=400, detail="Назва послуги обов'язкова")
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Сума має бути більше 0")
+    
+    try:
+        db.execute(text("""
+            INSERT INTO order_additional_services (order_id, name, amount)
+            VALUES (:oid, :name, :amount)
+        """), {"oid": order_id, "name": name, "amount": amount})
+        
+        service_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        
+        # Update total service_fee on order (sum of all services)
+        _sync_service_fee_total(db, order_id)
+        
+        db.commit()
+        return {"success": True, "id": service_id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/{order_id}/additional-services/{service_id}")
+async def update_additional_service(order_id: int, service_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """Update an additional service."""
+    name = data.get("name", "").strip()
+    amount = float(data.get("amount", 0))
+    
+    try:
+        db.execute(text("""
+            UPDATE order_additional_services SET name = :name, amount = :amount
+            WHERE id = :sid AND order_id = :oid
+        """), {"sid": service_id, "oid": order_id, "name": name, "amount": amount})
+        
+        _sync_service_fee_total(db, order_id)
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{order_id}/additional-services/{service_id}")
+async def delete_additional_service(order_id: int, service_id: int, db: Session = Depends(get_rh_db)):
+    """Delete an additional service."""
+    try:
+        db.execute(text("""
+            DELETE FROM order_additional_services WHERE id = :sid AND order_id = :oid
+        """), {"sid": service_id, "oid": order_id})
+        
+        _sync_service_fee_total(db, order_id)
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _sync_service_fee_total(db: Session, order_id: int):
+    """Sync the total service_fee on the order from all additional services."""
+    result = db.execute(text("""
+        SELECT COALESCE(SUM(amount), 0), GROUP_CONCAT(name SEPARATOR ', ')
+        FROM order_additional_services WHERE order_id = :oid
+    """), {"oid": order_id}).fetchone()
+    
+    total = float(result[0]) if result else 0
+    names = result[1] if result else ''
+    
+    db.execute(text("""
+        UPDATE orders SET service_fee = :fee, service_fee_name = :name WHERE order_id = :oid
+    """), {"fee": total, "name": names or '', "oid": order_id})
+

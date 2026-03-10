@@ -540,36 +540,81 @@ async def list_expenses(category_code: Optional[str] = None, expense_type: Optio
                           "order_id": r[9], "employee_id": r[10], "vendor_id": r[11], "status": r[12]} for r in result]}
 
 @router.post("/expenses")
-async def create_expense(data: ExpenseCreate, db: Session = Depends(get_rh_db)):
-    """Record a new expense with ledger entries."""
-    occurred_at = datetime.fromisoformat(data.occurred_at) if data.occurred_at else datetime.now()
+async def create_expense(data: ExpenseCreate):
+    """Record a new expense with ledger entries using direct connection."""
+    import pymysql
+    import os
     
-    cat = db.execute(text("SELECT id, type FROM fin_categories WHERE code = :code"), {"code": data.category_code}).fetchone()
-    if not cat:
-        raise HTTPException(status_code=400, detail=f"Category not found: {data.category_code}")
-    
-    debit_acc = "INV_ASSETS" if data.expense_type == "investment" else ("VENDORS" if data.vendor_id else "OPEX")
-    credit_acc = "CASH" if data.method == "cash" else "BANK"
+    conn = pymysql.connect(
+        host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
+        port=int(os.environ.get('RH_DB_PORT', 3306)),
+        user=os.environ.get('RH_DB_USERNAME', 'farforre_rentalhub'),
+        password=os.environ.get('RH_DB_PASSWORD', '-nu+3Gp54L'),
+        database=os.environ.get('RH_DB_DATABASE', 'farforre_rentalhub'),
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False
+    )
     
     try:
-        tx_id = post_transaction(db, "expense" if data.expense_type == "expense" else "investment_purchase",
-                                 data.amount, debit_acc, credit_acc, "order" if data.order_id else None, data.order_id,
-                                 category_id=cat[0], order_id=data.order_id, vendor_id=data.vendor_id,
-                                 employee_id=data.employee_id, note=data.note, occurred_at=occurred_at)
+        cursor = conn.cursor()
+        occurred_at = datetime.fromisoformat(data.occurred_at) if data.occurred_at else datetime.now()
         
-        db.execute(text("""
-            INSERT INTO fin_expenses (expense_type, category_id, amount, method, vendor_id, occurred_at, note, order_id, employee_id, receipt_file_key, tx_id)
-            VALUES (:expense_type, :category_id, :amount, :method, :vendor_id, :occurred_at, :note, :order_id, :employee_id, :receipt_file_key, :tx_id)
-        """), {"expense_type": data.expense_type, "category_id": cat[0], "amount": data.amount, "method": data.method,
-               "vendor_id": data.vendor_id, "occurred_at": occurred_at, "note": data.note, "order_id": data.order_id,
-               "employee_id": data.employee_id, "receipt_file_key": data.receipt_file_key, "tx_id": tx_id})
-        expense_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        # Find category
+        cursor.execute("SELECT id, type FROM fin_categories WHERE code = %s", (data.category_code,))
+        cat = cursor.fetchone()
+        if not cat:
+            raise HTTPException(status_code=400, detail=f"Category not found: {data.category_code}")
         
-        db.commit()
+        debit_acc = "INV_ASSETS" if data.expense_type == "investment" else ("VENDORS" if data.vendor_id else "OPEX")
+        credit_acc = "CASH" if data.method == "cash" else "BANK"
+        
+        # Get account IDs
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (debit_acc,))
+        debit_acc_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (credit_acc,))
+        credit_acc_id = cursor.fetchone()['id']
+        
+        # Create transaction
+        cursor.execute("""
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, category_id, note)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            "expense" if data.expense_type == "expense" else "investment_purchase",
+            data.amount, occurred_at,
+            "order" if data.order_id else None, data.order_id,
+            cat['id'], data.note
+        ))
+        tx_id = cursor.lastrowid
+        
+        # Ledger entries
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id, vendor_id, employee_id)
+            VALUES (%s, %s, 'D', %s, %s, %s, %s)
+        """, (tx_id, debit_acc_id, data.amount, data.order_id, data.vendor_id, data.employee_id))
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id, vendor_id, employee_id)
+            VALUES (%s, %s, 'C', %s, %s, %s, %s)
+        """, (tx_id, credit_acc_id, data.amount, data.order_id, data.vendor_id, data.employee_id))
+        
+        # Create expense record
+        cursor.execute("""
+            INSERT INTO fin_expenses (expense_type, category_id, amount, method, vendor_id, occurred_at, note, order_id, employee_id, receipt_file_key, tx_id, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'posted')
+        """, (data.expense_type, cat['id'], data.amount, data.method, data.vendor_id,
+              occurred_at, data.note, data.order_id, data.employee_id, data.receipt_file_key, tx_id))
+        expense_id = cursor.lastrowid
+        
+        conn.commit()
         return {"success": True, "expense_id": expense_id, "tx_id": tx_id}
+    except HTTPException:
+        conn.rollback()
+        raise
     except Exception as e:
-        db.rollback()
+        conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 
 # ============================================================

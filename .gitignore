@@ -1150,3 +1150,11 @@ frontend/node_modules/.cache/default-development/9.pack_
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
+-e 
+# Environment files
+*.env
+*.env.*

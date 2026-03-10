@@ -1,1779 +1,330 @@
 /* eslint-disable */
 /**
- * DamageHubApp - Кабінет шкоди (Unified Version)
+ * DamageHubApp - Кабінет шкоди
  * 
- * Оновлення:
- * - Єдиний екран з 3 колонками (як FinanceHub)
- * - Фото з можливістю збільшення
- * - Архів кейсів
- * - БЕЗ фінансових дій (тільки інформування)
- * - Хімчистка з партіями та частковим поверненням
+ * Три колонки: Мийка | Реставрація | Пральня
+ * Декор летить одразу з повернення у відповідну чергу
  */
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import CorporateHeader from "../components/CorporateHeader";
-import { X, Search, Archive, Package, Droplets, Wrench, Sparkles, ChevronDown, ChevronRight, RefreshCw, Eye, Check, AlertTriangle, Clock, Plus, Minus, Trash2, Printer } from "lucide-react";
+import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, Eye, ChevronDown, ChevronRight } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
-
-// ============= HELPERS =============
-const cls = (...classes) => classes.filter(Boolean).join(" ");
-const money = (n) => `₴${(+n || 0).toFixed(2)}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("uk-UA") : "—";
+const fmtTime = (d) => d ? new Date(d).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
 
 const authFetch = async (url, options = {}) => {
   const token = localStorage.getItem("token");
-  const defaultHeaders = { "Content-Type": "application/json" };
-  if (token) defaultHeaders["Authorization"] = `Bearer ${token}`;
-  const response = await fetch(url, { ...options, headers: { ...defaultHeaders, ...options.headers } });
-  return response;
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return fetch(url, { ...options, headers: { ...headers, ...options.headers } });
 };
 
 const getPhotoUrl = (item) => {
-  if (!item) return null;
-  if (item.photo_url) return item.photo_url;
-  if (item.image_url) return item.image_url;
-  
-  // Допоміжна функція для формування повного URL
-  const makeFullUrl = (path) => {
-    if (!path) return null;
-    if (path.startsWith("http")) return path;
-    // Додаємо слеш якщо потрібно
-    const base = BACKEND_URL.endsWith('/') ? BACKEND_URL.slice(0, -1) : BACKEND_URL;
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${base}${cleanPath}`;
-  };
-  
-  if (item.product_image) return makeFullUrl(item.product_image);
-  if (item.image) return makeFullUrl(item.image);
-  return null;
+  const url = item?.photo_url || item?.product_image || item?.image_url;
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  const base = BACKEND_URL.endsWith('/') ? BACKEND_URL.slice(0, -1) : BACKEND_URL;
+  return `${base}/${url.replace(/^\//, '')}`;
 };
 
-// ============= COMPONENTS =============
-
-// Badge компонент
-const Badge = ({ tone = "neutral", children, className = "" }) => {
-  const colors = {
-    ok: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    warn: "bg-amber-100 text-amber-700 border-amber-200",
-    danger: "bg-red-100 text-red-700 border-red-200",
-    info: "bg-blue-100 text-blue-700 border-blue-200",
-    neutral: "bg-slate-100 text-slate-600 border-slate-200",
-  };
-  return (
-    <span className={cls("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium", colors[tone], className)}>
-      {children}
-    </span>
-  );
-};
-
-// Фото з можливістю збільшення
-const ProductPhoto = ({ item, size = "md", className = "", onClick }) => {
+// ============= ITEM CARD =============
+const QueueItemCard = ({ item, onComplete, onPhotoClick, completing }) => {
   const photoUrl = getPhotoUrl(item);
-  const sizes = {
-    sm: "w-10 h-10",
-    md: "w-14 h-14",
-    lg: "w-20 h-20",
-    xl: "w-28 h-28"
-  };
-  
-  if (!photoUrl) {
-    return (
-      <div className={cls(
-        sizes[size] || sizes.md,
-        "rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-xs flex-shrink-0",
-        className
-      )}>
-        <Package className="w-5 h-5" />
-      </div>
-    );
-  }
-  
-  return (
-    <img 
-      src={photoUrl} 
-      alt={item.product_name || item.name || "Товар"} 
-      className={cls(
-        sizes[size] || sizes.md, 
-        "rounded-lg object-cover border border-slate-200 cursor-pointer hover:opacity-90 transition flex-shrink-0",
-        className
-      )}
-      onClick={onClick}
-      onError={(e) => { e.target.style.display = 'none'; }}
-    />
-  );
-};
+  const isInProgress = item.processing_status === 'in_progress';
+  const isPending = item.processing_status === 'pending';
 
-// Модалка збільшеного фото
-const PhotoModal = ({ isOpen, photoUrl, productName, onClose }) => {
-  if (!isOpen) return null;
-  
   return (
-    <div 
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition"
-      >
-        <X className="w-6 h-6" />
-      </button>
-      <img 
-        src={photoUrl}
-        alt={productName}
-        className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      />
-    </div>
-  );
-};
-
-// Картка товару в списку
-const DamageItemCard = ({ item, isSelected, onClick, onPhotoClick }) => {
-  const getProcessingInfo = () => {
-    const type = item.processing_type;
-    if (!type || type === 'none' || type === 'awaiting_assignment') return { icon: <Clock className="w-4 h-4" />, label: "Очікує розподілу", color: "text-amber-600" };
-    const map = {
-      wash: { icon: <Droplets className="w-4 h-4" />, label: "Мийка", color: "text-blue-600" },
-      restoration: { icon: <Wrench className="w-4 h-4" />, label: "Реставрація", color: "text-orange-600" },
-      washing: { icon: <Droplets className="w-4 h-4" />, label: "Прання", color: "text-cyan-600" },
-      laundry: { icon: <Sparkles className="w-4 h-4" />, label: "Хімчистка", color: "text-purple-600" },
-      returned_to_stock: { icon: <Package className="w-4 h-4" />, label: "На склад", color: "text-emerald-600" },
-    };
-    return map[type] || { icon: null, label: type, color: "text-slate-600" };
-  };
-  
-  const processing = getProcessingInfo();
-  const isCompleted = item.processing_status === 'completed';
-  
-  // Показуємо опис забруднення та рівень ризику якщо є
-  const hasDamageInfo = item.damage_description || item.risk_level;
-  
-  return (
-    <div 
-      onClick={onClick}
-      className={cls(
-        "p-3 rounded-xl border bg-white cursor-pointer transition-all hover:shadow-md",
-        isSelected ? "ring-2 ring-blue-500 border-blue-300" : "border-slate-200 hover:border-slate-300",
-        isCompleted && "opacity-60"
-      )}
-    >
+    <div className={`p-3 rounded-xl border bg-white transition-all hover:shadow-sm ${isInProgress ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200'}`}>
       <div className="flex gap-3">
-        <ProductPhoto 
-          item={item} 
-          size="md" 
-          onClick={(e) => { e.stopPropagation(); onPhotoClick(item); }}
-        />
+        {/* Photo */}
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={item.product_name}
+            className="w-14 h-14 rounded-lg object-cover border border-slate-200 cursor-pointer hover:opacity-80 flex-shrink-0"
+            onClick={() => onPhotoClick?.(photoUrl, item.product_name)}
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
+            <Package className="w-5 h-5 text-slate-400" />
+          </div>
+        )}
+        
+        {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="font-medium text-slate-800 text-sm truncate">{item.product_name || item.name}</div>
-              <div className="text-xs text-slate-500">{item.sku}</div>
+            <div className="min-w-0">
+              <div className="font-semibold text-slate-800 text-sm truncate">{item.product_name}</div>
+              <div className="text-xs text-slate-500 font-mono">{item.sku}</div>
             </div>
-            <div className="text-right">
-              <div className="font-bold text-slate-800">{money(item.fee_amount || item.total_fee || 0)}</div>
-              {item.qty > 1 && <div className="text-xs text-slate-500">x{item.qty}</div>}
-            </div>
+            {item.qty > 1 && (
+              <span className="flex-shrink-0 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+                x{item.qty}
+              </span>
+            )}
           </div>
           
-          {/* Опис забруднення та рівень ризику */}
-          {hasDamageInfo && (
-            <div className="mt-1.5 text-xs">
-              {item.damage_description && (
-                <div className="text-slate-600 truncate" title={item.damage_description}>
-                  💬 {item.damage_description}
-                </div>
-              )}
-              {item.risk_level && (
-                <span className={cls(
-                  "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5",
-                  item.risk_level === 'high' ? "bg-red-100 text-red-700" :
-                  item.risk_level === 'medium' ? "bg-amber-100 text-amber-700" :
-                  "bg-green-100 text-green-700"
-                )}>
-                  ⚠️ Ризик: {item.risk_level === 'high' ? 'Високий' : item.risk_level === 'medium' ? 'Середній' : 'Низький'}
-                </span>
-              )}
+          {/* Damage type */}
+          <div className="mt-1.5 px-2 py-1 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-800 truncate" title={item.damage_type}>
+            {item.damage_type || "Не вказано"}
+          </div>
+          
+          {/* Meta row */}
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+            <span title="Замовлення">
+              <span className="font-medium text-slate-700">#{item.order_number}</span>
+            </span>
+            <span title="Відправлено">
+              {fmtTime(item.sent_to_processing_at || item.created_at)}
+            </span>
+            {item.created_by && (
+              <span className="truncate max-w-[120px]" title={`Розподілив: ${item.created_by}`}>
+                {item.created_by.split('@')[0]}
+              </span>
+            )}
+          </div>
+          
+          {/* Note */}
+          {item.note && (
+            <div className="mt-1.5 text-xs text-slate-600 italic truncate" title={item.note}>
+              {item.note}
             </div>
           )}
-          
-          <div className="flex items-center gap-2 mt-2">
-            <span className={cls("flex items-center gap-1 text-xs font-medium", processing.color)}>
-              {processing.icon}
-              {processing.label}
-            </span>
-            {item.processing_status === 'in_progress' && (
-              <Badge tone="info">В роботі</Badge>
-            )}
-            {isCompleted && (
-              <Badge tone="ok">✓ Готово</Badge>
-            )}
+        </div>
+      </div>
+      
+      {/* Action */}
+      <div className="mt-2 flex justify-end">
+        <button
+          onClick={() => onComplete(item.id)}
+          disabled={completing === item.id}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50 transition-colors flex items-center gap-1"
+        >
+          <Check className="w-3.5 h-3.5" />
+          {completing === item.id ? 'Обробка...' : 'Готово'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ============= COLUMN =============
+const QueueColumn = ({ title, icon: Icon, iconColor, items, loading, onComplete, onPhotoClick, completing, searchQuery }) => {
+  const filtered = searchQuery 
+    ? items.filter(i => 
+        (i.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (i.sku || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (i.order_number || '').toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : items;
+  
+  const pendingCount = items.filter(i => i.processing_status === 'pending').length;
+  const inProgressCount = items.filter(i => i.processing_status === 'in_progress').length;
+
+  return (
+    <div className="flex flex-col h-full min-w-0">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconColor}`}>
+            <Icon className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="font-bold text-slate-800 text-sm">{title}</div>
+            <div className="text-[11px] text-slate-500">
+              {pendingCount > 0 && <span className="text-amber-600 font-medium">{pendingCount} очікує</span>}
+              {pendingCount > 0 && inProgressCount > 0 && ' · '}
+              {inProgressCount > 0 && <span className="text-blue-600 font-medium">{inProgressCount} в роботі</span>}
+              {pendingCount === 0 && inProgressCount === 0 && <span>Порожньо</span>}
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-};
-
-// Картка замовлення в лівій колонці
-const OrderCard = ({ order, isSelected, onClick, isArchived = false }) => {
-  const pendingCount = order.pending_assignment || 0;
-  const hasIssues = pendingCount > 0;
-  
-  return (
-    <div
-      onClick={onClick}
-      className={cls(
-        "p-3 rounded-xl border cursor-pointer transition-all",
-        isSelected ? "ring-2 ring-blue-500 border-blue-300 bg-blue-50" : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm",
-        isArchived && "opacity-70"
-      )}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="font-bold text-slate-800">#{order.order_number}</div>
-          <div className="text-sm text-slate-600">{order.customer_name || "—"}</div>
-        </div>
-        <div className="text-right">
-          <div className="font-bold text-slate-800">{money(order.total_fee)}</div>
-          <div className="text-xs text-slate-500">{order.items_count} поз.</div>
-        </div>
+        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+          {filtered.length}
+        </span>
       </div>
       
-      {hasIssues && (
-        <div className="mt-2 flex items-center gap-1 text-amber-600 text-xs font-medium">
-          <AlertTriangle className="w-3 h-3" />
-          {pendingCount} не розподілено
-        </div>
-      )}
-      
-      {isArchived && (
-        <div className="mt-2">
-          <Badge tone="neutral">В архіві</Badge>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Картка партії хімчистки
-const LaundryBatchCard = ({ batch, isSelected, onClick }) => {
-  const progress = batch.total_items > 0 ? (batch.returned_items / batch.total_items) * 100 : 0;
-  const isComplete = batch.status === 'completed';
-  
-  return (
-    <div
-      onClick={onClick}
-      className={cls(
-        "p-3 rounded-xl border cursor-pointer transition-all",
-        isSelected ? "ring-2 ring-purple-500 border-purple-300 bg-purple-50" : "bg-white border-slate-200 hover:border-slate-300",
-        isComplete && "opacity-60"
-      )}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="font-bold text-slate-800">{batch.batch_number || batch.id?.slice(0, 8)}</div>
-          <div className="text-sm text-slate-600">{batch.laundry_company}</div>
-        </div>
-        {isComplete ? (
-          <Badge tone="ok">✓ Закрито</Badge>
-        ) : batch.status === 'partial_return' ? (
-          <Badge tone="warn">Частково</Badge>
+      {/* Items */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-slate-50/50">
+        {loading ? (
+          <div className="text-center py-12 text-slate-400 text-sm">Завантаження...</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <Icon className={`w-8 h-8 mx-auto mb-2 text-slate-300`} />
+            <div className="text-slate-400 text-sm">
+              {searchQuery ? 'Нічого не знайдено' : 'Черга порожня'}
+            </div>
+          </div>
         ) : (
-          <Badge tone="info">Відправлено</Badge>
+          filtered.map(item => (
+            <QueueItemCard
+              key={item.id}
+              item={item}
+              onComplete={onComplete}
+              onPhotoClick={onPhotoClick}
+              completing={completing}
+            />
+          ))
         )}
       </div>
-      
-      <div className="mt-2">
-        <div className="flex justify-between text-xs text-slate-500 mb-1">
-          <span>Повернуто: {batch.returned_items}/{batch.total_items}</span>
-          <span>{Math.round(progress)}%</span>
-        </div>
-        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-          <div 
-            className={cls("h-full rounded-full transition-all", isComplete ? "bg-emerald-500" : "bg-purple-500")}
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
     </div>
   );
 };
 
-// ============= MAIN COMPONENT =============
+// ============= PHOTO MODAL =============
+const PhotoModal = ({ isOpen, photoUrl, productName, onClose }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white">
+        <X className="w-6 h-6" />
+      </button>
+      <img src={photoUrl} alt={productName} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
+    </div>
+  );
+};
+
+// ============= MAIN =============
 export default function DamageHubApp() {
-  // View states
-  const [view, setView] = useState('active'); // 'active' | 'archive'
-  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [completing, setCompleting] = useState(null);
   
-  // Data states
-  const [orderCases, setOrderCases] = useState([]);
-  const [archivedCases, setArchivedCases] = useState([]);
-  const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const [selectedOrderItems, setSelectedOrderItems] = useState([]);
-  
-  // Processing items
   const [washItems, setWashItems] = useState([]);
   const [restoreItems, setRestoreItems] = useState([]);
-  const [washingQueue, setWashingQueue] = useState([]); // Прання
-  const [laundryQueue, setLaundryQueue] = useState([]); // Хімчистка
-  const [washingBatches, setWashingBatches] = useState([]); // Партії прання
-  const [laundryBatches, setLaundryBatches] = useState([]); // Партії хімчистки
-  const [selectedBatchId, setSelectedBatchId] = useState(null);
-  const [selectedBatchType, setSelectedBatchType] = useState(null); // 'washing' | 'laundry'
-  const [batchItems, setBatchItems] = useState([]);
+  const [laundryItems, setLaundryItems] = useState([]);
   
-  // Expanded sections in right panel
-  const [expandedSections, setExpandedSections] = useState({ wash: true, restore: true, washing: true, laundry: true });
-  
-  // Photo modal
   const [photoModal, setPhotoModal] = useState({ isOpen: false, url: null, name: null });
-  
-  // Laundry/Washing batch creation modal
-  const [batchModal, setBatchModal] = useState({
-    isOpen: false,
-    batchType: 'laundry', // 'washing' | 'laundry'
-    selectedItems: [],
-    companyName: '',
-    complexity: 'normal' // 'light', 'normal', 'heavy'
-  });
-  
-  // Full-screen section modals
-  const [fullScreenModal, setFullScreenModal] = useState({
-    isOpen: false,
-    section: null // 'wash', 'restore', 'washing', 'laundry'
-  });
-  
-  // Expanded batches in modal
-  const [expandedBatches, setExpandedBatches] = useState({});
-  const [batchItemsCache, setBatchItemsCache] = useState({});
-  
-  // Return quantities for batch items (temp state for editing)
-  const [returnQuantities, setReturnQuantities] = useState({});
-  
-  // Quick add to queue modal
-  const [quickAddModal, setQuickAddModal] = useState({
-    isOpen: false,
-    queueType: null, // 'washing' | 'laundry'
-    searchQuery: '',
-    searchResults: [],
-    loading: false
-  });
-  
-  // ============= DATA LOADING =============
-  const loadOrderCases = useCallback(async () => {
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
     try {
-      // Завантажуємо активні кейси
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/cases/grouped`);
-      const data = await res.json();
-      setOrderCases(data.cases || []);
+      const [washRes, restoreRes, laundryRes] = await Promise.all([
+        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/wash`),
+        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/restoration`),
+        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/laundry`),
+      ]);
       
-      // Завантажуємо архівовані кейси окремо
-      try {
-        const archiveRes = await authFetch(`${BACKEND_URL}/api/product-damage-history/archive`);
-        const archiveData = await archiveRes.json();
-        setArchivedCases(archiveData.cases || []);
-      } catch (e) {
-        setArchivedCases([]);
-      }
+      const [washData, restoreData, laundryData] = await Promise.all([
+        washRes.json(), restoreRes.json(), laundryRes.json()
+      ]);
       
-      return data.cases || [];
+      setWashItems(washData.items || []);
+      setRestoreItems(restoreData.items || []);
+      setLaundryItems(laundryData.items || []);
     } catch (e) {
-      console.error("Error loading order cases:", e);
-      return [];
+      console.error("Load error:", e);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  const loadOrderDetails = useCallback(async (orderId) => {
-    if (!orderId) return;
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  const handleComplete = async (itemId) => {
+    setCompleting(itemId);
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/order/${orderId}`);
-      const data = await res.json();
-      setSelectedOrderItems(data.history || data.items || []);
-    } catch (e) {
-      console.error("Error loading order details:", e);
-      setSelectedOrderItems([]);
-    }
-  }, []);
-
-  const loadWashItems = useCallback(async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/processing/wash`);
-      const data = await res.json();
-      setWashItems(data.items || []);
-    } catch (e) {
-      setWashItems([]);
-    }
-  }, []);
-
-  const loadRestoreItems = useCallback(async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/processing/restoration`);
-      const data = await res.json();
-      setRestoreItems(data.items || []);
-    } catch (e) {
-      setRestoreItems([]);
-    }
-  }, []);
-
-  const loadLaundryQueue = useCallback(async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/queue?type=laundry`);
-      const data = await res.json();
-      setLaundryQueue(data.items || []);
-    } catch (e) {
-      setLaundryQueue([]);
-    }
-  }, []);
-
-  const loadWashingQueue = useCallback(async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/queue?type=washing`);
-      const data = await res.json();
-      setWashingQueue(data.items || []);
-    } catch (e) {
-      setWashingQueue([]);
-    }
-  }, []);
-
-  const loadLaundryBatches = useCallback(async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches?type=laundry`);
-      const data = await res.json();
-      setLaundryBatches(data.batches || data || []);
-    } catch (e) {
-      setLaundryBatches([]);
-    }
-  }, []);
-
-  const loadWashingBatches = useCallback(async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches?type=washing`);
-      const data = await res.json();
-      setWashingBatches(data.batches || data || []);
-    } catch (e) {
-      setWashingBatches([]);
-    }
-  }, []);
-
-  const loadBatchItems = useCallback(async (batchId, batchType = 'laundry') => {
-    if (!batchId) return;
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}`);
-      const data = await res.json();
-      setBatchItems(data.items || []);
-      return data.items || [];
-    } catch (e) {
-      setBatchItems([]);
-      return [];
-    }
-  }, []);
-
-  // Toggle batch expansion and load items
-  const toggleBatchExpand = useCallback(async (batchId, batchType) => {
-    setExpandedBatches(prev => {
-      const isCurrentlyExpanded = prev[batchId];
-      if (isCurrentlyExpanded) {
-        // Collapse
-        return { ...prev, [batchId]: false };
-      } else {
-        // Expand and load items if not cached
-        if (!batchItemsCache[batchId]) {
-          loadBatchItems(batchId, batchType).then(items => {
-            setBatchItemsCache(prev => ({ ...prev, [batchId]: items }));
-          });
-        }
-        return { ...prev, [batchId]: true };
-      }
-    });
-  }, [loadBatchItems, batchItemsCache]);
-
-  // Delete completed batch
-  const handleDeleteBatch = async (batchId, batchType) => {
-    if (!confirm("Видалити цю партію? Ця дія незворотна.")) return;
-    
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}`, {
-        method: "DELETE"
-      });
-      
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
-      }
-      
-      // Refresh batches
-      if (batchType === 'washing') {
-        await loadWashingBatches();
-      } else {
-        await loadLaundryBatches();
-      }
-      
-      // Clear from cache
-      setBatchItemsCache(prev => {
-        const newCache = { ...prev };
-        delete newCache[batchId];
-        return newCache;
-      });
-      setExpandedBatches(prev => {
-        const newExpanded = { ...prev };
-        delete newExpanded[batchId];
-        return newExpanded;
-      });
-      
-      alert("✅ Партію видалено");
-    } catch (e) {
-      alert(`❌ Помилка: ${e.message}`);
-    }
-  };
-
-  // Quick search for products
-  // Debounce для пошуку
-  const searchTimeoutRef = useRef(null);
-  
-  const handleQuickSearch = async (query) => {
-    // Очистити попередній таймаут
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-    
-    if (!query || query.length < 2) {
-      setQuickAddModal(prev => ({ ...prev, searchResults: [], loading: false }));
-      return;
-    }
-    
-    setQuickAddModal(prev => ({ ...prev, loading: true }));
-    
-    // Debounce 300ms
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await authFetch(`${BACKEND_URL}/api/catalog?search=${encodeURIComponent(query)}&limit=20`);
-        const data = await res.json();
-        // API returns array directly, not { products: [...] }
-        const products = Array.isArray(data) ? data : (data.products || data.items || []);
-        setQuickAddModal(prev => ({ ...prev, searchResults: products, loading: false }));
-      } catch (e) {
-        console.error("Search error:", e);
-        setQuickAddModal(prev => ({ ...prev, searchResults: [], loading: false }));
-      }
-    }, 300);
-  };
-
-  // Quick add product to queue
-  const handleQuickAddToQueue = async (product, queueType) => {
-    try {
-      // Create a quick damage record and send to queue
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/return-to-stock`, {
         method: "POST",
-        body: JSON.stringify({
-          product_id: product.product_id,
-          sku: product.sku,
-          product_name: product.name || product.product_name,
-          category: product.category,
-          queue_type: queueType, // 'washing' or 'laundry'
-          notes: `Швидке додавання в ${queueType === 'washing' ? 'прання' : 'хімчистку'}`
-        })
+        body: JSON.stringify({ notes: "Обробку завершено" })
       });
-      
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
-      }
-      
-      // Refresh queues
-      if (queueType === 'washing') {
-        await loadWashingQueue();
-      } else {
-        await loadLaundryQueue();
-      }
-      
-      // Close modal
-      setQuickAddModal({ isOpen: false, queueType: null, searchQuery: '', searchResults: [], loading: false });
-      alert(`✅ ${product.name || product.product_name} додано в чергу ${queueType === 'washing' ? 'прання' : 'хімчистки'}`);
-    } catch (e) {
-      alert(`❌ Помилка: ${e.message}`);
-    }
-  };
-
-  // Receive items from batch (partial return)
-  const handleReceiveItems = async (batchId, batchType) => {
-    const items = batchItemsCache[batchId] || [];
-    const itemsToReturn = [];
-    
-    for (const item of items) {
-      const key = `${batchId}_${item.id}`;
-      const qty = returnQuantities[key];
-      const remaining = (item.quantity || 1) - (item.returned_quantity || 0);
-      
-      if (qty && qty > 0 && qty <= remaining) {
-        itemsToReturn.push({
-          item_id: item.id,
-          returned_quantity: qty,
-          condition_after: 'good',
-          notes: ''
-        });
-      }
-    }
-    
-    if (itemsToReturn.length === 0) {
-      alert('Введіть кількість для повернення хоча б одного товару');
-      return;
-    }
-    
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}/receive-items`, {
-        method: 'POST',
-        body: JSON.stringify({
-          items: itemsToReturn,
-          received_by_id: 1, // TODO: get from auth context
-          received_by_name: 'Менеджер'
-        })
-      });
-      
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
-      }
-      
-      const result = await res.json();
-      
-      // Clear return quantities for this batch
-      setReturnQuantities(prev => {
-        const newState = { ...prev };
-        for (const item of items) {
-          delete newState[`${batchId}_${item.id}`];
-        }
-        return newState;
-      });
-      
-      // Reload batch items
-      const updatedItems = await loadBatchItems(batchId, batchType);
-      setBatchItemsCache(prev => ({ ...prev, [batchId]: updatedItems }));
-      
-      // Refresh batches list
-      if (batchType === 'washing') {
-        await loadWashingBatches();
-      } else {
-        await loadLaundryBatches();
-      }
-      
-      alert(`✅ ${result.message}`);
-    } catch (e) {
-      alert(`❌ Помилка: ${e.message}`);
-    }
-  };
-
-  // Track mount status
-  const isMountedRef = React.useRef(true);
-  
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-  
-  // Initial load
-  useEffect(() => {
-    const loadAll = async () => {
-      setLoading(true);
-      try {
-        const results = await Promise.all([
-          loadOrderCases(),
-          loadWashItems(),
-          loadRestoreItems(),
-          loadWashingQueue(),
-          loadWashingBatches(),
-          loadLaundryQueue(),
-          loadLaundryBatches()
-        ]);
-        
-        const cases = results[0];
-        
-        // Auto-select first order if none selected
-        if (cases?.length > 0 && isMountedRef.current) {
-          setSelectedOrderId(prev => prev || cases[0].order_id);
-        }
-      } catch (e) {
-        console.error("[DamageHub] Initial load error:", e);
-      } finally {
-        if (isMountedRef.current) {
-          setLoading(false);
-        }
-      }
-    };
-    
-    loadAll();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (selectedOrderId) loadOrderDetails(selectedOrderId);
-  }, [selectedOrderId, loadOrderDetails]);
-
-  useEffect(() => {
-    if (selectedBatchId) loadBatchItems(selectedBatchId);
-  }, [selectedBatchId, loadBatchItems]);
-
-  // ============= HANDLERS =============
-  const handleSendTo = async (itemId, processingType, damageInfo = {}) => {
-    try {
-      const endpoint = { 
-        wash: "send-to-wash", 
-        restoration: "send-to-restoration", 
-        washing: "send-to-washing", // Прання
-        laundry: "send-to-laundry", // Хімчистка
-        return_to_stock: "return-to-stock" 
-      }[processingType];
-      if (!endpoint) return;
-      
-      // Передаємо опис забруднення та рівень ризику
-      const body = { 
-        notes: "Відправлено з кабінету шкоди",
-        damage_description: damageInfo.damage_description || null,
-        risk_level: damageInfo.risk_level || null
-      };
-      
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/${endpoint}`, {
-        method: "POST",
-        body: JSON.stringify(body)
-      });
-      
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
-      }
-      
-      // Повідомлення про успіх
-      const messages = {
-        wash: "✅ Товар відправлено на мийку",
-        restoration: "✅ Товар відправлено на реставрацію",
-        washing: "✅ Товар додано в чергу прання",
-        laundry: "✅ Товар додано в чергу хімчистки",
-        return_to_stock: "✅ Товар повернуто на склад і доступний для оренди"
-      };
-      alert(messages[processingType] || "✅ Готово");
-      
-      await loadOrderDetails(selectedOrderId);
-      await loadOrderCases();
-      if (processingType === "wash") await loadWashItems();
-      if (processingType === "restoration") await loadRestoreItems();
-      if (processingType === "washing") { await loadWashingQueue(); await loadWashingBatches(); }
-      if (processingType === "laundry") { await loadLaundryQueue(); await loadLaundryBatches(); }
-    } catch (e) {
-      alert(`❌ Помилка: ${e.message || "Помилка відправки на обробку"}`);
-    }
-  };
-
-  const handleComplete = async (itemId, notes = "", completedQty = null) => {
-    try {
-      // Для quick_action товарів - використовуємо спеціальний endpoint
-      if (String(itemId).startsWith('quick_')) {
-        const productId = String(itemId).replace('quick_', '');
-        await authFetch(`${BACKEND_URL}/api/product-damage-history/quick-action/complete/${productId}`, {
-          method: "POST",
-          body: JSON.stringify({ notes: notes || "Обробку завершено" })
-        });
-      } else {
-        const body = { 
-          notes: notes || "Обробку завершено"
-        };
-        // Якщо вказано кількість - часткове завершення
-        if (completedQty !== null) {
-          body.completed_qty = completedQty;
-        }
-        await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/complete-processing`, {
-          method: "POST",
-          body: JSON.stringify(body)
-        });
-      }
-      
-      await loadWashItems();
-      await loadRestoreItems();
-      alert("✅ Обробку завершено!");
-    } catch (e) {
-      console.error("Error completing:", e);
-      alert("Помилка завершення обробки");
-    }
-  };
-  
-  // Модал для часткового завершення обробки
-  const [partialCompleteModal, setPartialCompleteModal] = useState({ isOpen: false, item: null, qty: 0 });
-  
-  const openPartialCompleteModal = (item) => {
-    const totalQty = item.qty || 1;
-    const processedQty = item.processed_qty || 0;
-    const remainingQty = totalQty - processedQty;
-    
-    setPartialCompleteModal({
-      isOpen: true,
-      item,
-      qty: remainingQty  // Початкове значення = залишок
-    });
-  };
-  
-  const handlePartialComplete = async () => {
-    if (!partialCompleteModal.item) return;
-    const item = partialCompleteModal.item;
-    const completedQty = partialCompleteModal.qty;
-    
-    if (completedQty <= 0) {
-      alert("Введіть кількість оброблених одиниць");
-      return;
-    }
-    
-    try {
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/complete-processing`, {
-        method: "POST",
-        body: JSON.stringify({ 
-          notes: `Оброблено ${completedQty} з ${item.qty || 1} шт`,
-          completed_qty: completedQty
-        })
-      });
-      
-      setPartialCompleteModal({ isOpen: false, item: null, qty: 0 });
-      await loadWashItems();
-      await loadRestoreItems();
-      await loadWashingQueue();
-      await loadLaundryQueue();
-      alert(`✅ Оброблено ${completedQty} шт!`);
-    } catch (e) {
-      console.error("Error partial complete:", e);
-      alert("Помилка часткового завершення");
-    }
-  };
-
-  // Видалити готову позицію зі списку (приховати, не видаляючи з БД)
-  const handleRemoveFromList = async (itemId, itemType = 'wash') => {
-    try {
-      // Для quick_action товарів - використовуємо спеціальний endpoint
-      if (String(itemId).startsWith('quick_')) {
-        const productId = String(itemId).replace('quick_', '');
-        await authFetch(`${BACKEND_URL}/api/product-damage-history/quick-action/complete/${productId}`, {
-          method: "POST",
-          body: JSON.stringify({ notes: "Видалено зі списку" })
-        });
-      } else {
-        // Для звичайних записів - помічаємо як приховані
-        await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/hide`, {
-          method: "POST"
-        });
-      }
-      
-      // Оновлюємо списки
-      if (itemType === 'wash') {
-        await loadWashItems();
-      } else if (itemType === 'restore') {
-        await loadRestoreItems();
-      } else if (itemType === 'laundry') {
-        await loadLaundryQueue();
+      if (res.ok) {
+        await loadAll();
       }
     } catch (e) {
-      console.error("Error removing item:", e);
-      alert("Помилка видалення зі списку");
+      console.error("Complete error:", e);
+    } finally {
+      setCompleting(null);
     }
   };
 
-  const handleArchiveCase = async (orderId) => {
-    if (!confirm("Відправити кейс в архів?")) return;
-    
-    try {
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/order/${orderId}/archive`, {
-        method: "POST"
-      });
-      
-      await loadOrderCases();
-      alert("✅ Кейс відправлено в архів");
-    } catch (e) {
-      alert("Помилка архівації");
-    }
-  };
+  const openPhoto = (url, name) => setPhotoModal({ isOpen: true, url, name });
 
-  const handleRestoreFromArchive = async (orderId) => {
-    try {
-      await authFetch(`${BACKEND_URL}/api/product-damage-history/order/${orderId}/restore`, {
-        method: "POST"
-      });
-      
-      await loadOrderCases();
-      alert("✅ Кейс відновлено з архіву");
-    } catch (e) {
-      alert("Помилка відновлення");
-    }
-  };
-
-  // Відкрити модалку формування партії
-  const openBatchModal = (batchType = 'laundry') => {
-    const queue = batchType === 'washing' ? washingQueue : laundryQueue;
-    setBatchModal({
-      isOpen: true,
-      batchType: batchType,
-      selectedItems: queue.map(i => i.id), // За замовчуванням вибрати всі
-      companyName: '',
-      complexity: 'normal'
-    });
-  };
-
-  // Перемикання вибору товару в модалці
-  const toggleBatchItem = (itemId) => {
-    setBatchModal(prev => ({
-      ...prev,
-      selectedItems: prev.selectedItems.includes(itemId)
-        ? prev.selectedItems.filter(id => id !== itemId)
-        : [...prev.selectedItems, itemId]
-    }));
-  };
-
-  // Створити партію
-  const handleCreateBatch = async () => {
-    const serviceName = batchModal.batchType === 'washing' ? 'пральні' : 'хімчистки';
-    if (!batchModal.companyName.trim()) {
-      alert(`Введіть назву ${serviceName}`);
-      return;
-    }
-    if (batchModal.selectedItems.length === 0) {
-      alert("Оберіть хоча б один товар");
-      return;
-    }
-    
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/laundry/queue/add-to-batch`, {
-        method: "POST",
-        body: JSON.stringify({ 
-          item_ids: batchModal.selectedItems, 
-          laundry_company: batchModal.companyName.trim(),
-          complexity: batchModal.complexity,
-          batch_type: batchModal.batchType
-        })
-      });
-      
-      if (!res.ok) {
-        const errData = await res.json();
-        alert(`Помилка: ${errData.detail}`);
-        return;
-      }
-      
-      await loadLaundryQueue();
-      await loadLaundryBatches();
-      setBatchModal({ isOpen: false, selectedItems: [], companyName: '', complexity: 'normal' });
-      alert("✅ Партію сформовано");
-    } catch (e) {
-      alert("Помилка формування партії");
-    }
-  };
-
-  // Legacy function - keep for backward compatibility
-  const handleAddToBatch = async (itemIds) => {
-    openBatchModal();
-  };
-
-  const handleReceiveBatchItem = async (batchId, itemId, quantity) => {
-    try {
-      await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}/return-items`, {
-        method: "POST",
-        body: JSON.stringify([{
-          item_id: itemId,
-          returned_quantity: quantity,
-          condition_after: "clean"
-        }])
-      });
-      
-      await loadLaundryBatches();
-      await loadBatchItems(batchId);
-      alert("✅ Товар прийнято");
-    } catch (e) {
-      alert("Помилка прийому");
-    }
-  };
-
-  const handleCloseBatch = async (batchId) => {
-    try {
-      await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}/complete`, { method: "POST" });
-      await loadLaundryBatches();
-      alert("✅ Партію закрито");
-    } catch (e) {
-      alert("Помилка закриття партії");
-    }
-  };
-
-  // Списання товару при повній втраті
-  const handleWriteOff = async (item) => {
-    const qty = item.qty || 1;
-    if (!confirm(`Списати ${qty} шт. "${item.product_name || item.sku}" через повну втрату?\n\nТовар буде відправлено в переоблік зі статусом "Списано".`)) {
-      return;
-    }
-    
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}/write-off`, {
-        method: "POST",
-        body: JSON.stringify({ 
-          qty: qty,
-          reason: "Повна втрата (списано з кабінету шкоди)",
-          damage_type: item.damage_type || "TOTAL_LOSS"
-        })
-      });
-      
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || "Помилка списання");
-      }
-      
-      await loadOrderDetails(selectedOrderId);
-      await loadOrderCases();
-      alert("✅ Товар списано! Кількість оновлено в переобліку.");
-    } catch (e) {
-      alert(`❌ Помилка: ${e.message}`);
-    }
-  };
-
-  const toggleSection = (section) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
-
-  // ============= COMPUTED =============
-  const selectedOrder = useMemo(() => {
-    const allCases = [...orderCases, ...archivedCases];
-    return allCases.find(c => c.order_id === selectedOrderId);
-  }, [orderCases, archivedCases, selectedOrderId]);
-
-  const selectedBatch = useMemo(() => 
-    laundryBatches.find(b => b.id === selectedBatchId),
-  [laundryBatches, selectedBatchId]);
-
-  const filteredCases = useMemo(() => {
-    const cases = view === 'archive' ? archivedCases : orderCases;
-    if (!searchQuery.trim()) return cases;
-    const q = searchQuery.toLowerCase();
-    return cases.filter(c => 
-      `${c.order_number || ''} ${c.customer_name || ''}`.toLowerCase().includes(q)
-    );
-  }, [view, orderCases, archivedCases, searchQuery]);
-
-  const stats = useMemo(() => ({
-    activeCases: orderCases.length,
-    archivedCases: archivedCases.length,
-    washCount: washItems.filter(i => i.processing_status !== 'completed').length,
-    restoreCount: restoreItems.filter(i => i.processing_status !== 'completed').length,
-    washingQueue: washingQueue.length, // Прання
-    laundryQueue: laundryQueue.length, // Хімчистка
-    washingBatches: washingBatches.filter(b => b.status !== 'completed').length,
-    laundryBatches: laundryBatches.filter(b => b.status !== 'completed').length,
-    pendingAssignment: orderCases.reduce((sum, c) => sum + (c.pending_assignment || 0), 0)
-  }), [orderCases, archivedCases, washItems, restoreItems, washingQueue, laundryQueue, washingBatches, laundryBatches]);
-
-  // ============= RENDER =============
   return (
-    <div className="min-h-screen bg-slate-50 font-montserrat">
-      <CorporateHeader cabinetName="Кабінет шкоди" />
+    <div className="min-h-screen bg-slate-50">
+      <CorporateHeader />
       
-      <div className="max-w-[1600px] mx-auto p-4">
-        {/* KPI Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
-            <div className="text-xs text-slate-500">Активні кейси</div>
-            <div className="text-2xl font-bold text-slate-800">{stats.activeCases}</div>
-          </div>
-          <div className="bg-amber-50 rounded-xl border border-amber-200 p-3">
-            <div className="text-xs text-amber-600">Не розподілено</div>
-            <div className="text-2xl font-bold text-amber-700">{stats.pendingAssignment}</div>
-          </div>
-          <div className="bg-blue-50 rounded-xl border border-blue-200 p-3">
-            <div className="text-xs text-blue-600 flex items-center gap-1"><Droplets className="w-3 h-3" /> Мийка</div>
-            <div className="text-2xl font-bold text-blue-700">{stats.washCount}</div>
-          </div>
-          <div className="bg-orange-50 rounded-xl border border-orange-200 p-3">
-            <div className="text-xs text-orange-600 flex items-center gap-1"><Wrench className="w-3 h-3" /> Реставрація</div>
-            <div className="text-2xl font-bold text-orange-700">{stats.restoreCount}</div>
-          </div>
-          <div className="bg-cyan-50 rounded-xl border border-cyan-200 p-3">
-            <div className="text-xs text-cyan-600 flex items-center gap-1"><Droplets className="w-3 h-3" /> Прання</div>
-            <div className="text-2xl font-bold text-cyan-700">{stats.washingQueue}</div>
-          </div>
-          <div className="bg-purple-50 rounded-xl border border-purple-200 p-3">
-            <div className="text-xs text-purple-600 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Хімчистка</div>
-            <div className="text-2xl font-bold text-purple-700">{stats.laundryQueue}</div>
-          </div>
-          <div className="bg-indigo-50 rounded-xl border border-indigo-200 p-3">
-            <div className="text-xs text-indigo-600">Активні партії</div>
-            <div className="text-2xl font-bold text-indigo-700">{stats.washingBatches + stats.laundryBatches}</div>
-          </div>
-          <div className="bg-slate-100 rounded-xl border border-slate-200 p-3">
-            <div className="text-xs text-slate-500 flex items-center gap-1"><Archive className="w-3 h-3" /> Архів</div>
-            <div className="text-2xl font-bold text-slate-600">{stats.archivedCases}</div>
-          </div>
-        </div>
-
-        {/* Main 3-Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      {/* Toolbar */}
+      <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <h1 className="text-lg font-bold text-slate-800">Кабінет шкоди</h1>
           
-          {/* LEFT COLUMN - Orders */}
-          <div className="lg:col-span-3 space-y-3">
-            {/* Search & View Toggle */}
-            <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Пошук..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <button
-                  onClick={() => { loadOrderCases(); loadWashItems(); loadRestoreItems(); loadLaundryQueue(); loadLaundryBatches(); }}
-                  className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition"
-                  title="Оновити"
-                >
-                  <RefreshCw className="w-4 h-4 text-slate-500" />
-                </button>
-              </div>
-              
-              {/* View Toggle */}
-              <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
-                <button
-                  onClick={() => setView('active')}
-                  className={cls(
-                    "flex-1 py-1.5 px-3 rounded-md text-sm font-medium transition",
-                    view === 'active' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  )}
-                >
-                  Активні ({orderCases.length})
-                </button>
-                <button
-                  onClick={() => setView('archive')}
-                  className={cls(
-                    "flex-1 py-1.5 px-3 rounded-md text-sm font-medium transition flex items-center justify-center gap-1",
-                    view === 'archive' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  )}
-                >
-                  <Archive className="w-3 h-3" /> Архів ({archivedCases.length})
-                </button>
-              </div>
-            </div>
-
-            {/* Orders List */}
-            <div className="max-h-[calc(100vh-320px)] overflow-y-auto space-y-2 pr-1">
-              {loading ? (
-                <div className="text-center py-8 text-slate-400">Завантаження...</div>
-              ) : filteredCases.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
-                  {view === 'archive' ? "Архів порожній" : "Немає активних кейсів"}
-                </div>
-              ) : (
-                filteredCases.map(order => (
-                  <OrderCard
-                    key={order.order_id}
-                    order={order}
-                    isSelected={order.order_id === selectedOrderId}
-                    onClick={() => setSelectedOrderId(order.order_id)}
-                    isArchived={view === 'archive'}
-                  />
-                ))
-              )}
+          <div className="flex items-center gap-3 flex-1 max-w-md">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Пошук за назвою, артикулом або замовленням..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-300 transition"
+                data-testid="damage-hub-search"
+              />
             </div>
           </div>
-
-          {/* CENTER COLUMN - Order Items */}
-          <div className="lg:col-span-5">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm h-[calc(100vh-260px)] flex flex-col">
-              {/* Header */}
-              <div className="p-4 border-b border-slate-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-bold text-slate-800">
-                      {selectedOrder ? `#${selectedOrder.order_number}` : "Оберіть замовлення"}
-                    </h3>
-                    {selectedOrder && (
-                      <div className="text-sm text-slate-500">{selectedOrder.customer_name}</div>
-                    )}
-                  </div>
-                  {selectedOrder && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-slate-800">{money(selectedOrder.total_fee)}</span>
-                      {view === 'active' ? (
-                        <button
-                          onClick={() => handleArchiveCase(selectedOrder.order_id)}
-                          className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                          title="В архів"
-                        >
-                          <Archive className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleRestoreFromArchive(selectedOrder.order_id)}
-                          className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
-                        >
-                          Відновити
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Items List */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {selectedOrderItems.length === 0 ? (
-                  <div className="text-center py-8 text-slate-400">
-                    {selectedOrder ? "Немає товарів" : "Оберіть замовлення зліва"}
-                  </div>
-                ) : (
-                  selectedOrderItems.map(item => {
-                    const isLoss = item.damage_code === 'TOTAL_LOSS' || item.damage_type?.toLowerCase().includes('втрата');
-                    const damageLabel = item.damage_type || item.damage_code || 'Невідомо';
-                    
-                    // Визначаємо колір бейджа за типом
-                    const getDamageBadge = () => {
-                      const code = item.damage_code?.toLowerCase() || '';
-                      const type = item.damage_type?.toLowerCase() || '';
-                      
-                      if (code === 'total_loss' || type.includes('втрата')) 
-                        return { tone: 'danger', label: '🔴 ПОВНА ВТРАТА' };
-                      if (code.includes('dirty') || code.includes('wet') || type.includes('бруд') || type.includes('волог'))
-                        return { tone: 'info', label: '🧼 ' + damageLabel };
-                      if (code.includes('broken') || code.includes('damaged') || code.includes('restore') || type.includes('бій') || type.includes('реставр'))
-                        return { tone: 'warn', label: '🔧 ' + damageLabel };
-                      if (code.includes('scratch') || code.includes('dent') || code.includes('chip'))
-                        return { tone: 'neutral', label: damageLabel };
-                      return { tone: 'neutral', label: damageLabel };
-                    };
-                    
-                    const badge = getDamageBadge();
-                    
-                    return (
-                      <div key={item.id} className={cls(
-                        "p-3 rounded-xl border bg-white",
-                        isLoss ? "border-red-300 bg-red-50" : "border-slate-200"
-                      )}>
-                        <div className="flex gap-3">
-                          <ProductPhoto
-                            item={item}
-                            size="lg"
-                            onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <div className="font-semibold text-slate-800">{item.product_name}</div>
-                                <div className="text-sm text-slate-500">{item.sku}</div>
-                                {/* Кількість */}
-                                <div className="text-sm font-medium text-slate-700 mt-0.5">
-                                  Кількість: <span className="text-slate-900">{item.qty || 1} шт</span>
-                                </div>
-                                {/* Причина пошкодження */}
-                                <div className="mt-1">
-                                  <Badge tone={badge.tone}>{badge.label}</Badge>
-                                </div>
-                                {item.note && (
-                                  <div className="text-xs text-slate-500 mt-1 italic">"{item.note}"</div>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <div className="font-bold text-slate-800">{money(item.fee_amount || item.fee || 0)}</div>
-                                <div className="text-xs text-slate-500 mt-1">
-                                  {item.qty || 1} шт × {money((item.fee_amount || item.fee || 0) / (item.qty || 1))}/шт
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Action Buttons */}
-                            {(!item.processing_type || item.processing_type === 'none' || item.processing_type === 'awaiting_assignment') && view === 'active' && (
-                              <div className="flex flex-wrap gap-2 mt-3">
-                                {/* Кнопка списання для повної втрати */}
-                                {isLoss && (
-                                  <button
-                                    onClick={() => handleWriteOff(item)}
-                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition border border-red-300"
-                                  >
-                                    <X className="w-3 h-3" /> Списати ({item.qty || 1} шт)
-                                  </button>
-                                )}
-                                
-                                <button
-                                  onClick={() => handleSendTo(item.id, 'wash', { damage_description: item.damage_description, risk_level: item.risk_level })}
-                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition"
-                                >
-                                  <Droplets className="w-3 h-3" /> Мийка
-                                </button>
-                                <button
-                                  onClick={() => handleSendTo(item.id, 'restoration', { damage_description: item.damage_description, risk_level: item.risk_level })}
-                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition"
-                                >
-                                  <Wrench className="w-3 h-3" /> Реставрація
-                                </button>
-                                <button
-                                  onClick={() => handleSendTo(item.id, 'washing', { damage_description: item.damage_description, risk_level: item.risk_level })}
-                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-cyan-50 text-cyan-600 rounded-lg hover:bg-cyan-100 transition"
-                                >
-                                  <Droplets className="w-3 h-3" /> Прання
-                                </button>
-                                <button
-                                  onClick={() => handleSendTo(item.id, 'laundry', { damage_description: item.damage_description, risk_level: item.risk_level })}
-                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition"
-                                >
-                                  <Sparkles className="w-3 h-3" /> Хімчистка
-                                </button>
-                                <button
-                                  onClick={() => handleSendTo(item.id, 'return_to_stock', { damage_description: item.damage_description, risk_level: item.risk_level })}
-                                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition"
-                                >
-                                  <Package className="w-3 h-3" /> На склад
-                                </button>
-                              </div>
-                            )}
-                            
-                            {/* Processing Status */}
-                            {item.processing_type && item.processing_type !== 'none' && item.processing_type !== 'awaiting_assignment' && (
-                              <div className="mt-2 flex items-center gap-2">
-                                <Badge tone={item.processing_status === 'completed' ? 'ok' : 'info'}>
-                                  {item.processing_type === 'wash' && '🧼 Мийка'}
-                                  {item.processing_type === 'restoration' && '🔧 Реставрація'}
-                                  {item.processing_type === 'washing' && '🫧 Прання'}
-                                  {item.processing_type === 'laundry' && '🧺 Хімчистка'}
-                                  {item.processing_status === 'completed' && ' ✓'}
-                                </Badge>
-                              </div>
-                            )}
-                            
-                            {/* Списано */}
-                            {item.processing_type === 'written_off' && (
-                              <div className="mt-2">
-                                <Badge tone="danger">❌ Списано</Badge>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN - Processing Status */}
-          <div className="lg:col-span-4 space-y-3">
-            
-            {/* МИЙКА Section */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-3 flex items-center justify-between bg-blue-50 border-b border-blue-100">
-                <button
-                  onClick={() => setFullScreenModal({ isOpen: true, section: 'wash' })}
-                  className="font-semibold text-blue-800 flex items-center gap-2 hover:text-blue-900"
-                >
-                  <Droplets className="w-4 h-4" /> Мийка ({washItems.length})
-                  <span className="text-xs text-blue-500">↗</span>
-                </button>
-                <button onClick={() => toggleSection('wash')}>
-                  {expandedSections.wash ? <ChevronDown className="w-4 h-4 text-blue-600" /> : <ChevronRight className="w-4 h-4 text-blue-600" />}
-                </button>
-              </div>
-              
-              {expandedSections.wash && (
-                <div className="max-h-48 overflow-y-auto p-2 space-y-2">
-                  {washItems.length === 0 ? (
-                    <div className="text-center py-4 text-slate-400 text-sm">Немає товарів</div>
-                  ) : washItems.map(item => {
-                    const processed = item.processed_qty || 0;
-                    const total = item.qty || 1;
-                    const remaining = total - processed;
-                    return (
-                    <div key={item.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                      <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
-                        <div className="text-xs text-slate-500">
-                          {item.sku} • 
-                          {processed > 0 ? (
-                            <span className="font-medium">
-                              <span className="text-emerald-600">{processed}</span>/{total} шт
-                            </span>
-                          ) : (
-                            <span className="font-medium">{total} шт</span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {item.processing_status !== 'completed' && (
-                          remaining > 1 ? (
-                            <button
-                              onClick={() => openPartialCompleteModal(item)}
-                              className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
-                              title="Оброблено..."
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleComplete(item.id)}
-                              className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
-                              title="Готово"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          )
-                        )}
-                        <button
-                          onClick={() => handleRemoveFromList(item.id, 'wash')}
-                          className="p-1.5 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 hover:text-slate-700 transition"
-                          title="Видалити зі списку"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )})}
-                </div>
-              )}
-            </div>
-
-            {/* РЕСТАВРАЦІЯ Section */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-3 flex items-center justify-between bg-orange-50 border-b border-orange-100">
-                <button
-                  onClick={() => setFullScreenModal({ isOpen: true, section: 'restore' })}
-                  className="font-semibold text-orange-800 flex items-center gap-2 hover:text-orange-900"
-                >
-                  <Wrench className="w-4 h-4" /> Реставрація ({restoreItems.length})
-                  <span className="text-xs text-orange-500">↗</span>
-                </button>
-                <button onClick={() => toggleSection('restore')}>
-                  {expandedSections.restore ? <ChevronDown className="w-4 h-4 text-orange-600" /> : <ChevronRight className="w-4 h-4 text-orange-600" />}
-                </button>
-              </div>
-              
-              {expandedSections.restore && (
-                <div className="max-h-48 overflow-y-auto p-2 space-y-2">
-                  {restoreItems.length === 0 ? (
-                    <div className="text-center py-4 text-slate-400 text-sm">Немає товарів</div>
-                  ) : restoreItems.map(item => (
-                    <div key={item.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg">
-                      <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
-                        <div className="text-xs text-slate-500">{item.sku} • <span className="font-medium">{item.qty || 1} шт</span></div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {item.processing_status !== 'completed' && (
-                          <button
-                            onClick={() => handleComplete(item.id)}
-                            className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200 transition"
-                            title="Готово"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleRemoveFromList(item.id, 'restore')}
-                          className="p-1.5 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 hover:text-slate-700 transition"
-                          title="Видалити зі списку"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ПРАЛЬНЯ Section - Прання і Хімчистка */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between bg-gradient-to-r from-cyan-50 to-purple-50 border-b border-slate-200 p-3">
-                <button 
-                  onClick={() => setFullScreenModal({ isOpen: true, section: 'laundry' })}
-                  className="font-semibold text-slate-800 flex items-center gap-2 hover:text-slate-900 transition"
-                >
-                  <Droplets className="w-4 h-4 text-cyan-600" />
-                  <Sparkles className="w-4 h-4 text-purple-600" />
-                  Пральня
-                  <span className="text-xs text-slate-500">↗</span>
-                </button>
-                <button onClick={() => toggleSection('laundry')}>
-                  {expandedSections.laundry ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-600" />}
-                </button>
-              </div>
-              
-              {expandedSections.laundry && (
-                <div className="grid grid-cols-2 divide-x divide-slate-200">
-                  {/* ЛІВА ЧАСТИНА - ПРАННЯ */}
-                  <div className="p-3 space-y-3 bg-cyan-50/30">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-cyan-800 flex items-center gap-1.5 text-sm">
-                        <Droplets className="w-4 h-4" /> Прання
-                        {washingQueue.length > 0 && (
-                          <span className="px-1.5 py-0.5 bg-cyan-200 text-cyan-800 text-xs rounded-full ml-1">
-                            {washingQueue.length}
-                          </span>
-                        )}
-                      </span>
-                      <button
-                        onClick={() => openBatchModal('washing')}
-                        disabled={washingQueue.length === 0}
-                        className={`text-xs px-2 py-1 rounded-lg transition font-medium flex items-center gap-1 ${
-                          washingQueue.length > 0 
-                            ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
-                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                        }`}
-                      >
-                        <Package className="w-3 h-3" /> Партія
-                      </button>
-                    </div>
-                    
-                    {/* Черга прання */}
-                    {washingQueue.length > 0 && (
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {washingQueue.map(item => (
-                          <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-cyan-100 text-xs">
-                            <ProductPhoto item={item} size="xs" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
-                              <div className="text-slate-500">{item.sku}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Партії прання */}
-                    <div>
-                      <div className="text-xs font-semibold text-cyan-700 mb-1.5 flex items-center gap-1">
-                        <Package className="w-3 h-3" /> Партії ({washingBatches.length})
-                      </div>
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {washingBatches.length === 0 ? (
-                          <div className="text-center py-3 text-slate-400 text-xs">Немає партій</div>
-                        ) : washingBatches.map(batch => (
-                          <div 
-                            key={batch.id} 
-                            onClick={() => { setSelectedBatchId(batch.id); setSelectedBatchType('washing'); loadBatchItems(batch.id, 'washing'); }}
-                            className={`p-2 rounded-lg border cursor-pointer transition ${
-                              selectedBatchId === batch.id && selectedBatchType === 'washing'
-                                ? 'border-cyan-400 bg-cyan-100' 
-                                : 'border-cyan-200 bg-white hover:border-cyan-300'
-                            }`}
-                          >
-                            <div className="font-medium text-cyan-800 text-xs">{batch.batch_number}</div>
-                            <div className="text-[10px] text-slate-600">{batch.laundry_company}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* ПРАВА ЧАСТИНА - ХІМЧИСТКА */}
-                  <div className="p-3 space-y-3 bg-purple-50/30">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-purple-800 flex items-center gap-1.5 text-sm">
-                        <Sparkles className="w-4 h-4" /> Хімчистка
-                        {laundryQueue.length > 0 && (
-                          <span className="px-1.5 py-0.5 bg-purple-200 text-purple-800 text-xs rounded-full ml-1">
-                            {laundryQueue.length}
-                          </span>
-                        )}
-                      </span>
-                      <button
-                        onClick={() => openBatchModal('laundry')}
-                        disabled={laundryQueue.length === 0}
-                        className={`text-xs px-2 py-1 rounded-lg transition font-medium flex items-center gap-1 ${
-                          laundryQueue.length > 0 
-                            ? 'bg-purple-500 text-white hover:bg-purple-600' 
-                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                        }`}
-                      >
-                        <Package className="w-3 h-3" /> Партія
-                      </button>
-                    </div>
-                    
-                    {/* Черга хімчистки */}
-                    {laundryQueue.length > 0 && (
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {laundryQueue.map(item => (
-                          <div key={item.id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-purple-100 text-xs">
-                            <ProductPhoto item={item} size="xs" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-slate-800 truncate">{item.product_name}</div>
-                              <div className="text-slate-500">{item.sku}</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Партії хімчистки */}
-                    <div>
-                      <div className="text-xs font-semibold text-purple-700 mb-1.5 flex items-center gap-1">
-                        <Package className="w-3 h-3" /> Партії ({laundryBatches.length})
-                      </div>
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {laundryBatches.length === 0 ? (
-                          <div className="text-center py-3 text-slate-400 text-xs">Немає партій</div>
-                        ) : laundryBatches.map(batch => (
-                          <div 
-                            key={batch.id} 
-                            onClick={() => { setSelectedBatchId(batch.id); setSelectedBatchType('laundry'); loadBatchItems(batch.id, 'laundry'); }}
-                            className={`p-2 rounded-lg border cursor-pointer transition ${
-                              selectedBatchId === batch.id && selectedBatchType === 'laundry'
-                                ? 'border-purple-400 bg-purple-100' 
-                                : 'border-purple-200 bg-white hover:border-purple-300'
-                            }`}
-                          >
-                            <div className="font-medium text-purple-800 text-xs">{batch.batch_number}</div>
-                            <div className="text-[10px] text-slate-600">{batch.laundry_company}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Info Block */}
-            <div className="bg-blue-50 rounded-xl border border-blue-200 p-3">
-              <div className="flex items-start gap-2">
-                <Eye className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <div className="text-xs text-blue-700">
-                  <strong>Інформація:</strong> Фінансові нарахування відображаються у фінансовому кабінеті. 
-                  Тут ви керуєте лише обробкою декору.
-                </div>
-              </div>
-            </div>
-          </div>
+          
+          <button
+            onClick={loadAll}
+            disabled={loading}
+            className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-50 transition"
+            title="Оновити"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
 
-      {/* Partial Complete Modal - Часткове завершення обробки */}
-      {partialCompleteModal.isOpen && partialCompleteModal.item && (() => {
-        const totalQty = partialCompleteModal.item.qty || 1;
-        const processedQty = partialCompleteModal.item.processed_qty || 0;
-        const remainingQty = totalQty - processedQty;
-        
-        return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[80] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            {/* Header */}
-            <div className="bg-emerald-50 border-b border-emerald-200 px-5 py-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-emerald-800 flex items-center gap-2">
-                  <Check className="w-5 h-5" /> Завершення обробки
-                </h2>
-                <p className="text-sm text-emerald-600 mt-0.5">Вкажіть кількість оброблених одиниць</p>
-              </div>
-              <button 
-                onClick={() => setPartialCompleteModal({ isOpen: false, item: null, qty: 0 })}
-                className="p-2 hover:bg-emerald-100 rounded-lg transition"
-              >
-                <X className="w-5 h-5 text-emerald-600" />
-              </button>
-            </div>
-            
-            {/* Content */}
-            <div className="p-5 space-y-4">
-              {/* Товар */}
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                <ProductPhoto item={partialCompleteModal.item} size="md" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-800">{partialCompleteModal.item.product_name}</div>
-                  <div className="text-sm text-slate-500">{partialCompleteModal.item.sku}</div>
-                  {partialCompleteModal.item.order_number && (
-                    <div className="text-sm font-medium text-blue-600">#{partialCompleteModal.item.order_number}</div>
-                  )}
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-amber-600">{remainingQty} шт</div>
-                  <div className="text-xs text-slate-500">залишилось</div>
-                  {processedQty > 0 && (
-                    <div className="text-xs text-emerald-600">{processedQty}/{totalQty} оброблено</div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Інформація про пошкодження */}
-              {(partialCompleteModal.item.damage_type || partialCompleteModal.item.note) && (
-                <div className="bg-amber-50 rounded-lg p-3 text-sm">
-                  {partialCompleteModal.item.damage_type && (
-                    <div className="text-slate-700"><span className="font-medium">Причина:</span> {partialCompleteModal.item.damage_type}</div>
-                  )}
-                  {partialCompleteModal.item.note && (
-                    <div className="text-slate-600 mt-1 italic">"{partialCompleteModal.item.note}"</div>
-                  )}
-                </div>
-              )}
-              
-              {/* Кількість оброблених */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Скільки оброблено зараз?
-                </label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.max(1, prev.qty - 1) }))}
-                    className="p-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition"
-                  >
-                    <Minus className="w-5 h-5" />
-                  </button>
-                  <input
-                    type="number"
-                    min="1"
-                    max={remainingQty}
-                    value={partialCompleteModal.qty}
-                    onChange={(e) => setPartialCompleteModal(prev => ({ 
-                      ...prev, 
-                      qty: Math.min(Math.max(1, parseInt(e.target.value) || 1), remainingQty)
-                    }))}
-                    className="flex-1 text-center text-2xl font-bold p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                  />
-                  <button
-                    onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.min(remainingQty, prev.qty + 1) }))}
-                    className="p-2 bg-slate-200 text-slate-600 rounded-lg hover:bg-slate-300 transition"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="text-center text-sm text-slate-500 mt-2">
-                  з {remainingQty} шт (залишилось)
-                </div>
-              </div>
-              
-              {/* Швидкі кнопки */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: Math.ceil(remainingQty / 2) }))}
-                  className="flex-1 py-2 text-sm bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 transition"
-                >
-                  Половина ({Math.ceil(remainingQty / 2)})
-                </button>
-                <button
-                  onClick={() => setPartialCompleteModal(prev => ({ ...prev, qty: remainingQty }))}
-                  className="flex-1 py-2 text-sm bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition"
-                >
-                  Всі залишок ({remainingQty})
-                </button>
-              </div>
-            </div>
-            
-            {/* Footer */}
-            <div className="bg-slate-50 border-t border-slate-200 px-5 py-4 flex gap-3">
-              <button
-                onClick={() => setPartialCompleteModal({ isOpen: false, item: null, qty: 0 })}
-                className="flex-1 py-3 text-slate-600 font-medium rounded-lg hover:bg-slate-200 transition"
-              >
-                Скасувати
-              </button>
-              <button
-                onClick={handlePartialComplete}
-                className="flex-1 py-3 bg-emerald-500 text-white font-medium rounded-lg hover:bg-emerald-600 transition"
-              >
-                ✓ Оброблено ({partialCompleteModal.qty} шт)
-              </button>
-            </div>
+      {/* Three columns */}
+      <div className="max-w-[1600px] mx-auto px-4 py-4">
+        <div className="grid grid-cols-3 gap-4 h-[calc(100vh-140px)]" data-testid="damage-hub-columns">
+          {/* Мийка */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col" data-testid="wash-column">
+            <QueueColumn
+              title="Мийка"
+              icon={Droplets}
+              iconColor="bg-blue-100 text-blue-600"
+              items={washItems}
+              loading={loading}
+              onComplete={handleComplete}
+              onPhotoClick={openPhoto}
+              completing={completing}
+              searchQuery={searchQuery}
+            />
+          </div>
+          
+          {/* Реставрація */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col" data-testid="restore-column">
+            <QueueColumn
+              title="Реставрація"
+              icon={Wrench}
+              iconColor="bg-orange-100 text-orange-600"
+              items={restoreItems}
+              loading={loading}
+              onComplete={handleComplete}
+              onPhotoClick={openPhoto}
+              completing={completing}
+              searchQuery={searchQuery}
+            />
+          </div>
+          
+          {/* Пральня */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col" data-testid="laundry-column">
+            <QueueColumn
+              title="Пральня"
+              icon={Shirt}
+              iconColor="bg-purple-100 text-purple-600"
+              items={laundryItems}
+              loading={loading}
+              onComplete={handleComplete}
+              onPhotoClick={openPhoto}
+              completing={completing}
+              searchQuery={searchQuery}
+            />
           </div>
         </div>
-      )})()}
+      </div>
 
       {/* Photo Modal */}
       <PhotoModal
@@ -1782,859 +333,6 @@ export default function DamageHubApp() {
         productName={photoModal.name}
         onClose={() => setPhotoModal({ isOpen: false, url: null, name: null })}
       />
-
-      {/* Batch Creation Modal - Mobile Responsive */}
-      {batchModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-[70] sm:p-4">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className={`${batchModal.batchType === 'washing' ? 'bg-cyan-50 border-cyan-200' : 'bg-purple-50 border-purple-200'} border-b px-4 sm:px-5 py-3 sm:py-4 flex items-center justify-between`}>
-              <div className="min-w-0 flex-1">
-                <h2 className={`text-base sm:text-lg font-bold ${batchModal.batchType === 'washing' ? 'text-cyan-800' : 'text-purple-800'} flex items-center gap-2`}>
-                  <Package className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" /> 
-                  <span className="truncate">Партія {batchModal.batchType === 'washing' ? 'прання' : 'хімчистки'}</span>
-                </h2>
-                <p className={`text-xs sm:text-sm ${batchModal.batchType === 'washing' ? 'text-cyan-600' : 'text-purple-600'} mt-0.5`}>Оберіть товари та заповніть дані</p>
-              </div>
-              <button 
-                onClick={() => setBatchModal({ isOpen: false, batchType: 'laundry', selectedItems: [], companyName: '', complexity: 'normal' })}
-                className={`p-2 ${batchModal.batchType === 'washing' ? 'hover:bg-cyan-100' : 'hover:bg-purple-100'} rounded-lg transition flex-shrink-0`}
-              >
-                <X className={`w-5 h-5 ${batchModal.batchType === 'washing' ? 'text-cyan-600' : 'text-purple-600'}`} />
-              </button>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5">
-              {/* Company Name */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
-                  Назва {batchModal.batchType === 'washing' ? 'пральні' : 'хімчистки'} <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={batchModal.companyName}
-                  onChange={(e) => setBatchModal(prev => ({ ...prev, companyName: e.target.value }))}
-                  placeholder={batchModal.batchType === 'washing' ? "Пральня №1..." : "Прана, Чистюля..."}
-                  className={`w-full px-3 sm:px-4 py-2.5 text-base border border-slate-300 rounded-lg focus:outline-none focus:ring-2 ${batchModal.batchType === 'washing' ? 'focus:ring-cyan-500 focus:border-cyan-500' : 'focus:ring-purple-500 focus:border-purple-500'}`}
-                />
-              </div>
-              
-              {/* Complexity */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
-                  Складність обробки
-                </label>
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                  {[
-                    { value: 'light', label: 'Легка', color: 'emerald' },
-                    { value: 'normal', label: 'Звичайна', color: 'blue' },
-                    { value: 'heavy', label: 'Складна', color: 'amber' }
-                  ].map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setBatchModal(prev => ({ ...prev, complexity: opt.value }))}
-                      className={`py-2 sm:py-2.5 px-2 sm:px-3 rounded-lg border-2 text-xs sm:text-sm font-medium transition ${
-                        batchModal.complexity === opt.value
-                          ? opt.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                          : opt.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700'
-                          : 'border-amber-500 bg-amber-50 text-amber-700'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Items Selection */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                  <label className="text-sm font-medium text-slate-700">
-                    Товари <span className="text-slate-500">({batchModal.selectedItems.length})</span>
-                  </label>
-                  <div className="flex gap-2 text-xs">
-                    <button
-                      onClick={() => setBatchModal(prev => ({ ...prev, selectedItems: laundryQueue.map(i => i.id) }))}
-                      className="text-purple-600 hover:text-purple-800"
-                    >
-                      Всі
-                    </button>
-                    <span className="text-slate-300">|</span>
-                    <button
-                      onClick={() => setBatchModal(prev => ({ ...prev, selectedItems: [] }))}
-                      className="text-slate-500 hover:text-slate-700"
-                    >
-                      Скинути
-                    </button>
-                  </div>
-                </div>
-                <div className="border border-slate-200 rounded-lg max-h-48 sm:max-h-60 overflow-y-auto">
-                  {laundryQueue.map(item => (
-                    <div
-                      key={item.id}
-                      onClick={() => toggleBatchItem(item.id)}
-                      className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 border-b border-slate-100 last:border-b-0 cursor-pointer transition active:bg-slate-100 ${
-                        batchModal.selectedItems.includes(item.id)
-                          ? 'bg-purple-50'
-                          : 'hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition flex-shrink-0 ${
-                        batchModal.selectedItems.includes(item.id)
-                          ? 'bg-purple-500 border-purple-500'
-                          : 'border-slate-300'
-                      }`}>
-                        {batchModal.selectedItems.includes(item.id) && (
-                          <Check className="w-3 h-3 text-white" />
-                        )}
-                      </div>
-                      <ProductPhoto item={item} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-slate-800 truncate">{item.product_name}</div>
-                        <div className="text-xs text-slate-500 truncate">
-                          {item.sku} • {item.qty || item.remaining_qty || 1} шт
-                          {item.order_number && <span className="hidden sm:inline text-slate-400 ml-1">• #{item.order_number}</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            
-            {/* Footer - Mobile optimized */}
-            <div className="border-t border-slate-200 px-4 sm:px-5 py-3 sm:py-4 bg-slate-50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="text-sm text-slate-500 hidden sm:block">
-                Дата: <span className="font-medium text-slate-700">{new Date().toLocaleDateString('uk-UA')}</span>
-              </div>
-              <div className="flex gap-2 sm:gap-3">
-                <button
-                  onClick={() => setBatchModal({ isOpen: false, selectedItems: [], companyName: '', complexity: 'normal' })}
-                  className="flex-1 sm:flex-none px-4 py-2.5 text-slate-600 hover:bg-slate-200 rounded-lg transition font-medium"
-                >
-                  Скасувати
-                </button>
-                <button
-                  onClick={handleCreateBatch}
-                  disabled={!batchModal.companyName.trim() || batchModal.selectedItems.length === 0}
-                  className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  <Package className="w-4 h-4" /> <span>Створити</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Full-screen Section Modal - Mobile Responsive */}
-      {fullScreenModal.isOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50 sm:p-4">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-5xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className={`px-4 sm:px-6 py-3 sm:py-4 border-b flex items-center justify-between ${
-              fullScreenModal.section === 'wash' ? 'bg-blue-50 border-blue-200' :
-              fullScreenModal.section === 'restore' ? 'bg-orange-50 border-orange-200' :
-              'bg-gradient-to-r from-cyan-50 to-purple-50 border-slate-200'
-            }`}>
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                {fullScreenModal.section === 'wash' && <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 flex-shrink-0" />}
-                {fullScreenModal.section === 'restore' && <Wrench className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 flex-shrink-0" />}
-                {fullScreenModal.section === 'laundry' && (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600" />
-                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <h2 className={`text-lg sm:text-xl font-bold truncate ${
-                    fullScreenModal.section === 'wash' ? 'text-blue-800' :
-                    fullScreenModal.section === 'restore' ? 'text-orange-800' :
-                    'text-slate-800'
-                  }`}>
-                    {fullScreenModal.section === 'wash' && 'Мийка'}
-                    {fullScreenModal.section === 'restore' && 'Реставрація'}
-                    {fullScreenModal.section === 'laundry' && 'Пральня'}
-                  </h2>
-                  <p className="text-xs sm:text-sm text-slate-500 truncate">
-                    {fullScreenModal.section === 'wash' && `${washItems.length} товарів`}
-                    {fullScreenModal.section === 'restore' && `${restoreItems.length} товарів`}
-                    {fullScreenModal.section === 'laundry' && `Прання: ${washingQueue.length}, Хімчистка: ${laundryQueue.length}`}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setFullScreenModal({ isOpen: false, section: null })}
-                className="p-2 hover:bg-white/50 rounded-lg transition flex-shrink-0"
-              >
-                <X className="w-5 h-5 sm:w-6 sm:h-6 text-slate-500" />
-              </button>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-6">
-              {/* МИЙКА */}
-              {fullScreenModal.section === 'wash' && (
-                <div className="space-y-2 sm:space-y-3">
-                  {washItems.length === 0 ? (
-                    <div className="text-center py-8 sm:py-12 text-slate-400">
-                      <Droplets className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 opacity-30" />
-                      <p className="text-base sm:text-lg">Немає товарів на мийці</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                      {washItems.map(item => (
-                        <div key={item.id} className={`flex flex-col gap-2 p-3 sm:p-4 rounded-xl border-2 transition ${
-                          item.processing_status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
-                        }`}>
-                          {/* Заголовок з фото */}
-                          <div className="flex items-start gap-2 sm:gap-3">
-                            <ProductPhoto item={item} size="md" className="sm:!w-16 sm:!h-16" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-slate-800 text-sm sm:text-base leading-tight">{item.product_name}</div>
-                              <div className="text-xs text-slate-500">{item.sku}</div>
-                              {item.order_number && (
-                                <div className="text-xs font-medium text-blue-600 mt-0.5">#{item.order_number}</div>
-                              )}
-                              <div className="text-sm font-bold text-blue-700 mt-1">{item.qty || 1} шт</div>
-                            </div>
-                            {item.processing_status === 'completed' && (
-                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">✓ Готово</span>
-                            )}
-                          </div>
-                          
-                          {/* Інформація про пошкодження */}
-                          {(item.damage_type || item.note) && (
-                            <div className="bg-slate-50 rounded-lg p-2 text-xs">
-                              {item.damage_type && (
-                                <div className="text-slate-600"><span className="font-medium">Тип:</span> {item.damage_type}</div>
-                              )}
-                              {item.note && (
-                                <div className="text-slate-500 mt-0.5 italic">"{item.note}"</div>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Прогрес обробки */}
-                          {item.qty > 1 && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-slate-500">Оброблено:</span>
-                              <span className="font-bold text-emerald-600">{item.processed_qty || 0}</span>
-                              <span className="text-slate-400">з {item.qty}</span>
-                            </div>
-                          )}
-                          
-                          {/* Кнопки дій */}
-                          <div className="flex gap-2 mt-auto">
-                            {item.processing_status !== 'completed' && (
-                              <>
-                                {(item.qty || 1) > 1 ? (
-                                  <button
-                                    onClick={() => openPartialCompleteModal(item)}
-                                    className="flex-1 flex items-center justify-center gap-1 p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition text-sm font-medium"
-                                  >
-                                    <Check className="w-4 h-4" /> Оброблено...
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleComplete(item.id)}
-                                    className="flex-1 flex items-center justify-center gap-1 p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition text-sm font-medium"
-                                  >
-                                    <Check className="w-4 h-4" /> Готово
-                                  </button>
-                                )}
-                              </>
-                            )}
-                            <button
-                              onClick={() => handleRemoveFromList(item.id, 'wash')}
-                              className="p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
-                              title="Видалити"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* РЕСТАВРАЦІЯ */}
-              {fullScreenModal.section === 'restore' && (
-                <div className="space-y-2 sm:space-y-3">
-                  {restoreItems.length === 0 ? (
-                    <div className="text-center py-8 sm:py-12 text-slate-400">
-                      <Wrench className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 opacity-30" />
-                      <p className="text-base sm:text-lg">Немає товарів на реставрації</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                      {restoreItems.map(item => (
-                        <div key={item.id} className={`flex flex-col gap-2 p-3 sm:p-4 rounded-xl border-2 transition ${
-                          item.processing_status === 'completed' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'
-                        }`}>
-                          {/* Заголовок з фото */}
-                          <div className="flex items-start gap-2 sm:gap-3">
-                            <ProductPhoto item={item} size="md" className="sm:!w-16 sm:!h-16" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-slate-800 text-sm sm:text-base leading-tight">{item.product_name}</div>
-                              <div className="text-xs text-slate-500">{item.sku}</div>
-                              {item.order_number && (
-                                <div className="text-xs font-medium text-orange-600 mt-0.5">#{item.order_number}</div>
-                              )}
-                              <div className="text-sm font-bold text-orange-700 mt-1">{item.qty || 1} шт</div>
-                            </div>
-                            {item.processing_status === 'completed' && (
-                              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">✓ Готово</span>
-                            )}
-                          </div>
-                          
-                          {/* Інформація про пошкодження */}
-                          {(item.damage_type || item.note) && (
-                            <div className="bg-slate-50 rounded-lg p-2 text-xs">
-                              {item.damage_type && (
-                                <div className="text-slate-600"><span className="font-medium">Тип:</span> {item.damage_type}</div>
-                              )}
-                              {item.note && (
-                                <div className="text-slate-500 mt-0.5 italic">"{item.note}"</div>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Прогрес обробки */}
-                          {item.qty > 1 && (
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="text-slate-500">Оброблено:</span>
-                              <span className="font-bold text-emerald-600">{item.processed_qty || 0}</span>
-                              <span className="text-slate-400">з {item.qty}</span>
-                            </div>
-                          )}
-                          
-                          {/* Кнопки дій */}
-                          <div className="flex gap-2 mt-auto">
-                            {item.processing_status !== 'completed' && (
-                              <>
-                                {(item.qty || 1) > 1 ? (
-                                  <button
-                                    onClick={() => openPartialCompleteModal(item)}
-                                    className="flex-1 flex items-center justify-center gap-1 p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition text-sm font-medium"
-                                  >
-                                    <Check className="w-4 h-4" /> Оброблено...
-                                  </button>
-                                ) : (
-                                  <button
-                                    onClick={() => handleComplete(item.id)}
-                                    className="flex-1 flex items-center justify-center gap-1 p-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition text-sm font-medium"
-                                  >
-                                    <Check className="w-4 h-4" /> Готово
-                                  </button>
-                                )}
-                              </>
-                            )}
-                            <button
-                              onClick={() => handleRemoveFromList(item.id, 'restore')}
-                              className="p-2 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition"
-                              title="Видалити"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ПРАЛЬНЯ - з двома підрозділами */}
-              {fullScreenModal.section === 'laundry' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                  {/* ПРАННЯ */}
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-cyan-200">
-                      <h3 className="font-bold text-cyan-800 flex items-center gap-2 text-base sm:text-lg">
-                        <Droplets className="w-4 h-4 sm:w-5 sm:h-5" /> Прання
-                        <span className="px-2 py-0.5 bg-cyan-200 text-cyan-800 rounded-full text-xs sm:text-sm ml-1">
-                          {washingQueue.length}
-                        </span>
-                      </h3>
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <button
-                          onClick={() => setQuickAddModal({ isOpen: true, queueType: 'washing', searchQuery: '', searchResults: [], loading: false })}
-                          className="px-2 py-1.5 bg-cyan-100 text-cyan-700 rounded-lg hover:bg-cyan-200 transition font-medium flex items-center gap-1 text-xs sm:text-sm"
-                          title="Додати напряму"
-                        >
-                          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
-                        {washingQueue.length > 0 && (
-                          <button
-                            onClick={() => openBatchModal('washing')}
-                            className="px-2 sm:px-3 py-1.5 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium flex items-center gap-1 text-xs sm:text-sm"
-                          >
-                            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Сформувати</span> Партію
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Черга прання */}
-                    <div>
-                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
-                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" /> Черга
-                      </h4>
-                      {washingQueue.length === 0 ? (
-                        <div className="text-center py-4 sm:py-6 text-slate-400 bg-cyan-50/50 rounded-xl text-sm">
-                          Черга прання порожня
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5 sm:space-y-2 max-h-36 sm:max-h-48 overflow-y-auto">
-                          {washingQueue.map(item => (
-                            <div key={item.id} className="flex flex-col gap-1.5 p-2.5 sm:p-3 bg-cyan-50 rounded-xl border border-cyan-200">
-                              <div className="flex items-center gap-2 sm:gap-3">
-                                <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-slate-800 truncate text-xs sm:text-sm">{item.product_name}</div>
-                                  <div className="text-[10px] sm:text-xs text-slate-500 truncate">{item.sku}</div>
-                                  {item.order_number && (
-                                    <div className="text-[10px] sm:text-xs font-medium text-cyan-600">#{item.order_number}</div>
-                                  )}
-                                </div>
-                                <span className="text-xs sm:text-sm font-semibold text-cyan-700 flex-shrink-0">{item.qty || 1} шт</span>
-                              </div>
-                              {item.note && (
-                                <div className="text-[10px] sm:text-xs text-slate-500 italic pl-2">"{item.note}"</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Партії прання */}
-                    <div>
-                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
-                        <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-500" /> Партії ({washingBatches.length})
-                      </h4>
-                      {washingBatches.length === 0 ? (
-                        <div className="text-center py-3 sm:py-4 text-slate-400 bg-slate-50 rounded-xl text-xs sm:text-sm">
-                          Немає партій
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5 sm:space-y-2 max-h-52 sm:max-h-64 overflow-y-auto">
-                          {washingBatches.map(batch => (
-                            <div key={batch.id} className="rounded-xl border-2 border-slate-200 overflow-hidden">
-                              {/* Batch header - clickable */}
-                              <div 
-                                className={`p-2.5 sm:p-3 cursor-pointer transition flex items-center justify-between active:bg-slate-100 ${
-                                  expandedBatches[batch.id] ? 'bg-cyan-50' : 'hover:bg-slate-50'
-                                }`}
-                                onClick={() => toggleBatchExpand(batch.id, 'washing')}
-                              >
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  {expandedBatches[batch.id] ? (
-                                    <ChevronDown className="w-4 h-4 text-cyan-500 flex-shrink-0" />
-                                  ) : (
-                                    <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                                  )}
-                                  <div className="min-w-0">
-                                    <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate">{batch.laundry_company}</div>
-                                    <div className="text-[10px] sm:text-xs text-slate-500 truncate">
-                                      {batch.batch_number} • {batch.total_items} шт • <span className="hidden sm:inline">Повернуто:</span> {batch.returned_items || 0}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
-                                    batch.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                                    batch.status === 'sent' ? 'bg-cyan-100 text-cyan-700' :
-                                    'bg-slate-100 text-slate-700'
-                                  }`}>
-                                    {batch.status === 'completed' ? '✓' : batch.status === 'sent' ? 'Відпр.' : batch.status}
-                                  </span>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/api/laundry/batches/${batch.id}/preview`, '_blank'); }}
-                                    className="p-1 sm:p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition"
-                                    title="Друкувати"
-                                  >
-                                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                  </button>
-                                  {batch.status === 'completed' && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch.id, 'washing'); }}
-                                      className="p-1 sm:p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition"
-                                      title="Видалити партію"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {/* Batch items - expanded with return inputs */}
-                              {expandedBatches[batch.id] && (
-                                <div className="border-t border-slate-200 bg-white p-2 space-y-1.5">
-                                  {(batchItemsCache[batch.id] || batch.items || []).length === 0 ? (
-                                    <div className="text-center py-2 text-slate-400 text-xs">Завантаження...</div>
-                                  ) : (
-                                    <>
-                                      {(batchItemsCache[batch.id] || batch.items || []).map(item => {
-                                        const remaining = (item.quantity || 1) - (item.returned_quantity || 0);
-                                        const inputKey = `${batch.id}_${item.id}`;
-                                        const isFullyReturned = remaining <= 0;
-                                        
-                                        return (
-                                          <div key={item.id} className={`flex items-center gap-2 p-2 rounded-lg text-xs ${isFullyReturned ? 'bg-emerald-50' : 'bg-slate-50'}`}>
-                                            <div className="flex-1 min-w-0">
-                                              <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
-                                              <div className="text-slate-500 truncate">{item.sku}</div>
-                                            </div>
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                              <div className="text-right">
-                                                <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity}</div>
-                                              </div>
-                                              {!isFullyReturned && batch.status !== 'completed' && (
-                                                <input
-                                                  type="number"
-                                                  min="0"
-                                                  max={remaining}
-                                                  placeholder="0"
-                                                  value={returnQuantities[inputKey] || ''}
-                                                  onChange={(e) => {
-                                                    const val = Math.min(parseInt(e.target.value) || 0, remaining);
-                                                    setReturnQuantities(prev => ({ ...prev, [inputKey]: val > 0 ? val : '' }));
-                                                  }}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  className="w-12 sm:w-14 px-1 sm:px-2 py-1 text-center border border-slate-300 rounded text-xs focus:outline-none focus:border-cyan-400"
-                                                />
-                                              )}
-                                              {isFullyReturned && (
-                                                <span className="text-emerald-600 font-medium">✓</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                      
-                                      {/* Save button */}
-                                      {batch.status !== 'completed' && (batchItemsCache[batch.id] || []).some(item => 
-                                        (item.quantity || 1) - (item.returned_quantity || 0) > 0
-                                      ) && (
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handleReceiveItems(batch.id, 'washing'); }}
-                                          className="w-full mt-2 px-3 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition font-medium text-xs flex items-center justify-center gap-1"
-                                        >
-                                          <Check className="w-3.5 h-3.5" /> Зберегти
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ХІМЧИСТКА */}
-                  <div className="space-y-3 sm:space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-purple-200">
-                      <h3 className="font-bold text-purple-800 flex items-center gap-2 text-base sm:text-lg">
-                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" /> Хімчистка
-                        <span className="px-2 py-0.5 bg-purple-200 text-purple-800 rounded-full text-xs sm:text-sm ml-1">
-                          {laundryQueue.length}
-                        </span>
-                      </h3>
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <button
-                          onClick={() => setQuickAddModal({ isOpen: true, queueType: 'laundry', searchQuery: '', searchResults: [], loading: false })}
-                          className="px-2 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition font-medium flex items-center gap-1 text-xs sm:text-sm"
-                          title="Додати напряму"
-                        >
-                          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        </button>
-                        {laundryQueue.length > 0 && (
-                          <button
-                            onClick={() => openBatchModal('laundry')}
-                            className="px-2 sm:px-3 py-1.5 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium flex items-center gap-1 text-xs sm:text-sm"
-                          >
-                            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Сформувати</span> Партію
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Черга хімчистки */}
-                    <div>
-                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
-                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" /> Черга
-                      </h4>
-                      {laundryQueue.length === 0 ? (
-                        <div className="text-center py-4 sm:py-6 text-slate-400 bg-purple-50/50 rounded-xl text-sm">
-                          Черга хімчистки порожня
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5 sm:space-y-2 max-h-36 sm:max-h-48 overflow-y-auto">
-                          {laundryQueue.map(item => (
-                            <div key={item.id} className="flex flex-col gap-1.5 p-2.5 sm:p-3 bg-purple-50 rounded-xl border border-purple-200">
-                              <div className="flex items-center gap-2 sm:gap-3">
-                                <ProductPhoto item={item} size="sm" onClick={() => setPhotoModal({ isOpen: true, url: getPhotoUrl(item), name: item.product_name })} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-slate-800 truncate text-xs sm:text-sm">{item.product_name}</div>
-                                  <div className="text-[10px] sm:text-xs text-slate-500 truncate">{item.sku}</div>
-                                  {item.order_number && (
-                                    <div className="text-[10px] sm:text-xs font-medium text-purple-600">#{item.order_number}</div>
-                                  )}
-                                </div>
-                                <span className="text-xs sm:text-sm font-semibold text-purple-700 flex-shrink-0">{item.qty || 1} шт</span>
-                              </div>
-                              {item.note && (
-                                <div className="text-[10px] sm:text-xs text-slate-500 italic pl-2">"{item.note}"</div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Партії хімчистки */}
-                    <div>
-                      <h4 className="font-semibold text-slate-700 flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
-                        <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-500" /> Партії ({laundryBatches.length})
-                      </h4>
-                      {laundryBatches.length === 0 ? (
-                        <div className="text-center py-3 sm:py-4 text-slate-400 bg-slate-50 rounded-xl text-xs sm:text-sm">
-                          Немає партій
-                        </div>
-                      ) : (
-                        <div className="space-y-1.5 sm:space-y-2 max-h-52 sm:max-h-64 overflow-y-auto">
-                          {laundryBatches.map(batch => (
-                            <div key={batch.id} className="rounded-xl border-2 border-slate-200 overflow-hidden">
-                              {/* Batch header - clickable */}
-                              <div 
-                                className={`p-2.5 sm:p-3 cursor-pointer transition flex items-center justify-between active:bg-slate-100 ${
-                                  expandedBatches[batch.id] ? 'bg-purple-50' : 'hover:bg-slate-50'
-                                }`}
-                                onClick={() => toggleBatchExpand(batch.id, 'laundry')}
-                              >
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  {expandedBatches[batch.id] ? (
-                                    <ChevronDown className="w-4 h-4 text-purple-500 flex-shrink-0" />
-                                  ) : (
-                                    <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                                  )}
-                                  <div className="min-w-0">
-                                    <div className="font-semibold text-slate-800 text-xs sm:text-sm truncate">{batch.laundry_company}</div>
-                                    <div className="text-[10px] sm:text-xs text-slate-500 truncate">
-                                      {batch.batch_number} • {batch.total_items} шт • <span className="hidden sm:inline">Повернуто:</span> {batch.returned_items || 0}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-                                  <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
-                                    batch.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
-                                    batch.status === 'sent' ? 'bg-purple-100 text-purple-700' :
-                                    'bg-slate-100 text-slate-700'
-                                  }`}>
-                                    {batch.status === 'completed' ? '✓' : batch.status === 'sent' ? 'Відпр.' : batch.status}
-                                  </span>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); window.open(`${BACKEND_URL}/api/laundry/batches/${batch.id}/preview`, '_blank'); }}
-                                    className="p-1 sm:p-1.5 text-slate-500 hover:bg-slate-100 rounded-lg transition"
-                                    title="Друкувати"
-                                  >
-                                    <Printer className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                  </button>
-                                  {batch.status === 'completed' && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch.id, 'laundry'); }}
-                                      className="p-1 sm:p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition"
-                                      title="Видалити партію"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {/* Batch items - expanded with return inputs */}
-                              {expandedBatches[batch.id] && (
-                                <div className="border-t border-slate-200 bg-white p-2 space-y-1.5">
-                                  {(batchItemsCache[batch.id] || batch.items || []).length === 0 ? (
-                                    <div className="text-center py-2 text-slate-400 text-xs">Завантаження...</div>
-                                  ) : (
-                                    <>
-                                      {(batchItemsCache[batch.id] || batch.items || []).map(item => {
-                                        const remaining = (item.quantity || 1) - (item.returned_quantity || 0);
-                                        const inputKey = `${batch.id}_${item.id}`;
-                                        const isFullyReturned = remaining <= 0;
-                                        
-                                        return (
-                                          <div key={item.id} className={`flex items-center gap-2 p-2 rounded-lg text-xs ${isFullyReturned ? 'bg-emerald-50' : 'bg-slate-50'}`}>
-                                            <div className="flex-1 min-w-0">
-                                              <div className="font-medium text-slate-700 truncate">{item.product_name}</div>
-                                              <div className="text-slate-500 truncate">{item.sku}</div>
-                                            </div>
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                              <div className="text-right">
-                                                <div className="font-semibold text-slate-700">{item.returned_quantity || 0}/{item.quantity}</div>
-                                              </div>
-                                              {!isFullyReturned && batch.status !== 'completed' && (
-                                                <input
-                                                  type="number"
-                                                  min="0"
-                                                  max={remaining}
-                                                  placeholder="0"
-                                                  value={returnQuantities[inputKey] || ''}
-                                                  onChange={(e) => {
-                                                    const val = Math.min(parseInt(e.target.value) || 0, remaining);
-                                                    setReturnQuantities(prev => ({ ...prev, [inputKey]: val > 0 ? val : '' }));
-                                                  }}
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  className="w-12 sm:w-14 px-1 sm:px-2 py-1 text-center border border-slate-300 rounded text-xs focus:outline-none focus:border-purple-400"
-                                                />
-                                              )}
-                                              {isFullyReturned && (
-                                                <span className="text-emerald-600 font-medium">✓</span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                      
-                                      {/* Save button */}
-                                      {batch.status !== 'completed' && (batchItemsCache[batch.id] || []).some(item => 
-                                        (item.quantity || 1) - (item.returned_quantity || 0) > 0
-                                      ) && (
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handleReceiveItems(batch.id, 'laundry'); }}
-                                          className="w-full mt-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition font-medium text-xs flex items-center justify-center gap-1"
-                                        >
-                                          <Check className="w-3.5 h-3.5" /> Зберегти
-                                        </button>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Add Modal - Mobile Responsive */}
-      {quickAddModal.isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center sm:p-4">
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[90vh] sm:max-h-[80vh] flex flex-col">
-            <div className={`px-4 sm:px-5 py-3 sm:py-4 border-b flex items-center justify-between ${
-              quickAddModal.queueType === 'washing' ? 'bg-cyan-50' : 'bg-purple-50'
-            }`}>
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                {quickAddModal.queueType === 'washing' ? (
-                  <Droplets className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 flex-shrink-0" />
-                ) : (
-                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 flex-shrink-0" />
-                )}
-                <div className="min-w-0">
-                  <h2 className={`text-base sm:text-lg font-bold truncate ${
-                    quickAddModal.queueType === 'washing' ? 'text-cyan-800' : 'text-purple-800'
-                  }`}>
-                    Додати в {quickAddModal.queueType === 'washing' ? 'прання' : 'хімчистку'}
-                  </h2>
-                  <p className="text-xs sm:text-sm text-slate-500">Пошук товару</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setQuickAddModal({ isOpen: false, queueType: null, searchQuery: '', searchResults: [], loading: false })}
-                className="p-2 hover:bg-white/50 rounded-lg transition flex-shrink-0"
-              >
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-            
-            {/* Search input */}
-            <div className="p-3 sm:p-4 border-b">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Введіть назву або SKU..."
-                  className="w-full pl-9 sm:pl-10 pr-4 py-2.5 text-base border border-slate-300 rounded-xl focus:outline-none focus:border-slate-400"
-                  value={quickAddModal.searchQuery}
-                  onChange={(e) => {
-                    const query = e.target.value;
-                    setQuickAddModal(prev => ({ ...prev, searchQuery: query }));
-                    handleQuickSearch(query);
-                  }}
-                  autoFocus
-                />
-              </div>
-            </div>
-            
-            {/* Search results */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
-              {quickAddModal.loading ? (
-                <div className="text-center py-6 sm:py-8 text-slate-400">
-                  <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 animate-spin mx-auto mb-2" />
-                  Пошук...
-                </div>
-              ) : quickAddModal.searchResults.length === 0 ? (
-                <div className="text-center py-6 sm:py-8 text-slate-400 text-sm">
-                  {quickAddModal.searchQuery.length < 2 ? 
-                    "Введіть мінімум 2 символи" : 
-                    "Товари не знайдено"
-                  }
-                </div>
-              ) : (
-                <div className="space-y-1.5 sm:space-y-2">
-                  {quickAddModal.searchResults.map(product => (
-                    <div
-                      key={product.product_id || product.id}
-                      className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 bg-slate-50 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition cursor-pointer"
-                      onClick={() => handleQuickAddToQueue(product, quickAddModal.queueType)}
-                    >
-                      {product.image_url ? (
-                        <img
-                          src={product.image_url.startsWith('http') ? product.image_url : `${BACKEND_URL}${product.image_url}`}
-                          alt={product.name || product.product_name}
-                          className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded-lg flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Package className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-800 truncate text-sm">{product.name || product.product_name}</div>
-                        <div className="text-xs text-slate-500 truncate">{product.sku} • {product.category}</div>
-                      </div>
-                      <button className={`p-2 sm:px-3 sm:py-1.5 rounded-lg font-medium text-sm flex-shrink-0 ${
-                        quickAddModal.queueType === 'washing' 
-                          ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
-                          : 'bg-purple-500 text-white hover:bg-purple-600'
-                      }`}>
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

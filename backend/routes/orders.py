@@ -945,7 +945,7 @@ async def update_order_status(
     # Validate status transition
     valid_statuses = [
         'pending', 'awaiting_customer', 'processing', 'ready_for_issue',
-        'issued', 'on_rent', 'returned', 'completed', 'cancelled'
+        'issued', 'on_rent', 'returned', 'partial_return', 'completed', 'cancelled'
     ]
     
     if new_status not in valid_statuses:

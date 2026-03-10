@@ -343,14 +343,22 @@ export default function ManagerDashboard() {
   // 2. В обробці (processing) - на комплектації
   // Фільтрація карток по пошуку
   const filterBySearch = (cards) => {
-    if (!searchQuery.trim()) return cards;
-    const q = searchQuery.toLowerCase().trim();
-    return cards.filter(card => {
-      const name = (card.customer_name || '').toLowerCase();
-      const phone = (card.customer_phone || '').toLowerCase();
-      const orderNum = String(card.order_id || card.id || '').toLowerCase();
-      const orderNumber = (card.order_number || '').toLowerCase();
-      return name.includes(q) || phone.includes(q) || orderNum.includes(q) || orderNumber.includes(q);
+    let result = cards;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = cards.filter(card => {
+        const name = (card.customer_name || '').toLowerCase();
+        const phone = (card.customer_phone || '').toLowerCase();
+        const orderNum = String(card.order_id || card.id || '').toLowerCase();
+        const orderNumber = (card.order_number || '').toLowerCase();
+        return name.includes(q) || phone.includes(q) || orderNum.includes(q) || orderNumber.includes(q);
+      });
+    }
+    // Сортування від нових до старих
+    return [...result].sort((a, b) => {
+      const dateA = new Date(a.updated_at || a.created_at || 0);
+      const dateB = new Date(b.updated_at || b.created_at || 0);
+      return dateB - dateA;
     });
   };
 

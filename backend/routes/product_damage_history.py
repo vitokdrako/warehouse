@@ -1356,8 +1356,8 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
     if not product_id or not sku:
         raise HTTPException(status_code=400, detail="product_id та sku обов'язкові")
     
-    if queue_type not in ('washing', 'laundry'):
-        raise HTTPException(status_code=400, detail="queue_type має бути 'washing' або 'laundry'")
+    if queue_type not in ('washing', 'laundry', 'wash', 'restoration'):
+        raise HTTPException(status_code=400, detail="queue_type має бути 'wash', 'restoration', 'washing' або 'laundry'")
     
     try:
         damage_id = str(uuid.uuid4())

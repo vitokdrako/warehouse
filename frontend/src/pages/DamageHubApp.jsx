@@ -28,8 +28,100 @@ const getPhotoUrl = (item) => {
   return `${base}/${url.replace(/^\//, '')}`;
 };
 
+// ============= QUICK ADD POPOVER =============
+const QuickAddPopover = ({ queueType, onAdd, onClose }) => {
+  const [sku, setSku] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [found, setFound] = useState(null);
+  const [error, setError] = useState('');
+
+  const searchBySku = async () => {
+    if (!sku.trim()) return;
+    setLoading(true);
+    setError('');
+    setFound(null);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/catalog/products/search?q=${encodeURIComponent(sku.trim())}&limit=1`);
+      if (res.ok) {
+        const data = await res.json();
+        const items = data.products || data.items || data || [];
+        if (items.length > 0) {
+          setFound(items[0]);
+        } else {
+          setError('Товар не знайдено');
+        }
+      } else {
+        setError('Помилка пошуку');
+      }
+    } catch {
+      setError('Помилка пошуку');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!found) return;
+    setLoading(true);
+    try {
+      await onAdd({
+        product_id: found.product_id || found.id,
+        sku: found.sku || found.model || sku.trim(),
+        product_name: found.name || found.product_name,
+        category: found.category || '',
+        queue_type: queueType,
+        notes: 'Додано вручну з кабінету шкоди'
+      });
+      onClose();
+    } catch {
+      setError('Помилка додавання');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="absolute top-full left-0 right-0 mt-1 z-40 p-3 rounded-xl border border-slate-200 bg-white shadow-xl space-y-2">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={sku}
+          onChange={e => setSku(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && searchBySku()}
+          placeholder="Артикул або назва..."
+          className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400"
+          autoFocus
+        />
+        <button onClick={searchBySku} disabled={loading || !sku.trim()} className="px-3 py-2 text-sm bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50">
+          {loading ? '...' : 'Знайти'}
+        </button>
+        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      {error && <div className="text-xs text-red-500">{error}</div>}
+      {found && (
+        <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border">
+          {(found.image || found.image_url) ? (
+            <img src={getPhotoUrl(found)} className="w-10 h-10 rounded-md object-cover border" alt="" onError={e => e.target.style.display='none'} />
+          ) : (
+            <div className="w-10 h-10 rounded-md bg-slate-200 flex items-center justify-center"><Package className="w-4 h-4 text-slate-400" /></div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{found.name || found.product_name}</div>
+            <div className="text-xs text-slate-500 font-mono">{found.sku || found.model}</div>
+          </div>
+          <button onClick={handleAdd} disabled={loading} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50">
+            Додати
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ============= ITEM CARD =============
-const QueueItemCard = ({ item, onComplete, onPhotoClick, completing }) => {
+const QueueItemCard = ({ item, onComplete, onDelete, onPhotoClick, completing }) => {
   const photoUrl = getPhotoUrl(item);
   const isInProgress = item.processing_status === 'in_progress';
   const isPending = item.processing_status === 'pending';
@@ -96,7 +188,14 @@ const QueueItemCard = ({ item, onComplete, onPhotoClick, completing }) => {
       </div>
       
       {/* Action */}
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex justify-end gap-1.5">
+        <button
+          onClick={() => onDelete(item.id)}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors flex items-center gap-1"
+        >
+          <X className="w-3.5 h-3.5" />
+          Видалити
+        </button>
         <button
           onClick={() => onComplete(item.id)}
           disabled={completing === item.id}
@@ -111,7 +210,9 @@ const QueueItemCard = ({ item, onComplete, onPhotoClick, completing }) => {
 };
 
 // ============= COLUMN =============
-const QueueColumn = ({ title, icon: Icon, iconColor, items, loading, onComplete, onPhotoClick, completing, searchQuery }) => {
+const QueueColumn = ({ title, icon: Icon, iconColor, queueType, items, loading, onComplete, onDelete, onPhotoClick, completing, searchQuery, onQuickAdd }) => {
+  const [showAdd, setShowAdd] = useState(false);
+  
   const filtered = searchQuery 
     ? items.filter(i => 
         (i.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -126,24 +227,42 @@ const QueueColumn = ({ title, icon: Icon, iconColor, items, loading, onComplete,
   return (
     <div className="flex flex-col h-full min-w-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
-        <div className="flex items-center gap-2.5">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconColor}`}>
-            <Icon className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="font-bold text-slate-800 text-sm">{title}</div>
-            <div className="text-[11px] text-slate-500">
-              {pendingCount > 0 && <span className="text-amber-600 font-medium">{pendingCount} очікує</span>}
-              {pendingCount > 0 && inProgressCount > 0 && ' · '}
-              {inProgressCount > 0 && <span className="text-blue-600 font-medium">{inProgressCount} в роботі</span>}
-              {pendingCount === 0 && inProgressCount === 0 && <span>Порожньо</span>}
+      <div className="relative px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconColor}`}>
+              <Icon className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="font-bold text-slate-800 text-sm">{title}</div>
+              <div className="text-[11px] text-slate-500">
+                {pendingCount > 0 && <span className="text-amber-600 font-medium">{pendingCount} очікує</span>}
+                {pendingCount > 0 && inProgressCount > 0 && ' · '}
+                {inProgressCount > 0 && <span className="text-blue-600 font-medium">{inProgressCount} в роботі</span>}
+                {pendingCount === 0 && inProgressCount === 0 && <span>Порожньо</span>}
+              </div>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAdd(!showAdd)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
+              title="Додати по артикулу"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+              {filtered.length}
+            </span>
+          </div>
         </div>
-        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
-          {filtered.length}
-        </span>
+        {showAdd && (
+          <QuickAddPopover
+            queueType={queueType}
+            onAdd={async (data) => { await onQuickAdd(data); setShowAdd(false); }}
+            onClose={() => setShowAdd(false)}
+          />
+        )}
       </div>
       
       {/* Items */}
@@ -163,6 +282,7 @@ const QueueColumn = ({ title, icon: Icon, iconColor, items, loading, onComplete,
               key={item.id}
               item={item}
               onComplete={onComplete}
+              onDelete={onDelete}
               onPhotoClick={onPhotoClick}
               completing={completing}
             />
@@ -230,13 +350,14 @@ const BatchCard = ({ batch, onToggle, isOpen }) => {
 };
 
 // ============= LAUNDRY COLUMN (з партіями) =============
-const LaundryColumn = ({ items, loading, onComplete, onPhotoClick, completing, searchQuery, batches, batchesLoading, onCreateBatch, onRefreshBatches }) => {
+const LaundryColumn = ({ items, loading, onComplete, onDelete, onPhotoClick, completing, searchQuery, batches, batchesLoading, onCreateBatch, onRefreshBatches, onQuickAdd }) => {
   const [tab, setTab] = useState('queue'); // queue | batches
   const [openBatch, setOpenBatch] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showBatchForm, setShowBatchForm] = useState(false);
   const [batchCompany, setBatchCompany] = useState('');
   const [batchType, setBatchType] = useState('laundry');
+  const [showAdd, setShowAdd] = useState(false);
 
   const filtered = searchQuery
     ? items.filter(i =>
@@ -285,10 +406,26 @@ const LaundryColumn = ({ items, loading, onComplete, onPhotoClick, completing, s
               </div>
             </div>
           </div>
-          <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
-            {items.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAdd(!showAdd)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-600 transition"
+              title="Додати по артикулу"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+              {items.length}
+            </span>
+          </div>
         </div>
+        {showAdd && (
+          <QuickAddPopover
+            queueType="laundry"
+            onAdd={async (data) => { await onQuickAdd(data); setShowAdd(false); }}
+            onClose={() => setShowAdd(false)}
+          />
+        )}
         {/* Tabs */}
         <div className="flex gap-1 bg-slate-100 rounded-lg p-0.5">
           <button onClick={() => setTab('queue')} className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition ${tab === 'queue' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
@@ -354,7 +491,7 @@ const LaundryColumn = ({ items, loading, onComplete, onPhotoClick, completing, s
                     className="mt-4 w-4 h-4 rounded flex-shrink-0"
                   />
                   <div className="flex-1">
-                    <QueueItemCard item={item} onComplete={onComplete} onPhotoClick={onPhotoClick} completing={completing} />
+                    <QueueItemCard item={item} onComplete={onComplete} onDelete={onDelete} onPhotoClick={onPhotoClick} completing={completing} />
                   </div>
                 </div>
               ))
@@ -484,6 +621,28 @@ export default function DamageHubApp() {
 
   const openPhoto = (url, name) => setPhotoModal({ isOpen: true, url, name });
 
+  const handleDelete = async (itemId) => {
+    if (!confirm('Видалити цю позицію з черги?')) return;
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}`, {
+        method: "DELETE",
+        body: JSON.stringify({ deleted_by: user.name || 'system', reason: 'Видалено з кабінету шкоди' })
+      });
+      if (res.ok) await loadAll();
+    } catch (e) { console.error("Delete error:", e); }
+  };
+
+  const handleQuickAdd = async (data) => {
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
+        method: "POST",
+        body: JSON.stringify(data)
+      });
+      if (res.ok) await loadAll();
+    } catch (e) { console.error("Quick add error:", e); }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <CorporateHeader />
@@ -527,12 +686,15 @@ export default function DamageHubApp() {
               title="Мийка"
               icon={Droplets}
               iconColor="bg-blue-100 text-blue-600"
+              queueType="wash"
               items={washItems}
               loading={loading}
               onComplete={handleComplete}
+              onDelete={handleDelete}
               onPhotoClick={openPhoto}
               completing={completing}
               searchQuery={searchQuery}
+              onQuickAdd={handleQuickAdd}
             />
           </div>
           
@@ -542,12 +704,15 @@ export default function DamageHubApp() {
               title="Реставрація"
               icon={Wrench}
               iconColor="bg-orange-100 text-orange-600"
+              queueType="restoration"
               items={restoreItems}
               loading={loading}
               onComplete={handleComplete}
+              onDelete={handleDelete}
               onPhotoClick={openPhoto}
               completing={completing}
               searchQuery={searchQuery}
+              onQuickAdd={handleQuickAdd}
             />
           </div>
           
@@ -557,6 +722,7 @@ export default function DamageHubApp() {
               items={laundryItems}
               loading={loading}
               onComplete={handleComplete}
+              onDelete={handleDelete}
               onPhotoClick={openPhoto}
               completing={completing}
               searchQuery={searchQuery}
@@ -564,6 +730,7 @@ export default function DamageHubApp() {
               batchesLoading={batchesLoading}
               onCreateBatch={handleCreateBatch}
               onRefreshBatches={loadBatches}
+              onQuickAdd={handleQuickAdd}
             />
           </div>
         </div>

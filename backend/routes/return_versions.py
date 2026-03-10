@@ -374,7 +374,7 @@ async def get_active_versions(
         db.execute(text("""
             UPDATE partial_return_versions v
             LEFT JOIN orders o ON v.parent_order_id = o.order_id
-            SET v.status = 'completed'
+            SET v.status = 'archived'
             WHERE v.status = 'active'
             AND (
                 o.status IN ('completed', 'cancelled', 'archived')
@@ -524,6 +524,27 @@ async def complete_version(
         
         return {"success": True, "version_id": version_id, "status": "returned"}
         
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/version/{version_id}/reactivate")
+async def reactivate_version(
+    version_id: int,
+    db: Session = Depends(get_rh_db)
+):
+    """Реактивувати версію (повернути зі статусу completed/returned в active)"""
+    ensure_version_tables(db)
+    try:
+        db.execute(text("""
+            UPDATE partial_return_versions
+            SET status = 'active', updated_at = NOW()
+            WHERE version_id = :vid
+        """), {"vid": version_id})
+        db.commit()
+        return {"success": True, "version_id": version_id, "status": "active"}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

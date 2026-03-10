@@ -1162,7 +1162,9 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
                     if pkg.get("other"):
                         other_text = pkg.get("other_text", "")
                         labels.append(f"Інше: {other_text}" if other_text else "Інше")
-                    item_packaging_map[item_id] = labels
+                    # Store by both int and str for reliable matching
+                    item_packaging_map[int(item_id)] = labels
+                    item_packaging_map[str(item_id)] = labels
     except Exception:
         pass
     
@@ -1173,7 +1175,7 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
         qty = it[3] or 1
         total_qty += qty
         sku = it[7] or "—"
-        item_id = it[0]  # order_items.id
+        item_id = it[1]  # product_id to match issue_cards items
         
         # Per-item packaging
         pack_labels = item_packaging_map.get(item_id, [])

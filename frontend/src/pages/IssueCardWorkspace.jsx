@@ -23,7 +23,7 @@ import {
 
 import {
   ZoneItemsPickup,
-  ZoneChecklist,
+  ZonePackaging,
   ZoneRequisitors,
 } from '../components/order-workspace/zones'
 // FinanceStatusCard тепер тільки в LeftRailFinance
@@ -614,12 +614,10 @@ setTimeout(()=>window.print(),500);
           readOnly={isIssued}
         />
         
-        {/* Чеклист */}
-        <ZoneChecklist
-          items={checklist}
-          onToggle={handleChecklistToggle}
-          title="✅ Чеклист перед видачею"
-          hint="Обов'язкові пункти для завершення"
+        {/* Додаткове пакування */}
+        <ZonePackaging
+          orderId={order?.order_id || issueCard?.order_id}
+          issueCardId={issueCard?.id}
           readOnly={isIssued}
         />
         

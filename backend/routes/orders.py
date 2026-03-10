@@ -3199,3 +3199,45 @@ def _sync_service_fee_total(db: Session, order_id: int):
         UPDATE orders SET service_fee = :fee, service_fee_name = :name WHERE order_id = :oid
     """), {"fee": total, "name": names or '', "oid": order_id})
 
+
+
+
+# ============================================================
+# PACKAGING CRUD
+# ============================================================
+
+@router.get("/{order_id}/packaging")
+async def get_packaging(order_id: int, db: Session = Depends(get_rh_db)):
+    """Get packaging quantities for an order."""
+    try:
+        rows = db.execute(text("""
+            SELECT item_key, quantity FROM order_packaging WHERE order_id = :oid
+        """), {"oid": order_id}).fetchall()
+        quantities = {r[0]: r[1] for r in rows}
+        return {"order_id": order_id, "quantities": quantities}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{order_id}/packaging")
+async def save_packaging(order_id: int, data: dict, db: Session = Depends(get_rh_db)):
+    """Save packaging quantities for an order (upsert)."""
+    quantities = data.get("quantities", {})
+    try:
+        for key, qty in quantities.items():
+            qty = int(qty)
+            if qty > 0:
+                db.execute(text("""
+                    INSERT INTO order_packaging (order_id, item_key, quantity)
+                    VALUES (:oid, :key, :qty)
+                    ON DUPLICATE KEY UPDATE quantity = :qty
+                """), {"oid": order_id, "key": key, "qty": qty})
+            else:
+                db.execute(text("""
+                    DELETE FROM order_packaging WHERE order_id = :oid AND item_key = :key
+                """), {"oid": order_id, "key": key})
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

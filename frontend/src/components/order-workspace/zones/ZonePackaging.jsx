@@ -9,11 +9,11 @@ const authFetch = (url, opts = {}) => {
 }
 
 const PACKAGING_ITEMS = [
-  { key: 'bag_s', label: 'Сумка S', icon: '👜' },
-  { key: 'bag_m', label: 'Сумка M', icon: '👜' },
-  { key: 'bag_l', label: 'Сумка L', icon: '👜' },
-  { key: 'cover', label: 'Чохол', icon: '🧥' },
-  { key: 'black_box', label: 'Чорний ящик', icon: '📦' },
+  { key: 'bag_s', label: 'Сумка S' },
+  { key: 'bag_m', label: 'Сумка M' },
+  { key: 'bag_l', label: 'Сумка L' },
+  { key: 'cover', label: 'Чохол' },
+  { key: 'black_box', label: 'Чорний ящик' },
 ]
 
 /**
@@ -83,7 +83,6 @@ export default function ZonePackaging({ orderId, issueCardId, readOnly = false }
               }`}
               data-testid={`packaging-${item.key}`}
             >
-              <span className="text-lg w-7 text-center">{item.icon}</span>
               <span className="flex-1 text-sm text-slate-800 font-medium">{item.label}</span>
               
               {readOnly ? (

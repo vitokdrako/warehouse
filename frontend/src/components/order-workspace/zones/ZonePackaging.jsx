@@ -20,20 +20,19 @@ const PACKAGING_ITEMS = [
  * ZonePackaging - Додаткове пакування
  * Замість чекліста перед видачею — облік тари
  */
-export default function ZonePackaging({ orderId, issueCardId, readOnly = false }) {
+export default function ZonePackaging({ orderId, readOnly = false }) {
   const [quantities, setQuantities] = useState({})
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   // Load existing data
   useEffect(() => {
-    if (!orderId && !issueCardId) return
-    const id = issueCardId || orderId
-    authFetch(`${BACKEND_URL}/api/orders/${id}/packaging`)
+    if (!orderId) return
+    authFetch(`${BACKEND_URL}/api/orders/${orderId}/packaging`)
       .then(r => r.ok ? r.json() : {})
       .then(data => { if (data.quantities) setQuantities(data.quantities) })
       .catch(() => {})
-  }, [orderId, issueCardId])
+  }, [orderId])
 
   const setQty = (key, val) => {
     const num = Math.max(0, parseInt(val) || 0)
@@ -47,11 +46,10 @@ export default function ZonePackaging({ orderId, issueCardId, readOnly = false }
   const totalItems = Object.values(quantities).reduce((s, v) => s + (v || 0), 0)
 
   const save = async () => {
-    const id = issueCardId || orderId
-    if (!id) return
+    if (!orderId) return
     setSaving(true)
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/orders/${id}/packaging`, {
+      const res = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/packaging`, {
         method: 'POST',
         body: JSON.stringify({ quantities })
       })

@@ -580,7 +580,6 @@ setTimeout(()=>window.print(),500);
         {/* Додаткове пакування */}
         <ZonePackaging
           orderId={order?.order_id || issueCard?.order_id}
-          issueCardId={issueCard?.id}
           readOnly={isIssued}
         />
         

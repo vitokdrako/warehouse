@@ -692,6 +692,145 @@ async def create_simple_expense(data: SimpleExpenseCreate, db: Session = Depends
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ============================================================
+# COLLECTION (Інкасація - вилучення грошей з каси)
+# ============================================================
+
+class CollectionCreate(BaseModel):
+    amount: float
+    method: str = "cash"  # cash | bank
+    note: Optional[str] = None
+    collected_by: Optional[str] = None
+
+@router.post("/collection")
+async def create_collection(data: CollectionCreate):
+    """Інкасація — вилучення грошей з каси (готівка або безготівка)."""
+    import pymysql
+    import os
+    
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Сума має бути більше 0")
+    
+    conn = pymysql.connect(
+        host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
+        port=int(os.environ.get('RH_DB_PORT', 3306)),
+        user=os.environ.get('RH_DB_USERNAME', 'farforre_rentalhub'),
+        password=os.environ.get('RH_DB_PASSWORD', '-nu+3Gp54L'),
+        database=os.environ.get('RH_DB_DATABASE', 'farforre_rentalhub'),
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False
+    )
+    
+    try:
+        cursor = conn.cursor()
+        method_label = "готівка" if data.method == "cash" else "безготівка"
+        
+        # Ensure COLLECTION category exists
+        cursor.execute("SELECT id FROM fin_categories WHERE code = 'COLLECTION'")
+        cat = cursor.fetchone()
+        if not cat:
+            cursor.execute("""
+                INSERT INTO fin_categories (code, name, type) 
+                VALUES ('COLLECTION', 'Інкасація', 'expense')
+            """)
+            conn.commit()
+            cursor.execute("SELECT id FROM fin_categories WHERE code = 'COLLECTION'")
+            cat = cursor.fetchone()
+        
+        category_id = cat['id']
+        
+        # Credit account (source) = CASH or BANK
+        credit_acc = "CASH" if data.method == "cash" else "BANK"
+        # Debit account = owner withdrawal
+        debit_acc = "OPEX"
+        
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (debit_acc,))
+        debit_acc_row = cursor.fetchone()
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (credit_acc,))
+        credit_acc_row = cursor.fetchone()
+        
+        if not debit_acc_row or not credit_acc_row:
+            raise HTTPException(status_code=500, detail="Accounts not configured")
+        
+        # Create transaction
+        note_text = f"Інкасація ({method_label})"
+        if data.note:
+            note_text += f": {data.note}"
+        if data.collected_by:
+            note_text += f" (by {data.collected_by})"
+        
+        cursor.execute("""
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, note)
+            VALUES ('collection', %s, NOW(), %s)
+        """, (data.amount, note_text))
+        tx_id = cursor.lastrowid
+        
+        # Ledger entries
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount)
+            VALUES (%s, %s, 'D', %s)
+        """, (tx_id, debit_acc_row['id'], data.amount))
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount)
+            VALUES (%s, %s, 'C', %s)
+        """, (tx_id, credit_acc_row['id'], data.amount))
+        
+        # Create expense record
+        cursor.execute("""
+            INSERT INTO fin_expenses (expense_type, category_id, amount, method, occurred_at, note, status)
+            VALUES ('collection', %s, %s, %s, NOW(), %s, 'posted')
+        """, (category_id, data.amount, data.method, note_text))
+        expense_id = cursor.lastrowid
+        
+        conn.commit()
+        return {"success": True, "expense_id": expense_id, "tx_id": tx_id, "amount": data.amount, "method": data.method}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@router.get("/collections")
+async def list_collections(period: str = "month", db: Session = Depends(get_rh_db)):
+    """Список інкасацій за період."""
+    date_filter = ""
+    if period == "day":
+        date_filter = "AND e.occurred_at >= CURDATE()"
+    elif period == "week":
+        date_filter = "AND e.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+    elif period == "month":
+        date_filter = "AND MONTH(e.occurred_at) = MONTH(CURDATE()) AND YEAR(e.occurred_at) = YEAR(CURDATE())"
+    
+    rows = db.execute(text(f"""
+        SELECT e.id, e.amount, e.method, e.occurred_at, e.note
+        FROM fin_expenses e
+        WHERE e.expense_type = 'collection' AND e.status = 'posted'
+        {date_filter}
+        ORDER BY e.occurred_at DESC
+    """)).fetchall()
+    
+    items = []
+    total_cash = 0
+    total_bank = 0
+    for r in rows:
+        amt = float(r[1] or 0)
+        method = r[2] or 'cash'
+        if method == 'cash':
+            total_cash += amt
+        else:
+            total_bank += amt
+        items.append({
+            "id": r[0], "amount": amt, "method": method,
+            "date": r[3].isoformat() if r[3] else None, "note": r[4],
+        })
+    
+    return {"items": items, "total_cash": total_cash, "total_bank": total_bank, "total": total_cash + total_bank, "count": len(items)}
+
 @router.get("/expenses/all")
 async def list_all_expenses(limit: int = 100, db: Session = Depends(get_rh_db)):
     """List all expenses for Finance Hub operations view."""
@@ -2802,6 +2941,22 @@ async def get_kasa_data(
                 "order_id": r[7],
             })
         
+        # Collection (Інкасація) totals
+        collection_rows = db.execute(text(f"""
+            SELECT e.method, SUM(e.amount) as total
+            FROM fin_expenses e
+            WHERE e.expense_type = 'collection' AND e.status = 'posted'
+            {date_filter_expenses}
+            GROUP BY e.method
+        """)).fetchall()
+        collection_cash = 0
+        collection_bank = 0
+        for r in collection_rows:
+            if (r[0] or 'cash') == 'cash':
+                collection_cash += float(r[1] or 0)
+            else:
+                collection_bank += float(r[1] or 0)
+        
         return {
             "period": period,
             "income": {
@@ -2828,6 +2983,11 @@ async def get_kasa_data(
                 "bank_total": expenses_bank_total,
                 "total": expenses_cash_total + expenses_bank_total,
                 "count": len(expenses) + len(refunds),
+            },
+            "collection": {
+                "cash_total": collection_cash,
+                "bank_total": collection_bank,
+                "total": collection_cash + collection_bank,
             },
             "summary": {
                 "net_cash": income_cash_total - expenses_cash_total,

@@ -5,7 +5,7 @@ import CorporateHeader from '../components/CorporateHeader';
 import {
   ArrowLeft, Banknote, CreditCard, Wallet, TrendingUp, TrendingDown,
   Search, RefreshCw, Shield, RotateCcw, Plus, X, MessageSquare,
-  ChevronDown
+  ChevronDown, Landmark
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -27,7 +27,7 @@ export default function KasaPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(searchParams.get('period') || 'month');
   const [searchQuery, setSearchQuery] = useState('');
-  const [modal, setModal] = useState(null); // 'income' | 'deposit' | 'expense' | null
+  const [modal, setModal] = useState(null); // 'income' | 'deposit' | 'expense' | 'collection' | null
 
   const fetchData = async () => {
     setLoading(true);
@@ -120,7 +120,23 @@ export default function KasaPage() {
               <div className="h-5 w-px bg-slate-200" />
               <SummaryPill icon={TrendingDown} label="Витрати" value={money(expenses.total)} color="rose" />
               <div className="h-5 w-px bg-slate-200" />
+              {data?.collection?.total > 0 && (
+                <>
+                  <SummaryPill icon={Landmark} label="Інкасація" value={money(data.collection.total)} color="violet" />
+                  <div className="h-5 w-px bg-slate-200" />
+                </>
+              )}
               <SummaryPill icon={Wallet} label="Чистий дохід" value={money(summary.net_total)} color={summary.net_total >= 0 ? 'emerald' : 'red'} bold />
+              <div className="ml-auto">
+                <button
+                  onClick={() => setModal('collection')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors shadow-sm"
+                  data-testid="collection-btn"
+                >
+                  <Landmark className="w-3.5 h-3.5" />
+                  Інкасація
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -145,6 +161,7 @@ export default function KasaPage() {
       {modal === 'income' && <AddIncomeModal onClose={() => setModal(null)} onCreated={onCreated} />}
       {modal === 'deposit' && <AddDepositModal onClose={() => setModal(null)} onCreated={onCreated} />}
       {modal === 'expense' && <AddExpenseModal onClose={() => setModal(null)} onCreated={onCreated} />}
+      {modal === 'collection' && <CollectionModal onClose={() => setModal(null)} onCreated={onCreated} />}
     </div>
   );
 }
@@ -154,6 +171,7 @@ function SummaryPill({ icon: Icon, label, value, color, sub, bold }) {
   const colorMap = {
     emerald: 'text-emerald-700', green: 'text-green-600', blue: 'text-blue-600',
     amber: 'text-amber-600', rose: 'text-rose-600', red: 'text-red-600',
+    violet: 'text-indigo-600',
   };
   return (
     <div className={`flex items-center gap-1.5 ${sub ? 'opacity-75' : ''}`}>
@@ -321,26 +339,27 @@ function ExpensesColumn({ items, totals, onAdd }) {
       <div className="p-3 space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto">
         {items.length === 0 ? <EmptyState text="Немає витрат за цей період" /> : items.map((item, idx) => {
           const isRefund = item.expense_type === 'refund';
+          const isCollection = item.expense_type === 'collection' || item.category_code === 'COLLECTION';
           return (
             <div key={item.id || idx}
               className="px-3 py-2.5 rounded-xl border border-slate-100 hover:border-rose-200 hover:bg-rose-50/30 transition-all"
               data-testid={`expense-item-${item.id || idx}`}>
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  isRefund ? 'bg-blue-100 text-blue-700' : item.method === 'cash' ? 'bg-red-100 text-red-700' : 'bg-pink-100 text-pink-700'
+                  isCollection ? 'bg-indigo-100 text-indigo-700' : isRefund ? 'bg-blue-100 text-blue-700' : item.method === 'cash' ? 'bg-red-100 text-red-700' : 'bg-pink-100 text-pink-700'
                 }`}>
-                  {isRefund ? <RotateCcw className="w-4 h-4" /> : item.method === 'cash' ? <Banknote className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                  {isCollection ? <Landmark className="w-4 h-4" /> : isRefund ? <RotateCcw className="w-4 h-4" /> : item.method === 'cash' ? <Banknote className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-slate-700">
-                    {isRefund ? 'Повернення застави' : (item.category_name || 'Витрата')}
+                    {isCollection ? 'Інкасація' : isRefund ? 'Повернення застави' : (item.category_name || 'Витрата')}
                   </div>
                   <div className="text-xs text-slate-500 truncate">
-                    {isRefund ? `${item.order_number} · ${item.customer_name}` : ''}
+                    {isCollection ? (item.method === 'cash' ? 'Готівка' : 'Безготівка') : isRefund ? `${item.order_number} · ${item.customer_name}` : ''}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <div className={`font-bold text-sm ${isRefund ? 'text-blue-700' : 'text-rose-700'}`}>-{money(item.amount)}</div>
+                  <div className={`font-bold text-sm ${isCollection ? 'text-indigo-700' : isRefund ? 'text-blue-700' : 'text-rose-700'}`}>-{money(item.amount)}</div>
                   <div className="text-[10px] text-slate-400">{fmtDate(item.date)}</div>
                 </div>
               </div>
@@ -556,10 +575,62 @@ function AddExpenseModal({ onClose, onCreated }) {
 
 
 /* ============================================================ */
+/*  MODAL: COLLECTION (Інкасація)                                */
+/* ============================================================ */
+function CollectionModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({ method: 'cash', amount: '', note: '' });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const userEmail = localStorage.getItem('user_email') || '';
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const submit = async () => {
+    if (!form.amount || Number(form.amount) <= 0) return setError('Вкажіть суму');
+    setSaving(true); setError('');
+    try {
+      const body = {
+        amount: Number(form.amount),
+        method: form.method,
+        note: form.note || undefined,
+        collected_by: userEmail,
+      };
+      const res = await authFetch(`${BACKEND_URL}/api/finance/collection`, { method: 'POST', body: JSON.stringify(body) });
+      if (res.ok) { onCreated(); } else {
+        const d = await res.json().catch(() => ({}));
+        setError(d.detail || 'Помилка збереження');
+      }
+    } catch (e) { setError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <ModalWrapper onClose={onClose} title="Інкасація" color="indigo">
+      <div className="space-y-4">
+        <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+          <p className="text-xs text-indigo-700">Вилучення грошей з каси. Оберіть тип (готівка / безготівка) та суму.</p>
+        </div>
+        <FieldSelect label="Тип" value={form.method} onChange={v => set('method', v)}
+          options={[{ value: 'cash', label: 'Готівка' }, { value: 'bank', label: 'Безготівка' }]} testId="collection-method" />
+        <FieldInput label="Сума (грн)" type="number" value={form.amount} onChange={v => set('amount', v)} testId="collection-amount" placeholder="0" />
+        <FieldTextarea label="Коментар" value={form.note} onChange={v => set('note', v)} testId="collection-note" placeholder="Призначення інкасації..." />
+        {error && <div className="text-red-600 text-sm bg-red-50 rounded-lg p-2">{error}</div>}
+        <button onClick={submit} disabled={saving}
+          className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors disabled:opacity-50"
+          data-testid="collection-submit-btn">
+          {saving ? 'Зберігаю...' : 'Провести інкасацію'}
+        </button>
+      </div>
+    </ModalWrapper>
+  );
+}
+
+
+/* ============================================================ */
 /*  SHARED FORM COMPONENTS                                       */
 /* ============================================================ */
 function ModalWrapper({ onClose, title, color, children }) {
-  const titleColor = { emerald: 'text-emerald-700', amber: 'text-amber-700', rose: 'text-rose-700' };
+  const titleColor = { emerald: 'text-emerald-700', amber: 'text-amber-700', rose: 'text-rose-700', indigo: 'text-indigo-700' };
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose} data-testid="modal-overlay">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md" onClick={e => e.stopPropagation()}>

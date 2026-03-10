@@ -171,7 +171,7 @@ export default function LeftRailDocuments({
     
     // Для Акту передачі - завжди відкриваємо прямий preview
     if (docType === 'issue_act') {
-      window.open(`${BACKEND_URL}/api/documents/issue-act/${orderId}/preview?executor_type=tov`, '_blank')
+      window.open(`${BACKEND_URL}/api/documents/issue-act/${orderId}/preview?executor_type=fop`, '_blank')
       return
     }
     
@@ -220,7 +220,7 @@ export default function LeftRailDocuments({
     if (docType === 'issue_act') {
       try {
         if (openPreview) {
-          window.open(`${BACKEND_URL}/api/documents/issue-act/${orderId}/preview?executor_type=tov`, '_blank')
+          window.open(`${BACKEND_URL}/api/documents/issue-act/${orderId}/preview?executor_type=fop`, '_blank')
         }
         setGenerating(null)
         return { id: null, doc_type: 'issue_act', entity_id: orderId }

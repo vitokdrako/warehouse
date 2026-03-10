@@ -1124,7 +1124,7 @@ async def download_invoice_offer_pdf(
 # ISSUE ACT (АКТ ВИДАЧІ)
 # ============================================================
 
-def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "tov"):
+def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"):
     """Build data for the issue act template."""
     order, items = _get_order_with_items(db, order_id)
     if not order:
@@ -1233,7 +1233,7 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "tov"
 @router.get("/issue-act/{order_id}/preview", response_class=HTMLResponse)
 async def preview_issue_act(
     order_id: int,
-    executor_type: str = Query("tov"),
+    executor_type: str = Query("fop"),
     db: Session = Depends(get_rh_db)
 ):
     """Generate HTML preview of issue act (Акт видачі)"""
@@ -1248,7 +1248,7 @@ async def preview_issue_act(
 @router.get("/issue-act/{order_id}/pdf", response_class=HTMLResponse)
 async def download_issue_act_pdf(
     order_id: int,
-    executor_type: str = Query("tov"),
+    executor_type: str = Query("fop"),
     db: Session = Depends(get_rh_db)
 ):
     """Generate printable HTML for issue act (use browser Print to PDF)"""

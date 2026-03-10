@@ -21,8 +21,18 @@ Fix bugs and improve functionality in the "Damage Hub" rental management applica
 - Master Agreement generation per client
 - Order merging functionality
 
-### Current Session (2026-03-09)
-- **Fixed**: Search bar visibility in ClientsTab.jsx - search input now prominent with search icon, proper border, and filter dropdown constrained to fixed width
+### Session (2026-03-09)
+- **Fixed**: Search bar visibility in ClientsTab.jsx
+- **Created**: Return & Settlement workflow (ReturnSettlementPage.jsx, ReturnColumn.jsx)
+- **Created**: 3-column Manager Cabinet layout with live KPI cards
+- **Created**: Defect Act document generation
+- **Fixed**: Finance overview SQL queries for correct KPI data
+
+### Session (2026-03-10)
+- **Completed**: Price update in farforre_db (OpenCart):
+  - Скатертини (cat 125): +1000 UAH (148 products)
+  - Серветки (cat 126): +50 UAH (156 products)
+  - Ранери (cat 125): +250 UAH (5 products, excluding mirror runners)
 
 ## Prioritized Backlog
 

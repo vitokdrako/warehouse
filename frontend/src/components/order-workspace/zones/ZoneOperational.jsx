@@ -48,6 +48,8 @@ export default function ZoneOperational({
   const [paymentAmount, setPaymentAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [paymentNote, setPaymentNote] = useState('')
+  const [paymentCurrency, setPaymentCurrency] = useState('UAH')
+  const [exchangeRate, setExchangeRate] = useState(41.5)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   
   // Список менеджерів
@@ -150,36 +152,60 @@ export default function ZoneOperational({
       const token = localStorage.getItem('token')
       const user = JSON.parse(localStorage.getItem('user') || '{}')
       
-      const res = await fetch(`${BACKEND_URL}/api/finance/payments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          order_id: orderId,
-          payment_type: paymentType,
-          method: paymentMethod,
-          amount: parseFloat(paymentAmount),
-          note: paymentNote || null,
-          payer_name: customerName,
-          accepted_by_id: user.id || null,
-          accepted_by_name: user.name || user.full_name || null
+      if (paymentType === 'deposit') {
+        // Deposit with currency support
+        const depositRes = await fetch(`${BACKEND_URL}/api/finance/deposits/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            order_id: orderId,
+            expected_amount: totalDeposit,
+            actual_amount: parseFloat(paymentAmount),
+            currency: paymentCurrency,
+            exchange_rate: paymentCurrency !== 'UAH' ? exchangeRate : null,
+            method: paymentMethod,
+            note: paymentCurrency !== 'UAH' 
+              ? `${paymentAmount} ${paymentCurrency} @ ${exchangeRate}${paymentNote ? '. ' + paymentNote : ''}`
+              : paymentNote || null,
+            accepted_by_id: user.id || null,
+            accepted_by_name: user.name || user.full_name || null
+          })
         })
-      })
-      
-      if (res.ok) {
-        alert(`✅ Оплату ₴${fmtUA(paymentAmount)} прийнято!`)
-        setShowPaymentForm(false)
-        setPaymentAmount('')
-        setPaymentNote('')
-        onPaymentSuccess?.()
+        if (!depositRes.ok) {
+          const err = await depositRes.json().catch(() => ({}))
+          throw new Error(err.detail || 'Помилка створення застави')
+        }
       } else {
-        const err = await res.json()
-        alert(`❌ Помилка: ${err.detail || 'Не вдалося зберегти оплату'}`)
+        const res = await fetch(`${BACKEND_URL}/api/finance/payments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            order_id: orderId,
+            payment_type: paymentType,
+            method: paymentMethod,
+            amount: parseFloat(paymentAmount),
+            note: paymentNote || null,
+            payer_name: customerName,
+            accepted_by_id: user.id || null,
+            accepted_by_name: user.name || user.full_name || null
+          })
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.detail || 'Помилка оплати')
+        }
       }
+      
+      const currSymbol = { UAH: '₴', USD: '$', EUR: '€' }[paymentCurrency] || '₴'
+      alert(`Оплату ${currSymbol}${fmtUA(paymentAmount)} прийнято!`)
+      setShowPaymentForm(false)
+      setPaymentAmount('')
+      setPaymentNote('')
+      setPaymentCurrency('UAH')
+      onPaymentSuccess?.()
     } catch (e) {
       console.error('Payment error:', e)
+      alert(`Помилка: ${e.message}`)
       alert(`❌ Помилка: ${e.message}`)
     } finally {
       setIsProcessingPayment(false)
@@ -457,9 +483,47 @@ export default function ZoneOperational({
                       </button>
                     </div>
                     
+                    {/* Currency (only for deposit) */}
+                    {paymentType === 'deposit' && (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          {['UAH', 'USD', 'EUR'].map(cur => (
+                            <button
+                              key={cur}
+                              onClick={() => setPaymentCurrency(cur)}
+                              className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                                paymentCurrency === cur
+                                  ? 'bg-amber-100 text-amber-700 border-2 border-amber-300'
+                                  : 'bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100'
+                              }`}
+                            >
+                              {{ UAH: '₴ UAH', USD: '$ USD', EUR: '€ EUR' }[cur]}
+                            </button>
+                          ))}
+                        </div>
+                        {paymentCurrency !== 'UAH' && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-500">Курс:</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={exchangeRate}
+                              onChange={(e) => setExchangeRate(Number(e.target.value))}
+                              className="w-24 px-2 py-1 text-sm border border-slate-200 rounded-lg"
+                            />
+                            <span className="text-xs text-slate-400">
+                              = ₴{fmtUA(parseFloat(paymentAmount || 0) * exchangeRate)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
                     {/* Amount */}
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">₴</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                        {{ UAH: '₴', USD: '$', EUR: '€' }[paymentType === 'deposit' ? paymentCurrency : 'UAH']}
+                      </span>
                       <input
                         type="number"
                         value={paymentAmount}

@@ -77,7 +77,8 @@ export default function LeftRailDocuments({
   orderStatus = 'pending',
   issueCardId = null,
   customerEmail = '',
-  onDocumentGenerated = () => {}
+  onDocumentGenerated = () => {},
+  requisitorMode = false,
 }) {
   const [expanded, setExpanded] = useState(true)
   const [generating, setGenerating] = useState(null)
@@ -531,9 +532,19 @@ export default function LeftRailDocuments({
   }
 
   // Чи показувати блок рахунків — для confirmed, processing, ready_for_issue, issued
-  const showInvoiceSection = ['confirmed', 'processing', 'ready_for_issue', 'issued', 'on_rent'].includes(orderStatus)
+  const showInvoiceSection = !requisitorMode && ['confirmed', 'processing', 'ready_for_issue', 'issued', 'on_rent'].includes(orderStatus)
 
-  const availableDocs = DOCS_BY_STATUS[orderStatus] || []
+  // Фільтрація документів для режиму реквізитора
+  const REQUISITOR_DOCS = {
+    'processing': ['picking_list'],
+    'ready_for_issue': ['issue_act'],
+  }
+  
+  let availableDocs = DOCS_BY_STATUS[orderStatus] || []
+  if (requisitorMode && REQUISITOR_DOCS[orderStatus]) {
+    const allowed = REQUISITOR_DOCS[orderStatus]
+    availableDocs = availableDocs.filter(d => allowed.includes(d.type))
+  }
   
   if (availableDocs.length === 0) {
     return null

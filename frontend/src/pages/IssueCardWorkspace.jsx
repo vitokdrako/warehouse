@@ -557,6 +557,7 @@ setTimeout(()=>window.print(),500);
               orderStatus={isIssued ? 'issued' : isReadyForIssue ? 'ready_for_issue' : 'processing'}
               issueCardId={issueCard?.id}
               customerEmail={clientEmail}
+              requisitorMode={true}
             />
             <LeftRailTimeline orderId={order?.order_id} events={timeline} />
           </>

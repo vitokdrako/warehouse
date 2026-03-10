@@ -36,7 +36,7 @@
     thead th:last-child{border-top-right-radius:10px}
     tbody td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
     tbody tr:last-child td{border-bottom:none}
-    .thumb{width:50px;height:50px;border-radius:8px;border:1px solid var(--line);background:#fff;object-fit:cover;display:block}
+    .thumb{width:40px;height:40px;border-radius:8px;border:1px solid var(--line);background:#fff;object-fit:cover;display:block}
     .name{font-weight:700;margin:0;font-size:13px}
     .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
     .center{text-align:center}
@@ -112,17 +112,17 @@
       <table>
         <thead>
           <tr>
-            <th style="width:60px">Фото</th>
-            <th style="width:90px">Артикул</th>
+            <th style="width:44px">Фото</th>
+            <th style="width:70px">Артикул</th>
             <th>Найменування</th>
-            <th style="width:130px">Тип пошкодження</th>
-            <th style="width:50px" class="center">К-сть</th>
+            <th style="width:100px">Тип</th>
+            <th style="width:36px" class="center">Шт</th>
             {% if batch %}
-            <th style="width:60px" class="center">Поверн.</th>
+            <th style="width:36px" class="center">Пов.</th>
             {% endif %}
-            <th>Замовлення</th>
-            <th>Відправив</th>
-            <th style="width:40px" class="center">V</th>
+            <th style="width:60px">Зам.</th>
+            <th style="width:70px">Хто</th>
+            <th style="width:28px" class="center">V</th>
           </tr>
         </thead>
         <tbody>
@@ -130,24 +130,24 @@
           <tr>
             <td>
               {% if item.image_url %}
-              <img class="thumb" src="{{ item.image_url }}" alt="" />
+              <img class="thumb" src="{{ item.image_url }}" alt="" style="width:40px;height:40px" />
               {% else %}
-              <div class="thumb" style="display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-weight:700;">—</div>
+              <div class="thumb" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-weight:700;">—</div>
               {% endif %}
             </td>
             <td><span class="sku mono">{{ item.sku }}</span></td>
             <td>
               <div class="name">{{ item.name }}</div>
-              {% if item.note or item.notes %}<div style="font-size:11px;color:var(--muted);margin-top:2px">{{ item.note or item.notes }}</div>{% endif %}
+              {% if item.note or item.notes %}<div style="font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">{{ item.note or item.notes }}</div>{% endif %}
             </td>
-            <td><span class="dmg-badge">{{ item.damage_type }}</span></td>
+            <td><span class="dmg-badge" style="font-size:10px;padding:2px 6px">{{ item.damage_type }}</span></td>
             <td class="center mono" style="font-weight:800">{{ item.qty or item.quantity }}</td>
             {% if batch %}
             <td class="center mono">{{ item.returned_qty }}</td>
             {% endif %}
-            <td class="mono" style="font-size:12px">{{ item.order_number }}</td>
-            <td style="font-size:12px">{{ item.created_by or item.sent_by or "—" }}</td>
-            <td class="center"><div class="check-box"></div></td>
+            <td class="mono" style="font-size:11px">{{ item.order_number }}</td>
+            <td style="font-size:11px">{{ item.created_by or item.sent_by or "—" }}</td>
+            <td class="center"><div class="check-box" style="width:18px;height:18px"></div></td>
           </tr>
           {% endfor %}
         </tbody>

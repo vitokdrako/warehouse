@@ -412,7 +412,7 @@ const LaundryColumn = ({ items, loading, onComplete, onDelete, onPhotoClick, com
   return (
     <div className="flex flex-col h-full min-w-0">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
+      <div className="relative px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-100 text-purple-600">

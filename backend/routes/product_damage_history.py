@@ -1052,9 +1052,11 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 pdh.returned_from_processing_at, pdh.processing_notes,
                 pdh.laundry_batch_id, pdh.laundry_item_id,
                 pdh.created_at, pdh.created_by,
-                lb.laundry_company, lb.status as batch_status
+                lb.laundry_company, lb.status as batch_status,
+                p.image_url as product_image
             FROM product_damage_history pdh
             LEFT JOIN laundry_batches lb ON pdh.laundry_batch_id = lb.id
+            LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'laundry'
             AND COALESCE(pdh.processing_status, '') != 'hidden'
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
@@ -1086,6 +1088,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 "created_by": row[19],
                 "laundry_company": row[20],
                 "batch_status": row[21],
+                "product_image": row[22],
                 "source": "damage_history"
             })
         
@@ -1123,6 +1126,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 "created_by": "system",
                 "laundry_company": None,
                 "batch_status": None,
+                "product_image": row[5],
                 "source": "quick_action"
             })
         

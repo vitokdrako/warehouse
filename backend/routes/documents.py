@@ -26,6 +26,14 @@ def _get_full_image_url(image_url: str) -> str:
     # Remove leading slash if present
     image_path = image_url.lstrip("/")
     return f"{BACKEND_BASE_URL}/{image_path}"
+
+def _email_to_name(val: str) -> str:
+    """Convert email to display name: katia@farforrent.com.ua -> Katia"""
+    if not val:
+        return "—"
+    if "@" in val:
+        return val.split("@")[0].capitalize()
+    return val
 from services.doc_engine.registry import DOC_REGISTRY, get_doc_config, get_docs_for_entity
 from services.doc_engine.data_builders import build_document_data
 from services.doc_engine.render import render_html, render_pdf, get_template_path
@@ -1558,7 +1566,7 @@ async def preview_processing_list(queue_type: str, db: Session = Depends(get_rh_
             "damage_type": r[4] or "—",
             "note": r[5] or "",
             "created_at": r[6].strftime("%d.%m.%Y %H:%M") if r[6] else "—",
-            "created_by": r[7] or "—",
+            "created_by": _email_to_name(r[7]),
             "order_number": r[8] or "—",
             "image_url": _get_full_image_url(r[12] or r[9]),
             "status": r[10] or "pending",
@@ -1592,13 +1600,11 @@ async def preview_laundry_batch(batch_id: str, db: Session = Depends(get_rh_db))
         raise HTTPException(status_code=404, detail="Партію не знайдено")
     
     items_rows = db.execute(text("""
-        SELECT li.id, li.damage_id, li.product_name, li.sku, li.quantity,
-               li.returned_quantity, li.notes,
-               pdh.damage_type, pdh.order_number, pdh.created_by as sent_by,
+        SELECT li.id, li.batch_id, li.product_name, li.sku, li.quantity,
+               li.returned_quantity, li.notes, li.category,
                p.image_url AS product_image
-        FROM laundry_batch_items li
-        LEFT JOIN product_damage_history pdh ON pdh.id = li.damage_id
-        LEFT JOIN products p ON p.product_id = pdh.product_id
+        FROM laundry_items li
+        LEFT JOIN products p ON li.product_id = p.product_id
         WHERE li.batch_id = :bid
         ORDER BY li.product_name
     """), {"bid": batch_id}).fetchall()
@@ -1612,9 +1618,9 @@ async def preview_laundry_batch(batch_id: str, db: Session = Depends(get_rh_db))
             "returned_qty": r[5] or 0,
             "notes": r[6] or "",
             "damage_type": r[7] or "—",
-            "order_number": r[8] or "—",
-            "sent_by": r[9] or "—",
-            "image_url": _get_full_image_url(r[10]),
+            "order_number": "—",
+            "sent_by": _email_to_name(batch_row[7]),
+            "image_url": _get_full_image_url(r[8]),
         })
     
     status_labels = {
@@ -1634,7 +1640,7 @@ async def preview_laundry_batch(batch_id: str, db: Session = Depends(get_rh_db))
             "sent_date": batch_row[4].strftime("%d.%m.%Y") if batch_row[4] else "—",
             "total_items": batch_row[5] or 0,
             "returned_items": batch_row[6] or 0,
-            "created_by": batch_row[7] or "—",
+            "created_by": _email_to_name(batch_row[7]),
             "batch_type": batch_type_labels.get(batch_row[8], batch_row[8] or "—"),
             "notes": batch_row[9] or "",
         },

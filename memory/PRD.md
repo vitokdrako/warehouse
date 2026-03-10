@@ -32,11 +32,11 @@ Fix bugs and improve functionality in the "Damage Hub" rental management applica
   - Fixed missing `Printer` import in DamageHubApp.jsx
   - Fixed `p.image` -> `p.image_url` column name in documents.py SQL queries
   - Added `laundry` support to processing-list endpoint
-  - Added print button to LaundryColumn header
-  - Added print button to BatchCard for individual batch printing
-  - Backend endpoints verified: `/api/documents/processing-list/{wash|restoration|laundry}/preview`, `/api/documents/laundry-batch/{batch_id}/preview`
-- **Completed**: Production frontend build
-  - Built with `REACT_APP_BACKEND_URL=https://backrentalhub.farforrent.com.ua`
+  - Added print button to LaundryColumn header + BatchCard
+  - Fixed laundry batch preview: `laundry_batch_items` -> `laundry_items` (correct table)
+  - Added `_email_to_name()` helper - shows "Katia" instead of "katia@farforrent.com.ua"
+  - Backend endpoints verified: all return 200
+- **Completed**: Production frontend build x2 (with bug fixes)
   - Output in `/app/clean_project/frontend_build/` (no archives)
 
 ## Prioritized Backlog
@@ -64,8 +64,7 @@ Fix bugs and improve functionality in the "Damage Hub" rental management applica
 - `/app/frontend/src/pages/DamageHubApp.jsx` - Damage Cabinet 3-column UI
 - `/app/backend/routes/documents.py` - All document generation endpoints
 - `/app/backend/templates/documents/processing_list.html` - Processing queue list template
-- `/app/frontend/src/components/workspaces/issue-card/left-rail/LeftRailDocuments.jsx` - Document generation in issue cards
-- `/app/frontend/src/components/workspaces/shared/DamageModal.jsx` - Damage recording modal
+- `/app/backend/routes/laundry.py` - Laundry batch management
 
 ## Credentials
 - Admin: `vitokdrako@gmail.com` / `test123`

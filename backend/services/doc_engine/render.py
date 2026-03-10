@@ -42,6 +42,17 @@ def format_date(value, fmt="%d.%m.%Y"):
 jinja_env.filters['money'] = format_money
 jinja_env.filters['date'] = format_date
 
+# Custom tests
+import re
+def regex_search(value, pattern):
+    """Jinja2 filter: regex search"""
+    if not value or not pattern:
+        return False
+    return bool(re.search(pattern, str(value)))
+
+jinja_env.filters['regex_search'] = regex_search
+jinja_env.tests['regex_search'] = regex_search
+
 def render_html(template_path: str, data: dict) -> str:
     """
     Рендерить HTML з шаблону та даних.

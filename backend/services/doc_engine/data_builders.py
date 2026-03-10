@@ -296,23 +296,27 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
             "available": float(deposit_row[0] or 0) - float(deposit_row[1] or 0) - float(deposit_row[2] or 0)
         }
     
-    # Компанія - FarforDecorOrenda
-    # © FarforDecorOrenda 2025
-    # Реальні дані з офіційних документів farforrent.com.ua
+    # Компанія - вибір на основі executor_type з options
+    from services.pdf_generator import EXECUTORS
+    
+    executor_type = options.get("executor_type", "fop")
+    executor = EXECUTORS.get(executor_type, EXECUTORS["fop"])
+    
     company = {
-        "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Трофімова Вікторія Сергіївна",
-        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
+        "name": executor.get("short_name", executor.get("name", "FarforDecorOrenda")),
+        "legal_name": executor.get("name", "ФОП Трофімова Вікторія Сергіївна"),
+        "address": executor.get("address", ""),
         "warehouse": "м. Харків, Військовий провулок, 1",
-        "phone": "+380 XX XXX XX XX",  # TODO: додати реальний номер
+        "phone": "+380 XX XXX XX XX",
         "email": "rfarfordecor@gmail.com.ua",
         "website": "https://www.farforrent.com.ua",
-        "tax_id": "3505100720",
-        "edrpou": "3505100720",
-        "iban": "UA653220010000026003340152018",
-        "mfo": "322001",
-        "bank_name": "АТ «УНІВЕРСАЛ БАНК»",
-        "director_name": "Трофімова Вікторія Сергіївна",
+        "tax_id": executor.get("edrpou", ""),
+        "edrpou": executor.get("edrpou", ""),
+        "iban": executor.get("iban", ""),
+        "mfo": executor.get("mfo", ""),
+        "bank_name": executor.get("bank", ""),
+        "director_name": executor.get("director", ""),
+        "tax_status": executor.get("tax_status", ""),
         # Правові документи
         "terms_url": "https://www.farforrent.com.ua/terms",
         "privacy_url": "https://www.farforrent.com.ua/privacy",
@@ -387,6 +391,10 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
             print(f"Warning: Could not load payer profile {payer_profile_id}: {e}")
     
     # Визначення типу товару/послуги на основі типу платника
+    # Якщо payer_type прийшов через options — використовуємо його (пріоритет)
+    if options.get("payer_type"):
+        payer["payer_type"] = options["payer_type"]
+    
     payer_type = payer.get("payer_type", "individual")
     if payer_type in ["fop_simple", "llc_simple"]:
         item_type = "service"  # Послуга "Прокат декору"

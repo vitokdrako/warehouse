@@ -103,17 +103,6 @@ export default function OrderWorkspaceLayout({
             <div className="space-y-2 sm:space-y-4">
               {children}
             </div>
-            
-            {/* Documents Footer */}
-            {showDocuments && orderId && (
-              <DocumentsFooter
-                orderId={orderId}
-                orderNumber={orderNumber}
-                orderStatus={status}
-                issueCardId={issueCardId}
-                deliveryType={deliveryType}
-              />
-            )}
           </main>
         </div>
       </div>

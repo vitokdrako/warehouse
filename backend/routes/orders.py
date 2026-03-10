@@ -189,6 +189,11 @@ def parse_order_row(row, db: Session = None):
     has_new_format = len(row) >= 16  # Новий формат з issue_date і return_date
     has_rental_days_format = len(row) == 15  # Формат з rental_days
     
+    # updated_at is at index 16 if present (17+ columns)
+    updated_at_val = None
+    if len(row) >= 17 and row[16]:
+        updated_at_val = row[16].isoformat() if hasattr(row[16], 'isoformat') else str(row[16])
+    
     if has_new_format:
         # Новий формат з issue_date та return_date
         order_dict = {
@@ -215,7 +220,8 @@ def parse_order_row(row, db: Session = None):
             "items": items,
             "packing_progress": packing_progress,
             "paid_rent": paid_rent,
-            "paid_deposit": paid_deposit
+            "paid_deposit": paid_deposit,
+            "updated_at": updated_at_val
         }
     elif has_rental_days_format:
         # Формат з rental_days (15 колонок)
@@ -306,7 +312,8 @@ async def get_orders(
             order_id, order_number, customer_id, customer_name, 
             customer_phone, customer_email, rental_start_date, rental_end_date,
             issue_date, return_date,
-            status, total_price, deposit_amount, notes, created_at, is_archived
+            status, total_price, deposit_amount, notes, created_at, is_archived,
+            updated_at
         FROM orders
         WHERE 1=1
     """

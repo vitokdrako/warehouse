@@ -779,6 +779,19 @@ function Column({ title, subtitle, children, tone }) {
 }
 
 function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDateUpdate, onCancelByClient }) {
+  // Маячок - перевіряємо чи ордер змінився з останнього перегляду
+  const seenKey = `order_seen_${order?.order_id}`;
+  const seenAt = localStorage.getItem(seenKey);
+  const updatedAt = order?.updated_at;
+  const hasChanges = updatedAt && (!seenAt || new Date(updatedAt) > new Date(seenAt));
+  
+  const handleClick = () => {
+    // Зберігаємо час перегляду
+    if (order?.order_id) {
+      localStorage.setItem(seenKey, new Date().toISOString());
+    }
+    if (onClick) onClick();
+  };
   const map = {
     new: { label: 'Нове', css: 'corp-badge corp-badge-info' },
     awaiting: { label: 'Очікує', css: 'corp-badge corp-badge-warning' },
@@ -912,18 +925,6 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
         ) : null
       )}
       
-      {/* Finance row */}
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-xl bg-slate-50 px-3 py-2.5 text-center">
-          <div className="text-corp-text-muted text-xs">Сума</div>
-          <div className="font-bold text-base tabular-nums">{rent}</div>
-        </div>
-        <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-center">
-          <div className="text-corp-text-muted text-xs">Застава</div>
-          <div className="font-bold text-base tabular-nums text-amber-700">{deposit}</div>
-        </div>
-      </div>
-      
       {/* Cancel button - bigger for mobile */}
       {onCancelByClient && ['awaiting', 'processing', 'preparation', 'ready'].includes(badge) && (
         <button
@@ -942,7 +943,11 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
 
 function OrderCardWithArchive({ id, name, phone, rent, deposit, badge, onClick, order, onArchive }) {
   return (
-    <article onClick={onClick} className="relative cursor-pointer rounded-xl border border-slate-200 bg-white p-3 transition hover:border-teal-400 hover:shadow-lg">
+    <article onClick={handleClick} className={`relative cursor-pointer rounded-xl border ${hasChanges ? 'border-blue-400 ring-2 ring-blue-100' : 'border-slate-200'} bg-white p-3 transition hover:border-teal-400 hover:shadow-lg`}>
+      {/* Маячок змін */}
+      {hasChanges && (
+        <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-blue-500 rounded-full border-2 border-white animate-pulse" data-testid={`change-beacon-${order?.order_id}`} title="Менеджер вніс зміни" />
+      )}
       <div className="mb-2 flex items-center justify-between">
         <div className="text-sm font-semibold text-corp-text-dark">{id}</div>
       </div>

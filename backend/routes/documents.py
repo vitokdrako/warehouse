@@ -1124,6 +1124,112 @@ async def download_invoice_offer_pdf(
 # ISSUE ACT (АКТ ВИДАЧІ)
 # ============================================================
 
+def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "tov"):
+    """Build data for the issue act template."""
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        return None
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
+    rental_days = order[15] or 1
+    
+    # Format items with full details
+    formatted_items = []
+    total_qty = 0
+    for it in items:
+        qty = it[3] or 1
+        total_qty += qty
+        sku = it[7] or "—"
+        
+        # Load damage history for this product by SKU
+        damages = []
+        if sku and sku != "—":
+            try:
+                damage_rows = db.execute(text("""
+                    SELECT damage_type, note, photo_url, stage, created_at, created_by
+                    FROM product_damage_history
+                    WHERE sku = :sku
+                    ORDER BY created_at DESC
+                """), {"sku": sku}).fetchall()
+                for d in damage_rows:
+                    damages.append({
+                        "damage_type": d[0] or "Дефект",
+                        "note": d[1],
+                        "photo_url": d[2],
+                        "stage": d[3],
+                        "created_at": _format_date_ua(d[4]) if d[4] else "",
+                        "created_by": d[5] or ""
+                    })
+            except Exception:
+                pass
+        
+        formatted_items.append({
+            "name": it[2],
+            "sku": sku,
+            "quantity": qty,
+            "image_url": _get_full_image_url(it[6]),
+            "damages": damages,
+            "has_damage": len(damages) > 0
+        })
+    
+    # Load packaging
+    packaging_items = []
+    PACKAGING_LABELS = {
+        "bag_s": "Сумка S",
+        "bag_m": "Сумка M",
+        "bag_l": "Сумка L",
+        "cover": "Чохол",
+        "black_box": "Чорний ящик",
+    }
+    try:
+        pkg_rows = db.execute(text("""
+            SELECT item_key, quantity FROM order_packaging
+            WHERE order_id = :oid AND quantity > 0
+        """), {"oid": order_id}).fetchall()
+        for r in pkg_rows:
+            packaging_items.append({
+                "key": r[0],
+                "label": PACKAGING_LABELS.get(r[0], r[0]),
+                "quantity": r[1]
+            })
+    except Exception:
+        pass
+    
+    act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    
+    return {
+        "act_number": act_number,
+        "act_date": datetime.now().strftime("%d.%m.%Y"),
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "executor": executor,
+        "client": {
+            "name": order[3],
+            "phone": order[4] or order[21],
+            "email": order[5] or order[22] or "",
+            "contact_person": order[3]
+        },
+        "order": {
+            "number": order[1],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days,
+        },
+        "items": formatted_items,
+        "packaging": packaging_items,
+        "has_packaging": len(packaging_items) > 0,
+        "has_any_damage": any(it["has_damage"] for it in formatted_items),
+        "rental_days": rental_days,
+        "rental_start_date": _format_date_ua(order[6]),
+        "rental_end_date": _format_date_ua(order[7]),
+        "return_date": _format_date_ua(order[9] or order[7]),
+        "totals": {"items_count": len(items), "quantity": total_qty},
+        "company": {
+            "phone": "(097) 123 09 93, (093) 375 09 40",
+            "email": "info@farforrent.com.ua"
+        },
+    }
+
+
 @router.get("/issue-act/{order_id}/preview", response_class=HTMLResponse)
 async def preview_issue_act(
     order_id: int,
@@ -1131,77 +1237,27 @@ async def preview_issue_act(
     db: Session = Depends(get_rh_db)
 ):
     """Generate HTML preview of issue act (Акт видачі)"""
-    
-    order, items = _get_order_with_items(db, order_id)
-    if not order:
+    template_data = _build_issue_act_data(db, order_id, executor_type)
+    if not template_data:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
-    
-    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
-    rental_days = order[15] or 1
-    
-    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
-    formatted_items = [{"name": it[2], "quantity": it[3]} for it in items]
-    total_qty = sum(it[3] for it in items)
-    
-    act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
-    
-    template_data = {
-        "act_number": act_number,
-        "act_date": datetime.now().strftime("%d.%m.%Y"),
-        "executor": executor,
-        "client": {"name": order[3], "phone": order[4] or order[21], "contact_person": order[3]},
-        "order": {"number": order[1]},
-        "items": formatted_items,
-        "rental_days": rental_days,
-        "rental_start_date": _format_date_ua(order[6]),
-        "rental_end_date": _format_date_ua(order[7]),
-        "return_date": _format_date_ua(order[9] or order[7]),
-        "totals": {"items_count": len(items), "quantity": total_qty}
-    }
     
     template = jinja_env.get_template("documents/issue_act.html")
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
-@router.get("/issue-act/{order_id}/pdf")
+@router.get("/issue-act/{order_id}/pdf", response_class=HTMLResponse)
 async def download_issue_act_pdf(
     order_id: int,
     executor_type: str = Query("tov"),
     db: Session = Depends(get_rh_db)
 ):
-    """Download issue act as PDF"""
-    
-    order, items = _get_order_with_items(db, order_id)
-    if not order:
+    """Generate printable HTML for issue act (use browser Print to PDF)"""
+    template_data = _build_issue_act_data(db, order_id, executor_type)
+    if not template_data:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
-    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
-    rental_days = order[15] or 1
-    
-    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
-    formatted_items = [{"name": it[2], "quantity": it[3]} for it in items]
-    total_qty = sum(it[3] for it in items)
-    
-    act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
-    
-    template_data = {
-        "act_number": act_number, "act_date": datetime.now().strftime("%d.%m.%Y"),
-        "executor": executor,
-        "client": {"name": order[3], "phone": order[4] or order[21], "contact_person": order[3]},
-        "order": {"number": order[1]},
-        "items": formatted_items, "rental_days": rental_days,
-        "rental_start_date": _format_date_ua(order[6]), "rental_end_date": _format_date_ua(order[7]),
-        "return_date": _format_date_ua(order[9] or order[7]),
-        "totals": {"items_count": len(items), "quantity": total_qty}
-    }
-    
     template = jinja_env.get_template("documents/issue_act.html")
-    html_content = template.render(**template_data)
-    
-    font_config = WeasyFontConfig()
-    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 15mm; }', font_config=font_config)], font_config=font_config)
-    
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Akt_vydachi_{order[1]}.pdf"})
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
 @router.get("/annex/{order_id}/pdf")
@@ -1253,10 +1309,7 @@ async def download_annex_pdf(order_id: int, agreement_id: Optional[int] = Query(
     template = jinja_env.get_template("documents/annex.html")
     html_content = template.render(**template_data)
     
-    font_config = WeasyFontConfig()
-    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 15mm; }', font_config=font_config)], font_config=font_config)
-    
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Dodatok_{annex_number}_{order[1]}.pdf"})
+    return HTMLResponse(content=html_content, media_type="text/html")
 
 async def get_latest_documents_batch(
     request: LatestBatchRequest,

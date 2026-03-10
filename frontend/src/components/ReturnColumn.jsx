@@ -41,7 +41,7 @@ const money = (v) => `₴${fmtUA(v)}`;
 // ============================================================
 // MAIN COLUMN COMPONENT
 // ============================================================
-export default function ReturnColumn({ onRefreshAll }) {
+export default function ReturnColumn({ onRefreshAll, searchQuery = '' }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrderId, setExpandedOrderId] = useState(null);
@@ -75,12 +75,26 @@ export default function ReturnColumn({ onRefreshAll }) {
     setExpandedOrderId(prev => prev === orderId ? null : orderId);
   };
 
+  // Фільтрація за пошуком
+  const filteredOrders = searchQuery
+    ? orders.filter(o => {
+        const q = searchQuery.toLowerCase();
+        return (
+          (o.order_number || '').toLowerCase().includes(q) ||
+          (o.customer_name || '').toLowerCase().includes(q) ||
+          (o.client_name || '').toLowerCase().includes(q) ||
+          (o.customer_phone || '').includes(q) ||
+          (o.client_phone || '').includes(q)
+        );
+      })
+    : orders;
+
   return (
     <section className="rounded-2xl border p-4 shadow-sm ring-2 bg-white ring-violet-100 border-violet-200">
       <header className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-slate-800" data-testid="return-column-title">↩️ Повернення</h3>
-          <p className="text-sm text-slate-500">{orders.length} замовлень</p>
+          <h3 className="text-lg font-semibold text-slate-800" data-testid="return-column-title">&#8617;&#65039; Повернення</h3>
+          <p className="text-sm text-slate-500">{filteredOrders.length} замовлень{searchQuery && orders.length !== filteredOrders.length ? ` (з ${orders.length})` : ''}</p>
         </div>
       </header>
       <div className="space-y-3 max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
@@ -90,8 +104,8 @@ export default function ReturnColumn({ onRefreshAll }) {
               <div key={i} className="rounded-xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
             ))}
           </div>
-        ) : orders.length > 0 ? (
-          orders.map(order => (
+        ) : filteredOrders.length > 0 ? (
+          filteredOrders.map(order => (
             <ReturnOrderCard
               key={order.order_id}
               order={order}
@@ -100,7 +114,7 @@ export default function ReturnColumn({ onRefreshAll }) {
           ))
         ) : (
           <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center">
-            <div className="text-slate-400 text-sm">Немає замовлень на повернення</div>
+            <div className="text-slate-400 text-sm">{searchQuery ? 'Нічого не знайдено' : 'Немає замовлень на повернення'}</div>
           </div>
         )}
       </div>

@@ -68,7 +68,8 @@ export default function ManagerCabinet() {
       if (managersRes.ok) {
         const managersData = await managersRes.json();
         const staffList = Array.isArray(managersData) ? managersData : [];
-        setManagers(staffList.filter(m => ['admin', 'manager', 'office_manager'].includes(m.role)));
+        // Тільки менеджери (без адмінів)
+        setManagers(staffList.filter(m => ['manager', 'office_manager'].includes(m.role)));
       }
       
       // Завантажити фінансові дані
@@ -177,7 +178,9 @@ export default function ManagerCabinet() {
         const matchesSearch = 
           order.order_number?.toLowerCase().includes(query) ||
           order.customer_name?.toLowerCase().includes(query) ||
-          order.customer_phone?.includes(query);
+          order.client_name?.toLowerCase().includes(query) ||
+          order.customer_phone?.includes(query) ||
+          order.client_phone?.includes(query);
         if (!matchesSearch) return false;
       }
       
@@ -191,9 +194,19 @@ export default function ManagerCabinet() {
         return false;
       }
       
+      // Фільтр по фінансах
+      if (financeFilter !== 'all') {
+        const totalRent = Number(order.total_rental || 0);
+        const paidRent = Number(order.paid_rent || 0);
+        if (financeFilter === 'paid' && paidRent < totalRent) return false;
+        if (financeFilter === 'pending' && paidRent >= totalRent && totalRent > 0) return false;
+        if (financeFilter === 'deposit_paid' && Number(order.paid_deposit || 0) <= 0) return false;
+        if (financeFilter === 'no_deposit' && Number(order.paid_deposit || 0) > 0) return false;
+      }
+      
       return true;
     });
-  }, [orders, searchQuery, statusFilter, managerFilter]);
+  }, [orders, searchQuery, statusFilter, managerFilter, financeFilter]);
 
   // Розділення на колонки
   const awaitingOrders = filteredOrders.filter(o => o.status === 'awaiting_customer');
@@ -343,8 +356,10 @@ export default function ManagerCabinet() {
               className="px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
             >
               <option value="all">Фінанси: всі</option>
-              <option value="pending">Очікує оплати</option>
-              <option value="paid">Оплачено</option>
+              <option value="pending">Очікує оплати оренди</option>
+              <option value="paid">Оренда оплачена</option>
+              <option value="deposit_paid">Застава внесена</option>
+              <option value="no_deposit">Без застави</option>
             </select>
             
             <div className="h-6 w-px bg-slate-200 mx-1" />
@@ -470,7 +485,7 @@ export default function ManagerCabinet() {
           </Column>
 
           {/* Column 3: Returns / Settlement */}
-          <ReturnColumn onRefreshAll={fetchData} />
+          <ReturnColumn onRefreshAll={fetchData} searchQuery={searchQuery} />
         </div>
       </main>
         </>

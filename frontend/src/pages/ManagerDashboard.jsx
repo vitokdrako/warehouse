@@ -646,19 +646,52 @@ export default function ManagerDashboard() {
             <div className="rounded-2xl border border-slate-200 p-4 h-32 bg-slate-50 animate-pulse" />
           ) : filterBySearch(returnOrders).length > 0 ? (
             <>
-              {(showAllReturns ? filterBySearch(returnOrders) : filterBySearch(returnOrders).slice(0, 4)).map(card => (
-                <OrderCard 
-                  key={card.id}
-                  id={card.order_number}
-                  name={card.customer_name}
-                  phone={card.customer_phone}
-                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
-                  deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
-                  badge="return"
-                  order={card}
-                  onClick={() => navigate(`/return/${card.order_id}`)}
-                />
-              ))}
+              {(showAllReturns ? filterBySearch(returnOrders) : filterBySearch(returnOrders).slice(0, 4)).map(card => {
+                const endDate = card.rental_end_date || card.return_date;
+                let overdueDays = 0;
+                if (endDate) {
+                  const end = new Date(endDate);
+                  end.setHours(23, 59, 59);
+                  const now = new Date();
+                  if (now > end) overdueDays = Math.floor((now - end) / (1000 * 60 * 60 * 24));
+                }
+                return (
+                  <div 
+                    key={card.id}
+                    className={`relative rounded-2xl border p-3 transition hover:shadow-lg cursor-pointer ${
+                      overdueDays > 0 
+                        ? 'border-red-300 bg-red-50/50 ring-2 ring-red-100 hover:border-red-400' 
+                        : 'border-slate-200 bg-white hover:border-teal-400'
+                    }`}
+                    onClick={() => navigate(`/return/${card.order_id}`)}
+                    data-testid={`return-card-${card.order_id}`}
+                  >
+                    {overdueDays > 0 && (
+                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm" data-testid={`overdue-badge-${card.order_id}`}>
+                        +{overdueDays} дн
+                      </div>
+                    )}
+                    <div className="flex justify-between items-start mb-1">
+                      <div>
+                        <div className="font-bold text-slate-800 text-sm">{card.order_number}</div>
+                        <div className="text-xs text-slate-500">{card.customer_name}</div>
+                      </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                        overdueDays > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                      }`}>
+                        {overdueDays > 0 ? `Прострочено` : 'Вчасно'}
+                      </span>
+                    </div>
+                    <div className={`text-xs ${overdueDays > 0 ? 'text-red-600 font-medium' : 'text-slate-500'}`}>
+                      Повернення: {endDate ? new Date(endDate).toLocaleDateString('uk-UA') : '—'}
+                      {overdueDays > 0 && ` (${overdueDays} дн прострочення)`}
+                    </div>
+                    {card.customer_phone && (
+                      <div className="text-xs text-slate-400 mt-0.5">{card.customer_phone}</div>
+                    )}
+                  </div>
+                );
+              })}
               {filterBySearch(returnOrders).length > 4 && !showAllReturns && (
                 <button 
                   onClick={() => setShowAllReturns(true)}

@@ -7,6 +7,7 @@
  */
 import React, { useState, useEffect, useCallback } from "react";
 import CorporateHeader from "../components/CorporateHeader";
+import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "../utils/imageHelper";
 import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, ChevronDown, ChevronRight, Plus, Clock, ArrowRight } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
@@ -21,11 +22,7 @@ const authFetch = async (url, options = {}) => {
 };
 
 const getPhotoUrl = (item) => {
-  const url = item?.photo_url || item?.product_image || item?.image_url;
-  if (!url) return null;
-  if (url.startsWith("http")) return url;
-  const base = BACKEND_URL.endsWith('/') ? BACKEND_URL.slice(0, -1) : BACKEND_URL;
-  return `${base}/${url.replace(/^\//, '')}`;
+  return getImageUrl(item?.product_image || item?.photo_url || item?.image_url || item?.image);
 };
 
 // ============= QUICK ADD POPOVER =============
@@ -103,7 +100,7 @@ const QuickAddPopover = ({ queueType, onAdd, onClose }) => {
       {found && (
         <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border">
           {(found.image || found.image_url) ? (
-            <img src={getPhotoUrl(found)} className="w-10 h-10 rounded-md object-cover border" alt="" onError={e => e.target.style.display='none'} />
+            <img src={getPhotoUrl(found)} className="w-10 h-10 rounded-md object-cover border" alt="" onError={handleImageError} />
           ) : (
             <div className="w-10 h-10 rounded-md bg-slate-200 flex items-center justify-center"><Package className="w-4 h-4 text-slate-400" /></div>
           )}
@@ -136,7 +133,7 @@ const QueueItemCard = ({ item, onComplete, onDelete, onPhotoClick, completing })
             alt={item.product_name}
             className="w-14 h-14 rounded-lg object-cover border border-slate-200 cursor-pointer hover:opacity-80 flex-shrink-0"
             onClick={() => onPhotoClick?.(photoUrl, item.product_name)}
-            onError={(e) => { e.target.style.display = 'none'; }}
+            onError={handleImageError}
           />
         ) : (
           <div className="w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
@@ -333,7 +330,7 @@ const BatchCard = ({ batch, onToggle, isOpen }) => {
           {batch.items.map(item => (
             <div key={item.id} className="flex items-center gap-2 py-1.5 text-xs">
               {item.product_image ? (
-                <img src={getPhotoUrl(item)} className="w-8 h-8 rounded-md object-cover border" alt="" onError={e => e.target.style.display='none'} />
+                <img src={getPhotoUrl(item)} className="w-8 h-8 rounded-md object-cover border" alt="" onError={handleImageError} />
               ) : (
                 <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center"><Package className="w-3 h-3 text-slate-400"/></div>
               )}

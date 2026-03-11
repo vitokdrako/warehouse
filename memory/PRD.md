@@ -1,72 +1,61 @@
-# Damage Hub / Rental Hub - PRD
+# RentalHub PRD
 
 ## Original Problem Statement
-Fix bugs and improve functionality in the "Damage Hub" rental management application. The app manages orders, clients, catalog items, documents (quotes, estimates), and payments for a decoration rental business.
+Comprehensive overhaul of rental management application workflows for Prop Masters and Managers, including damage processing, financial operations, document generation, and catalog management.
 
-## Core Architecture
-- **Frontend**: React (CRA) + Tailwind CSS
-- **Backend**: FastAPI + MySQL (external OpenCart DB sync via SQLAlchemy)
-- **Key Pages**: Manager Cabinet, Order View, Catalog, Damage Hub, Calendar
+## Architecture
+- **Frontend:** React (CRA) → `rentalhub.farforrent.com.ua`
+- **Backend:** FastAPI → `backrentalhub.farforrent.com.ua`
+- **Database:** External MySQL (OpenCart-based)
+- **Deployment:** Manual — agent builds frontend + prepares backend files in `/app/clean_project/`
+
+## Core Modules
+1. **Damage Cabinet** (`DamageHubApp.jsx` + `product_damage_history.py`) — 3-column dashboard (Wash/Restoration/Laundry)
+2. **Catalog** (`CatalogBoard.jsx` + `catalog.py`) — Product catalog with availability tracking
+3. **Orders/Returns** — Order management with damage recording at return
+4. **Kasa (Cash Desk)** — Financial operations + cash collection
+5. **Documents** — Printable lists, acts, invoices
 
 ## What's Been Implemented
 
-### Previous sessions
-- Full order management workflow with Kanban columns
-- Document generation (quotes, estimates, issue act, picking list) with PDF/email
-- Catalog management with families/sets
-- Calendar with booking visualization
-- Moodboard feature
-- Client management (CRUD, search, notes)
-- Payment processing within orders
-- Master Agreement generation per client
-- Order merging functionality
-- Packaging return workflow (interactive for Prop Masters)
-- Prop Master UI cleanup (removed financial data, add-on orders)
-- Document generation overhaul (Handover Act, Picking List redesigned)
-- Damage tracking "For comparison" option
-- Damage Cabinet 3-column redesign (Wash, Restoration, Laundry)
-- Laundry batch management, quick-add by SKU, delete from queues
+### Session 2026-03-11
+- Catalog SKU search integrated into Damage Cabinet (API-based with debounce)
+- Quantity input when adding items to queues
+- Freeze on add (`frozen_quantity += qty`), unfreeze on complete (`frozen_quantity -= qty`)
+- Partial acceptance for ALL queues (Wash/Restoration/Laundry) + laundry batches
+- DamageModal updated: 3 queue buttons, "Без запису" uses quick-add (no damage history)
+- Print list excludes returned items, shows remaining qty
+- Fixed 17 products with stuck frozen_quantity via fix-frozen-quantities endpoint
+- Laundry endpoint now returns qty/processed_qty fields
+- `loadAll` uses Promise.allSettled for resilience
 
-### Session (2026-03-10) - Latest
-- **Completed**: Printable lists for Damage Cabinet
-  - Fixed missing `Printer` import in DamageHubApp.jsx
-  - Fixed `p.image` -> `p.image_url` column name in documents.py SQL queries
-  - Added `laundry` support to processing-list endpoint
-  - Added print button to LaundryColumn header + BatchCard
-  - Fixed laundry batch preview: `laundry_batch_items` -> `laundry_items` (correct table)
-  - Added `_email_to_name()` helper - shows "Katia" instead of "katia@farforrent.com.ua"
-  - Backend endpoints verified: all return 200
-- **Completed**: Production frontend build x2 (with bug fixes)
-  - Output in `/app/clean_project/frontend_build/` (no archives)
+### Previous Sessions
+- 3-column Damage Cabinet dashboard
+- Laundry batches (create, print, partial return)
+- Cash Collection (інкасація) feature
+- Multi-currency deposit support
+- Financial calculations fix (service_fee)
+- Mass order closing, order restoration
+- Document generation (handover act, picking list, processing list)
 
-## Prioritized Backlog
-
-### P1 (High)
-- Optimize Catalog API (`/api/catalog`) - performance bottleneck causing FamiliesManager infinite loading
-- System cleanup - delete 18 unused tables and 7 obsolete files (pending user approval)
-
-### P2 (Medium)
-- Implement remaining document templates: "Act of Return" (Акт повернення)
-- Fix `convert-to-order` endpoint instability
-- Fix Calendar timezone bug
-- Fix Moodboard export
-- Create email templates for other documents
-
-### P3 (Future/Backlog)
-- Real-time updates for client cabinet
-- Unify NewOrderViewWorkspace and IssueCardWorkspace
-- Unify database item status tables
-- Implement full RBAC
-- Monthly Financial Report
-- HR/Ops Module
+## Pending Issues
+- P1: Monthly Cash Desk Closing (Z-report)
+- P1: Catalog API performance / FamiliesManager infinite loading
+- P1: System cleanup (unused tables/files)
+- P2: convert-to-order instability
+- P2: Moodboard export broken
+- P2: Calendar timezone bug
+- P2: Email templates for documents
 
 ## Key Files
-- `/app/frontend/src/pages/DamageHubApp.jsx` - Damage Cabinet 3-column UI
-- `/app/backend/routes/documents.py` - All document generation endpoints
-- `/app/backend/templates/documents/processing_list.html` - Processing queue list template
-- `/app/backend/routes/laundry.py` - Laundry batch management
+- `/app/frontend/src/pages/DamageHubApp.jsx`
+- `/app/frontend/src/components/DamageModal.jsx`
+- `/app/backend/routes/product_damage_history.py`
+- `/app/backend/routes/laundry.py`
+- `/app/backend/routes/documents.py`
+- `/app/backend/routes/catalog.py`
+- `/app/clean_project/backend_update/` — files for production deployment
+- `/app/clean_project/frontend_build/` — production frontend build
 
 ## Credentials
 - Admin: `vitokdrako@gmail.com` / `test123`
-- Production frontend: `https://rentalhub.farforrent.com.ua`
-- Production backend: `https://backrentalhub.farforrent.com.ua`

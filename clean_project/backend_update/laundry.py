@@ -603,6 +603,36 @@ async def return_laundry_items(
                     WHERE product_id = :product_id
                 """), {"product_id": item["product_id"]})
             
+            # Оновити product_damage_history якщо прив'язаний
+            try:
+                # Знайти damage_history запис через laundry_item_id
+                pdh_row = db.execute(text("""
+                    SELECT id FROM product_damage_history 
+                    WHERE laundry_item_id = :lid
+                    AND processing_type = 'laundry'
+                    LIMIT 1
+                """), {"lid": item_return.item_id}).fetchone()
+                
+                if pdh_row:
+                    pdh_id = pdh_row[0]
+                    if new_returned >= item["quantity"]:
+                        db.execute(text("""
+                            UPDATE product_damage_history
+                            SET processing_status = 'completed',
+                                processing_type = 'returned_to_stock',
+                                processed_qty = qty,
+                                returned_from_processing_at = NOW()
+                            WHERE id = :pid
+                        """), {"pid": pdh_id})
+                    else:
+                        db.execute(text("""
+                            UPDATE product_damage_history
+                            SET processed_qty = COALESCE(processed_qty, 0) + :rqty
+                            WHERE id = :pid
+                        """), {"pid": pdh_id, "rqty": item_return.returned_quantity})
+            except Exception:
+                pass
+            
             total_returned += item_return.returned_quantity
         
         # Оновити загальну кількість повернених товарів у партії

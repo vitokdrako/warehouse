@@ -2401,3 +2401,40 @@ async def fix_frozen_quantities(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fix-returned-batch-items")
+async def fix_returned_batch_items(db: Session = Depends(get_rh_db)):
+    """
+    Одноразовий фікс: закрити product_damage_history записи
+    які прив'язані до повернених партій пральні.
+    """
+    try:
+        # Знайти damage_history записи де партія вже повернена
+        stale = db.execute(text("""
+            SELECT pdh.id, pdh.product_id, pdh.sku, pdh.qty,
+                   lb.id as batch_id, lb.status as batch_status
+            FROM product_damage_history pdh
+            JOIN laundry_batches lb ON pdh.laundry_batch_id = lb.id
+            WHERE pdh.processing_type = 'laundry'
+            AND COALESCE(pdh.processing_status, '') NOT IN ('completed', 'returned_to_stock')
+            AND lb.status IN ('returned', 'completed')
+        """)).fetchall()
+        
+        fixes = []
+        for row in stale:
+            db.execute(text("""
+                UPDATE product_damage_history
+                SET processing_status = 'completed',
+                    processing_type = 'returned_to_stock',
+                    processed_qty = COALESCE(qty, 1),
+                    returned_from_processing_at = NOW()
+                WHERE id = :pid
+            """), {"pid": row[0]})
+            fixes.append({"id": row[0], "sku": row[2], "qty": row[3], "batch": row[4]})
+        
+        db.commit()
+        return {"success": True, "fixed_count": len(fixes), "fixes": fixes}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

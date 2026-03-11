@@ -851,8 +851,8 @@ async def get_wash_queue(db: Session = Depends(get_rh_db)):
                 p.image_url as product_image
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.product_id
-            WHERE pdh.processing_type = 'wash'
-            AND COALESCE(pdh.processing_status, '') != 'hidden'
+            WHERE pdh.processing_type IN ('wash', 'washing')
+            AND COALESCE(pdh.processing_status, '') NOT IN ('hidden', 'completed', 'returned_to_stock', 'deleted')
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
@@ -954,7 +954,7 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'restoration'
-            AND COALESCE(pdh.processing_status, '') != 'hidden'
+            AND COALESCE(pdh.processing_status, '') NOT IN ('hidden', 'completed', 'returned_to_stock', 'deleted')
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
@@ -1059,7 +1059,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
             LEFT JOIN laundry_batches lb ON pdh.laundry_batch_id = lb.id
             LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'laundry'
-            AND COALESCE(pdh.processing_status, '') != 'hidden'
+            AND COALESCE(pdh.processing_status, '') NOT IN ('hidden', 'completed', 'returned_to_stock', 'deleted')
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         

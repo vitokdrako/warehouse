@@ -224,12 +224,14 @@ async def get_dashboard_overview(
             print(f"[Dashboard] Error loading finance: {e}")
             result["finance_summary"] = {"total_revenue": 0, "rent_paid": 0, "deposits_count": 0}
         
-        # 5. Cleaning stats
+        # 5. Cleaning stats (тепер з product_damage_history)
         try:
             cleaning_result = db.execute(text("""
                 SELECT COUNT(*) 
-                FROM product_cleaning 
-                WHERE status = 'in_progress' AND cleaning_type = 'repair'
+                FROM product_damage_history 
+                WHERE processing_type = 'restoration'
+                AND COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+                AND (COALESCE(qty, 1) - COALESCE(processed_qty, 0)) > 0
             """))
             repair_count = cleaning_result.fetchone()[0] or 0
             

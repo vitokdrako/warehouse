@@ -237,13 +237,15 @@ async def get_calendar_events(
         try:
             cleaning_query = """
                 SELECT 
-                    id, product_id, sku, cleaning_type, status,
-                    started_at, completed_at, notes
-                FROM product_cleaning
-                WHERE status IN ('pending', 'in_progress')
+                    id, product_id, sku, processing_type, processing_status,
+                    created_at, updated_at, note
+                FROM product_damage_history
+                WHERE COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+                AND processing_type IN ('wash', 'restoration', 'laundry')
+                AND (COALESCE(qty, 1) - COALESCE(processed_qty, 0)) > 0
                 AND (
-                    DATE(started_at) BETWEEN :date_from AND :date_to
-                    OR DATE(created_at) BETWEEN :date_from AND :date_to
+                    DATE(created_at) BETWEEN :date_from AND :date_to
+                    OR DATE(updated_at) BETWEEN :date_from AND :date_to
                 )
             """
             
@@ -254,7 +256,7 @@ async def get_calendar_events(
             
             for row in cleaning_result:
                 cleaning_type = row[3]
-                event_type = "repair" if cleaning_type == "repair" else (
+                event_type = "repair" if cleaning_type == "restoration" else (
                     "laundry" if cleaning_type == "laundry" else "cleaning"
                 )
                 

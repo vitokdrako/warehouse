@@ -29,9 +29,9 @@ rh_engine = create_engine(
     RH_MYSQL_URL,
     pool_pre_ping=True,
     pool_recycle=180,
-    pool_size=5,
-    max_overflow=10,
-    pool_timeout=30,
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=60,
     connect_args={
         'connect_timeout': 30,
         'read_timeout': 60,

@@ -292,57 +292,45 @@ async def delete_damage_case(
     rh_db: Session = Depends(get_rh_db)
 ):
     """
-    Видалити кейс шкоди (розморожує товар і видаляє всі записи)
+    Видалити кейс шкоди з product_damage_history (розморожує товар)
     """
     try:
-        # Отримати всі damage_items для цього кейсу
+        # Отримати запис з product_damage_history
         query = text("""
-            SELECT id, product_id, action_type, frozen_qty, qty
-            FROM damage_items
-            WHERE damage_id = :damage_id
+            SELECT id, product_id, processing_type, qty, processed_qty
+            FROM product_damage_history
+            WHERE id = :damage_id
         """)
         
-        items = rh_db.execute(query, {'damage_id': damage_id}).fetchall()
+        item = rh_db.execute(query, {'damage_id': damage_id}).fetchone()
         
-        if not items:
+        if not item:
             raise HTTPException(status_code=404, detail="Кейс не знайдено")
         
-        # Розморозити товари або повернути кількість
-        for item in items:
-            item_id, product_id, action_type, frozen_qty, qty = item
-            
-            if action_type == 'total_loss':
-                # Повернути кількість назад
-                update_query = text("""
-                    UPDATE products 
-                    SET quantity = quantity + :qty
-                    WHERE product_id = :pid
-                """)
-                rh_db.execute(update_query, {'qty': qty, 'pid': product_id})
-            else:
-                # Розморозити товар
-                if frozen_qty > 0:
-                    unfreeze_query = text("""
-                        UPDATE products 
-                        SET frozen_quantity = GREATEST(0, frozen_quantity - :qty)
-                        WHERE product_id = :pid
-                    """)
-                    rh_db.execute(unfreeze_query, {'qty': frozen_qty, 'pid': product_id})
+        pdh_id, product_id, processing_type, qty, processed_qty = item
+        remaining = (qty or 1) - (processed_qty or 0)
         
-        # Видалити damage_items
-        delete_items = text("DELETE FROM damage_items WHERE damage_id = :damage_id")
-        rh_db.execute(delete_items, {'damage_id': damage_id})
+        # Розморозити товар
+        if remaining > 0 and processing_type != 'none':
+            rh_db.execute(text("""
+                UPDATE products 
+                SET frozen_quantity = GREATEST(0, frozen_quantity - :qty)
+                WHERE product_id = :pid
+            """), {'qty': remaining, 'pid': product_id})
         
-        # Видалити damage
-        delete_damage = text("DELETE FROM damages WHERE id = :damage_id")
-        rh_db.execute(delete_damage, {'damage_id': damage_id})
+        # Позначити як видалений
+        rh_db.execute(text("""
+            UPDATE product_damage_history 
+            SET processing_status = 'deleted', updated_at = NOW()
+            WHERE id = :damage_id
+        """), {'damage_id': damage_id})
         
         rh_db.commit()
         
         return {
             'success': True,
-            'message': f'Кейс видалено. Оброблено {len(items)} позицій.',
-            'items_count': len(items)
+            'message': f'Кейс видалено. Розморожено {remaining} од.',
+            'items_count': 1
         }
         
     except HTTPException:
@@ -363,8 +351,8 @@ async def complete_damage_case(
     try:
         # Отримати інформацію про кейс
         query = text("""
-            SELECT product_id, action_type, frozen_qty, status
-            FROM damage_items
+            SELECT product_id, processing_type, (COALESCE(qty, 1) - COALESCE(processed_qty, 0)) as remaining, processing_status
+            FROM product_damage_history
             WHERE id = :id
         """)
         
@@ -373,28 +361,28 @@ async def complete_damage_case(
         if not result:
             raise HTTPException(status_code=404, detail="Кейс не знайдено")
         
-        product_id, action_type, frozen_qty, status = result
+        product_id, action_type, remaining_qty, status = result
         
         if status == 'completed':
             return {'success': True, 'message': 'Кейс вже завершено'}
         
         # Оновити статус кейсу
         update_query = text("""
-            UPDATE damage_items 
-            SET status = 'completed', frozen_qty = 0
+            UPDATE product_damage_history 
+            SET processing_status = 'completed', updated_at = NOW()
             WHERE id = :id
         """)
         
         rh_db.execute(update_query, {'id': damage_item_id})
         
-        # Розморозити товар якщо був заморожений (не total_loss)
-        if action_type in ['repair', 'restoration', 'washing'] and frozen_qty > 0:
+        # Розморозити товар
+        if action_type in ('wash', 'restoration', 'laundry') and remaining_qty > 0:
             unfreeze_query = text("""
                 UPDATE products 
                 SET frozen_quantity = GREATEST(0, frozen_quantity - :qty)
                 WHERE product_id = :pid
             """)
-            rh_db.execute(unfreeze_query, {'qty': frozen_qty, 'pid': product_id})
+            rh_db.execute(unfreeze_query, {'qty': remaining_qty, 'pid': product_id})
         
         rh_db.commit()
         

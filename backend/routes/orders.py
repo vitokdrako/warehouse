@@ -725,21 +725,22 @@ async def get_order_details(
             "created_at": r_row[12].isoformat() if r_row[12] else None
         })
     
-    # Get damages
+    # Get damages (тепер з product_damage_history)
     damages_result = db.execute(text("""
-        SELECT id, case_status, severity, claimed_total, paid_total, created_at
-        FROM damages
+        SELECT id, processing_status, severity, estimate_value, processed_qty, created_at
+        FROM product_damage_history
         WHERE order_id = :order_id
+        AND processing_type IN ('wash', 'restoration', 'laundry')
     """), {"order_id": order_id})
     
     damages = []
     for d_row in damages_result:
         damages.append({
             "id": d_row[0],
-            "status": d_row[1],
-            "severity": d_row[2],
+            "status": d_row[1] or 'pending',
+            "severity": d_row[2] or 'low',
             "claimed_total": float(d_row[3]) if d_row[3] else 0.0,
-            "paid_total": float(d_row[4]) if d_row[4] else 0.0,
+            "paid_total": 0.0,
             "created_at": d_row[5].isoformat() if d_row[5] else None
         })
     

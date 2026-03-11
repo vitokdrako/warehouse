@@ -26,6 +26,15 @@
   - FamiliesManager.jsx updated: parallel loading, lightweight endpoint
   - All files copied to /app/clean_project/ for deployment
 
+- **Discount Calculation Fix (P0 - COMPLETED)**:
+  - Fixed: `orders` endpoint mapped `discount` (percent) to `discount_amount` → now correctly maps to `discount_percent`
+  - Fixed: `discount_amount` added to allowed_fields so fixed amounts save correctly
+  - Fixed: Frontend `calculations` now uses fixed amount when available (not always percentage)
+  - Fixed: `discountAmount` added to useMemo dependencies → LeftRailFinance updates in real-time
+  - Fixed: `total_price` always = items sum (BEFORE discount), not inconsistent
+  - NEW: `total_after_discount` field returned from backend = total_price - discount_amount
+  - Idempotency verified: saving 3x produces identical results (no snowball effect)
+
 - **Frozen Quantity Consistency Fix (P0 - COMPLETED)**:
   - Catalog processing filters (on_wash/on_laundry/on_restoration) now query PDH directly instead of stale `products.state`
   - Available quantity now calculated from PDH: `total - reserved - in_rent - (wash + restoration + laundry)`

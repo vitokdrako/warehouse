@@ -2284,3 +2284,80 @@ async def write_off_item(
         db.rollback()
         print(f"[WriteOff] ❌ Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/fix-frozen-quantities")
+async def fix_frozen_quantities(
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Одноразовий фікс: перерахувати frozen_quantity для товарів,
+    де кількість вже повернута з пральні але frozen_quantity не було зменшено.
+    """
+    try:
+        # Знайти всі товари з frozen_quantity > 0
+        frozen = db.execute(text("""
+            SELECT product_id, sku, name, frozen_quantity 
+            FROM products 
+            WHERE frozen_quantity > 0
+        """)).fetchall()
+        
+        fixes = []
+        
+        for row in frozen:
+            pid = row[0]
+            sku = row[1]
+            name = row[2]
+            current_frozen = row[3] or 0
+            
+            # Порахувати скільки реально в обробці (не повернуто)
+            # 1. damage_history записи з активним processing_type, 
+            #    які НЕ прив'язані до партії (ті що в партії рахуються через laundry_items)
+            active_damage = db.execute(text("""
+                SELECT COALESCE(SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)), 0)
+                FROM product_damage_history
+                WHERE product_id = :pid
+                AND processing_type IN ('wash', 'restoration', 'laundry', 'washing')
+                AND COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+                AND (laundry_batch_id IS NULL OR laundry_batch_id = '')
+            """), {"pid": pid}).scalar() or 0
+            
+            # 2. laundry_items що ще не повернуті (з незавершених партій)
+            active_laundry = db.execute(text("""
+                SELECT COALESCE(SUM(li.quantity - COALESCE(li.returned_quantity, 0)), 0)
+                FROM laundry_items li
+                JOIN laundry_batches lb ON li.batch_id = lb.id
+                WHERE li.product_id = :pid
+                AND lb.status NOT IN ('cancelled')
+                AND li.quantity > COALESCE(li.returned_quantity, 0)
+            """), {"pid": pid}).scalar() or 0
+            
+            correct_frozen = int(active_damage) + int(active_laundry)
+            
+            if correct_frozen != current_frozen:
+                db.execute(text("""
+                    UPDATE products SET frozen_quantity = :correct WHERE product_id = :pid
+                """), {"correct": correct_frozen, "pid": pid})
+                
+                fixes.append({
+                    "product_id": pid,
+                    "sku": sku,
+                    "name": str(name)[:50] if name else "",
+                    "was_frozen": current_frozen,
+                    "now_frozen": correct_frozen,
+                    "active_damage": int(active_damage),
+                    "active_laundry": int(active_laundry)
+                })
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "fixed_count": len(fixes),
+            "fixes": fixes
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -126,10 +126,32 @@ async def get_items_by_category(
         rent_filter = availability in ('in_rent', 'reserved')
         
         if processing_filter:
-            # Знайти товари на обробці з products.state
-            db_state = state_filter_map[availability]
+            # Знайти товари на обробці з product_damage_history (SSOT)
+            pdh_type_map = {
+                'on_wash': ('wash', 'washing'),
+                'on_restoration': ('restoration',),
+                'on_laundry': ('laundry',)
+            }
+            pdh_types = pdh_type_map[availability]
+            pdh_type_placeholders = ','.join(f"'{t}'" for t in pdh_types)
             
-            sql_parts = ["""
+            # Спочатку знайти product_ids з PDH
+            pdh_product_result = db.execute(text(f"""
+                SELECT product_id, SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)) as active_qty
+                FROM product_damage_history
+                WHERE processing_type IN ({pdh_type_placeholders})
+                AND COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+                GROUP BY product_id
+                HAVING active_qty > 0
+            """)).fetchall()
+            
+            pdh_product_ids = [row[0] for row in pdh_product_result]
+            
+            if not pdh_product_ids:
+                return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0, "on_wash": 0, "on_restoration": 0, "on_laundry": 0}, "date_filter_active": bool(date_from and date_to)}
+            
+            pdh_ids_str = ','.join(str(int(pid)) for pid in pdh_product_ids)
+            sql_parts = [f"""
                 SELECT 
                     p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
                     p.category_name, p.subcategory_name,
@@ -138,9 +160,9 @@ async def get_items_by_category(
                     p.cleaning_status, p.product_state,
                     p.description, p.state, p.frozen_quantity, p.in_laundry, p.family_id
                 FROM products p
-                WHERE p.status = 1 AND p.state = :db_state AND COALESCE(p.frozen_quantity, 0) > 0
+                WHERE p.status = 1 AND p.product_id IN ({pdh_ids_str})
             """]
-            params = {"db_state": db_state}
+            params = {}
             
         elif rent_filter:
             # Знайти товари в оренді або резерві
@@ -457,18 +479,17 @@ async def get_items_by_category(
             
             # Отримуємо реальні кількості з product_damage_history
             product_state = row[18] if len(row) > 18 else None
-            frozen_qty = row[19] if len(row) > 19 else 0
-            frozen_qty = frozen_qty or 0
             family_id = row[21] if len(row) > 21 else None
             
-            # Кількість на обробці з реальних даних кабінету шкоди
+            # Кількість на обробці з реальних даних кабінету шкоди (SSOT)
             proc = processing_dict.get(product_id, {"wash": 0, "restoration": 0, "laundry": 0})
             on_wash_qty = proc["wash"]
             on_restoration_qty = proc["restoration"]
             on_laundry_qty = proc["laundry"]
             
-            # Доступно = всього - резерв - в оренді - заморожено
-            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - frozen_qty)
+            # Доступно = всього - резерв - в оренді - на обробці (з PDH, а не frozen_quantity)
+            total_processing = on_wash_qty + on_restoration_qty + on_laundry_qty
+            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - total_processing)
             
             # Stats
             stats["total"] += total_qty
@@ -649,10 +670,6 @@ async def get_catalog_items(
         family_id = row[14] if len(row) > 14 else None
         family_name = row[15] if len(row) > 15 else None
         family_description = row[16] if len(row) > 16 else None
-        frozen_qty = row[17] if len(row) > 17 else 0
-        frozen_qty = frozen_qty or 0
-        in_laundry_qty = row[18] if len(row) > 18 else 0
-        in_laundry_qty = in_laundry_qty or 0
         product_state = row[19] if len(row) > 19 else None
         
         normalized_image = normalize_image_url(row[4])
@@ -664,13 +681,15 @@ async def get_catalog_items(
         in_rent_qty = in_rent_dict.get(product_id, 0)
         in_restore_qty = in_restore_dict.get(product_id, 0)
         
-        # Визначити on_wash/restoration/laundry з реальних даних кабінету шкоди
+        # Визначити on_wash/restoration/laundry з реальних даних кабінету шкоди (SSOT)
         proc = processing_dict.get(product_id, {"wash": 0, "restoration": 0, "laundry": 0})
         on_wash_qty = proc["wash"]
         on_restoration_qty = proc["restoration"]
         on_laundry_qty = proc["laundry"]
         
-        available_qty = max(0, total_qty - reserved_qty - in_rent_qty - frozen_qty)
+        # Доступно = всього - резерв - в оренді - на обробці (з PDH)
+        total_processing = on_wash_qty + on_restoration_qty + on_laundry_qty
+        available_qty = max(0, total_qty - reserved_qty - in_rent_qty - total_processing)
         
         items.append({
             "id": row[0],
@@ -702,8 +721,8 @@ async def get_catalog_items(
             "on_wash": on_wash_qty,
             "on_restoration": on_restoration_qty,
             "on_laundry": on_laundry_qty,
-            "frozen_quantity": frozen_qty,
-            "in_laundry": in_laundry_qty,
+            "frozen_quantity": total_processing,
+            "in_laundry": on_laundry_qty,
             "location": {
                 "zone": row[11] or "",
                 "aisle": row[12] or "",

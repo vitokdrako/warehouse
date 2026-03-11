@@ -45,7 +45,7 @@ class LaundryBatchUpdate(BaseModel):
 class LaundryItemReturn(BaseModel):
     item_id: str
     returned_quantity: int
-    condition_after: str
+    condition_after: str = "clean"
     photo_after: Optional[str] = None
     notes: Optional[str] = None
 

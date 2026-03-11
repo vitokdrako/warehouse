@@ -303,7 +303,7 @@ const QueueColumn = ({ title, icon: Icon, iconColor, queueType, items, loading, 
 };
 
 // ============= BATCH CARD =============
-const BatchCard = ({ batch, onToggle, isOpen }) => {
+const BatchCard = ({ batch, onToggle, isOpen, onReturnItem }) => {
   const statusColors = {
     sent: 'bg-blue-50 text-blue-700 border-blue-200',
     partial_return: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -350,20 +350,36 @@ const BatchCard = ({ batch, onToggle, isOpen }) => {
         </button>
       </button>
       {isOpen && batch.items?.length > 0 && (
-        <div className="px-3 pb-3 space-y-1.5 border-t border-slate-100">
-          {batch.items.map(item => (
-            <div key={item.id} className="flex items-center gap-2 py-1.5 text-xs">
-              {item.product_image ? (
-                <img src={getPhotoUrl(item)} className="w-8 h-8 rounded-md object-cover border" alt="" onError={handleImageError} />
-              ) : (
-                <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center"><Package className="w-3 h-3 text-slate-400"/></div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="truncate font-medium text-slate-700">{item.product_name}</div>
-                <div className="text-slate-500 font-mono">{item.sku} · {item.returned_quantity || 0}/{item.quantity} шт</div>
+        <div className="px-3 pb-3 space-y-1.5 border-t border-slate-100 pt-2">
+          {batch.items.map(item => {
+            const isReturned = (item.returned_quantity || 0) >= (item.quantity || 1);
+            return (
+              <div key={item.id} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg text-xs ${isReturned ? 'bg-emerald-50/50' : 'hover:bg-slate-50'}`}>
+                {item.product_image ? (
+                  <img src={getPhotoUrl(item)} className="w-8 h-8 rounded-md object-cover border" alt="" onError={handleImageError} />
+                ) : (
+                  <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center"><Package className="w-3 h-3 text-slate-400"/></div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="truncate font-medium text-slate-700">{item.product_name}</div>
+                  <div className="text-slate-500 font-mono">{item.sku} · {item.returned_quantity || 0}/{item.quantity} шт</div>
+                </div>
+                {!isReturned && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onReturnItem?.(batch.id, item); }}
+                    className="px-2 py-1 rounded-lg text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors flex-shrink-0"
+                    title="Повернути цей товар"
+                  >
+                    <Check className="w-3 h-3 inline mr-0.5" />
+                    Прийняти
+                  </button>
+                )}
+                {isReturned && (
+                  <span className="px-2 py-1 text-[10px] font-semibold text-emerald-600 bg-emerald-100 rounded-full flex-shrink-0">Повернуто</span>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -371,7 +387,7 @@ const BatchCard = ({ batch, onToggle, isOpen }) => {
 };
 
 // ============= LAUNDRY COLUMN (з партіями) =============
-const LaundryColumn = ({ items, loading, onComplete, onDelete, onPhotoClick, completing, searchQuery, batches, batchesLoading, onCreateBatch, onRefreshBatches, onQuickAdd }) => {
+const LaundryColumn = ({ items, loading, onComplete, onDelete, onPhotoClick, completing, searchQuery, batches, batchesLoading, onCreateBatch, onRefreshBatches, onQuickAdd, onReturnBatchItem }) => {
   const [tab, setTab] = useState('queue'); // queue | batches
   const [openBatch, setOpenBatch] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -535,7 +551,7 @@ const LaundryColumn = ({ items, loading, onComplete, onDelete, onPhotoClick, com
             </div>
           ) : (
             activeBatches.map(batch => (
-              <BatchCard key={batch.id} batch={batch} isOpen={openBatch === batch.id} onToggle={() => setOpenBatch(openBatch === batch.id ? null : batch.id)} />
+              <BatchCard key={batch.id} batch={batch} isOpen={openBatch === batch.id} onToggle={() => setOpenBatch(openBatch === batch.id ? null : batch.id)} onReturnItem={onReturnBatchItem} />
             ))
           )
         )}
@@ -627,6 +643,26 @@ export default function DamageHubApp() {
       setCompleting(null);
     }
   };
+
+  const handleReturnBatchItem = async (batchId, item) => {
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}/return-items`, {
+        method: "POST",
+        body: JSON.stringify([
+          { item_id: String(item.id), returned_quantity: item.quantity || 1, condition_after: "clean" }
+        ])
+      });
+      if (res.ok) {
+        await Promise.all([loadAll(), loadBatches()]);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Помилка повернення');
+      }
+    } catch (e) {
+      console.error("Batch return error:", e);
+    }
+  };
+
 
   const handleCreateBatch = async (itemIds, company, batchType) => {
     try {
@@ -760,6 +796,7 @@ export default function DamageHubApp() {
               onCreateBatch={handleCreateBatch}
               onRefreshBatches={loadBatches}
               onQuickAdd={handleQuickAdd}
+              onReturnBatchItem={handleReturnBatchItem}
             />
           </div>
         </div>

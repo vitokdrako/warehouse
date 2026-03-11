@@ -1701,9 +1701,19 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
     Розморожує товар і робить його доступним для оренди.
     """
     try:
-        # Отримати product_id з damage record
+        notes = data.get("notes", "Повернуто на склад")
+        
+        # --- Quick action items (quick_{product_id}) ---
+        if str(damage_id).startswith("quick_"):
+            product_id = int(str(damage_id).replace("quick_", ""))
+            db.execute(text("UPDATE products SET product_state = 'shelf' WHERE product_id = :pid"), {"pid": product_id})
+            db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :pid"), {"pid": product_id})
+            db.commit()
+            return {"success": True, "message": "Товар повернуто на склад"}
+        
+        # --- Regular damage history records ---
         damage_record = db.execute(text("""
-            SELECT product_id, sku, product_name, qty 
+            SELECT product_id, sku, product_name, qty, laundry_batch_id, laundry_item_id
             FROM product_damage_history 
             WHERE id = :damage_id
         """), {"damage_id": damage_id}).fetchone()
@@ -1712,8 +1722,10 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
             raise HTTPException(status_code=404, detail="Запис не знайдено")
         
         product_id = damage_record[0]
+        batch_id = damage_record[4]
+        laundry_item_id = damage_record[5]
         
-        # 1. Оновити запис шкоди - позначити як оброблений (просто повернуто)
+        # 1. Оновити запис шкоди
         db.execute(text("""
             UPDATE product_damage_history
             SET processing_type = 'returned_to_stock',
@@ -1721,39 +1733,33 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
                 returned_from_processing_at = NOW(),
                 processing_notes = :notes
             WHERE id = :damage_id
-        """), {
-            "damage_id": damage_id,
-            "notes": data.get("notes", "Повернуто на склад без обробки")
-        })
+        """), {"damage_id": damage_id, "notes": notes})
         
-        # 2. Розморозити товар - встановити state = 'available' або 'shelf'
+        # 2. Якщо елемент був у партії — оновити повернення
+        if batch_id:
+            if laundry_item_id:
+                db.execute(text("UPDATE laundry_items SET returned_quantity = quantity WHERE id = :lid"), {"lid": laundry_item_id})
+            db.execute(text("""
+                UPDATE laundry_batches 
+                SET returned_items = (SELECT COALESCE(SUM(returned_quantity), 0) FROM laundry_items WHERE batch_id = :bid)
+                WHERE id = :bid
+            """), {"bid": batch_id})
+            # Автозакриття партії якщо все повернуто
+            batch_info = db.execute(text("SELECT total_items, returned_items FROM laundry_batches WHERE id = :bid"), {"bid": batch_id}).fetchone()
+            if batch_info and batch_info[1] >= batch_info[0]:
+                db.execute(text("UPDATE laundry_batches SET status = 'returned' WHERE id = :bid"), {"bid": batch_id})
+        
+        # 3. Повернути товар на полицю
         if product_id:
-            db.execute(text("""
-                UPDATE products 
-                SET product_state = 'shelf'
-                WHERE product_id = :product_id
-            """), {"product_id": product_id})
-            
-            # Оновити стан в inventory - доступний
-            db.execute(text("""
-                UPDATE inventory 
-                SET product_state = 'available', 
-                    cleaning_status = 'clean',
-                    updated_at = NOW()
-                WHERE product_id = :product_id
-            """), {"product_id": product_id})
-            
-            # Записати в історію
+            db.execute(text("UPDATE products SET product_state = 'shelf' WHERE product_id = :product_id"), {"product_id": product_id})
+            db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
             try:
                 db.execute(text("""
                     INSERT INTO product_history (product_id, action, actor, details, created_at)
                     VALUES (:product_id, 'ПОВЕРНУТО НА СКЛАД', 'system', :details, NOW())
-                """), {
-                    "product_id": product_id,
-                    "details": f"Повернуто з кабінету шкоди. Без обробки. Доступний для оренди."
-                })
+                """), {"product_id": product_id, "details": f"Повернуто з кабінету шкоди. {notes}"})
             except Exception:
-                pass  # Ігноруємо помилки запису історії
+                pass
         
         db.commit()
         return {"success": True, "message": "Товар повернуто на склад і доступний для оренди"}

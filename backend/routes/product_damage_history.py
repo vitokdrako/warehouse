@@ -1941,6 +1941,15 @@ async def delete_damage_record(
         - reason: Причина видалення (опціонально)
     """
     try:
+        # Quick action items (quick_{product_id}) — не в базі, просто повертаємо на полицю
+        if str(damage_id).startswith("quick_"):
+            product_id = int(str(damage_id).replace("quick_", ""))
+            # Повернути товар у доступний стан
+            db.execute(text("UPDATE products SET product_state = 'shelf' WHERE product_id = :pid"), {"pid": product_id})
+            db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :pid"), {"pid": product_id})
+            db.commit()
+            return {"success": True, "message": "Товар видалено з черги", "deleted_record": {"product_id": product_id, "sku": f"quick_{product_id}"}}
+        
         # Перевірити чи існує запис
         check_result = db.execute(text("""
             SELECT id, product_id, sku, product_name, damage_type, photo_url

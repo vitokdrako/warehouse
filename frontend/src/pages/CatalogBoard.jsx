@@ -1289,7 +1289,7 @@ function Sidebar({
               <option value="reserved">Резерв (очікують)</option>
               <option value="on_wash">На мийці</option>
               <option value="on_restoration">На реставрації</option>
-              <option value="on_laundry">В хімчистці</option>
+              <option value="on_laundry">В пральні</option>
             </select>
           </div>
         </div>
@@ -1392,7 +1392,7 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
             <Badge variant="default">{item.on_restoration} рест.</Badge>
           )}
           {item.on_laundry > 0 && (
-            <Badge variant="default">{item.on_laundry} хім.</Badge>
+            <Badge variant="default">{item.on_laundry} прал.</Badge>
           )}
         </div>
       </div>
@@ -1466,7 +1466,7 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
           <div className="text-xs rounded px-2 py-1.5 mt-1 bg-cyan-50 text-cyan-700 border border-cyan-200">
             {item.on_wash > 0 && <span>🧹 На мийці: {item.on_wash}</span>}
             {item.on_restoration > 0 && <span>{item.on_wash > 0 ? ' · ' : ''}🔧 Реставрація: {item.on_restoration}</span>}
-            {item.on_laundry > 0 && <span>{(item.on_wash > 0 || item.on_restoration > 0) ? ' · ' : ''}👕 Хімчистка: {item.on_laundry}</span>}
+            {item.on_laundry > 0 && <span>{(item.on_wash > 0 || item.on_restoration > 0) ? ' · ' : ''}👕 Пральня: {item.on_laundry}</span>}
           </div>
         )}
       </div>
@@ -1575,7 +1575,7 @@ function ProductDetailModal({ item, onClose, dateFilterActive }) {
                       )}
                       {item.on_laundry > 0 && (
                         <span className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-lg">
-                          Хімчистка: {item.on_laundry}
+                          Пральня: {item.on_laundry}
                         </span>
                       )}
                     </div>
@@ -1934,7 +1934,7 @@ export default function CatalogBoard() {
                   </div>
                   <div className="hidden md:block border-l border-corp-border pl-3 lg:pl-4 min-w-[60px] lg:min-w-[70px] flex-shrink-0">
                     <div className="text-lg lg:text-xl font-bold text-indigo-600">{fmtUA(stats.on_laundry)}</div>
-                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Хімчистка</div>
+                    <div className="text-[10px] lg:text-xs text-corp-text-muted">Пральня</div>
                   </div>
                   {conflictCount > 0 && (
                     <div className="border-l border-corp-border pl-3 lg:pl-4 flex-shrink-0">

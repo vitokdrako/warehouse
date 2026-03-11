@@ -1,72 +1,58 @@
-# RentalHub PRD
+# RentalHub - PRD
 
-## Продукт
-Система управління орендою декору — бекофіс з менеджерським кабінетом, каталогом, кабінетом шкоди, касою.
+## Original Problem Statement
+Системна оптимізація RentalHub: уніфікація БД (product_damage_history як SSOT), видалення зайвих таблиць, спрощення workflow (видалення FinanceHub, інтеграція Каси в ManagerCabinet), оптимізація продуктивності.
 
-## Архітектура
-- **Frontend:** React (CRA) + Tailwind CSS
-- **Backend:** FastAPI + MySQL (external farforre.mysql.tools)
-- **Дві БД:** farforre_db (OpenCart), farforre_rentalhub (RentalHub)
-- **Deploy model:** manual — backend .py → clean_project/backend_update/, frontend build → clean_project/frontend_build/
+## Current Architecture
+- Backend: FastAPI + SQLAlchemy → Remote MySQL (farforre_laravell - тестова БД)
+- Frontend: React + Shadcn UI
+- Deployment: Manual (clean_project/ directory)
 
-## Реалізовано (Березень 2026)
+## What's Been Implemented
 
-### Кабінет Шкоди (DamageHubApp)
-- Пошук по SKU/назві через API
-- Додавання товарів з кількістю в черги (wash/restoration/laundry)
-- Часткові повернення (batch + individual)
-- frozen_quantity логіка виправлена
+### Session 1 (Previous Forks)
+- Database Architecture Overhaul: Switched to test DB, unified PDH as SSOT
+- Full-Stack Refactoring: orders.py, catalog.py, damage_cases.py, product_cleaning.py
+- Database & Code Cleanup: Deleted ~25 unused SQL tables + legacy .py files
+- UI/UX: Removed /finance, embedded KasaPage into ManagerCabinet
+- Critical Bug Fixes: DB connection pool, fin_ledger_entries restore, partial return cards
 
-### Оптимізація системи (11.03.2026)
-- **product_damage_history** — єдине джерело істини для стану обробки
-- `orders.py` → пише в PDH замість `product_cleaning_status`
-- `return_cards.py` → пише в PDH замість `damages`+`damage_items`
-- `catalog.py` → restoration читає з PDH замість `product_cleaning_status`
-- `product_cleaning.py` → повністю переписаний на PDH
-- `damage_cases.py` → пише тільки в PDH
-- Уніфікація `washing` → `wash` (БД + бекенд + фронтенд)
+### Session 2 (Current - 2026-03-11)
+- **Catalog API Performance Optimization (P0 - COMPLETED)**:
+  - `/api/catalog/families`: N+1 query problem fixed (119 queries → 1 JOIN)
+  - Performance: 18.2s → ~1s (22x faster, 94.5% improvement)
+  - New `/api/catalog/products-lite` endpoint for FamiliesManager (66% smaller response)
+  - Merged reserved/in_rent queries in `/api/catalog` and `/api/catalog/items-by-category`
+  - FamiliesManager.jsx updated: parallel loading, lightweight endpoint
+  - All files copied to /app/clean_project/ for deployment
 
-### Фінансова оптимізація (11.03.2026)
-- `orders.py` → fin_transactions замість finance_transactions
-- `user_tracking.py` → fin_transactions замість finance_transactions
-- Каса (/kasa) вбудована в менеджерський кабінет як вкладка
-- /finance (FinanceHub) → redirect на /manager-cabinet
+## Pending Issues
+1. **Partial return cards on manager dashboard** - Fixed, USER VERIFICATION PENDING
+2. **convert-to-order endpoint unstable** (P2)
+3. **Moodboard export broken** (P2)
+4. **Calendar timezone bug** (P2)
 
-### Очистка
-- Видалено 8 порожніх таблиць (customers, inventory, etc.)
-- Видалено 14 backup/old файлів бекенду
+## Upcoming Tasks (P1)
+- Simplify laundry_items table/logic (may be redundant with PDH)
+- Delete legacy route files (damages.py, audit.py etc.) after full verification
+- Implement Monthly Cash Desk Closing ("Close Month")
+- Create document templates ("Акт повернення")
 
-## Менеджерський кабінет (/manager-cabinet)
-3 вкладки:
-1. **Замовлення** — 3 колонки + KPI
-2. **Клієнти** — ClientsTab (документація, історія замовлень)
-3. **Каса** — KasaPage embedded (дохід/депозити/витрати)
+## Future Tasks (P2+)
+- **CRITICAL**: Migrate all changes from test to production DB
+- Real-time updates for client cabinet
+- Unify NewOrderViewWorkspace.jsx and IssueCardWorkspace.jsx
+- Full RBAC implementation
+- Monthly Financial Report
+- HR/Ops Module
 
-## Тестова база
-- `farforre_laravell` на farforre.mysql.tools — копія production для безпечного тестування
+## Key Files
+- /app/backend/routes/catalog.py - Optimized catalog API
+- /app/frontend/src/components/catalog/FamiliesManager.jsx - Updated frontend
+- /app/clean_project/ - All deployment files
+- /app/clean_project/migration_script.sql - Schema migration for production
 
-## Бекенд файли для deploy
-`/app/clean_project/backend_update/routes/`:
-- orders.py, return_cards.py, catalog.py, product_cleaning.py
-- product_damage_history.py, laundry.py, damage_cases.py, user_tracking.py
-
-## Міграційний скрипт
-`/app/clean_project/MIGRATION_SCRIPT.sql`
-
-## Credentials
-- Admin: `vitokdrako@gmail.com` / `test123`
-
-## Backlog (P1)
-- Виправити FamiliesManager.jsx (повільний Catalog API)
-- Оптимізація Catalog API (N+1 queries)
-- Місячне закриття каси
-- Клієнти: документація + історія замовлень
-
-## Backlog (P2)
-- convert-to-order стабільність
-- Moodboard export
-- Timezone bug в календарі
-- Email шаблони
-- Real-time оновлення
-- Уніфікація workspaces
-- RBAC
+## Database
+- Test DB: farforre_laravell (current)
+- Production DB: farforre_rentalhub (DO NOT SWITCH without user approval)
+- SSOT: product_damage_history table

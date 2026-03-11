@@ -2,11 +2,11 @@
 /**
  * FamiliesManager - 3-колоночний інтерфейс керування розмірними сітками
  * 
- * Layout:
- * [Ліва колонка - Список Families] | [Центр - Family Detail + Матриця] | [Права - Прив'язка товарів]
+ * Layout Desktop: [Ліва - Список] | [Центр - Деталі] | [Права - Прив'язка]
+ * Layout Mobile: Tabs з переключенням між панелями
  */
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Search, Plus, Trash2, Save, Grid3X3, List, X, AlertTriangle, Check, Move, ChevronRight, Package, Palette, Ruler } from 'lucide-react'
+import { Search, Plus, Trash2, Save, Grid3X3, List, X, AlertTriangle, Check, Move, ChevronRight, ChevronLeft, Package, Palette, Ruler, Layers, Settings } from 'lucide-react'
 import { getImageUrl, handleImageError } from '../../utils/imageHelper'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
@@ -80,26 +80,51 @@ function FamiliesList({
   searchQuery,
   onSearchChange,
   filterHasProducts,
-  onFilterChange 
+  onFilterChange,
+  categoryFilter,
+  onCategoryChange,
+  categories = [],
+  isMobile = false
 }) {
   const filteredFamilies = useMemo(() => {
     return families.filter(f => {
-      // Пошук
+      const familyProducts = f.products || []
+      
+      // Пошук по назві набору, артикулу або назві товару
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
-        if (!f.name?.toLowerCase().includes(q) && !f.description?.toLowerCase().includes(q)) {
-          return false
-        }
+        const matchesFamily = f.name?.toLowerCase().includes(q) || f.description?.toLowerCase().includes(q)
+        const matchesProduct = familyProducts.some(p => 
+          p.sku?.toLowerCase().includes(q) || 
+          p.name?.toLowerCase().includes(q)
+        )
+        if (!matchesFamily && !matchesProduct) return false
       }
+      
+      // Фільтр по категорії
+      if (categoryFilter) {
+        const hasCategory = familyProducts.some(p => 
+          p.category === categoryFilter || 
+          p.category_name === categoryFilter
+        )
+        if (!hasCategory) return false
+      }
+      
       // Фільтр по наявності товарів
-      if (filterHasProducts === 'has' && (!f.products || f.products.length === 0)) return false
-      if (filterHasProducts === 'empty' && f.products && f.products.length > 0) return false
+      if (filterHasProducts === 'has' && familyProducts.length === 0) return false
+      if (filterHasProducts === 'empty' && familyProducts.length > 0) return false
+      
       return true
     })
-  }, [families, searchQuery, filterHasProducts])
+  }, [families, searchQuery, filterHasProducts, categoryFilter])
+
+  const hasActiveFilters = searchQuery || categoryFilter || filterHasProducts !== 'all'
 
   return (
-    <div className="w-[340px] flex-shrink-0 bg-white border-r border-slate-200 flex flex-col h-full">
+    <div className={cls(
+      "bg-white flex flex-col h-full",
+      isMobile ? "w-full" : "w-[340px] flex-shrink-0 border-r border-slate-200"
+    )}>
       {/* Header */}
       <div className="p-4 border-b border-slate-100">
         <div className="flex items-center justify-between mb-3">
@@ -109,7 +134,8 @@ function FamiliesList({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            Створити
+            <span className={isMobile ? "hidden" : ""}>Створити</span>
+            {isMobile && <span>+</span>}
           </button>
         </div>
         
@@ -118,15 +144,31 @@ function FamiliesList({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Пошук..."
+            placeholder="Назва, артикул..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
           />
         </div>
         
-        {/* Filter */}
-        <div className="flex gap-1">
+        {/* Category Filter */}
+        {categories.length > 0 && (
+          <div className="mb-3">
+            <select
+              value={categoryFilter || ''}
+              onChange={(e) => onCategoryChange(e.target.value || null)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-amber-400"
+            >
+              <option value="">Всі категорії</option>
+              {categories.map(cat => (
+                <option key={cat.name} value={cat.name}>{cat.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        
+        {/* Quick Filters */}
+        <div className="flex gap-1 flex-wrap">
           {[
             { value: 'all', label: 'Всі' },
             { value: 'has', label: 'З товарами' },
@@ -146,6 +188,13 @@ function FamiliesList({
             </button>
           ))}
         </div>
+        
+        {/* Results count */}
+        {hasActiveFilters && (
+          <div className="mt-2 text-xs text-slate-500">
+            Знайдено: {filteredFamilies.length} з {families.length}
+          </div>
+        )}
       </div>
       
       {/* List */}
@@ -167,9 +216,12 @@ function FamiliesList({
               )}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="font-medium text-slate-800 truncate">{family.name || 'Без назви'}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-200 text-slate-600 rounded">#{family.id}</span>
+                  <span className="font-medium text-slate-800 truncate">{family.name || 'Без назви'}</span>
+                </div>
                 <span className={cls(
-                  'px-2 py-0.5 text-xs font-medium rounded-full',
+                  'px-2 py-0.5 text-xs font-medium rounded-full flex-shrink-0',
                   family.products?.length > 0 
                     ? 'bg-emerald-100 text-emerald-700'
                     : 'bg-slate-100 text-slate-500'
@@ -199,11 +251,12 @@ function FamilyDetail({
   saving,
   hasChanges,
   pendingAdd = [],
-  pendingRemove = []
+  pendingRemove = [],
+  isMobile = false
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [viewMode, setViewMode] = useState('matrix') // 'matrix' | 'list'
+  const [viewMode, setViewMode] = useState('list') // 'matrix' | 'list' - default list for mobile
   const [highlightedSku, setHighlightedSku] = useState(null)
   const [originalName, setOriginalName] = useState('')
   const [originalDescription, setOriginalDescription] = useState('')
@@ -267,12 +320,15 @@ function FamilyDetail({
 
   if (!family) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-50">
-        <div className="text-center">
+      <div className={cls(
+        "flex items-center justify-center bg-slate-50",
+        isMobile ? "w-full h-full" : "flex-1"
+      )}>
+        <div className="text-center px-4">
           <div className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center mx-auto mb-4">
             <Grid3X3 className="w-8 h-8 text-slate-400" />
           </div>
-          <p className="text-slate-500">Виберіть розмірну сітку зліва</p>
+          <p className="text-slate-500">Виберіть розмірну сітку</p>
           <p className="text-sm text-slate-400 mt-1">або створіть нову</p>
         </div>
       </div>
@@ -280,86 +336,69 @@ function FamilyDetail({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
+    <div className={cls(
+      "flex flex-col bg-slate-50 overflow-hidden",
+      isMobile ? "w-full h-full" : "flex-1"
+    )}>
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-3">
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Назва розмірної сітки"
-              className="text-xl font-semibold text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-amber-400 focus:outline-none w-full pb-1 transition-colors"
-            />
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Опис (опціонально)"
-              className="text-sm text-slate-500 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-amber-400 focus:outline-none w-full pb-1 transition-colors"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {hasAnyChanges && (
-              <div className="flex items-center gap-2 text-xs px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
-                <span className="text-amber-700 font-medium">Незбережені:</span>
-                {hasTextChanges && (
-                  <span className="text-blue-600">назва</span>
-                )}
-                {pendingAdd.length > 0 && (
-                  <span className="text-emerald-600">+{pendingAdd.length}</span>
-                )}
-                {pendingRemove.length > 0 && (
-                  <span className="text-rose-600">-{pendingRemove.length}</span>
-                )}
-              </div>
-            )}
-            <button
-              onClick={() => onSave({ name, description, nameChanged, descriptionChanged })}
-              disabled={saving || !hasAnyChanges || !name.trim()}
-              className={cls(
-                "flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-                hasAnyChanges
-                  ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                  : "bg-slate-200 text-slate-500 cursor-not-allowed"
-              )}
-            >
-              <Save className="w-4 h-4" />
-              {saving ? 'Зберігаю...' : hasAnyChanges ? 'Зберегти' : 'Збережено'}
-            </button>
-            <button
-              onClick={onDelete}
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-              title="Видалити"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+      <div className="bg-white border-b border-slate-200 p-3 lg:p-4">
+        {/* Name & Description inputs */}
+        <div className="space-y-2 mb-3">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Назва розмірної сітки"
+            className="text-lg lg:text-xl font-semibold text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-200 focus:border-amber-400 focus:outline-none w-full pb-1 transition-colors"
+          />
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Опис (опціонально)"
+            className="text-sm text-slate-500 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-amber-400 focus:outline-none w-full pb-1 transition-colors"
+          />
         </div>
         
-        {/* Stats & View Toggle */}
-        <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-4 text-sm">
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <Package className="w-4 h-4" />
-              <b>{products.length}</b> SKU
-            </span>
-            <span className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-medium">
-              Σ {products.reduce((sum, p) => sum + (p.quantity || 0), 0)} шт
-            </span>
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <Palette className="w-4 h-4" />
-              <b>{matrixData.colors.filter(c => c !== 'Other').length || 0}</b> кольорів
-            </span>
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <Ruler className="w-4 h-4" />
-              <b>{matrixData.sizes.filter(s => s !== 'Other').length || 0}</b> розмірів
-            </span>
-          </div>
+        {/* Action buttons - responsive layout */}
+        <div className="flex flex-wrap items-center gap-2">
+          {hasAnyChanges && (
+            <div className="flex items-center gap-1.5 text-xs px-2 py-1 bg-amber-50 border border-amber-200 rounded-full">
+              <span className="text-amber-700 font-medium hidden sm:inline">Незбережені:</span>
+              {hasTextChanges && (
+                <span className="text-blue-600">✎</span>
+              )}
+              {pendingAdd.length > 0 && (
+                <span className="text-emerald-600">+{pendingAdd.length}</span>
+              )}
+              {pendingRemove.length > 0 && (
+                <span className="text-rose-600">-{pendingRemove.length}</span>
+              )}
+            </div>
+          )}
+          <button
+            onClick={() => onSave({ name, description, nameChanged, descriptionChanged })}
+            disabled={saving || !hasAnyChanges || !name.trim()}
+            className={cls(
+              "flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+              hasAnyChanges
+                ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                : "bg-slate-200 text-slate-500 cursor-not-allowed"
+            )}
+          >
+            <Save className="w-4 h-4" />
+            <span className="hidden sm:inline">{saving ? 'Зберігаю...' : hasAnyChanges ? 'Зберегти' : 'Збережено'}</span>
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            title="Видалити"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
           
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+          {/* View Toggle - moved inline */}
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg ml-auto">
             <button
               onClick={() => setViewMode('matrix')}
               className={cls(
@@ -381,6 +420,25 @@ function FamilyDetail({
               <List className="w-4 h-4" />
             </button>
           </div>
+        </div>
+        
+        {/* Stats row - scrollable on mobile */}
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-100 overflow-x-auto pb-1 -mb-1">
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
+            <Package className="w-3.5 h-3.5" />
+            <b>{products.length}</b> SKU
+          </span>
+          <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium whitespace-nowrap">
+            Σ {products.reduce((sum, p) => sum + (p.quantity || 0), 0)} шт
+          </span>
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
+            <Palette className="w-3.5 h-3.5" />
+            <b>{matrixData.colors.filter(c => c !== 'Other').length || 0}</b>
+          </span>
+          <span className="flex items-center gap-1 text-xs sm:text-sm text-slate-600 whitespace-nowrap">
+            <Ruler className="w-3.5 h-3.5" />
+            <b>{matrixData.sizes.filter(s => s !== 'Other').length || 0}</b>
+          </span>
         </div>
       </div>
       
@@ -581,7 +639,8 @@ function ProductBindingPanel({
   onRemove,
   onMoveToFamily,
   pendingAdd = [],
-  pendingRemove = []
+  pendingRemove = [],
+  isMobile = false
 }) {
   const [activeTab, setActiveTab] = useState('add') // 'add' | 'assigned' | 'conflicts'
   const [searchQuery, setSearchQuery] = useState('')
@@ -651,33 +710,47 @@ function ProductBindingPanel({
 
   if (!familyId) {
     return (
-      <div className="w-[420px] flex-shrink-0 bg-white border-l border-slate-200 flex items-center justify-center">
+      <div className={cls(
+        "bg-white flex items-center justify-center",
+        isMobile ? "w-full h-full" : "w-[420px] flex-shrink-0 border-l border-slate-200"
+      )}>
         <p className="text-slate-400 text-sm">Виберіть розмірну сітку</p>
       </div>
     )
   }
 
   return (
-    <div className="w-[420px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full">
+    <div className={cls(
+      "bg-white flex flex-col h-full",
+      isMobile ? "w-full" : "w-[420px] flex-shrink-0 border-l border-slate-200"
+    )}>
       {/* Tabs */}
       <div className="flex border-b border-slate-200">
         {[
-          { id: 'add', label: 'Додати', icon: Plus },
-          { id: 'assigned', label: `Прив'язані (${assignedProducts.length})`, icon: Check },
-          { id: 'conflicts', label: `Конфлікти (${conflicts.length})`, icon: AlertTriangle, highlight: conflicts.length > 0 },
+          { id: 'add', label: 'Додати', shortLabel: '+', icon: Plus },
+          { id: 'assigned', label: `Прив'язані`, count: assignedProducts.length, icon: Check },
+          { id: 'conflicts', label: `Конфлікти`, count: conflicts.length, icon: AlertTriangle, highlight: conflicts.length > 0 },
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cls(
-              'flex-1 flex items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium transition-colors',
+              'flex-1 flex items-center justify-center gap-1 px-1.5 sm:px-3 py-2.5 text-xs sm:text-sm font-medium transition-colors',
               activeTab === tab.id
                 ? 'text-amber-600 border-b-2 border-amber-500 bg-amber-50/50'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             )}
           >
-            <tab.icon className={cls('w-4 h-4', tab.highlight && activeTab !== tab.id && 'text-rose-500')} />
-            {tab.label}
+            <tab.icon className={cls('w-3.5 h-3.5 sm:w-4 sm:h-4', tab.highlight && activeTab !== tab.id && 'text-rose-500')} />
+            <span className="hidden sm:inline">{tab.label}</span>
+            {tab.count !== undefined && (
+              <span className={cls(
+                'ml-0.5 text-[10px] sm:text-xs',
+                activeTab === tab.id ? 'text-amber-600' : 'text-slate-400'
+              )}>
+                ({tab.count})
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -712,7 +785,10 @@ function ProductBindingPanel({
             
             {/* Products List */}
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {availableProducts.filter(p => !p.family_id || p.family_id === familyId).slice(0, 100).map(product => (
+              {availableProducts
+                .filter(p => !p.family_id || p.family_id === familyId)
+                .slice(0, searchQuery ? 500 : 100)  // Показуємо більше при пошуку
+                .map(product => (
                 <ProductMiniCard
                   key={product.product_id}
                   product={product}
@@ -727,9 +803,14 @@ function ProductBindingPanel({
                   }
                 />
               ))}
-              {availableProducts.filter(p => !p.family_id).length === 0 && (
+              {availableProducts.filter(p => !p.family_id || p.family_id === familyId).length === 0 && (
                 <div className="text-center py-8 text-slate-400 text-sm">
                   {searchQuery ? 'Нічого не знайдено' : 'Всі товари вже прив\'язані'}
+                </div>
+              )}
+              {!searchQuery && availableProducts.filter(p => !p.family_id || p.family_id === familyId).length > 100 && (
+                <div className="text-center py-2 text-slate-400 text-xs">
+                  Показано 100 з {availableProducts.filter(p => !p.family_id || p.family_id === familyId).length}. Використайте пошук.
                 </div>
               )}
             </div>
@@ -873,9 +954,13 @@ function ProductMiniCard({ product, action, badge, selected, onSelect, showCheck
 export default function FamiliesManager() {
   const [families, setFamilies] = useState([])
   const [allProducts, setAllProducts] = useState([])
+  const [categories, setCategories] = useState([])
   const [selectedFamily, setSelectedFamily] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  
+  // Mobile navigation: 'list' | 'detail' | 'add'
+  const [mobilePanel, setMobilePanel] = useState('list')
   
   // Pending changes (not yet saved to server)
   const [pendingAdd, setPendingAdd] = useState([])      // Products to add
@@ -886,31 +971,49 @@ export default function FamiliesManager() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [filterHasProducts, setFilterHasProducts] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState(null)
 
-  // Load data
+  // Load data - families + categories in parallel, products lazy
   const loadData = useCallback(async () => {
+    console.log('[FamiliesManager] loadData started')
     setLoading(true)
     try {
-      const [familiesRes, productsRes] = await Promise.all([
+      // Load families + categories in parallel
+      const [familiesRes, categoriesRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/catalog/families`),
-        fetch(`${BACKEND_URL}/api/catalog?limit=5000`)
+        fetch(`${BACKEND_URL}/api/catalog/categories`)
       ])
       
       if (familiesRes.ok) {
         const data = await familiesRes.json()
+        console.log('[FamiliesManager] Families loaded:', data?.length || 0)
         setFamilies(data || [])
+      } else {
+        console.error('[FamiliesManager] Families fetch failed:', familiesRes.status)
       }
       
+      if (categoriesRes.ok) {
+        const data = await categoriesRes.json()
+        setCategories(Array.isArray(data) ? data : data.categories || [])
+      }
+    } catch (error) {
+      console.error('[FamiliesManager] Error loading families:', error)
+    } finally {
+      // Always stop loading spinner
+      setLoading(false)
+    }
+    
+    // Then load products in background (lightweight endpoint)
+    try {
+      const productsRes = await fetch(`${BACKEND_URL}/api/catalog/products-lite?limit=10000`)
       if (productsRes.ok) {
         const data = await productsRes.json()
-        // API returns array directly, not {items: [...]}
         const items = Array.isArray(data) ? data : (data.items || [])
+        console.log('[FamiliesManager] Products loaded:', items.length)
         setAllProducts(items)
       }
     } catch (error) {
-      console.error('Error loading data:', error)
-    } finally {
-      setLoading(false)
+      console.error('[FamiliesManager] Error loading products:', error)
     }
   }, [])
 
@@ -1097,6 +1200,12 @@ export default function FamiliesManager() {
     }
   }, [families])
 
+  // Mobile: switch to detail panel when family selected
+  const handleSelectFamily = (f) => {
+    setSelectedFamily(f)
+    setMobilePanel('detail')
+  }
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -1109,41 +1218,142 @@ export default function FamiliesManager() {
   }
 
   return (
-    <div className="h-full flex bg-slate-100">
-      {/* Left Column - Families List */}
-      <FamiliesList
-        families={families}
-        selectedId={selectedFamily?.id}
-        onSelect={(f) => setSelectedFamily(f)}
-        onCreate={handleCreateFamily}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        filterHasProducts={filterHasProducts}
-        onFilterChange={setFilterHasProducts}
-      />
+    <div className="h-full flex flex-col lg:flex-row bg-slate-100">
       
-      {/* Center Column - Family Detail */}
-      <FamilyDetail
-        family={{ ...selectedFamily, products: assignedProducts }}
-        onSave={handleSaveFamily}
-        onDelete={handleDeleteFamily}
-        saving={saving}
-        hasChanges={hasChanges}
-        pendingAdd={pendingAdd}
-        pendingRemove={pendingRemove}
-      />
-      
-      {/* Right Column - Product Binding */}
-      <ProductBindingPanel
-        familyId={selectedFamily?.id}
-        assignedProducts={assignedProducts}
-        allProducts={allProducts}
-        onAssign={handleAddProductLocal}
-        onRemove={handleRemoveProductLocal}
-        onMoveToFamily={handleMoveToFamily}
-        pendingAdd={pendingAdd}
-        pendingRemove={pendingRemove}
-      />
+      {/* Mobile Navigation Tabs - fixed at top */}
+      <div className="lg:hidden flex items-center bg-white border-b border-slate-200 px-1.5 py-1.5 gap-1 shadow-sm">
+        <button
+          onClick={() => setMobilePanel('list')}
+          className={cls(
+            "flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors",
+            mobilePanel === 'list'
+              ? "bg-amber-100 text-amber-700"
+              : "text-slate-600 hover:bg-slate-100"
+          )}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Сітки</span>
+          <span className="text-[10px] opacity-60">({families.length})</span>
+        </button>
+        <button
+          onClick={() => setMobilePanel('detail')}
+          disabled={!selectedFamily}
+          className={cls(
+            "flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors",
+            mobilePanel === 'detail'
+              ? "bg-amber-100 text-amber-700"
+              : "text-slate-600 hover:bg-slate-100",
+            !selectedFamily && "opacity-40 cursor-not-allowed"
+          )}
+        >
+          <Grid3X3 className="w-3.5 h-3.5" />
+          <span>Деталі</span>
+          {hasChanges && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />}
+        </button>
+        <button
+          onClick={() => setMobilePanel('add')}
+          disabled={!selectedFamily}
+          className={cls(
+            "flex-1 flex items-center justify-center gap-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors",
+            mobilePanel === 'add'
+              ? "bg-amber-100 text-amber-700"
+              : "text-slate-600 hover:bg-slate-100",
+            !selectedFamily && "opacity-40 cursor-not-allowed"
+          )}
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>Товари</span>
+          {pendingAdd.length > 0 && (
+            <span className="min-w-[16px] h-[16px] flex items-center justify-center bg-emerald-500 text-white text-[10px] rounded-full">
+              {pendingAdd.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Mobile: Selected family indicator - compact */}
+      {selectedFamily && mobilePanel !== 'list' && (
+        <div className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-amber-50 border-b border-amber-200">
+          <button
+            onClick={() => setMobilePanel('list')}
+            className="p-0.5 hover:bg-amber-100 rounded"
+          >
+            <ChevronLeft className="w-4 h-4 text-amber-600" />
+          </button>
+          <span className="font-medium text-amber-800 truncate text-sm flex-1">{selectedFamily.name}</span>
+          <span className="text-xs text-amber-600">{assignedProducts.length} SKU</span>
+        </div>
+      )}
+
+      {/* Desktop: 3 columns | Mobile: Show active panel */}
+      <div className="flex-1 flex overflow-hidden">
+        
+        {/* Left Column - Families List */}
+        <div className={cls(
+          "h-full",
+          // Desktop: always show
+          "hidden lg:flex",
+          // Mobile: show only when panel is 'list'
+          mobilePanel === 'list' && "!flex w-full"
+        )}>
+          <FamiliesList
+            families={families}
+            selectedId={selectedFamily?.id}
+            onSelect={handleSelectFamily}
+            onCreate={handleCreateFamily}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            filterHasProducts={filterHasProducts}
+            onFilterChange={setFilterHasProducts}
+            categoryFilter={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            categories={categories}
+            isMobile={mobilePanel === 'list'}
+          />
+        </div>
+        
+        {/* Center Column - Family Detail */}
+        <div className={cls(
+          "h-full flex-1",
+          // Desktop: always show
+          "hidden lg:flex",
+          // Mobile: show only when panel is 'detail'
+          mobilePanel === 'detail' && "!flex w-full"
+        )}>
+          <FamilyDetail
+            family={{ ...selectedFamily, products: assignedProducts }}
+            onSave={handleSaveFamily}
+            onDelete={handleDeleteFamily}
+            saving={saving}
+            hasChanges={hasChanges}
+            pendingAdd={pendingAdd}
+            pendingRemove={pendingRemove}
+            isMobile={mobilePanel === 'detail'}
+          />
+        </div>
+        
+        {/* Right Column - Product Binding */}
+        <div className={cls(
+          "h-full",
+          // Desktop: always show
+          "hidden lg:flex",
+          // Mobile: show only when panel is 'add'
+          mobilePanel === 'add' && "!flex w-full"
+        )}>
+          <ProductBindingPanel
+            familyId={selectedFamily?.id}
+            assignedProducts={assignedProducts}
+            allProducts={allProducts}
+            onAssign={handleAddProductLocal}
+            onRemove={handleRemoveProductLocal}
+            onMoveToFamily={handleMoveToFamily}
+            pendingAdd={pendingAdd}
+            pendingRemove={pendingRemove}
+            isMobile={mobilePanel === 'add'}
+          />
+        </div>
+        
+      </div>
     </div>
   )
 }

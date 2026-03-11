@@ -244,6 +244,14 @@ export default function DamageModal({
       
       if (!compareOnly) {
         // === ПОВНИЙ ЗАПИС: зберігаємо в стан декору ===
+        
+        // Якщо stage=return, вимагаємо вибір черги
+        if (stage === 'return' && (!formData.sendTo || formData.sendTo === 'none')) {
+          alert('Оберіть чергу обробки (Мийка / Реставрація / Пральня)')
+          setSaving(false)
+          return
+        }
+        
         const isTotalLoss = formData.kindCode === 'TOTAL_LOSS'
       
         // Save to damage history API
@@ -310,49 +318,23 @@ export default function DamageModal({
           }
         }
       } else {
-        // === БЕЗ ЗАПИСУ У СТАН: зберігаємо для порівняння, але пушимо у чергу ===
-        if (formData.sendTo && formData.sendTo !== 'none') {
-          const response = await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
-            product_id: item.inventory_id || item.id,
-            sku: item.sku,
-            product_name: item.name,
-            category: formData.category,
-            order_id: order?.order_id,
-            order_number: order?.order_number,
-            stage: 'compare_only',
-            damage_type: selectedKind?.label || formData.kindCode || 'Для обробки',
-            damage_code: formData.kindCode || 'compare',
-            severity: formData.severity || 'low',
-            fee: 0,
-            fee_per_item: 0,
-            qty: formData.qty,
-            photo_url: uploadedPhotoUrl || formData.photoName,
-            note: formData.note,
-            created_by: userName,
-            is_compare_only: true,
-            processing_type: formData.sendTo === 'restore' ? 'restoration' : formData.sendTo,
-            processing_status: 'pending'
-          })
-          
-          try {
-            const damageId = response.data?.id || response.data?.damage_id
-            if (damageId) {
-              const endpoint = formData.sendTo === 'wash' ? 'send-to-wash'
-                : formData.sendTo === 'restore' ? 'send-to-restoration'
-                : formData.sendTo === 'washing' ? 'send-to-washing'
-                : formData.sendTo === 'laundry' ? 'send-to-laundry'
-                : null
-              
-              if (endpoint) {
-                await axios.post(`${BACKEND_URL}/api/product-damage-history/${damageId}/${endpoint}`, {
-                  notes: formData.note || `Без запису у стан. ${order?.order_number || ''}`
-                })
-              }
-            }
-          } catch (processErr) {
-            console.warn('[DamageModal] Failed to send to processing (compare):', processErr)
-          }
+        // === БЕЗ ЗАПИСУ У СТАН: тільки пушимо у чергу через quick-add (без damage_history) ===
+        if (!formData.sendTo || formData.sendTo === 'none') {
+          alert('Оберіть чергу обробки (Мийка / Реставрація / Пральня)')
+          setSaving(false)
+          return
         }
+        
+        const queueType = formData.sendTo === 'restore' ? 'restoration' : formData.sendTo
+        await axios.post(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
+          product_id: item.inventory_id || item.id,
+          sku: item.sku,
+          product_name: item.name,
+          category: formData.category,
+          queue_type: queueType,
+          quantity: formData.qty,
+          notes: formData.note || `Без запису. Замовлення ${order?.order_number || ''}`
+        })
       }
       // === кінець повного запису ===
       
@@ -750,30 +732,26 @@ export default function DamageModal({
           {/* Send to Processing - only for return stage */}
           {stage === 'return' && !isPreIssue && (
             <div className="mb-4">
-              <div className="text-slate-500 mb-2 text-sm">Відправити на обробку</div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              <div className="text-slate-500 mb-2 text-sm font-medium">Відправити на обробку *</div>
+              <div className="grid grid-cols-3 gap-2">
                 {[
-                  { value: 'none', label: 'Ні', icon: '', color: 'slate' },
-                  { value: 'wash', label: 'Мийка', icon: '', color: 'blue' },
-                  { value: 'restore', label: 'Реставрація', icon: '', color: 'orange' },
-                  { value: 'washing', label: 'Прання', icon: '', color: 'cyan' },
-                  { value: 'laundry', label: 'Хімчистка', icon: '', color: 'purple' },
+                  { value: 'wash', label: 'Мийка', color: 'blue' },
+                  { value: 'restore', label: 'Реставрація', color: 'orange' },
+                  { value: 'laundry', label: 'Пральня', color: 'purple' },
                 ].map(opt => (
                   <button
                     key={opt.value}
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, sendTo: opt.value }))}
-                    className={`px-2 py-2 rounded-xl border-2 text-xs font-medium transition-all flex flex-col items-center gap-1 ${
+                    className={`px-3 py-3 rounded-xl border-2 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                       formData.sendTo === opt.value
-                        ? opt.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : opt.color === 'orange' ? 'border-orange-500 bg-orange-50 text-orange-700'
-                        : opt.color === 'cyan' ? 'border-cyan-500 bg-cyan-50 text-cyan-700'
-                        : opt.color === 'purple' ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-slate-400 bg-slate-100 text-slate-700'
+                        ? opt.color === 'blue' ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                        : opt.color === 'orange' ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm'
+                        : 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
                         : 'border-slate-200 hover:border-slate-300 text-slate-600'
                     }`}
+                    data-testid={`damage-send-${opt.value}`}
                   >
-                    <span className="text-lg">{opt.icon}</span>
                     <span>{opt.label}</span>
                   </button>
                 ))}
@@ -783,8 +761,7 @@ export default function DamageModal({
                   {formData.qty} шт буде відправлено на {
                     formData.sendTo === 'wash' ? 'мийку' :
                     formData.sendTo === 'restore' ? 'реставрацію' :
-                    formData.sendTo === 'washing' ? 'прання' :
-                    formData.sendTo === 'laundry' ? 'хімчистку' : ''
+                    formData.sendTo === 'laundry' ? 'пральню' : ''
                   }
                 </div>
               )}

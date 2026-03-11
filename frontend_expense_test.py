@@ -15,7 +15,7 @@ import sys
 from datetime import datetime
 
 # Configuration
-FRONTEND_URL = "https://damage-cabinet-lists.preview.emergentagent.com"
+FRONTEND_URL = "https://kasa-monthly-close.preview.emergentagent.com"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"
@@ -105,7 +105,7 @@ def main():
     print("🧪 Frontend Testing: Expense Management UI")
     print("=" * 80)
     print("Testing frontend accessibility for expense management:")
-    print("   • Frontend URL: https://damage-cabinet-lists.preview.emergentagent.com")
+    print("   • Frontend URL: https://kasa-monthly-close.preview.emergentagent.com")
     print("   • Target page: /finance")
     print("   • Expected: Витрати tab with 4 sub-tabs")
     print("=" * 80)

@@ -1356,6 +1356,9 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
     category = data.get("category")
     queue_type = data.get("queue_type", "laundry")
     notes = data.get("notes", "")
+    quantity = int(data.get("quantity", 1))
+    if quantity < 1:
+        quantity = 1
     
     if not product_id or not sku:
         raise HTTPException(status_code=400, detail="product_id та sku обов'язкові")
@@ -1373,7 +1376,7 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
                 damage_type, note, sent_to_processing_at, created_at
             ) VALUES (
                 :id, :product_id, :sku, :product_name, :category,
-                1, 0, :processing_type, 'pending',
+                :qty, 0, :processing_type, 'pending',
                 'quick_add', :notes, NOW(), NOW()
             )
         """), {
@@ -1382,9 +1385,17 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
             "sku": sku,
             "product_name": product_name,
             "category": category,
+            "qty": quantity,
             "processing_type": queue_type,
             "notes": notes
         })
+        
+        # Заморозити товар у каталозі
+        db.execute(text("""
+            UPDATE products 
+            SET frozen_quantity = COALESCE(frozen_quantity, 0) + :qty
+            WHERE product_id = :pid
+        """), {"qty": quantity, "pid": product_id})
         
         db.commit()
         
@@ -1706,8 +1717,16 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
         # --- Quick action items (quick_{product_id}) ---
         if str(damage_id).startswith("quick_"):
             product_id = int(str(damage_id).replace("quick_", ""))
-            db.execute(text("UPDATE products SET product_state = 'shelf' WHERE product_id = :pid"), {"pid": product_id})
-            db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :pid"), {"pid": product_id})
+            db.execute(text("""
+                UPDATE products 
+                SET product_state = 'shelf',
+                    frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - 1, 0)
+                WHERE product_id = :pid
+            """), {"pid": product_id})
+            db.execute(text("""
+                UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                WHERE product_id = :pid
+            """), {"pid": product_id})
             db.commit()
             return {"success": True, "message": "Товар повернуто на склад"}
         
@@ -1749,9 +1768,16 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
             if batch_info and batch_info[1] >= batch_info[0]:
                 db.execute(text("UPDATE laundry_batches SET status = 'returned' WHERE id = :bid"), {"bid": batch_id})
         
-        # 3. Повернути товар на полицю
+        # 3. Повернути товар на полицю та розморозити
         if product_id:
-            db.execute(text("UPDATE products SET product_state = 'shelf' WHERE product_id = :product_id"), {"product_id": product_id})
+            # Отримати кількість із damage record для правильної розморозки
+            damage_qty = damage_record[3] or 1
+            db.execute(text("""
+                UPDATE products 
+                SET product_state = 'shelf',
+                    frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - :qty, 0)
+                WHERE product_id = :product_id
+            """), {"product_id": product_id, "qty": damage_qty})
             db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
             try:
                 db.execute(text("""
@@ -1944,9 +1970,14 @@ async def delete_damage_record(
         # Quick action items (quick_{product_id}) — не в базі, просто повертаємо на полицю
         if str(damage_id).startswith("quick_"):
             product_id = int(str(damage_id).replace("quick_", ""))
-            # Повернути товар у доступний стан
-            db.execute(text("UPDATE products SET product_state = 'shelf' WHERE product_id = :pid"), {"pid": product_id})
-            db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :pid"), {"pid": product_id})
+            db.execute(text("""
+                UPDATE products SET product_state = 'shelf', state = 'available', frozen_quantity = 0
+                WHERE product_id = :pid
+            """), {"pid": product_id})
+            db.execute(text("""
+                UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                WHERE product_id = :pid
+            """), {"pid": product_id})
             db.commit()
             return {"success": True, "message": "Товар видалено з черги", "deleted_record": {"product_id": product_id, "sku": f"quick_{product_id}"}}
         

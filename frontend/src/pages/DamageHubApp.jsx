@@ -5,7 +5,7 @@
  * Три колонки: Мийка | Реставрація | Пральня (черга + партії)
  * Декор летить одразу з повернення у відповідну чергу
  */
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import CorporateHeader from "../components/CorporateHeader";
 import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "../utils/imageHelper";
 import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, ChevronDown, ChevronRight, Plus, Clock, ArrowRight, Printer } from "lucide-react";
@@ -27,92 +27,140 @@ const getPhotoUrl = (item) => {
 
 // ============= QUICK ADD POPOVER =============
 const QuickAddPopover = ({ queueType, onAdd, onClose }) => {
-  const [sku, setSku] = useState('');
+  const [query, setQuery] = useState('');
+  const [qty, setQty] = useState(1);
+  const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [found, setFound] = useState(null);
-  const [error, setError] = useState('');
+  const [adding, setAdding] = useState(null);
+  const inputRef = useRef(null);
+  const timerRef = useRef(null);
 
-  const searchBySku = async () => {
-    if (!sku.trim()) return;
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const doSearch = (q) => {
+    clearTimeout(timerRef.current);
+    if (!q || q.length < 2) { setResults([]); setLoading(false); return; }
     setLoading(true);
-    setError('');
-    setFound(null);
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/catalog?search=${encodeURIComponent(sku.trim())}&limit=1`);
-      if (res.ok) {
+    timerRef.current = setTimeout(async () => {
+      try {
+        const res = await authFetch(`${BACKEND_URL}/api/catalog?search=${encodeURIComponent(q)}&limit=20`);
         const data = await res.json();
         const items = Array.isArray(data) ? data : (data.products || data.items || []);
-        if (items.length > 0) {
-          setFound(items[0]);
-        } else {
-          setError('Товар не знайдено');
-        }
-      } else {
-        setError('Помилка пошуку');
+        setResults(items);
+      } catch {
+        setResults([]);
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setError('Помилка пошуку');
-    } finally {
-      setLoading(false);
-    }
+    }, 300);
   };
 
-  const handleAdd = async () => {
-    if (!found) return;
-    setLoading(true);
+  const handleAdd = async (product) => {
+    const pid = product.product_id || product.id;
+    setAdding(pid);
     try {
       await onAdd({
-        product_id: found.product_id || found.id,
-        sku: found.sku || found.model || sku.trim(),
-        product_name: found.name || found.product_name,
-        category: found.category || '',
+        product_id: pid,
+        sku: product.sku || '',
+        product_name: product.name || product.product_name || '',
+        category: product.category || product.category_name || '',
         queue_type: queueType,
-        notes: 'Додано вручну з кабінету шкоди'
+        quantity: qty,
+        notes: `Додано вручну (${qty} шт)`
       });
-      onClose();
+      setQuery('');
+      setResults([]);
+      setQty(1);
     } catch {
-      setError('Помилка додавання');
+      // handled upstream
     } finally {
-      setLoading(false);
+      setAdding(null);
     }
   };
 
+  const queueLabel = { wash: 'Мийку', restoration: 'Реставрацію', laundry: 'Пральню' }[queueType] || queueType;
+  const queueColor = { wash: 'blue', restoration: 'orange', laundry: 'purple' }[queueType] || 'slate';
+
   return (
-    <div className="absolute top-full left-0 right-0 mt-1 z-40 p-3 rounded-xl border border-slate-200 bg-white shadow-xl space-y-2">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={sku}
-          onChange={e => setSku(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && searchBySku()}
-          placeholder="Артикул або назва..."
-          className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-400"
-          autoFocus
-        />
-        <button onClick={searchBySku} disabled={loading || !sku.trim()} className="px-3 py-2 text-sm bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50">
-          {loading ? '...' : 'Знайти'}
-        </button>
-        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600">
-          <X className="w-4 h-4" />
+    <div className="absolute top-full left-0 right-0 mt-1 z-40 rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden" data-testid="quick-add-popover">
+      <div className={`px-3 py-2 border-b bg-${queueColor}-50 flex items-center justify-between`}>
+        <span className={`text-xs font-semibold text-${queueColor}-700`}>Додати в {queueLabel}</span>
+        <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-white/60">
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
-      {error && <div className="text-xs text-red-500">{error}</div>}
-      {found && (
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-slate-50 border">
-          {(found.image || found.image_url) ? (
-            <img src={getPhotoUrl(found)} className="w-10 h-10 rounded-md object-cover border" alt="" onError={handleImageError} />
-          ) : (
-            <div className="w-10 h-10 rounded-md bg-slate-200 flex items-center justify-center"><Package className="w-4 h-4 text-slate-400" /></div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium truncate">{found.name || found.product_name}</div>
-            <div className="text-xs text-slate-500 font-mono">{found.sku || found.model}</div>
-          </div>
-          <button onClick={handleAdd} disabled={loading} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50">
-            Додати
-          </button>
+      <div className="flex items-center gap-2 p-2.5 border-b border-slate-100">
+        <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={e => { setQuery(e.target.value); doSearch(e.target.value); }}
+          onKeyDown={e => e.key === 'Escape' && onClose()}
+          placeholder="Артикул (SKU) або назва..."
+          className="flex-1 text-sm bg-transparent outline-none placeholder:text-slate-400"
+          data-testid="quick-add-search-input"
+        />
+        <div className="flex items-center gap-0.5 flex-shrink-0 border border-slate-200 rounded-lg">
+          <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-1.5 py-0.5 text-slate-500 hover:text-slate-800 text-sm font-bold">-</button>
+          <input
+            type="number"
+            min={1}
+            value={qty}
+            onChange={e => setQty(Math.max(1, parseInt(e.target.value) || 1))}
+            className="w-8 text-center text-sm font-medium bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            data-testid="quick-add-qty-input"
+          />
+          <button onClick={() => setQty(qty + 1)} className="px-1.5 py-0.5 text-slate-500 hover:text-slate-800 text-sm font-bold">+</button>
         </div>
-      )}
+        {loading && <RefreshCw className="w-3.5 h-3.5 text-slate-400 animate-spin flex-shrink-0" />}
+      </div>
+
+      <div className="max-h-[320px] overflow-y-auto">
+        {loading && results.length === 0 ? (
+          <div className="text-center py-6 text-slate-400 text-xs"><RefreshCw className="w-4 h-4 animate-spin mx-auto mb-1" />Пошук...</div>
+        ) : results.length === 0 ? (
+          <div className="text-center py-5 text-xs text-slate-400">
+            {query.length < 2 ? "Введіть мінімум 2 символи" : "Товари не знайдено"}
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {results.map(p => {
+              const pid = p.product_id || p.id;
+              const imgSrc = getImageUrl(p.image || p.image_url || p.cover || p.photo);
+              return (
+                <button
+                  key={pid}
+                  onClick={() => handleAdd(p)}
+                  disabled={adding === pid}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-emerald-50 transition-colors disabled:opacity-50"
+                  data-testid={`quick-add-item-${pid}`}
+                >
+                  {imgSrc ? (
+                    <img src={imgSrc} className="w-10 h-10 rounded-md object-cover border border-slate-200 flex-shrink-0" alt="" onError={handleImageError} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0"><Package className="w-4 h-4 text-slate-400" /></div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-800 truncate">{p.name || p.product_name}</div>
+                    <div className="text-xs text-slate-500 truncate">{p.sku} {p.category_name ? `\u00B7 ${p.category_name}` : ''}</div>
+                  </div>
+                  <div className="text-right flex-shrink-0 mr-1">
+                    <div className="text-xs font-semibold text-slate-700">{p.available ?? p.quantity ?? '—'}</div>
+                    <div className="text-[10px] text-slate-400">доступно</div>
+                  </div>
+                  {adding === pid ? (
+                    <RefreshCw className="w-4 h-4 text-emerald-500 animate-spin flex-shrink-0" />
+                  ) : (
+                    <Plus className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -590,19 +638,15 @@ export default function DamageHubApp() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [washRes, restoreRes, laundryRes] = await Promise.all([
-        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/wash`),
-        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/restoration`),
-        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/laundry`),
+      const results = await Promise.allSettled([
+        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/wash`).then(r => r.ok ? r.json() : { items: [] }),
+        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/restoration`).then(r => r.ok ? r.json() : { items: [] }),
+        authFetch(`${BACKEND_URL}/api/product-damage-history/processing/laundry`).then(r => r.ok ? r.json() : { items: [] }),
       ]);
       
-      const [washData, restoreData, laundryData] = await Promise.all([
-        washRes.json(), restoreRes.json(), laundryRes.json()
-      ]);
-      
-      setWashItems(washData.items || []);
-      setRestoreItems(restoreData.items || []);
-      setLaundryItems(laundryData.items || []);
+      setWashItems(results[0].status === 'fulfilled' ? (results[0].value.items || []) : []);
+      setRestoreItems(results[1].status === 'fulfilled' ? (results[1].value.items || []) : []);
+      setLaundryItems(results[2].status === 'fulfilled' ? (results[2].value.items || []) : []);
     } catch (e) {
       console.error("Load error:", e);
     } finally {

@@ -117,10 +117,10 @@ export default function ZoneOperational({
       managerName: selectedManager?.full_name || '',
       discountPercent: finalDiscountPercent,
       discountAmount: finalDiscountAmount,
-      serviceFee: showServiceFeeForm ? localServiceFee : 0,
-      serviceFeeName: showServiceFeeForm ? localServiceFeeName : '',
+      serviceFee: serviceFee,
+      serviceFeeName: serviceFeeName,
     })
-  }, [localManagerId, localDiscountPercent, localDiscountAmount, discountMode, localServiceFee, localServiceFeeName, showServiceFeeForm, managers])
+  }, [localManagerId, localDiscountPercent, localDiscountAmount, discountMode, managers])
   
   // Payment calculations
   const remainingRent = Math.max(0, totalRent - paidRent)
@@ -330,70 +330,6 @@ export default function ZoneOperational({
                 </div>
               )}
             </>
-          )}
-        </div>
-        
-        {/* Додаткова послуга */}
-        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4 border border-purple-100">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-purple-700 font-medium">Додаткова послуга</label>
-            {!readOnly && !showServiceFeeForm && (
-              <button
-                onClick={() => setShowServiceFeeForm(true)}
-                className="text-xs text-purple-600 hover:text-purple-800 font-medium flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" /> Додати
-              </button>
-            )}
-          </div>
-          
-          {showServiceFeeForm ? (
-            <div className="space-y-2">
-              {readOnly ? (
-                <>
-                  <div className="font-semibold text-purple-800">{localServiceFeeName || 'Додаткова послуга'}</div>
-                  <div className="text-purple-700">₴{fmtUA(localServiceFee)}</div>
-                </>
-              ) : (
-                <>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={localServiceFeeName}
-                      onChange={(e) => setLocalServiceFeeName(e.target.value)}
-                      placeholder="Назва послуги (напр. Мінімальне замовлення)"
-                      className="flex-1 rounded-lg border border-purple-200 px-3 py-2 text-sm focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
-                    />
-                    <button
-                      onClick={() => {
-                        setShowServiceFeeForm(false)
-                        setLocalServiceFee(0)
-                        setLocalServiceFeeName('')
-                      }}
-                      className="p-2 text-purple-400 hover:text-purple-600 hover:bg-purple-100 rounded-lg transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-500">₴</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="100"
-                      value={localServiceFee}
-                      onChange={(e) => setLocalServiceFee(parseFloat(e.target.value) || 0)}
-                      placeholder="Сума"
-                      className="w-full rounded-lg border border-purple-200 pl-8 pr-3 py-2 text-sm focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <div className="text-sm text-purple-500 italic">
-              Немає додаткових послуг
-            </div>
           )}
         </div>
         

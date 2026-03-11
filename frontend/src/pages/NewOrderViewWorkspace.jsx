@@ -57,6 +57,7 @@ export default function NewOrderViewWorkspace() {
   const [discountAmount, setDiscountAmount] = useState(0)
   const [serviceFee, setServiceFee] = useState(0)
   const [serviceFeeName, setServiceFeeName] = useState('')
+  const [additionalServicesTotal, setAdditionalServicesTotal] = useState(0)
   
   // Дати
   const [issueDate, setIssueDate] = useState('')
@@ -241,6 +242,14 @@ export default function NewOrderViewWorkspace() {
           } catch (e) {}
         }
       }
+      
+      // Завантажити additional services
+      try {
+        const token = localStorage.getItem('token')
+        const svcRes = await axios.get(`${BACKEND_URL}/api/orders/${orderId}/additional-services`, { headers: { 'Authorization': `Bearer ${token}` } })
+        const svcs = svcRes.data?.services || svcRes.data || []
+        setAdditionalServicesTotal(svcs.reduce((s, sv) => s + (sv.amount || 0), 0))
+      } catch (e) { /* ok - may not exist */ }
       
     } catch (err) {
       console.error('[Workspace] ❌ Error loading order:', err)
@@ -536,7 +545,7 @@ export default function NewOrderViewWorkspace() {
         service_fee: serviceFee, // Додаткова послуга - сума
         service_fee_name: serviceFeeName, // Додаткова послуга - назва
         // Фінансові дані - ДЖЕРЕЛО ПРАВДИ
-        total_price: calculations.rentWithServiceFee,
+        total_price: calculations.rentAfterDiscount + additionalServicesTotal,
         deposit_amount: calculations.totalDeposit,
         total_loss_value: calculations.totalDeposit
       })
@@ -579,7 +588,7 @@ export default function NewOrderViewWorkspace() {
         issue_time: issueTime,
         return_time: returnTime,
         items: items,
-        total_rent: calculations.rentWithServiceFee,
+        total_rent: calculations.rentAfterDiscount + additionalServicesTotal,
         total_deposit: calculations.totalDeposit,
         manager_notes: managerNotes
       })
@@ -895,8 +904,7 @@ export default function NewOrderViewWorkspace() {
         totalBeforeDiscount={items.reduce((sum, item) => sum + (item.rental_price * item.qty * rentalDays), 0)}
         totalRent={(() => {
           const baseRent = order?.total_after_discount || order?.total_rental || calculations.rentAfterDiscount || 0;
-          const fee = order?.service_fee || serviceFee || 0;
-          return baseRent + fee;
+          return baseRent + additionalServicesTotal;
         })()}
         totalDeposit={order?.total_deposit || order?.deposit_amount || calculations.totalDeposit || 0}
         paidRent={order?.paid_rent || 0}

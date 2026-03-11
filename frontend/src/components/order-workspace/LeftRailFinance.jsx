@@ -149,7 +149,8 @@ export default function LeftRailFinance({
   const depositActual = hasDeposit ? (deposit.actual_amount || depositHeld) : 0
   
   // Статуси
-  const totalWithServices = rentAmount + (serviceFee || 0) + services.reduce((s, sv) => s + (sv.amount || 0), 0)
+  const servicesTotal = services.reduce((s, sv) => s + (sv.amount || 0), 0)
+  const totalWithServices = rentAmount + servicesTotal
   const rentStatus = rentPaid >= totalWithServices ? 'paid' : rentPaid > 0 ? 'partial' : 'pending'
   const depositStatus = hasDeposit && depositHeld > 0 ? 'received' : 'pending'
   

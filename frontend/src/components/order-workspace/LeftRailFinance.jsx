@@ -149,12 +149,13 @@ export default function LeftRailFinance({
   const depositActual = hasDeposit ? (deposit.actual_amount || depositHeld) : 0
   
   // Статуси
-  const rentStatus = rentPaid >= rentAmount ? 'paid' : rentPaid > 0 ? 'partial' : 'pending'
+  const totalWithServices = rentAmount + (serviceFee || 0) + services.reduce((s, sv) => s + (sv.amount || 0), 0)
+  const rentStatus = rentPaid >= totalWithServices ? 'paid' : rentPaid > 0 ? 'partial' : 'pending'
   const depositStatus = hasDeposit && depositHeld > 0 ? 'received' : 'pending'
   
   // Загальний статус
   const isFullyPaid = rentStatus === 'paid' && depositStatus === 'received'
-  const rentDue = Math.max(0, rentAmount - rentPaid)
+  const rentDue = Math.max(0, totalWithServices - rentPaid)
   
   // Форматування застави у валюті
   const depositDisplay = depositCurrency === 'UAH' 
@@ -356,6 +357,22 @@ export default function LeftRailFinance({
             </div>
           )}
         </div>
+
+        {/* Загальний підсумок оренди */}
+        {(serviceFee > 0 || services.length > 0) && (
+          <div className="rounded-lg border-2 border-slate-300 bg-white p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-700 font-semibold text-sm">Разом до сплати</span>
+              <span className="font-bold text-lg text-slate-900">₴ {fmtUA(totalWithServices)}</span>
+            </div>
+            {rentPaid > 0 && rentPaid < totalWithServices && (
+              <div className="mt-1 flex items-center justify-between text-xs">
+                <span className="text-amber-600">Залишок:</span>
+                <span className="font-semibold text-amber-700">₴ {fmtUA(rentDue)}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Деталі оплат */}
         {payments.length > 0 && (

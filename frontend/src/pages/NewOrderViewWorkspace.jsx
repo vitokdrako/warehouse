@@ -380,15 +380,18 @@ export default function NewOrderViewWorkspace() {
     
     const discountAmount = (totalRent * discount) / 100
     const rentAfterDiscount = totalRent - discountAmount
+    // Загальна оренда з урахуванням додаткових послуг (мінімальне замовлення тощо)
+    const rentWithServiceFee = rentAfterDiscount + (serviceFee || 0)
     
     return {
       totalRent,
       totalDeposit,
       discountAmount,
       rentAfterDiscount,
+      rentWithServiceFee,
       itemsCount: items.length
     }
-  }, [items, rentalDays, discount])
+  }, [items, rentalDays, discount, serviceFee])
   
   // === ПОШУК ТОВАРІВ ===
   const handleSearch = async (query) => {
@@ -533,7 +536,7 @@ export default function NewOrderViewWorkspace() {
         service_fee: serviceFee, // Додаткова послуга - сума
         service_fee_name: serviceFeeName, // Додаткова послуга - назва
         // Фінансові дані - ДЖЕРЕЛО ПРАВДИ
-        total_price: calculations.rentAfterDiscount,
+        total_price: calculations.rentWithServiceFee,
         deposit_amount: calculations.totalDeposit,
         total_loss_value: calculations.totalDeposit
       })
@@ -576,7 +579,7 @@ export default function NewOrderViewWorkspace() {
         issue_time: issueTime,
         return_time: returnTime,
         items: items,
-        total_rent: calculations.rentAfterDiscount,
+        total_rent: calculations.rentWithServiceFee,
         total_deposit: calculations.totalDeposit,
         manager_notes: managerNotes
       })
@@ -890,7 +893,11 @@ export default function NewOrderViewWorkspace() {
         serviceFee={serviceFee}
         serviceFeeName={serviceFeeName}
         totalBeforeDiscount={items.reduce((sum, item) => sum + (item.rental_price * item.qty * rentalDays), 0)}
-        totalRent={order?.total_after_discount || order?.total_rental || calculations.rentAfterDiscount || 0}
+        totalRent={(() => {
+          const baseRent = order?.total_after_discount || order?.total_rental || calculations.rentAfterDiscount || 0;
+          const fee = order?.service_fee || serviceFee || 0;
+          return baseRent + fee;
+        })()}
         totalDeposit={order?.total_deposit || order?.deposit_amount || calculations.totalDeposit || 0}
         paidRent={order?.paid_rent || 0}
         paidDeposit={order?.paid_deposit || 0}

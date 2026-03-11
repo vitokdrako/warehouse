@@ -1706,8 +1706,14 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
         # --- Quick action items (quick_{product_id}) ---
         if str(damage_id).startswith("quick_"):
             product_id = int(str(damage_id).replace("quick_", ""))
-            db.execute(text("UPDATE products SET product_state = 'shelf' WHERE product_id = :pid"), {"pid": product_id})
-            db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :pid"), {"pid": product_id})
+            db.execute(text("""
+                UPDATE products SET product_state = 'shelf', state = 'available', frozen_quantity = 0 
+                WHERE product_id = :pid
+            """), {"pid": product_id})
+            db.execute(text("""
+                UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                WHERE product_id = :pid
+            """), {"pid": product_id})
             db.commit()
             return {"success": True, "message": "Товар повернуто на склад"}
         
@@ -1944,9 +1950,14 @@ async def delete_damage_record(
         # Quick action items (quick_{product_id}) — не в базі, просто повертаємо на полицю
         if str(damage_id).startswith("quick_"):
             product_id = int(str(damage_id).replace("quick_", ""))
-            # Повернути товар у доступний стан
-            db.execute(text("UPDATE products SET product_state = 'shelf' WHERE product_id = :pid"), {"pid": product_id})
-            db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :pid"), {"pid": product_id})
+            db.execute(text("""
+                UPDATE products SET product_state = 'shelf', state = 'available', frozen_quantity = 0
+                WHERE product_id = :pid
+            """), {"pid": product_id})
+            db.execute(text("""
+                UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                WHERE product_id = :pid
+            """), {"pid": product_id})
             db.commit()
             return {"success": True, "message": "Товар видалено з черги", "deleted_record": {"product_id": product_id, "sku": f"quick_{product_id}"}}
         

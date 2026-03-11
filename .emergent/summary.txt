@@ -1,82 +1,83 @@
 <analysis>**original_problem_statement:**
-The user's initial request was to update rental prices for specific product categories in an external OpenCart database. After completing this, the user requested a series of significant feature additions and improvements primarily focused on the Manager Cabinet and the Prop Master's (Реквізитор) dashboard.
+The user's initial request was to update rental prices, but this evolved into a comprehensive overhaul of the application's workflows for Prop Masters (Реквізитори) and Managers.
 
-The key features implemented are:
-1.  **Kasa (Cashbox) Page:** A new page at  was created, accessible from the Manager Cabinet. It displays income, deposits, and expenses. Functionality was added to create new transactions for each category directly from this page.
-2.  **Invoice Generation in Order View:** The documents section for in-progress orders was enhanced with a dropdown to generate different types of invoices (for FOP, TOV) by leveraging and extending the existing document generation system.
-3.  **Manager Cabinet Filters:** The search functionality was extended to the Return column, admin users were excluded from the manager filter, and a previously non-functional financial status filter was implemented.
-4.  **Multiple Additional Services:** The order view was upgraded from supporting a single additional service to a full CRUD interface for managing a list of multiple services per order, backed by a new database table and API.
-5.  **Prop Master Dashboard & Workspace Overhaul:**
-    *   A bug was fixed where a completed order was stuck in the returns view. A preventative fix was also added to the API.
-    *   Order cards were cleaned up to remove financial data (sum, deposit).
-    *   A visual indicator was added to cards for orders that have been recently modified.
-    *   Cards in all columns are now sorted from newest to oldest.
-    *   Overdue orders in the return column now display a badge indicating how many days they are late.
-    *   The pre-issue checklist was replaced with a new Additional Packaging section to track issued containers (bags, boxes, etc.).
-    *   The documents footer in the central workspace was removed.
-6.  **Packaging Return Tracking:** The current task is to track the return of the aforementioned packaging, allowing staff to record returned quantities and automatically charge for non-returned items during the settlement process.
+Key features and changes implemented include:
+- A complete redesign of the Damage Cabinet into a 3-column dashboard (Wash, Restoration, Laundry) for processing damaged items, with features for batching, quick-add, and printable list generation.
+- A new Cash Collection (інкасація) feature in the financial module.
+- Overhaul of the document generation system (Handover Act, Picking List).
+- Refinement of the Prop Master's UI by removing financial data.
+- Enhancement of payment forms to support multiple currencies for deposits and to record the manager who processed the transaction.
+- Numerous bug fixes related to financial calculations, data synchronization, and UI consistency.
+
+The project is now focused on stabilizing the new Damage Cabinet functionality and adding a monthly closing process for the cash desk.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application now has a new Kasa (Cashbox) page for managing day-to-day financial transactions. The Manager Cabinet is more powerful with improved search and filtering. The Prop Master's workflow has been significantly enhanced: their dashboard cards are sorted, show overdue status, and track issued packaging. The backend has new tables and APIs for  and . The return settlement process is currently being updated to account for unreturned packaging items. The agent has already created new database columns, backend endpoints, and frontend components for this, and integrated them into the return-related pages.
+The application features significantly refined workflows for prop masters and managers. The Damage Cabinet is a functional 3-column dashboard (Wash, Restoration, Laundry) with capabilities for quick-adding items, creating laundry batches, and generating printable lists. A Cash Collection (інкасація) feature has been integrated into the financial (Kasa) page. Order payment forms now support multi-currency deposits. The system's financial calculations have been improved to correctly account for additional services. Backend code fixes are being delivered to the user via a specific directory () for manual deployment to their production server, as the agent cannot deploy backend changes directly.
 
 **Last working item**:
--   **Last item agent was working:** Implementing the functionality to track the return of issued packaging. The agent added a  column to the  table, created a backend endpoint to update it, and created a new frontend component () to display and manage the returned packaging on both the Prop Master's return page () and the Manager's settlement page (). The logic to add the cost of unreturned packaging to the final order fee has also been added.
+-   **Last item agent was working:** The agent was debugging an issue where items marked as Готово (Ready) in the Damage Cabinet were not being removed from the UI. The root cause was identified: the backend logic updated one database field () while the API endpoint for fetching the list filtered by another ( and ). The agent was in the process of correcting the SQL  statements in the backend to modify all necessary fields.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** both.
-    1.  **Backend:** Use  to test the new  endpoint to ensure  is updated correctly.
-    2.  **Frontend:** Use the screenshot tool on the  page for an order with packaging. Verify the new Повернення тари section appears, that changing quantities works, and that the До сплати за тару amount updates correctly.
+-   **Which testing method agent to use?** both
+    1.  **Backend:** Use  to test the  and  endpoints for  items to confirm they result in a  status and that subsequent calls to the processing list endpoint no longer include the item.
+    2.  **Frontend:** Use the screenshot tool on the  page to visually confirm that items disappear from the Wash/Restoration/Laundry queues after the Готово or delete buttons are clicked.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: (P0) Complete and test the packaging return feature.**
--   **Issue 2: (P1)  has an infinite loading bug due to a slow Catalog API.**
--   **Issue 3: (P1) System cleanup (deleting unused tables/files) is pending user approval.**
--   **Issue 4: (P2) The backend is generally slow due to reliance on an external database, causing frequent 502 errors on startup.**
--   **Issue 5: (P2)  endpoint is unstable.**
--   **Issue 6: (P2) Moodboard export is likely broken.**
--   **Issue 7: (P2) Recurring Calendar Timezone Bug.**
--   **Issue 8: (P2) Create email templates for other documents.**
+-   **Issue 1: (P0) Damage Cabinet UI does not update correctly.**
+-   **Issue 2: (P0) UI for partial return from laundry batches is missing.**
+-   **Issue 3: (P1) Implement Monthly Cash Desk Closing.**
+-   **Issue 4: (P1)  has an infinite loading bug.**
+-   **Issue 5: (P1) System cleanup (deleting unused tables/files).**
+-   **Issue 6: (P2)  endpoint is unstable.**
+-   **Issue 7: (P2) Moodboard export is likely broken.**
+-   **Issue 8: (P2) Recurring Calendar Timezone Bug.**
+-   **Issue 9: (P2) Create email templates for other documents.**
 
 **Issues Detail:**
--   **Issue 1: Complete and test the packaging return feature.**
-    -   **Attempted fixes:** The agent has created the DB migration, backend endpoint, and frontend components (). They have been added to  and . The fee calculation logic in  has been updated.
+-   **Issue 1: Damage Cabinet UI does not update correctly.**
+    -   **Attempted fixes:** The agent identified that the backend logic in  was incomplete. When returning an item to stock, it updated  but failed to update the  field or decrement the  in the  table, which caused the item to remain visible in the queue.
     -   **Next debug checklist:**
-        1.  Start the backend and run  to test the  endpoint for updating .
-        2.  On the frontend, load an order with issued packaging on the .
-        3.  Verify the new component renders and displays the issued packaging.
-        4.  Verify that updating the returned quantity sends the correct API request.
-        5.  Verify that the total fee for unreturned packaging is calculated and displayed correctly.
-        6.  Verify that this data is also included when generating the Defect Act.
-    -   **Why fix this issue and what will be achieved with the fix?** This will complete the packaging tracking feature, allowing the business to account for and charge for lost or unreturned packaging items.
+        1.  Modify the  and  functions in .
+        2.  Ensure the SQL  statements for  items set  and decrement  in the  table.
+        3.  Place the updated  file into .
+        4.  Clearly instruct the user to deploy this updated backend file to their production server.
+        5.  Test the fix in the preview environment.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a critical bug that prevents users from managing the damage processing queues, as completed items do not disappear.
     -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** Y (The underlying cause of backend/frontend desync is recurring)
+    -   **Should Test frontend/backend/both after fix?** Both.
+    -   **Blocked on other issue:** None.
+
+-   **Issue 2: UI for partial return from laundry batches is missing.**
+    -   **Attempted fixes:** The agent previously implemented the backend endpoint () and added a simple return button to the frontend, but this did not support partial quantities.
+    -   **Next debug checklist:**
+        1.  In , modify the return functionality.
+        2.  Instead of a simple button, trigger a modal that allows the user to input the quantity of items being returned from the batch.
+        3.  Update the  function in  to pass the specified quantity to the backend API.
+        4.  Verify the backend endpoint correctly processes partial returns and updates the batch item quantities.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a required workflow for the user, as they often receive partial deliveries from laundry services.
+    -   **Status:** NOT STARTED
     -   **Is recurring issue?** N
     -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on other issue:** None.
 
--   **Issue 2:  has an infinite loading bug due to a slow Catalog API.**
-    -   **Attempted fixes:** None in the last few sessions. A previous temporary fix involved increasing the API limit.
-    -   **Next debug checklist:** Analyze queries in , implement pagination on the backend, and refactor  to use it. Add database indexes.
-    -   **Why fix this issue and what will be achieved with the fix?** Critical feature is unusable.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** None.
-
 **In progress Task List**:
--   **Task 1: Packaging Return Implementation.**
-    -   **Where to resume:** Testing the implementation. The code has been written and placed in the respective files. The next step is to run backend  tests and then check the frontend UI on the return/settlement pages.
-    -   **What will be achieved with this?** A complete, testable feature for tracking the full lifecycle of packaging items, from issue to return and financial settlement.
+-   **Task 1: Finalize Damage Cabinet Fixes**
+    -   **Where to resume:** In , complete the SQL  logic for returning and deleting items from processing queues.
+    -   **What will be achieved with this?** The Damage Cabinet will be fully functional, with items correctly removed from lists after processing.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   **(P1) Optimize Catalog API & Unblock :** Address the performance bottleneck in .
-    -   **(P1) System Cleanup:** Execute the deletion of 18 unused tables and 7 obsolete files, pending user confirmation.
+    -   **(P0) Implement UI for partial returns from laundry batches.** (Issue #2)
+    -   **(P1) Implement Monthly Cash Desk Closing:** Add a Close Month feature to archive transactions and generate a monthly Z-report.
+    -   **(P1) Optimize Catalog API & Unblock :** Address the performance bottleneck causing the Families feature to be unusable.
+    -   **(P1) System Cleanup:** Execute deletion of unused tables and files, pending user confirmation.
     -   **(P2) Implement remaining document templates:** e.g., Акт повернення (Return Act).
 -   **Future Tasks:**
     -   Real-time updates for the client cabinet.
@@ -87,91 +88,95 @@ The application now has a new Kasa (Cashbox) page for managing day-to-day financ
     -   Create an HR/Ops Module.
 
 **Completed work in this session**
--   **Database Price Update:** Updated rental prices for tablecloths, napkins, and runners in the external OpenCart database as per user's request.
--   **Kasa (Cashbox) Feature:**
-    -   Created a new  page with a 3-column layout for income, deposits, and expenses.
-    -   Implemented functionality to add new financial transactions directly from the Kasa page.
-    -   Fixed a bug in the  endpoint.
--   **Manager & Prop Master Workflow Enhancements:**
-    -   Added a dropdown for generating various invoice types in the order workspace ().
-    -   Fixed a Jinja filter bug () in the document generation backend.
-    -   Enhanced Manager Cabinet with improved search and filtering (excluding admins, enabling financial filter).
-    -   Implemented full CRUD for adding multiple additional services to an order ().
-    -   Replaced the static checklist with a dynamic packaging tracking system ().
-    -   Removed the  from the order workspace layout.
--   **Bug Fixes & UI Improvements:**
-    -   Fixed a bug where a completed order was stuck on the prop master's dashboard by correcting the data in the DB and patching the API.
-    -   Redesigned prop master dashboard cards: removed price/deposit, added a modified indicator, and sorted cards from new to old.
-    -   Added a visual badge to indicate overdue orders on the return dashboard.
--   **Build Generation:** The agent provided multiple frontend builds for the user's external hosting environment in the  directory.
+-   Generated printable lists for Damage Cabinet queues and fixed layout issues.
+-   Created multiple production frontend builds for the user.
+-   Fixed user's name display (email -> name) in printable documents.
+-   Fixed an Internal Server Error when printing laundry batches.
+-   **Critical Incident Response:** Reverted the status of accidentally closed orders and fixed a subsequent bug where they disappeared from the dashboard.
+-   **Batch Operation:** Mass-closed 60+  orders, processing payments and closing them.
+-   **New Feature:** Implemented Cash Collection (інкасація) in the cash desk module.
+-   **Enhancement:** Added multi-currency support for deposit payments in order forms.
+-   **Bugfix:** Corrected total rent calculations to properly include additional services (), resolving discrepancies in financial UI blocks and payment modals.
+-   **Bugfix:** Restored an order that had incorrectly disappeared from the calendar.
+-   **Bugfix:** Fixed several issues in the Damage Cabinet, including the Ready button logic, deletion, and item search. Provided updated backend files to the user for manual deployment.
 
 **Earlier issues found/mentioned but not fixed**
--   The critical performance issue with the Catalog API ().
+-   The critical performance issue with the Catalog API () that makes  unusable.
 -    endpoint instability.
 -   Moodboard export is likely broken.
 -   Recurring Calendar Timezone Bug.
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence:** Slow Catalog API and general backend slowness due to reliance on an external database. This is a persistent technical debt item.
--   **Recurrence count:** 5+
+-   **Issue recurrence:** Slow Catalog API and general backend slowness. This is a persistent problem.
+-   **Recurrence count:** 6+
 -   **Status:** NOT STARTED
 
 **Code Architecture**
 
 
+**Key Technical Concepts**
+-   **Architecture:** React frontend, FastAPI backend, external MySQL database (via direct SQL queries).
+-   **Deployment Model:** The agent creates a frontend production build (yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.) and places it in a specific folder. For backend changes, the agent places modified Python files in a separate folder (). The user is responsible for deploying both frontend and backend assets to their own production hosting. This separation is a critical constraint.
+-   **Database:** Direct SQL queries are used extensively via a  utility, bypassing a traditional ORM for many operations. The schema includes tables like , , , , and .
+
+**key DB schema**
+-   **product_damage_history:** 
+-   **products:** 
+-   **orders:** 
+-   **return_versions:** 
+-   **laundry_batches:** 
+-   **laundry_items:** 
+-   **fin_records:** 
+
 **All files of reference**
--   **/app/frontend/src/pages/ReturnSettlementPage.jsx**: **(MODIFIED)** Manager's settlement page, needs testing for new packaging fee logic.
--   **/app/frontend/src/pages/ReturnOrderWorkspace.jsx**: **(MODIFIED)** Prop master's return page, needs testing for new packaging return UI.
--   **/app/frontend/src/components/workspaces/return-order/zones/ZonePackagingReturn.jsx**: **(NEW)** Component for handling packaging returns.
--   **/app/backend/routes/order_packaging.py**: **(MODIFIED)** API for packaging, recently updated to handle returns.
--   **/app/frontend/src/pages/KasaPage.jsx**: **(NEW)** New page for financial operations.
--   **/app/frontend/src/pages/ManagerCabinet.jsx**: **(MODIFIED)** Core manager dashboard with new filters.
--   **/app/frontend/src/pages/Dashboard.jsx**: **(MODIFIED)** Core prop master dashboard with sorting and UI changes.
--   **/app/backend/routes/catalog.py**: **(NEEDS ATTENTION)** Source of the critical performance bug.
+-   **/app/backend/routes/product_damage_history.py**: **(NEEDS FIXING)** The core logic for the Damage Cabinet backend. The current bug resides here.
+-   **/app/frontend/src/pages/DamageHubApp/DamageHubApp.jsx**: **(MODIFIED)** The main frontend component for the Damage Cabinet. Needs state management improvements to reflect backend changes immediately.
+-   **/app/frontend/src/pages/DamageHubApp/BatchCard.jsx**: **(NEEDS FEATURE)** This component must be updated to support partial returns with a quantity input.
+-   **/app/clean_project/backend_update/**: **(IMPORTANT)** This directory serves as the handoff point for backend code that the user must deploy.
 
 **Critical Info for New Agent**
 -   **Ви повинні спілкуватися українською мовою. (You must communicate in Ukrainian.)**
--   Your immediate task is to finish and test the packaging return feature. The code is mostly written but needs thorough verification.
--   The user has a specific workflow: after you complete a feature, they will ask you to create a production frontend build in . You will need to edit  to set  to  before running yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command..
--   The application's backend is slow due to its reliance on the user's external database. Expect  errors or slow load times in the preview environment. The user is aware of this.
--   A significant amount of technical debt (especially the slow Catalog API) remains unaddressed. If the user is open to it after the current task, tackling the  bug would be a high-impact fix.
+-   **Backend Deployment is Manual:** Your primary constraint is that you cannot deploy backend changes. Any fixes to  files must be placed in , and you must explicitly instruct the user to deploy them. The user's production environment () will not see your backend changes otherwise. This is the root cause of several recent fixed but still broken reports from the user.
+-   **Current Task:** Your immediate priority is fixing the Damage Cabinet. First, correct the backend logic in  so items are properly removed from queues. Second, implement the UI for partial returns from laundry batches.
 
 **documents and test reports created in this job**
--   None.
+-   None. The agent has been directly creating production builds.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:** Now we need to sort the cards from new to old in the columns, it will be easier for the prop masters. - **Status: Completed.**
-2.  **User:** Can the return column check for orders that were not returned on time? and calculate the overdue days? - **Status: Completed.**
-3.  **User:** Now we need to tidy up the prop master cards... replace the pre-issue checklist with additional packaging... - **Status: Completed.**
-4.  **User:** Just remove the emojis from the packaging. - **Status: Completed.**
-5.  **User:** At the bottom of the central zone there are documents, remove them. - **Status: Completed.**
-6.  **User:** Now, upon return, we need to take into account what we additionally issued and whether it was returned, if not, then we need to charge for it. - **Status: IN PROGRESS. This is the current task.**
-7.  **User:** Asks to remove sum and deposit from prop master cards but add an indicator for manager changes. - **Status: Completed.**
-8.  **User:** And now lets go back to our current tasks) we are working hard on the managers office. We need to finish it. To do this, study how our finances and damages work and the managers office itself." - **Status: Completed.** This led to the Kasa page implementation.
-9.  **User:** Requests to compile a new frontend build. - **Status: Completed.**
-10. **User:** "My kitty, everything flies like a rocket :) we need to add deposits to the cash desk in the managers office with a comment, and also display comments if they exist. And also record expenses in the cash desk... - **Status: Completed.**
+1.  **[LATEST] User:** The card doesn't disappear from the list when I click ready. And the batch still doesn't have partial returns. I might need to accept 20 out of 38 items. (Status: **IN PROGRESS**)
+2.  **User:** Damage Cabinet: partial acceptance in a batch isn't finished. Ready button does nothing. Delete doesn't work. Search doesn't work. (Status: **Partially Addressed**, root cause identified as backend sync issue).
+3.  **User:** Is the build compiled for my production backend URL? (Status: **Completed**)
+4.  **User:** The order total on the dashboard KPI card is wrong. Also, the damage logging button for comparison should be renamed and still push the item to a processing queue. (Status: **Completed**)
+5.  **User:** Example of an order on the dashboard with the wrong rent amount. (Status: **Completed**)
+6.  **User:** Financial status totals are wrong due to double-counting service fees, and a UI block needs to be moved. (Status: **Completed**)
+7.  **User:** Ready button in laundry is broken for items not in a batch. Also, we forgot to implement partial returns from batches. (Status: **Partially Addressed**)
+8.  **User:** An order disappeared from the calendar. (Status: **Completed**)
+9.  **User:** Adding an additional service fee doesn't update the total order amount correctly. (Status: **Completed**)
+10. **User:** Agreed to monthly cash closing and requested two new features: recording which manager accepts payment and adding currency selection for deposits. (Status: **Completed**)
 
 **Project Health Check:**
 -   **Broken:**
-    -   The Families feature () remains unusable due to the slow catalog API.
+    -   The Families feature () is unusable due to a slow catalog API.
+    -   The Damage Cabinet UI does not update correctly when items are processed.
 -   **Slow:**
-    -   The entire backend is prone to slowness and initial  errors due to its dependency on a slow external MySQL database.
+    -   The entire backend is prone to slowness due to its reliance on a slow external MySQL database.
 -   **Mocked:**
     -   None.
 
 **3rd Party Integrations**
 -   **SMTPEmailProvider:** Custom implementation for sending emails.
--   **OpenCart:** The system reads from an external OpenCart database, and was also updated (price update) in this session.
+-   **OpenCart:** Reads product information and images from an external OpenCart MySQL database.
 
 **Testing status**
 -   **Testing agent used after significant changes:** NO
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** []
--   **Known regressions:** The core performance issue in the catalog API remains.
+-   **Known regressions:** The core performance issue in the catalog API remains unfixed and is a known regression from previous sessions.
 
 **Credentials to test flow:**
 -   **RentalHub Admin:**  / 
 
 **What agent forgot to execute**
--   The agent has been closely following the user's numerous and rapidly changing requests. The primary thing forgotten is addressing the long-standing technical debt items (slow Catalog API, system cleanup) from the initial handoff summary, but this was a conscious prioritization of the user's explicit, immediate feature requests.</analysis>
+-   The agent has not fully implemented the user's request for partial returns from a laundry batch; the UI for selecting a quantity is missing.
+-   While the agent identified the root cause of items not disappearing from the Damage Cabinet, the final fix in  was still in progress when the session ended.</analysis>

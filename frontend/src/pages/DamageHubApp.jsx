@@ -38,10 +38,10 @@ const QuickAddPopover = ({ queueType, onAdd, onClose }) => {
     setError('');
     setFound(null);
     try {
-      const res = await authFetch(`${BACKEND_URL}/api/catalog/products/search?q=${encodeURIComponent(sku.trim())}&limit=1`);
+      const res = await authFetch(`${BACKEND_URL}/api/catalog?search=${encodeURIComponent(sku.trim())}&limit=1`);
       if (res.ok) {
         const data = await res.json();
-        const items = data.products || data.items || data || [];
+        const items = Array.isArray(data) ? data : (data.products || data.items || []);
         if (items.length > 0) {
           setFound(items[0]);
         } else {
@@ -636,9 +636,13 @@ export default function DamageHubApp() {
       });
       if (res.ok) {
         await loadAll();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Помилка завершення');
       }
     } catch (e) {
       console.error("Complete error:", e);
+      alert('Помилка з\'єднання');
     } finally {
       setCompleting(null);
     }

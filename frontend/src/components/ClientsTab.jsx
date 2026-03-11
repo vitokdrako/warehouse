@@ -357,7 +357,6 @@ const PayerModal = ({ isOpen, onClose, clientId, payer, onSave }) => {
 
 // ===== CLIENT DETAIL DRAWER =====
 const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
-  const [activeTab, setActiveTab] = useState("contact");
   const [payers, setPayers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [showPayerModal, setShowPayerModal] = useState(false);
@@ -643,68 +642,47 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
         </div>
 
-        {/* Tabs */}
-        <div className="px-5 py-2 border-b border-slate-100 flex gap-1">
-          {["contact", "payers", "orders"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                "px-4 py-2 rounded-lg text-sm font-medium transition",
-                activeTab === tab
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-100"
-              )}
-            >
-              {tab === "contact" && "👤 Контакт"}
-              {tab === "payers" && `💳 Платники (${payers.length})`}
-              {tab === "orders" && `📦 Замовлення (${orders.length})`}
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
+        {/* Content - single scrollable view */}
         <div className="flex-1 overflow-y-auto p-5">
           {loading ? (
             <div className="flex items-center justify-center h-32 text-slate-400">
               Завантаження...
             </div>
           ) : (
-            <>
-              {/* Contact Tab */}
-              {activeTab === "contact" && (
-                <div className="space-y-4">
-                  {/* Edit/View Toggle Button */}
-                  <div className="flex justify-end">
-                    <Button
-                      variant={isEditingClient ? "danger" : "ghost"}
-                      size="sm"
-                      onClick={() => {
-                        if (isEditingClient) {
-                          setEditForm({
-                            full_name: client.full_name || client.name || '',
-                            phone: client.phone || '',
-                            email: client.email || '',
-                            company_hint: client.company_hint || '',
-                            company: client.company || '',
-                            notes: client.notes || '',
-                            payer_type: client.payer_type || '',
-                            tax_id: client.tax_id || '',
-                            is_regular: client.is_regular || false,
-                            rating: client.rating || 0,
-                            internal_notes: client.internal_notes || '',
-                            instagram: client.instagram || ''
-                          });
-                        }
-                        setIsEditingClient(!isEditingClient);
-                      }}
-                    >
-                      {isEditingClient ? "✕ Скасувати" : "✏️ Редагувати"}
-                    </Button>
-                  </div>
+            <div className="space-y-5">
 
-                  {/* Edit Form or View Mode */}
-                  {isEditingClient ? (
+              {/* === CONTACT SECTION === */}
+              <div className="space-y-4">
+                {/* Edit button */}
+                <div className="flex justify-end">
+                  <Button
+                    variant={isEditingClient ? "danger" : "ghost"}
+                    size="sm"
+                    onClick={() => {
+                      if (isEditingClient) {
+                        setEditForm({
+                          full_name: client.full_name || client.name || '',
+                          phone: client.phone || '',
+                          email: client.email || '',
+                          company_hint: client.company_hint || '',
+                          company: client.company || '',
+                          notes: client.notes || '',
+                          payer_type: client.payer_type || '',
+                          tax_id: client.tax_id || '',
+                          is_regular: client.is_regular || false,
+                          rating: client.rating || 0,
+                          internal_notes: client.internal_notes || '',
+                          instagram: client.instagram || ''
+                        });
+                      }
+                      setIsEditingClient(!isEditingClient);
+                    }}
+                  >
+                    {isEditingClient ? "Скасувати" : "Редагувати"}
+                  </Button>
+                </div>
+
+                {isEditingClient ? (
                     <div className="space-y-4 bg-blue-50 border border-blue-100 rounded-xl p-4">
                       <div className="text-sm font-medium text-blue-800 mb-2">Редагування клієнта</div>
                       
@@ -730,7 +708,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                               className={cn("text-lg transition", star <= editForm.rating ? "text-amber-400" : "text-slate-300 hover:text-amber-200")}
                               data-testid={`client-rating-star-${star}`}
                             >
-                              &#9733;
+                              {"\u2605"}
                             </button>
                           ))}
                         </div>
@@ -865,341 +843,233 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                     </div>
                   ) : (
                     <>
-                      {/* Regular client & Rating badge */}
-                      {(client.is_regular || client.rating > 0) && (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {client.is_regular && (
-                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" data-testid="client-regular-badge">
-                              Постійний клієнт
-                            </span>
+                      {/* Badges row */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {client.is_regular && (
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" data-testid="client-regular-badge">
+                            Постійний
+                          </span>
+                        )}
+                        {client.payer_type && client.payer_type !== 'individual' && (
+                          <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            {client.payer_type === 'fop' ? 'ФОП' : client.payer_type === 'fop_simple' ? 'ФОП спрощ.' : client.payer_type === 'tov' ? 'ТОВ' : client.payer_type}
+                          </span>
+                        )}
+                        {client.rating > 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-sm" data-testid="client-rating-display">
+                            {[1,2,3,4,5].map(s => (
+                              <span key={s} className={s <= client.rating ? "text-amber-400" : "text-slate-200"}>{"\u2605"}</span>
+                            ))}
+                          </span>
+                        )}
+                        {client.total_revenue > 0 && (
+                          <span className="text-xs text-slate-500 ml-auto" data-testid="client-revenue">
+                            {client.total_revenue.toLocaleString('uk-UA')} грн
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Contact info - compact grid */}
+                      <div className="rounded-xl border border-slate-200 divide-y divide-slate-100 text-sm">
+                        {[
+                          { label: 'Телефон', value: client.phone },
+                          { label: 'Email', value: client.email },
+                          { label: 'Instagram', value: client.instagram },
+                          { label: 'Компанія', value: client.company || client.company_hint },
+                          { label: 'ЄДРПОУ/ІПН', value: client.tax_id, mono: true },
+                          { label: 'Джерело', value: client.source },
+                          { label: 'Останнє замовлення', value: client.last_order_date ? new Date(client.last_order_date).toLocaleDateString('uk-UA') : null },
+                        ].filter(f => f.value).map(field => (
+                          <div key={field.label} className="flex justify-between items-center px-4 py-2.5">
+                            <span className="text-slate-500">{field.label}</span>
+                            <span className={cn("text-slate-900 font-medium", field.mono && "font-mono")}>{field.value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Notes - only if present */}
+                      {(client.notes || client.internal_notes) && (
+                        <div className="space-y-3">
+                          {client.notes && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                              <div className="text-xs font-medium text-amber-700 mb-1">Нотатки</div>
+                              <p className="text-sm text-amber-900 whitespace-pre-wrap">{client.notes}</p>
+                            </div>
                           )}
-                          {client.rating > 0 && (
-                            <span className="inline-flex items-center gap-0.5 text-sm" data-testid="client-rating-display">
-                              {[1,2,3,4,5].map(s => (
-                                <span key={s} className={s <= client.rating ? "text-amber-400" : "text-slate-200"}>&#9733;</span>
-                              ))}
-                            </span>
-                          )}
-                          {client.total_revenue > 0 && (
-                            <span className="text-xs text-slate-500 ml-auto" data-testid="client-revenue">
-                              {client.total_revenue.toLocaleString('uk-UA')} грн
-                            </span>
+                          {client.internal_notes && (
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3" data-testid="client-internal-notes-block">
+                              <div className="text-xs font-medium text-slate-600 mb-1">Внутрішні нотатки</div>
+                              <p className="text-sm text-slate-700 whitespace-pre-wrap">{client.internal_notes}</p>
+                            </div>
                           )}
                         </div>
                       )}
 
-                      {/* Client MA Block */}
-                      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-4">
-                        <div className="text-sm font-medium text-purple-800 mb-2">Рамковий договір</div>
-                        
+                      {/* Quick stats row */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-slate-50 rounded-xl p-3 text-center">
+                          <div className="text-xl font-bold text-slate-900">{client.orders_count || 0}</div>
+                          <div className="text-xs text-slate-500">Замовлень</div>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-3 text-center">
+                          <div className="text-xl font-bold text-slate-900">{payers.length}</div>
+                          <div className="text-xs text-slate-500">Платників</div>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-3 text-center">
+                          <PayerStatusBadge status={payers.some(p => p.type !== "pending") ? "ok" : (payers.length > 0 ? "pending" : "missing")} />
+                        </div>
+                      </div>
+
+                      {/* MA Agreement - compact */}
+                      <div className="rounded-xl border border-purple-200 bg-purple-50/50 px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-purple-800">Рамковий договір</span>
+                          {clientMA?.exists ? (
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full",
+                              clientMA.status === 'signed' ? "bg-emerald-100 text-emerald-700" :
+                              clientMA.status === 'sent' ? "bg-blue-100 text-blue-700" :
+                              "bg-amber-100 text-amber-700"
+                            )}>
+                              {clientMA.status === 'signed' ? 'Підписано' :
+                               clientMA.status === 'sent' ? 'Відправлено' : 'Чернетка'}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400">Не створено</span>
+                          )}
+                        </div>
                         {clientMA?.exists ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <span className={cn(
-                                  "text-xs px-2 py-0.5 rounded-full",
-                                  clientMA.status === 'signed' ? "bg-emerald-100 text-emerald-700" :
-                                  clientMA.status === 'draft' ? "bg-amber-100 text-amber-700" :
-                                  clientMA.status === 'sent' ? "bg-blue-100 text-blue-700" :
-                                  "bg-slate-100 text-slate-600"
-                                )}>
-                                  {clientMA.status === 'signed' ? '✅ Підписано' :
-                                   clientMA.status === 'draft' ? '⏳ Чернетка' :
-                                   clientMA.status === 'sent' ? '📤 Відправлено' :
-                                   clientMA.status}
-                                </span>
-                                <span className="text-sm font-medium text-slate-800 ml-2">{clientMA.contract_number}</span>
-                              </div>
-                            </div>
-                            
+                          <div className="mt-2">
+                            <div className="text-sm font-medium text-slate-800">{clientMA.contract_number}</div>
                             {clientMA.valid_until && (
-                              <div className="text-xs text-slate-600">
-                                Дійсний до: {new Date(clientMA.valid_until).toLocaleDateString('uk-UA')}
-                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">до {new Date(clientMA.valid_until).toLocaleDateString('uk-UA')}</div>
                             )}
-                            
-                            <div className="flex gap-2 mt-2 flex-wrap">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs h-8"
-                                onClick={() => handlePreviewMA(clientMA.id)}
-                              >
-                                👁 Переглянути
+                            <div className="flex gap-2 mt-2">
+                              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => handlePreviewMA(clientMA.id)}>
+                                Переглянути
                               </Button>
-                              
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs h-8"
-                                onClick={() => window.open(`${BACKEND_URL}/api/agreements/${clientMA.id}/pdf`, '_blank')}
-                              >
-                                📥 PDF
+                              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => window.open(`${BACKEND_URL}/api/agreements/${clientMA.id}/pdf`, '_blank')}>
+                                PDF
                               </Button>
-                              
                               {clientMA.status === 'draft' && (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  className="text-xs h-8"
-                                  onClick={() => handleSignClientMA(clientMA.id)}
-                                >
-                                  ✍️ Підписати
+                                <Button variant="primary" size="sm" className="text-xs h-7" onClick={() => handleSignClientMA(clientMA.id)}>
+                                  Підписати
                                 </Button>
                               )}
-                              
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-xs h-8"
-                                onClick={() => handleSendMAEmail(clientMA.id)}
-                              >
-                                📧 Email
+                              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => handleSendMAEmail(clientMA.id)}>
+                                Email
                               </Button>
                             </div>
                           </div>
                         ) : (
-                          <div className="text-center py-2">
-                            <p className="text-sm text-slate-600 mb-2">Договір не створено</p>
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              onClick={handleCreateClientMA}
-                              disabled={creatingMA === client.id}
-                              className="w-full"
-                            >
-                              {creatingMA === client.id ? "Створення..." : "📋 Створити договір"}
-                            </Button>
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCreateClientMA}
+                            disabled={creatingMA === client.id}
+                            className="w-full mt-2 text-xs h-8 border-purple-200 text-purple-700 hover:bg-purple-100"
+                          >
+                            {creatingMA === client.id ? "Створення..." : "Створити договір"}
+                          </Button>
                         )}
-                      </div>
-                      
-                      {/* Payer Type */}
-                      <div className="bg-slate-50 rounded-xl p-4">
-                        <div className="text-sm font-medium text-slate-700 mb-2">💳 Тип платника</div>
-                        <div className="flex gap-2 flex-wrap">
-                          {[
-                            { value: 'individual', label: '👤 Фіз. особа' },
-                            { value: 'fop', label: '🏪 ФОП' },
-                            { value: 'fop_simple', label: '🏪 ФОП (спрощ.)' },
-                            { value: 'tov', label: '🏢 ТОВ' }
-                          ].map(type => (
-                            <span
-                              key={type.value}
-                              className={cn(
-                                "text-xs px-3 py-1.5 rounded-full cursor-pointer transition",
-                                client.payer_type === type.value
-                                  ? "bg-slate-900 text-white"
-                                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                              )}
-                              onClick={() => {
-                                // TODO: Update payer type
-                              }}
-                            >
-                              {type.label}
-                            </span>
-                          ))}
-                        </div>
-                        {client.tax_id && (
-                          <div className="mt-2 text-xs text-slate-600">
-                            ЄДРПОУ/ІПН: <span className="font-mono">{client.tax_id}</span>
-                          </div>
-                        )}
-                      </div>
-                    
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs text-slate-500">Email</label>
-                          <p className="font-medium">{client.email}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-500">Телефон</label>
-                          <p className="font-medium">{client.phone || "—"}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-500">Instagram</label>
-                          <p className="font-medium">{client.instagram || "—"}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs text-slate-500">Джерело</label>
-                          <p className="font-medium">{client.source || "rentalhub"}</p>
-                        </div>
-                        {client.company && (
-                          <div>
-                            <label className="text-xs text-slate-500">Компанія</label>
-                            <p className="font-medium">{client.company}</p>
-                          </div>
-                        )}
-                        {client.company_hint && (
-                          <div>
-                            <label className="text-xs text-slate-500">Компанія (підказка)</label>
-                            <p className="font-medium">{client.company_hint}</p>
-                          </div>
-                        )}
-                        {client.last_order_date && (
-                          <div className="col-span-2">
-                            <label className="text-xs text-slate-500">Останнє замовлення</label>
-                            <p className="font-medium">{new Date(client.last_order_date).toLocaleDateString('uk-UA')}</p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Notes Block */}
-                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <div className="text-sm font-medium text-amber-800 mb-2">Нотатки про клієнта</div>
-                        {client.notes ? (
-                          <p className="text-sm text-amber-900 whitespace-pre-wrap">{client.notes}</p>
-                        ) : (
-                          <p className="text-sm text-amber-600 italic">Нотаток немає. Натисніть "Редагувати" щоб додати.</p>
-                        )}
-                      </div>
-                      
-                      {/* Internal Notes Block */}
-                      {client.internal_notes && (
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4" data-testid="client-internal-notes-block">
-                          <div className="text-sm font-medium text-slate-700 mb-2">Внутрішні нотатки</div>
-                          <p className="text-sm text-slate-600 whitespace-pre-wrap">{client.internal_notes}</p>
-                        </div>
-                      )}
-                      
-                      <div className="pt-4 border-t border-slate-100">
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                          <div>
-                            <div className="text-2xl font-bold text-slate-900">{client.orders_count || 0}</div>
-                            <div className="text-xs text-slate-500">Замовлень</div>
-                          </div>
-                          <div>
-                            <div className="text-2xl font-bold text-slate-900">{payers.length}</div>
-                            <div className="text-xs text-slate-500">Платників</div>
-                          </div>
-                          <div>
-                            <PayerStatusBadge status={payers.some(p => p.type !== "pending") ? "ok" : (payers.length > 0 ? "pending" : "missing")} />
-                          </div>
-                        </div>
                       </div>
                     </>
                   )}
                 </div>
-              )}
 
-              {/* Payers Tab */}
-              {activeTab === "payers" && (
-                <div className="space-y-4">
+              {/* === PAYERS SECTION === */}
+              <div className="border-t border-slate-100 pt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-slate-800">Платники ({payers.length})</h4>
                   <Button
-                    variant="primary"
+                    variant="ghost"
                     size="sm"
                     onClick={() => { setEditingPayer(null); setShowPayerModal(true); }}
-                    className="w-full"
+                    data-testid="add-payer-drawer-btn"
                   >
-                    + Додати платника
+                    + Додати
                   </Button>
-
-                  {payers.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
-                      <div className="text-4xl mb-2">💳</div>
-                      <p>Немає платників</p>
-                      <p className="text-sm">Додайте платника для генерації документів</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {payers.map((payer) => (
-                        <div
-                          key={payer.id}
-                          className={cn(
-                            "p-4 rounded-xl border transition",
-                            payer.is_default
-                              ? "border-emerald-200 bg-emerald-50/50"
-                              : "border-slate-200 hover:border-slate-300"
-                          )}
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <div className="font-medium text-slate-900">{payer.display_name}</div>
-                              <div className="text-xs text-slate-500">
-                                {PAYER_TYPES.find(t => t.value === payer.type)?.label}
-                                {payer.tax_mode && payer.tax_mode !== "none" && (
-                                  <> · {TAX_MODES.find(t => t.value === payer.tax_mode)?.label}</>
-                                )}
-                              </div>
-                            </div>
-                            {payer.is_default && (
-                              <Badge kind="ok">За замовч.</Badge>
-                            )}
-                          </div>
-
-                          {payer.edrpou && (
-                            <div className="text-xs text-slate-600 mb-2">
-                              ЄДРПОУ: {payer.edrpou}
-                            </div>
-                          )}
-
-                          <div className="flex gap-2 pt-3 mt-3 border-t border-slate-100">
-                            <button
-                              onClick={() => { setEditingPayer(payer); setShowPayerModal(true); }}
-                              className="text-xs text-slate-600 hover:text-slate-900"
-                            >
-                              ✏️ Редагувати
-                            </button>
-                            {!payer.is_default && (
-                              <button
-                                onClick={() => handleSetDefaultPayer(payer.id)}
-                                className="text-xs text-emerald-600 hover:text-emerald-700"
-                              >
-                                ⭐ Зробити основним
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleUnlinkPayer(payer.id)}
-                              className="text-xs text-rose-600 hover:text-rose-700"
-                            >
-                              🗑️ Відв'язати
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              )}
 
-              {/* Orders Tab */}
-              {activeTab === "orders" && (
-                <div className="space-y-3">
-                  {orders.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400">
-                      <div className="text-4xl mb-2">📦</div>
-                      <p>Немає замовлень</p>
-                    </div>
-                  ) : (
-                    orders.map((order) => (
+                {payers.length === 0 ? (
+                  <div className="text-center py-4 text-slate-400 text-sm">
+                    Немає платників. Додайте для генерації документів.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {payers.map((payer) => (
+                      <div
+                        key={payer.id}
+                        className={cn(
+                          "px-4 py-3 rounded-xl border transition",
+                          payer.is_default
+                            ? "border-emerald-200 bg-emerald-50/50"
+                            : "border-slate-200"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-medium text-sm text-slate-900">{payer.display_name}</span>
+                            <span className="text-xs text-slate-500 ml-2">
+                              {PAYER_TYPES.find(t => t.value === payer.type)?.label}
+                            </span>
+                            {payer.edrpou && <span className="text-xs text-slate-400 ml-1 font-mono">({payer.edrpou})</span>}
+                          </div>
+                          {payer.is_default && <Badge kind="ok">Осн.</Badge>}
+                        </div>
+                        <div className="flex gap-3 mt-2">
+                          <button onClick={() => { setEditingPayer(payer); setShowPayerModal(true); }} className="text-xs text-slate-500 hover:text-slate-800">
+                            Редагувати
+                          </button>
+                          {!payer.is_default && (
+                            <button onClick={() => handleSetDefaultPayer(payer.id)} className="text-xs text-emerald-600 hover:text-emerald-700">
+                              Зробити основним
+                            </button>
+                          )}
+                          <button onClick={() => handleUnlinkPayer(payer.id)} className="text-xs text-rose-500 hover:text-rose-700">
+                            Відв'язати
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* === ORDERS SECTION === */}
+              <div className="border-t border-slate-100 pt-5">
+                <h4 className="text-sm font-semibold text-slate-800 mb-3">Замовлення ({orders.length})</h4>
+                {orders.length === 0 ? (
+                  <div className="text-center py-4 text-slate-400 text-sm">
+                    Немає замовлень
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {orders.map((order) => (
                       <div
                         key={order.order_id}
-                        className="p-3 rounded-xl border border-slate-200 hover:border-slate-300 transition"
+                        className="px-4 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 transition flex items-center justify-between"
                       >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-mono font-medium text-slate-900">
-                            #{order.order_number}
+                        <div>
+                          <span className="font-mono font-medium text-sm text-slate-900">#{order.order_number}</span>
+                          <span className="text-xs text-slate-500 ml-2">
+                            {order.rental_start_date ? new Date(order.rental_start_date).toLocaleDateString("uk-UA") : "—"}
                           </span>
+                          {order.payer_name && <span className="text-xs text-slate-400 ml-2">{order.payer_name}</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-slate-700">{order.total_price?.toLocaleString() || 0} грн</span>
                           <Badge kind={order.status === "completed" ? "ok" : "pending"}>
                             {order.status}
                           </Badge>
                         </div>
-                        <div className="text-xs text-slate-500 flex gap-3">
-                          <span>{order.rental_start_date ? new Date(order.rental_start_date).toLocaleDateString("uk-UA") : "—"}</span>
-                          <span className="font-semibold text-slate-700">₴{order.total_price?.toLocaleString() || 0}</span>
-                          {order.source && <Badge kind="info">{order.source}</Badge>}
-                        </div>
-                        {order.payer_name && (
-                          <div className="text-xs text-slate-600 mt-1">
-                            💳 {order.payer_name}
-                          </div>
-                        )}
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
           )}
         </div>
 
@@ -1325,75 +1195,102 @@ export default function ClientsTab({ onSelectClientForOrder }) {
         </div>
       </div>
 
-      {/* Clients List */}
-      <Card title={`👥 Клієнти (${filteredClients.length})`}>
+      {/* Clients Table */}
+      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        {/* Table header */}
+        <div className="grid grid-cols-[1fr_160px_100px_90px_100px] gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase tracking-wide">
+          <div>Клієнт</div>
+          <div>Телефон</div>
+          <div className="text-center">Замовл.</div>
+          <div className="text-center">Платник</div>
+          <div></div>
+        </div>
+
         {loading && !loadingTimeout ? (
           <div className="flex items-center justify-center h-32 text-slate-400">
             Завантаження...
           </div>
         ) : filteredClients.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
-            <div className="text-4xl mb-2">👥</div>
-            <p>Клієнтів не знайдено</p>
+          <div className="text-center py-12 text-slate-400">
+            <p className="text-sm">Клієнтів не знайдено</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 -mx-4">
+          <div className="divide-y divide-slate-100">
             {filteredClients.map((client) => (
               <div
                 key={client.id}
-                className="px-4 py-3 hover:bg-slate-50 cursor-pointer transition flex items-center gap-3"
+                data-testid={`client-row-${client.id}`}
+                className="grid grid-cols-[1fr_160px_100px_90px_100px] gap-2 px-4 py-2.5 hover:bg-slate-50/80 cursor-pointer transition items-center"
                 onClick={() => setSelectedClient(client)}
               >
-                {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-semibold text-sm flex-shrink-0">
-                  {(client.full_name || client.email || "?")[0].toUpperCase()}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-900 truncate flex items-center gap-1.5">
-                    {client.full_name || client.email}
+                {/* Name + badges */}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium text-slate-900 text-sm truncate">
+                      {client.full_name || client.email}
+                    </span>
                     {client.is_regular && (
-                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" title="Постійний клієнт" />
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" title="Постійний" />
                     )}
                     {client.rating > 0 && (
-                      <span className="text-xs text-amber-400 flex-shrink-0">{"&#9733;".repeat(client.rating)}</span>
+                      <span className="text-amber-400 text-xs flex-shrink-0 leading-none" data-testid={`client-stars-${client.id}`}>
+                        {Array.from({length: client.rating}, (_, i) => "\u2605").join("")}
+                      </span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-500 truncate">
+                  <div className="text-xs text-slate-400 truncate">
                     {client.email}
-                    {client.phone && <> · {client.phone}</>}
-                    {client.company && <> · {client.company}</>}
-                    {client.instagram && <> · {client.instagram}</>}
+                    {client.company && <span className="text-slate-500"> · {client.company}</span>}
                   </div>
                 </div>
 
-                {/* Stats */}
-                <div className="text-right flex-shrink-0">
-                  <div className="text-sm font-medium text-slate-700">
-                    {client.orders_count || 0} замовл.
-                  </div>
-                  <PayerStatusBadge status={getPayerStatus(client)} />
+                {/* Phone */}
+                <div className="text-sm text-slate-600 truncate">
+                  {client.phone || <span className="text-slate-300">—</span>}
                 </div>
 
-                {/* Quick action - add payer */}
-                {client.payers_count === 0 && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setQuickCreateClientId(client.id);
-                      setShowPayerModal(true);
-                    }}
-                    className="px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition flex-shrink-0"
-                  >
-                    + Платник
-                  </button>
-                )}
+                {/* Orders count */}
+                <div className="text-center text-sm font-medium text-slate-700">
+                  {client.orders_count || 0}
+                </div>
+
+                {/* Payer status */}
+                <div className="text-center">
+                  {client.payers_count > 0 ? (
+                    <span className="inline-block w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 text-xs leading-5 text-center" title="Є платник">&#10003;</span>
+                  ) : (
+                    <span className="inline-block w-5 h-5 rounded-full bg-rose-100 text-rose-500 text-xs leading-5 text-center" title="Немає платника">!</span>
+                  )}
+                </div>
+
+                {/* Quick action */}
+                <div className="text-right">
+                  {client.payers_count === 0 && (
+                    <button
+                      data-testid={`add-payer-btn-${client.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setQuickCreateClientId(client.id);
+                        setShowPayerModal(true);
+                      }}
+                      className="px-2.5 py-1 text-xs font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 border border-emerald-200 transition"
+                    >
+                      + Платник
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
-      </Card>
+        
+        {/* Footer with count */}
+        {filteredClients.length > 0 && (
+          <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
+            Показано {filteredClients.length} з {clients.length}
+          </div>
+        )}
+      </div>
 
       {/* Client Detail Drawer */}
       {selectedClient && (

@@ -1053,7 +1053,8 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 pdh.laundry_batch_id, pdh.laundry_item_id,
                 pdh.created_at, pdh.created_by,
                 lb.laundry_company, lb.status as batch_status,
-                p.image_url as product_image
+                p.image_url as product_image,
+                pdh.qty, pdh.processed_qty
             FROM product_damage_history pdh
             LEFT JOIN laundry_batches lb ON pdh.laundry_batch_id = lb.id
             LEFT JOIN products p ON pdh.product_id = p.product_id
@@ -1065,6 +1066,8 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
         pdh_product_ids = set()
         for row in result:
             pdh_product_ids.add(row[1])
+            qty = row[23] or 1
+            processed_qty = row[24] or 0
             items.append({
                 "id": row[0],
                 "product_id": row[1],
@@ -1089,6 +1092,9 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 "laundry_company": row[20],
                 "batch_status": row[21],
                 "product_image": row[22],
+                "qty": qty,
+                "processed_qty": processed_qty,
+                "remaining_qty": qty - processed_qty,
                 "source": "damage_history"
             })
         
@@ -1109,6 +1115,9 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 "sku": row[1],
                 "product_name": row[2],
                 "category": row[3],
+                "qty": row[4] or 1,
+                "processed_qty": 0,
+                "remaining_qty": row[4] or 1,
                 "order_id": None,
                 "order_number": None,
                 "damage_type": "Внутрішня обробка",

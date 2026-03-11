@@ -139,7 +139,7 @@ async def get_dashboard_overview(
                        COALESCE(discount_amount, 0) as discount_amount,
                        COALESCE(discount_percent, 0) as discount_percent
                 FROM orders 
-                WHERE status IN ('processing', 'ready_for_issue', 'issued', 'on_rent', 'shipped', 'delivered', 'returning')
+                WHERE status IN ('processing', 'ready_for_issue', 'issued', 'on_rent', 'shipped', 'delivered', 'returning', 'partial_return', 'returned')
                 AND is_archived = 0
                 ORDER BY 
                     CASE status 

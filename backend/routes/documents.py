@@ -1702,3 +1702,365 @@ async def preview_laundry_batch(batch_id: str, db: Session = Depends(get_rh_db))
     
     template = jinja_env.get_template("documents/processing_list.html")
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+
+# ============================================================
+# INVOICE PAYMENT (РАХУНОК НА ОПЛАТУ) & SERVICE ACT (АКТ НАДАННЯ ПОСЛУГ)
+# ============================================================
+
+def _number_to_text_ua(amount: float) -> str:
+    """Convert number to Ukrainian text for documents"""
+    units = ['', 'одна', 'дві', 'три', 'чотири', "п'ять", 'шість', 'сім', 'вісім', "дев'ять"]
+    teens = ['десять', 'одинадцять', 'дванадцять', 'тринадцять', 'чотирнадцять',
+             "п'ятнадцять", 'шістнадцять', 'сімнадцять', 'вісімнадцять', "дев'ятнадцять"]
+    tens = ['', 'десять', 'двадцять', 'тридцять', 'сорок', "п'ятдесят",
+            'шістдесят', 'сімдесят', 'вісімдесят', "дев'яносто"]
+    hundreds = ['', 'сто', 'двісті', 'триста', 'чотириста', "п'ятсот",
+                'шістсот', 'сімсот', 'вісімсот', "дев'ятсот"]
+    
+    int_part = int(amount)
+    kopecks = round((amount - int_part) * 100)
+    
+    if int_part == 0:
+        result = "нуль"
+    else:
+        parts = []
+        # Thousands
+        thousands = int_part // 1000
+        remainder = int_part % 1000
+        
+        if thousands > 0:
+            if thousands == 1:
+                parts.append("одна тисяча")
+            elif thousands == 2:
+                parts.append("дві тисячі")
+            elif thousands in (3, 4):
+                t_units = ['', 'одна', 'дві', 'три', 'чотири']
+                parts.append(f"{t_units[thousands]} тисячі")
+            elif 5 <= thousands <= 20:
+                t_text = []
+                if thousands >= 10:
+                    t_text.append(teens[thousands - 10] if thousands < 20 else tens[thousands // 10])
+                else:
+                    t_text.append(units[thousands] if thousands < 10 else teens[thousands - 10])
+                parts.append(f"{''.join(t_text)} тисяч")
+            else:
+                parts.append(f"{thousands} тисяч")
+        
+        if remainder > 0:
+            h = remainder // 100
+            t = (remainder % 100) // 10
+            u = remainder % 10
+            
+            if h > 0:
+                parts.append(hundreds[h])
+            
+            if t == 1:
+                parts.append(teens[u])
+            else:
+                if t > 0:
+                    parts.append(tens[t])
+                if u > 0:
+                    parts.append(units[u])
+        
+        result = ' '.join(parts)
+    
+    result = result.strip()
+    if result:
+        result = result[0].upper() + result[1:]
+    
+    # Гривень / гривня / гривні
+    last_digit = int_part % 10
+    last_two = int_part % 100
+    if last_two in (11, 12, 13, 14):
+        hrn_word = "гривень"
+    elif last_digit == 1:
+        hrn_word = "гривня"
+    elif last_digit in (2, 3, 4):
+        hrn_word = "гривні"
+    else:
+        hrn_word = "гривень"
+    
+    return f"{result} {hrn_word} {kopecks:02d} копійок"
+
+
+def _get_order_payer(db: Session, order_id: int):
+    """Get payer profile linked to the order's client (default payer)"""
+    # First check if order has a direct payer_profile_id
+    order_payer = db.execute(text("""
+        SELECT pp.id, pp.type, pp.display_name, pp.legal_name, pp.edrpou,
+               pp.iban, pp.email_for_docs, pp.phone_for_docs,
+               pp.signatory_name, pp.signatory_basis, pp.tax_mode
+        FROM orders o
+        JOIN payer_profiles pp ON pp.id = o.payer_profile_id
+        WHERE o.order_id = :order_id AND pp.is_active = TRUE
+    """), {"order_id": order_id}).fetchone()
+    
+    if order_payer:
+        return {
+            "id": order_payer[0], "type": order_payer[1],
+            "display_name": order_payer[2], "legal_name": order_payer[3],
+            "edrpou": order_payer[4], "iban": order_payer[5],
+            "email_for_docs": order_payer[6], "phone_for_docs": order_payer[7],
+            "signatory_name": order_payer[8], "signatory_basis": order_payer[9],
+            "tax_mode": order_payer[10]
+        }
+    
+    # Try via client_user_id on order
+    client_payer = db.execute(text("""
+        SELECT pp.id, pp.type, pp.display_name, pp.legal_name, pp.edrpou,
+               pp.iban, pp.email_for_docs, pp.phone_for_docs,
+               pp.signatory_name, pp.signatory_basis, pp.tax_mode
+        FROM orders o
+        JOIN client_payer_links cpl ON cpl.client_user_id = o.client_user_id AND cpl.is_default = TRUE
+        JOIN payer_profiles pp ON pp.id = cpl.payer_profile_id
+        WHERE o.order_id = :order_id AND pp.is_active = TRUE
+    """), {"order_id": order_id}).fetchone()
+    
+    if client_payer:
+        return {
+            "id": client_payer[0], "type": client_payer[1],
+            "display_name": client_payer[2], "legal_name": client_payer[3],
+            "edrpou": client_payer[4], "iban": client_payer[5],
+            "email_for_docs": client_payer[6], "phone_for_docs": client_payer[7],
+            "signatory_name": client_payer[8], "signatory_basis": client_payer[9],
+            "tax_mode": client_payer[10]
+        }
+    
+    # Fallback: match by customer_name -> client_users.full_name
+    name_payer = db.execute(text("""
+        SELECT pp.id, pp.type, pp.display_name, pp.legal_name, pp.edrpou,
+               pp.iban, pp.email_for_docs, pp.phone_for_docs,
+               pp.signatory_name, pp.signatory_basis, pp.tax_mode
+        FROM orders o
+        JOIN client_users cu ON cu.full_name COLLATE utf8mb4_unicode_ci = o.customer_name COLLATE utf8mb4_unicode_ci
+        JOIN client_payer_links cpl ON cpl.client_user_id = cu.id AND cpl.is_default = TRUE
+        JOIN payer_profiles pp ON pp.id = cpl.payer_profile_id
+        WHERE o.order_id = :order_id AND pp.is_active = TRUE
+        LIMIT 1
+    """), {"order_id": order_id}).fetchone()
+    
+    if name_payer:
+        return {
+            "id": name_payer[0], "type": name_payer[1],
+            "display_name": name_payer[2], "legal_name": name_payer[3],
+            "edrpou": name_payer[4], "iban": name_payer[5],
+            "email_for_docs": name_payer[6], "phone_for_docs": name_payer[7],
+            "signatory_name": name_payer[8], "signatory_basis": name_payer[9],
+            "tax_mode": name_payer[10]
+        }
+    
+    return None
+
+
+def _format_date_ua_long_nominative(date_val) -> str:
+    """Format date to 'DD місяця YYYY р.' for documents"""
+    if not date_val:
+        return "__ ________ 202_ р."
+    if isinstance(date_val, str):
+        try:
+            date_val = datetime.fromisoformat(date_val.replace('Z', '+00:00'))
+        except:
+            return date_val
+    months = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+              'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня']
+    return f"{date_val.day:02d} {months[date_val.month - 1]} {date_val.year} р."
+
+
+@router.get("/invoice-payment/{order_id}/preview", response_class=HTMLResponse)
+async def preview_invoice_payment(
+    order_id: int,
+    executor_type: str = Query("fop", description="fop or tov"),
+    payer_id: Optional[int] = Query(None, description="Override payer profile ID"),
+    db: Session = Depends(get_rh_db)
+):
+    """Generate HTML preview of Invoice for Payment (Рахунок на оплату)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["fop"])
+    
+    # Get payer
+    if payer_id:
+        payer_row = db.execute(text("""
+            SELECT id, type, display_name, legal_name, edrpou, iban,
+                   email_for_docs, phone_for_docs, signatory_name, signatory_basis, tax_mode
+            FROM payer_profiles WHERE id = :id AND is_active = TRUE
+        """), {"id": payer_id}).fetchone()
+        payer = {
+            "id": payer_row[0], "type": payer_row[1], "display_name": payer_row[2],
+            "legal_name": payer_row[3], "edrpou": payer_row[4], "iban": payer_row[5],
+            "email_for_docs": payer_row[6], "signatory_name": payer_row[8]
+        } if payer_row else None
+    else:
+        payer = _get_order_payer(db, order_id)
+    
+    if not payer:
+        raise HTTPException(status_code=400, detail="Не знайдено платника для замовлення. Додайте платника в картці клієнта.")
+    
+    # Calculate totals
+    total_amount = float(order[11] or 0)
+    discount = float(order[23] or 0)
+    service_fee = float(order[25] or 0)
+    grand_total = total_amount - discount + service_fee
+    if grand_total <= 0:
+        grand_total = total_amount
+    
+    # Build items for invoice (simplified: one line "Прокат декору")
+    formatted_items = []
+    if items:
+        formatted_items.append({
+            "num": 1,
+            "name": "Прокат декору",
+            "quantity": 1,
+            "unit": "послуга",
+            "price": _format_currency(grand_total),
+            "amount": _format_currency(grand_total)
+        })
+    
+    # Generate invoice number based on order
+    invoice_number = order[0]
+    
+    template_data = {
+        "invoice_number": invoice_number,
+        "invoice_date": _format_date_ua_long_nominative(datetime.now()),
+        "executor": executor,
+        "payer": payer,
+        "items": formatted_items,
+        "total_fmt": _format_currency(grand_total),
+        "total_items_count": len(formatted_items),
+        "total_text": _number_to_text_ua(grand_total),
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+    }
+    
+    template = jinja_env.get_template("documents/invoice_payment.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/invoice-payment/{order_id}/pdf")
+async def download_invoice_payment_pdf(
+    order_id: int,
+    executor_type: str = Query("fop"),
+    payer_id: Optional[int] = Query(None),
+    db: Session = Depends(get_rh_db)
+):
+    """Download Invoice for Payment as printable HTML"""
+    response = await preview_invoice_payment(order_id, executor_type, payer_id, db)
+    html_content = response.body.decode()
+    print_script = '<script>window.onload = function() { window.print(); }</script>'
+    html_content = html_content.replace('</body>', f'{print_script}</body>')
+    return HTMLResponse(content=html_content, media_type="text/html")
+
+
+@router.get("/service-act/{order_id}/preview", response_class=HTMLResponse)
+async def preview_service_act(
+    order_id: int,
+    executor_type: str = Query("fop", description="fop or tov"),
+    payer_id: Optional[int] = Query(None),
+    act_date: Optional[str] = Query(None, description="Act date in YYYY-MM-DD format"),
+    db: Session = Depends(get_rh_db)
+):
+    """Generate HTML preview of Service Act (Акт надання послуг)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["fop"])
+    
+    # Get payer
+    if payer_id:
+        payer_row = db.execute(text("""
+            SELECT id, type, display_name, legal_name, edrpou, iban,
+                   email_for_docs, phone_for_docs, signatory_name, signatory_basis, tax_mode
+            FROM payer_profiles WHERE id = :id AND is_active = TRUE
+        """), {"id": payer_id}).fetchone()
+        payer = {
+            "id": payer_row[0], "type": payer_row[1], "display_name": payer_row[2],
+            "legal_name": payer_row[3], "edrpou": payer_row[4], "iban": payer_row[5],
+            "email_for_docs": payer_row[6], "signatory_name": payer_row[8],
+            "signatory_basis": payer_row[9]
+        } if payer_row else None
+    else:
+        payer = _get_order_payer(db, order_id)
+    
+    if not payer:
+        raise HTTPException(status_code=400, detail="Не знайдено платника для замовлення. Додайте платника в картці клієнта.")
+    
+    # Calculate totals
+    total_amount = float(order[11] or 0)
+    discount = float(order[23] or 0)
+    service_fee = float(order[25] or 0)
+    grand_total = total_amount - discount + service_fee
+    if grand_total <= 0:
+        grand_total = total_amount
+    
+    # Signatory short names
+    executor_short = executor.get("short_name", executor["name"])
+    payer_short = payer.get("display_name", "")
+    # Build short name from display_name: "ФОП Мельник Олександр Анатолійович" -> "Мельник О.А."
+    parts = payer_short.replace("ФОП ", "").replace("ТОВ ", "").split()
+    if len(parts) >= 3:
+        payer_initials = f"{parts[0]} {parts[1][0]}.{parts[2][0]}."
+    elif len(parts) >= 2:
+        payer_initials = f"{parts[0]} {parts[1][0]}."
+    else:
+        payer_initials = payer_short
+    
+    # Determine act date
+    if act_date:
+        try:
+            parsed_date = datetime.fromisoformat(act_date)
+        except:
+            parsed_date = datetime.now()
+    else:
+        parsed_date = order[9] or order[7] or datetime.now()  # return_date or rental_end_date or now
+    
+    formatted_items = []
+    if items:
+        formatted_items.append({
+            "num": 1,
+            "name": "Прокат декору",
+            "quantity": 1,
+            "unit": "шт",
+            "price": _format_currency(grand_total),
+            "amount": _format_currency(grand_total)
+        })
+    
+    act_number = order[0]
+    
+    template_data = {
+        "act_number": act_number,
+        "act_date": _format_date_ua_long_nominative(parsed_date),
+        "act_date_short": _format_date_ua(parsed_date),
+        "executor": executor,
+        "payer": payer,
+        "payer_initials": payer_initials,
+        "items": formatted_items,
+        "total_fmt": _format_currency(grand_total),
+        "total_text": _number_to_text_ua(grand_total),
+        "contract_name": "Основний",
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+    }
+    
+    template = jinja_env.get_template("documents/service_act.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/service-act/{order_id}/pdf")
+async def download_service_act_pdf(
+    order_id: int,
+    executor_type: str = Query("fop"),
+    payer_id: Optional[int] = Query(None),
+    act_date: Optional[str] = Query(None),
+    db: Session = Depends(get_rh_db)
+):
+    """Download Service Act as printable HTML"""
+    response = await preview_service_act(order_id, executor_type, payer_id, act_date, db)
+    html_content = response.body.decode()
+    print_script = '<script>window.onload = function() { window.print(); }</script>'
+    html_content = html_content.replace('</body>', f'{print_script}</body>')
+    return HTMLResponse(content=html_content, media_type="text/html")

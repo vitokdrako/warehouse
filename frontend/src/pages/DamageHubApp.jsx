@@ -352,6 +352,8 @@ const QueueColumn = ({ title, icon: Icon, iconColor, queueType, items, loading, 
 
 // ============= BATCH CARD =============
 const BatchCard = ({ batch, onToggle, isOpen, onReturnItem }) => {
+  const [returnQty, setReturnQty] = useState({});
+
   const statusColors = {
     sent: 'bg-blue-50 text-blue-700 border-blue-200',
     partial_return: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -368,6 +370,17 @@ const BatchCard = ({ batch, onToggle, isOpen, onReturnItem }) => {
   const openBatchPrint = (e) => {
     e.stopPropagation();
     window.open(`${BACKEND_URL}/api/documents/laundry-batch/${batch.id}/preview`, '_blank');
+  };
+
+  const getRemaining = (item) => (item.quantity || 1) - (item.returned_quantity || 0);
+
+  const handleAccept = (e, item) => {
+    e.stopPropagation();
+    const remaining = getRemaining(item);
+    const qty = returnQty[item.id] ?? remaining;
+    if (qty < 1 || qty > remaining) return;
+    onReturnItem?.(batch.id, item, qty);
+    setReturnQty(prev => { const n = { ...prev }; delete n[item.id]; return n; });
   };
   
   return (
@@ -400,7 +413,9 @@ const BatchCard = ({ batch, onToggle, isOpen, onReturnItem }) => {
       {isOpen && batch.items?.length > 0 && (
         <div className="px-3 pb-3 space-y-1.5 border-t border-slate-100 pt-2">
           {batch.items.map(item => {
-            const isReturned = (item.returned_quantity || 0) >= (item.quantity || 1);
+            const remaining = getRemaining(item);
+            const isReturned = remaining <= 0;
+            const currentQty = returnQty[item.id] ?? remaining;
             return (
               <div key={item.id} className={`flex items-center gap-2 py-1.5 px-2 rounded-lg text-xs ${isReturned ? 'bg-emerald-50/50' : 'hover:bg-slate-50'}`}>
                 {item.product_image ? (
@@ -413,14 +428,37 @@ const BatchCard = ({ batch, onToggle, isOpen, onReturnItem }) => {
                   <div className="text-slate-500 font-mono">{item.sku} · {item.returned_quantity || 0}/{item.quantity} шт</div>
                 </div>
                 {!isReturned && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onReturnItem?.(batch.id, item); }}
-                    className="px-2 py-1 rounded-lg text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors flex-shrink-0"
-                    title="Повернути цей товар"
-                  >
-                    <Check className="w-3 h-3 inline mr-0.5" />
-                    Прийняти
-                  </button>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setReturnQty(prev => ({ ...prev, [item.id]: Math.max(1, (prev[item.id] ?? remaining) - 1) })); }}
+                        className="px-1.5 py-0.5 text-slate-500 hover:bg-slate-100 text-xs font-bold"
+                      >-</button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={remaining}
+                        value={currentQty}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => { const v = Math.max(1, Math.min(remaining, parseInt(e.target.value) || 1)); setReturnQty(prev => ({ ...prev, [item.id]: v })); }}
+                        className="w-8 text-center text-xs font-medium bg-transparent outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        data-testid={`batch-return-qty-${item.id}`}
+                      />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setReturnQty(prev => ({ ...prev, [item.id]: Math.min(remaining, (prev[item.id] ?? remaining) + 1) })); }}
+                        className="px-1.5 py-0.5 text-slate-500 hover:bg-slate-100 text-xs font-bold"
+                      >+</button>
+                    </div>
+                    <button
+                      onClick={(e) => handleAccept(e, item)}
+                      className="px-2 py-1 rounded-lg text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors"
+                      title={`Прийняти ${currentQty} з ${remaining}`}
+                      data-testid={`batch-accept-${item.id}`}
+                    >
+                      <Check className="w-3 h-3 inline mr-0.5" />
+                      Прийняти
+                    </button>
+                  </div>
                 )}
                 {isReturned && (
                   <span className="px-2 py-1 text-[10px] font-semibold text-emerald-600 bg-emerald-100 rounded-full flex-shrink-0">Повернуто</span>
@@ -692,12 +730,12 @@ export default function DamageHubApp() {
     }
   };
 
-  const handleReturnBatchItem = async (batchId, item) => {
+  const handleReturnBatchItem = async (batchId, item, qty) => {
     try {
       const res = await authFetch(`${BACKEND_URL}/api/laundry/batches/${batchId}/return-items`, {
         method: "POST",
         body: JSON.stringify([
-          { item_id: String(item.id), returned_quantity: item.quantity || 1, condition_after: "clean" }
+          { item_id: String(item.id), returned_quantity: qty, condition_after: "clean" }
         ])
       });
       if (res.ok) {

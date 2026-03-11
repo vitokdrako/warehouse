@@ -584,7 +584,7 @@ async def return_laundry_items(
             # Повернути товар на склад (розморозити)
             db.execute(text("""
                 UPDATE products 
-                SET quantity = quantity + :qty
+                SET frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - :qty, 0)
                 WHERE product_id = :product_id
             """), {
                 "qty": item_return.returned_quantity,

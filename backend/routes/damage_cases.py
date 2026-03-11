@@ -82,116 +82,69 @@ async def create_damage_case(
                 detail=f"Недостатньо товару. Доступно: {available_qty} (загалом: {current_qty}, заморожено: {frozen_qty})"
             )
         
-        # Створити damage case
+        # Створити damage case — записуємо ТІЛЬКИ в product_damage_history
         damage_id = str(uuid.uuid4())
         
-        # Генеруємо case_number (DMG-XXXX)
-        count_query = text("SELECT COUNT(*) FROM damages")
-        count = rh_db.execute(count_query).fetchone()[0]
-        case_number = f"DMG-{count + 1:04d}"
+        # Маппінг action_type → processing_type
+        action_to_processing = {
+            'repair': 'restoration',
+            'restoration': 'restoration',
+            'washing': 'wash',
+            'wash': 'wash',
+            'laundry': 'laundry',
+            'dry_cleaning': 'laundry',
+            'total_loss': 'none'
+        }
+        processing_type = action_to_processing.get(action_type, 'restoration')
         
-        # 1. Створити запис в damages
-        insert_damage = text("""
-            INSERT INTO damages (
-                id, case_number, case_status, severity, source, from_reaudit_item_id,
-                notes, created_by, created_at, updated_at
-            ) VALUES (
-                :id, :case_number, 'open', 'minor', 'reaudit', :product_id,
-                :notes, :created_by, NOW(), NOW()
-            )
-        """)
-        
-        rh_db.execute(insert_damage, {
-            'id': damage_id,
-            'case_number': case_number,
-            'product_id': str(product_id),
-            'notes': description,
-            'created_by': created_by
-        })
-        
-        # 2. Створити запис в damage_items
-        insert_item = text("""
-            INSERT INTO damage_items (
-                damage_id, product_id, name, image, qty, frozen_qty,
-                action_type, status, estimate_value, comment, created_at
+        # Створити запис в product_damage_history (єдине джерело істини)
+        rh_db.execute(text("""
+            INSERT INTO product_damage_history (
+                id, product_id, sku, product_name, category,
+                damage_type, damage_code, severity, 
+                processing_type, processing_status,
+                qty, processed_qty, estimate_value,
+                note, source, created_at, updated_at, created_by
             )
             SELECT 
-                :damage_id, :product_id, name, image_url, :qty, :frozen_qty,
-                :action_type, 'pending', :estimated_cost, :comment, NOW()
+                :id, :product_id, sku, name, category_name,
+                :damage_type, :action_type, 'minor',
+                :processing_type, :processing_status,
+                :qty, 0, :estimated_cost,
+                :notes, 'reaudit', NOW(), NOW(), :created_by
             FROM products
             WHERE product_id = :product_id
-        """)
-        
-        frozen_qty = qty if action_type in ['repair', 'restoration', 'washing'] else 0
-        
-        rh_db.execute(insert_item, {
-            'damage_id': damage_id,
-            'product_id': product_id,
-            'qty': qty,
-            'frozen_qty': frozen_qty,
-            'action_type': action_type,
-            'estimated_cost': estimated_cost,
-            'comment': description
+        """), {
+            "id": damage_id,
+            "product_id": product_id,
+            "damage_type": description or "З кабінету переобліку",
+            "action_type": action_type,
+            "processing_type": processing_type,
+            "processing_status": 'completed' if action_type == 'total_loss' else 'pending',
+            "qty": qty,
+            "estimated_cost": estimated_cost,
+            "notes": description or "Створено через кейс шкоди",
+            "created_by": created_by
         })
         
-        # 3. Оновити кількість товару
+        # Оновити кількість товару
         if action_type == 'total_loss':
-            # Повна втрата - віднімаємо від кількості
-            update_query = text("""
+            # Повна втрата — віднімаємо від кількості
+            rh_db.execute(text("""
                 UPDATE products 
                 SET quantity = quantity - :qty,
                     state = 'written_off'
                 WHERE product_id = :pid
-            """)
-            rh_db.execute(update_query, {'qty': qty, 'pid': product_id})
+            """), {'qty': qty, 'pid': product_id})
             message = f"Повна втрата: віднято {qty} од."
         else:
-            # Ремонт/Реставрація/Мийка - заморожуємо товар і оновлюємо state
-            # Маппінг action_type до state
-            action_to_state = {
-                'repair': 'on_repair',
-                'restoration': 'on_repair',
-                'washing': 'on_wash',
-                'wash': 'on_wash',
-                'laundry': 'on_laundry',
-                'dry_cleaning': 'on_laundry'
-            }
-            new_state = action_to_state.get(action_type, 'on_repair')
-            
-            update_query = text("""
+            # Ремонт/Реставрація/Мийка — заморожуємо товар
+            rh_db.execute(text("""
                 UPDATE products 
-                SET frozen_quantity = frozen_quantity + :qty,
-                    state = :new_state
+                SET frozen_quantity = frozen_quantity + :qty
                 WHERE product_id = :pid
-            """)
-            rh_db.execute(update_query, {'qty': qty, 'pid': product_id, 'new_state': new_state})
+            """), {'qty': qty, 'pid': product_id})
             message = f"{action_type.capitalize()}: заморожено {qty} од."
-            
-            # Для хімчистки - додати запис в product_damage_history щоб з'явився в черзі
-            if action_type == 'laundry':
-                try:
-                    pdh_id = str(uuid.uuid4())
-                    rh_db.execute(text("""
-                        INSERT INTO product_damage_history (
-                            id, product_id, sku, product_name, category,
-                            damage_type, processing_type, processing_status,
-                            qty, processed_qty, note, created_at, created_by
-                        )
-                        SELECT 
-                            :id, :product_id, sku, name, category_name,
-                            :damage_type, 'laundry', 'pending',
-                            :qty, 0, :notes, NOW(), 'system'
-                        FROM products
-                        WHERE product_id = :product_id
-                    """), {
-                        "id": pdh_id,
-                        "product_id": product_id,
-                        "damage_type": description or "З кабінету переобліку",
-                        "qty": qty,
-                        "notes": description or "Створено через кейс шкоди"
-                    })
-                except Exception as e:
-                    print(f"[DamageCases] Warning: Could not add to product_damage_history: {e}")
         
         rh_db.commit()
         
@@ -279,30 +232,29 @@ async def get_all_damage_cases(
     rh_db: Session = Depends(get_rh_db)
 ):
     """
-    Отримати всі кейси шкоди
+    Отримати всі кейси шкоди з product_damage_history
     """
     try:
         query = text("""
             SELECT 
-                di.id,
-                di.damage_id,
-                di.product_id,
-                di.name,
-                di.image,
-                di.action_type,
-                di.status,
-                di.qty,
-                di.frozen_qty,
-                di.estimate_value,
-                di.comment,
-                di.created_at,
-                d.case_status,
-                d.notes,
-                d.created_by,
-                d.case_number
-            FROM damage_items di
-            LEFT JOIN damages d ON di.damage_id = d.id
-            ORDER BY di.created_at DESC
+                pdh.id,
+                pdh.id as damage_id,
+                pdh.product_id,
+                pdh.product_name,
+                pdh.photo_url,
+                pdh.processing_type,
+                pdh.processing_status,
+                pdh.qty,
+                pdh.processed_qty,
+                pdh.estimate_value,
+                pdh.note,
+                pdh.created_at,
+                pdh.source,
+                pdh.created_by,
+                pdh.sku
+            FROM product_damage_history pdh
+            WHERE pdh.source = 'reaudit'
+            ORDER BY pdh.created_at DESC
         """)
         
         results = rh_db.execute(query).fetchall()
@@ -318,14 +270,14 @@ async def get_all_damage_cases(
                 'action_type': row[5],
                 'status': row[6],
                 'qty': row[7],
-                'frozen_qty': row[8],
+                'frozen_qty': row[7] - (row[8] or 0),
                 'estimate_value': float(row[9]) if row[9] else 0,
                 'comment': row[10],
                 'created_at': row[11].isoformat() if row[11] else None,
-                'case_status': row[12],
-                'notes': row[13],
-                'created_by': row[14],
-                'case_number': row[15]
+                'case_status': 'open' if row[6] not in ('completed', 'returned_to_stock') else 'closed',
+                'notes': row[10],
+                'created_by': row[13],
+                'case_number': row[14]
             })
         
         return cases

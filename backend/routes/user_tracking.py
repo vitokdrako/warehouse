@@ -273,29 +273,26 @@ async def get_order_history(
     finance_result = db.execute(text("""
         SELECT 
             ft.created_at,
-            ft.created_by_id,
-            u.firstname,
-            u.lastname,
-            ft.transaction_type,
+            ft.created_by,
+            ft.tx_type,
             ft.amount,
             ft.currency
-        FROM finance_transactions ft
-        LEFT JOIN users u ON ft.created_by_id = u.user_id
-        WHERE ft.order_id = :order_id
+        FROM fin_transactions ft
+        WHERE ft.entity_type = 'order' AND ft.entity_id = :order_id
         ORDER BY ft.created_at ASC
     """), {"order_id": order_id})
     
     for finance_row in finance_result:
         history.append({
             "action": "finance_transaction",
-            "action_label": f"Фінанси: {finance_row[4]}",
+            "action_label": f"Фінанси: {finance_row[2]}",
             "timestamp": finance_row[0].isoformat() if finance_row[0] else None,
             "user_id": finance_row[1],
-            "user_name": f"{finance_row[2] or ''} {finance_row[3] or ''}".strip() if finance_row[2] else "System",
+            "user_name": str(finance_row[1]) if finance_row[1] else "System",
             "details": {
-                "type": finance_row[4],
-                "amount": float(finance_row[5]) if finance_row[5] else 0.0,
-                "currency": finance_row[6] or "UAH"
+                "type": finance_row[2],
+                "amount": float(finance_row[3]) if finance_row[3] else 0.0,
+                "currency": finance_row[4] or "UAH"
             }
         })
     

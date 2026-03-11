@@ -743,11 +743,15 @@ async def get_order_details(
             "created_at": d_row[5].isoformat() if d_row[5] else None
         })
     
-    # Get finance transactions
+    # Get finance transactions (read from both new fin_transactions and fin_payments)
     finance_result = db.execute(text("""
-        SELECT transaction_type, amount, status, description, transaction_date
-        FROM finance_transactions
-        WHERE order_id = :order_id
+        (SELECT tx_type as transaction_type, amount, status, note as description, occurred_at as transaction_date
+         FROM fin_transactions
+         WHERE entity_type = 'order' AND entity_id = :order_id)
+        UNION ALL
+        (SELECT payment_type as transaction_type, amount, status, note as description, occurred_at as transaction_date
+         FROM fin_payments
+         WHERE order_id = :order_id)
         ORDER BY transaction_date DESC
     """), {"order_id": order_id})
     
@@ -1273,39 +1277,34 @@ async def accept_order(
         rent_transaction_id = str(uuid.uuid4())
         deposit_transaction_id = str(uuid.uuid4())
         
-        # 1. Нарахування оренди (debit - борг клієнта)
+        # 1. Нарахування оренди → fin_transactions
         db.execute(text("""
-            INSERT INTO finance_transactions (
-                id, order_id, transaction_type, amount, status, description, 
-                payment_method, notes, created_at
+            INSERT INTO fin_transactions (
+                tx_type, status, currency, amount, occurred_at, note,
+                entity_type, entity_id, created_at
             ) VALUES (
-                :id, :order_id, 'rent_accrual', :amount, 'pending', 
-                :description, NULL, :notes, NOW()
+                'rent_accrual', 'pending', 'UAH', :amount, NOW(), :note,
+                'order', :order_id, NOW()
             )
         """), {
-            "id": rent_transaction_id,
             "order_id": order_id,
             "amount": total_amount,
-            "description": f"Оренда за {rental_days} дн.",
-            "notes": f"Автоматично при прийнятті замовлення"
+            "note": f"Оренда за {rental_days} дн."
         })
         
-        # 2. Очікувана застава (тільки для відображення, НЕ реальний холд)
-        # ПРИМІТКА: Реальний deposit_hold створюється вручну менеджером через FinanceCabinet
+        # 2. Очікувана застава → fin_transactions
         db.execute(text("""
-            INSERT INTO finance_transactions (
-                id, order_id, transaction_type, amount, status, description,
-                payment_method, notes, created_at
+            INSERT INTO fin_transactions (
+                tx_type, status, currency, amount, occurred_at, note,
+                entity_type, entity_id, created_at
             ) VALUES (
-                :id, :order_id, 'deposit_expected', :amount, 'pending',
-                :description, NULL, :notes, NOW()
+                'deposit_expected', 'pending', 'UAH', :amount, NOW(), :note,
+                'order', :order_id, NOW()
             )
         """), {
-            "id": deposit_transaction_id,
             "order_id": order_id,
             "amount": deposit_amount,
-            "description": f"Очікувана застава (₴{deposit_amount})",
-            "notes": f"Розраховано як 50% від вартості втрати: ₴{total_loss_value}"
+            "note": f"Очікувана застава (₴{deposit_amount}). Розраховано як 50% від вартості втрати: ₴{total_loss_value}"
         })
     
     db.commit()
@@ -2497,50 +2496,41 @@ async def move_to_preparation(
             
             # Перевірити чи вже існують фінансові транзакції для цього замовлення
             existing_transactions = db.execute(text("""
-                SELECT COUNT(*) FROM finance_transactions 
-                WHERE order_id = :order_id 
-                AND transaction_type IN ('rent_accrual', 'deposit_hold')
+                SELECT COUNT(*) FROM fin_transactions 
+                WHERE entity_type = 'order' AND entity_id = :order_id 
+                AND tx_type IN ('rent_accrual', 'deposit_expected')
             """), {"order_id": order_id}).scalar()
             
             # Створити транзакції тільки якщо їх ще немає
             if existing_transactions == 0:
-                # Генерувати UUID для транзакцій
-                rent_transaction_id = str(uuid.uuid4())
-                deposit_transaction_id = str(uuid.uuid4())
-                
-                # 1. Нарахування оренди (debit - борг клієнта)
+                # 1. Нарахування оренди → fin_transactions
                 db.execute(text("""
-                    INSERT INTO finance_transactions (
-                        id, order_id, transaction_type, amount, status, description, 
-                        payment_method, notes, created_at
+                    INSERT INTO fin_transactions (
+                        tx_type, status, currency, amount, occurred_at, note,
+                        entity_type, entity_id, created_at
                     ) VALUES (
-                        :id, :order_id, 'rent_accrual', :amount, 'pending', 
-                        :description, NULL, :notes, NOW()
+                        'rent_accrual', 'pending', 'UAH', :amount, NOW(), :note,
+                        'order', :order_id, NOW()
                     )
                 """), {
-                    "id": rent_transaction_id,
                     "order_id": order_id,
                     "amount": total_amount,
-                    "description": f"Оренда за {rental_days} дн.",
-                    "notes": f"Автоматично при відправці на збір"
+                    "note": f"Оренда за {rental_days} дн. Автоматично при відправці на збір"
                 })
                 
-                # 2. Очікувана застава (тільки для відображення, НЕ реальний холд)
-                # ПРИМІТКА: Реальний deposit_hold створюється вручну менеджером через FinanceCabinet
+                # 2. Очікувана застава → fin_transactions
                 db.execute(text("""
-                    INSERT INTO finance_transactions (
-                        id, order_id, transaction_type, amount, status, description,
-                        payment_method, notes, created_at
+                    INSERT INTO fin_transactions (
+                        tx_type, status, currency, amount, occurred_at, note,
+                        entity_type, entity_id, created_at
                     ) VALUES (
-                        :id, :order_id, 'deposit_expected', :amount, 'pending',
-                        :description, NULL, :notes, NOW()
+                        'deposit_expected', 'pending', 'UAH', :amount, NOW(), :note,
+                        'order', :order_id, NOW()
                     )
                 """), {
-                    "id": deposit_transaction_id,
                     "order_id": order_id,
                     "amount": deposit_amount,
-                    "description": f"Очікувана застава (₴{deposit_amount})",
-                    "notes": f"Розраховано як 50% від вартості втрати: ₴{total_loss_value}. Автоматично при відправці на збір"
+                    "note": f"Очікувана застава (₴{deposit_amount}). Розраховано як 50% від вартості втрати: ₴{total_loss_value}. Автоматично при відправці на збір"
                 })
         
         # Log lifecycle з інформацією про менеджера (пріоритет: JWT токен > тіло запиту)
@@ -2883,21 +2873,18 @@ async def complete_return(
             if manager_notes:
                 description += f" | Коментар: {manager_notes}"
             
-            import uuid
-            transaction_id = str(uuid.uuid4())
             db.execute(text("""
-                INSERT INTO finance_transactions (
-                    id, order_id, transaction_type, amount, currency, 
-                    status, description, created_at
+                INSERT INTO fin_transactions (
+                    tx_type, status, currency, amount, occurred_at, note,
+                    entity_type, entity_id, created_at
                 ) VALUES (
-                    :id, :order_id, 'charge', :amount, 'UAH',
-                    'pending', :description, NOW()
+                    'charge', 'pending', 'UAH', :amount, NOW(), :note,
+                    'order', :order_id, NOW()
                 )
             """), {
-                "id": transaction_id,
                 "order_id": order_id,
                 "amount": total_fees,
-                "description": description
+                "note": description
             })
         
         db.commit()

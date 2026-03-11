@@ -48,7 +48,13 @@
   - "До сплати" тепер = вартість ордеру - знижка (чітка логіка)
   - Зміна суми автоматично перераховує відсоток і навпаки
 
+
 ## Pending Issues
+- **Estimate (Кошторис) Fix (COMPLETED)**:
+  - Fixed: `rent_before_discount = order_rent + discount_amount` → `rent_before_discount = order_rent` (total_price вже ДО знижки)
+  - Fixed: `grand_total` now = `order_rent - discount_amount + service_fee` (правильно зі знижкою)
+  - Fixed in ALL 3 document endpoints (preview, PDF, email)
+  - Before: Оренда 10,120 / Разом 8,800. After: Оренда 8,800 / Разом 7,480 ✅
 1. **Partial return cards on manager dashboard** - Fixed, USER VERIFICATION PENDING
 2. **convert-to-order endpoint unstable** (P2)
 3. **Moodboard export broken** (P2)

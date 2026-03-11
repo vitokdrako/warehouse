@@ -26,6 +26,13 @@
   - FamiliesManager.jsx updated: parallel loading, lightweight endpoint
   - All files copied to /app/clean_project/ for deployment
 
+- **Frozen Quantity Consistency Fix (P0 - COMPLETED)**:
+  - Catalog processing filters (on_wash/on_laundry/on_restoration) now query PDH directly instead of stale `products.state`
+  - Available quantity now calculated from PDH: `total - reserved - in_rent - (wash + restoration + laundry)`
+  - Before: catalog showed 2 items in laundry. After: 7 items — matches damage cabinet exactly
+  - Verified: TX9147 (105 laundry), TX8938 (15 laundry), TX9150 (24 wash + 25 laundry)
+  - Known data issue: TX8938 has on_laundry=15 > total=14 (DB data inconsistency)
+
 ## Pending Issues
 1. **Partial return cards on manager dashboard** - Fixed, USER VERIFICATION PENDING
 2. **convert-to-order endpoint unstable** (P2)

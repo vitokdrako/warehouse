@@ -309,6 +309,50 @@ export default function DamageModal({
             console.warn('[DamageModal] Failed to process loss:', lossErr)
           }
         }
+      } else {
+        // === БЕЗ ЗАПИСУ У СТАН: зберігаємо для порівняння, але пушимо у чергу ===
+        if (formData.sendTo && formData.sendTo !== 'none') {
+          const response = await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
+            product_id: item.inventory_id || item.id,
+            sku: item.sku,
+            product_name: item.name,
+            category: formData.category,
+            order_id: order?.order_id,
+            order_number: order?.order_number,
+            stage: 'compare_only',
+            damage_type: selectedKind?.label || formData.kindCode || 'Для обробки',
+            damage_code: formData.kindCode || 'compare',
+            severity: formData.severity || 'low',
+            fee: 0,
+            fee_per_item: 0,
+            qty: formData.qty,
+            photo_url: uploadedPhotoUrl || formData.photoName,
+            note: formData.note,
+            created_by: userName,
+            is_compare_only: true,
+            processing_type: formData.sendTo === 'restore' ? 'restoration' : formData.sendTo,
+            processing_status: 'pending'
+          })
+          
+          try {
+            const damageId = response.data?.id || response.data?.damage_id
+            if (damageId) {
+              const endpoint = formData.sendTo === 'wash' ? 'send-to-wash'
+                : formData.sendTo === 'restore' ? 'send-to-restoration'
+                : formData.sendTo === 'washing' ? 'send-to-washing'
+                : formData.sendTo === 'laundry' ? 'send-to-laundry'
+                : null
+              
+              if (endpoint) {
+                await axios.post(`${BACKEND_URL}/api/product-damage-history/${damageId}/${endpoint}`, {
+                  notes: formData.note || `Без запису у стан. ${order?.order_number || ''}`
+                })
+              }
+            }
+          } catch (processErr) {
+            console.warn('[DamageModal] Failed to send to processing (compare):', processErr)
+          }
+        }
       }
       // === кінець повного запису ===
       
@@ -770,7 +814,7 @@ export default function DamageModal({
               disabled={saving}
               className="rounded-full px-4 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white disabled:bg-amber-300"
             >
-              {saving ? 'Збереження...' : 'Для порівняння'}
+              {saving ? 'Збереження...' : 'Без запису у стан'}
             </button>
             <PillButton tone='green' onClick={() => handleSave(false)} disabled={saving}>
               {saving ? 'Збереження...' : 'В стан декору'}

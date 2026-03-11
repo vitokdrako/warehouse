@@ -12,13 +12,15 @@ export default function ZoneCommercialSummary({
   discountPercent = 0,
   rentalDays = 1,
   itemsCount = 0,
+  additionalServicesTotal = 0,
   onRecalculate,
 }) {
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
   
   const discountAmount = (rentAmount * discountPercent) / 100
   const rentAfterDiscount = rentAmount - discountAmount
-  const totalToPay = rentAfterDiscount + depositAmount
+  const rentWithServices = rentAfterDiscount + additionalServicesTotal
+  const totalToPay = rentWithServices + depositAmount
   
   return (
     <ZoneCard
@@ -59,12 +61,13 @@ export default function ZoneCommercialSummary({
       
       {/* Підсумок */}
       <div className="mt-4 pt-3 border-t border-slate-100 text-sm text-slate-600">
-        📦 {itemsCount} позицій • 
+        {itemsCount} позицій  
         {discountPercent > 0 
           ? ` Оренда зі знижкою: ₴${fmtUA(rentAfterDiscount)}` 
           : ` Оренда: ₴${fmtUA(rentAmount)}`
-        } • 
-        Застава: ₴{fmtUA(depositAmount)}
+        }
+        {additionalServicesTotal > 0 && ` + Послуги: ₴${fmtUA(additionalServicesTotal)}`}
+         Застава: ₴{fmtUA(depositAmount)}
       </div>
     </ZoneCard>
   )

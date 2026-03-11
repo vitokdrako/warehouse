@@ -562,7 +562,7 @@ export default function ManagerDashboard() {
                   id={`#${card.order_id}`}
                   name={card.customer_name || '—'}
                   phone={card.customer_phone || '—'}
-                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
+                  rent={`₴ ${((card.total_after_discount || card.total_rental || 0) + (card.service_fee || 0)).toFixed(0)}`}
                   deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
                   badge="preparation"
                   order={card}
@@ -607,7 +607,7 @@ export default function ManagerDashboard() {
                   id={`#${card.order_id}`}
                   name={card.customer_name || '—'}
                   phone={card.customer_phone || '—'}
-                  rent={`₴ ${(card.total_after_discount || card.total_rental || 0).toFixed(0)}`}
+                  rent={`₴ ${((card.total_after_discount || card.total_rental || 0) + (card.service_fee || 0)).toFixed(0)}`}
                   deposit={`₴ ${(card.deposit_amount || 0).toFixed(0)}`}
                   badge="ready"
                   order={card}

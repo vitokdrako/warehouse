@@ -1,48 +1,37 @@
-# RentalHub - PRD
+# RentalHub PRD
 
 ## Original Problem Statement
-Системна оптимізація RentalHub: уніфікація БД, спрощення workflow, оптимізація клієнтської бази, генерація рахунків та актів.
+Stabilize and optimize the "Damage Cabinet" system. Evolved into a large-scale system-wide optimization: unify DB tables, refactor app, simplify UI, build CRM, fix document generation, and apply all changes to live production.
 
-## Current Architecture
-- Backend: FastAPI + SQLAlchemy -> Remote MySQL (farforre_laravell - тестова БД)
-- Frontend: React + Shadcn UI
-- Deployment: Manual (clean_project/)
+## Architecture
+- Backend: FastAPI + MySQL (farforre.mysql.tools) + MongoDB
+- Frontend: React
+- External: OpenCart MySQL, SMTP email, Telegram bot
+- Production: rentalhub.farforrent.com.ua
 
-## Implemented (Session 3 - 2026-03-11)
+## Completed Work
+- Production schema sync & data migration
+- Client CRM feature (live)
+- Document generation: invoices & service acts (live)
+- Production data fixes (payer profiles, stuck items)
+- **2026-02-XX**: Released 49 textile items from мийка (washing) → completed in product_damage_history
+- **2026-02-XX**: Updated 10 textile products state from on_laundry → available in products table
 
-### Client Database Optimization (DONE)
-- Extended client_users with CRM fields (is_regular, company, rating, internal_notes, instagram)
-- Updated backend API, redesigned frontend (table layout, merged drawer)
+## Pending Issues (P2)
+- convert-to-order endpoint instability
+- Moodboard export likely broken
+- Recurring Calendar Timezone Bug
 
-### Invoice/Act Generation (DONE)
-- **Рахунок на оплату:** `/api/documents/invoice-payment/{order_id}/preview`
-- **Акт надання послуг:** `/api/documents/service-act/{order_id}/preview`
-- **Доступні типи:** `/api/documents/available-invoices/{order_id}` — динамічний список на основі payer profile
-- Auto-detection: payer_profile_id -> client_user_id -> customer_name fallback
-- Templates match standard Ukrainian accounting format
+## Upcoming Tasks (P1)
+- Post-deployment health check
+- Simplify laundry_items table/logic
+- Delete legacy route files (damages.py, audit.py)
+- Implement Monthly Cash Desk Closing
 
-### Order Integration (DONE)
-- LeftRailDocuments dynamically loads available invoice types from backend
-- Shows payer name in invoice section header
-- Shows "Додайте платника" message if no payer linked
-- Only shows relevant document types (FOP options for FOP payer, TOV for TOV)
-
-## Payer Lookup Chain
-1. orders.payer_profile_id -> payer_profiles
-2. orders.client_user_id -> client_payer_links (is_default) -> payer_profiles
-3. orders.customer_name COLLATE -> client_users.full_name -> client_payer_links -> payer_profiles
-
-## Testing Status
-- iteration_13: Client CRUD backend (18/18 PASS)
-- iteration_14: Client UI redesign (11/11 PASS)
-- iteration_15: Invoice/Act generation (24/24 PASS)
-
-## Pending Issues
-- (P1) convert-to-order instability
-- (P2) Moodboard export, Calendar timezone bug
-
-## Upcoming Tasks
-- Backfill client_user_id + payer_profile_id on historical orders
-- laundry_items simplification, legacy file deletion
-- Monthly Cash Desk Closing, "Акт повернення" template
-- CRITICAL: Migrate to production DB
+## Future/Backlog
+- Create "Акт повернення" document template
+- Real-time updates for client cabinet
+- Unify NewOrderViewWorkspace.jsx and IssueCardWorkspace.jsx
+- Full RBAC
+- Monthly Financial Report
+- HR/Ops Module

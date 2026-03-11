@@ -52,6 +52,52 @@ async def list_document_types():
         for key, value in DOC_REGISTRY.items()
     ]
 
+
+@router.get("/available-invoices/{order_id}")
+async def get_available_invoices(order_id: int, db: Session = Depends(get_rh_db)):
+    """Get available invoice/document types for an order based on its payer profile"""
+    
+    payer = _get_order_payer(db, order_id)
+    
+    result = {
+        "has_payer": payer is not None,
+        "payer": None,
+        "available_types": []
+    }
+    
+    if not payer:
+        return result
+    
+    result["payer"] = {
+        "id": payer["id"],
+        "type": payer["type"],
+        "display_name": payer["display_name"],
+        "edrpou": payer.get("edrpou"),
+        "tax_mode": payer.get("tax_mode")
+    }
+    
+    payer_type = payer["type"]  # fop, tov, individual, fop_simple
+    
+    # Always available: invoice payment and service act
+    if payer_type in ("fop", "fop_simple"):
+        result["available_types"] = [
+            {"value": "invoice_payment_fop", "label": "Рахунок на оплату (ФОП)", "endpoint": "invoice-payment", "executor_type": "fop"},
+            {"value": "service_act_fop", "label": "Акт надання послуг (ФОП)", "endpoint": "service-act", "executor_type": "fop"},
+        ]
+    elif payer_type == "tov":
+        result["available_types"] = [
+            {"value": "invoice_payment_tov", "label": "Рахунок на оплату (ТОВ)", "endpoint": "invoice-payment", "executor_type": "tov"},
+            {"value": "service_act_tov", "label": "Акт надання послуг (ТОВ)", "endpoint": "service-act", "executor_type": "tov"},
+        ]
+    else:
+        # Individual - show both FOP options (most common for rental)
+        result["available_types"] = [
+            {"value": "invoice_payment_fop", "label": "Рахунок на оплату (ФОП)", "endpoint": "invoice-payment", "executor_type": "fop"},
+            {"value": "service_act_fop", "label": "Акт надання послуг (ФОП)", "endpoint": "service-act", "executor_type": "fop"},
+        ]
+    
+    return result
+
 @router.get("/types/{entity_type}")
 async def list_documents_for_entity(entity_type: str):
     """Список документів для типу сутності (order, issue, return, damage_case)"""

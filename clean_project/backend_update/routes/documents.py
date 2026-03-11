@@ -680,6 +680,9 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
+    # Якщо відсоток 0, але є сума — розрахувати динамічно
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
+        discount_percent = round((discount_amount / order_rent) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
     
@@ -696,6 +699,16 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         None: "Самовивіз"
     }
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
+    
+    # Завантажити індивідуальні додаткові послуги
+    additional_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services 
+        WHERE order_id = :oid ORDER BY id
+    """), {"oid": order_id}).fetchall()
+    additional_services = [
+        {"name": row[0], "amount": float(row[1] or 0), "amount_fmt": _format_currency(float(row[1] or 0))}
+        for row in additional_services_raw
+    ]
     
     # Build template data matching quote.html structure
     template_data = {
@@ -735,13 +748,14 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(rent_after_discount),  # РАЗОМ ЗА ОРЕНДУ (зі знижкою)
-            "grand_total": rent_after_discount
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total": grand_total
         },
         "company": {
             "phone": "(097) 123 09 93, (093) 375 09 40",
             "email": "info@farforrent.com.ua"
         },
+        "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None  # Can be set to "ПОПЕРЕДНІЙ" or "ЗАТВЕРДЖЕНО"
     }
@@ -792,6 +806,9 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
+    # Якщо відсоток 0, але є сума — розрахувати динамічно
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
+        discount_percent = round((discount_amount / order_rent) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
     # ВАЖЛИВО: order_rent вже включає знижку
@@ -802,6 +819,16 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
     
+    # Завантажити індивідуальні додаткові послуги (PDF)
+    pdf_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services 
+        WHERE order_id = :oid ORDER BY id
+    """), {"oid": order_id}).fetchall()
+    additional_services = [
+        {"name": row[0], "amount": float(row[1] or 0), "amount_fmt": _format_currency(float(row[1] or 0))}
+        for row in pdf_services_raw
+    ]
+
     template_data = {
         "order": {
             "order_number": order[1], "customer_name": order[3],
@@ -825,10 +852,11 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(rent_after_discount),  # РАЗОМ ЗА ОРЕНДУ (зі знижкою)
-            "grand_total": rent_after_discount
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total": grand_total
         },
         "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
+        "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None,
         "auto_print": True  # Trigger print dialog
@@ -896,6 +924,9 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
+    # Якщо відсоток 0, але є сума — розрахувати динамічно
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
+        discount_percent = round((discount_amount / order_rent) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
     # ВАЖЛИВО: order_rent вже включає знижку
@@ -906,6 +937,16 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
     
+    # Завантажити індивідуальні додаткові послуги (Email)
+    email_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services 
+        WHERE order_id = :oid ORDER BY id
+    """), {"oid": order_id}).fetchall()
+    additional_services = [
+        {"name": row[0], "amount": float(row[1] or 0), "amount_fmt": _format_currency(float(row[1] or 0))}
+        for row in email_services_raw
+    ]
+
     template_data = {
         "order": {
             "order_number": order[1], "customer_name": order[3],
@@ -929,10 +970,11 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(rent_after_discount),  # РАЗОМ ЗА ОРЕНДУ (зі знижкою)
-            "grand_total": rent_after_discount
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total": grand_total
         },
         "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
+        "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None
     }

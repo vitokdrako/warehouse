@@ -14,15 +14,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
  * - Рахунки - через випадаючий список з вибором типу
  */
 
-// Типи рахунків для випадаючого списку
-const INVOICE_TYPES = [
-  { value: 'invoice_legal_fop_simple', label: 'Рахунок ФОП (спрощена)', executor: 'fop', docType: 'invoice_legal', payerType: 'fop_simple' },
-  { value: 'invoice_legal_fop_general', label: 'Рахунок ФОП (загальна)', executor: 'fop', docType: 'invoice_legal', payerType: 'fop_general' },
-  { value: 'invoice_legal_tov_simple', label: 'Рахунок ТОВ (спрощена)', executor: 'tov', docType: 'invoice_legal', payerType: 'llc_simple' },
-  { value: 'invoice_legal_tov_general', label: 'Рахунок ТОВ (загальна)', executor: 'tov', docType: 'invoice_legal', payerType: 'llc_general' },
-  { value: 'goods_invoice_fop', label: 'Видаткова накладна ФОП', executor: 'fop', docType: 'goods_invoice', payerType: 'fop_general' },
-  { value: 'goods_invoice_tov', label: 'Видаткова накладна ТОВ', executor: 'tov', docType: 'goods_invoice', payerType: 'llc_general' },
-]
+// Типи рахунків тепер завантажуються з бекенду динамічно
 
 // Документи по статусах замовлення
 const DOCS_BY_STATUS = {
@@ -89,6 +81,7 @@ export default function LeftRailDocuments({
   const [historyData, setHistoryData] = useState([])
   const [invoiceDropdownOpen, setInvoiceDropdownOpen] = useState(false)
   const [generatingInvoice, setGeneratingInvoice] = useState(false)
+  const [availableInvoices, setAvailableInvoices] = useState({ has_payer: false, payer: null, available_types: [] })
   const getToken = () => localStorage.getItem('token')
 
   // ОПТИМІЗАЦІЯ Phase 2: Використовуємо batch endpoint замість N окремих запитів
@@ -159,6 +152,15 @@ export default function LeftRailDocuments({
   useEffect(() => {
     if (orderId && orderStatus) {
       loadDocumentVersions()
+      // Load available invoice types based on payer profile
+      if (!requisitorMode && ['confirmed', 'processing', 'ready_for_issue', 'issued', 'on_rent', 'completed'].includes(orderStatus)) {
+        fetch(`${BACKEND_URL}/api/documents/available-invoices/${orderId}`, {
+          headers: { 'Authorization': `Bearer ${getToken()}` }
+        })
+          .then(r => r.json())
+          .then(data => setAvailableInvoices(data))
+          .catch(() => {})
+      }
     }
   }, [orderId, orderStatus, issueCardId])
 
@@ -484,9 +486,9 @@ export default function LeftRailDocuments({
     }
   }
 
-  // Генерація рахунку за типом
+  // Генерація рахунку/акту за типом (нові ендпоінти)
   const generateInvoice = async (invoiceType) => {
-    const inv = INVOICE_TYPES.find(t => t.value === invoiceType)
+    const inv = availableInvoices.available_types.find(t => t.value === invoiceType)
     if (!inv || !orderId) return
     
     setGeneratingInvoice(true)
@@ -494,36 +496,10 @@ export default function LeftRailDocuments({
     setError(null)
     
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${BACKEND_URL}/api/documents/generate`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({
-          doc_type: inv.docType,
-          entity_id: String(orderId),
-          options: { executor_type: inv.executor, payer_type: inv.payerType }
-        })
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        if (data.html_content) {
-          const w = window.open('', '_blank')
-          if (w) {
-            w.document.write(data.html_content)
-            w.document.close()
-          }
-        } else if (data.preview_url) {
-          window.open(`${BACKEND_URL}${data.preview_url}`, '_blank')
-        }
-        onDocumentGenerated()
-      } else {
-        const d = await res.json().catch(() => ({}))
-        setError(d.detail || 'Помилка генерації рахунку')
-      }
+      const payerId = availableInvoices.payer?.id
+      const url = `${BACKEND_URL}/api/documents/${inv.endpoint}/${orderId}/preview?executor_type=${inv.executor_type}${payerId ? `&payer_id=${payerId}` : ''}`
+      window.open(url, '_blank')
+      onDocumentGenerated()
     } catch (e) {
       setError(e.message)
     } finally {
@@ -531,8 +507,8 @@ export default function LeftRailDocuments({
     }
   }
 
-  // Чи показувати блок рахунків — для confirmed, processing, ready_for_issue, issued
-  const showInvoiceSection = !requisitorMode && ['confirmed', 'processing', 'ready_for_issue', 'issued', 'on_rent'].includes(orderStatus)
+  // Чи показувати блок рахунків — тепер перевіряємо наявність платника
+  const showInvoiceSection = !requisitorMode && ['confirmed', 'processing', 'ready_for_issue', 'issued', 'on_rent', 'completed'].includes(orderStatus)
 
   // Фільтрація документів для режиму реквізитора
   const REQUISITOR_DOCS = {
@@ -703,37 +679,48 @@ export default function LeftRailDocuments({
                     <Receipt className="w-4 h-4 text-amber-600" />
                     <span className="text-sm font-medium text-slate-800">Рахунки</span>
                   </div>
-                </div>
-                
-                <div className="relative">
-                  <button
-                    onClick={() => setInvoiceDropdownOpen(!invoiceDropdownOpen)}
-                    disabled={generatingInvoice}
-                    className="w-full flex items-center justify-between px-3 py-2 text-xs bg-white border border-amber-300 rounded-lg hover:bg-amber-50 transition-colors"
-                    data-testid="invoice-dropdown-btn"
-                  >
-                    <span className="text-slate-700">
-                      {generatingInvoice ? 'Генерую...' : 'Виставити рахунок...'}
+                  {availableInvoices.payer && (
+                    <span className="text-xs text-slate-500 truncate max-w-[180px]" title={availableInvoices.payer.display_name}>
+                      {availableInvoices.payer.display_name}
                     </span>
-                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${invoiceDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  {invoiceDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-30 overflow-hidden" data-testid="invoice-dropdown-list">
-                      {INVOICE_TYPES.map(inv => (
-                        <button
-                          key={inv.value}
-                          onClick={() => generateInvoice(inv.value)}
-                          className="w-full px-3 py-2.5 text-left text-xs hover:bg-amber-50 transition-colors border-b border-slate-100 last:border-0 flex items-center gap-2"
-                          data-testid={`invoice-type-${inv.value}`}
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                          <span className="text-slate-700">{inv.label}</span>
-                        </button>
-                      ))}
-                    </div>
                   )}
                 </div>
+                
+                {!availableInvoices.has_payer ? (
+                  <div className="text-xs text-slate-500 py-2 text-center">
+                    Платника не знайдено. Додайте платника в картці клієнта.
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <button
+                      onClick={() => setInvoiceDropdownOpen(!invoiceDropdownOpen)}
+                      disabled={generatingInvoice}
+                      className="w-full flex items-center justify-between px-3 py-2 text-xs bg-white border border-amber-300 rounded-lg hover:bg-amber-50 transition-colors"
+                      data-testid="invoice-dropdown-btn"
+                    >
+                      <span className="text-slate-700">
+                        {generatingInvoice ? 'Генерую...' : 'Виставити рахунок...'}
+                      </span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${invoiceDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {invoiceDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-30 overflow-hidden" data-testid="invoice-dropdown-list">
+                        {availableInvoices.available_types.map(inv => (
+                          <button
+                            key={inv.value}
+                            onClick={() => generateInvoice(inv.value)}
+                            className="w-full px-3 py-2.5 text-left text-xs hover:bg-amber-50 transition-colors border-b border-slate-100 last:border-0 flex items-center gap-2"
+                            data-testid={`invoice-type-${inv.value}`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                            <span className="text-slate-700">{inv.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

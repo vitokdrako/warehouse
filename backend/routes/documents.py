@@ -2056,14 +2056,14 @@ async def preview_service_act(
     else:
         payer_initials = payer_short
     
-    # Determine act date
+    # Determine act date: rental start date (видача)
     if act_date:
         try:
             parsed_date = datetime.fromisoformat(act_date)
         except:
             parsed_date = datetime.now()
     else:
-        parsed_date = order[9] or order[7] or datetime.now()  # return_date or rental_end_date or now
+        parsed_date = order[6] or order[7] or datetime.now()  # rental_start_date or rental_end_date or now
     
     formatted_items = []
     if items:

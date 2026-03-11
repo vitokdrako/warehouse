@@ -113,6 +113,7 @@ export default function NewOrderClean() {
     return {
       totalRent,
       discountAmount,
+      totalDiscount: discountAmount,
       rentAfterDiscount,
       estimatedDeposit,
       itemsCount: items.filter(i => i.name).length

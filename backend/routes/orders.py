@@ -588,12 +588,15 @@ async def get_order_details(
     discount_percent_db = float(row[20]) if row[20] else 0
     
     # Обчислити відсоток якщо він не збережений, але є discount_amount
+    # total_price = сума товарів (ДО знижки)
     if discount_percent_db == 0 and discount_amount > 0 and total_price > 0:
-        # total_price вже зі знижкою, тому original = total_price + discount_amount
-        original_price = total_price + discount_amount
-        discount_percent_db = (discount_amount / original_price) * 100
+        discount_percent_db = (discount_amount / total_price) * 100
     
-    order["discount_amount"] = discount_amount
+    # Якщо є відсоток, але немає суми — порахувати суму
+    if discount_percent_db > 0 and discount_amount == 0 and total_price > 0:
+        discount_amount = total_price * discount_percent_db / 100
+    
+    order["discount_amount"] = round(discount_amount, 2)
     order["manager_id"] = row[16]
     order["issue_time"] = row[17] or "11:30–12:00"
     order["return_time"] = row[18] or "до 17:00"
@@ -603,6 +606,8 @@ async def get_order_details(
     order["service_fee"] = float(row[21]) if row[21] else 0
     order["service_fee_name"] = row[22] or ""
     order["client_notes"] = row[23] if len(row) > 23 else None  # Нотатки про клієнта
+    # Після знижки — динамічний розрахунок
+    order["total_after_discount"] = round(max(0, total_price - discount_amount), 2)
     
     # Завантажити items
     items_result = db.execute(text("""
@@ -806,12 +811,13 @@ async def update_order(
         'rental_start_date', 'rental_end_date', 'issue_date', 'return_date', 
         'issue_time', 'return_time', 'status', 
         'total_price', 'deposit_amount', 'total_loss_value', 'rental_days', 'notes',
-        'discount', 'manager_comment', 'manager_id', 'service_fee', 'service_fee_name'
+        'discount', 'discount_amount', 'manager_comment', 'manager_id', 'service_fee', 'service_fee_name'
     ]
     
-    # Маппінг полів frontend -> database (якщо назви різні)
+    # Маппінг полів frontend -> database
     field_mapping = {
-        'discount': 'discount_amount',  # frontend discount -> db discount_amount
+        'discount': 'discount_percent',      # frontend discount (%) -> db discount_percent
+        'discount_amount': 'discount_amount', # frontend discount_amount (грн) -> db discount_amount
     }
     
     for field in allowed_fields:

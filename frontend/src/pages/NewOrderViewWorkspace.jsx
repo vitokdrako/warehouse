@@ -387,20 +387,23 @@ export default function NewOrderViewWorkspace() {
       return sum + (deposit * qty)
     }, 0)
     
-    const discountAmount = (totalRent * discount) / 100
-    const rentAfterDiscount = totalRent - discountAmount
+    const discountCalcAmount = discountAmount > 0 
+      ? discountAmount  // Фіксована сума має пріоритет
+      : (totalRent * discount) / 100  // Інакше рахуємо з відсотків
+    const rentAfterDiscount = totalRent - discountCalcAmount
     // Загальна оренда з урахуванням додаткових послуг (мінімальне замовлення тощо)
     const rentWithServiceFee = rentAfterDiscount + (serviceFee || 0)
     
     return {
       totalRent,
       totalDeposit,
-      discountAmount,
+      discountAmount: discountCalcAmount,
+      totalDiscount: discountCalcAmount,
       rentAfterDiscount,
       rentWithServiceFee,
       itemsCount: items.length
     }
-  }, [items, rentalDays, discount, serviceFee])
+  }, [items, rentalDays, discount, discountAmount, serviceFee])
   
   // === ПОШУК ТОВАРІВ ===
   const handleSearch = async (query) => {
@@ -544,8 +547,8 @@ export default function NewOrderViewWorkspace() {
         manager_id: managerId,
         service_fee: serviceFee, // Додаткова послуга - сума
         service_fee_name: serviceFeeName, // Додаткова послуга - назва
-        // Фінансові дані - ДЖЕРЕЛО ПРАВДИ
-        total_price: calculations.rentAfterDiscount + additionalServicesTotal,
+        // Фінансові дані - total_price = сума товарів ДО знижки
+        total_price: calculations.totalRent + additionalServicesTotal,
         deposit_amount: calculations.totalDeposit,
         total_loss_value: calculations.totalDeposit
       })
@@ -838,7 +841,7 @@ export default function NewOrderViewWorkspace() {
             orderId={orderId}
             rentAmount={calculations.rentAfterDiscount}
             depositAmount={calculations.totalDeposit}
-            discountPercent={order?.discount_percent}
+            discountPercent={discount}
             discountAmount={calculations.totalDiscount}
             rentBeforeDiscount={calculations.totalRent}
             serviceFee={order?.service_fee || 0}
@@ -903,7 +906,7 @@ export default function NewOrderViewWorkspace() {
         serviceFeeName={serviceFeeName}
         totalBeforeDiscount={items.reduce((sum, item) => sum + (item.rental_price * item.qty * rentalDays), 0)}
         totalRent={(() => {
-          const baseRent = order?.total_after_discount || order?.total_rental || calculations.rentAfterDiscount || 0;
+          const baseRent = calculations.rentAfterDiscount || 0;
           return baseRent + additionalServicesTotal;
         })()}
         totalDeposit={order?.total_deposit || order?.deposit_amount || calculations.totalDeposit || 0}

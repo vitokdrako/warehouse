@@ -42,6 +42,12 @@
   - Verified: TX9147 (105 laundry), TX8938 (15 laundry), TX9150 (24 wash + 25 laundry)
   - Known data issue: TX8938 has on_laundry=15 > total=14 (DB data inconsistency)
 
+- **Discount UI Redesign (COMPLETED)**:
+  - "Оренда" → "Вартість ордеру" в LeftRailFinance
+  - Блок знижки → простий рядок з двома полями (сума + відсоток) та кнопкою збереження
+  - "До сплати" тепер = вартість ордеру - знижка (чітка логіка)
+  - Зміна суми автоматично перераховує відсоток і навпаки
+
 ## Pending Issues
 1. **Partial return cards on manager dashboard** - Fixed, USER VERIFICATION PENDING
 2. **convert-to-order endpoint unstable** (P2)

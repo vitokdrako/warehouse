@@ -25,23 +25,35 @@ class ClientCreate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     company_hint: Optional[str] = None
+    company: Optional[str] = None
     notes: Optional[str] = None
-    preferred_contact: Optional[str] = None  # telegram/viber/whatsapp/email/phone
+    preferred_contact: Optional[str] = None
     source: Optional[str] = "rentalhub"
-    payer_type: Optional[str] = "individual"  # individual, fop, fop_simple, tov
-    tax_id: Optional[str] = None  # ЄДРПОУ / ІПН
+    payer_type: Optional[str] = "individual"
+    tax_id: Optional[str] = None
+    is_regular: Optional[bool] = False
+    rating: Optional[int] = 0
+    rating_labels: Optional[str] = None
+    internal_notes: Optional[str] = None
+    instagram: Optional[str] = None
 
 class ClientUpdate(BaseModel):
     full_name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[str] = None
     company_hint: Optional[str] = None
+    company: Optional[str] = None
     notes: Optional[str] = None
     preferred_contact: Optional[str] = None
     is_active: Optional[bool] = None
     payer_type: Optional[str] = None
     tax_id: Optional[str] = None
-    bank_details: Optional[dict] = None  # {bank_name, iban, mfo}
+    bank_details: Optional[dict] = None
+    is_regular: Optional[bool] = None
+    rating: Optional[int] = None
+    rating_labels: Optional[str] = None
+    internal_notes: Optional[str] = None
+    instagram: Optional[str] = None
 
 class ClientResponse(BaseModel):
     id: int
@@ -50,16 +62,24 @@ class ClientResponse(BaseModel):
     full_name: Optional[str]
     phone: Optional[str]
     company_hint: Optional[str]
+    company: Optional[str] = None
     source: Optional[str]
     notes: Optional[str]
     preferred_contact: Optional[str]
     is_active: bool
     created_at: Optional[str]
     updated_at: Optional[str]
-    # Нові поля платника
     payer_type: Optional[str] = "individual"
     tax_id: Optional[str] = None
     bank_details: Optional[dict] = None
+    # Нові поля
+    is_regular: Optional[bool] = False
+    rating: Optional[int] = 0
+    rating_labels: Optional[str] = None
+    internal_notes: Optional[str] = None
+    instagram: Optional[str] = None
+    total_revenue: Optional[float] = 0
+    last_order_date: Optional[str] = None
     # MA info
     has_agreement: Optional[bool] = False
     agreement_status: Optional[str] = None
@@ -96,7 +116,9 @@ async def list_clients(
             COUNT(DISTINCT cpl.payer_profile_id) as payers_count,
             (SELECT payer_profile_id FROM client_payer_links 
              WHERE client_user_id = c.id AND is_default = TRUE LIMIT 1) as default_payer_id,
-            ma.id as ma_id, ma.contract_number as ma_number, ma.status as ma_status
+            ma.id as ma_id, ma.contract_number as ma_number, ma.status as ma_status,
+            c.is_regular, c.company, c.rating, c.rating_labels, c.internal_notes,
+            c.total_revenue, c.last_order_date, c.instagram
         FROM client_users c
         LEFT JOIN orders o ON o.client_user_id = c.id
         LEFT JOIN client_payer_links cpl ON cpl.client_user_id = c.id
@@ -112,7 +134,9 @@ async def list_clients(
             c.email LIKE :search OR 
             c.full_name LIKE :search OR 
             c.phone LIKE :search OR
-            c.company_hint LIKE :search
+            c.company_hint LIKE :search OR
+            c.company LIKE :search OR
+            c.instagram LIKE :search
         )"""
         params["search"] = f"%{search}%"
     
@@ -157,7 +181,15 @@ async def list_clients(
             "default_payer_id": row[17],
             "has_agreement": bool(row[18]),
             "agreement_number": row[19],
-            "agreement_status": row[20]
+            "agreement_status": row[20],
+            "is_regular": bool(row[21]) if row[21] is not None else False,
+            "company": row[22],
+            "rating": row[23] or 0,
+            "rating_labels": row[24],
+            "internal_notes": row[25],
+            "total_revenue": float(row[26]) if row[26] else 0,
+            "last_order_date": row[27].isoformat() if row[27] else None,
+            "instagram": row[28]
         })
     
     # Фільтр has_payer після агрегації
@@ -259,7 +291,10 @@ async def get_client(client_id: int, db: Session = Depends(get_rh_db)):
         SELECT 
             c.id, c.email, c.email_normalized, c.full_name, c.phone,
             c.company_hint, c.source, c.notes, c.preferred_contact,
-            c.is_active, c.created_at, c.updated_at
+            c.is_active, c.created_at, c.updated_at,
+            c.payer_type, c.tax_id, c.is_regular, c.company,
+            c.rating, c.rating_labels, c.internal_notes,
+            c.total_revenue, c.last_order_date, c.instagram
         FROM client_users c
         WHERE c.id = :id
     """), {"id": client_id})
@@ -280,7 +315,17 @@ async def get_client(client_id: int, db: Session = Depends(get_rh_db)):
         "preferred_contact": row[8],
         "is_active": bool(row[9]),
         "created_at": row[10].isoformat() if row[10] else None,
-        "updated_at": row[11].isoformat() if row[11] else None
+        "updated_at": row[11].isoformat() if row[11] else None,
+        "payer_type": row[12] or "individual",
+        "tax_id": row[13],
+        "is_regular": bool(row[14]) if row[14] is not None else False,
+        "company": row[15],
+        "rating": row[16] or 0,
+        "rating_labels": row[17],
+        "internal_notes": row[18],
+        "total_revenue": float(row[19]) if row[19] else 0,
+        "last_order_date": row[20].isoformat() if row[20] else None,
+        "instagram": row[21]
     }
     
     # Отримати платників клієнта
@@ -365,18 +410,26 @@ async def create_client(data: ClientCreate, db: Session = Depends(get_rh_db)):
     
     db.execute(text("""
         INSERT INTO client_users 
-        (email, email_normalized, full_name, phone, company_hint, notes, preferred_contact, source)
+        (email, email_normalized, full_name, phone, company_hint, company, notes, 
+         preferred_contact, source, is_regular, rating, rating_labels, internal_notes, instagram)
         VALUES 
-        (:email, :email_norm, :name, :phone, :company, :notes, :contact, :source)
+        (:email, :email_norm, :name, :phone, :company_hint, :company, :notes, 
+         :contact, :source, :is_regular, :rating, :rating_labels, :internal_notes, :instagram)
     """), {
         "email": data.email,
         "email_norm": email_normalized,
         "name": data.full_name,
         "phone": data.phone,
-        "company": data.company_hint,
+        "company_hint": data.company_hint,
+        "company": data.company,
         "notes": data.notes,
         "contact": data.preferred_contact,
-        "source": data.source or "rentalhub"
+        "source": data.source or "rentalhub",
+        "is_regular": data.is_regular or False,
+        "rating": data.rating or 0,
+        "rating_labels": data.rating_labels,
+        "internal_notes": data.internal_notes,
+        "instagram": data.instagram
     })
     db.commit()
     
@@ -429,11 +482,29 @@ async def update_client(client_id: int, data: ClientUpdate, db: Session = Depend
     if data.email is not None:
         updates.append("email = :email")
         params["email"] = data.email
-        # Оновити також нормалізований email
         updates.append("email_normalized = :email_normalized")
         params["email_normalized"] = data.email.lower().strip() if data.email else None
+    if data.is_regular is not None:
+        updates.append("is_regular = :is_regular")
+        params["is_regular"] = data.is_regular
+    if data.company is not None:
+        updates.append("company = :company")
+        params["company"] = data.company if data.company else None
+    if data.rating is not None:
+        updates.append("rating = :rating")
+        params["rating"] = data.rating
+    if data.rating_labels is not None:
+        updates.append("rating_labels = :rating_labels")
+        params["rating_labels"] = data.rating_labels if data.rating_labels else None
+    if data.internal_notes is not None:
+        updates.append("internal_notes = :internal_notes")
+        params["internal_notes"] = data.internal_notes if data.internal_notes else None
+    if data.instagram is not None:
+        updates.append("instagram = :instagram")
+        params["instagram"] = data.instagram if data.instagram else None
     
     if updates:
+        updates.append("updated_at = NOW()")
         sql = f"UPDATE client_users SET {', '.join(updates)} WHERE id = :id"
         db.execute(text(sql), params)
         db.commit()

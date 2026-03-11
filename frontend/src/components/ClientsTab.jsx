@@ -371,9 +371,14 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
     phone: '',
     email: '',
     company_hint: '',
+    company: '',
     notes: '',
     payer_type: '',
-    tax_id: ''
+    tax_id: '',
+    is_regular: false,
+    rating: 0,
+    internal_notes: '',
+    instagram: ''
   });
   const [savingClient, setSavingClient] = useState(false);
   
@@ -390,9 +395,14 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
         phone: client.phone || '',
         email: client.email || '',
         company_hint: client.company_hint || '',
+        company: client.company || '',
         notes: client.notes || '',
         payer_type: client.payer_type || '',
-        tax_id: client.tax_id || ''
+        tax_id: client.tax_id || '',
+        is_regular: client.is_regular || false,
+        rating: client.rating || 0,
+        internal_notes: client.internal_notes || '',
+        instagram: client.instagram || ''
       });
     }
   }, [client?.id]);
@@ -408,9 +418,14 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
           phone: editForm.phone,
           email: editForm.email,
           company_hint: editForm.company_hint,
+          company: editForm.company,
           notes: editForm.notes,
           payer_type: editForm.payer_type || null,
-          tax_id: editForm.tax_id || null
+          tax_id: editForm.tax_id || null,
+          is_regular: editForm.is_regular,
+          rating: editForm.rating,
+          internal_notes: editForm.internal_notes || null,
+          instagram: editForm.instagram || null
         })
       });
       if (res.ok) {
@@ -457,6 +472,36 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
       if (detailRes.ok) {
         const data = await detailRes.json();
         setOrders(data.recent_orders || []);
+        // Merge new CRM fields from detail response into local client state
+        Object.assign(client, {
+          is_regular: data.is_regular,
+          company: data.company,
+          rating: data.rating,
+          rating_labels: data.rating_labels,
+          internal_notes: data.internal_notes,
+          instagram: data.instagram,
+          total_revenue: data.total_revenue,
+          last_order_date: data.last_order_date,
+          payer_type: data.payer_type,
+          tax_id: data.tax_id,
+          notes: data.notes
+        });
+        // Update edit form too
+        setEditForm(prev => ({
+          ...prev,
+          is_regular: data.is_regular || false,
+          company: data.company || '',
+          rating: data.rating || 0,
+          internal_notes: data.internal_notes || '',
+          instagram: data.instagram || '',
+          notes: data.notes || '',
+          full_name: data.full_name || prev.full_name,
+          phone: data.phone || prev.phone,
+          email: data.email || prev.email,
+          company_hint: data.company_hint || '',
+          payer_type: data.payer_type || '',
+          tax_id: data.tax_id || ''
+        }));
       }
     } catch (err) {
       console.error("Error loading client data:", err);
@@ -636,15 +681,19 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                       size="sm"
                       onClick={() => {
                         if (isEditingClient) {
-                          // Cancel editing - reset form
                           setEditForm({
                             full_name: client.full_name || client.name || '',
                             phone: client.phone || '',
                             email: client.email || '',
                             company_hint: client.company_hint || '',
+                            company: client.company || '',
                             notes: client.notes || '',
                             payer_type: client.payer_type || '',
-                            tax_id: client.tax_id || ''
+                            tax_id: client.tax_id || '',
+                            is_regular: client.is_regular || false,
+                            rating: client.rating || 0,
+                            internal_notes: client.internal_notes || '',
+                            instagram: client.instagram || ''
                           });
                         }
                         setIsEditingClient(!isEditingClient);
@@ -657,8 +706,36 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                   {/* Edit Form or View Mode */}
                   {isEditingClient ? (
                     <div className="space-y-4 bg-blue-50 border border-blue-100 rounded-xl p-4">
-                      <div className="text-sm font-medium text-blue-800 mb-2">📝 Редагування клієнта</div>
+                      <div className="text-sm font-medium text-blue-800 mb-2">Редагування клієнта</div>
                       
+                      {/* Regular client toggle */}
+                      <div className="flex items-center gap-3 bg-white rounded-lg p-3 border border-blue-100">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={editForm.is_regular}
+                            onChange={(e) => setEditForm({...editForm, is_regular: e.target.checked})}
+                            className="w-4 h-4 rounded border-slate-300"
+                            data-testid="client-is-regular-checkbox"
+                          />
+                          <span className="text-sm font-medium text-slate-700">Постійний клієнт</span>
+                        </label>
+                        <div className="ml-auto flex items-center gap-1">
+                          <span className="text-xs text-slate-500">Рейтинг:</span>
+                          {[1,2,3,4,5].map(star => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setEditForm({...editForm, rating: editForm.rating === star ? 0 : star})}
+                              className={cn("text-lg transition", star <= editForm.rating ? "text-amber-400" : "text-slate-300 hover:text-amber-200")}
+                              data-testid={`client-rating-star-${star}`}
+                            >
+                              &#9733;
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="text-xs text-slate-600 block mb-1">Ім'я *</label>
@@ -668,6 +745,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
                             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
                             placeholder="ПІБ клієнта"
+                            data-testid="client-edit-name"
                           />
                         </div>
                         <div>
@@ -678,6 +756,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
                             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
                             placeholder="+380..."
+                            data-testid="client-edit-phone"
                           />
                         </div>
                         <div>
@@ -688,16 +767,40 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             onChange={(e) => setEditForm({...editForm, email: e.target.value})}
                             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
                             placeholder="email@example.com"
+                            data-testid="client-edit-email"
                           />
                         </div>
                         <div>
-                          <label className="text-xs text-slate-600 block mb-1">Компанія</label>
+                          <label className="text-xs text-slate-600 block mb-1">Instagram</label>
+                          <input
+                            type="text"
+                            value={editForm.instagram}
+                            onChange={(e) => setEditForm({...editForm, instagram: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            placeholder="@username"
+                            data-testid="client-edit-instagram"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-600 block mb-1">Компанія (офіційна)</label>
+                          <input
+                            type="text"
+                            value={editForm.company}
+                            onChange={(e) => setEditForm({...editForm, company: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            placeholder="ТОВ / ФОП назва"
+                            data-testid="client-edit-company"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-600 block mb-1">Компанія (підказка)</label>
                           <input
                             type="text"
                             value={editForm.company_hint}
                             onChange={(e) => setEditForm({...editForm, company_hint: e.target.value})}
                             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
-                            placeholder="Назва компанії"
+                            placeholder="Декор-студія Квіти"
+                            data-testid="client-edit-company-hint"
                           />
                         </div>
                         <div>
@@ -708,6 +811,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             onChange={(e) => setEditForm({...editForm, tax_id: e.target.value})}
                             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm font-mono"
                             placeholder="12345678"
+                            data-testid="client-edit-tax-id"
                           />
                         </div>
                         <div>
@@ -716,6 +820,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             value={editForm.payer_type}
                             onChange={(e) => setEditForm({...editForm, payer_type: e.target.value})}
                             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm"
+                            data-testid="client-edit-payer-type"
                           >
                             <option value="">Не вказано</option>
                             <option value="individual">Фіз. особа</option>
@@ -731,8 +836,20 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                         <textarea
                           value={editForm.notes}
                           onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
-                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm min-h-[100px]"
-                          placeholder="Особливості клієнта, важливі примітки..."
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm min-h-[60px]"
+                          placeholder="Особливості клієнта..."
+                          data-testid="client-edit-notes"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="text-xs text-slate-600 block mb-1">Внутрішні нотатки (тільки для менеджерів)</label>
+                        <textarea
+                          value={editForm.internal_notes}
+                          onChange={(e) => setEditForm({...editForm, internal_notes: e.target.value})}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm min-h-[60px]"
+                          placeholder="VIP, складний клієнт, потребує додаткової уваги..."
+                          data-testid="client-edit-internal-notes"
                         />
                       </div>
                       
@@ -741,15 +858,39 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                         onClick={handleSaveClient}
                         disabled={savingClient || !editForm.full_name || !editForm.phone}
                         className="w-full"
+                        data-testid="client-save-btn"
                       >
-                        {savingClient ? "Збереження..." : "💾 Зберегти зміни"}
+                        {savingClient ? "Збереження..." : "Зберегти зміни"}
                       </Button>
                     </div>
                   ) : (
                     <>
+                      {/* Regular client & Rating badge */}
+                      {(client.is_regular || client.rating > 0) && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {client.is_regular && (
+                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" data-testid="client-regular-badge">
+                              Постійний клієнт
+                            </span>
+                          )}
+                          {client.rating > 0 && (
+                            <span className="inline-flex items-center gap-0.5 text-sm" data-testid="client-rating-display">
+                              {[1,2,3,4,5].map(s => (
+                                <span key={s} className={s <= client.rating ? "text-amber-400" : "text-slate-200"}>&#9733;</span>
+                              ))}
+                            </span>
+                          )}
+                          {client.total_revenue > 0 && (
+                            <span className="text-xs text-slate-500 ml-auto" data-testid="client-revenue">
+                              {client.total_revenue.toLocaleString('uk-UA')} грн
+                            </span>
+                          )}
+                        </div>
+                      )}
+
                       {/* Client MA Block */}
                       <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-4">
-                        <div className="text-sm font-medium text-purple-800 mb-2">📋 Рамковий договір</div>
+                        <div className="text-sm font-medium text-purple-800 mb-2">Рамковий договір</div>
                         
                         {clientMA?.exists ? (
                           <div className="space-y-2">
@@ -876,24 +1017,50 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                           <p className="font-medium">{client.phone || "—"}</p>
                         </div>
                         <div>
+                          <label className="text-xs text-slate-500">Instagram</label>
+                          <p className="font-medium">{client.instagram || "—"}</p>
+                        </div>
+                        <div>
                           <label className="text-xs text-slate-500">Джерело</label>
                           <p className="font-medium">{client.source || "rentalhub"}</p>
                         </div>
-                        <div>
-                          <label className="text-xs text-slate-500">Компанія (підказка)</label>
-                          <p className="font-medium">{client.company_hint || "—"}</p>
-                        </div>
+                        {client.company && (
+                          <div>
+                            <label className="text-xs text-slate-500">Компанія</label>
+                            <p className="font-medium">{client.company}</p>
+                          </div>
+                        )}
+                        {client.company_hint && (
+                          <div>
+                            <label className="text-xs text-slate-500">Компанія (підказка)</label>
+                            <p className="font-medium">{client.company_hint}</p>
+                          </div>
+                        )}
+                        {client.last_order_date && (
+                          <div className="col-span-2">
+                            <label className="text-xs text-slate-500">Останнє замовлення</label>
+                            <p className="font-medium">{new Date(client.last_order_date).toLocaleDateString('uk-UA')}</p>
+                          </div>
+                        )}
                       </div>
                       
-                      {/* Notes Block - Always visible */}
+                      {/* Notes Block */}
                       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                        <div className="text-sm font-medium text-amber-800 mb-2">📝 Нотатки про клієнта</div>
+                        <div className="text-sm font-medium text-amber-800 mb-2">Нотатки про клієнта</div>
                         {client.notes ? (
                           <p className="text-sm text-amber-900 whitespace-pre-wrap">{client.notes}</p>
                         ) : (
                           <p className="text-sm text-amber-600 italic">Нотаток немає. Натисніть "Редагувати" щоб додати.</p>
                         )}
                       </div>
+                      
+                      {/* Internal Notes Block */}
+                      {client.internal_notes && (
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4" data-testid="client-internal-notes-block">
+                          <div className="text-sm font-medium text-slate-700 mb-2">Внутрішні нотатки</div>
+                          <p className="text-sm text-slate-600 whitespace-pre-wrap">{client.internal_notes}</p>
+                        </div>
+                      )}
                       
                       <div className="pt-4 border-t border-slate-100">
                         <div className="grid grid-cols-3 gap-4 text-center">
@@ -1090,6 +1257,7 @@ export default function ClientsTab({ onSelectClientForOrder }) {
   }, [loadClients]);
 
   const filteredClients = clients.filter(c => {
+    if (filter === "regular") return c.is_regular;
     if (filter === "has_payer") return c.payers_count > 0;
     if (filter === "no_payer") return c.payers_count === 0;
     return true;
@@ -1124,23 +1292,30 @@ export default function ClientsTab({ onSelectClientForOrder }) {
             onChange={(e) => setFilter(e.target.value)}
           >
             <option value="all">Всі клієнти</option>
-            <option value="has_payer">✓ Є платник</option>
-            <option value="no_payer">⚠ Без платника</option>
+            <option value="regular">Постійні клієнти</option>
+            <option value="has_payer">Є платник</option>
+            <option value="no_payer">Без платника</option>
           </select>
         </div>
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <div className="bg-white rounded-xl border border-slate-200 p-4 text-center">
           <div className="text-2xl font-bold text-slate-900">{clients.length}</div>
-          <div className="text-xs text-slate-500">Всього клієнтів</div>
+          <div className="text-xs text-slate-500">Всього</div>
         </div>
         <div className="bg-emerald-50 rounded-xl border border-emerald-200 p-4 text-center">
           <div className="text-2xl font-bold text-emerald-700">
+            {clients.filter(c => c.is_regular).length}
+          </div>
+          <div className="text-xs text-emerald-600">Постійні</div>
+        </div>
+        <div className="bg-blue-50 rounded-xl border border-blue-200 p-4 text-center">
+          <div className="text-2xl font-bold text-blue-700">
             {clients.filter(c => c.payers_count > 0).length}
           </div>
-          <div className="text-xs text-emerald-600">Є платники</div>
+          <div className="text-xs text-blue-600">Є платники</div>
         </div>
         <div className="bg-rose-50 rounded-xl border border-rose-200 p-4 text-center">
           <div className="text-2xl font-bold text-rose-700">
@@ -1176,12 +1351,20 @@ export default function ClientsTab({ onSelectClientForOrder }) {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-900 truncate">
+                  <div className="font-medium text-slate-900 truncate flex items-center gap-1.5">
                     {client.full_name || client.email}
+                    {client.is_regular && (
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" title="Постійний клієнт" />
+                    )}
+                    {client.rating > 0 && (
+                      <span className="text-xs text-amber-400 flex-shrink-0">{"&#9733;".repeat(client.rating)}</span>
+                    )}
                   </div>
                   <div className="text-xs text-slate-500 truncate">
                     {client.email}
                     {client.phone && <> · {client.phone}</>}
+                    {client.company && <> · {client.company}</>}
+                    {client.instagram && <> · {client.instagram}</>}
                   </div>
                 </div>
 

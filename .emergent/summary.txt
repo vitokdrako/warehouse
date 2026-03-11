@@ -1,72 +1,62 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to stabilize the Damage Cabinet. This quickly evolved into a large-scale system-wide optimization project. The core requirements are:
-- Unify multiple, conflicting database tables related to item damage and status (, , , ) into a single source of truth:  (PDH).
-- Refactor the entire application (backend and frontend) to read from and write to this unified PDH table.
-- Consolidate duplicated financial tables ( into ).
-- Simplify the user workflow by removing the complex  (FinanceHub) page and integrating the cash desk () directly into the main  as a new tab.
-- Perform a massive cleanup of the database by deleting dozens of unused tables and removing legacy code files to improve maintainability.
-- All this work is to be performed on a safe, temporary test database, with a final plan to migrate the changes to the production environment.
-- Fix the long-standing performance issue with the Catalog API, which makes features like  unusable.
+The user's initial goal was to stabilize the Damage Cabinet and evolved into a large-scale, system-wide optimization project. The core requirements include:
+- Unify multiple conflicting database tables into single sources of truth (e.g., ).
+- Refactor the entire application to use these unified tables.
+- Simplify UI workflows, such as removing the  page and integrating the cash desk () into the .
+- Perform a massive cleanup of unused database tables and legacy code.
+- Fix long-standing performance issues, particularly with the Catalog API.
+- A new major requirement was added: overhaul the entire client database. The goal is to create a single, unified  table as the source of truth for all customer information (contact details, company, FOP/TOV profiles, notes, history), migrate legacy data, and build a new UI to manage this information, which will then be used to fix the broken invoice generation.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-A major refactoring and cleanup effort has been successfully executed on a **test database** (a clone of production). The application is currently running against this test DB.
-
-- **Single Source of Truth:**  (PDH) is now the definitive source for item damage/processing status. Code across key modules (, , , ) has been refactored to use it.
-- **Database Cleanup:** Approximately 25 unused tables (including , , , ) have been deleted from the test database. Over a dozen legacy backup files have also been removed from the filesystem.
-- **UI/Workflow Simplification:** The complex  page (FinanceHub) has been completely removed. The cash desk () is now seamlessly integrated as a Каса tab within the , simplifying the manager's workflow.
-- **Bug Fixes:** Critical bugs arising from the refactoring have been addressed. This includes fixing backend crashes (502 errors) by increasing the DB connection pool size, restoring a necessary table () that was accidentally deleted, and resolving an issue where partial return cards disappeared from the manager dashboard by restoring missing data in the test DB.
+The application is running on a **test database**. A significant portion of the system-wide refactoring is complete.
+- **Performance:** The critically slow Catalog API has been optimized, with load times for key endpoints reduced by over 20x, making the  feature usable.
+- **Data Integrity:** The Catalog has been refactored to use  as the single source of truth, resolving major data inconsistencies between what users saw in the catalog vs. the damage cabinet.
+- **Discount & Order Logic:** A complex and critical bug causing discount amounts to fluctuate randomly upon saving has been fixed. The entire order saving and calculation flow (, frontend components) has been overhauled to be consistent and idempotent.
+- **Document Generation:** The Кошторис (Estimate) document generation in  has been fixed to correctly calculate totals, apply discounts, and display a detailed list of additional services.
+- **Client DB Refactoring (In Progress):** A new, optimized schema for the  table has been designed and approved. New columns (, , , , ) have been added, and legacy customer data from the  table has been migrated into this new structure. The backend API () is currently being updated to support these new fields.
 
 **Last working item**:
--   **Last item agent was working:** The agent was continuing the system-wide optimization. After fixing numerous bugs caused by deleting ~25 tables, the agent was cleaning up broken router references in  and was just about to begin the performance optimization of the very slow Catalog API () to solve its N+1 query problem.
+-   **Last item agent was working:** The agent was in the middle of a major refactoring of the client database. After adding new columns to the  table and migrating data, the agent was updating the backend API in  to handle the new fields. Specifically, it was modifying the  function to allow saving values for the new columns like , , etc.
 -   **Status:** IN PROGRESS
--   **Agent Testing Done:** Y (for individual fixes and refactoring steps)
--   **Which testing method agent to use?** backend testing agent (to validate performance improvements of the Catalog API)
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** both. First, the backend testing agent to validate the CRUD operations on the updated  API. Second, the frontend testing agent after the new client management UI is built.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Partial return cards disappeared from the manager dashboard (P0)**
--   **Issue 2: Slow Catalog API causes infinite loading in  (P1)**
--   **Issue 3:  endpoint is unstable (P2)**
--   **Issue 4: Moodboard export is likely broken (P2)**
--   **Issue 5: Recurring Calendar Timezone Bug (P2)**
+-   **Issue 1: Invoice generation for FOP/TOV is broken (P0)**
+-   **Issue 2:  endpoint is unstable (P2)**
+-   **Issue 3: Moodboard export is likely broken (P2)**
+-   **Issue 4: Recurring Calendar Timezone Bug (P2)**
 
 **Issues Detail:**
--   **Issue 1: Partial return cards disappeared from the manager dashboard**
-    -   **Attempted fixes:** The agent identified that the  table was empty in the test DB. The data was copied from the production DB, and the API () started returning the correct data. The cards should now be visible.
-    -   **Next debug checklist:** The user needs to verify if the fix works on the  page.
-    -   **Why fix this issue and what will be achieved with the fix?** Restores critical functionality to the manager's main dashboard.
-    -   **Status:** USER VERIFICATION PENDING
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Frontend (visual verification).
-    -   **Blocked on other issue:** None.
-
--   **Issue 2: Slow Catalog API causes infinite loading in **
-    -   **Attempted fixes:** None yet in this session. This is the next high-priority task.
+-   **Issue 1: Invoice generation for FOP/TOV is broken**
+    -   **Attempted fixes:** The agent identified that the invoice documents in  do not correctly pull client FOP/TOV details from  and use hardcoded/incorrect financial values. The fix was paused in favor of a larger, more fundamental refactoring of the entire client database, which the user approved. The current work on the  table is the first step to properly fixing this.
     -   **Next debug checklist:**
-        1.  Analyze .
-        2.  Identify the N+1 query pattern where the code likely loops through products and makes individual database calls for status/availability.
-        3.  Refactor the data retrieval logic to use a single, efficient SQL query with s to fetch all required data at once.
-        4.  Use the backend testing agent to measure the performance improvement of the  endpoint.
-    -   **Why fix this issue and what will be achieved with the fix?** This will drastically improve application performance and make the  feature usable for the first time in a long while.
-    -   **Status:** NOT STARTED
+        1.  Complete the update of the  API.
+        2.  Build the frontend UI for managing the new, richer client data.
+        3.  Refactor the invoice generation logic in  to fetch all required client and payer profile data from the new unified client table structure.
+        4.  Ensure all financial data (discounts, additional services, totals) is correctly passed to the invoice template.
+    -   **Why fix this issue and what will be achieved with the fix?** This will restore critical business functionality for generating correct legal and financial documents for clients.
+    -   **Status:** BLOCKED
     -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Both.
-    -   **Blocked on other issue:** None.
+    -   **Blocked on other issue:** Complete Client Database Optimization task.
 
 **In progress Task List**:
--   **Task 1: Complete System-wide Optimization (P0)**
-    -   **Where to resume:** Begin optimizing the Catalog API located at . This is the most critical remaining optimization task.
-    -   **What will be achieved with this?** A significantly faster, cleaner, and more maintainable application, ready for migration to production.
+-   **Task 1: Complete Client Database Optimization (P0)**
+    -   **Where to resume:** Continue editing . The  function's  SQL statement and parameter mapping need to be completed to handle the new fields: , , , , and .
+    -   **What will be achieved with this?** A unified, single source of truth for all client information, which is the foundational step for fixing invoice generation and improving overall CRM capabilities.
     -   **Status:** IN PROGRESS
     -   **Should Test frontend/backend/both after fix?** Both.
     -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P1) Simplify  table/logic, which is now likely redundant with .
-    -   (P1) Delete legacy route files (, , etc.) completely after ensuring they are no longer used anywhere.
+    -   (P0) Create a new frontend UI for the  page () to display and edit the new fields (, , , , etc.).
+    -   (P1) Simplify  table/logic, which may now be redundant.
+    -   (P1) Delete legacy route files (, ) after confirming they are no longer used.
     -   (P1) Implement Monthly Cash Desk Closing (Close Month feature).
     -   (P2) Create remaining document templates (e.g., Акт повернення).
 -   **Future Tasks:**
@@ -78,11 +68,18 @@ A major refactoring and cleanup effort has been successfully executed on a **tes
     -   Create an HR/Ops Module.
 
 **Completed work in this session**
--   **Database Architecture Overhaul:** Switched to a test database, unified , ,  into , and consolidated  into .
--   **Full-Stack Refactoring:** Updated , , ,  to use the new single source of truth.
--   **Database & Code Cleanup:** Deleted ~25 unused SQL tables and over a dozen legacy  backup files.
--   **UI/UX Refactoring:** Removed the complex  (FinanceHub) and embedded the  (Cash Desk) directly into the  for a simplified workflow.
--   **Critical Bug Fixes:** Resolved backend crashes by increasing DB connection pool size, restored the  table required by the Kasa, and fixed missing partial return cards on the manager dashboard by restoring data in the test DB.
+-   **Catalog API Performance Overhaul:** Fixed the N+1 query problem in , resulting in a **22x performance increase** for the  endpoint (from 18s to <1s) and making the  page usable.
+-   **Catalog Data Consistency:** Resolved a critical bug where the catalog showed incorrect item availability. The logic was refactored to use  as the single source of truth, aligning it with the Damage Cabinet.
+-   **Order Discount Logic Refactor:** Completely fixed a persistent bug that caused order totals and discounts to change unpredictably on save. The logic in  and multiple frontend components was standardized to be idempotent and consistent.
+-   **Estimate Document (Кошторис) Fixes:** The document generation logic in  was corrected to:
+    -   Display the correct final totals after discounts.
+    -   Show a detailed breakdown of individual additional services instead of a single summarized line.
+-   **UI/UX Enhancements:** Refined the order management UI, including clearer labels (Вартість ордеру) and a simplified discount input component.
+-   **Client Database Refactoring (Initiated):**
+    -   Designed and began implementing a new, unified client data model.
+    -   Extended the  table with new CRM-focused columns (, , , ).
+    -   Migrated ~94 unique client records from the  table into the newly structured  table.
+    -   Began updating the  API to support the new schema.
 
 **Earlier issues found/mentioned but not fixed**
 -    endpoint instability.
@@ -92,72 +89,79 @@ A major refactoring and cleanup effort has been successfully executed on a **tes
 **Known issue recurrence from previous fork**
 -   **Issue recurrence:** Slow Catalog API and general backend slowness.
 -   **Recurrence count:** 8+
--   **Status:** IN PROGRESS (This is the immediate next task).
+-   **Status:** RESOLVED. The primary cause (N+1 query in ) has been fixed.
 
 **Code Architecture**
-embedded
+
 
 **Key Technical Concepts**
--   **Test-Driven Refactoring on a Cloned Database:** The entire session's work was performed safely on a temporary database () that was a clone of the production data. This enabled destructive changes like dropping tables without production risk.
--   **Single Source of Truth (SSOT):** A core principle of the refactoring, consolidating multiple conflicting status tables (, , etc.) into the  table.
--   **Database Connection Pooling:** The agent debugged and resolved  errors by increasing the  in , a common issue in high-concurrency applications.
+-   **N+1 Query Optimization:** Successfully identified and eliminated a classic N+1 query problem by refactoring Python loops into a single, efficient SQL query with , dramatically improving API response times.
+-   **Lightweight API Endpoints:** Created a new  endpoint that returns only the essential data needed by a specific frontend component, reducing payload size and improving load times.
+-   **Idempotent API Design:** Refactored the order update logic () to be idempotent, ensuring that sending the same request multiple times does not result in incorrect data accumulation or drift of financial values.
+-   **Single Source of Truth (SSOT):** Continued the theme of the project by refactoring the Catalog API to derive item availability status directly from , ensuring data consistency across the application.
+-   **Progressive Database Refactoring:** Executed a schema change on a live (test) database by adding columns () and then writing a script to migrate and backfill data from other tables, laying the groundwork for a larger feature.
 
 **key DB schema**
--   **product_damage_history:** uid=0(root) gid=0(root) groups=0(root), , , ,  - Now the single source of truth for all item processing. New columns ,  were added.
--   **fin_transactions:** Consolidated financial records, replacing the old  table.
--   **DELETED TABLES:** , , , , , , , , , , , etc. (~25 total).
--   **RESTORED TABLE:**  was restored after being mistakenly deleted, as it is essential for the Kasa functionality.
+-   **clients:** (MODIFIED) Extended with new columns:  (VARCHAR),  (BOOLEAN),  (VARCHAR),  (TEXT),  (TEXT).
+-   **orders:**  now consistently stores the pre-discount total.  and  are calculated and stored. A new  column was added for clarity in some queries.
+-   **product_damage_history:** Now the definitive source for calculating  in the catalog.
 
 **All files of reference**
--   **/app/backend/routes/catalog.py**: **(CRITICAL NEXT STEP)** Needs performance optimization to fix N+1 queries.
--   **/app/frontend/src/pages/ManagerCabinet/ManagerCabinet.jsx**: The newly refactored central hub for managers.
--   **/app/backend/.env**: Contains the connection string to the **test database**.
--   **/app/backend/database_rentalhub.py**: Contains the database connection logic, including the updated pool size.
--   **/app/clean_project/migration_script.sql**: **(CRITICAL)** Captures all  and  commands that will be needed for production deployment.
--   **/app/clean_project/backend_update/**: Destination for all modified backend files for user deployment.
--   **/app/clean_project/frontend_build/**: Destination for the new production frontend build.
+-   **/app/backend/routes/clients.py**: **(CRITICAL IN-PROGRESS FILE)** The main file for the current client database refactoring task.
+-   **/app/backend/routes/documents.py**: Contains the logic for generating estimates (fixed) and invoices (broken, needs refactoring).
+-   **/app/backend/routes/catalog.py**: The file where major performance and data consistency optimizations were completed.
+-   **/app/backend/routes/orders.py**: The file where the critical discount calculation logic was fixed.
+-   **/app/frontend/src/pages/Orders/NewOrderViewWorkspace.jsx**: The main UI component for order management, which was heavily modified to fix the discount bug.
+-   **/app/clean_project/migration_script.sql**: Contains the  statements for the  table.
 
 **Areas that need refactoring**:
--   **:** This is the highest priority. It suffers from a classic N+1 query problem and is the main source of application slowness. It needs to be refactored to use s.
--   **:** The  table may be redundant now and could potentially be removed, simplifying this module.
--   **:** Should be cleaned to remove all imports and router registrations for fully deprecated modules like .
+-   **:** The invoice generation part is still broken and must be refactored to use the new client database structure.
+-   **:** This area needs a complete overhaul. A new UI must be created to view, edit, and manage the new rich data in the  table.
+-   **:** The API needs to be completed and tested.
 
 **key api endpoints**
--   : The main catalog endpoint, which is critically slow and the next target for optimization.
--   : Key API for the manager dashboard.
--   : Fetches active partial returns for the dashboard.
--   : The primary endpoint for processing returns, now correctly writes to .
+-   : **(OPTIMIZED)** Now performs ~22x faster.
+-   : **(NEW)** A lightweight endpoint to efficiently populate the Families Manager.
+-   : **(FIXED)** Now idempotent and correctly handles discount calculations.
+-   : **(FIXED)** Now shows correct totals and a full list of services.
+-    & : **(BROKEN)** These are the next targets for fixing after the client DB refactor is complete.
+-   : **(IN PROGRESS)** Being updated to support the new client schema.
 
 **Critical Info for New Agent**
 -   **Ви повинні спілкуватися українською мовою. (You must communicate in Ukrainian.)**
--   **WORKING ON TEST DATABASE:** The application is currently connected to a **test database** (). This is intentional and was requested by the user. Do not switch back to the production database until all optimizations are complete and a migration plan is approved by the user.
--   **Deployment is Manual:** All modified  files must be placed in . A new frontend build (yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.) must be placed in . All database schema changes must be added to .
--   **Immediate Priority:** Your first and most important task is to continue the system optimization by fixing the performance of the Catalog API. Analyze , identify and eliminate the N+1 query problem by refactoring it to use a single ed query.
+-   **WORKING ON TEST DATABASE:** All work is on the  test database. Do not switch to production.
+-   **Deployment is Manual:** Remember to copy updated files to , run yarn run v1.22.22
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. for the frontend, and update .
+-   **Immediate Priority:** Your first task is to **complete the client database refactoring**.
+    1.  Finish updating the API in  (specifically the  function).
+    2.  Once the backend is done, create the new frontend interface for managing clients with their new fields (, , , ).
+    3.  After the client management is fully functional, use it to fix the broken invoice generation in .
 
 **documents and test reports created in this job**
 -   
 -   
 -   
--   The agent also created temporary pytest files under  to validate backend changes during the refactoring process.
+-   
+-    (updated)
+-    (updated)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **[LATEST] с головного дашборду зникли картки часткового повернення** (The partial return cards disappeared from the main dashboard) - User reported a critical bug on the manager dashboard. **Status: Fixed, awaiting user verification.**
-2.  **не тут а тут у реквізиторській /manager...** (Not here, but here in the props manager /manager...) - User clarified the exact location of the bug from the previous message.
-3.  **а решту таблиць видаляй)** (and delete the rest of the tables) - User gave explicit permission to delete a list of ~25 identified unnecessary database tables. **Status: Completed.**
-4.  **витрати маємо використовувати через кассу, так само як і інкасацію** (we should use expenses through the cash desk, as well as collection) - User clarified that  and  tables are necessary for the Kasa and should not be deleted. **Status: Completed.**
-5.  **чи не залишилось лишніх таблиць фінансових?** (are there any unnecessary financial tables left?) - User prompted for more financial table cleanup and pasted console errors, indicating new bugs. **Status: Completed.**
-6.  **і чи можемо видалити більшу подовину данних із тестової бд щоб прискорити завантаження?** (and can we delete more than half of the data from the test db to speed up loading?) - User requested to trim the test DB to improve performance. **Status: Completed.**
-7.  **так все вірно. і вкладка клієнти...** (yes, that's right. and the clients tab...) - User approved the plan to refactor the Manager Cabinet and add the Kasa tab. **Status: Completed.**
-8.  **/finance я хочу знасти він складний а от /kasa через /manager-cabinet залишається...** (I want to get rid of /finance it's complicated, but /kasa via /manager-cabinet remains...) - User gave the core directive to remove the FinanceHub and integrate the Kasa into the Manager Cabinet. **Status: Completed.**
-9.  **Проаналізуй кабінет менеджерів...** (Analyze the manager's cabinet...) - User asked for an analysis of the existing manager workflow. **Status: Completed.**
-10. **Фінанси. Фінанси мають фіксуватись через ордери...** (Finances. Finances should be recorded through orders...) - User explained the desired simplified financial workflow. **Status: Completed.**
+1.  **[LATEST] супер! мені подобається!!!! також давай додамо чи почтійний клієнт чи ні...** (Super! I like it!!!! Let's also add if they are a regular client or not...) - User approved the client database optimization plan and added more requirements for new fields (, , , ). **Status: In Progress.**
+2.  **чи можемо ми оптимізувати клієнтську базу?** (can we optimize the client base?) - User initiated the major task of refactoring the client database to be a single source of truth. **Status: In Progress.**
+3.  **з когторисом розібрались, тепер давай рахунки на оплату по фоп і тов розберемось** (we've sorted out the estimate, now let's figure out the FOP and TOV invoices) - User confirmed the estimate fix and directed the agent to the next problem: broken invoice generation. **Status: In Progress (Blocked by client refactor).**
+4.  **кошторис не підтягує додаткові нарахування** (the estimate doesn't include additional charges) - User reported a bug where additional services were missing from the estimate. **Status: Completed.**
+5.  **кошторис досі з розуму сходить** (the estimate is still going crazy) - User reported that the totals on the estimate document were incorrect. **Status: Completed.**
+6.  **давай де слово оренда, буде вартість ордеру...** (let's replace the word rent with order cost...) - User requested UI text changes and a simplification of the discount input UI. **Status: Completed.**
+7.  **я почистила мийку від текстилю... але виявив проблему у знижці** (I cleaned the laundry from textiles... but found a problem with the discount) - User confirmed the catalog data consistency fix was working, but then reported the major bug with discount calculations being unstable. **Status: Completed.**
+8.  **каталог і кабінет шкоди. не відповідає дійсності у замороженних товарах** (catalog and damage cabinet. doesn't match reality for frozen items) - User reported the data inconsistency between the catalog's item availability and the actual item status in the damage cabinet. **Status: Completed.**
+9.  **продовжуй оптимізацію** (continue optimization) - User approved the initial plan to start optimizing the Catalog API. **Status: Completed.**
+10. **(First message of session)** - User received the agent's initial plan and asked to proceed.
 
 **Project Health Check:**
 -   **Broken:**
-    -    remains unusable due to the slow Catalog API.
+    -   Invoice generation (, ) is non-functional and produces incorrect documents. This is the next major area to fix after the client DB refactor.
 -   **Slow:**
-    -   The Catalog API () is the primary performance bottleneck in the application. This is the next task to be addressed.
+    -   The main application performance bottleneck (Catalog API) has been **fixed**.
 -   **Mocked:**
     -   None.
 
@@ -166,601 +170,13 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 -   **OpenCart:** Reads product information and images from an external MySQL database.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO (Agent self-tested with ============================= test session starts ==============================
-platform linux -- Python 3.11.14, pytest-9.0.1, pluggy-1.6.0
-rootdir: /app
-plugins: anyio-4.11.0
-collected 167 items / 70 errors
-
-==================================== ERRORS ====================================
-_______________________ ERROR collecting backend_test.py _______________________
-import file mismatch:
-imported module 'backend_test' has this __file__ attribute:
-  /app/Ivent-tool/backend_test.py
-which is not the same as the test file we want to collect:
-  /app/backend_test.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_________ ERROR collecting clean_project/backend/routes/test_orders.py _________
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_________ ERROR collecting clean_project/backend/test_calendar_data.py _________
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting clean_project/backend/test_finance_api.py __________
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-______ ERROR collecting clean_project/backend/test_move_to_preparation.py ______
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting clean_project/backend/test_order_sync.py ___________
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting clean_project/backend/tests/test_calendar.py _________
-import file mismatch:
-imported module 'test_calendar' has this __file__ attribute:
-  /app/backend/tests/test_calendar.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_calendar.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___ ERROR collecting clean_project/backend/tests/test_clients_ma_bug_fix.py ____
-import file mismatch:
-imported module 'test_clients_ma_bug_fix' has this __file__ attribute:
-  /app/backend/tests/test_clients_ma_bug_fix.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_clients_ma_bug_fix.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_ ERROR collecting clean_project/backend/tests/test_damage_laundry_features.py _
-import file mismatch:
-imported module 'test_damage_laundry_features' has this __file__ attribute:
-  /app/backend/tests/test_damage_laundry_features.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_damage_laundry_features.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting clean_project/backend/tests/test_documents.py ________
-import file mismatch:
-imported module 'test_documents' has this __file__ attribute:
-  /app/backend/tests/test_documents.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_documents.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_ ERROR collecting clean_project/backend/tests/test_email_provider_and_features.py _
-import file mismatch:
-imported module 'test_email_provider_and_features' has this __file__ attribute:
-  /app/backend/tests/test_email_provider_and_features.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_email_provider_and_features.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_________ ERROR collecting clean_project/backend/tests/test_finance.py _________
-import file mismatch:
-imported module 'test_finance' has this __file__ attribute:
-  /app/backend/tests/test_finance.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_finance.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____ ERROR collecting clean_project/backend/tests/test_master_agreements.py ____
-import file mismatch:
-imported module 'test_master_agreements' has this __file__ attribute:
-  /app/backend/tests/test_master_agreements.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_master_agreements.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_________ ERROR collecting clean_project/backend/tests/test_payroll.py _________
-import file mismatch:
-imported module 'test_payroll' has this __file__ attribute:
-  /app/backend/tests/test_payroll.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_payroll.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_ ERROR collecting clean_project/backend/tests/test_phase32_document_preview.py _
-import file mismatch:
-imported module 'test_phase32_document_preview' has this __file__ attribute:
-  /app/backend/tests/test_phase32_document_preview.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_phase32_document_preview.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_ ERROR collecting clean_project/backend/tests/test_phase32_manual_fields_email.py _
-import file mismatch:
-imported module 'test_phase32_manual_fields_email' has this __file__ attribute:
-  /app/backend/tests/test_phase32_manual_fields_email.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_phase32_manual_fields_email.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_ ERROR collecting clean_project/backend/tests/test_phase3_documents_engine.py _
-import file mismatch:
-imported module 'test_phase3_documents_engine' has this __file__ attribute:
-  /app/backend/tests/test_phase3_documents_engine.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_phase3_documents_engine.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_____ ERROR collecting clean_project/backend/tests/test_return_versions.py _____
-import file mismatch:
-imported module 'test_return_versions' has this __file__ attribute:
-  /app/backend/tests/test_return_versions.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_return_versions.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_________ ERROR collecting clean_project/backend/tests/test_vendors.py _________
-import file mismatch:
-imported module 'test_vendors' has this __file__ attribute:
-  /app/backend/tests/test_vendors.py
-which is not the same as the test file we want to collect:
-  /app/clean_project/backend/tests/test_vendors.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting deploy_v23/backend/routes/test_orders.py ___________
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/deploy_v23/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting deploy_v23/backend/test_calendar_data.py ___________
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/deploy_v23/backend/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting deploy_v23/backend/test_finance_api.py ____________
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/deploy_v23/backend/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_______ ERROR collecting deploy_v23/backend/test_move_to_preparation.py ________
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/deploy_v23/backend/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____________ ERROR collecting deploy_v23/backend/test_order_sync.py ____________
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/deploy_v23/backend/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting deploy_v26/backend/routes/test_orders.py ___________
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/deploy_v26/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________________ ERROR collecting evetnsnew/backend_test.py __________________
-import file mismatch:
-imported module 'backend_test' has this __file__ attribute:
-  /app/Ivent-tool/backend_test.py
-which is not the same as the test file we want to collect:
-  /app/evetnsnew/backend_test.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting project_17/backend/routes/test_orders.py ___________
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/project_17/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting project_17/backend/test_calendar_data.py ___________
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/project_17/backend/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting project_17/backend/test_finance_api.py ____________
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/project_17/backend/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_______ ERROR collecting project_17/backend/test_move_to_preparation.py ________
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/project_17/backend/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____________ ERROR collecting project_17/backend/test_order_sync.py ____________
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/project_17/backend/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_19/backend/routes/test_orders.py ___________
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/версія_19/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_19/backend/test_calendar_data.py ___________
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/версія_19/backend/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____________ ERROR collecting версія_19/backend/test_finance_api.py ____________
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/версія_19/backend/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting версія_19/backend/test_move_to_preparation.py ________
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/версія_19/backend/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____________ ERROR collecting версія_19/backend/test_order_sync.py _____________
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/версія_19/backend/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_____ ERROR collecting версія_20_deployment/backend/routes/test_orders.py ______
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_____ ERROR collecting версія_20_deployment/backend/test_calendar_data.py ______
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-______ ERROR collecting версія_20_deployment/backend/test_finance_api.py _______
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__ ERROR collecting версія_20_deployment/backend/test_move_to_preparation.py ___
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_______ ERROR collecting версія_20_deployment/backend/test_order_sync.py _______
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__ ERROR collecting версія_20_deployment/backend_files/routes/test_orders.py ___
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend_files/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__ ERROR collecting версія_20_deployment/backend_files/test_calendar_data.py ___
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend_files/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___ ERROR collecting версія_20_deployment/backend_files/test_finance_api.py ____
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend_files/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_ ERROR collecting версія_20_deployment/backend_files/test_move_to_preparation.py _
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend_files/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____ ERROR collecting версія_20_deployment/backend_files/test_order_sync.py ____
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/версія_20_deployment/backend_files/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__ ERROR collecting версія_21_deployment/backend_files/routes/test_orders.py ___
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/версія_21_deployment/backend_files/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_____ ERROR collecting версія_22_deployment/backend/routes/test_orders.py ______
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/версія_22_deployment/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_____ ERROR collecting версія_22_deployment/backend/test_calendar_data.py ______
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/версія_22_deployment/backend/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-______ ERROR collecting версія_22_deployment/backend/test_finance_api.py _______
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/версія_22_deployment/backend/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__ ERROR collecting версія_22_deployment/backend/test_move_to_preparation.py ___
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/версія_22_deployment/backend/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-_______ ERROR collecting версія_22_deployment/backend/test_order_sync.py _______
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/версія_22_deployment/backend/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_27/backend/routes/test_orders.py ___________
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_27/backend/test_calendar_data.py ___________
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____________ ERROR collecting версія_27/backend/test_finance_api.py ____________
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting версія_27/backend/test_move_to_preparation.py ________
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____________ ERROR collecting версія_27/backend/test_order_sync.py _____________
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting версія_27/backend/tests/test_documents.py __________
-import file mismatch:
-imported module 'test_documents' has this __file__ attribute:
-  /app/backend/tests/test_documents.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/tests/test_documents.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_27/backend/tests/test_finance.py ___________
-import file mismatch:
-imported module 'test_finance' has this __file__ attribute:
-  /app/backend/tests/test_finance.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/tests/test_finance.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_27/backend/tests/test_payroll.py ___________
-import file mismatch:
-imported module 'test_payroll' has this __file__ attribute:
-  /app/backend/tests/test_payroll.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/tests/test_payroll.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_27/backend/tests/test_vendors.py ___________
-import file mismatch:
-imported module 'test_vendors' has this __file__ attribute:
-  /app/backend/tests/test_vendors.py
-which is not the same as the test file we want to collect:
-  /app/версія_27/backend/tests/test_vendors.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_28/backend/routes/test_orders.py ___________
-import file mismatch:
-imported module 'routes.test_orders' has this __file__ attribute:
-  /app/backend/routes/test_orders.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/routes/test_orders.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_28/backend/test_calendar_data.py ___________
-import file mismatch:
-imported module 'test_calendar_data' has this __file__ attribute:
-  /app/backend/test_calendar_data.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/test_calendar_data.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____________ ERROR collecting версія_28/backend/test_finance_api.py ____________
-import file mismatch:
-imported module 'test_finance_api' has this __file__ attribute:
-  /app/backend/test_finance_api.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/test_finance_api.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-________ ERROR collecting версія_28/backend/test_move_to_preparation.py ________
-import file mismatch:
-imported module 'test_move_to_preparation' has this __file__ attribute:
-  /app/backend/test_move_to_preparation.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/test_move_to_preparation.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-____________ ERROR collecting версія_28/backend/test_order_sync.py _____________
-import file mismatch:
-imported module 'test_order_sync' has this __file__ attribute:
-  /app/backend/test_order_sync.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/test_order_sync.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-__________ ERROR collecting версія_28/backend/tests/test_documents.py __________
-import file mismatch:
-imported module 'test_documents' has this __file__ attribute:
-  /app/backend/tests/test_documents.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/tests/test_documents.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_28/backend/tests/test_finance.py ___________
-import file mismatch:
-imported module 'test_finance' has this __file__ attribute:
-  /app/backend/tests/test_finance.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/tests/test_finance.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_28/backend/tests/test_payroll.py ___________
-import file mismatch:
-imported module 'test_payroll' has this __file__ attribute:
-  /app/backend/tests/test_payroll.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/tests/test_payroll.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-___________ ERROR collecting версія_28/backend/tests/test_vendors.py ___________
-import file mismatch:
-imported module 'test_vendors' has this __file__ attribute:
-  /app/backend/tests/test_vendors.py
-which is not the same as the test file we want to collect:
-  /app/версія_28/backend/tests/test_vendors.py
-HINT: remove __pycache__ / .pyc files and/or use a unique basename for your test file modules
-=============================== warnings summary ===============================
-../root/.venv/lib/python3.11/site-packages/starlette/formparsers.py:12
-  /root/.venv/lib/python3.11/site-packages/starlette/formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
-    import multipart
-
-backend/database_rentalhub.py:44
-  /app/backend/tests/../database_rentalhub.py:44: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
-    RHBase = declarative_base()
-
-backend/routes/orders.py:39
-  /app/backend/routes/orders.py:39: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
-    class Order(BaseModel):
-
-backend/database.py:44
-  /app/backend/tests/../database.py:44: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
-    Base = declarative_base()
-
--- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ============================
-ERROR backend_test.py
-ERROR clean_project/backend/routes/test_orders.py
-ERROR clean_project/backend/test_calendar_data.py
-ERROR clean_project/backend/test_finance_api.py
-ERROR clean_project/backend/test_move_to_preparation.py
-ERROR clean_project/backend/test_order_sync.py
-ERROR clean_project/backend/tests/test_calendar.py
-ERROR clean_project/backend/tests/test_clients_ma_bug_fix.py
-ERROR clean_project/backend/tests/test_damage_laundry_features.py
-ERROR clean_project/backend/tests/test_documents.py
-ERROR clean_project/backend/tests/test_email_provider_and_features.py
-ERROR clean_project/backend/tests/test_finance.py
-ERROR clean_project/backend/tests/test_master_agreements.py
-ERROR clean_project/backend/tests/test_payroll.py
-ERROR clean_project/backend/tests/test_phase32_document_preview.py
-ERROR clean_project/backend/tests/test_phase32_manual_fields_email.py
-ERROR clean_project/backend/tests/test_phase3_documents_engine.py
-ERROR clean_project/backend/tests/test_return_versions.py
-ERROR clean_project/backend/tests/test_vendors.py
-ERROR deploy_v23/backend/routes/test_orders.py
-ERROR deploy_v23/backend/test_calendar_data.py
-ERROR deploy_v23/backend/test_finance_api.py
-ERROR deploy_v23/backend/test_move_to_preparation.py
-ERROR deploy_v23/backend/test_order_sync.py
-ERROR deploy_v26/backend/routes/test_orders.py
-ERROR evetnsnew/backend_test.py
-ERROR project_17/backend/routes/test_orders.py
-ERROR project_17/backend/test_calendar_data.py
-ERROR project_17/backend/test_finance_api.py
-ERROR project_17/backend/test_move_to_preparation.py
-ERROR project_17/backend/test_order_sync.py
-ERROR версія_19/backend/routes/test_orders.py
-ERROR версія_19/backend/test_calendar_data.py
-ERROR версія_19/backend/test_finance_api.py
-ERROR версія_19/backend/test_move_to_preparation.py
-ERROR версія_19/backend/test_order_sync.py
-ERROR версія_20_deployment/backend/routes/test_orders.py
-ERROR версія_20_deployment/backend/test_calendar_data.py
-ERROR версія_20_deployment/backend/test_finance_api.py
-ERROR версія_20_deployment/backend/test_move_to_preparation.py
-ERROR версія_20_deployment/backend/test_order_sync.py
-ERROR версія_20_deployment/backend_files/routes/test_orders.py
-ERROR версія_20_deployment/backend_files/test_calendar_data.py
-ERROR версія_20_deployment/backend_files/test_finance_api.py
-ERROR версія_20_deployment/backend_files/test_move_to_preparation.py
-ERROR версія_20_deployment/backend_files/test_order_sync.py
-ERROR версія_21_deployment/backend_files/routes/test_orders.py
-ERROR версія_22_deployment/backend/routes/test_orders.py
-ERROR версія_22_deployment/backend/test_calendar_data.py
-ERROR версія_22_deployment/backend/test_finance_api.py
-ERROR версія_22_deployment/backend/test_move_to_preparation.py
-ERROR версія_22_deployment/backend/test_order_sync.py
-ERROR версія_27/backend/routes/test_orders.py
-ERROR версія_27/backend/test_calendar_data.py
-ERROR версія_27/backend/test_finance_api.py
-ERROR версія_27/backend/test_move_to_preparation.py
-ERROR версія_27/backend/test_order_sync.py
-ERROR версія_27/backend/tests/test_documents.py
-ERROR версія_27/backend/tests/test_finance.py
-ERROR версія_27/backend/tests/test_payroll.py
-ERROR версія_27/backend/tests/test_vendors.py
-ERROR версія_28/backend/routes/test_orders.py
-ERROR версія_28/backend/test_calendar_data.py
-ERROR версія_28/backend/test_finance_api.py
-ERROR версія_28/backend/test_move_to_preparation.py
-ERROR версія_28/backend/test_order_sync.py
-ERROR версія_28/backend/tests/test_documents.py
-ERROR версія_28/backend/tests/test_finance.py
-ERROR версія_28/backend/tests/test_payroll.py
-ERROR версія_28/backend/tests/test_vendors.py
-!!!!!!!!!!!!!!!!!!! Interrupted: 70 errors during collection !!!!!!!!!!!!!!!!!!!
-======================== 4 warnings, 70 errors in 5.24s ======================== and ).
+-   **Testing agent used after significant changes:** YES. The backend testing agent was used multiple times to validate fixes for the Catalog API, discount logic, and estimate generation.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** Yes, temporary test files were created in  to validate refactoring.
--   **Known regressions:** None from the refactoring, but the pre-existing performance issue is now the main focus.
+-   **Test files created:** Yes,  was created to test the idempotency of the fixed discount logic.
+-   **Known regressions:** None.
 
 **Credentials to test flow:**
 -   **RentalHub Admin:**  / 
 
 **What agent forgot to execute**
--   The agent has not yet completed the optimization of the **Catalog API**, which is the highest priority performance bottleneck and the direct next step in the plan.
--   While many legacy files were cleaned up, some routers like  and  were patched to work with the new schema instead of being removed entirely. A final cleanup pass will be needed to remove them once all dependencies are confirmed to be gone.</analysis>
+-   The original task of fixing the invoice generation () is still pending. The agent correctly identified that a larger client database refactor was necessary first and is currently executing that prerequisite task. The next logical step is to complete the client refactor and then immediately apply it to fix the invoices.</analysis>

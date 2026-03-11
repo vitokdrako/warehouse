@@ -1549,17 +1549,21 @@ async def preview_processing_list(queue_type: str, db: Session = Depends(get_rh_
     rows = db.execute(text("""
         SELECT pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.damage_type,
                pdh.note, pdh.created_at, pdh.created_by, pdh.order_number,
-               pdh.photo_url, pdh.processing_status, pdh.qty,
+               pdh.photo_url, pdh.processing_status, pdh.qty, pdh.processed_qty,
                p.image_url AS product_image
         FROM product_damage_history pdh
         LEFT JOIN products p ON p.product_id = pdh.product_id
         WHERE pdh.processing_type = :ptype
-          AND pdh.processing_status IN ('pending', 'in_progress')
+          AND COALESCE(pdh.processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+          AND (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0
         ORDER BY pdh.created_at DESC
     """), {"ptype": queue_type}).fetchall()
     
     items = []
     for r in rows:
+        total_qty = r[11] or 1
+        processed = r[12] or 0
+        remaining = total_qty - processed
         items.append({
             "sku": r[2] or "—",
             "name": r[3] or "—",
@@ -1568,9 +1572,11 @@ async def preview_processing_list(queue_type: str, db: Session = Depends(get_rh_
             "created_at": r[6].strftime("%d.%m.%Y %H:%M") if r[6] else "—",
             "created_by": _email_to_name(r[7]),
             "order_number": r[8] or "—",
-            "image_url": _get_full_image_url(r[12] or r[9]),
+            "image_url": _get_full_image_url(r[13] or r[9]),
             "status": r[10] or "pending",
-            "qty": r[11] or 1,
+            "qty": remaining,
+            "total_qty": total_qty,
+            "processed_qty": processed,
         })
     
     template_data = {

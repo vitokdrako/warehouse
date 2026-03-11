@@ -74,7 +74,7 @@ export default function DamageModal({
     fee: 0,
     qty: 1,
     photoName: '',
-    sendTo: 'none'  // 'none' | 'wash' | 'restore' | 'laundry' | 'washing'
+    sendTo: 'none'  // 'none' | 'wash' | 'restore' | 'laundry'
   })
   
   const [photos, setPhotos] = useState([])
@@ -286,7 +286,7 @@ export default function DamageModal({
             if (damageId) {
               const endpoint = formData.sendTo === 'wash' ? 'send-to-wash'
                 : formData.sendTo === 'restore' ? 'send-to-restoration'
-                : formData.sendTo === 'washing' ? 'send-to-washing'
+                : formData.sendTo === 'laundry' ? 'send-to-laundry'
                 : formData.sendTo === 'laundry' ? 'send-to-laundry'
                 : null
               

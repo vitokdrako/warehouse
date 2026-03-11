@@ -636,7 +636,7 @@ const LaundryColumn = ({ items, loading, onComplete, onDelete, onPhotoClick, com
                     <div className="flex gap-2">
                       <select value={batchType} onChange={e => setBatchType(e.target.value)} className="flex-1 px-2 py-1.5 text-xs border rounded-lg">
                         <option value="laundry">Хімчистка</option>
-                        <option value="washing">Прання</option>
+                        <option value="wash">Прання</option>
                       </select>
                       <button onClick={handleCreateBatch} disabled={!batchCompany.trim()} className="px-4 py-1.5 rounded-lg text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50">
                         Створити

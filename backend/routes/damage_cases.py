@@ -176,26 +176,25 @@ async def get_product_damage_cases(
     try:
         query = text("""
             SELECT 
-                di.id,
-                di.damage_id,
-                di.product_id,
-                di.name,
-                di.image,
-                di.action_type,
-                di.status,
-                di.qty,
-                di.frozen_qty,
-                di.estimate_value,
-                di.comment,
-                di.created_at,
-                d.case_status,
-                d.notes,
-                d.created_by,
-                d.case_number
-            FROM damage_items di
-            LEFT JOIN damages d ON di.damage_id = d.id
-            WHERE di.product_id = :pid
-            ORDER BY di.created_at DESC
+                pdh.id,
+                pdh.id as damage_id,
+                pdh.product_id,
+                pdh.product_name,
+                pdh.photo_url,
+                pdh.processing_type,
+                pdh.processing_status,
+                pdh.qty,
+                (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) as remaining,
+                pdh.estimate_value,
+                pdh.note,
+                pdh.created_at,
+                CASE WHEN pdh.processing_status IN ('completed', 'returned_to_stock') THEN 'closed' ELSE 'open' END as case_status,
+                pdh.note as notes,
+                pdh.created_by,
+                pdh.sku
+            FROM product_damage_history pdh
+            WHERE pdh.product_id = :pid
+            ORDER BY pdh.created_at DESC
         """)
         
         results = rh_db.execute(query, {'pid': product_id}).fetchall()

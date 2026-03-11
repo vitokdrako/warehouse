@@ -973,32 +973,39 @@ export default function FamiliesManager() {
   const [filterHasProducts, setFilterHasProducts] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState(null)
 
-  // Load data - families first, products lazy
+  // Load data - families + categories in parallel, products lazy
   const loadData = useCallback(async () => {
     console.log('[FamiliesManager] loadData started')
     setLoading(true)
     try {
-      // Load families first (fast)
-      const familiesRes = await fetch(`${BACKEND_URL}/api/catalog/families`)
+      // Load families + categories in parallel
+      const [familiesRes, categoriesRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/catalog/families`),
+        fetch(`${BACKEND_URL}/api/catalog/categories`)
+      ])
+      
       if (familiesRes.ok) {
         const data = await familiesRes.json()
         console.log('[FamiliesManager] Families loaded:', data?.length || 0)
         setFamilies(data || [])
+      } else {
+        console.error('[FamiliesManager] Families fetch failed:', familiesRes.status)
       }
       
-      // Load categories
-      const categoriesRes = await fetch(`${BACKEND_URL}/api/catalog/categories`)
       if (categoriesRes.ok) {
         const data = await categoriesRes.json()
         setCategories(Array.isArray(data) ? data : data.categories || [])
       }
-      
-      // Families loaded - show UI
+    } catch (error) {
+      console.error('[FamiliesManager] Error loading families:', error)
+    } finally {
+      // Always stop loading spinner
       setLoading(false)
-      
-      // Then load products in background (slow)
-      // Збільшено ліміт до 10000 щоб охопити весь каталог
-      const productsRes = await fetch(`${BACKEND_URL}/api/catalog?limit=10000`)
+    }
+    
+    // Then load products in background (lightweight endpoint)
+    try {
+      const productsRes = await fetch(`${BACKEND_URL}/api/catalog/products-lite?limit=10000`)
       if (productsRes.ok) {
         const data = await productsRes.json()
         const items = Array.isArray(data) ? data : (data.items || [])
@@ -1006,8 +1013,7 @@ export default function FamiliesManager() {
         setAllProducts(items)
       }
     } catch (error) {
-      console.error('[FamiliesManager] Error loading data:', error)
-      setLoading(false)
+      console.error('[FamiliesManager] Error loading products:', error)
     }
   }, [])
 

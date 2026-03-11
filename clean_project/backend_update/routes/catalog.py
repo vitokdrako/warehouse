@@ -314,28 +314,24 @@ async def get_items_by_category(
             """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)),
             {"date_from": date_from, "date_to": date_to})
         else:
-            # Без дат - показуємо поточний стан
-            reserved_result = db.execute(text("""
-                SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+            # Без дат - показуємо поточний стан: один запит замість трьох
+            combined_result = db.execute(text("""
+                SELECT 
+                    oi.product_id,
+                    SUM(CASE WHEN o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending') THEN oi.quantity ELSE 0 END) as reserved,
+                    SUM(CASE WHEN o.status IN ('issued', 'on_rent') THEN oi.quantity ELSE 0 END) as in_rent
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.order_id
                 WHERE oi.product_id IN :product_ids
-                AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+                AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending', 'issued', 'on_rent')
                 AND o.rental_end_date >= CURDATE()
                 GROUP BY oi.product_id
             """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
-            reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
-            
-            in_rent_result = db.execute(text("""
-                SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
-                FROM order_items oi
-                JOIN orders o ON oi.order_id = o.order_id
-                WHERE oi.product_id IN :product_ids
-                AND o.status IN ('issued', 'on_rent')
-                AND o.rental_end_date >= CURDATE()
-                GROUP BY oi.product_id
-            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
-            in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+            reserved_dict = {}
+            in_rent_dict = {}
+            for row in combined_result:
+                reserved_dict[row[0]] = int(row[1] or 0)
+                in_rent_dict[row[0]] = int(row[2] or 0)
             
             who_has_result = db.execute(text("""
                 SELECT 
@@ -621,27 +617,21 @@ async def get_catalog_items(
         pass
     
     if include_reservations:
-        # Резерви (замовлення на комплектації, готові до видачі, очікують клієнта)
-        reserved_result = db.execute(text("""
-            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+        # Об'єднаний запит: резерви + оренда за один раз
+        combined_result = db.execute(text("""
+            SELECT 
+                oi.product_id,
+                SUM(CASE WHEN o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending') THEN oi.quantity ELSE 0 END) as reserved,
+                SUM(CASE WHEN o.status IN ('issued', 'on_rent') THEN oi.quantity ELSE 0 END) as in_rent
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.order_id
-            WHERE o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+            WHERE o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending', 'issued', 'on_rent')
             AND o.rental_end_date >= CURDATE()
             GROUP BY oi.product_id
         """))
-        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
-        
-        # В оренді (видані замовлення)
-        in_rent_result = db.execute(text("""
-            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.order_id
-            WHERE o.status IN ('issued', 'on_rent')
-            AND o.rental_end_date >= CURDATE()
-            GROUP BY oi.product_id
-        """))
-        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+        for row in combined_result:
+            reserved_dict[row[0]] = int(row[1] or 0)
+            in_rent_dict[row[0]] = int(row[2] or 0)
         
         # На реставрації - тепер з product_damage_history (єдине джерело)
         in_restore_result = db.execute(text("""
@@ -835,68 +825,118 @@ async def get_family_products(
 
 
 
+
+@router.get("/products-lite")
+async def get_products_lite(
+    search: str = None,
+    category: str = None,
+    limit: int = 10000,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Легкий ендпоінт для FamiliesManager - мінімум полів, максимум швидкості
+    """
+    sql = """
+        SELECT 
+            p.product_id, p.sku, p.name, p.image_url,
+            p.category_name, p.family_id, p.color, p.quantity
+        FROM products p
+        WHERE p.status = 1
+    """
+    params = {}
+    
+    if search:
+        sql += " AND (p.name LIKE :search OR p.sku LIKE :search)"
+        params['search'] = f"%{search}%"
+    
+    if category:
+        sql += " AND (p.category_name LIKE :category OR p.subcategory_name LIKE :category)"
+        params['category'] = f"%{category}%"
+    
+    sql += f" ORDER BY p.product_id DESC LIMIT {limit}"
+    
+    result = db.execute(text(sql), params).fetchall()
+    
+    items = []
+    for row in result:
+        img = normalize_image_url(row[3])
+        items.append({
+            "product_id": row[0],
+            "sku": row[1],
+            "name": row[2],
+            "image": img,
+            "cover": img,
+            "category": row[4],
+            "category_name": row[4],
+            "family_id": row[5],
+            "color": row[6],
+            "quantity": row[7] or 0
+        })
+    
+    return items
+
+
 @router.get("/families")
 async def get_all_families(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Отримати всі набори з їх товарами
+    Отримати всі набори з їх товарами (оптимізовано - один JOIN замість N+1)
     """
     try:
-        # Отримати всі набори
-        families_result = db.execute(text("""
-            SELECT id, name, description FROM product_families ORDER BY name
-        """))
+        # Один запит замість 1 + N окремих запитів
+        result = db.execute(text("""
+            SELECT 
+                pf.id as family_id,
+                pf.name as family_name,
+                pf.description as family_description,
+                p.product_id,
+                p.sku,
+                p.name as product_name,
+                p.image_url,
+                p.color,
+                p.material,
+                p.rental_price,
+                p.price,
+                p.quantity,
+                p.category_name,
+                p.family_id as product_family_id
+            FROM product_families pf
+            LEFT JOIN products p ON p.family_id = pf.id AND p.status = 1
+            ORDER BY pf.name, p.sku
+        """)).fetchall()
         
-        families = []
-        for fam_row in families_result:
-            family_id = fam_row[0]
-            
-            # Отримати товари для кожного набору з усіма потрібними полями
-            products_result = db.execute(text("""
-                SELECT 
-                    p.product_id, 
-                    p.sku, 
-                    p.name, 
-                    p.image_url,
-                    p.color,
-                    p.material,
-                    p.rental_price,
-                    p.price,
-                    p.quantity,
-                    p.category_name,
-                    p.family_id
-                FROM products p
-                WHERE p.family_id = :family_id
-                ORDER BY p.sku
-            """), {"family_id": family_id})
-            
-            products = []
-            for prod_row in products_result:
-                products.append({
-                    "product_id": prod_row[0],
-                    "sku": prod_row[1],
-                    "name": prod_row[2],
-                    "cover": normalize_image_url(prod_row[3]),
-                    "image": normalize_image_url(prod_row[3]),
-                    "image_url": normalize_image_url(prod_row[3]),
-                    "color": prod_row[4],
-                    "material": prod_row[5],
-                    "rental_price": float(prod_row[6]) if prod_row[6] else 0,
-                    "price": float(prod_row[7]) if prod_row[7] else 0,
-                    "quantity": prod_row[8] or 0,
-                    "category_name": prod_row[9],
-                    "family_id": prod_row[10]
+        # Групуємо результати в Python
+        families_map = {}
+        for row in result:
+            fid = row[0]
+            if fid not in families_map:
+                families_map[fid] = {
+                    "id": fid,
+                    "name": row[1],
+                    "description": row[2],
+                    "products": []
+                }
+            # Якщо є продукт (LEFT JOIN може дати NULL)
+            if row[3] is not None:
+                img = normalize_image_url(row[6])
+                families_map[fid]["products"].append({
+                    "product_id": row[3],
+                    "sku": row[4],
+                    "name": row[5],
+                    "cover": img,
+                    "image": img,
+                    "image_url": img,
+                    "color": row[7],
+                    "material": row[8],
+                    "rental_price": float(row[9]) if row[9] else 0,
+                    "price": float(row[10]) if row[10] else 0,
+                    "quantity": row[11] or 0,
+                    "category_name": row[12],
+                    "family_id": row[13]
                 })
-            
-            families.append({
-                "id": family_id,
-                "name": fam_row[1],
-                "description": fam_row[2],
-                "products": products
-            })
         
-        return families
+        return list(families_map.values())
         
     except Exception as e:
         raise HTTPException(
@@ -988,18 +1028,21 @@ async def assign_products_to_family(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Прив'язати товари до набору
+    Прив'язати товари до набору (batch операції)
     """
     try:
         product_ids = data.get("product_ids", [])
+        if not product_ids:
+            return {"success": True, "message": "Немає товарів для прив'язки", "product_ids": None}
         
-        # Оновлюємо family_id в products
-        for product_id in product_ids:
-            db.execute(text("""
-                UPDATE products SET family_id = :family_id WHERE product_id = :product_id
-            """), {"family_id": family_id, "product_id": product_id})
+        # Batch UPDATE - один запит замість циклу
+        placeholders = ','.join(str(int(pid)) for pid in product_ids)
+        db.execute(text(f"""
+            UPDATE products SET family_id = :family_id 
+            WHERE product_id IN ({placeholders})
+        """), {"family_id": family_id})
         
-        # Оновлюємо колонку product_ids в product_families
+        # Отримати всі product_ids для цієї family
         all_products = db.execute(text("""
             SELECT product_id FROM products WHERE family_id = :family_id ORDER BY product_id
         """), {"family_id": family_id}).fetchall()
@@ -1010,12 +1053,13 @@ async def assign_products_to_family(
             UPDATE product_families SET product_ids = :product_ids WHERE id = :family_id
         """), {"product_ids": product_ids_str, "family_id": family_id})
         
-        # Оновлюємо таблицю product_family_items
+        # Оновити product_family_items - batch операція
         db.execute(text("DELETE FROM product_family_items WHERE family_id = :family_id"), {"family_id": family_id})
-        for product_id in product_ids:
-            db.execute(text("""
-                INSERT INTO product_family_items (family_id, product_id) VALUES (:family_id, :product_id)
-            """), {"family_id": family_id, "product_id": product_id})
+        if all_products:
+            values = ','.join(f"({family_id},{p[0]})" for p in all_products)
+            db.execute(text(f"""
+                INSERT INTO product_family_items (family_id, product_id) VALUES {values}
+            """))
         
         db.commit()
         

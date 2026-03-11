@@ -123,7 +123,7 @@ async def get_tasks(
             u.firstname as assignee_firstname, u.lastname as assignee_lastname,
             creator.firstname as creator_firstname, creator.lastname as creator_lastname
         FROM tasks t
-        LEFT JOIN damages d ON t.damage_id = d.id
+        LEFT JOIN product_damage_history d ON t.damage_id = d.id
         LEFT JOIN users u ON t.assigned_to_id = u.user_id
         LEFT JOIN users creator ON t.created_by_id = creator.user_id
         WHERE 1=1
@@ -256,7 +256,7 @@ async def get_task(
             t.*, d.case_number as damage_case_number,
             u.firstname as assignee_firstname, u.lastname as assignee_lastname
         FROM tasks t
-        LEFT JOIN damages d ON t.damage_id = d.id
+        LEFT JOIN product_damage_history d ON t.damage_id = d.id
         LEFT JOIN users u ON t.assigned_to_id = u.user_id
         WHERE t.id = :task_id
     """), {"task_id": task_id})

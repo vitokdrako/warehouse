@@ -56,11 +56,13 @@ async def warehouse_dashboard(
         tasks_pending = len([t for t in tasks_rows if t[0] == 'todo'])
         tasks_progress = len([t for t in tasks_rows if t[0] == 'in_progress'])
         
-        # ✅ Активні шкоди
+        # ✅ Активні шкоди (з product_damage_history)
         damages_result = db.execute(text("""
             SELECT COUNT(*) as count
-            FROM damages
-            WHERE case_status IN ('pending', 'investigating', 'pending_payment')
+            FROM product_damage_history
+            WHERE COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+            AND processing_type IN ('wash', 'restoration', 'laundry')
+            AND (COALESCE(qty, 1) - COALESCE(processed_qty, 0)) > 0
         """))
         active_damages = damages_result.scalar() or 0
         

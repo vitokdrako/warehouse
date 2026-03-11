@@ -20,7 +20,7 @@ const money = (v) => `₴${fmtUA(v)}`;
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—';
 const fmtTime = (d) => d ? new Date(d).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '';
 
-export default function KasaPage() {
+export default function KasaPage({ embedded = false }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState(null);
@@ -71,17 +71,19 @@ export default function KasaPage() {
   const onCreated = () => { setModal(null); fetchData(); };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-montserrat" data-testid="kasa-page">
-      <CorporateHeader cabinetName="Каса" />
+    <div className={embedded ? "font-montserrat" : "min-h-screen bg-slate-50 font-montserrat"} data-testid="kasa-page">
+      {!embedded && <CorporateHeader cabinetName="Каса" />}
 
       {/* Top Bar */}
-      <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
+      <div className={embedded ? "bg-white border-b border-slate-200 rounded-t-xl" : "sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm"}>
         <div className="max-w-[1800px] mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <button onClick={() => navigate('/manager-cabinet')} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" data-testid="back-btn">
-                <ArrowLeft className="w-5 h-5" />
-              </button>
+              {!embedded && (
+                <button onClick={() => navigate('/manager-cabinet')} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" data-testid="back-btn">
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+              )}
               <div>
                 <h1 className="text-lg font-bold text-slate-800">Каса</h1>
                 <p className="text-xs text-slate-500">{periodLabels[period]}</p>

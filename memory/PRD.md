@@ -1,61 +1,72 @@
 # RentalHub PRD
 
-## Original Problem Statement
-Comprehensive overhaul of rental management application workflows for Prop Masters and Managers, including damage processing, financial operations, document generation, and catalog management.
+## Продукт
+Система управління орендою декору — бекофіс з менеджерським кабінетом, каталогом, кабінетом шкоди, касою.
 
-## Architecture
-- **Frontend:** React (CRA) → `rentalhub.farforrent.com.ua`
-- **Backend:** FastAPI → `backrentalhub.farforrent.com.ua`
-- **Database:** External MySQL (OpenCart-based)
-- **Deployment:** Manual — agent builds frontend + prepares backend files in `/app/clean_project/`
+## Архітектура
+- **Frontend:** React (CRA) + Tailwind CSS
+- **Backend:** FastAPI + MySQL (external farforre.mysql.tools)
+- **Дві БД:** farforre_db (OpenCart), farforre_rentalhub (RentalHub)
+- **Deploy model:** manual — backend .py → clean_project/backend_update/, frontend build → clean_project/frontend_build/
 
-## Core Modules
-1. **Damage Cabinet** (`DamageHubApp.jsx` + `product_damage_history.py`) — 3-column dashboard (Wash/Restoration/Laundry)
-2. **Catalog** (`CatalogBoard.jsx` + `catalog.py`) — Product catalog with availability tracking
-3. **Orders/Returns** — Order management with damage recording at return
-4. **Kasa (Cash Desk)** — Financial operations + cash collection
-5. **Documents** — Printable lists, acts, invoices
+## Реалізовано (Березень 2026)
 
-## What's Been Implemented
+### Кабінет Шкоди (DamageHubApp)
+- Пошук по SKU/назві через API
+- Додавання товарів з кількістю в черги (wash/restoration/laundry)
+- Часткові повернення (batch + individual)
+- frozen_quantity логіка виправлена
 
-### Session 2026-03-11
-- Catalog SKU search integrated into Damage Cabinet (API-based with debounce)
-- Quantity input when adding items to queues
-- Freeze on add (`frozen_quantity += qty`), unfreeze on complete (`frozen_quantity -= qty`)
-- Partial acceptance for ALL queues (Wash/Restoration/Laundry) + laundry batches
-- DamageModal updated: 3 queue buttons, "Без запису" uses quick-add (no damage history)
-- Print list excludes returned items, shows remaining qty
-- Fixed 17 products with stuck frozen_quantity via fix-frozen-quantities endpoint
-- Laundry endpoint now returns qty/processed_qty fields
-- `loadAll` uses Promise.allSettled for resilience
+### Оптимізація системи (11.03.2026)
+- **product_damage_history** — єдине джерело істини для стану обробки
+- `orders.py` → пише в PDH замість `product_cleaning_status`
+- `return_cards.py` → пише в PDH замість `damages`+`damage_items`
+- `catalog.py` → restoration читає з PDH замість `product_cleaning_status`
+- `product_cleaning.py` → повністю переписаний на PDH
+- `damage_cases.py` → пише тільки в PDH
+- Уніфікація `washing` → `wash` (БД + бекенд + фронтенд)
 
-### Previous Sessions
-- 3-column Damage Cabinet dashboard
-- Laundry batches (create, print, partial return)
-- Cash Collection (інкасація) feature
-- Multi-currency deposit support
-- Financial calculations fix (service_fee)
-- Mass order closing, order restoration
-- Document generation (handover act, picking list, processing list)
+### Фінансова оптимізація (11.03.2026)
+- `orders.py` → fin_transactions замість finance_transactions
+- `user_tracking.py` → fin_transactions замість finance_transactions
+- Каса (/kasa) вбудована в менеджерський кабінет як вкладка
+- /finance (FinanceHub) → redirect на /manager-cabinet
 
-## Pending Issues
-- P1: Monthly Cash Desk Closing (Z-report)
-- P1: Catalog API performance / FamiliesManager infinite loading
-- P1: System cleanup (unused tables/files)
-- P2: convert-to-order instability
-- P2: Moodboard export broken
-- P2: Calendar timezone bug
-- P2: Email templates for documents
+### Очистка
+- Видалено 8 порожніх таблиць (customers, inventory, etc.)
+- Видалено 14 backup/old файлів бекенду
 
-## Key Files
-- `/app/frontend/src/pages/DamageHubApp.jsx`
-- `/app/frontend/src/components/DamageModal.jsx`
-- `/app/backend/routes/product_damage_history.py`
-- `/app/backend/routes/laundry.py`
-- `/app/backend/routes/documents.py`
-- `/app/backend/routes/catalog.py`
-- `/app/clean_project/backend_update/` — files for production deployment
-- `/app/clean_project/frontend_build/` — production frontend build
+## Менеджерський кабінет (/manager-cabinet)
+3 вкладки:
+1. **Замовлення** — 3 колонки + KPI
+2. **Клієнти** — ClientsTab (документація, історія замовлень)
+3. **Каса** — KasaPage embedded (дохід/депозити/витрати)
+
+## Тестова база
+- `farforre_laravell` на farforre.mysql.tools — копія production для безпечного тестування
+
+## Бекенд файли для deploy
+`/app/clean_project/backend_update/routes/`:
+- orders.py, return_cards.py, catalog.py, product_cleaning.py
+- product_damage_history.py, laundry.py, damage_cases.py, user_tracking.py
+
+## Міграційний скрипт
+`/app/clean_project/MIGRATION_SCRIPT.sql`
 
 ## Credentials
 - Admin: `vitokdrako@gmail.com` / `test123`
+
+## Backlog (P1)
+- Виправити FamiliesManager.jsx (повільний Catalog API)
+- Оптимізація Catalog API (N+1 queries)
+- Місячне закриття каси
+- Клієнти: документація + історія замовлень
+
+## Backlog (P2)
+- convert-to-order стабільність
+- Moodboard export
+- Timezone bug в календарі
+- Email шаблони
+- Real-time оновлення
+- Уніфікація workspaces
+- RBAC

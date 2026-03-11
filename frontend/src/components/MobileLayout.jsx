@@ -16,7 +16,7 @@ const MobileLayout = ({ children, currentPage = 'dashboard' }) => {
     { name: 'Головна', href: '/manager', icon: Home, id: 'dashboard' },
     { name: 'Календар', href: '/calendar', icon: Calendar, id: 'calendar' },
     { name: 'Видача', href: '/issue', icon: Package, id: 'issue' },
-    { name: 'Фінанси', href: '/finance', icon: DollarSign, id: 'finance' },
+    { name: 'Каса', href: '/kasa', icon: DollarSign, id: 'finance' },
     { name: 'Пошкодження', href: '/damage', icon: AlertTriangle, id: 'damage' },
   ];
 

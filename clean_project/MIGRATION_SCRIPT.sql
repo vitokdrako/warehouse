@@ -1,8 +1,10 @@
 -- =====================================================
--- МІГРАЦІЙНИЙ СКРИПТ: Оптимізація Damage Cabinet
+-- МІГРАЦІЙНИЙ СКРИПТ v2: Повна оптимізація RentalHub
 -- Виконати на production базі farforre_rentalhub
 -- ПЕРЕД запуском нового бекенду
 -- =====================================================
+
+-- ============ ФАЗА 1: ОБОВ'ЯЗКОВІ ЗМІНИ ============
 
 -- 1. Додати нові поля в product_damage_history
 ALTER TABLE product_damage_history ADD COLUMN source VARCHAR(50) DEFAULT 'manual' AFTER created_by;
@@ -17,14 +19,11 @@ ALTER TABLE product_damage_history ADD INDEX idx_pdh_order (order_id);
 -- 3. Уніфікувати processing_type: 'washing' → 'wash'
 UPDATE product_damage_history SET processing_type = 'wash' WHERE processing_type = 'washing';
 
--- 4. Оновити batch_type в laundry_batches (якщо є 'washing')
+-- 4. Уніфікувати batch_type в laundry_batches
 UPDATE laundry_batches SET batch_type = 'wash' WHERE batch_type = 'washing';
 
--- =====================================================
--- ПІСЛЯ ПЕРЕВІРКИ що все працює (через кілька днів):
--- =====================================================
+-- ============ ФАЗА 2: ОЧИСТКА ТАБЛИЦЬ (після 1 тижня роботи) ============
 
--- 5. Видалити порожні таблиці (безпечно)
 -- DROP TABLE IF EXISTS customers;
 -- DROP TABLE IF EXISTS inventory;
 -- DROP TABLE IF EXISTS inventory_recounts;
@@ -34,12 +33,21 @@ UPDATE laundry_batches SET batch_type = 'wash' WHERE batch_type = 'washing';
 -- DROP TABLE IF EXISTS order_notes;
 -- DROP TABLE IF EXISTS order_item_packing;
 
--- 6. ПІСЛЯ ТИЖНЯ РОБОТИ: видалити product_cleaning_status
+-- ============ ФАЗА 3: ПІСЛЯ 1 МІСЯЦЯ РОБОТИ ============
+
+-- Видалити стару таблицю product_cleaning_status (дані тепер в product_damage_history)
 -- DROP TABLE IF EXISTS product_cleaning_status;
 
--- 7. ПІСЛЯ МІСЯЦЯ: видалити старі backup файли з сервера
--- rm -f routes/archive_old.py routes/audit.py.backup routes/catalog_old.py
--- rm -f routes/damages.py.backup routes/damages_old.py routes/extended_catalog_old.py
--- rm -f routes/finance_old.py routes/issue_cards_old.py routes/orders.py.backup
--- rm -f routes/orders_old_full.py routes/orders_simple_backup.py
--- rm -f routes/products.py.backup routes/return_cards_old.py routes/tasks_old.py
+-- Видалити стару таблицю finance_transactions (замінена fin_transactions)
+-- DROP TABLE IF EXISTS finance_transactions;
+
+-- ============ ПРИМІТКИ ============
+-- Оновлені бекенд файли:
+--   orders.py          — фінанси → fin_transactions, повернення → product_damage_history
+--   return_cards.py    — шкода → product_damage_history (замість damages+damage_items)
+--   catalog.py         — restoration з product_damage_history (замість product_cleaning_status)
+--   product_cleaning.py — повністю переписаний, читає з product_damage_history
+--   laundry.py         — washing → wash
+--   damage_cases.py    — пише тільки в product_damage_history
+--   user_tracking.py   — читає з fin_transactions (замість finance_transactions)
+--   product_damage_history.py — washing → wash

@@ -3,8 +3,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CorporateHeader from '../components/CorporateHeader';
 import ClientsTab from '../components/ClientsTab';
+import KasaPage from './KasaPage';
 import ReturnColumn from '../components/ReturnColumn';
-import { Search, Filter, ChevronDown, RefreshCw, Edit3, Eye, Clock, Package, CheckCircle, AlertTriangle, CreditCard, Banknote, Building2, X, Users, FileText } from 'lucide-react';
+import { Search, Filter, ChevronDown, RefreshCw, Edit3, Eye, Clock, Package, CheckCircle, AlertTriangle, CreditCard, Banknote, Building2, X, Users, FileText, Wallet } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -268,6 +269,18 @@ export default function ManagerCabinet() {
             <Users className="w-4 h-4" />
             Клієнти
           </button>
+          <button
+            onClick={() => setActiveTab('kasa')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'kasa' 
+                ? 'bg-white text-slate-800 shadow-sm' 
+                : 'text-slate-600 hover:text-slate-800'
+            }`}
+            data-testid="tab-kasa"
+          >
+            <Wallet className="w-4 h-4" />
+            Каса
+          </button>
         </div>
       </div>
       
@@ -275,6 +288,10 @@ export default function ManagerCabinet() {
       {activeTab === 'clients' ? (
         <div className="max-w-[1600px] mx-auto px-4 py-4">
           <ClientsTab />
+        </div>
+      ) : activeTab === 'kasa' ? (
+        <div className="max-w-[1800px] mx-auto px-4 py-4">
+          <KasaPage embedded={true} />
         </div>
       ) : (
         <>
@@ -286,7 +303,7 @@ export default function ManagerCabinet() {
                 <div className="text-2xl font-bold text-slate-800">{filteredOrders.length}</div>
                 <div className="text-xs text-slate-400">{awaitingOrders.length} нові / {inProgressOrders.length} в роботі</div>
               </div>
-              <div className="bg-white rounded-xl border border-slate-200 p-4 cursor-pointer hover:ring-2 hover:ring-emerald-200 hover:shadow-md transition-all" onClick={() => window.open('/kasa', '_blank')} data-testid="kpi-revenue">
+              <div className="bg-white rounded-xl border border-slate-200 p-4 cursor-pointer hover:ring-2 hover:ring-emerald-200 hover:shadow-md transition-all" onClick={() => setActiveTab('kasa')} data-testid="kpi-revenue">
                 <div className="text-sm text-slate-500">Виручка (місяць)</div>
                 <div className="text-2xl font-bold text-emerald-600">₴{(financeData.revenue || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}</div>
                 <div className="text-xs text-slate-400 flex items-center gap-3">

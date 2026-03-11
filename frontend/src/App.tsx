@@ -20,7 +20,7 @@ import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
 import UniversalOpsCalendar from './pages/UniversalOpsCalendar';
 import CatalogBoard from './pages/CatalogBoard';
-import FinanceHub from './pages/FinanceHub';  // ✅ Фінансова консоль
+// Legacy: import FinanceHub from './pages/FinanceHub';  // Перенесено в ManagerCabinet як вкладку "Каса"
 // New unified workspace components
 import NewOrderCleanWorkspace from './pages/NewOrderCleanWorkspace';
 import NewOrderViewWorkspace from './pages/NewOrderViewWorkspace';
@@ -194,23 +194,9 @@ function App() {
             } 
           />
           
-          <Route 
-            path="/finance" 
-            element={
-              <ProtectedRoute>
-                <FinanceHub />
-              </ProtectedRoute>
-            } 
-          />
-
-          <Route 
-            path="/analytics" 
-            element={
-              <ProtectedRoute>
-                <FinanceHub />
-              </ProtectedRoute>
-            } 
-          />
+          {/* /finance та /analytics прибрані — фінанси тепер у вкладці "Каса" менеджерського кабінету */}
+          <Route path="/finance" element={<Navigate to="/manager-cabinet" replace />} />
+          <Route path="/analytics" element={<Navigate to="/manager-cabinet" replace />} />
           
           <Route 
             path="/sync" 

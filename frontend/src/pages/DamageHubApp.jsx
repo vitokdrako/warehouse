@@ -167,9 +167,19 @@ const QuickAddPopover = ({ queueType, onAdd, onClose }) => {
 
 // ============= ITEM CARD =============
 const QueueItemCard = ({ item, onComplete, onDelete, onPhotoClick, completing }) => {
+  const [acceptQty, setAcceptQty] = useState(null); // null = не показувати, число = кількість
   const photoUrl = getPhotoUrl(item);
   const isInProgress = item.processing_status === 'in_progress';
-  const isPending = item.processing_status === 'pending';
+  
+  const totalQty = item.qty || 1;
+  const processedQty = item.processed_qty || 0;
+  const remaining = totalQty - processedQty;
+
+  const handleAccept = () => {
+    const qty = acceptQty ?? remaining;
+    onComplete(item.id, qty);
+    setAcceptQty(null);
+  };
 
   return (
     <div className={`p-3 rounded-xl border bg-white transition-all hover:shadow-sm ${isInProgress ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200'}`}>
@@ -196,11 +206,9 @@ const QueueItemCard = ({ item, onComplete, onDelete, onPhotoClick, completing })
               <div className="font-semibold text-slate-800 text-sm truncate">{item.product_name}</div>
               <div className="text-xs text-slate-500 font-mono">{item.sku}</div>
             </div>
-            {item.qty > 1 && (
-              <span className="flex-shrink-0 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
-                x{item.qty}
-              </span>
-            )}
+            <span className="flex-shrink-0 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+              {processedQty > 0 ? `${processedQty}/${totalQty}` : totalQty} шт
+            </span>
           </div>
           
           {/* Damage type */}
@@ -233,7 +241,7 @@ const QueueItemCard = ({ item, onComplete, onDelete, onPhotoClick, completing })
       </div>
       
       {/* Action */}
-      <div className="mt-2 flex justify-end gap-1.5">
+      <div className="mt-2 flex items-center justify-end gap-1.5">
         <button
           onClick={() => onDelete(item.id)}
           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors flex items-center gap-1"
@@ -241,14 +249,48 @@ const QueueItemCard = ({ item, onComplete, onDelete, onPhotoClick, completing })
           <X className="w-3.5 h-3.5" />
           Видалити
         </button>
-        <button
-          onClick={() => onComplete(item.id)}
-          disabled={completing === item.id}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50 transition-colors flex items-center gap-1"
-        >
-          <Check className="w-3.5 h-3.5" />
-          {completing === item.id ? 'Обробка...' : 'Готово'}
-        </button>
+        
+        {remaining > 1 ? (
+          <div className="flex items-center gap-1">
+            <div className="flex items-center border border-emerald-200 rounded-lg overflow-hidden bg-emerald-50/50">
+              <button
+                onClick={() => setAcceptQty(Math.max(1, (acceptQty ?? remaining) - 1))}
+                className="px-1.5 py-1 text-emerald-600 hover:bg-emerald-100 text-xs font-bold"
+              >-</button>
+              <input
+                type="number"
+                min={1}
+                max={remaining}
+                value={acceptQty ?? remaining}
+                onChange={e => setAcceptQty(Math.max(1, Math.min(remaining, parseInt(e.target.value) || 1)))}
+                className="w-9 text-center text-xs font-semibold bg-transparent outline-none text-emerald-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                data-testid={`accept-qty-${item.id}`}
+              />
+              <button
+                onClick={() => setAcceptQty(Math.min(remaining, (acceptQty ?? remaining) + 1))}
+                className="px-1.5 py-1 text-emerald-600 hover:bg-emerald-100 text-xs font-bold"
+              >+</button>
+            </div>
+            <button
+              onClick={handleAccept}
+              disabled={completing === item.id}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50 transition-colors flex items-center gap-1"
+              data-testid={`accept-btn-${item.id}`}
+            >
+              <Check className="w-3.5 h-3.5" />
+              {completing === item.id ? '...' : 'Прийняти'}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => onComplete(item.id, remaining)}
+            disabled={completing === item.id}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50 transition-colors flex items-center gap-1"
+          >
+            <Check className="w-3.5 h-3.5" />
+            {completing === item.id ? 'Обробка...' : 'Готово'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -709,12 +751,12 @@ export default function DamageHubApp() {
 
   useEffect(() => { loadAll(); loadBatches(); }, [loadAll, loadBatches]);
 
-  const handleComplete = async (itemId) => {
+  const handleComplete = async (itemId, qty) => {
     setCompleting(itemId);
     try {
       const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${itemId}/return-to-stock`, {
         method: "POST",
-        body: JSON.stringify({ notes: "Обробку завершено" })
+        body: JSON.stringify({ notes: "Обробку завершено", return_qty: qty || null })
       });
       if (res.ok) {
         await loadAll();

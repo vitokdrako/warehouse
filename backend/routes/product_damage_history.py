@@ -1707,32 +1707,34 @@ async def mark_processing_failed(damage_id: str, data: dict, db: Session = Depen
 @router.post("/{damage_id}/return-to-stock")
 async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """
-    Повернути товар на склад БЕЗ обробки.
-    Використовується коли шкода незначна або не потребує ремонту.
-    Розморожує товар і робить його доступним для оренди.
+    Повернути товар на склад (повністю або частково).
+    Якщо передано return_qty < qty — часткове повернення (залишок лишається в черзі).
+    Розморожує вказану кількість і робить її доступною.
     """
     try:
         notes = data.get("notes", "Повернуто на склад")
+        return_qty = data.get("return_qty")  # None = повне повернення
         
         # --- Quick action items (quick_{product_id}) ---
         if str(damage_id).startswith("quick_"):
             product_id = int(str(damage_id).replace("quick_", ""))
+            unfreeze = return_qty or 1
             db.execute(text("""
                 UPDATE products 
                 SET product_state = 'shelf',
-                    frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - 1, 0)
+                    frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - :qty, 0)
                 WHERE product_id = :pid
-            """), {"pid": product_id})
+            """), {"pid": product_id, "qty": unfreeze})
             db.execute(text("""
                 UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.commit()
-            return {"success": True, "message": "Товар повернуто на склад"}
+            return {"success": True, "message": f"Повернуто {unfreeze} шт на склад"}
         
         # --- Regular damage history records ---
         damage_record = db.execute(text("""
-            SELECT product_id, sku, product_name, qty, laundry_batch_id, laundry_item_id
+            SELECT product_id, sku, product_name, qty, laundry_batch_id, laundry_item_id, COALESCE(processed_qty, 0)
             FROM product_damage_history 
             WHERE id = :damage_id
         """), {"damage_id": damage_id}).fetchone()
@@ -1743,52 +1745,81 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
         product_id = damage_record[0]
         batch_id = damage_record[4]
         laundry_item_id = damage_record[5]
+        total_qty = damage_record[3] or 1
+        already_processed = damage_record[6] or 0
+        remaining = total_qty - already_processed
         
-        # 1. Оновити запис шкоди
-        db.execute(text("""
-            UPDATE product_damage_history
-            SET processing_type = 'returned_to_stock',
-                processing_status = 'completed',
-                returned_from_processing_at = NOW(),
-                processing_notes = :notes
-            WHERE id = :damage_id
-        """), {"damage_id": damage_id, "notes": notes})
+        # Визначити кількість для повернення
+        qty_to_return = min(return_qty or remaining, remaining)
+        if qty_to_return < 1:
+            qty_to_return = remaining
         
-        # 2. Якщо елемент був у партії — оновити повернення
+        is_full_return = (already_processed + qty_to_return) >= total_qty
+        
+        if is_full_return:
+            # Повне повернення — закриваємо запис
+            db.execute(text("""
+                UPDATE product_damage_history
+                SET processing_type = 'returned_to_stock',
+                    processing_status = 'completed',
+                    processed_qty = :total,
+                    returned_from_processing_at = NOW(),
+                    processing_notes = :notes
+                WHERE id = :damage_id
+            """), {"damage_id": damage_id, "notes": notes, "total": total_qty})
+        else:
+            # Часткове повернення — збільшуємо processed_qty, запис лишається в черзі
+            db.execute(text("""
+                UPDATE product_damage_history
+                SET processed_qty = COALESCE(processed_qty, 0) + :qty,
+                    processing_notes = CONCAT(COALESCE(processing_notes, ''), '\nЧасткове: ', :qty_str, ' шт. ', :notes)
+                WHERE id = :damage_id
+            """), {"damage_id": damage_id, "qty": qty_to_return, "qty_str": str(qty_to_return), "notes": notes})
+        
+        # Якщо елемент був у партії — оновити повернення
         if batch_id:
             if laundry_item_id:
-                db.execute(text("UPDATE laundry_items SET returned_quantity = quantity WHERE id = :lid"), {"lid": laundry_item_id})
+                if is_full_return:
+                    db.execute(text("UPDATE laundry_items SET returned_quantity = quantity WHERE id = :lid"), {"lid": laundry_item_id})
+                else:
+                    db.execute(text("UPDATE laundry_items SET returned_quantity = returned_quantity + :qty WHERE id = :lid"), {"lid": laundry_item_id, "qty": qty_to_return})
             db.execute(text("""
                 UPDATE laundry_batches 
                 SET returned_items = (SELECT COALESCE(SUM(returned_quantity), 0) FROM laundry_items WHERE batch_id = :bid)
                 WHERE id = :bid
             """), {"bid": batch_id})
-            # Автозакриття партії якщо все повернуто
             batch_info = db.execute(text("SELECT total_items, returned_items FROM laundry_batches WHERE id = :bid"), {"bid": batch_id}).fetchone()
             if batch_info and batch_info[1] >= batch_info[0]:
                 db.execute(text("UPDATE laundry_batches SET status = 'returned' WHERE id = :bid"), {"bid": batch_id})
         
-        # 3. Повернути товар на полицю та розморозити
+        # Розморозити вказану кількість
         if product_id:
-            # Отримати кількість із damage record для правильної розморозки
-            damage_qty = damage_record[3] or 1
             db.execute(text("""
                 UPDATE products 
-                SET product_state = 'shelf',
+                SET product_state = CASE WHEN :is_full THEN 'shelf' ELSE product_state END,
                     frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - :qty, 0)
                 WHERE product_id = :product_id
-            """), {"product_id": product_id, "qty": damage_qty})
-            db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
+            """), {"product_id": product_id, "qty": qty_to_return, "is_full": is_full_return})
+            
+            if is_full_return:
+                db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
+            
             try:
                 db.execute(text("""
                     INSERT INTO product_history (product_id, action, actor, details, created_at)
                     VALUES (:product_id, 'ПОВЕРНУТО НА СКЛАД', 'system', :details, NOW())
-                """), {"product_id": product_id, "details": f"Повернуто з кабінету шкоди. {notes}"})
+                """), {"product_id": product_id, "details": f"{'Повністю' if is_full_return else f'Частково {qty_to_return} шт'} з кабінету шкоди. {notes}"})
             except Exception:
                 pass
         
         db.commit()
-        return {"success": True, "message": "Товар повернуто на склад і доступний для оренди"}
+        return {
+            "success": True, 
+            "message": f"Повернуто {qty_to_return} шт" + (" (повністю)" if is_full_return else f" (залишок: {remaining - qty_to_return} шт)"),
+            "qty_returned": qty_to_return,
+            "is_full": is_full_return,
+            "remaining": remaining - qty_to_return
+        }
         
     except HTTPException:
         raise

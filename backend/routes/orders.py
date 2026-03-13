@@ -827,6 +827,26 @@ async def get_order_details(
     
     order["documents"] = documents
     
+    # Get internal notes / chat for this order
+    notes_result = db.execute(text("""
+        SELECT id, user_name, message, created_at
+        FROM order_internal_notes
+        WHERE order_id = :order_id
+        ORDER BY created_at ASC
+    """), {"order_id": str(order_id)})
+    
+    internal_notes = []
+    for n_row in notes_result:
+        if n_row[2]:  # skip empty messages
+            internal_notes.append({
+                "id": n_row[0],
+                "author": n_row[1] or "System",
+                "message": n_row[2],
+                "created_at": n_row[3].isoformat() if n_row[3] else None,
+            })
+    
+    order["internal_notes"] = internal_notes
+    
     return order
 
 @router.put("/{order_id}")

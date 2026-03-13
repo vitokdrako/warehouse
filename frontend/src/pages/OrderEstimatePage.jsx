@@ -333,11 +333,63 @@ export default function OrderEstimatePage() {
           </div>
         )}
 
-        {/* Notes */}
-        {(order.notes || order.manager_comment) && (
-          <div className="bg-amber-50 rounded-2xl border border-amber-200 p-5">
-            <h3 className="font-semibold text-amber-800 mb-2">Примітки</h3>
-            <p className="text-sm text-amber-900 whitespace-pre-wrap">{order.notes || order.manager_comment}</p>
+        {/* Internal Notes / Chat */}
+        {(order.internal_notes?.length > 0 || order.notes || order.manager_comment) && (
+          <div className="bg-white rounded-2xl border border-slate-200 p-5">
+            <h3 className="font-semibold text-slate-800 mb-4">Примітки та чат ({order.internal_notes?.length || 0})</h3>
+            
+            {/* Manager/order notes */}
+            {order.manager_comment && order.manager_comment !== order.notes && (
+              <div className="mb-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-sm">
+                <div className="text-xs font-medium text-blue-600 mb-1">Коментар менеджера</div>
+                <div className="text-blue-900 whitespace-pre-wrap">{order.manager_comment}</div>
+              </div>
+            )}
+            
+            {/* Internal notes chat */}
+            {order.internal_notes?.length > 0 && (
+              <div className="space-y-2">
+                {order.internal_notes.map((note, i) => {
+                  const isClient = note.author?.includes("клієнт") || note.author?.includes("Клієнт");
+                  const isSystem = note.author === "System";
+                  return (
+                    <div
+                      key={note.id || i}
+                      className={cn(
+                        "px-4 py-2.5 rounded-xl text-sm",
+                        isClient ? "bg-amber-50 border border-amber-200" :
+                        isSystem ? "bg-slate-50 border border-slate-200" :
+                        "bg-blue-50 border border-blue-200"
+                      )}
+                      data-testid={`note-${i}`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={cn(
+                          "text-xs font-semibold",
+                          isClient ? "text-amber-700" : isSystem ? "text-slate-500" : "text-blue-700"
+                        )}>
+                          {note.author}
+                        </span>
+                        <span className="text-xs text-slate-400">{fmtDateTime(note.created_at)}</span>
+                      </div>
+                      <div className={cn(
+                        "whitespace-pre-wrap",
+                        isClient ? "text-amber-900" : isSystem ? "text-slate-700" : "text-blue-900"
+                      )}>
+                        {note.message}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Fallback: order notes if no internal notes */}
+            {(!order.internal_notes || order.internal_notes.length === 0) && order.notes && (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-sm">
+                <div className="text-amber-900 whitespace-pre-wrap">{order.notes}</div>
+              </div>
+            )}
           </div>
         )}
 

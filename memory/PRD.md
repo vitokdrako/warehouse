@@ -3,11 +3,6 @@
 ## Original Problem Statement
 Build a comprehensive rental management system (RentalHub) for FarforRent — a tableware/decor rental company. The system manages orders, inventory, clients, finances, documents, and internal team workflows.
 
-## Latest Feature: Personal Cabinet & Internal Chat (March 2026)
-- **Personal Cabinet** for employees with Profile, My Tasks, Statistics
-- **Internal Chat** (Telegram-style) with channels, DMs, threads — all on MySQL
-- **Integration** with existing Task Manager system
-
 ## Architecture
 - **Frontend**: React + TypeScript + Tailwind CSS + Shadcn UI
 - **Backend**: FastAPI (Python) + MySQL (production: farforre_rentalhub)
@@ -28,37 +23,47 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Damage cabinet & laundry tracking
 - Email integration
 
-### Recent Completions (This Session - March 2026)
-1. **Personal Cabinet** (`/cabinet` route)
-   - Profile tab: user info, role badge, login history
-   - My Tasks tab: task list with status toggle, filters
-   - Team tab: all team members with activity stats
-   - Statistics: active/done/overdue tasks, messages today
+### Session: March 2026
 
-2. **Internal Team Chat** (MySQL-based)
-   - 4 MySQL tables: `chat_channels`, `chat_messages`, `chat_channel_members`, `chat_read_status`
-   - Channel types: general, topic, dm
-   - Thread support (reply_to)
-   - Unread count tracking
-   - 4 default channels: Загальний, Склад, Доставка, Термінове
-   - Polling-based updates (5s interval)
+#### 1. Personal Cabinet (`/cabinet` route)
+- **Profile tab**: User info, role badge, login history, quick stats
+- **Tasks tab** (Full Kanban):
+  - Kanban board with 3 columns (До виконання / В роботі / Виконано)
+  - "Focus of the Day" widget (overdue + due today + in progress)
+  - Mini week calendar showing task counts per day
+  - Task creation modal (title, description, type, priority, assignee, deadline, order)
+  - Task detail modal with status change and assignee reassignment
+  - Scope toggle: "Мої" (my tasks) / "Всі" (all team tasks)
+  - View toggle: Kanban / List
+  - Filters: task type, priority, search
+- **Chat tab**: Telegram-style messaging (see below)
+- **Team tab**: Team members with activity stats
 
-3. **Production DB Connected**: farforre_rentalhub with all new tables
+#### 2. Internal Team Chat (MySQL-based)
+- 4 MySQL tables: `chat_channels`, `chat_messages`, `chat_channel_members`, `chat_read_status`
+- Channel types: general, topic, dm
+- Thread support (reply_to)
+- Unread count tracking with polling (5s/15s intervals)
+- Default channels: Загальний, Склад, Доставка, Термінове
+
+#### 3. Task Manager Optimization
+- Enhanced `/api/cabinet/focus` endpoint for daily focus widget
+- Enhanced `/api/cabinet/my-tasks` with scope parameter (my/all) and assignee names
+- Calendar-Cabinet integration: clicking tasks in calendar navigates to `/cabinet?tab=tasks`
+- URL-based tab selection via query params (`?tab=tasks`)
+- Fixed SQL bug in tasks.py (product_damage_history.case_number column reference)
 
 ## Key Files
-- `/app/backend/routes/cabinet.py` — Cabinet API (profile, stats, tasks, team)
+- `/app/backend/routes/cabinet.py` — Cabinet API (profile, stats, tasks, focus, team)
 - `/app/backend/routes/team_chat.py` — Chat API (channels, messages, threads, DMs)
-- `/app/frontend/src/pages/PersonalCabinet.jsx` — Full cabinet page with all tabs
+- `/app/backend/routes/tasks.py` — Task CRUD (fixed SQL bug)
+- `/app/frontend/src/pages/PersonalCabinet.jsx` — Full cabinet page (kanban, chat, profile, team)
+- `/app/frontend/src/pages/UniversalOpsCalendar.jsx` — Calendar (now links to cabinet)
 - `/app/backend/database_rentalhub.py` — MySQL connection
-- `/app/frontend/src/App.tsx` — Routes (including `/cabinet`)
 
 ## Prioritized Backlog
 
-### P0 (Critical)
-- None currently
-
 ### P1 (High Priority)
-- Integrate Personal Cabinet with Task Manager and Calendar views
 - Post-Deployment Health Check on production
 - Simplify `laundry_items` table/logic
 - Delete legacy route files (`damages.py`, `audit.py`)
@@ -69,6 +74,7 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Fix `convert-to-order` endpoint instability
 - Fix moodboard export
 - Fix recurring Calendar timezone bug
+- Task-Chat integration (discuss tasks in chat threads)
 
 ### P3 (Future)
 - Real-time updates (WebSocket for chat)
@@ -76,6 +82,7 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Implement full RBAC
 - Monthly Financial Report
 - HR/Ops Module
+- Push notifications via Telegram bot
 
 ## Users (9 active)
 | ID | Name | Role |
@@ -89,6 +96,10 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 | 8 | Андрій Реквізитор | requisitor |
 | 9 | Ярослав Реквізитор | requisitor |
 | 10 | Женя Реквізитор | requisitor |
+
+## Test Reports
+- `/app/test_reports/iteration_16.json` — Cabinet + Chat basics (25/25 passed)
+- `/app/test_reports/iteration_17.json` — Task Kanban + Focus + CRUD (21/21 passed)
 
 ## Test Credentials
 - Admin: vitokdrako@gmail.com / test123

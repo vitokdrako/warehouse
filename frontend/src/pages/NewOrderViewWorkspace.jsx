@@ -547,8 +547,8 @@ export default function NewOrderViewWorkspace() {
         manager_id: managerId,
         service_fee: serviceFee, // Додаткова послуга - сума
         service_fee_name: serviceFeeName, // Додаткова послуга - назва
-        // Фінансові дані - total_price = сума товарів ДО знижки
-        total_price: calculations.totalRent + additionalServicesTotal,
+        // Фінансові дані - total_price = сума товарів ДО знижки (без service_fee)
+        total_price: calculations.totalRent,
         deposit_amount: calculations.totalDeposit,
         total_loss_value: calculations.totalDeposit
       })
@@ -591,7 +591,7 @@ export default function NewOrderViewWorkspace() {
         issue_time: issueTime,
         return_time: returnTime,
         items: items,
-        total_rent: calculations.rentAfterDiscount + additionalServicesTotal,
+        total_rent: calculations.rentAfterDiscount + additionalServicesTotal, // Для кошторису — повна сума
         total_deposit: calculations.totalDeposit,
         manager_notes: managerNotes
       })

@@ -196,6 +196,12 @@ def parse_order_row(row, db: Session = None):
     
     if has_new_format:
         # Новий формат з issue_date та return_date
+        total_rental = float(row[11]) if row[11] else 0.0
+        service_fee_val = float(row[17]) if len(row) > 17 and row[17] else 0.0
+        discount_amount_val = float(row[18]) if len(row) > 18 and row[18] else 0.0
+        total_after_disc = round(max(0, total_rental - discount_amount_val), 2)
+        total_to_pay = round(total_after_disc + service_fee_val, 2)
+        
         order_dict = {
             "id": str(row[0]),
             "order_id": row[0],
@@ -211,7 +217,8 @@ def parse_order_row(row, db: Session = None):
             "issue_date": row[8].isoformat() if row[8] else None,
             "return_date": row[9].isoformat() if row[9] else None,
             "status": row[10],
-            "total_rental": float(row[11]) if row[11] else 0.0,
+            "total_rental": total_rental,
+            "total_price": total_rental,
             "total_deposit": float(row[12]) if row[12] else 0.0,
             "deposit_held": float(row[12]) if row[12] else 0.0,
             "manager_comment": row[13] if row[13] else None,
@@ -221,7 +228,11 @@ def parse_order_row(row, db: Session = None):
             "packing_progress": packing_progress,
             "paid_rent": paid_rent,
             "paid_deposit": paid_deposit,
-            "updated_at": updated_at_val
+            "updated_at": updated_at_val,
+            "service_fee": service_fee_val,
+            "discount_amount": discount_amount_val,
+            "total_after_discount": total_after_disc,
+            "total_to_pay": total_to_pay,
         }
     elif has_rental_days_format:
         # Формат з rental_days (15 колонок)
@@ -313,7 +324,8 @@ async def get_orders(
             customer_phone, customer_email, rental_start_date, rental_end_date,
             issue_date, return_date,
             status, total_price, deposit_amount, notes, created_at, is_archived,
-            updated_at
+            updated_at, COALESCE(service_fee, 0) as service_fee, 
+            COALESCE(discount_amount, 0) as discount_amount
         FROM orders
         WHERE 1=1
     """
@@ -603,11 +615,15 @@ async def get_order_details(
     order["manager_name"] = (row[19] or "").strip()
     order["discount"] = round(discount_percent_db, 2)
     order["discount_percent"] = round(discount_percent_db, 2)
-    order["service_fee"] = float(row[21]) if row[21] else 0
+    service_fee = float(row[21]) if row[21] else 0
+    order["service_fee"] = service_fee
     order["service_fee_name"] = row[22] or ""
     order["client_notes"] = row[23] if len(row) > 23 else None  # Нотатки про клієнта
     # Після знижки — динамічний розрахунок
-    order["total_after_discount"] = round(max(0, total_price - discount_amount), 2)
+    total_after_discount = round(max(0, total_price - discount_amount), 2)
+    order["total_after_discount"] = total_after_discount
+    # Повна сума до сплати = товари - знижка + додаткові послуги
+    order["total_to_pay"] = round(total_after_discount + service_fee, 2)
     
     # Завантажити items
     items_result = db.execute(text("""

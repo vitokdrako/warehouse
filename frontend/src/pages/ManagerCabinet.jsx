@@ -544,7 +544,7 @@ function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, merge
   // Розрахунок оплачених сум (з order.payments якщо є)
   const paidRent = order.paid_rent || 0;
   const paidDeposit = order.paid_deposit || 0;
-  const totalRent = order.total_after_discount || order.total_rental || 0;
+  const totalRent = (order.total_after_discount || order.total_rental || 0) + (order.service_fee || 0);
   const totalDeposit = order.total_deposit || order.deposit_amount || 0;
   
   // Статус бейджі
@@ -635,10 +635,10 @@ function ManagerOrderCard({ order, onEdit, onCancel, showProgress = false, merge
         </div>
         
         {/* Finance */}
-        <div className="flex items-center gap-4 text-sm mb-3">
+        <div className="flex items-center gap-4 text-sm mb-3 flex-wrap">
           <div>
             <span className="text-slate-500">Оренда:</span>{' '}
-            <span className="font-semibold text-slate-800">₴{fmtUA(order.total_rental)}</span>
+            <span className="font-semibold text-slate-800">₴{fmtUA(order.total_to_pay || ((order.total_after_discount || order.total_rental || 0) + (order.service_fee || 0)))}</span>
           </div>
           <div>
             <span className="text-slate-500">Застава:</span>{' '}

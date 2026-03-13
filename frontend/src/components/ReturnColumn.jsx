@@ -185,7 +185,7 @@ function ReturnOrderCard({ order, onOpen }) {
         {/* Finance status row */}
         {(() => {
           const paidRent = order.paid_rent || 0;
-          const totalRent = order.total_after_discount || order.total_rental || 0;
+          const totalRent = (order.total_after_discount || order.total_rental || 0) + (order.service_fee || 0);
           const rentDue = Math.max(0, totalRent - paidRent);
           const paidDeposit = order.paid_deposit || 0;
           const totalDeposit = order.total_deposit || order.deposit_amount || 0;

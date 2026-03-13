@@ -183,9 +183,27 @@ const OrderViewModal = ({ order, history, onClose }) => {
                   {/* Total */}
                   <div className="mt-4 p-4 rounded-xl bg-emerald-50 border border-emerald-200">
                     <div className="flex justify-between items-center">
-                      <span className="text-emerald-700 font-medium">Загальна сума:</span>
-                      <span className="text-2xl font-bold text-emerald-800">{money(history.order?.total_price)}</span>
+                      <span className="text-emerald-700 font-medium">Сума товарів:</span>
+                      <span className="text-lg font-bold text-emerald-800">{money(history.order?.total_price)}</span>
                     </div>
+                    {Number(history.order?.service_fee || 0) > 0 && (
+                      <>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-emerald-200">
+                          <span className="text-amber-700 font-medium">{history.order?.service_fee_name || 'Додаткова послуга'}:</span>
+                          <span className="text-lg font-bold text-amber-700">{money(history.order?.service_fee)}</span>
+                        </div>
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-emerald-300">
+                          <span className="text-emerald-800 font-semibold">Разом до сплати:</span>
+                          <span className="text-2xl font-bold text-emerald-900">{money(history.order?.total_to_pay || (Number(history.order?.total_price || 0) + Number(history.order?.service_fee || 0)))}</span>
+                        </div>
+                      </>
+                    )}
+                    {!Number(history.order?.service_fee || 0) && (
+                      <div className="flex justify-between items-center mt-0">
+                        <span></span>
+                        <span className="text-xs text-emerald-600">до сплати</span>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -239,6 +257,12 @@ const OrderViewModal = ({ order, history, onClose }) => {
                   <h3 className="text-xs font-semibold text-emerald-600 mb-3 uppercase">Фінанси</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between"><span className="text-emerald-700">Сума оренди:</span><span className="font-bold text-emerald-800 text-lg">{money(history.order?.total_price)}</span></div>
+                    {Number(history.order?.service_fee || 0) > 0 && (
+                      <div className="flex justify-between"><span className="text-amber-700">{history.order?.service_fee_name || 'Додаткова послуга'}:</span><span className="font-bold text-amber-700">{money(history.order?.service_fee)}</span></div>
+                    )}
+                    {Number(history.order?.service_fee || 0) > 0 && (
+                      <div className="flex justify-between pt-2 border-t border-emerald-200"><span className="text-emerald-800 font-semibold">Разом до сплати:</span><span className="font-bold text-emerald-900 text-lg">{money(history.order?.total_to_pay || (Number(history.order?.total_price || 0) + Number(history.order?.service_fee || 0)))}</span></div>
+                    )}
                     <div className="flex justify-between"><span className="text-emerald-700">Застава:</span><span className="font-bold text-emerald-800">{money(history.order?.deposit_amount)}</span></div>
                   </div>
                 </div>
@@ -316,9 +340,32 @@ const OrderViewModal = ({ order, history, onClose }) => {
           
           {activeTab === 'finance' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Financial Summary */}
+              <div className="md:col-span-2 rounded-xl bg-slate-50 p-4 border border-slate-200">
+                <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase">Зведення</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-slate-500">Сума оренди</div>
+                    <div className="text-lg font-bold text-slate-900">{money(history.order?.total_price)}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">{history.order?.service_fee_name || 'Дод. послуги'}</div>
+                    <div className="text-lg font-bold text-amber-700">{money(history.order?.service_fee || 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Разом до сплати</div>
+                    <div className="text-lg font-bold text-emerald-700">{money(history.order?.total_to_pay || (Number(history.order?.total_price || 0) + Number(history.order?.service_fee || 0)))}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-500">Застава</div>
+                    <div className="text-lg font-bold text-slate-900">{money(history.order?.deposit_amount)}</div>
+                  </div>
+                </div>
+              </div>
+              
               {/* Payments */}
               <div>
-                <h3 className="text-sm font-semibold text-slate-700 mb-3">💰 Платежі ({history.payments?.length || 0})</h3>
+                <h3 className="text-sm font-semibold text-slate-700 mb-3">Платежі ({history.payments?.length || 0})</h3>
                 {history.payments && history.payments.length > 0 ? (
                   <div className="space-y-2">
                     {history.payments.map((p, idx) => (
@@ -614,13 +661,13 @@ export default function OrdersArchive() {
   const sortedOrders = [...filteredOrders].sort((a, b) => {
     switch (sortBy) {
       case 'date_asc': return new Date(a.created_at) - new Date(b.created_at);
-      case 'amount_desc': return (b.total_rental || b.total_price || 0) - (a.total_rental || a.total_price || 0);
-      case 'amount_asc': return (a.total_rental || a.total_price || 0) - (b.total_rental || b.total_price || 0);
+      case 'amount_desc': return (b.total_to_pay || b.total_rental || b.total_price || 0) - (a.total_to_pay || a.total_rental || a.total_price || 0);
+      case 'amount_asc': return (a.total_to_pay || a.total_rental || a.total_price || 0) - (b.total_to_pay || b.total_rental || b.total_price || 0);
       default: return new Date(b.created_at) - new Date(a.created_at);
     }
   });
   
-  const totalAmount = sortedOrders.reduce((sum, o) => sum + (o.total_rental || o.total_price || 0), 0);
+  const totalAmount = sortedOrders.reduce((sum, o) => sum + (o.total_to_pay || o.total_rental || o.total_price || 0), 0);
   
   return (
     <div className="min-h-screen bg-slate-50">
@@ -704,7 +751,7 @@ export default function OrdersArchive() {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <div className="font-semibold text-slate-900">{money(order.total_rental || order.total_price)}</div>
+                        <div className="font-semibold text-slate-900">{money(order.total_to_pay || order.total_rental || order.total_price)}</div>
                         <div className="text-xs text-slate-500">{order.client_name || order.customer_name}</div>
                       </div>
                       <span className="text-slate-400">{isExpanded ? '▼' : '▶'}</span>
@@ -739,6 +786,18 @@ export default function OrdersArchive() {
                                   <span className="text-slate-600">Сума оренди:</span>
                                   <span className="font-semibold">{money(history.order.total_price)}</span>
                                 </div>
+                                {history.order.service_fee > 0 && (
+                                  <div className="flex justify-between">
+                                    <span className="text-slate-600">{history.order.service_fee_name || 'Додаткова послуга'}:</span>
+                                    <span className="font-semibold text-amber-700">{money(history.order.service_fee)}</span>
+                                  </div>
+                                )}
+                                {history.order.service_fee > 0 && (
+                                  <div className="flex justify-between pt-1 border-t border-slate-200">
+                                    <span className="text-slate-700 font-medium">Разом до сплати:</span>
+                                    <span className="font-bold text-slate-900">{money(history.order.total_to_pay || (Number(history.order.total_price || 0) + Number(history.order.service_fee || 0)))}</span>
+                                  </div>
+                                )}
                                 <div className="flex justify-between">
                                   <span className="text-slate-600">Застава:</span>
                                   <span className="font-semibold">{money(history.order.deposit_amount)}</span>

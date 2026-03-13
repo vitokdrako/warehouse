@@ -91,16 +91,13 @@ const Select = ({ value, onChange, options, placeholder }) => (
 const PAYER_TYPES = [
   { value: "individual", label: "Фізична особа" },
   { value: "fop", label: "ФОП" },
-  { value: "company", label: "Юридична особа" },
-  { value: "foreign", label: "Нерезидент" },
+  { value: "tov", label: "ТОВ" },
   { value: "pending", label: "Вкажу пізніше" }
 ];
 
 const TAX_MODES = [
-  { value: "none", label: "Без оподаткування" },
-  { value: "simplified", label: "Спрощена система" },
   { value: "general", label: "Загальна система" },
-  { value: "vat", label: "Платник ПДВ" }
+  { value: "simplified", label: "Спрощена система" },
 ];
 
 // ===== PAYER STATUS BADGE =====
@@ -209,7 +206,7 @@ const PayerModal = ({ isOpen, onClose, clientId, payer, onSave }) => {
     }
   };
 
-  const showLegalFields = type === "fop" || type === "company";
+  const showLegalFields = type === "fop" || type === "tov";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>

@@ -17,6 +17,74 @@ def log(msg):
     """Log with timestamp"""
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
 
+
+def ensure_client_from_order(cursor, customer_name, phone, email):
+    """
+    Знайти або створити клієнта в client_users на основі даних ордеру.
+    Повертає client_user_id або None.
+    Пріоритет пошуку: email > phone.
+    """
+    if not customer_name:
+        return None
+    
+    email = (email or '').strip()
+    phone = (phone or '').strip()
+    email_normalized = email.lower().strip() if email else ''
+    
+    # 1. Пошук по email (якщо є)
+    if email_normalized and '@' in email_normalized:
+        cursor.execute(
+            "SELECT id FROM client_users WHERE email_normalized = %s LIMIT 1",
+            (email_normalized,)
+        )
+        row = cursor.fetchone()
+        if row:
+            # Оновити last_order_date
+            cursor.execute(
+                "UPDATE client_users SET last_order_date = CURDATE(), updated_at = NOW() WHERE id = %s",
+                (row[0] if isinstance(row, tuple) else row['id'],)
+            )
+            return row[0] if isinstance(row, tuple) else row['id']
+    
+    # 2. Пошук по телефону (останні 9 цифр)
+    if phone:
+        phone_digits = ''.join(c for c in phone if c.isdigit())
+        if len(phone_digits) >= 9:
+            phone_suffix = phone_digits[-9:]
+            cursor.execute(
+                "SELECT id FROM client_users WHERE phone LIKE %s LIMIT 1",
+                (f'%{phone_suffix}',)
+            )
+            row = cursor.fetchone()
+            if row:
+                client_id = row[0] if isinstance(row, tuple) else row['id']
+                # Оновити email якщо у клієнта його немає
+                if email_normalized:
+                    cursor.execute(
+                        """UPDATE client_users 
+                           SET email = %s, email_normalized = %s, 
+                               last_order_date = CURDATE(), updated_at = NOW() 
+                           WHERE id = %s AND (email IS NULL OR email = '')""",
+                        (email, email_normalized, client_id)
+                    )
+                else:
+                    cursor.execute(
+                        "UPDATE client_users SET last_order_date = CURDATE(), updated_at = NOW() WHERE id = %s",
+                        (client_id,)
+                    )
+                return client_id
+    
+    # 3. Не знайдено — створити нового клієнта
+    cursor.execute("""
+        INSERT INTO client_users 
+            (email, email_normalized, full_name, phone, source, is_active, created_at, updated_at, last_order_date)
+        VALUES (%s, %s, %s, %s, 'opencart', 1, NOW(), NOW(), CURDATE())
+    """, (email or None, email_normalized, customer_name, phone or None))
+    
+    cursor.execute("SELECT LAST_INSERT_ID()")
+    new_id = cursor.fetchone()
+    return new_id[0] if new_id else None
+
 def sync_categories():
     """Sync categories - fast"""
     log("📁 Syncing categories...")
@@ -372,6 +440,19 @@ def sync_orders_from_opencart():
                         item['price'],
                         item['total']
                     ))
+                
+                # ✅ Автостворення/прив'язка клієнта
+                try:
+                    client_user_id = ensure_client_from_order(
+                        rh_cur, customer_name, 
+                        order['telephone'], order['email']
+                    )
+                    if client_user_id:
+                        rh_cur.execute("""
+                            UPDATE orders SET client_user_id = %s WHERE order_id = %s
+                        """, (client_user_id, order_id))
+                except Exception as ce:
+                    log(f"  ⚠️  Client auto-create error for order {order_id}: {ce}")
                 
                 rh_conn.commit()
                 synced_count += 1

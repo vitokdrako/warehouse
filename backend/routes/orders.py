@@ -1085,46 +1085,55 @@ async def create_order(
     
     # ✅ Автоматично створити/оновити клієнта
     try:
-        # Перевірити чи існує клієнт з таким телефоном або email
-        existing_client = db.execute(text("""
-            SELECT id FROM client_users 
-            WHERE phone = :phone OR (email = :email AND email IS NOT NULL AND email != '')
-            LIMIT 1
-        """), {
-            "phone": order.customer_phone,
-            "email": order.customer_email or ''
-        }).fetchone()
+        client_id = None
+        email_normalized = (order.customer_email or '').lower().strip()
+        phone = (order.customer_phone or '').strip()
         
-        if existing_client:
-            # Оновити ім'я якщо змінилось
+        # Пошук по email
+        if email_normalized and '@' in email_normalized:
+            existing_client = db.execute(text("""
+                SELECT id FROM client_users WHERE email_normalized = :email LIMIT 1
+            """), {"email": email_normalized}).fetchone()
+            if existing_client:
+                client_id = existing_client[0]
+        
+        # Пошук по телефону
+        if not client_id and phone:
+            phone_digits = ''.join(c for c in phone if c.isdigit())
+            if len(phone_digits) >= 9:
+                phone_suffix = phone_digits[-9:]
+                existing_client = db.execute(text("""
+                    SELECT id FROM client_users WHERE phone LIKE :phone LIMIT 1
+                """), {"phone": f'%{phone_suffix}'}).fetchone()
+                if existing_client:
+                    client_id = existing_client[0]
+        
+        if client_id:
+            # Оновити дату останнього замовлення
             db.execute(text("""
                 UPDATE client_users 
-                SET name = :name, updated_at = NOW()
+                SET last_order_date = CURDATE(), updated_at = NOW()
                 WHERE id = :id
-            """), {
-                "id": existing_client[0],
-                "name": order.customer_name
-            })
-            client_id = existing_client[0]
+            """), {"id": client_id})
         else:
             # Створити нового клієнта
             db.execute(text("""
-                INSERT INTO client_users (name, phone, email, created_at, updated_at)
-                VALUES (:name, :phone, :email, NOW(), NOW())
+                INSERT INTO client_users 
+                    (email, email_normalized, full_name, phone, source, is_active, created_at, updated_at, last_order_date)
+                VALUES (:email, :email_norm, :name, :phone, 'rentalhub', 1, NOW(), NOW(), CURDATE())
             """), {
+                "email": order.customer_email or None,
+                "email_norm": email_normalized,
                 "name": order.customer_name,
-                "phone": order.customer_phone,
-                "email": order.customer_email or None
+                "phone": order.customer_phone or None
             })
             client_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar()
         
         # Прив'язати клієнта до замовлення
-        db.execute(text("""
-            UPDATE orders SET customer_id = :client_id WHERE order_id = :order_id
-        """), {
-            "client_id": client_id,
-            "order_id": order_id
-        })
+        if client_id:
+            db.execute(text("""
+                UPDATE orders SET client_user_id = :client_id WHERE order_id = :order_id
+            """), {"client_id": client_id, "order_id": order_id})
     except Exception as e:
         print(f"[create_order] Error creating client: {e}")
         # Не блокуємо створення замовлення якщо клієнт не створився
@@ -1221,51 +1230,63 @@ async def accept_order(
     # ✅ Автоматично створити клієнта якщо не існує
     # Отримати дані клієнта із замовлення
     client_data = db.execute(text("""
-        SELECT customer_name, customer_phone, customer_email 
+        SELECT customer_name, customer_phone, customer_email, client_user_id
         FROM orders WHERE order_id = :order_id
     """), {"order_id": order_id}).fetchone()
     
-    if client_data and client_data[2]:  # Є email
-        customer_name = client_data[0] or ''
-        customer_phone = client_data[1] or ''
-        customer_email = client_data[2]
-        email_normalized = customer_email.lower().strip()
-        
-        # Перевірити чи існує клієнт з таким email
-        existing_client = db.execute(text("""
-            SELECT id FROM client_users WHERE email_normalized = :email
-        """), {"email": email_normalized}).fetchone()
-        
-        if not existing_client:
-            # Створити нового клієнта
-            db.execute(text("""
-                INSERT INTO client_users (name, phone, email, email_normalized, client_type, created_at)
-                VALUES (:name, :phone, :email, :email_normalized, 'retail', NOW())
-            """), {
-                "name": customer_name,
-                "phone": customer_phone,
-                "email": customer_email,
-                "email_normalized": email_normalized
-            })
+    if client_data and not client_data[3]:  # Немає client_user_id
+        try:
+            customer_name = (client_data[0] or '').strip()
+            customer_phone = (client_data[1] or '').strip()
+            customer_email = (client_data[2] or '').strip()
+            email_normalized = customer_email.lower().strip() if customer_email else ''
             
-            # Отримати ID нового клієнта
-            new_client = db.execute(text("""
-                SELECT id FROM client_users WHERE email_normalized = :email
-            """), {"email": email_normalized}).fetchone()
+            found_client_id = None
             
-            if new_client:
-                # Оновити замовлення з посиланням на клієнта
+            # Пошук по email
+            if email_normalized and '@' in email_normalized:
+                existing_client = db.execute(text("""
+                    SELECT id FROM client_users WHERE email_normalized = :email LIMIT 1
+                """), {"email": email_normalized}).fetchone()
+                if existing_client:
+                    found_client_id = existing_client[0]
+            
+            # Пошук по телефону
+            if not found_client_id and customer_phone:
+                phone_digits = ''.join(c for c in customer_phone if c.isdigit())
+                if len(phone_digits) >= 9:
+                    phone_suffix = phone_digits[-9:]
+                    existing_client = db.execute(text("""
+                        SELECT id FROM client_users WHERE phone LIKE :phone LIMIT 1
+                    """), {"phone": f'%{phone_suffix}'}).fetchone()
+                    if existing_client:
+                        found_client_id = existing_client[0]
+            
+            if not found_client_id and customer_name:
+                # Створити нового клієнта
+                db.execute(text("""
+                    INSERT INTO client_users 
+                        (email, email_normalized, full_name, phone, source, is_active, created_at, updated_at, last_order_date)
+                    VALUES (:email, :email_norm, :name, :phone, 'rentalhub', 1, NOW(), NOW(), CURDATE())
+                """), {
+                    "email": customer_email or None,
+                    "email_norm": email_normalized,
+                    "name": customer_name,
+                    "phone": customer_phone or None
+                })
+                found_client_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+            
+            if found_client_id:
                 db.execute(text("""
                     UPDATE orders SET client_user_id = :client_id WHERE order_id = :order_id
-                """), {"client_id": new_client[0], "order_id": order_id})
+                """), {"client_id": found_client_id, "order_id": order_id})
                 
-                logger.info(f"✅ Auto-created client: {customer_name} ({email_normalized}) for order {order_id}")
-        else:
-            # Клієнт існує - прив'язати до замовлення якщо ще не прив'язаний
-            db.execute(text("""
-                UPDATE orders SET client_user_id = :client_id 
-                WHERE order_id = :order_id AND client_user_id IS NULL
-            """), {"client_id": existing_client[0], "order_id": order_id})
+                # Оновити last_order_date
+                db.execute(text("""
+                    UPDATE client_users SET last_order_date = CURDATE(), updated_at = NOW() WHERE id = :id
+                """), {"id": found_client_id})
+        except Exception as e:
+            print(f"[accept_order] Error auto-creating client: {e}")
     
     # Створити фінансові транзакції автоматично
     # Отримати фінансові дані замовлення

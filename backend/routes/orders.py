@@ -765,16 +765,13 @@ async def get_order_details(
             "created_at": d_row[5].isoformat() if d_row[5] else None
         })
     
-    # Get finance transactions (read from both new fin_transactions and fin_payments)
+    # Get finance transactions — читаємо тільки з fin_transactions (єдине джерело правди)
+    # fin_payments дублює дані з fin_transactions для платежів
     finance_result = db.execute(text("""
-        (SELECT tx_type as transaction_type, amount, status, note as description, occurred_at as transaction_date
-         FROM fin_transactions
-         WHERE entity_type = 'order' AND entity_id = :order_id)
-        UNION ALL
-        (SELECT payment_type as transaction_type, amount, status, note as description, occurred_at as transaction_date
-         FROM fin_payments
-         WHERE order_id = :order_id)
-        ORDER BY transaction_date DESC
+        SELECT tx_type as transaction_type, amount, status, note as description, occurred_at as transaction_date
+        FROM fin_transactions
+        WHERE entity_type = 'order' AND entity_id = :order_id
+        ORDER BY occurred_at DESC
     """), {"order_id": order_id})
     
     transactions = []

@@ -103,11 +103,16 @@ export default function OrdersChatModal({ isOpen, onClose }) {
       const response = await authFetch(`${BACKEND_URL}/api/orders/${selectedOrderId}/internal-notes`, {
         method: 'POST',
         body: JSON.stringify({
-          message: newMessage,
-          user_id: user.id,
-          user_name: user.name || user.email || 'Менеджер'
+          message: newMessage
         })
       });
+
+      if (response.status === 401) {
+        alert('Сесія закінчилась. Будь ласка, перелогіньтесь.');
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return;
+      }
 
       if (response.ok) {
         setNewMessage('');

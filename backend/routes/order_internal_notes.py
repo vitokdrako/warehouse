@@ -77,13 +77,21 @@ async def add_internal_note(
     """
     Додати внутрішню нотатку до замовлення.
     Користувач визначається автоматично з токена авторизації.
+    Вимагає валідний токен — анонімні нотатки заборонені.
     """
     if not note.message or not note.message.strip():
         raise HTTPException(status_code=400, detail="Повідомлення не може бути порожнім")
     
-    # Отримуємо дані користувача з токена
+    # Отримуємо дані користувача з токена — ВИМАГАЄМО валідного юзера
     user_id = current_user.get("user_id") or current_user.get("id")
-    user_name = current_user.get("name") or "Невідомий"
+    user_name = current_user.get("name") or current_user.get("username") or current_user.get("email")
+    
+    # Якщо user_id відсутній — токен невалідний або прострочений
+    if not user_id or user_name == "System":
+        raise HTTPException(
+            status_code=401, 
+            detail="Сесія закінчилась. Будь ласка, перелогіньтесь."
+        )
     
     try:
         db.execute(text("""

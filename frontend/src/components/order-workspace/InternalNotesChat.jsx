@@ -70,26 +70,37 @@ export default function InternalNotesChat({
       // Отримуємо токен авторизації
       const token = localStorage.getItem('token')
       
+      if (!token) {
+        alert('Сесія закінчилась. Будь ласка, перелогіньтесь.')
+        window.location.href = '/login'
+        return
+      }
+      
       const response = await axios.post(
         `${BACKEND_URL}/api/orders/${orderId}/internal-notes`,
         { message: newMessage.trim() },
         { 
           headers: { 
             'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
+            'Authorization': `Bearer ${token}`
           } 
         }
       )
 
       if (response.data.success) {
-        setShouldScrollToBottom(true) // Скролимо тільки при відправці нового повідомлення
+        setShouldScrollToBottom(true)
         setNotes([...notes, response.data.note])
         setNewMessage('')
       }
     } catch (err) {
-      console.error('[InternalNotesChat] Error sending note:', err)
-      console.error('[InternalNotesChat] Response data:', err.response?.data)
-      alert('Помилка відправки повідомлення. Спробуйте ще раз.')
+      if (err.response?.status === 401) {
+        alert('Сесія закінчилась. Будь ласка, перелогіньтесь.')
+        localStorage.removeItem('token')
+        window.location.href = '/login'
+      } else {
+        console.error('[InternalNotesChat] Error sending note:', err)
+        alert('Помилка відправки повідомлення. Спробуйте ще раз.')
+      }
     } finally {
       setSending(false)
     }

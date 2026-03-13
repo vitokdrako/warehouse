@@ -343,3 +343,19 @@ async def get_order_chats(
         "last_note_user": r[10] or "",
         "last_note_text": r[11] or "",
     } for r in rows]
+
+
+
+@router.get("/order-notes-new")
+async def get_order_notes_new_count(
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    """Count order notes from the last 24h not written by current user."""
+    uid = str(user.get("user_id") or user.get("id"))
+    count = db.execute(text("""
+        SELECT COUNT(*) FROM order_internal_notes
+        WHERE created_at >= NOW() - INTERVAL 24 HOUR
+          AND (user_id IS NULL OR user_id != :uid)
+    """), {"uid": uid}).scalar()
+    return {"count": count or 0}

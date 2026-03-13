@@ -21,7 +21,7 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - **Profile tab**: user info, stats
 - **Tasks tab**: Full Kanban (3 columns), Focus of Day, create/detail modals, scope toggle, list/kanban views, filters
 - **Chat tab**: Telegram-style messaging, threads, photo upload, task notifications
-- **Orders tab (NEW)**: Order-specific internal chat, search, filters (Active/With Notes/All), message sending
+- **Orders tab**: Order-specific internal chat, search, filters (Active/With Notes/All), message sending, **NEW: badge with unread count (last 24h)**
 - **Team tab**: team members with activity stats
 
 #### 2. Internal Chat (MySQL) with:
@@ -29,28 +29,26 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Task-Chat integration (auto-notifications)
 - Photo upload (inline images)
 
-#### 3. Order Chats Integration (NEW - March 13, 2026)
+#### 3. Order Chats Integration (March 13, 2026)
 - New "Замовлення" tab in Personal Cabinet
 - Lists all orders with notes count, last message preview, status dots
 - Full chat view per order using existing `order_internal_notes` table
 - Search by order number or client name
 - Filter: Active / With Notes / All
 - Dashboard "💬 Чат" button redirects to `/cabinet?tab=orders`
-- Old `OrdersChatModal` no longer used from dashboard
+- **Badge counter**: shows new notes from last 24h (not by current user), auto-refreshes every 15s
 
 #### 4. Legacy Cleanup
 - **Deleted**: `TasksCabinet.tsx` (replaced by `/cabinet?tab=tasks`)
 - **Redirect**: `/tasks` → `/cabinet?tab=tasks`
 - **Updated**: Dashboard chat button → `/cabinet?tab=orders`
-- All navigation buttons updated to point to cabinet
 
 ## Key Files
-- `/app/backend/routes/cabinet.py` — Cabinet API (profile, tasks, order-chats)
+- `/app/backend/routes/cabinet.py` — Cabinet API (profile, tasks, order-chats, order-notes-new)
 - `/app/backend/routes/team_chat.py` — Team Chat API
 - `/app/backend/routes/tasks.py` — Task CRUD with chat integration
 - `/app/backend/routes/order_internal_notes.py` — Order notes CRUD
 - `/app/frontend/src/pages/PersonalCabinet.jsx` — Full cabinet page (all 5 tabs)
-- `/app/frontend/src/pages/UniversalOpsCalendar.jsx` — Calendar (links to cabinet)
 - `/app/frontend/src/pages/ManagerDashboard.jsx` — Dashboard (chat redirects to cabinet)
 
 ## Prioritized Backlog
@@ -71,13 +69,6 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Unify workspace components, full RBAC
 - Monthly Financial Report, HR/Ops Module
 - Telegram bot push notifications
-- Message reactions
-
-## Test Reports
-- iteration_16: Cabinet + Chat basics (25/25)
-- iteration_17: Task Kanban + Focus (21/21)
-- iteration_18: Task-Chat, Close threads, Photo upload (13/13)
-- iteration_19: Order Chats integration (15/15 backend, 100% frontend)
 
 ## Credentials
 - Admin: vitokdrako@gmail.com / test123

@@ -1009,6 +1009,7 @@ export default function PersonalCabinet() {
   const [stats, setStats] = useState(null);
   const [teamData, setTeamData] = useState([]);
   const [unread, setUnread] = useState(0);
+  const [orderNotesNew, setOrderNotesNew] = useState(0);
   const navigate = useNavigate();
 
   const currentUserId = (() => {
@@ -1018,21 +1019,30 @@ export default function PersonalCabinet() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [pRes, sRes, tRes, uRes] = await Promise.all([
+        const [pRes, sRes, tRes, uRes, onRes] = await Promise.all([
           authFetch(`${BACKEND_URL}/api/cabinet/profile`),
           authFetch(`${BACKEND_URL}/api/cabinet/stats`),
           authFetch(`${BACKEND_URL}/api/cabinet/team`),
           authFetch(`${BACKEND_URL}/api/chat/unread`),
+          authFetch(`${BACKEND_URL}/api/cabinet/order-notes-new`),
         ]);
         if (pRes.ok) setProfile(await pRes.json());
         if (sRes.ok) setStats(await sRes.json());
         if (tRes.ok) setTeamData(await tRes.json());
         if (uRes.ok) { const d = await uRes.json(); setUnread(d.unread || 0); }
+        if (onRes.ok) { const d = await onRes.json(); setOrderNotesNew(d.count || 0); }
       } catch (e) { console.error('[Cabinet] init error', e); }
     };
     loadData();
     const interval = setInterval(async () => {
-      try { const r = await authFetch(`${BACKEND_URL}/api/chat/unread`); if (r.ok) { const d = await r.json(); setUnread(d.unread || 0); } } catch {}
+      try {
+        const [r, on] = await Promise.all([
+          authFetch(`${BACKEND_URL}/api/chat/unread`),
+          authFetch(`${BACKEND_URL}/api/cabinet/order-notes-new`),
+        ]);
+        if (r.ok) { const d = await r.json(); setUnread(d.unread || 0); }
+        if (on.ok) { const d = await on.json(); setOrderNotesNew(d.count || 0); }
+      } catch {}
     }, 15000);
     return () => clearInterval(interval);
   }, []);
@@ -1046,7 +1056,7 @@ export default function PersonalCabinet() {
     { key: 'profile', label: 'Профіль', icon: User },
     { key: 'tasks', label: 'Задачі', icon: CheckSquare },
     { key: 'chat', label: 'Чат', icon: MessageSquare, count: unread },
-    { key: 'orders', label: 'Замовлення', icon: Package },
+    { key: 'orders', label: 'Замовлення', icon: Package, count: orderNotesNew },
     { key: 'team', label: 'Команда', icon: Users },
   ];
 

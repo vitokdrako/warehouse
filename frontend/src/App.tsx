@@ -69,19 +69,34 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  // Перевірка токена кожні 5 хв — автоматичний logout при протуханні
+  // Автоматичний logout: о 7:00 ранку + перевірка протухання токена
   useEffect(() => {
-    const checkToken = () => {
+    const checkSession = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
+      
+      // 1. Перевірка протухання JWT
       const payload = parseJwt(token);
       if (!payload || !payload.exp || payload.exp * 1000 < Date.now()) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
+        return;
+      }
+      
+      // 2. Щоденний logout о 7:00
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      if (hours === 7 && minutes < 5) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
       }
     };
-    const interval = setInterval(checkToken, 5 * 60 * 1000); // кожні 5 хв
+    
+    checkSession(); // перевірити одразу
+    const interval = setInterval(checkSession, 60 * 1000); // кожну хвилину
     return () => clearInterval(interval);
   }, []);
   

@@ -14,7 +14,7 @@ import ManagerCabinet from './pages/ManagerCabinet';  // ✅ Новий кабі
 import ReauditCabinetFull from './pages/ReauditCabinetFull';
 import DamageHubApp from './pages/DamageHubApp';
 // Legacy: import DamageCabinet from './pages/DamageCabinet';
-import TasksCabinet from './pages/TasksCabinet';
+// Legacy: TasksCabinet removed — now in PersonalCabinet /cabinet?tab=tasks
 import PackingCabinet from './pages/PackingCabinet';
 import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
@@ -195,15 +195,10 @@ function App() {
             } 
           />
           
+          {/* Tasks — redirect to cabinet */}
           <Route 
             path="/tasks" 
-            element={
-              <ProtectedRoute>
-                <TasksCabinet 
-                  onBackToDashboard={handleBackToDashboard}
-                />
-              </ProtectedRoute>
-            } 
+            element={<Navigate to="/cabinet?tab=tasks" replace />}
           />
           
           <Route 

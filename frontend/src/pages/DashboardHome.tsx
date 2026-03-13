@@ -54,7 +54,7 @@ export default function DashboardHome() {
       title: 'Завдання PRO',
       icon: '📋',
       description: 'Kanban дошка, мийка, збір',
-      route: '/tasks',
+      route: '/cabinet?tab=tasks',
       color: 'from-purple-500 to-violet-500'
     },
     {

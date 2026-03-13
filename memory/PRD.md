@@ -19,37 +19,39 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 
 #### 1. Personal Cabinet (`/cabinet`) — Central Hub
 - **Profile tab**: user info, stats
-- **Tasks tab**: Full Kanban (3 columns), Focus of Day, create/detail modals, scope toggle, list/kanban views, filters
+- **Tasks tab**: Full Kanban (3 columns), Focus of Day, create/detail modals
 - **Chat tab**: Telegram-style messaging, threads, photo upload, task notifications
-- **Orders tab**: Order-specific internal chat, search, filters (Active/With Notes/All), message sending, **NEW: badge with unread count (last 24h)**
+- **Orders tab**: Order-specific internal chat, search, filters, badge with unread count (24h)
 - **Team tab**: team members with activity stats
 
-#### 2. Internal Chat (MySQL) with:
-- Channels (general, topic, dm), threads with close/reopen
-- Task-Chat integration (auto-notifications)
-- Photo upload (inline images)
-
-#### 3. Order Chats Integration (March 13, 2026)
-- New "Замовлення" tab in Personal Cabinet
-- Lists all orders with notes count, last message preview, status dots
-- Full chat view per order using existing `order_internal_notes` table
-- Search by order number or client name
-- Filter: Active / With Notes / All
+#### 2. Order Chats Integration
+- New "Замовлення" tab in Personal Cabinet with badge counter
+- Lists orders with notes count, last message preview, status dots
+- Full chat view per order, search, filter (Active/With Notes/All)
 - Dashboard "💬 Чат" button redirects to `/cabinet?tab=orders`
-- **Badge counter**: shows new notes from last 24h (not by current user), auto-refreshes every 15s
+
+#### 3. Role-Based Login Redirect (NEW - March 13, 2026)
+- **admin** → `/manager` (Реквізиторська панель)
+- **manager** → `/manager-cabinet` (Менеджерська панель)
+- **requisitor** → `/manager` (Реквізиторська панель)
+- Uses `window.location.href` for reliable full-page navigation
 
 #### 4. Legacy Cleanup
-- **Deleted**: `TasksCabinet.tsx` (replaced by `/cabinet?tab=tasks`)
-- **Redirect**: `/tasks` → `/cabinet?tab=tasks`
-- **Updated**: Dashboard chat button → `/cabinet?tab=orders`
+- Deleted: `TasksCabinet.tsx`, redirected `/tasks` → `/cabinet?tab=tasks`
+- Dashboard chat button → `/cabinet?tab=orders`
+
+## Roles
+| Role | Users | Start Page |
+|------|-------|------------|
+| admin | vitok, tania | /manager |
+| manager | max, marina | /manager-cabinet |
+| requisitor | katia, diana, andrii, yaroslav, zhenia | /manager |
 
 ## Key Files
+- `/app/frontend/src/pages/Login.tsx` — Role-based redirect logic
 - `/app/backend/routes/cabinet.py` — Cabinet API (profile, tasks, order-chats, order-notes-new)
-- `/app/backend/routes/team_chat.py` — Team Chat API
-- `/app/backend/routes/tasks.py` — Task CRUD with chat integration
-- `/app/backend/routes/order_internal_notes.py` — Order notes CRUD
 - `/app/frontend/src/pages/PersonalCabinet.jsx` — Full cabinet page (all 5 tabs)
-- `/app/frontend/src/pages/ManagerDashboard.jsx` — Dashboard (chat redirects to cabinet)
+- `/app/frontend/src/pages/ManagerDashboard.jsx` — Dashboard
 
 ## Prioritized Backlog
 
@@ -66,10 +68,10 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 
 ### P3 (Future)
 - WebSocket for real-time chat
-- Unify workspace components, full RBAC
-- Monthly Financial Report, HR/Ops Module
-- Telegram bot push notifications
+- Full RBAC (page-level access control), Monthly Financial Report
+- HR/Ops Module, Telegram bot
 
 ## Credentials
 - Admin: vitokdrako@gmail.com / test123
+- Manager: max@farforrent.com.ua / test123
 - DB: farforre_rentalhub @ farforre.mysql.tools

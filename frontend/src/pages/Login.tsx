@@ -44,9 +44,11 @@ export default function Login() {
       localStorage.setItem('token', data.access_token)
       localStorage.setItem('user', JSON.stringify(data.user))
 
-      // Navigate to dashboard
-      navigate('/dashboard')
-      window.location.reload() // Reload to update navigation
+      // Role-based redirect
+      const role = data.user?.role;
+      const startPage = role === 'manager' ? '/manager-cabinet'
+                       : '/manager';
+      window.location.href = startPage;
     } catch (err: any) {
       setError(err.message || 'Помилка авторизації')
     } finally {

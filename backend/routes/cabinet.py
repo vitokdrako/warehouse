@@ -85,32 +85,8 @@ async def update_my_profile(
 
 # === My Tasks ===
 
-@router.get("/my-tasks")
-async def get_my_tasks(
-    status: Optional[str] = None,
-    user: dict = Depends(require_auth),
-    db: Session = Depends(get_rh_db)
-):
-    uid = user.get("user_id") or user.get("id")
-    where = "t.assigned_to_id = :uid"
-    params = {"uid": uid}
-
-    if status:
-        where += " AND t.status = :status"
-        params["status"] = status
-
-    rows = db.execute(text(f"""
-        SELECT t.id, t.order_id, t.order_number, t.title, t.description,
-               t.task_type, t.status, t.priority, t.due_date,
-               t.completed_at, t.created_at,
-               creator.firstname as cf, creator.lastname as cl
-        FROM tasks t
-        LEFT JOIN users creator ON t.created_by_id = creator.user_id
-        WHERE {where}
-        ORDER BY FIELD(t.priority, 'high', 'medium', 'low'), t.created_at DESC
-    """), params).fetchall()
-
-    return [{
+def _format_task(r):
+    return {
         "id": r[0], "order_id": r[1], "order_number": r[2],
         "title": r[3], "description": r[4],
         "task_type": r[5], "status": r[6], "priority": r[7],
@@ -118,7 +94,102 @@ async def get_my_tasks(
         "completed_at": r[9].isoformat() if r[9] else None,
         "created_at": r[10].isoformat() if r[10] else None,
         "created_by": f"{r[11] or ''} {r[12] or ''}".strip() if r[11] else None,
-    } for r in rows]
+        "assigned_to_id": r[13] if len(r) > 13 else None,
+        "assignee_name": f"{r[14] or ''} {r[15] or ''}".strip() if len(r) > 14 and r[14] else None,
+    }
+
+_TASK_SELECT = """
+    SELECT t.id, t.order_id, t.order_number, t.title, t.description,
+           t.task_type, t.status, t.priority, t.due_date,
+           t.completed_at, t.created_at,
+           creator.firstname, creator.lastname,
+           t.assigned_to_id,
+           assignee.firstname, assignee.lastname
+    FROM tasks t
+    LEFT JOIN users creator ON t.created_by_id = creator.user_id
+    LEFT JOIN users assignee ON t.assigned_to_id = assignee.user_id
+"""
+
+
+@router.get("/my-tasks")
+async def get_my_tasks(
+    status: Optional[str] = None,
+    scope: Optional[str] = None,
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    uid = user.get("user_id") or user.get("id")
+
+    if scope == "all":
+        where = "1=1"
+        params = {}
+    else:
+        where = "t.assigned_to_id = :uid"
+        params = {"uid": uid}
+
+    if status:
+        where += " AND t.status = :status"
+        params["status"] = status
+
+    rows = db.execute(text(f"""
+        {_TASK_SELECT}
+        WHERE {where}
+        ORDER BY FIELD(t.priority, 'high', 'medium', 'low'),
+                 FIELD(t.status, 'in_progress', 'todo', 'done'),
+                 t.created_at DESC
+    """), params).fetchall()
+
+    return [_format_task(r) for r in rows]
+
+
+# === Focus: tasks due today + overdue ===
+
+@router.get("/focus")
+async def get_daily_focus(
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    uid = user.get("user_id") or user.get("id")
+    today = date.today().isoformat()
+
+    overdue = db.execute(text(f"""
+        {_TASK_SELECT}
+        WHERE t.assigned_to_id = :uid AND t.status != 'done'
+          AND t.due_date IS NOT NULL AND DATE(t.due_date) < :today
+        ORDER BY t.due_date ASC
+    """), {"uid": uid, "today": today}).fetchall()
+
+    due_today = db.execute(text(f"""
+        {_TASK_SELECT}
+        WHERE t.assigned_to_id = :uid AND t.status != 'done'
+          AND DATE(t.due_date) = :today
+        ORDER BY FIELD(t.priority, 'high', 'medium', 'low')
+    """), {"uid": uid, "today": today}).fetchall()
+
+    in_progress = db.execute(text(f"""
+        {_TASK_SELECT}
+        WHERE t.assigned_to_id = :uid AND t.status = 'in_progress'
+        ORDER BY FIELD(t.priority, 'high', 'medium', 'low')
+    """), {"uid": uid}).fetchall()
+
+    # Week calendar: tasks per day for next 7 days
+    week_start = date.today()
+    week_data = []
+    for i in range(7):
+        d = week_start + __import__('datetime').timedelta(days=i)
+        cnt = db.execute(text("""
+            SELECT COUNT(*) FROM tasks
+            WHERE assigned_to_id = :uid AND status != 'done'
+              AND DATE(due_date) = :d
+        """), {"uid": uid, "d": d.isoformat()}).scalar()
+        week_data.append({"date": d.isoformat(), "day_name": d.strftime("%a"), "count": cnt or 0})
+
+    return {
+        "overdue": [_format_task(r) for r in overdue],
+        "due_today": [_format_task(r) for r in due_today],
+        "in_progress": [_format_task(r) for r in in_progress],
+        "week": week_data,
+    }
 
 
 # === My Stats ===

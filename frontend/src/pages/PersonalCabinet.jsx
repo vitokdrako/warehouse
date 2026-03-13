@@ -1,39 +1,33 @@
 /* eslint-disable */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import CorporateHeader from '../components/CorporateHeader';
-import { User, MessageSquare, CheckSquare, Users, BarChart3, Send, Hash, Lock, Plus, ArrowLeft, ChevronRight, Clock, AlertTriangle, Circle, Reply, Search, X } from 'lucide-react';
+import { User, MessageSquare, CheckSquare, Users, Send, Hash, Lock, Plus, ArrowLeft, Clock, AlertTriangle, Circle, Reply, Search, X, ChevronRight, CalendarDays, Flame, Filter, LayoutGrid, List } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
-const authFetch = (url, options = {}) => {
+const authFetch = (url, opts = {}) => {
   const token = localStorage.getItem('token');
-  return fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  return fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...opts.headers } });
 };
 
 const cls = (...a) => a.filter(Boolean).join(' ');
 
-const roleLabels = { admin: 'Адмiн', manager: 'Менеджер', requisitor: 'Реквiзитор' };
+const roleLabels = { admin: 'Адмін', manager: 'Менеджер', requisitor: 'Реквізитор' };
 const roleColors = { admin: 'bg-rose-100 text-rose-700', manager: 'bg-sky-100 text-sky-700', requisitor: 'bg-amber-100 text-amber-700' };
-
 const priorityColors = { high: 'bg-rose-500', medium: 'bg-amber-500', low: 'bg-slate-400' };
-const statusLabels = { todo: 'До виконання', in_progress: 'В роботi', done: 'Виконано' };
+const priorityLabels = { high: 'Високий', medium: 'Середній', low: 'Низький' };
+const statusLabels = { todo: 'До виконання', in_progress: 'В роботі', done: 'Виконано' };
 const statusColors = { todo: 'bg-slate-100 text-slate-700', in_progress: 'bg-sky-100 text-sky-700', done: 'bg-emerald-100 text-emerald-700' };
+const typeLabels = { packing: 'Комплектація', washing: 'Мийка', restoration: 'Реставрація', reaudit: 'Переоблік', return: 'Повернення', general: 'Загальне', cleaning: 'Мийка', repair: 'Реставрація', delivery: 'Доставка' };
+const typeColors = { packing: 'bg-sky-100 text-sky-700', washing: 'bg-sky-100 text-sky-700', cleaning: 'bg-sky-100 text-sky-700', restoration: 'bg-violet-100 text-violet-700', repair: 'bg-violet-100 text-violet-700', reaudit: 'bg-amber-100 text-amber-700', return: 'bg-emerald-100 text-emerald-700', delivery: 'bg-orange-100 text-orange-700', general: 'bg-slate-100 text-slate-700' };
 
 /* ========== PROFILE TAB ========== */
 function ProfileTab({ profile, stats }) {
-  if (!profile) return <div className="p-6 text-center text-corp-text-muted">Завантаження...</div>;
+  if (!profile) return <div className="p-8 text-center text-corp-text-muted">Завантаження...</div>;
   return (
-    <div className="space-y-6" data-testid="profile-tab">
-      {/* Profile Card */}
-      <div className="bg-white rounded-xl border border-corp-border p-6">
+    <div className="space-y-5" data-testid="profile-tab">
+      <div className="bg-white rounded-xl border border-corp-border p-5">
         <div className="flex items-start gap-5">
           <div className="w-16 h-16 rounded-full bg-corp-primary grid place-content-center text-white text-2xl font-bold flex-shrink-0">
             {(profile.firstname?.[0] || 'U').toUpperCase()}
@@ -45,20 +39,18 @@ function ProfileTab({ profile, stats }) {
             </span>
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-corp-text-main">
               <div><span className="text-corp-text-muted">Email:</span> {profile.email}</div>
-              <div><span className="text-corp-text-muted">Логiн:</span> {profile.username}</div>
-              <div><span className="text-corp-text-muted">Останній вхід:</span> {profile.last_login ? new Date(profile.last_login).toLocaleString('uk-UA') : 'Невідомо'}</div>
+              <div><span className="text-corp-text-muted">Логін:</span> {profile.username}</div>
+              <div><span className="text-corp-text-muted">Останній вхід:</span> {profile.last_login ? new Date(profile.last_login).toLocaleString('uk-UA') : '—'}</div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Quick Stats */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Активних задач" value={stats.tasks?.todo + stats.tasks?.in_progress} color="text-sky-600" bg="bg-sky-50" />
-          <StatCard label="Виконано задач" value={stats.tasks?.done} color="text-emerald-600" bg="bg-emerald-50" />
+          <StatCard label="Активних задач" value={(stats.tasks?.todo || 0) + (stats.tasks?.in_progress || 0)} color="text-sky-600" bg="bg-sky-50" />
+          <StatCard label="Виконано" value={stats.tasks?.done} color="text-emerald-600" bg="bg-emerald-50" />
           <StatCard label="Прострочених" value={stats.tasks?.overdue} color="text-rose-600" bg="bg-rose-50" />
-          <StatCard label="Повiдомлень сьогоднi" value={stats.today?.messages_sent} color="text-corp-primary" bg="bg-[#f4f8e6]" />
+          <StatCard label="Повідомлень" value={stats.today?.messages_sent} color="text-corp-primary" bg="bg-[#f4f8e6]" />
         </div>
       )}
     </div>
@@ -74,82 +66,371 @@ function StatCard({ label, value, color, bg }) {
   );
 }
 
-/* ========== TASKS TAB ========== */
-function TasksTab({ tasks, onRefresh }) {
-  const [filter, setFilter] = useState('active');
+/* ========== TASKS TAB (Full Kanban + Focus) ========== */
+function TasksTab({ currentUserId }) {
+  const [tasks, setTasks] = useState([]);
+  const [focus, setFocus] = useState(null);
+  const [staff, setStaff] = useState([]);
+  const [view, setView] = useState('kanban'); // kanban | list
+  const [scope, setScope] = useState('my'); // my | all
+  const [filterType, setFilterType] = useState('all');
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [search, setSearch] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const filtered = tasks.filter(t => {
-    if (filter === 'active') return t.status !== 'done';
-    if (filter === 'done') return t.status === 'done';
-    return true;
-  });
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [tasksRes, focusRes, staffRes] = await Promise.all([
+        authFetch(`${BACKEND_URL}/api/cabinet/my-tasks?scope=${scope}`),
+        authFetch(`${BACKEND_URL}/api/cabinet/focus`),
+        authFetch(`${BACKEND_URL}/api/tasks/staff`),
+      ]);
+      if (tasksRes.ok) setTasks(await tasksRes.json());
+      if (focusRes.ok) setFocus(await focusRes.json());
+      if (staffRes.ok) setStaff(await staffRes.json());
+    } catch (e) { console.error('[Tasks] load error', e); }
+    setLoading(false);
+  }, [scope]);
 
-  const handleStatusChange = async (taskId, newStatus) => {
-    await authFetch(`${BACKEND_URL}/api/tasks/${taskId}`, {
-      method: 'PUT',
-      body: JSON.stringify({ status: newStatus }),
-    });
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = useMemo(() => tasks.filter(t => {
+    if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterType !== 'all' && t.task_type !== filterType) return false;
+    if (filterPriority !== 'all' && t.priority !== filterPriority) return false;
+    return true;
+  }), [tasks, search, filterType, filterPriority]);
+
+  const byStatus = useMemo(() => ({
+    todo: filtered.filter(t => t.status === 'todo'),
+    in_progress: filtered.filter(t => t.status === 'in_progress'),
+    done: filtered.filter(t => t.status === 'done'),
+  }), [filtered]);
+
+  const changeStatus = async (taskId, newStatus) => {
+    await authFetch(`${BACKEND_URL}/api/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify({ status: newStatus }) });
+    load();
+  };
+
+  const isOverdue = (t) => t.due_date && t.status !== 'done' && new Date(t.due_date) < new Date();
+
+  return (
+    <div data-testid="tasks-tab" className="space-y-4">
+      {/* Focus of the Day */}
+      {focus && (focus.overdue.length > 0 || focus.due_today.length > 0 || focus.in_progress.length > 0) && (
+        <div className="bg-white rounded-xl border border-corp-border overflow-hidden" data-testid="focus-widget">
+          <div className="px-4 py-3 bg-gradient-to-r from-corp-primary/5 to-transparent border-b border-corp-border">
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-corp-primary" />
+              <span className="text-sm font-semibold text-corp-text-dark">Фокус дня</span>
+            </div>
+          </div>
+          <div className="p-3 space-y-2">
+            {focus.overdue.map(t => (
+              <FocusItem key={t.id} task={t} tag="Прострочено" tagColor="bg-rose-100 text-rose-700" onClick={() => setSelectedTask(t)} />
+            ))}
+            {focus.due_today.map(t => (
+              <FocusItem key={t.id} task={t} tag="Сьогодні" tagColor="bg-amber-100 text-amber-700" onClick={() => setSelectedTask(t)} />
+            ))}
+            {focus.in_progress.filter(t => !focus.due_today.find(d => d.id === t.id) && !focus.overdue.find(d => d.id === t.id)).map(t => (
+              <FocusItem key={t.id} task={t} tag="В роботі" tagColor="bg-sky-100 text-sky-700" onClick={() => setSelectedTask(t)} />
+            ))}
+          </div>
+          {/* Mini week calendar */}
+          {focus.week && (
+            <div className="px-3 pb-3">
+              <div className="flex gap-1">
+                {focus.week.map((d, i) => (
+                  <div key={d.date} className={cls('flex-1 text-center rounded-lg py-1.5 text-[10px]',
+                    i === 0 ? 'bg-corp-primary/10 border border-corp-primary/30' : 'bg-corp-bg-light border border-corp-border'
+                  )}>
+                    <div className="text-corp-text-muted">{['Пн','Вт','Ср','Чт','Пт','Сб','Нд'][new Date(d.date).getDay() === 0 ? 6 : new Date(d.date).getDay() - 1]}</div>
+                    <div className="font-bold text-corp-text-dark">{new Date(d.date).getDate()}</div>
+                    {d.count > 0 && <div className="w-4 h-4 mx-auto rounded-full bg-corp-primary text-white text-[9px] grid place-content-center font-bold">{d.count}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex bg-white rounded-lg border border-corp-border p-0.5">
+          {[['my', 'Мої'], ['all', 'Всі']].map(([k, l]) => (
+            <button key={k} onClick={() => setScope(k)}
+              className={cls('px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+                scope === k ? 'bg-corp-primary text-white' : 'text-corp-text-main hover:bg-corp-bg-light'
+              )} data-testid={`scope-${k}`}>{l}</button>
+          ))}
+        </div>
+        <div className="flex bg-white rounded-lg border border-corp-border p-0.5">
+          <button onClick={() => setView('kanban')} className={cls('p-1.5 rounded-md', view === 'kanban' ? 'bg-corp-primary text-white' : 'text-corp-text-muted')} data-testid="view-kanban">
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+          <button onClick={() => setView('list')} className={cls('p-1.5 rounded-md', view === 'list' ? 'bg-corp-primary text-white' : 'text-corp-text-muted')} data-testid="view-list">
+            <List className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="relative flex-1 min-w-[140px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-corp-text-muted" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Пошук..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-corp-border bg-white focus:outline-none focus:border-corp-primary" data-testid="task-search" />
+        </div>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)}
+          className="px-2 py-1.5 text-xs rounded-lg border border-corp-border bg-white text-corp-text-main">
+          <option value="all">Всі типи</option>
+          {Object.entries(typeLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
+          className="px-2 py-1.5 text-xs rounded-lg border border-corp-border bg-white text-corp-text-main">
+          <option value="all">Пріоритет</option>
+          {Object.entries(priorityLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <button onClick={() => setShowCreate(true)}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-corp-primary text-white text-xs font-medium hover:bg-corp-primary-hover transition-colors" data-testid="create-task-btn">
+          <Plus className="w-3.5 h-3.5" /> Задача
+        </button>
+      </div>
+
+      {/* Stats row */}
+      <div className="flex gap-2 text-xs">
+        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">Всього: <b>{filtered.length}</b></span>
+        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">До: <b>{byStatus.todo.length}</b></span>
+        <span className="px-2.5 py-1 rounded-full bg-sky-100 text-sky-600">В роботі: <b>{byStatus.in_progress.length}</b></span>
+        <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-600">Зроблено: <b>{byStatus.done.length}</b></span>
+      </div>
+
+      {/* Kanban View */}
+      {view === 'kanban' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <KanbanCol title="До виконання" tasks={byStatus.todo} colBg="bg-slate-50" onTaskClick={setSelectedTask} onStatusChange={changeStatus} isOverdue={isOverdue} nextStatus="in_progress" scope={scope} />
+          <KanbanCol title="В роботі" tasks={byStatus.in_progress} colBg="bg-sky-50/50" onTaskClick={setSelectedTask} onStatusChange={changeStatus} isOverdue={isOverdue} nextStatus="done" scope={scope} />
+          <KanbanCol title="Виконано" tasks={byStatus.done} colBg="bg-emerald-50/50" onTaskClick={setSelectedTask} onStatusChange={changeStatus} isOverdue={() => false} nextStatus="todo" scope={scope} />
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {filtered.map(t => <TaskRow key={t.id} task={t} isOverdue={isOverdue(t)} onClick={() => setSelectedTask(t)} onStatusChange={changeStatus} scope={scope} />)}
+          {filtered.length === 0 && <div className="text-center py-10 text-corp-text-muted text-sm">Немає задач</div>}
+        </div>
+      )}
+
+      {/* Task Detail */}
+      {selectedTask && <TaskDetail task={selectedTask} staff={staff} onClose={() => setSelectedTask(null)} onStatusChange={changeStatus} onRefresh={load} navigate={navigate} />}
+
+      {/* Create Modal */}
+      {showCreate && <CreateTaskModal staff={staff} currentUserId={currentUserId} onClose={() => setShowCreate(false)} onSuccess={() => { setShowCreate(false); load(); }} />}
+    </div>
+  );
+}
+
+function FocusItem({ task, tag, tagColor, onClick }) {
+  return (
+    <button onClick={onClick} className="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-corp-bg-light transition-colors" data-testid={`focus-${task.id}`}>
+      <span className={cls('w-2 h-2 rounded-full flex-shrink-0', priorityColors[task.priority])} />
+      <span className="text-sm text-corp-text-dark truncate flex-1">{task.title}</span>
+      <span className={cls('px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0', tagColor)}>{tag}</span>
+      {task.due_date && <span className="text-[10px] text-corp-text-muted flex-shrink-0">{new Date(task.due_date).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' })}</span>}
+    </button>
+  );
+}
+
+function KanbanCol({ title, tasks, colBg, onTaskClick, onStatusChange, isOverdue, nextStatus, scope }) {
+  return (
+    <div className={cls('rounded-xl p-3 min-h-[200px]', colBg)}>
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-xs font-semibold text-corp-text-dark uppercase tracking-wide">{title}</h4>
+        <span className="text-[10px] bg-white/80 px-2 py-0.5 rounded-full text-corp-text-muted font-medium">{tasks.length}</span>
+      </div>
+      <div className="space-y-2">
+        {tasks.map(t => (
+          <div key={t.id} onClick={() => onTaskClick(t)}
+            className={cls('bg-white rounded-lg border p-2.5 cursor-pointer hover:shadow-sm transition-shadow',
+              isOverdue(t) ? 'border-rose-300' : 'border-corp-border'
+            )} data-testid={`task-card-${t.id}`}>
+            <div className="flex items-start gap-2">
+              <button onClick={e => { e.stopPropagation(); onStatusChange(t.id, nextStatus); }} className="mt-0.5 flex-shrink-0">
+                <Circle className={cls('w-4 h-4', t.status === 'done' ? 'text-emerald-500 fill-emerald-500' : t.status === 'in_progress' ? 'text-sky-500' : 'text-slate-300')} />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className={cls('text-xs font-medium', t.status === 'done' ? 'line-through text-corp-text-muted' : 'text-corp-text-dark')}>{t.title}</p>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span className={cls('w-1.5 h-1.5 rounded-full', priorityColors[t.priority])} />
+                  {t.task_type && t.task_type !== 'general' && <span className={cls('px-1.5 py-0 rounded text-[9px] font-medium', typeColors[t.task_type])}>{typeLabels[t.task_type]}</span>}
+                  {t.due_date && <span className={cls('text-[10px]', isOverdue(t) ? 'text-rose-600 font-medium' : 'text-corp-text-muted')}>{new Date(t.due_date).toLocaleDateString('uk-UA', { day: '2-digit', month: '2-digit' })}</span>}
+                  {scope === 'all' && t.assignee_name && <span className="text-[10px] text-corp-text-muted">{t.assignee_name.split(' ')[0]}</span>}
+                </div>
+                {isOverdue(t) && <span className="inline-block mt-1 px-1.5 py-0 rounded text-[9px] font-medium bg-rose-100 text-rose-700">Прострочено</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+        {tasks.length === 0 && <div className="text-center text-xs text-corp-text-muted py-6">Порожньо</div>}
+      </div>
+    </div>
+  );
+}
+
+function TaskRow({ task, isOverdue, onClick, onStatusChange, scope }) {
+  const next = task.status === 'todo' ? 'in_progress' : task.status === 'in_progress' ? 'done' : 'todo';
+  return (
+    <div onClick={onClick} className={cls('flex items-center gap-3 bg-white rounded-lg border p-2.5 cursor-pointer hover:shadow-sm transition-shadow',
+      isOverdue ? 'border-rose-300' : 'border-corp-border'
+    )}>
+      <button onClick={e => { e.stopPropagation(); onStatusChange(task.id, next); }} className="flex-shrink-0">
+        <Circle className={cls('w-4 h-4', task.status === 'done' ? 'text-emerald-500 fill-emerald-500' : task.status === 'in_progress' ? 'text-sky-500' : 'text-slate-300')} />
+      </button>
+      <span className={cls('w-1.5 h-1.5 rounded-full flex-shrink-0', priorityColors[task.priority])} />
+      <span className={cls('text-sm flex-1 truncate', task.status === 'done' ? 'line-through text-corp-text-muted' : 'text-corp-text-dark')}>{task.title}</span>
+      {task.task_type && task.task_type !== 'general' && <span className={cls('px-1.5 py-0.5 rounded text-[9px] font-medium hidden sm:inline', typeColors[task.task_type])}>{typeLabels[task.task_type]}</span>}
+      <span className={cls('px-1.5 py-0.5 rounded-full text-[9px] font-medium', statusColors[task.status])}>{statusLabels[task.status]}</span>
+      {task.due_date && <span className={cls('text-[10px] hidden sm:inline', isOverdue ? 'text-rose-600 font-medium' : 'text-corp-text-muted')}>{new Date(task.due_date).toLocaleDateString('uk-UA')}</span>}
+      {scope === 'all' && task.assignee_name && <span className="text-[10px] text-corp-text-muted hidden sm:inline">{task.assignee_name.split(' ')[0]}</span>}
+      <ChevronRight className="w-3.5 h-3.5 text-corp-text-muted flex-shrink-0" />
+    </div>
+  );
+}
+
+function TaskDetail({ task, staff, onClose, onStatusChange, onRefresh, navigate }) {
+  const [assigneeId, setAssigneeId] = useState(task.assigned_to_id || '');
+
+  const saveAssignee = async () => {
+    await authFetch(`${BACKEND_URL}/api/tasks/${task.id}`, { method: 'PUT', body: JSON.stringify({ assigned_to_id: assigneeId ? Number(assigneeId) : null }) });
     onRefresh();
   };
 
   return (
-    <div data-testid="tasks-tab">
-      {/* Filters */}
-      <div className="flex gap-2 mb-4">
-        {[['active', 'Активнi'], ['done', 'Виконанi'], ['all', 'Всi']].map(([key, label]) => (
-          <button key={key} onClick={() => setFilter(key)}
-            className={cls('px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-              filter === key ? 'bg-corp-primary text-white' : 'bg-white border border-corp-border text-corp-text-main hover:bg-corp-bg-light'
-            )}>
-            {label} {key === 'active' ? `(${tasks.filter(t=>t.status!=='done').length})` : ''}
-          </button>
-        ))}
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-12 text-corp-text-muted text-sm">
-          {filter === 'active' ? 'Немає активних задач' : 'Немає задач'}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filtered.map(task => (
-            <div key={task.id} className="bg-white rounded-lg border border-corp-border p-3 hover:shadow-sm transition-shadow" data-testid={`task-${task.id}`}>
-              <div className="flex items-start gap-3">
-                {/* Status toggle */}
-                <button onClick={() => handleStatusChange(task.id, task.status === 'done' ? 'todo' : task.status === 'todo' ? 'in_progress' : 'done')}
-                  className="mt-0.5 flex-shrink-0">
-                  <Circle className={cls('w-5 h-5', task.status === 'done' ? 'text-emerald-500 fill-emerald-500' : task.status === 'in_progress' ? 'text-sky-500' : 'text-slate-300')} />
-                </button>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={cls('w-2 h-2 rounded-full flex-shrink-0', priorityColors[task.priority])} />
-                    <span className={cls('text-sm font-medium', task.status === 'done' ? 'line-through text-corp-text-muted' : 'text-corp-text-dark')}>
-                      {task.title}
-                    </span>
-                  </div>
-                  {task.description && <p className="text-xs text-corp-text-muted mt-1 line-clamp-1">{task.description}</p>}
-                  <div className="flex items-center gap-3 mt-2 flex-wrap">
-                    <span className={cls('px-2 py-0.5 rounded-full text-[10px] font-medium', statusColors[task.status])}>{statusLabels[task.status]}</span>
-                    {task.order_number && (
-                      <button onClick={() => navigate(`/order/${task.order_id}/view`)}
-                        className="text-[10px] text-corp-primary hover:underline font-medium">
-                        {task.order_number}
-                      </button>
-                    )}
-                    {task.due_date && (
-                      <span className="flex items-center gap-1 text-[10px] text-corp-text-muted">
-                        <Clock className="w-3 h-3" />
-                        {new Date(task.due_date).toLocaleDateString('uk-UA')}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid="task-detail">
+        <div className="p-5">
+          <div className="flex items-start justify-between mb-3">
+            <h2 className="text-base font-bold text-corp-text-dark pr-4">{task.title}</h2>
+            <button onClick={onClose} className="text-corp-text-muted hover:text-corp-text-dark"><X className="w-5 h-5" /></button>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            <span className={cls('px-2 py-0.5 rounded-full text-[10px] font-medium', statusColors[task.status])}>{statusLabels[task.status]}</span>
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">
+              <span className={cls('w-1.5 h-1.5 rounded-full', priorityColors[task.priority])} /> {priorityLabels[task.priority]}
+            </span>
+            {task.task_type && <span className={cls('px-2 py-0.5 rounded-full text-[10px] font-medium', typeColors[task.task_type])}>{typeLabels[task.task_type]}</span>}
+          </div>
+          {task.description && <p className="text-sm text-corp-text-main bg-corp-bg-light rounded-lg p-3 mb-3">{task.description}</p>}
+          <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
+            <div className="p-2.5 bg-corp-bg-light rounded-lg">
+              <div className="text-[10px] text-corp-text-muted">Виконавець</div>
+              <div className="font-medium text-xs text-corp-text-dark">{task.assignee_name || '—'}</div>
             </div>
-          ))}
+            <div className="p-2.5 bg-corp-bg-light rounded-lg">
+              <div className="text-[10px] text-corp-text-muted">Дедлайн</div>
+              <div className="font-medium text-xs text-corp-text-dark">{task.due_date ? new Date(task.due_date).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</div>
+            </div>
+          </div>
+          {task.order_number && (
+            <button onClick={() => { navigate(`/order/${task.order_id}/view`); onClose(); }}
+              className="mb-3 text-xs text-corp-primary hover:underline font-medium">Замовлення: {task.order_number}</button>
+          )}
+          {/* Assignee */}
+          <div className="mb-4 p-3 bg-corp-bg-light rounded-lg">
+            <div className="text-[10px] text-corp-text-muted mb-1.5">Змінити виконавця</div>
+            <div className="flex gap-2">
+              <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)} className="flex-1 rounded-lg border border-corp-border px-2 py-1.5 text-xs">
+                <option value="">Не призначено</option>
+                {staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+              </select>
+              <button onClick={saveAssignee} className="px-3 py-1.5 bg-corp-primary text-white rounded-lg text-xs font-medium">OK</button>
+            </div>
+          </div>
+          {/* Status actions */}
+          <div className="border-t border-corp-border pt-3">
+            <div className="text-[10px] text-corp-text-muted mb-2">Змінити статус:</div>
+            <div className="flex flex-wrap gap-2">
+              {task.status !== 'todo' && <button onClick={() => { onStatusChange(task.id, 'todo'); onClose(); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200">До виконання</button>}
+              {task.status !== 'in_progress' && <button onClick={() => { onStatusChange(task.id, 'in_progress'); onClose(); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-sky-100 text-sky-700 hover:bg-sky-200">В роботу</button>}
+              {task.status !== 'done' && <button onClick={() => { onStatusChange(task.id, 'done'); onClose(); }} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-100 text-emerald-700 hover:bg-emerald-200">Виконано</button>}
+            </div>
+          </div>
         </div>
-      )}
+      </div>
+    </div>
+  );
+}
+
+function CreateTaskModal({ staff, currentUserId, onClose, onSuccess }) {
+  const [form, setForm] = useState({
+    title: '', description: '', task_type: 'general', priority: 'medium',
+    assigned_to_id: currentUserId || '', due_date: '', order_number: '',
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    const body = {
+      title: form.title.trim(),
+      description: form.description.trim() || undefined,
+      task_type: form.task_type,
+      priority: form.priority,
+      assigned_to_id: form.assigned_to_id ? Number(form.assigned_to_id) : undefined,
+      due_date: form.due_date ? new Date(form.due_date).toISOString() : undefined,
+      order_number: form.order_number || undefined,
+    };
+    const res = await authFetch(`${BACKEND_URL}/api/tasks`, { method: 'POST', body: JSON.stringify(body) });
+    if (res.ok) onSuccess();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
+      <div className="bg-white rounded-t-2xl sm:rounded-xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid="create-task-modal">
+        <form onSubmit={handleSubmit} className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold text-corp-text-dark">Нова задача</h2>
+            <button type="button" onClick={onClose}><X className="w-5 h-5 text-corp-text-muted" /></button>
+          </div>
+          <div className="space-y-3">
+            <input type="text" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Назва задачі *"
+              className="w-full px-3 py-2.5 text-sm rounded-lg border border-corp-border focus:outline-none focus:border-corp-primary" data-testid="task-title-input" />
+            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Опис (необов'язково)" rows={2}
+              className="w-full px-3 py-2.5 text-sm rounded-lg border border-corp-border focus:outline-none focus:border-corp-primary resize-none" />
+            <div className="grid grid-cols-2 gap-3">
+              <select value={form.task_type} onChange={e => setForm({ ...form, task_type: e.target.value })}
+                className="px-3 py-2.5 text-sm rounded-lg border border-corp-border">
+                <option value="general">Загальне</option>
+                <option value="packing">Комплектація</option>
+                <option value="washing">Мийка</option>
+                <option value="restoration">Реставрація</option>
+                <option value="reaudit">Переоблік</option>
+                <option value="return">Повернення</option>
+                <option value="delivery">Доставка</option>
+              </select>
+              <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}
+                className="px-3 py-2.5 text-sm rounded-lg border border-corp-border">
+                <option value="low">Низький</option>
+                <option value="medium">Середній</option>
+                <option value="high">Високий</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <select value={form.assigned_to_id} onChange={e => setForm({ ...form, assigned_to_id: e.target.value })}
+                className="px-3 py-2.5 text-sm rounded-lg border border-corp-border">
+                <option value="">Виконавець</option>
+                {staff.map(s => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+              </select>
+              <input type="datetime-local" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })}
+                className="px-3 py-2.5 text-sm rounded-lg border border-corp-border" />
+            </div>
+            <input type="text" value={form.order_number} onChange={e => setForm({ ...form, order_number: e.target.value })} placeholder="Замовлення (OC-7317)"
+              className="w-full px-3 py-2.5 text-sm rounded-lg border border-corp-border focus:outline-none focus:border-corp-primary" />
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button type="submit" className="flex-1 py-2.5 rounded-lg bg-corp-primary text-white text-sm font-medium hover:bg-corp-primary-hover" data-testid="submit-task-btn">Створити</button>
+            <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-lg border border-corp-border text-sm text-corp-text-main hover:bg-corp-bg-light">Скасувати</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
@@ -168,30 +449,21 @@ function ChatTab({ currentUserId }) {
   const [showNewChannel, setShowNewChannel] = useState(false);
   const [newChName, setNewChName] = useState('');
   const [newChDesc, setNewChDesc] = useState('');
-  const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
 
   const loadChannels = useCallback(async () => {
-    const res = await authFetch(`${BACKEND_URL}/api/chat/channels`);
-    if (res.ok) setChannels(await res.json());
+    try { const res = await authFetch(`${BACKEND_URL}/api/chat/channels`); if (res.ok) setChannels(await res.json()); } catch {}
   }, []);
 
   const loadTeam = useCallback(async () => {
-    const res = await authFetch(`${BACKEND_URL}/api/chat/team`);
-    if (res.ok) setTeam(await res.json());
+    try { const res = await authFetch(`${BACKEND_URL}/api/chat/team`); if (res.ok) setTeam(await res.json()); } catch {}
   }, []);
 
   const loadMessages = useCallback(async (chId) => {
     if (!chId) return;
-    setLoadingMsgs(true);
-    const res = await authFetch(`${BACKEND_URL}/api/chat/channels/${chId}/messages`);
-    if (res.ok) {
-      setMessages(await res.json());
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    }
-    setLoadingMsgs(false);
+    try { const res = await authFetch(`${BACKEND_URL}/api/chat/channels/${chId}/messages`); if (res.ok) { setMessages(await res.json()); setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); } } catch {}
   }, []);
 
   useEffect(() => { loadChannels(); loadTeam(); }, [loadChannels, loadTeam]);
@@ -199,31 +471,20 @@ function ChatTab({ currentUserId }) {
   useEffect(() => {
     if (!activeChannel) return;
     loadMessages(activeChannel.id);
-    // Poll every 5s
-    pollRef.current = setInterval(() => {
-      loadMessages(activeChannel.id);
-      loadChannels();
-    }, 5000);
+    pollRef.current = setInterval(() => { loadMessages(activeChannel.id); loadChannels(); }, 5000);
     return () => clearInterval(pollRef.current);
   }, [activeChannel, loadMessages, loadChannels]);
 
   const sendMessage = async () => {
     if (!newMsg.trim() || !activeChannel) return;
-    await authFetch(`${BACKEND_URL}/api/chat/channels/${activeChannel.id}/messages`, {
-      method: 'POST', body: JSON.stringify({ message: newMsg.trim() }),
-    });
-    setNewMsg('');
-    loadMessages(activeChannel.id);
-    loadChannels();
+    await authFetch(`${BACKEND_URL}/api/chat/channels/${activeChannel.id}/messages`, { method: 'POST', body: JSON.stringify({ message: newMsg.trim() }) });
+    setNewMsg(''); loadMessages(activeChannel.id); loadChannels();
   };
 
   const sendThreadReply = async () => {
     if (!threadReply.trim() || !thread || !activeChannel) return;
-    await authFetch(`${BACKEND_URL}/api/chat/channels/${activeChannel.id}/messages`, {
-      method: 'POST', body: JSON.stringify({ message: threadReply.trim(), reply_to: thread.id }),
-    });
+    await authFetch(`${BACKEND_URL}/api/chat/channels/${activeChannel.id}/messages`, { method: 'POST', body: JSON.stringify({ message: threadReply.trim(), reply_to: thread.id }) });
     setThreadReply('');
-    // Reload thread
     const res = await authFetch(`${BACKEND_URL}/api/chat/messages/${thread.id}/thread`);
     if (res.ok) setThreadMsgs(await res.json());
     loadMessages(activeChannel.id);
@@ -237,49 +498,27 @@ function ChatTab({ currentUserId }) {
 
   const createDm = async (userId) => {
     const res = await authFetch(`${BACKEND_URL}/api/chat/dm/${userId}`, { method: 'POST' });
-    if (res.ok) {
-      const dm = await res.json();
-      setShowNewDm(false);
-      loadChannels();
-      setActiveChannel(dm);
-    }
+    if (res.ok) { const dm = await res.json(); setShowNewDm(false); loadChannels(); setActiveChannel(dm); }
   };
 
   const createChannel = async () => {
     if (!newChName.trim()) return;
-    const res = await authFetch(`${BACKEND_URL}/api/chat/channels`, {
-      method: 'POST', body: JSON.stringify({ name: newChName.trim(), description: newChDesc.trim(), type: 'topic' }),
-    });
-    if (res.ok) {
-      setShowNewChannel(false);
-      setNewChName('');
-      setNewChDesc('');
-      loadChannels();
-    }
+    const res = await authFetch(`${BACKEND_URL}/api/chat/channels`, { method: 'POST', body: JSON.stringify({ name: newChName.trim(), description: newChDesc.trim(), type: 'topic' }) });
+    if (res.ok) { setShowNewChannel(false); setNewChName(''); setNewChDesc(''); loadChannels(); }
   };
 
-  const filteredChannels = channels.filter(c =>
-    !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const channelIcon = (type) => {
-    if (type === 'dm') return <Lock className="w-4 h-4 text-corp-text-muted" />;
-    return <Hash className="w-4 h-4 text-corp-text-muted" />;
-  };
+  const filteredChannels = channels.filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const channelIcon = (type) => type === 'dm' ? <Lock className="w-4 h-4 text-corp-text-muted" /> : <Hash className="w-4 h-4 text-corp-text-muted" />;
 
   return (
     <div className="flex h-[calc(100vh-200px)] bg-white rounded-xl border border-corp-border overflow-hidden" data-testid="chat-tab">
       {/* Sidebar */}
-      <div className={cls('flex-shrink-0 border-r border-corp-border flex flex-col bg-corp-bg-light',
-        activeChannel ? 'hidden sm:flex w-72' : 'w-full sm:w-72'
-      )}>
-        {/* Search & Actions */}
+      <div className={cls('flex-shrink-0 border-r border-corp-border flex flex-col bg-corp-bg-light', activeChannel ? 'hidden sm:flex w-72' : 'w-full sm:w-72')}>
         <div className="p-3 space-y-2 border-b border-corp-border">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-corp-text-muted" />
             <input type="text" placeholder="Пошук..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-corp-border bg-white focus:outline-none focus:border-corp-primary"
-              data-testid="chat-search" />
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-corp-border bg-white focus:outline-none focus:border-corp-primary" data-testid="chat-search" />
           </div>
           <div className="flex gap-1.5">
             <button onClick={() => setShowNewChannel(true)} className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs rounded-lg bg-corp-primary text-white hover:bg-corp-primary-hover transition-colors" data-testid="new-channel-btn">
@@ -290,90 +529,62 @@ function ChatTab({ currentUserId }) {
             </button>
           </div>
         </div>
-
-        {/* Channel List */}
         <div className="flex-1 overflow-y-auto">
           {filteredChannels.map(ch => (
             <button key={ch.id} onClick={() => { setActiveChannel(ch); setThread(null); }}
               className={cls('w-full text-left px-3 py-2.5 flex items-center gap-2.5 hover:bg-white/80 transition-colors border-b border-corp-border/50',
-                activeChannel?.id === ch.id && 'bg-white shadow-sm'
-              )} data-testid={`channel-${ch.id}`}>
+                activeChannel?.id === ch.id && 'bg-white shadow-sm')} data-testid={`channel-${ch.id}`}>
               {channelIcon(ch.type)}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-corp-text-dark truncate">{ch.name}</span>
-                  {ch.unread > 0 && (
-                    <span className="ml-1 w-5 h-5 rounded-full bg-corp-primary text-white text-[10px] grid place-content-center font-bold flex-shrink-0">{ch.unread}</span>
-                  )}
+                  {ch.unread > 0 && <span className="ml-1 w-5 h-5 rounded-full bg-corp-primary text-white text-[10px] grid place-content-center font-bold flex-shrink-0">{ch.unread}</span>}
                 </div>
-                {ch.last_message && (
-                  <p className="text-[11px] text-corp-text-muted truncate mt-0.5">
-                    <span className="font-medium">{ch.last_message.user_name?.split(' ')[0]}:</span> {ch.last_message.text}
-                  </p>
-                )}
+                {ch.last_message && <p className="text-[11px] text-corp-text-muted truncate mt-0.5"><span className="font-medium">{ch.last_message.user_name?.split(' ')[0]}:</span> {ch.last_message.text}</p>}
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Main Chat Area */}
+      {/* Main Chat */}
       <div className={cls('flex-1 flex flex-col', !activeChannel && 'hidden sm:flex')}>
         {activeChannel ? (
           <>
-            {/* Chat Header */}
             <div className="px-4 py-3 border-b border-corp-border flex items-center gap-3 bg-white">
-              <button onClick={() => setActiveChannel(null)} className="sm:hidden">
-                <ArrowLeft className="w-5 h-5 text-corp-text-main" />
-              </button>
+              <button onClick={() => setActiveChannel(null)} className="sm:hidden"><ArrowLeft className="w-5 h-5 text-corp-text-main" /></button>
               {channelIcon(activeChannel.type)}
               <div>
                 <div className="text-sm font-semibold text-corp-text-dark">{activeChannel.name}</div>
                 {activeChannel.description && <div className="text-[11px] text-corp-text-muted">{activeChannel.description}</div>}
               </div>
             </div>
-
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-corp-bg-light/50">
               {messages.map(msg => (
                 <div key={msg.id} className={cls('flex gap-2.5', msg.user_id === currentUserId && 'flex-row-reverse')} data-testid={`message-${msg.id}`}>
-                  <div className={cls('w-8 h-8 rounded-full grid place-content-center text-xs font-bold flex-shrink-0',
-                    msg.user_id === currentUserId ? 'bg-corp-primary text-white' : 'bg-corp-gold text-white'
-                  )}>
+                  <div className={cls('w-8 h-8 rounded-full grid place-content-center text-xs font-bold flex-shrink-0', msg.user_id === currentUserId ? 'bg-corp-primary text-white' : 'bg-corp-gold text-white')}>
                     {(msg.user_name?.[0] || 'U').toUpperCase()}
                   </div>
-                  <div className={cls('max-w-[75%] rounded-xl px-3 py-2',
-                    msg.user_id === currentUserId ? 'bg-corp-primary/10 rounded-tr-sm' : 'bg-white border border-corp-border rounded-tl-sm'
-                  )}>
+                  <div className={cls('max-w-[75%] rounded-xl px-3 py-2', msg.user_id === currentUserId ? 'bg-corp-primary/10 rounded-tr-sm' : 'bg-white border border-corp-border rounded-tl-sm')}>
                     <div className="flex items-center gap-2 mb-0.5">
                       <span className="text-xs font-semibold text-corp-text-dark">{msg.user_name}</span>
                       <span className={cls('px-1.5 py-0 rounded text-[9px] font-medium', roleColors[msg.user_role])}>{roleLabels[msg.user_role] || msg.user_role}</span>
                       <span className="text-[10px] text-corp-text-muted">{msg.created_at ? new Date(msg.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </div>
                     <p className="text-sm text-corp-text-dark whitespace-pre-wrap break-words">{msg.message}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <button onClick={() => openThread(msg)} className="flex items-center gap-1 text-[10px] text-corp-text-muted hover:text-corp-primary transition-colors" data-testid={`thread-btn-${msg.id}`}>
-                        <Reply className="w-3 h-3" />
-                        {msg.thread_count > 0 ? `${msg.thread_count} вiдповiдей` : 'Вiдповiсти'}
-                      </button>
-                    </div>
+                    <button onClick={() => openThread(msg)} className="flex items-center gap-1 mt-1 text-[10px] text-corp-text-muted hover:text-corp-primary transition-colors" data-testid={`thread-btn-${msg.id}`}>
+                      <Reply className="w-3 h-3" /> {msg.thread_count > 0 ? `${msg.thread_count} відповідей` : 'Відповісти'}
+                    </button>
                   </div>
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
-
-            {/* Input */}
             <div className="p-3 border-t border-corp-border bg-white">
               <div className="flex items-center gap-2">
-                <input type="text" value={newMsg} onChange={e => setNewMsg(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
-                  placeholder="Написати повiдомлення..."
-                  className="flex-1 px-4 py-2.5 text-sm rounded-xl border border-corp-border bg-corp-bg-light focus:outline-none focus:border-corp-primary focus:bg-white transition-colors"
-                  data-testid="chat-input" />
-                <button onClick={sendMessage}
-                  className="p-2.5 rounded-xl bg-corp-primary text-white hover:bg-corp-primary-hover transition-colors disabled:opacity-50"
-                  disabled={!newMsg.trim()} data-testid="chat-send-btn">
+                <input type="text" value={newMsg} onChange={e => setNewMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
+                  placeholder="Написати повідомлення..." className="flex-1 px-4 py-2.5 text-sm rounded-xl border border-corp-border bg-corp-bg-light focus:outline-none focus:border-corp-primary focus:bg-white transition-colors" data-testid="chat-input" />
+                <button onClick={sendMessage} className="p-2.5 rounded-xl bg-corp-primary text-white hover:bg-corp-primary-hover transition-colors disabled:opacity-50" disabled={!newMsg.trim()} data-testid="chat-send-btn">
                   <Send className="w-5 h-5" />
                 </button>
               </div>
@@ -382,7 +593,7 @@ function ChatTab({ currentUserId }) {
         ) : (
           <div className="flex-1 grid place-content-center text-corp-text-muted text-sm">
             <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>Оберiть канал для спiлкування</p>
+            <p>Оберіть канал для спілкування</p>
           </div>
         )}
       </div>
@@ -392,9 +603,7 @@ function ChatTab({ currentUserId }) {
         <div className="w-80 border-l border-corp-border flex flex-col bg-white hidden lg:flex">
           <div className="px-4 py-3 border-b border-corp-border flex items-center justify-between">
             <div className="text-sm font-semibold text-corp-text-dark">Тред</div>
-            <button onClick={() => setThread(null)} className="p-1 hover:bg-corp-bg-light rounded">
-              <X className="w-4 h-4 text-corp-text-muted" />
-            </button>
+            <button onClick={() => setThread(null)} className="p-1 hover:bg-corp-bg-light rounded"><X className="w-4 h-4 text-corp-text-muted" /></button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {threadMsgs.map(msg => (
@@ -409,11 +618,8 @@ function ChatTab({ currentUserId }) {
           </div>
           <div className="p-3 border-t border-corp-border">
             <div className="flex items-center gap-2">
-              <input type="text" value={threadReply} onChange={e => setThreadReply(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendThreadReply())}
-                placeholder="Вiдповiсти в тред..."
-                className="flex-1 px-3 py-2 text-sm rounded-lg border border-corp-border focus:outline-none focus:border-corp-primary"
-                data-testid="thread-input" />
+              <input type="text" value={threadReply} onChange={e => setThreadReply(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendThreadReply())}
+                placeholder="Відповісти в тред..." className="flex-1 px-3 py-2 text-sm rounded-lg border border-corp-border focus:outline-none focus:border-corp-primary" data-testid="thread-input" />
               <button onClick={sendThreadReply} className="p-2 rounded-lg bg-corp-primary text-white hover:bg-corp-primary-hover disabled:opacity-50" disabled={!threadReply.trim()}>
                 <Send className="w-4 h-4" />
               </button>
@@ -426,7 +632,7 @@ function ChatTab({ currentUserId }) {
       {showNewChannel && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowNewChannel(false)}>
           <div className="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()} data-testid="new-channel-modal">
-            <h3 className="text-lg font-semibold text-corp-text-dark mb-4">Новий канал</h3>
+            <h3 className="text-base font-semibold text-corp-text-dark mb-4">Новий канал</h3>
             <input type="text" value={newChName} onChange={e => setNewChName(e.target.value)} placeholder="Назва каналу"
               className="w-full px-3 py-2.5 text-sm rounded-lg border border-corp-border mb-3 focus:outline-none focus:border-corp-primary" data-testid="new-channel-name" />
             <input type="text" value={newChDesc} onChange={e => setNewChDesc(e.target.value)} placeholder="Опис (необов'язково)"
@@ -443,14 +649,12 @@ function ChatTab({ currentUserId }) {
       {showNewDm && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowNewDm(false)}>
           <div className="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()} data-testid="new-dm-modal">
-            <h3 className="text-lg font-semibold text-corp-text-dark mb-4">Особисте повiдомлення</h3>
+            <h3 className="text-base font-semibold text-corp-text-dark mb-4">Особисте повідомлення</h3>
             <div className="space-y-1 max-h-64 overflow-y-auto">
               {team.filter(m => m.id !== currentUserId).map(m => (
                 <button key={m.id} onClick={() => createDm(m.id)}
                   className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-corp-bg-light flex items-center gap-3 transition-colors" data-testid={`dm-user-${m.id}`}>
-                  <div className="w-8 h-8 rounded-full bg-corp-gold grid place-content-center text-white text-xs font-bold">
-                    {(m.name?.[0] || 'U').toUpperCase()}
-                  </div>
+                  <div className="w-8 h-8 rounded-full bg-corp-gold grid place-content-center text-white text-xs font-bold">{(m.name?.[0] || 'U').toUpperCase()}</div>
                   <div>
                     <div className="text-sm font-medium text-corp-text-dark">{m.name}</div>
                     <div className="text-[11px] text-corp-text-muted">{roleLabels[m.role] || m.role}</div>
@@ -468,23 +672,21 @@ function ChatTab({ currentUserId }) {
 
 /* ========== TEAM TAB ========== */
 function TeamTab({ teamData }) {
-  if (!teamData?.length) return <div className="p-6 text-center text-corp-text-muted">Завантаження...</div>;
+  if (!teamData?.length) return <div className="p-8 text-center text-corp-text-muted">Завантаження...</div>;
   return (
     <div className="space-y-2" data-testid="team-tab">
       {teamData.map(m => (
         <div key={m.user_id} className="bg-white rounded-lg border border-corp-border p-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-corp-gold grid place-content-center text-white font-bold flex-shrink-0">
-            {(m.name?.[0] || 'U').toUpperCase()}
-          </div>
+          <div className="w-10 h-10 rounded-full bg-corp-gold grid place-content-center text-white font-bold flex-shrink-0">{(m.name?.[0] || 'U').toUpperCase()}</div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-corp-text-dark">{m.name}</span>
               <span className={cls('px-2 py-0.5 rounded-full text-[10px] font-medium', roleColors[m.role])}>{roleLabels[m.role]}</span>
             </div>
             <div className="flex items-center gap-4 mt-1 text-xs text-corp-text-muted">
-              <span>Активних задач: <b className="text-corp-text-dark">{m.active_tasks}</b></span>
-              <span>Виконано сьогоднi: <b className="text-emerald-600">{m.done_today}</b></span>
-              {m.last_login && <span>Останній вхід: {new Date(m.last_login).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}
+              <span>Активних: <b className="text-corp-text-dark">{m.active_tasks}</b></span>
+              <span>Сьогодні: <b className="text-emerald-600">{m.done_today}</b></span>
+              {m.last_login && <span>Вхід: {new Date(m.last_login).toLocaleString('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>}
             </div>
           </div>
         </div>
@@ -495,103 +697,68 @@ function TeamTab({ teamData }) {
 
 /* ========== MAIN PAGE ========== */
 export default function PersonalCabinet() {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'profile');
   const [profile, setProfile] = useState(null);
   const [stats, setStats] = useState(null);
-  const [tasks, setTasks] = useState([]);
   const [teamData, setTeamData] = useState([]);
   const [unread, setUnread] = useState(0);
   const navigate = useNavigate();
 
   const currentUserId = (() => {
-    try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}');
-      return u.user_id || u.id;
-    } catch { return null; }
+    try { const u = JSON.parse(localStorage.getItem('user') || '{}'); return u.user_id || u.id; } catch { return null; }
   })();
 
-  const loadProfile = async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/cabinet/profile`);
-      if (res.ok) setProfile(await res.json());
-      else console.error('[Cabinet] Profile error:', res.status);
-    } catch (e) { console.error('[Cabinet] Profile fetch error:', e); }
-  };
-
-  const loadStats = async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/cabinet/stats`);
-      if (res.ok) setStats(await res.json());
-      else console.error('[Cabinet] Stats error:', res.status);
-    } catch (e) { console.error('[Cabinet] Stats fetch error:', e); }
-  };
-
-  const loadTasks = async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/cabinet/my-tasks`);
-      if (res.ok) setTasks(await res.json());
-      else console.error('[Cabinet] Tasks error:', res.status);
-    } catch (e) { console.error('[Cabinet] Tasks fetch error:', e); }
-  };
-
-  const loadTeam = async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/cabinet/team`);
-      if (res.ok) setTeamData(await res.json());
-      else console.error('[Cabinet] Team error:', res.status);
-    } catch (e) { console.error('[Cabinet] Team fetch error:', e); }
-  };
-
-  const loadUnread = async () => {
-    try {
-      const res = await authFetch(`${BACKEND_URL}/api/chat/unread`);
-      if (res.ok) {
-        const d = await res.json();
-        setUnread(d.unread || 0);
-      }
-    } catch (e) { /* silent */ }
-  };
-
   useEffect(() => {
-    console.log('[Cabinet] Mounting, loading data...');
-    loadProfile();
-    loadStats();
-    loadTasks();
-    loadTeam();
-    loadUnread();
-    const interval = setInterval(loadUnread, 10000);
+    const loadData = async () => {
+      try {
+        const [pRes, sRes, tRes, uRes] = await Promise.all([
+          authFetch(`${BACKEND_URL}/api/cabinet/profile`),
+          authFetch(`${BACKEND_URL}/api/cabinet/stats`),
+          authFetch(`${BACKEND_URL}/api/cabinet/team`),
+          authFetch(`${BACKEND_URL}/api/chat/unread`),
+        ]);
+        if (pRes.ok) setProfile(await pRes.json());
+        if (sRes.ok) setStats(await sRes.json());
+        if (tRes.ok) setTeamData(await tRes.json());
+        if (uRes.ok) { const d = await uRes.json(); setUnread(d.unread || 0); }
+      } catch (e) { console.error('[Cabinet] init error', e); }
+    };
+    loadData();
+    const interval = setInterval(async () => {
+      try { const r = await authFetch(`${BACKEND_URL}/api/chat/unread`); if (r.ok) { const d = await r.json(); setUnread(d.unread || 0); } } catch {}
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
+
   const tabs = [
-    { key: 'profile', label: 'Профiль', icon: User },
-    { key: 'tasks', label: 'Мої задачi', icon: CheckSquare, count: tasks.filter(t => t.status !== 'done').length },
+    { key: 'profile', label: 'Профіль', icon: User },
+    { key: 'tasks', label: 'Задачі', icon: CheckSquare },
     { key: 'chat', label: 'Чат', icon: MessageSquare, count: unread },
     { key: 'team', label: 'Команда', icon: Users },
   ];
 
   return (
     <div className="min-h-screen bg-corp-bg-page" data-testid="personal-cabinet">
-      <CorporateHeader cabinetName="Особистий кабiнет" showBackButton onBackClick={() => navigate('/manager')} />
-
+      <CorporateHeader cabinetName="Особистий кабінет" showBackButton onBackClick={() => navigate('/manager')} />
       <div className="mx-auto max-w-6xl px-3 sm:px-6 py-4">
-        {/* Tab Navigation */}
         <div className="flex gap-1 mb-5 bg-white rounded-xl p-1.5 border border-corp-border overflow-x-auto" data-testid="cabinet-tabs">
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (
-              <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className={cls(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
-                  activeTab === tab.key
-                    ? 'bg-corp-primary text-white shadow-sm'
-                    : 'text-corp-text-main hover:bg-corp-bg-light'
+              <button key={tab.key} onClick={() => switchTab(tab.key)}
+                className={cls('flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
+                  activeTab === tab.key ? 'bg-corp-primary text-white shadow-sm' : 'text-corp-text-main hover:bg-corp-bg-light'
                 )} data-testid={`tab-${tab.key}`}>
                 <Icon className="w-4 h-4" />
                 <span className="hidden sm:inline">{tab.label}</span>
                 {tab.count > 0 && (
-                  <span className={cls(
-                    'w-5 h-5 rounded-full text-[10px] grid place-content-center font-bold',
+                  <span className={cls('w-5 h-5 rounded-full text-[10px] grid place-content-center font-bold',
                     activeTab === tab.key ? 'bg-white text-corp-primary' : 'bg-corp-primary text-white'
                   )}>{tab.count > 99 ? '99+' : tab.count}</span>
                 )}
@@ -599,10 +766,8 @@ export default function PersonalCabinet() {
             );
           })}
         </div>
-
-        {/* Tab Content */}
         {activeTab === 'profile' && <ProfileTab profile={profile} stats={stats} />}
-        {activeTab === 'tasks' && <TasksTab tasks={tasks} onRefresh={() => { loadTasks(); loadStats(); }} />}
+        {activeTab === 'tasks' && <TasksTab currentUserId={currentUserId} />}
         {activeTab === 'chat' && <ChatTab currentUserId={currentUserId} />}
         {activeTab === 'team' && <TeamTab teamData={teamData} />}
       </div>

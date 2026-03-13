@@ -205,7 +205,7 @@ function ItemCard({ item, onOpen, onMoveStart, isCompact, navigate }) {
     } else if (item.linkTo === 'damage') {
       navigate('/damages');
     } else if (item.linkTo === 'cleaning' || item.linkTo === 'tasks') {
-      navigate('/tasks');
+      navigate('/cabinet?tab=tasks');
     } else {
       onOpen(item);
     }
@@ -432,7 +432,7 @@ function Drawer({ open, item, onClose, navigate }) {
     } else if (item.linkTo === 'damage') {
       navigate('/damages');
     } else if (item.linkTo === 'cleaning' || item.linkTo === 'tasks') {
-      navigate('/tasks');
+      navigate('/cabinet?tab=tasks');
     }
     onClose();
   };

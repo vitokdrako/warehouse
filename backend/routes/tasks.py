@@ -119,11 +119,10 @@ async def get_tasks(
             t.task_type, t.status, t.priority, t.assigned_to, t.due_date,
             t.completed_at, t.created_by, t.created_at, t.updated_at,
             t.assigned_to_id, t.created_by_id,
-            d.case_number as damage_case_number,
+            NULL as damage_case_number,
             u.firstname as assignee_firstname, u.lastname as assignee_lastname,
             creator.firstname as creator_firstname, creator.lastname as creator_lastname
         FROM tasks t
-        LEFT JOIN product_damage_history d ON t.damage_id = d.id
         LEFT JOIN users u ON t.assigned_to_id = u.user_id
         LEFT JOIN users creator ON t.created_by_id = creator.user_id
         WHERE 1=1
@@ -253,10 +252,12 @@ async def get_task(
     """Get single task by ID"""
     result = db.execute(text("""
         SELECT 
-            t.*, d.case_number as damage_case_number,
+            t.id, t.order_id, t.order_number, t.damage_id, t.title, t.description,
+            t.task_type, t.status, t.priority, t.assigned_to, t.due_date,
+            t.completed_at, t.created_by, t.created_at, t.updated_at,
+            t.assigned_to_id, t.created_by_id,
             u.firstname as assignee_firstname, u.lastname as assignee_lastname
         FROM tasks t
-        LEFT JOIN product_damage_history d ON t.damage_id = d.id
         LEFT JOIN users u ON t.assigned_to_id = u.user_id
         WHERE t.id = :task_id
     """), {"task_id": task_id})
@@ -266,8 +267,8 @@ async def get_task(
         raise HTTPException(status_code=404, detail="Task not found")
     
     assignee_name = None
-    if row[18] or row[19]:
-        assignee_name = f"{row[18] or ''} {row[19] or ''}".strip()
+    if len(row) > 17 and (row[17] or row[18]):
+        assignee_name = f"{row[17] or ''} {row[18] or ''}".strip()
     elif row[9]:
         assignee_name = row[9]
     
@@ -290,7 +291,7 @@ async def get_task(
         "created_by_id": row[16] if len(row) > 16 else None,
         "created_at": row[13].isoformat() if row[13] else None,
         "updated_at": row[14].isoformat() if row[14] else None,
-        "damage_case_number": row[17] if len(row) > 17 else None
+        "damage_case_number": None
     }
 
 @router.put("/{task_id}")

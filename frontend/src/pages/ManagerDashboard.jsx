@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CorporateHeader from '../components/CorporateHeader';
-import OrdersChatModal from '../components/OrdersChatModal';  // ✅ Чат замовлень
 import { limitedAuthFetch } from '../utils/requestLimiter';  // ✅ Request limiter
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -20,7 +19,7 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [financeData, setFinanceData] = useState({ revenue: 0, deposits: 0 });
   const [cleaningStats, setCleaningStats] = useState({ repair: 0 });
-  const [showChatModal, setShowChatModal] = useState(false);  // ✅ Стан для модалки чату
+  const navigate = useNavigate();
   
   // Стани для розгортання карток
   const [showAllAwaiting, setShowAllAwaiting] = useState(false);
@@ -35,8 +34,6 @@ export default function ManagerDashboard() {
   // ✅ Режим об'єднання замовлень
   const [mergeMode, setMergeMode] = useState(false);
   const [selectedForMerge, setSelectedForMerge] = useState([]);
-  
-  const navigate = useNavigate();
 
   // Завантажити дані користувача
   useEffect(() => {
@@ -423,10 +420,10 @@ export default function ManagerDashboard() {
               🔗 {mergeMode ? 'Скасувати' : 'Об\'єднати'}
             </button>
             
-            {/* ✅ Кнопка чату */}
+            {/* ✅ Кнопка чату — перенаправлення в кабінет */}
             <button 
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center gap-1.5"
-              onClick={() => setShowChatModal(true)}
+              onClick={() => navigate('/cabinet?tab=orders')}
             >
               💬 Чат
             </button>
@@ -766,11 +763,7 @@ export default function ManagerDashboard() {
       </main>
       {/* Footer moved to global LegalFooter in App.tsx */}
       
-      {/* ✅ Модалка чату */}
-      <OrdersChatModal 
-        isOpen={showChatModal} 
-        onClose={() => setShowChatModal(false)} 
-      />
+      {/* Чат замовлень перенесено в Особистий кабінет → вкладка "Замовлення" */}
     </div>
   );
 }

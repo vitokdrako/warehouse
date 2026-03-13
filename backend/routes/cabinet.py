@@ -275,3 +275,71 @@ async def get_team_overview(
         "active_tasks": r[6] or 0,
         "done_today": r[7] or 0,
     } for r in rows]
+
+
+
+# === Order Chats ===
+
+@router.get("/order-chats")
+async def get_order_chats(
+    mode: Optional[str] = "active",
+    search: Optional[str] = None,
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Get orders with internal notes count for Order Chats tab.
+    mode: active (default), all, with_notes
+    """
+    status_filter = ""
+    params = {}
+
+    if mode == "active":
+        status_filter = "AND o.status IN ('awaiting_customer','processing','ready_for_issue','issued','on_rent','partial_return','returned')"
+    elif mode == "with_notes":
+        status_filter = ""
+    # 'all' = no filter
+
+    search_filter = ""
+    if search and search.strip():
+        search_filter = "AND (o.order_number LIKE :search OR o.customer_name LIKE :search)"
+        params["search"] = f"%{search.strip()}%"
+
+    rows = db.execute(text(f"""
+        SELECT o.order_id, o.order_number, o.customer_name, o.customer_phone,
+               o.status, o.issue_date, o.return_date, o.created_at,
+               COALESCE(n.notes_count, 0) as notes_count,
+               n.last_note_at, n.last_note_user, n.last_note_text
+        FROM orders o
+        LEFT JOIN (
+            SELECT order_id,
+                   COUNT(*) as notes_count,
+                   MAX(created_at) as last_note_at,
+                   SUBSTRING_INDEX(GROUP_CONCAT(user_name ORDER BY created_at DESC SEPARATOR '|||'), '|||', 1) as last_note_user,
+                   SUBSTRING_INDEX(GROUP_CONCAT(LEFT(message, 80) ORDER BY created_at DESC SEPARATOR '|||'), '|||', 1) as last_note_text
+            FROM order_internal_notes
+            GROUP BY order_id
+        ) n ON CAST(n.order_id AS UNSIGNED) = o.order_id
+        WHERE 1=1 {status_filter} {search_filter}
+        {"HAVING notes_count > 0" if mode == "with_notes" else ""}
+        ORDER BY
+            CASE WHEN n.last_note_at IS NOT NULL THEN 0 ELSE 1 END,
+            n.last_note_at DESC,
+            o.order_id DESC
+        LIMIT 100
+    """), params).fetchall()
+
+    return [{
+        "order_id": r[0],
+        "order_number": r[1],
+        "customer_name": r[2] or "",
+        "customer_phone": r[3] or "",
+        "status": r[4] or "",
+        "issue_date": r[5].isoformat() if r[5] else None,
+        "return_date": r[6].isoformat() if r[6] else None,
+        "created_at": r[7].isoformat() if r[7] else None,
+        "notes_count": r[8] or 0,
+        "last_note_at": r[9].isoformat() if r[9] else None,
+        "last_note_user": r[10] or "",
+        "last_note_text": r[11] or "",
+    } for r in rows]

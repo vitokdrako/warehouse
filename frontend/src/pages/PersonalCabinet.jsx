@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import CorporateHeader from '../components/CorporateHeader';
-import { User, MessageSquare, CheckSquare, Users, Send, Hash, Lock, Plus, ArrowLeft, Clock, AlertTriangle, Circle, Reply, Search, X, ChevronRight, CalendarDays, Flame, Filter, LayoutGrid, List } from 'lucide-react';
+import { User, MessageSquare, CheckSquare, Users, Send, Hash, Lock, Plus, ArrowLeft, Clock, AlertTriangle, Circle, Reply, Search, X, ChevronRight, CalendarDays, Flame, Filter, LayoutGrid, List, Package } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -732,6 +732,250 @@ function ChatTab({ currentUserId }) {
   );
 }
 
+/* ========== ORDER CHATS TAB ========== */
+const orderStatusConfig = {
+  awaiting_customer: { label: 'Очікує', color: 'bg-amber-500' },
+  processing: { label: 'Комплектація', color: 'bg-blue-500' },
+  ready_for_issue: { label: 'Готово', color: 'bg-emerald-500' },
+  issued: { label: 'Видано', color: 'bg-purple-500' },
+  on_rent: { label: 'В оренді', color: 'bg-indigo-500' },
+  partial_return: { label: 'Часткове', color: 'bg-orange-500' },
+  returned: { label: 'Повернено', color: 'bg-slate-500' },
+  completed: { label: 'Завершено', color: 'bg-slate-400' },
+  cancelled: { label: 'Скасовано', color: 'bg-red-400' },
+};
+
+function OrderChatsTab() {
+  const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [filterMode, setFilterMode] = useState('active');
+  const [searchQuery, setSearchQuery] = useState('');
+  const messagesEndRef = useRef(null);
+
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ mode: filterMode });
+      if (searchQuery.trim()) params.set('search', searchQuery.trim());
+      const r = await authFetch(`${BACKEND_URL}/api/cabinet/order-chats?${params}`);
+      if (r.ok) setOrders(await r.json());
+    } catch (e) { console.error('[OrderChats] load error', e); }
+    setLoading(false);
+  }, [filterMode, searchQuery]);
+
+  useEffect(() => { loadOrders(); }, [loadOrders]);
+
+  const loadMessages = useCallback(async (orderId) => {
+    setLoadingMsgs(true);
+    try {
+      const r = await authFetch(`${BACKEND_URL}/api/orders/${orderId}/internal-notes`);
+      if (r.ok) { const d = await r.json(); setMessages(d.notes || []); }
+    } catch (e) { console.error('[OrderChats] messages error', e); }
+    setLoadingMsgs(false);
+  }, []);
+
+  useEffect(() => {
+    if (selectedOrder) {
+      loadMessages(selectedOrder.order_id);
+    }
+  }, [selectedOrder, loadMessages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedOrder || sending) return;
+    setSending(true);
+    try {
+      const r = await authFetch(`${BACKEND_URL}/api/orders/${selectedOrder.order_id}/internal-notes`, {
+        method: 'POST', body: JSON.stringify({ message: newMessage.trim() })
+      });
+      if (r.ok) {
+        setNewMessage('');
+        loadMessages(selectedOrder.order_id);
+        loadOrders();
+      }
+    } catch (e) { console.error('[OrderChats] send error', e); }
+    setSending(false);
+  };
+
+  const selectOrder = (order) => {
+    setSelectedOrder(order);
+  };
+
+  const getUserColor = (name) => {
+    const colors = [
+      'bg-blue-50 border-blue-200', 'bg-emerald-50 border-emerald-200',
+      'bg-violet-50 border-violet-200', 'bg-amber-50 border-amber-200',
+      'bg-rose-50 border-rose-200', 'bg-cyan-50 border-cyan-200',
+    ];
+    const hash = (name || '').split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  };
+
+  const filteredOrders = orders;
+
+  return (
+    <div className="flex h-[calc(100vh-200px)] bg-white rounded-xl border border-corp-border overflow-hidden" data-testid="order-chats-tab">
+      {/* Left sidebar — orders list */}
+      <div className={cls('flex-shrink-0 border-r border-corp-border flex flex-col bg-corp-bg-light',
+        selectedOrder ? 'hidden sm:flex w-72 lg:w-80' : 'w-full sm:w-72 lg:w-80')}>
+        {/* Search & filters */}
+        <div className="p-3 space-y-2 border-b border-corp-border">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-corp-text-muted" />
+            <input type="text" placeholder="Пошук замовлення..." value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-corp-border bg-white focus:outline-none focus:border-corp-primary"
+              data-testid="order-chat-search" />
+          </div>
+          <div className="flex gap-1 bg-white rounded-lg border border-corp-border p-0.5">
+            {[['active', 'Активні'], ['with_notes', 'З нотатками'], ['all', 'Всі']].map(([k, l]) => (
+              <button key={k} onClick={() => setFilterMode(k)}
+                className={cls('flex-1 px-2 py-1.5 rounded-md text-[11px] font-medium transition-colors',
+                  filterMode === k ? 'bg-corp-primary text-white' : 'text-corp-text-main hover:bg-corp-bg-light'
+                )} data-testid={`order-filter-${k}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Orders List */}
+        <div className="flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="p-4 text-center text-sm text-corp-text-muted animate-pulse">Завантаження...</div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="p-6 text-center">
+              <Package className="w-10 h-10 mx-auto mb-2 text-corp-text-muted opacity-30" />
+              <p className="text-sm text-corp-text-muted">Немає замовлень</p>
+            </div>
+          ) : (
+            filteredOrders.map(order => {
+              const st = orderStatusConfig[order.status] || { label: order.status, color: 'bg-slate-400' };
+              const isSelected = selectedOrder?.order_id === order.order_id;
+              return (
+                <button key={order.order_id} onClick={() => selectOrder(order)}
+                  className={cls('w-full text-left px-3 py-2.5 border-b border-corp-border/50 transition-colors',
+                    isSelected ? 'bg-white shadow-sm' : 'hover:bg-white/80'
+                  )} data-testid={`order-item-${order.order_id}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={cls('w-2 h-2 rounded-full flex-shrink-0', st.color)} />
+                    <span className={cls('text-sm font-semibold', isSelected ? 'text-corp-primary' : 'text-corp-text-dark')}>
+                      {order.order_number}
+                    </span>
+                    <span className="text-[9px] text-corp-text-muted bg-corp-bg-light px-1.5 py-0.5 rounded">{st.label}</span>
+                    {order.notes_count > 0 && (
+                      <span className="ml-auto w-5 h-5 rounded-full bg-corp-primary/10 text-corp-primary text-[10px] grid place-content-center font-bold flex-shrink-0">
+                        {order.notes_count}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-corp-text-muted truncate">{order.customer_name}</div>
+                  {order.last_note_text && (
+                    <div className="text-[11px] text-corp-text-muted mt-1 truncate">
+                      <span className="font-medium">{order.last_note_user?.split(' ')[0]}:</span> {order.last_note_text}
+                    </div>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Right panel — Chat */}
+      <div className={cls('flex-1 flex flex-col', !selectedOrder && 'hidden sm:flex')}>
+        {selectedOrder ? (
+          <>
+            {/* Chat header */}
+            <div className="px-4 py-3 border-b border-corp-border flex items-center gap-3 bg-white">
+              <button onClick={() => setSelectedOrder(null)} className="sm:hidden">
+                <ArrowLeft className="w-5 h-5 text-corp-text-main" />
+              </button>
+              <div className={cls('w-2.5 h-2.5 rounded-full flex-shrink-0', (orderStatusConfig[selectedOrder.status] || {}).color || 'bg-slate-400')} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-corp-text-dark">{selectedOrder.order_number}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-corp-bg-light text-corp-text-muted">
+                    {(orderStatusConfig[selectedOrder.status] || {}).label || selectedOrder.status}
+                  </span>
+                </div>
+                <div className="text-xs text-corp-text-muted truncate">{selectedOrder.customer_name}</div>
+              </div>
+              {(selectedOrder.issue_date || selectedOrder.return_date) && (
+                <div className="hidden md:flex items-center gap-3 text-[11px] text-corp-text-muted">
+                  {selectedOrder.issue_date && <span>Видача: {new Date(selectedOrder.issue_date).toLocaleDateString('uk-UA')}</span>}
+                  {selectedOrder.return_date && <span>Повернення: {new Date(selectedOrder.return_date).toLocaleDateString('uk-UA')}</span>}
+                </div>
+              )}
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-corp-bg-light/50">
+              {loadingMsgs ? (
+                <div className="text-center text-corp-text-muted py-8 text-sm animate-pulse">Завантаження...</div>
+              ) : messages.length === 0 ? (
+                <div className="text-center text-corp-text-muted py-12">
+                  <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">Немає повідомлень</p>
+                  <p className="text-xs mt-1 text-corp-text-muted">Напишіть перше повідомлення</p>
+                </div>
+              ) : (
+                messages.map((msg) => {
+                  const isClient = msg.user_name?.includes('Коментар клієнта');
+                  const isSystem = msg.user_name === 'System';
+                  return (
+                    <div key={msg.id} className={cls('max-w-[85%]', !isClient && !isSystem && 'ml-auto')} data-testid={`order-msg-${msg.id}`}>
+                      <div className={cls('rounded-xl border px-3 py-2.5', getUserColor(msg.user_name),
+                        isClient ? 'bg-amber-50 border-amber-200' :
+                        isSystem ? 'bg-white border-corp-border' : ''
+                      )}>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-xs font-semibold text-corp-text-dark">{msg.user_name || 'Невідомий'}</span>
+                          <span className="text-[10px] text-corp-text-muted flex-shrink-0">{msg.created_at}</span>
+                        </div>
+                        <p className="text-sm text-corp-text-dark whitespace-pre-wrap break-words">{msg.message}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="p-3 border-t border-corp-border bg-white">
+              <div className="flex items-center gap-2">
+                <input type="text" value={newMessage}
+                  onChange={e => setNewMessage(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
+                  placeholder="Нотатка для команди..."
+                  className="flex-1 px-4 py-2.5 text-sm rounded-xl border border-corp-border bg-corp-bg-light focus:outline-none focus:border-corp-primary focus:bg-white transition-colors"
+                  data-testid="order-chat-input" />
+                <button onClick={sendMessage}
+                  className="p-2.5 rounded-xl bg-corp-primary text-white hover:bg-corp-primary-hover transition-colors disabled:opacity-50"
+                  disabled={!newMessage.trim() || sending} data-testid="order-chat-send">
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 grid place-content-center text-corp-text-muted text-sm">
+            <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <p>Оберіть замовлення для перегляду чату</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ========== TEAM TAB ========== */
 function TeamTab({ teamData }) {
   if (!teamData?.length) return <div className="p-8 text-center text-corp-text-muted">Завантаження...</div>;
@@ -802,6 +1046,7 @@ export default function PersonalCabinet() {
     { key: 'profile', label: 'Профіль', icon: User },
     { key: 'tasks', label: 'Задачі', icon: CheckSquare },
     { key: 'chat', label: 'Чат', icon: MessageSquare, count: unread },
+    { key: 'orders', label: 'Замовлення', icon: Package },
     { key: 'team', label: 'Команда', icon: Users },
   ];
 
@@ -831,6 +1076,7 @@ export default function PersonalCabinet() {
         {activeTab === 'profile' && <ProfileTab profile={profile} stats={stats} />}
         {activeTab === 'tasks' && <TasksTab currentUserId={currentUserId} />}
         {activeTab === 'chat' && <ChatTab currentUserId={currentUserId} />}
+        {activeTab === 'orders' && <OrderChatsTab />}
         {activeTab === 'team' && <TeamTab teamData={teamData} />}
       </div>
     </div>

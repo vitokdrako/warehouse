@@ -40,7 +40,15 @@ import SyncPanel from './pages/SyncPanel';
 import DocumentTemplatesAdmin from './pages/DocumentTemplatesAdmin';
 import UnifiedCalendar from './pages/UnifiedCalendarNew';
 
-// Protected Route component
+// Декодування JWT без бібліотеки
+function parseJwt(token: string) {
+  try {
+    const base64 = token.split('.')[1];
+    return JSON.parse(atob(base64));
+  } catch { return null; }
+}
+
+// Protected Route — перевіряє наявність І валідність токена
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
   
@@ -48,12 +56,34 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
   
+  // Перевірка чи токен не протух
+  const payload = parseJwt(token);
+  if (!payload || !payload.exp || payload.exp * 1000 < Date.now()) {
+    // Токен протух — чистимо і на логін
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return <Navigate to="/login" replace />;
+  }
+  
   return <>{children}</>;
 }
 
 function App() {
-  // Note: navigate is not used here - remove if unneeded
-  // const navigate = useNavigate();
+  // Перевірка токена кожні 5 хв — автоматичний logout при протуханні
+  useEffect(() => {
+    const checkToken = () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const payload = parseJwt(token);
+      if (!payload || !payload.exp || payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    };
+    const interval = setInterval(checkToken, 5 * 60 * 1000); // кожні 5 хв
+    return () => clearInterval(interval);
+  }, []);
   
   const handleBackToDashboard = () => {
     window.location.href = '/dashboard';

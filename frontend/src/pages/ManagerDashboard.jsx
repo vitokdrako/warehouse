@@ -465,7 +465,14 @@ export default function ManagerDashboard() {
               className="rounded-lg border border-corp-primary bg-corp-primary/5 px-3 py-2 text-sm font-medium text-corp-primary hover:bg-corp-primary hover:text-white transition-colors"
               onClick={() => navigate('/manager-cabinet')}
             >
-              👔 Менеджерська
+              Менеджерська
+            </button>
+            <button 
+              className="rounded-lg border border-corp-gold bg-corp-gold/5 px-3 py-2 text-sm font-medium text-corp-gold hover:bg-corp-gold hover:text-white transition-colors flex items-center gap-1.5"
+              onClick={() => navigate('/cabinet')}
+              data-testid="nav-cabinet-btn"
+            >
+              Кабiнет
             </button>
             <button 
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"

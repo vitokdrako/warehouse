@@ -36,6 +36,7 @@ import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
 import InventoryRecount from './pages/InventoryRecount';
 // Legacy: OrdersArchive removed — order history now in ClientsTab
 import OrderEstimatePage from './pages/OrderEstimatePage';
+import PersonalCabinet from './pages/PersonalCabinet';
 import SyncPanel from './pages/SyncPanel';
 import DocumentTemplatesAdmin from './pages/DocumentTemplatesAdmin';
 import UnifiedCalendar from './pages/UnifiedCalendarNew';
@@ -150,6 +151,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <OrderEstimatePage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Особистий кабiнет */}
+          <Route 
+            path="/cabinet" 
+            element={
+              <ProtectedRoute>
+                <PersonalCabinet />
               </ProtectedRoute>
             } 
           />

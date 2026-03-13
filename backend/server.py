@@ -12,7 +12,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Import route modules AFTER loading env
-from routes import inventory, clients, orders, tasks, damages, finance, test_orders, settings, pdf, users, issue_cards, return_cards, photos, qr_codes, email, catalog, archive, warehouse, extended_catalog, audit, products, auth, image_proxy, price_sync, damage_cases, admin, product_damage_history, product_reservations, inventory_adjustments, sync, product_cleaning, migrations, product_images, event_tool_integration, user_tracking, laundry, documents, analytics, product_sets, expense_management, export, template_admin, order_modifications, order_internal_notes, order_sync, partial_returns, uploads, payer_profiles, dashboard_overview, calendar_events, return_versions, event_tool, master_agreements, order_annexes, document_policy, document_render, document_signatures, document_pdf, document_manual_fields, document_email
+from routes import inventory, clients, orders, tasks, damages, finance, test_orders, settings, pdf, users, issue_cards, return_cards, photos, qr_codes, email, catalog, archive, warehouse, extended_catalog, audit, products, auth, image_proxy, price_sync, damage_cases, admin, product_damage_history, product_reservations, inventory_adjustments, sync, product_cleaning, migrations, product_images, event_tool_integration, user_tracking, laundry, documents, analytics, product_sets, expense_management, export, template_admin, order_modifications, order_internal_notes, order_sync, partial_returns, uploads, payer_profiles, dashboard_overview, calendar_events, return_versions, event_tool, master_agreements, order_annexes, document_policy, document_render, document_signatures, document_pdf, document_manual_fields, document_email, team_chat, cabinet
 
 # Create the main app
 app = FastAPI(title="Rental Hub API")
@@ -44,6 +44,7 @@ default_origins = [
     "https://backrentalhub.farforrent.com.ua",
     "http://localhost:3000",
     "http://localhost:3001",
+    "https://staff-hub-106.preview.emergentagent.com",  # Emergent preview
 ]
 
 if cors_origins == '*':
@@ -137,6 +138,8 @@ app.include_router(document_policy.router)
 app.include_router(document_render.router)
 app.include_router(document_signatures.router)
 app.include_router(document_pdf.router)
+app.include_router(team_chat.router)
+app.include_router(cabinet.router)
 
 # Configure logging
 logging.basicConfig(

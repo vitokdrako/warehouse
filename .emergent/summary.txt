@@ -8,43 +8,50 @@ The user's initial goal was to stabilize the Damage Cabinet and evolved into a l
 - **CRITICAL**: Apply all schema changes and code updates to the live production database and server environment.
 - Fix miscellaneous data integrity issues in the production database as they are discovered.
 
+**New requirements from this session:**
+- Automatically create new client records in the  table when an order arrives for a client that doesn't exist.
+- Fix a critical bug where additional service fees () were not included in the total order price (), causing incorrect financial reporting.
+- Unify the Order Archive functionality into the Clients tab, creating a dedicated, full-page view for each order's details.
+- Fix a bug where the author of internal order notes was lost and recorded as System due to expired authentication tokens.
+- Create a Personal Cabinet for employees (Managers, Props Masters) that includes a profile, a task list integrated with the existing calendar, and a new internal chat system similar to Telegram/Slack.
+
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is **live on the production environment**. A massive, critical migration has just been completed.
-- **Production Schema Sync:** The production database () schema has been fully synchronized with the test database. This involved adding numerous columns (e.g., CRM fields to ), altering column types, and dropping over 20 unused legacy tables.
-- **Production Data Migration:** Client data from the old  table was migrated into the new  structure in production.
-- **Full-Stack Deployment:** A complete build of the frontend (pointed to the production backend) and a full copy of all backend files have been prepared in a directory named  for deployment. The user has deployed these files, but this process caused initial errors which were later resolved.
-- **Client CRM Feature (Live):** A new, feature-rich client management UI is live. It includes a compact table view, filters, statistics, and a detailed drawer view with editing capabilities for new CRM fields (is_regular, company, rating, notes, etc.).
-- **Document Generation (Live):** The broken invoice generation has been completely fixed. Two new document types, Рахунок на оплату (Payment Invoice) and Акт надання послуг (Service Act), are now generated correctly based on the client's associated payer profile. The UI in the order view dynamically shows which documents can be generated.
-- **Live Data Fixes:** The agent has already performed several direct data fixes on the production database at the user's request, including creating a payer profile for a client and releasing specific items stuck in an incorrect state.
+The application is live, and the agent performed several critical fixes and feature updates directly against the production codebase.
+- **Order Total Fix:** The calculation of  (total price + service fee - discount) is now correct across the backend and frontend. Multiple UI components have been updated to display the correct amount.
+- **Unified Order View:** The old Order Archive page has been deleted. A new, full-page Order Estimate view () is now implemented. It's accessible via a clickable list of orders within the client's detail drawer. This page provides a comprehensive summary of an order, including financial details, product lists, generated documents, and a full history of internal chat notes.
+- **Automatic Client Creation:** Logic has been added to  (for OpenCart orders) and the manual order creation endpoints to automatically check for and create new clients in , preventing orphaned orders. A one-time migration was performed to link 74 existing orphaned orders.
+- **Authentication Fix:** The bug causing lost authorship on notes is resolved. The JWT token lifetime has been extended to 24 hours. The backend now correctly returns a 401 error on expired tokens, and the frontend handles this by automatically logging the user out. A scheduled logout is also implemented to force re-authentication every morning at 7 AM.
+- **UI/Code Cleanup:** The old  page, its route, and related legacy files () have been deleted. Unnecessary Archive and Finance buttons have been removed from the main dashboards for a cleaner interface.
+- **Database Connection:** The agent's environment was disconnected from the production MySQL database due to an IP block. At the user's direction, the agent reconfigured the backend to use the older test database () as they share the same schema.
 
 **Last working item**:
--   **Last item agent was working:** The user requested to fix a data integrity issue in the production database. All textile items that were mistakenly sent to the мойка (washing) status in the  table need to be released. This was a user error, and the items should be made available again.
--   **Status:** NOT STARTED
+-   **Last item agent was working:** The user requested a new Personal Cabinet for employees with an integrated chat and task manager. The agent began by exploring the existing codebase, identifying  and  as relevant files for the task/calendar integration. The user then clarified that the entire implementation, including the new chat feature, must use the existing **MySQL** database, not MongoDB. The agent was in the process of re-planning the feature with this critical constraint in mind.
+-   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** manual testing by curl/ python -c. The agent should connect to the production database using , identify all relevant records in  (e.g., where status is 'washing' and the product is a textile), and run an  query to change their status to . A  query should be run before and after to verify the change.
+-   **Which testing method agent to use?** both. This is a major new feature requiring backend API tests (for chat, tasks, user profiles) and frontend e2e tests for the new UI.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Release all stuck textile items from laundry (P0)**
+-   **Issue 1: Build Personal Cabinet & Internal Chat (P0)**
 -   **Issue 2:  endpoint is unstable (P2)**
 -   **Issue 3: Moodboard export is likely broken (P2)**
 -   **Issue 4: Recurring Calendar Timezone Bug (P2)**
 
 **Issues Detail:**
--   **Issue 1: Release all stuck textile items from laundry**
-    -   **Attempted fixes:** None. This is a new request.
+-   **Issue 1: Build Personal Cabinet & Internal Chat**
+    -   **Attempted fixes:** Agent created initial files for a MongoDB-based chat, but this was incorrect. The work must be redone for MySQL.
     -   **Next debug checklist:**
-        1.  Connect to the production database .
-        2.  Identify which products are considered textile. This may require querying the  or  tables.
-        3.  Construct a  query to find all entries in  for textile products where .
-        4.  Show the user the records that will be affected and ask for confirmation.
-        5.  Upon confirmation, run an  query to change the status of these records to .
-    -   **Why fix this issue and what will be achieved with the fix?** To correct a user data entry error and restore inventory availability for multiple products, fixing data integrity in production.
-    -   **Status:** NOT STARTED
+        1.  Design the MySQL schema for the chat feature (e.g., , , , ).
+        2.  Create backend API endpoints in a new  route file for CRUD operations on channels, messages, and threads.
+        3.  Create API endpoints for the Personal Cabinet to fetch user profiles, their tasks from the existing task system, and statistics.
+        4.  Build the frontend UI: a main Personal Cabinet page, a profile section, a task view integrated with the calendar, and a Telegram-style chat interface.
+        5.  Thoroughly investigate  and the associated task routes to understand how to integrate My Tasks for the logged-in user.
+    -   **Why fix this issue and what will be achieved with the fix?** This is a major new feature requested by the user to improve internal team communication and workflow management.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Backend (database query).
+    -   **Should Test frontend/backend/both after fix?** both
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
@@ -52,9 +59,10 @@ The application is **live on the production environment**. A massive, critical m
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P1) Post-Deployment Health Check: Systematically verify that all major features (Orders, Catalog, Clients, Documents) are working correctly on the production environment after the massive migration.
-    -   (P1) Simplify  table/logic, which may now be redundant.
-    -   (P1) Delete legacy route files (, ) after confirming they are no longer used by the newly deployed code.
+    -   (P1) Integrate Personal Cabinet with Task Manager and Calendar.
+    -   (P1) Post-Deployment Health Check: Systematically verify all major features are working correctly on production after the recent wave of changes.
+    -   (P1) Simplify  table/logic.
+    -   (P1) Delete legacy route files (, ) after confirming they are no longer used.
     -   (P1) Implement Monthly Cash Desk Closing (Close Month feature).
     -   (P2) Create remaining document templates (e.g., Акт повернення).
 -   **Future Tasks:**
@@ -65,93 +73,90 @@ The application is **live on the production environment**. A massive, critical m
     -   Create an HR/Ops Module.
 
 **Completed work in this session**
--   **Production Deployment & Migration:**
-    -   Performed a full schema synchronization between the test and production databases, which included adding columns, altering types, and dropping 23 legacy tables.
-    -   Executed a data migration script on production to populate the new  table structure.
-    -   Assembled a complete, deployable package of all backend and frontend files in .
-    -   Debugged and resolved 500/CORS errors that occurred post-deployment by ensuring a complete set of backend files was deployed.
--   **Client Database Refactoring (P0 Task - COMPLETED):**
-    -   Finished updating the backend API () to support new CRM fields.
-    -   Built a completely new frontend UI () for client management, featuring a compact table view and a merged single-scroll detail drawer.
--   **Invoice Generation (P0 Task - COMPLETED):**
-    -   Created new backend endpoints (, ) and HTML templates to generate correct invoices and service acts based on user's samples.
-    -   Implemented a dynamic document dropdown in the order view that only shows available document types based on the client's payer profile.
--   **Live Production Data Fixes:**
-    -   Successfully created and linked a payer profile for Христина Мулярчук in the production database.
-    -   Released a specific product (TX9150) that was stuck in the washing status in production.
+-   **Production Data Fix:** Successfully released all textile items that were incorrectly stuck in the washing status in the  table.
+-   **Automatic Client Creation:** Implemented logic in  and order creation routes to automatically create  records from new orders, and backfilled 74 orphaned orders.
+-   **Fixed Order Total Calculation:** Corrected the application-wide logic to ensure  +  is accurately reflected as  in both backend responses and all relevant frontend components.
+-   **Unified Order Archive:**
+    -   Created a new full-page **OrderEstimatePage.jsx** to display comprehensive order details, including finances, items, documents, and the full internal chat history.
+    -   Refactored the  to link each order to its new estimate page.
+    -   Deleted the old  page and removed all associated routes and UI buttons.
+-   **Fixed Lost Author Authentication Bug:**
+    -   Identified and fixed the root cause where expired JWT tokens led to notes being authored by System.
+    -   Increased token lifetime to 24 hours and hardened the backend to return a 401 error instead of failing silently.
+    -   Implemented automatic frontend logout on 401 errors and a scheduled daily logout at 7 AM.
+-   **Code Cleanup:** Deleted legacy files () and removed obsolete Archive and Finance buttons from dashboards.
 
 **Earlier issues found/mentioned but not fixed**
--    endpoint instability.
--   Moodboard export is likely broken.
--   Recurring Calendar Timezone Bug.
+-   ** endpoint instability:** Mentioned in the initial handoff, not addressed.
+-   **Moodboard export is likely broken:** Mentioned in the initial handoff, not addressed.
+-   **Recurring Calendar Timezone Bug:** Mentioned in the initial handoff, not addressed.
 
 **Known issue recurrence from previous fork**
--   None. The major recurring issue of backend slowness was resolved in the previous session.
+-   None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Live Production Database Migration:** The agent performed a complex, multi-step migration directly on a live production database, including schema diffing, altering tables, dropping tables, and handling foreign key constraints.
--   **Production Debugging:** Diagnosed and resolved live application errors (CORS, 500 Internal Server Error) by identifying that an incomplete set of files had been deployed.
--   **Full-Stack Feature Implementation:** Built features from backend to frontend, such as the dynamic document availability list which required a new API endpoint and corresponding frontend logic to consume it.
--   **Data-Driven UI:** Refactored UI components (like the document dropdown) to be dynamic and render based on data fetched from the backend, improving user experience by hiding irrelevant options.
--   **Direct Database Manipulation:** Used  to perform critical data migration and ad-hoc data fixes directly on the production database as requested by the user.
+-   **MySQL-Only Constraint:** The user mandated that all new features, including the complex chat system, must use the existing MySQL database. This invalidates any solution relying on other DBs like MongoDB.
+-   **JWT Token Lifecycle Management:** Implemented a robust authentication flow including extending token lifetime, backend enforcement (throwing 401s), frontend interception, and scheduled/automatic logout on token expiration.
+-   **UI Refactoring (Unification):** Successfully deprecated a standalone Archive page by integrating its functionality into a more logical user flow (Clients -> Client Details -> Order Estimate Page), improving UX.
+-   **Data Integrity and Reconciliation:** Fixed bugs at multiple levels: direct database updates (releasing textile items), preventing data duplication (payment records), and ensuring data consistency (creating clients automatically).
 
 **key DB schema**
--   **client_users (production):** Schema is now synchronized with test. Contains new CRM columns: , , , , , , , .
--   **product_damage_history (production):**  column is critical. The current task involves changing records from  to .
--   **payer_profiles (production):** Used as the source of truth for generating invoices and service acts. Linked to  via .
--   **Dropped Tables:** ~23 legacy tables like , , ,  have been dropped from the production database.
+-   **orders:**  stores the sum of items only. The final amount is calculated as .
+-   **client_users:** Is now correctly populated with new clients from incoming orders.
+-   **order_internal_notes:** Confirmed as the source for the internal order chat. Contains , , , and  (client/system/manager).
+-   **documents:** Confirmed to store metadata for generated documents, linked by .
+-   **fin_transactions** / **fin_payments:** Identified that these tables contained duplicate payment data. The code was fixed to use  as the single source of truth for payments.
 
 **All files of reference**
--   **/app/clean_project/фінал чендж/**: This directory contains the definitive final version of the deployed codebase. Any future modifications should start from these files.
--   **/app/backend/routes/documents.py**: Contains the logic for all document generation, including the newly added invoices and acts.
--   **/app/frontend/src/pages/Clients/ClientsTab.jsx**: The main UI file for the new Client CRM feature.
--   **/app/test_reports/iteration_6.json**: The last test report confirming the dynamic invoice feature worked before deployment.
+-   **/app/frontend/src/pages/OrderEstimatePage.jsx**: The new core component for viewing a single order's complete details.
+-   **/app/frontend/src/pages/Clients/ClientsTab.jsx**: The entry point for the new order view workflow.
+-   **/app/backend/routes/orders.py**: Contains the main logic for fetching order data, including the corrected  and aggregated documents/notes.
+-   **/app/frontend/src/hooks/useAuth.js**: Contains the new client-side authentication and auto-logout logic.
+-   **/app/frontend/src/pages/UniversalOpsCalendar.jsx**: Key file to investigate for the task manager integration.
+-   **/app/backend/routes/tasks.py**: Key file to investigate for the task manager integration.
 
 **Critical Info for New Agent**
 -   **Ви повинні спілкуватися українською мовою. (You must communicate in Ukrainian.)**
--   **YOU ARE WORKING ON A LIVE PRODUCTION SYSTEM.** All operations, especially database queries, must be performed with extreme caution. Always confirm actions with the user before executing  or  statements on the production database.
--   The source of truth for the codebase is now in the  directory. When viewing or modifying files, refer to this directory.
--   Your immediate task is a data fix on the production database, as requested by the user. Do not proceed to other tasks until this is resolved.
+-   **CRITICAL: The user has mandated a MySQL-only architecture.** Do not use MongoDB or any other database for new features. The  file created in the last session is based on MongoDB and must be discarded and rewritten for MySQL.
+-   **DATABASE CONNECTION:** The agent's environment is currently blocked from accessing the production DB (). The user is aware and approved falling back to the test DB () since their schemas are identical. You should continue with the test DB unless the user resolves the IP block.
+-   **Your immediate task is to design and build the Personal Cabinet and internal chat features using MySQL.** This involves database design, backend API development, and frontend implementation. You must also research the existing task manager/calendar to plan its integration.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_4.json
--   /app/test_reports/iteration_5.json
--   /app/test_reports/iteration_6.json
--   /app/clean_project/фінал чендж/MIGRATION_V3_CLIENTS.sql
+-   None. The previous test reports are now outdated due to the significant UI and backend changes.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **[LATEST] взалі текстиль який застряг на мийці треба звільнити...** (all textile stuck in laundry must be released...) - User expanded the previous data-fix request. All textile items in 'washing' status are incorrect and need to be fixed. **Status: Pending (Next Action Item).**
-2.  **TX9150 24 штучки застрягли на мийці, звільни їх)** (TX9150 24 pieces are stuck in laundry, release them) - User requested a specific data fix on production. **Status: Completed.**
-3.  **Христина Мулярчук онови в продакшн базі платника** (Update the payer for Khrystyna Mulyarchuk in the production database) - User requested another data fix on production. **Status: Completed.**
-4.  **а онови мені всі файли беку** (update all my backend files) - User confirmed the diagnosis that an incomplete set of files was deployed. **Status: Completed.**
-5.  **помилочка** (error) - User reported the production site was down with CORS/500 errors after they deployed the files. **Status: Completed.**
-6.  **але це не всі зміни попередні агенти змінювали багато чого...** (but this is not all the changes, previous agents changed a lot...) - User requested a full database schema sync to production, not just the client-related changes. **Status: Completed.**
-7.  **зроби мені повстю скомпільований білд...** (make me a fully compiled build...) - User gave the final go-ahead for production deployment and provided server details. **Status: Completed.**
-8.  **так як думаєш чи можемо ми оновити структуру таблиць на нашому основному хостиннгу...** (so what do you think, can we update the table structure on our main hosting...) - User initiated the critical task of migrating all changes to production. **Status: Completed.**
-9.  **акт надання послуг давай буде с почастку видачі...** (let's make the service act date the start of issuance...) - User requested a minor correction to the date logic on a document. **Status: Completed.**
-10. **тепер нам треба генерувати рахунки прямо із ордеру...** (now we need to generate invoices directly from the order...) - User requested the feature for a dynamic document list in the order view. **Status: Completed.**
+1.  **[LATEST] User provides a list of current employees and their roles, confirming the team size for the new chat feature.** They approve the initial plan for the Personal Cabinet (Profile, Tasks, Stats, Chat) and ask the agent to investigate and optimize the existing Task Manager and Calendar. **Status: Pending (Next Action Item).**
+2.  **User requests a Personal Cabinet for employees and an internal Telegram-like chat.** **Status: In Progress.**
+3.  **User asks to remove the old Archive page and unused Finance buttons now that the functionality is merged into the client view.** **Status: Completed.**
+4.  **User asks if they can be logged out automatically every morning.** **Status: Completed.**
+5.  **User asks why the author of chat notes is sometimes lost (System) and asks to investigate.** **Status: Completed.**
+6.  **User asks if the internal order notes/chat can be displayed on the new estimate page.** **Status: Completed.**
+-   **User reports that payments are showing up twice on the new order estimate page for order OC-7317.** **Status: Completed.**
+7.  **User expresses approval for the new order estimate page design.** **Status: Acknowledged.**
+8.  **User asks to connect the agent's test environment to the production database.** This failed due to an IP block. **Status: Blocked.**
+9.  **User initiates the major refactor to merge the Archive into the Clients tab.** **Status: Completed.**
+10. **User reports that the  is missing from the total amount payable on order 7392.** **Status: Completed.**
 
 **Project Health Check:**
--   **Broken:** None currently reported, but the system is fragile after the recent major migration.
--   **Slow:** No known performance issues.
+-   **Broken:** The agent's direct connection to the production database is blocked by an IP whitelist. The functionality relies on a fallback test database.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
 -   **SMTPEmailProvider:** Custom implementation for sending emails.
--   **OpenCart:** Reads product information and images from an external MySQL database.
+-   **OpenCart:** Reads product information and orders from an external MySQL database.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. Used multiple times to validate the Client CRM and Dynamic Document features before deployment.
+-   **Testing agent used after significant changes:** NO. Agent self-tested via  and screenshots.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None in this session.
--   **Known regressions:** None.
+-   **Test files created:** None.
+-   **Known regressions:** None reported by the user.
 
 **Credentials to test flow:**
 -   **RentalHub Admin:**  / 
--   **Production DB:** Credentials were provided in chat but should be re-requested if needed for safety. They are  with user  and password .
+-   **Test DB:** The backend is configured to use the  database. Credentials are in .
 
 **What agent forgot to execute**
--   The agent has not yet executed the user's final request to release *all* textile items stuck in the 'washing' status in the production database. This is the immediate next step.</analysis>
+-   The agent correctly followed the user's priorities. Older, lower-priority bugs ( instability, moodboard export, timezone bug) from the initial handoff were not addressed as the user directed work towards new features and more critical bugs.</analysis>

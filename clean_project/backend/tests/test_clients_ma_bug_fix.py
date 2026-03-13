@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://laundry-stuck-items.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://staff-hub-106.preview.emergentagent.com')
 
 class TestClientsAPI:
     """Test /api/clients endpoints"""

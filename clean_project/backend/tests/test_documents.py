@@ -20,7 +20,7 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 # Configuration
-BASE_URL = "https://laundry-stuck-items.preview.emergentagent.com/api"
+BASE_URL = "https://staff-hub-106.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "email": "vitokdrako@gmail.com",
     "password": "test123"

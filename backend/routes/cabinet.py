@@ -1,0 +1,206 @@
+"""
+Personal Cabinet API — Особистий кабінет працівника
+Профіль, мої задачі, статистика, дашборд
+"""
+from fastapi import APIRouter, Depends, HTTPException, Header
+from pydantic import BaseModel
+from typing import Optional
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from datetime import datetime, date
+
+from database_rentalhub import get_rh_db
+from utils.user_tracking_helper import get_current_user_dependency
+
+router = APIRouter(prefix="/api/cabinet", tags=["cabinet"])
+
+
+def require_auth(current_user: dict = Depends(get_current_user_dependency)):
+    uid = current_user.get("user_id") or current_user.get("id")
+    if not uid or current_user.get("name") == "System":
+        raise HTTPException(status_code=401, detail="Авторизуйтесь")
+    return current_user
+
+
+class ProfileUpdate(BaseModel):
+    firstname: Optional[str] = None
+    lastname: Optional[str] = None
+    phone: Optional[str] = None
+    telegram: Optional[str] = None
+
+
+# === Profile ===
+
+@router.get("/profile")
+async def get_my_profile(
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    uid = user.get("user_id") or user.get("id")
+    row = db.execute(text("""
+        SELECT user_id, username, email, firstname, lastname, role,
+               is_active, created_at, last_login
+        FROM users WHERE user_id = :uid
+    """), {"uid": uid}).fetchone()
+
+    if not row:
+        raise HTTPException(404, "Користувач не знайдений")
+
+    return {
+        "user_id": row[0],
+        "username": row[1],
+        "email": row[2],
+        "firstname": row[3] or "",
+        "lastname": row[4] or "",
+        "full_name": f"{row[3] or ''} {row[4] or ''}".strip(),
+        "role": row[5],
+        "is_active": bool(row[6]),
+        "created_at": row[7].isoformat() if row[7] else None,
+        "last_login": row[8].isoformat() if row[8] else None,
+    }
+
+
+@router.put("/profile")
+async def update_my_profile(
+    data: ProfileUpdate,
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    uid = user.get("user_id") or user.get("id")
+    sets = []
+    params = {"uid": uid}
+    if data.firstname is not None:
+        sets.append("firstname = :fn")
+        params["fn"] = data.firstname
+    if data.lastname is not None:
+        sets.append("lastname = :ln")
+        params["ln"] = data.lastname
+    if not sets:
+        raise HTTPException(400, "Немає даних для оновлення")
+
+    db.execute(text(f"UPDATE users SET {', '.join(sets)} WHERE user_id = :uid"), params)
+    db.commit()
+    return await get_my_profile(user, db)
+
+
+# === My Tasks ===
+
+@router.get("/my-tasks")
+async def get_my_tasks(
+    status: Optional[str] = None,
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    uid = user.get("user_id") or user.get("id")
+    where = "t.assigned_to_id = :uid"
+    params = {"uid": uid}
+
+    if status:
+        where += " AND t.status = :status"
+        params["status"] = status
+
+    rows = db.execute(text(f"""
+        SELECT t.id, t.order_id, t.order_number, t.title, t.description,
+               t.task_type, t.status, t.priority, t.due_date,
+               t.completed_at, t.created_at,
+               creator.firstname as cf, creator.lastname as cl
+        FROM tasks t
+        LEFT JOIN users creator ON t.created_by_id = creator.user_id
+        WHERE {where}
+        ORDER BY FIELD(t.priority, 'high', 'medium', 'low'), t.created_at DESC
+    """), params).fetchall()
+
+    return [{
+        "id": r[0], "order_id": r[1], "order_number": r[2],
+        "title": r[3], "description": r[4],
+        "task_type": r[5], "status": r[6], "priority": r[7],
+        "due_date": r[8].isoformat() if r[8] else None,
+        "completed_at": r[9].isoformat() if r[9] else None,
+        "created_at": r[10].isoformat() if r[10] else None,
+        "created_by": f"{r[11] or ''} {r[12] or ''}".strip() if r[11] else None,
+    } for r in rows]
+
+
+# === My Stats ===
+
+@router.get("/stats")
+async def get_my_stats(
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    uid = user.get("user_id") or user.get("id")
+    today = date.today().isoformat()
+
+    # Task stats
+    task_stats = db.execute(text("""
+        SELECT
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'todo' THEN 1 ELSE 0 END) as todo,
+            SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+            SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done,
+            SUM(CASE WHEN due_date IS NOT NULL AND due_date < NOW() AND status != 'done' THEN 1 ELSE 0 END) as overdue
+        FROM tasks
+        WHERE assigned_to_id = :uid
+    """), {"uid": uid}).fetchone()
+
+    # Tasks completed today
+    today_done = db.execute(text("""
+        SELECT COUNT(*) FROM tasks
+        WHERE assigned_to_id = :uid AND status = 'done'
+          AND DATE(completed_at) = :today
+    """), {"uid": uid, "today": today}).scalar()
+
+    # Orders stats (from order_internal_notes as activity indicator)
+    notes_today = db.execute(text("""
+        SELECT COUNT(*) FROM order_internal_notes
+        WHERE user_id = :uid AND DATE(created_at) = :today
+    """), {"uid": uid, "today": today}).scalar()
+
+    # Chat messages today
+    msgs_today = db.execute(text("""
+        SELECT COUNT(*) FROM chat_messages
+        WHERE user_id = :uid AND DATE(created_at) = :today
+    """), {"uid": uid, "today": today}).scalar()
+
+    return {
+        "tasks": {
+            "total": task_stats[0] or 0,
+            "todo": task_stats[1] or 0,
+            "in_progress": task_stats[2] or 0,
+            "done": task_stats[3] or 0,
+            "overdue": task_stats[4] or 0,
+        },
+        "today": {
+            "tasks_completed": today_done or 0,
+            "notes_written": notes_today or 0,
+            "messages_sent": msgs_today or 0,
+        },
+    }
+
+
+# === Team Overview ===
+
+@router.get("/team")
+async def get_team_overview(
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_rh_db)
+):
+    rows = db.execute(text("""
+        SELECT u.user_id, u.username, u.firstname, u.lastname, u.role,
+               u.last_login,
+               (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to_id = u.user_id AND t.status != 'done') as active_tasks,
+               (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to_id = u.user_id AND t.status = 'done'
+                AND DATE(t.completed_at) = CURDATE()) as done_today
+        FROM users u
+        WHERE u.is_active = 1
+        ORDER BY u.role, u.firstname
+    """)).fetchall()
+
+    return [{
+        "user_id": r[0], "username": r[1],
+        "name": f"{r[2] or ''} {r[3] or ''}".strip(),
+        "role": r[4],
+        "last_login": r[5].isoformat() if r[5] else None,
+        "active_tasks": r[6] or 0,
+        "done_today": r[7] or 0,
+    } for r in rows]

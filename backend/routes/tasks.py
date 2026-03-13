@@ -238,6 +238,24 @@ async def create_task(
     
     db.commit()
     
+    # === Task-Chat Integration: notify in chat ===
+    try:
+        from routes.team_chat import notify_task_in_chat
+        assignee_name = ""
+        if task.assigned_to_id:
+            arow = db.execute(text("SELECT firstname, lastname FROM users WHERE user_id = :uid"), {"uid": task.assigned_to_id}).fetchone()
+            if arow:
+                assignee_name = f"{arow[0] or ''} {arow[1] or ''}".strip()
+        notify_task_in_chat(
+            db=db, user_id=created_by_id or 1, user_name=created_by,
+            task_title=task.title, task_id=task_id,
+            assignee_name=assignee_name,
+            priority=task.priority or "",
+            due_date=str(task.due_date) if task.due_date else "",
+        )
+    except Exception as e:
+        print(f"[Task-Chat] Notification failed: {e}")
+    
     return {
         "id": task_id,
         "message": "Task created successfully",
@@ -347,6 +365,15 @@ async def update_task(
     sql = f"UPDATE tasks SET {', '.join(set_clauses)} WHERE id = :task_id"
     db.execute(text(sql), params)
     db.commit()
+    
+    # === Task-Chat Integration: notify status change ===
+    if task.status is not None:
+        try:
+            from routes.team_chat import notify_task_status_change
+            # Get user_id from authorization header if available
+            notify_task_status_change(db=db, user_id=1, task_id=task_id, new_status=task.status)
+        except Exception as e:
+            print(f"[Task-Chat] Status notification failed: {e}")
     
     # Return updated task
     return await get_task(task_id, db)

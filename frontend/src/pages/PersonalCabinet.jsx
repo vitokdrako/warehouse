@@ -450,7 +450,9 @@ function ChatTab({ currentUserId }) {
   const [newChName, setNewChName] = useState('');
   const [newChDesc, setNewChDesc] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
   const pollRef = useRef(null);
 
   const loadChannels = useCallback(async () => {
@@ -482,7 +484,7 @@ function ChatTab({ currentUserId }) {
   };
 
   const sendThreadReply = async () => {
-    if (!threadReply.trim() || !thread || !activeChannel) return;
+    if (!threadReply.trim() || !thread || !activeChannel || thread.is_closed) return;
     await authFetch(`${BACKEND_URL}/api/chat/channels/${activeChannel.id}/messages`, { method: 'POST', body: JSON.stringify({ message: threadReply.trim(), reply_to: thread.id }) });
     setThreadReply('');
     const res = await authFetch(`${BACKEND_URL}/api/chat/messages/${thread.id}/thread`);
@@ -496,6 +498,32 @@ function ChatTab({ currentUserId }) {
     if (res.ok) setThreadMsgs(await res.json());
   };
 
+  const toggleCloseThread = async () => {
+    if (!thread) return;
+    const action = thread.is_closed ? 'reopen' : 'close';
+    const r = await authFetch(`${BACKEND_URL}/api/chat/messages/${thread.id}/${action}`, { method: 'PUT' });
+    if (r.ok) {
+      const d = await r.json();
+      setThread({ ...thread, is_closed: d.is_closed });
+      loadMessages(activeChannel.id);
+    }
+  };
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeChannel) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('channel_id', activeChannel.id);
+    fd.append('message', '');
+    const token = localStorage.getItem('token');
+    try {
+      const r = await fetch(`${BACKEND_URL}/api/chat/upload`, { method: 'POST', body: fd, headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) { loadMessages(activeChannel.id); loadChannels(); }
+    } catch {}
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
   const createDm = async (userId) => {
     const res = await authFetch(`${BACKEND_URL}/api/chat/dm/${userId}`, { method: 'POST' });
     if (res.ok) { const dm = await res.json(); setShowNewDm(false); loadChannels(); setActiveChannel(dm); }
@@ -509,6 +537,9 @@ function ChatTab({ currentUserId }) {
 
   const filteredChannels = channels.filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const channelIcon = (type) => type === 'dm' ? <Lock className="w-4 h-4 text-corp-text-muted" /> : <Hash className="w-4 h-4 text-corp-text-muted" />;
+  const PaperclipIcon = ({ className }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>;
+  const LockClosed = ({ className }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+  const LockOpen = ({ className }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>;
 
   return (
     <div className="flex h-[calc(100vh-200px)] bg-white rounded-xl border border-corp-border overflow-hidden" data-testid="chat-tab">
@@ -565,13 +596,23 @@ function ChatTab({ currentUserId }) {
                   <div className={cls('w-8 h-8 rounded-full grid place-content-center text-xs font-bold flex-shrink-0', msg.user_id === currentUserId ? 'bg-corp-primary text-white' : 'bg-corp-gold text-white')}>
                     {(msg.user_name?.[0] || 'U').toUpperCase()}
                   </div>
-                  <div className={cls('max-w-[75%] rounded-xl px-3 py-2', msg.user_id === currentUserId ? 'bg-corp-primary/10 rounded-tr-sm' : 'bg-white border border-corp-border rounded-tl-sm')}>
-                    <div className="flex items-center gap-2 mb-0.5">
+                  <div className={cls('max-w-[75%] rounded-xl px-3 py-2',
+                    msg.task_id ? 'bg-amber-50 border border-amber-200 rounded-tl-sm' :
+                    msg.user_id === currentUserId ? 'bg-corp-primary/10 rounded-tr-sm' : 'bg-white border border-corp-border rounded-tl-sm'
+                  )}>
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <span className="text-xs font-semibold text-corp-text-dark">{msg.user_name}</span>
                       <span className={cls('px-1.5 py-0 rounded text-[9px] font-medium', roleColors[msg.user_role])}>{roleLabels[msg.user_role] || msg.user_role}</span>
                       <span className="text-[10px] text-corp-text-muted">{msg.created_at ? new Date(msg.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      {msg.task_id && <span className="px-1.5 py-0 rounded text-[9px] font-medium bg-amber-100 text-amber-700">Задача</span>}
+                      {msg.is_closed && <span className="px-1.5 py-0 rounded text-[9px] font-medium bg-slate-200 text-slate-600">Закрито</span>}
                     </div>
                     <p className="text-sm text-corp-text-dark whitespace-pre-wrap break-words">{msg.message}</p>
+                    {msg.attachment_url && msg.attachment_type === 'image' && (
+                      <a href={`${BACKEND_URL}${msg.attachment_url}`} target="_blank" rel="noopener noreferrer">
+                        <img src={`${BACKEND_URL}${msg.attachment_url}`} alt="" className="mt-2 rounded-lg max-w-[240px] max-h-[180px] object-cover border border-corp-border cursor-pointer hover:opacity-90 transition-opacity" data-testid={`img-${msg.id}`} />
+                      </a>
+                    )}
                     <button onClick={() => openThread(msg)} className="flex items-center gap-1 mt-1 text-[10px] text-corp-text-muted hover:text-corp-primary transition-colors" data-testid={`thread-btn-${msg.id}`}>
                       <Reply className="w-3 h-3" /> {msg.thread_count > 0 ? `${msg.thread_count} відповідей` : 'Відповісти'}
                     </button>
@@ -582,6 +623,10 @@ function ChatTab({ currentUserId }) {
             </div>
             <div className="p-3 border-t border-corp-border bg-white">
               <div className="flex items-center gap-2">
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} data-testid="file-input" />
+                <button onClick={() => fileInputRef.current?.click()} className={cls('p-2.5 rounded-xl border border-corp-border text-corp-text-muted hover:text-corp-primary hover:border-corp-primary transition-colors', uploading && 'animate-pulse')} data-testid="attach-btn" disabled={uploading}>
+                  <PaperclipIcon className="w-5 h-5" />
+                </button>
                 <input type="text" value={newMsg} onChange={e => setNewMsg(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
                   placeholder="Написати повідомлення..." className="flex-1 px-4 py-2.5 text-sm rounded-xl border border-corp-border bg-corp-bg-light focus:outline-none focus:border-corp-primary focus:bg-white transition-colors" data-testid="chat-input" />
                 <button onClick={sendMessage} className="p-2.5 rounded-xl bg-corp-primary text-white hover:bg-corp-primary-hover transition-colors disabled:opacity-50" disabled={!newMsg.trim()} data-testid="chat-send-btn">
@@ -602,8 +647,16 @@ function ChatTab({ currentUserId }) {
       {thread && (
         <div className="w-80 border-l border-corp-border flex flex-col bg-white hidden lg:flex">
           <div className="px-4 py-3 border-b border-corp-border flex items-center justify-between">
-            <div className="text-sm font-semibold text-corp-text-dark">Тред</div>
-            <button onClick={() => setThread(null)} className="p-1 hover:bg-corp-bg-light rounded"><X className="w-4 h-4 text-corp-text-muted" /></button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-corp-text-dark">Тред</span>
+              {thread.is_closed && <span className="px-1.5 py-0 rounded text-[9px] font-medium bg-slate-200 text-slate-600">Закрито</span>}
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={toggleCloseThread} className="p-1 hover:bg-corp-bg-light rounded" title={thread.is_closed ? 'Відкрити тред' : 'Закрити тред'} data-testid="toggle-close-thread">
+                {thread.is_closed ? <LockOpen className="w-4 h-4 text-emerald-500" /> : <LockClosed className="w-4 h-4 text-corp-text-muted" />}
+              </button>
+              <button onClick={() => setThread(null)} className="p-1 hover:bg-corp-bg-light rounded"><X className="w-4 h-4 text-corp-text-muted" /></button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
             {threadMsgs.map(msg => (
@@ -613,9 +666,15 @@ function ChatTab({ currentUserId }) {
                   <span className="text-[10px] text-corp-text-muted">{msg.created_at ? new Date(msg.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                 </div>
                 <p className="text-sm text-corp-text-dark">{msg.message}</p>
+                {msg.attachment_url && msg.attachment_type === 'image' && (
+                  <a href={`${BACKEND_URL}${msg.attachment_url}`} target="_blank" rel="noopener noreferrer">
+                    <img src={`${BACKEND_URL}${msg.attachment_url}`} alt="" className="mt-1 rounded-lg max-w-full max-h-[120px] object-cover" />
+                  </a>
+                )}
               </div>
             ))}
           </div>
+          {!thread.is_closed ? (
           <div className="p-3 border-t border-corp-border">
             <div className="flex items-center gap-2">
               <input type="text" value={threadReply} onChange={e => setThreadReply(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendThreadReply())}
@@ -625,6 +684,9 @@ function ChatTab({ currentUserId }) {
               </button>
             </div>
           </div>
+          ) : (
+            <div className="p-3 border-t border-corp-border text-center text-xs text-corp-text-muted">Тред закрито. Натисніть замок, щоб відкрити.</div>
+          )}
         </div>
       )}
 

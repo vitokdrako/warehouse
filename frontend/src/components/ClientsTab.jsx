@@ -1045,26 +1045,48 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {orders.map((order) => (
-                      <div
-                        key={order.order_id}
-                        className="px-4 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 transition flex items-center justify-between"
-                      >
-                        <div>
-                          <span className="font-mono font-medium text-sm text-slate-900">#{order.order_number}</span>
-                          <span className="text-xs text-slate-500 ml-2">
-                            {order.rental_start_date ? new Date(order.rental_start_date).toLocaleDateString("uk-UA") : "—"}
-                          </span>
-                          {order.payer_name && <span className="text-xs text-slate-400 ml-2">{order.payer_name}</span>}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-slate-700">{order.total_price?.toLocaleString() || 0} грн</span>
-                          <Badge kind={order.status === "completed" ? "ok" : "pending"}>
-                            {order.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
+                    {orders.map((order) => {
+                      const total = order.total_to_pay || (Number(order.total_price || 0) + Number(order.service_fee || 0));
+                      const statusMap = {
+                        new: "Новий", confirmed: "Підтверджений", processing: "В обробці",
+                        ready: "Готовий", issued: "Видано", returned: "Повернуто",
+                        completed: "Завершений", cancelled: "Скасований"
+                      };
+                      const statusColor = {
+                        new: "bg-blue-100 text-blue-700", confirmed: "bg-indigo-100 text-indigo-700",
+                        processing: "bg-yellow-100 text-yellow-700", ready: "bg-teal-100 text-teal-700",
+                        issued: "bg-emerald-100 text-emerald-700", returned: "bg-slate-200 text-slate-700",
+                        completed: "bg-green-100 text-green-700", cancelled: "bg-rose-100 text-rose-700"
+                      };
+                      return (
+                        <a
+                          key={order.order_id}
+                          href={`/order/${order.order_id}/estimate`}
+                          data-testid={`client-order-${order.order_id}`}
+                          className="block px-4 py-3 rounded-xl border border-slate-200 hover:border-slate-400 hover:shadow-sm transition cursor-pointer"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-mono font-semibold text-sm text-slate-900">#{order.order_number}</span>
+                              <span className="text-xs text-slate-500 ml-2">
+                                {order.rental_start_date ? new Date(order.rental_start_date).toLocaleDateString("uk-UA") : "—"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-slate-800">{total.toLocaleString()} грн</span>
+                              <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", statusColor[order.status] || "bg-slate-100 text-slate-600")}>
+                                {statusMap[order.status] || order.status}
+                              </span>
+                            </div>
+                          </div>
+                          {order.service_fee > 0 && (
+                            <div className="text-xs text-amber-600 mt-1">
+                              + {order.service_fee_name || "Дод. послуга"}: {Number(order.service_fee).toLocaleString()} грн
+                            </div>
+                          )}
+                        </a>
+                      );
+                    })}
                   </div>
                 )}
               </div>

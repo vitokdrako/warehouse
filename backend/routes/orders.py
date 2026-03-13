@@ -793,6 +793,43 @@ async def get_order_details(
     order["damages"] = damages
     order["transactions"] = transactions
     
+    # Get documents linked to this order
+    docs_result = db.execute(text("""
+        SELECT id, doc_type, doc_number, version, status, signed_at, created_at, category
+        FROM documents
+        WHERE (entity_type = 'order' AND entity_id = :order_id_str)
+           OR (entity_type = 'issue' AND entity_id LIKE :issue_pattern)
+           OR (entity_type = 'return' AND entity_id LIKE :return_pattern)
+        ORDER BY created_at DESC
+    """), {
+        "order_id_str": str(order_id),
+        "issue_pattern": f"IC-{order_id}-%",
+        "return_pattern": f"RC-{order_id}-%"
+    })
+    
+    documents = []
+    for d_row in docs_result:
+        doc_type_names = {
+            "estimate": "Кошторис", "invoice_legal": "Рахунок", "goods_invoice": "Видаткова",
+            "issue_act": "Акт видачі", "return_act": "Акт повернення", "defect_act": "Акт дефектів",
+            "picking_list": "Пакувальний лист", "invoice_payment": "Рахунок на оплату",
+            "service_act": "Акт надання послуг"
+        }
+        documents.append({
+            "id": d_row[0],
+            "doc_type": d_row[1],
+            "doc_type_name": doc_type_names.get(d_row[1], d_row[1]),
+            "doc_number": d_row[2],
+            "version": d_row[3],
+            "status": d_row[4],
+            "signed_at": d_row[5].isoformat() if d_row[5] else None,
+            "created_at": d_row[6].isoformat() if d_row[6] else None,
+            "preview_url": f"/api/documents/{d_row[0]}/preview",
+            "pdf_url": f"/api/documents/{d_row[0]}/pdf"
+        })
+    
+    order["documents"] = documents
+    
     return order
 
 @router.put("/{order_id}")

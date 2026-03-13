@@ -354,24 +354,37 @@ async def get_client(client_id: int, db: Session = Depends(get_rh_db)):
         SELECT 
             o.order_id, o.order_number, o.status, o.total_price,
             o.rental_start_date, o.created_at, o.source,
-            pp.display_name as payer_name
+            pp.display_name as payer_name,
+            COALESCE(o.service_fee, 0) as service_fee,
+            COALESCE(o.discount_amount, 0) as discount_amount,
+            o.service_fee_name
         FROM orders o
         LEFT JOIN payer_profiles pp ON pp.id = o.payer_profile_id
         WHERE o.client_user_id = :client_id
         ORDER BY o.created_at DESC
-        LIMIT 10
+        LIMIT 20
     """), {"client_id": client_id})
     
-    client["recent_orders"] = [{
-        "order_id": o[0],
-        "order_number": o[1],
-        "status": o[2],
-        "total_price": float(o[3]) if o[3] else 0,
-        "rental_start_date": o[4].isoformat() if o[4] else None,
-        "created_at": o[5].isoformat() if o[5] else None,
-        "source": o[6],
-        "payer_name": o[7]
-    } for o in orders_result]
+    client["recent_orders"] = []
+    for o in orders_result:
+        tp = float(o[3]) if o[3] else 0
+        sf = float(o[8]) if o[8] else 0
+        da = float(o[9]) if o[9] else 0
+        total_to_pay = round(max(0, tp - da) + sf, 2)
+        client["recent_orders"].append({
+            "order_id": o[0],
+            "order_number": o[1],
+            "status": o[2],
+            "total_price": tp,
+            "rental_start_date": o[4].isoformat() if o[4] else None,
+            "created_at": o[5].isoformat() if o[5] else None,
+            "source": o[6],
+            "payer_name": o[7],
+            "service_fee": sf,
+            "service_fee_name": o[10] or "",
+            "discount_amount": da,
+            "total_to_pay": total_to_pay,
+        })
     
     # Статистика
     stats = db.execute(text("""

@@ -35,6 +35,7 @@ import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
 // Other pages
 import InventoryRecount from './pages/InventoryRecount';
 import OrdersArchive from './pages/OrdersArchive';
+import OrderEstimatePage from './pages/OrderEstimatePage';
 import SyncPanel from './pages/SyncPanel';
 import DocumentTemplatesAdmin from './pages/DocumentTemplatesAdmin';
 import UnifiedCalendar from './pages/UnifiedCalendarNew';
@@ -100,6 +101,16 @@ function App() {
             element={
               <ProtectedRoute>
                 <OrdersArchive />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Повна сторінка кошторису ордеру */}
+          <Route 
+            path="/order/:id/estimate" 
+            element={
+              <ProtectedRoute>
+                <OrderEstimatePage />
               </ProtectedRoute>
             } 
           />

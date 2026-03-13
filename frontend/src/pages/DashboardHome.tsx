@@ -26,15 +26,6 @@ export default function DashboardHome() {
       roles: ['admin', 'manager']
     },
     {
-      id: 'finance',
-      title: 'Фінанси',
-      icon: '💰',
-      description: 'Платежі, рахунки, застави',
-      route: '/finance',
-      color: 'from-amber-500 to-orange-500',
-      roles: ['admin', 'manager']
-    },
-    {
       id: 'catalog',
       title: 'Каталог',
       icon: '📚',

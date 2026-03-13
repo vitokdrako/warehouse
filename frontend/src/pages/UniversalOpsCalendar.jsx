@@ -507,9 +507,6 @@ function Drawer({ open, item, onClose, navigate }) {
                   Зателефонувати
                 </a>
               )}
-              <button className="corp-btn corp-btn-secondary" onClick={() => navigate('/finance')}>
-                Фінанси
-              </button>
               <button className="corp-btn corp-btn-secondary" onClick={() => alert('Нотатка додана (демо)')}>
                 + Нотатка
               </button>

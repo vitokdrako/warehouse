@@ -34,7 +34,7 @@ import ArchivedOrderWorkspace from './pages/ArchivedOrderWorkspace';
 import OrderWorkspaceDemo from './pages/OrderWorkspaceDemo';
 // Other pages
 import InventoryRecount from './pages/InventoryRecount';
-import OrdersArchive from './pages/OrdersArchive';
+// Legacy: OrdersArchive removed — order history now in ClientsTab
 import OrderEstimatePage from './pages/OrderEstimatePage';
 import SyncPanel from './pages/SyncPanel';
 import DocumentTemplatesAdmin from './pages/DocumentTemplatesAdmin';
@@ -141,14 +141,8 @@ function App() {
             } 
           />
           
-          <Route 
-            path="/orders-archive" 
-            element={
-              <ProtectedRoute>
-                <OrdersArchive />
-              </ProtectedRoute>
-            } 
-          />
+          {/* Архів прибрано — історія замовлень тепер у Клієнтах */}
+          <Route path="/orders-archive" element={<Navigate to="/manager-cabinet" replace />} />
           
           {/* Повна сторінка кошторису ордеру */}
           <Route 

@@ -36,12 +36,6 @@ function TopTiles({ active, onTileClick }: { active: string; onTileClick: (key: 
         icon: '📦',
       },
       {
-        key: 'finance',
-        title: '💰 Фінанси',
-        desc: 'Платежі, рахунки, застави',
-        icon: '💰',
-      },
-      {
         key: 'catalog',
         title: '📚 Каталог',
         desc: 'Товари, категорії, ціни',

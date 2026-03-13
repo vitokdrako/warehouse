@@ -475,12 +475,6 @@ export default function ManagerDashboard() {
             </button>
             <button 
               className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-              onClick={() => navigate('/finance')}
-            >
-              Фінанси
-            </button>
-            <button 
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
               onClick={() => navigate('/catalog')}
             >
               Каталог
@@ -502,12 +496,6 @@ export default function ManagerDashboard() {
               onClick={() => navigate('/reaudit')}
             >
               Переоблік
-            </button>
-            <button 
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-              onClick={() => navigate('/orders-archive')}
-            >
-              Архів
             </button>
             {user?.role === 'admin' && (
               <button 

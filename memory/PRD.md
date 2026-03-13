@@ -1,71 +1,95 @@
-# RentalHub PRD
+# RentalHub - Product Requirements Document
 
 ## Original Problem Statement
-Stabilize and optimize the "Damage Cabinet" system. Evolved into a large-scale system-wide optimization: unify DB tables, refactor app, simplify UI, build CRM, fix document generation, and apply all changes to live production.
+Build a comprehensive rental management system (RentalHub) for FarforRent — a tableware/decor rental company. The system manages orders, inventory, clients, finances, documents, and internal team workflows.
+
+## Latest Feature: Personal Cabinet & Internal Chat (March 2026)
+- **Personal Cabinet** for employees with Profile, My Tasks, Statistics
+- **Internal Chat** (Telegram-style) with channels, DMs, threads — all on MySQL
+- **Integration** with existing Task Manager system
 
 ## Architecture
-- Backend: FastAPI + MySQL (farforre.mysql.tools) + MongoDB
-- Frontend: React
-- External: OpenCart MySQL, SMTP email, Telegram bot
-- Production: rentalhub.farforrent.com.ua
+- **Frontend**: React + TypeScript + Tailwind CSS + Shadcn UI
+- **Backend**: FastAPI (Python) + MySQL (production: farforre_rentalhub)
+- **Database**: MySQL only (farforre_rentalhub for RentalHub, farforre_db for OpenCart)
+- **Auth**: JWT-based (24h token, auto-logout at 7:00 AM)
 
-## Completed Work (Previous Sessions)
-- Production schema sync & data migration
-- Client CRM feature (live)
-- Document generation: invoices & service acts (live)
-- Production data fixes (payer profiles, stuck items)
-- Auto-client creation from orders
-- Released textile items from мийка/пральня
+## What's Been Implemented
 
-## Completed Work (Current Session)
+### Core Features (Previous Sessions)
+- Order management (CRUD, sync from OpenCart, status workflow)
+- Client management (CRM, auto-creation from orders)
+- Finance module (transactions, payments, deposits, kasa)
+- Document generation (invoices, service acts, contracts)
+- Inventory management (products, categories, damage tracking)
+- Task manager (CRUD, assignment, priority, status)
+- Calendar (operations calendar with lanes)
+- Issue/Return card workflow
+- Damage cabinet & laundry tracking
+- Email integration
 
-### Service Fee Fix (total_to_pay)
-- Added `total_to_pay` field to backend: `GET /api/orders/{id}` and `GET /api/orders` list
-- Formula: `total_to_pay = total_price - discount + service_fee`
-- Fixed double-counting bug in `NewOrderViewWorkspace.jsx` save logic
-- Updated all frontend components to show `total_to_pay`:
-  - OrdersArchive.jsx (header, modal items tab, modal info tab, modal finance tab)
-  - ManagerCabinet.jsx (order card)
-  - ReturnColumn.jsx (return summary)
-  - ManagerDashboard.jsx (already correct)
-  - FinanceHub.jsx (already correct)
+### Recent Completions (This Session - March 2026)
+1. **Personal Cabinet** (`/cabinet` route)
+   - Profile tab: user info, role badge, login history
+   - My Tasks tab: task list with status toggle, filters
+   - Team tab: all team members with activity stats
+   - Statistics: active/done/overdue tasks, messages today
 
-### Full Order Estimate Page
-- Created `/order/:id/estimate` route → `OrderEstimatePage.jsx`
-- Full-page кошторис with sections:
-  - Client info, Dates, Financial summary (3-column layout)
-  - Items table with photos, SKU, qty, price/day, totals
-  - Service fees and discounts in table footer
-  - Payments list
-  - Documents list with Preview/PDF links
-  - Lifecycle timeline
-  - Notes section
-- Backend: Added `documents` array to `GET /api/orders/{id}` response
+2. **Internal Team Chat** (MySQL-based)
+   - 4 MySQL tables: `chat_channels`, `chat_messages`, `chat_channel_members`, `chat_read_status`
+   - Channel types: general, topic, dm
+   - Thread support (reply_to)
+   - Unread count tracking
+   - 4 default channels: Загальний, Склад, Доставка, Термінове
+   - Polling-based updates (5s interval)
 
-### Client Orders Integration
-- Updated `ClientsTab.jsx` drawer:
-  - Orders are now clickable → navigate to `/order/{id}/estimate`
-  - Show `total_to_pay` instead of just `total_price`
-  - Show service_fee label when present
-  - Status labels in Ukrainian with color coding
-- Updated `GET /api/clients/{id}` to return `service_fee`, `discount_amount`, `total_to_pay` for each order
+3. **Production DB Connected**: farforre_rentalhub with all new tables
 
-## Pending Issues (P2)
-- convert-to-order endpoint instability
-- Moodboard export likely broken
-- Recurring Calendar Timezone Bug
+## Key Files
+- `/app/backend/routes/cabinet.py` — Cabinet API (profile, stats, tasks, team)
+- `/app/backend/routes/team_chat.py` — Chat API (channels, messages, threads, DMs)
+- `/app/frontend/src/pages/PersonalCabinet.jsx` — Full cabinet page with all tabs
+- `/app/backend/database_rentalhub.py` — MySQL connection
+- `/app/frontend/src/App.tsx` — Routes (including `/cabinet`)
 
-## Upcoming Tasks (P1)
-- Remove/redirect Archive as separate page → integrate into Clients
-- Post-deployment health check
-- Simplify laundry_items table/logic
-- Delete legacy route files (damages.py, audit.py)
+## Prioritized Backlog
+
+### P0 (Critical)
+- None currently
+
+### P1 (High Priority)
+- Integrate Personal Cabinet with Task Manager and Calendar views
+- Post-Deployment Health Check on production
+- Simplify `laundry_items` table/logic
+- Delete legacy route files (`damages.py`, `audit.py`)
 - Implement Monthly Cash Desk Closing
 
-## Future/Backlog
-- Create "Акт повернення" document template
-- Real-time updates for client cabinet
-- Unify NewOrderViewWorkspace.jsx and IssueCardWorkspace.jsx
-- Full RBAC
+### P2 (Medium Priority)
+- Create remaining document templates (Акт повернення)
+- Fix `convert-to-order` endpoint instability
+- Fix moodboard export
+- Fix recurring Calendar timezone bug
+
+### P3 (Future)
+- Real-time updates (WebSocket for chat)
+- Unify `NewOrderViewWorkspace.jsx` and `IssueCardWorkspace.jsx`
+- Implement full RBAC
 - Monthly Financial Report
 - HR/Ops Module
+
+## Users (9 active)
+| ID | Name | Role |
+|----|------|------|
+| 1 | Віточек Филим | admin |
+| 2 | Таня Операційна | admin |
+| 4 | Макс Менеджер | manager |
+| 5 | Марина Менеджер | manager |
+| 6 | Катя Реквізитор | requisitor |
+| 7 | Діана Матіч | requisitor |
+| 8 | Андрій Реквізитор | requisitor |
+| 9 | Ярослав Реквізитор | requisitor |
+| 10 | Женя Реквізитор | requisitor |
+
+## Test Credentials
+- Admin: vitokdrako@gmail.com / test123
+- DB: farforre_rentalhub @ farforre.mysql.tools

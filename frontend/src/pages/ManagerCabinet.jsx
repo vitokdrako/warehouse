@@ -330,6 +330,14 @@ export default function ManagerCabinet() {
       <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-4 py-3">
           <div className="flex flex-wrap items-center gap-3">
+            {/* Нове замовлення */}
+            <button
+              className="corp-btn corp-btn-primary"
+              onClick={() => navigate('/order/new')}
+            >
+              + Нове замовлення
+            </button>
+            
             {/* Search */}
             <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

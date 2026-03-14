@@ -398,12 +398,6 @@ export default function ManagerDashboard() {
       <div className="bg-white border-b border-corp-border">
         <div className="mx-auto max-w-7xl px-6 py-3">
           <div className="flex flex-wrap items-center gap-2">
-            <button 
-              className="corp-btn corp-btn-primary"
-              onClick={() => navigate('/order/new')}
-            >
-              + Нове замовлення
-            </button>
             
             {/* ✅ Кнопка режиму об'єднання */}
             <button 
@@ -418,14 +412,6 @@ export default function ManagerDashboard() {
               }}
             >
               🔗 {mergeMode ? 'Скасувати' : 'Об\'єднати'}
-            </button>
-            
-            {/* ✅ Кнопка чату — перенаправлення в кабінет */}
-            <button 
-              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors flex items-center gap-1.5"
-              onClick={() => navigate('/cabinet?tab=orders')}
-            >
-              💬 Чат
             </button>
             
             {/* Панель об'єднання */}
@@ -443,19 +429,6 @@ export default function ManagerDashboard() {
                 </button>
               </div>
             )}
-            
-            <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
-            
-            {/* Кнопка оновлення */}
-            <button 
-              onClick={handleReload}
-              disabled={loading}
-              className="px-3 py-2 rounded-lg border border-corp-border text-corp-text-muted hover:bg-corp-bg-light hover:text-corp-text-dark transition-colors flex items-center gap-2"
-              title="Оновити всі дані"
-            >
-              <span className={loading ? 'animate-spin' : ''}>🔄</span>
-              <span className="hidden sm:inline">Оновити</span>
-            </button>
             
             <div className="h-6 w-px bg-slate-200 mx-1 hidden md:block" />
             <button 

@@ -5,7 +5,7 @@ import CorporateHeader from '../components/CorporateHeader';
 import {
   ArrowLeft, Banknote, CreditCard, Wallet, TrendingUp, TrendingDown,
   Search, RefreshCw, Shield, RotateCcw, Plus, X, MessageSquare,
-  ChevronDown, Landmark
+  ChevronDown, Landmark, CalendarCheck, Check
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -27,7 +27,7 @@ export default function KasaPage({ embedded = false }) {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(searchParams.get('period') || 'month');
   const [searchQuery, setSearchQuery] = useState('');
-  const [modal, setModal] = useState(null); // 'income' | 'deposit' | 'expense' | 'collection' | null
+  const [modal, setModal] = useState(null); // 'income' | 'deposit' | 'expense' | 'collection' | 'closeMonth' | null
 
   const fetchData = async () => {
     setLoading(true);
@@ -129,7 +129,15 @@ export default function KasaPage({ embedded = false }) {
                 </>
               )}
               <SummaryPill icon={Wallet} label="Чистий дохід" value={money(summary.net_total)} color={summary.net_total >= 0 ? 'emerald' : 'red'} bold />
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={() => setModal('closeMonth')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold transition-colors shadow-sm"
+                  data-testid="close-month-btn"
+                >
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  Закрити місяць
+                </button>
                 <button
                   onClick={() => setModal('collection')}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors shadow-sm"
@@ -164,6 +172,7 @@ export default function KasaPage({ embedded = false }) {
       {modal === 'deposit' && <AddDepositModal onClose={() => setModal(null)} onCreated={onCreated} />}
       {modal === 'expense' && <AddExpenseModal onClose={() => setModal(null)} onCreated={onCreated} />}
       {modal === 'collection' && <CollectionModal onClose={() => setModal(null)} onCreated={onCreated} />}
+      {modal === 'closeMonth' && <CloseMonthModal onClose={() => setModal(null)} onCreated={onCreated} />}
     </div>
   );
 }
@@ -629,6 +638,122 @@ function CollectionModal({ onClose, onCreated }) {
 
 
 /* ============================================================ */
+/*  MODAL: CLOSE MONTH (Закриття місяця)                         */
+/* ============================================================ */
+function CloseMonthModal({ onClose, onCreated }) {
+  const now = new Date();
+  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+  const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  
+  const [year, setYear] = useState(prevYear);
+  const [month, setMonth] = useState(prevMonth);
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
+
+  const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+
+  const submit = async () => {
+    setSaving(true); setError('');
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const body = {
+        year, month, note,
+        closed_by: user.firstname ? `${user.firstname} ${user.lastname || ''}`.trim() : (user.email || ''),
+        closed_by_id: user.user_id,
+      };
+      const res = await authFetch(`${BACKEND_URL}/api/finance/close-month`, { method: 'POST', body: JSON.stringify(body) });
+      const data = await res.json();
+      if (res.ok) {
+        setResult(data.report);
+      } else {
+        setError(data.detail || 'Помилка');
+      }
+    } catch (e) { setError(e.message); }
+    finally { setSaving(false); }
+  };
+
+  if (result) {
+    const r = result;
+    return (
+      <ModalWrapper onClose={() => { onCreated(); }} title={`Місяць ${monthNames[month-1]} ${year} закрито`} color="emerald">
+        <div className="space-y-3" data-testid="close-month-result">
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
+            <Check className="w-8 h-8 text-emerald-600 mx-auto mb-1" />
+            <p className="text-sm font-semibold text-emerald-700">Звіт збережено</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="bg-slate-50 rounded-lg p-2.5">
+              <div className="text-xs text-slate-500">Дохід</div>
+              <div className="font-bold text-emerald-700">{money(r.income?.total || 0)}</div>
+              <div className="text-[10px] text-slate-400">готівка {money(r.income?.cash || 0)} · банк {money(r.income?.bank || 0)}</div>
+            </div>
+            <div className="bg-slate-50 rounded-lg p-2.5">
+              <div className="text-xs text-slate-500">Витрати + Повернення</div>
+              <div className="font-bold text-rose-600">{money((r.expenses?.total || 0) + (r.refunds?.total || 0))}</div>
+            </div>
+            <div className="bg-slate-50 rounded-lg p-2.5">
+              <div className="text-xs text-slate-500">Застави отримано</div>
+              <div className="font-bold text-amber-700">{money(r.deposits?.total_held || 0)}</div>
+            </div>
+            <div className="bg-slate-50 rounded-lg p-2.5">
+              <div className="text-xs text-slate-500">Застави повернено</div>
+              <div className="font-bold text-amber-600">{money(r.deposits?.total_refunded || 0)}</div>
+            </div>
+            <div className="col-span-2 bg-slate-800 rounded-lg p-3 text-center">
+              <div className="text-xs text-slate-300">Чистий дохід</div>
+              <div className="text-lg font-extrabold text-white">{money(r.summary?.net_total || 0)}</div>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 text-center">Звіт доступний в Адмін-панелі → Звіти</p>
+        </div>
+      </ModalWrapper>
+    );
+  }
+
+  return (
+    <ModalWrapper onClose={onClose} title="Закриття місяця" color="indigo">
+      <div className="space-y-4" data-testid="close-month-form">
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
+          <p className="text-xs text-amber-800">
+            Система зафіксує всі фінансові операції за обраний місяць і створить підсумковий звіт.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Місяць</label>
+            <select value={month} onChange={e => setMonth(Number(e.target.value))}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+              data-testid="close-month-month">
+              {monthNames.map((m, i) => <option key={i} value={i+1}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Рік</label>
+            <select value={year} onChange={e => setYear(Number(e.target.value))}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+              data-testid="close-month-year">
+              {[now.getFullYear(), now.getFullYear()-1, now.getFullYear()-2].map(y => 
+                <option key={y} value={y}>{y}</option>
+              )}
+            </select>
+          </div>
+        </div>
+        <FieldTextarea label="Примітка (необов'язково)" value={note} onChange={setNote} testId="close-month-note" placeholder="Коментар до закриття..." />
+        {error && <div className="text-red-600 text-sm bg-red-50 rounded-lg p-2">{error}</div>}
+        <button onClick={submit} disabled={saving}
+          className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          data-testid="close-month-submit-btn">
+          <CalendarCheck className="w-4 h-4" />
+          {saving ? 'Зберігаю...' : `Закрити ${monthNames[month-1]} ${year}`}
+        </button>
+      </div>
+    </ModalWrapper>
+  );
+}
+
+
 /*  SHARED FORM COMPONENTS                                       */
 /* ============================================================ */
 function ModalWrapper({ onClose, title, color, children }) {

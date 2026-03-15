@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CorporateHeader from '../components/CorporateHeader'
-import { Users, FileText, FolderTree, Receipt, Settings, Plus, Pencil, Trash2, Shield, X, Eye, EyeOff, Key, Save, RefreshCw, Check, ArrowLeft, RotateCcw, Code } from 'lucide-react'
+import { Users, FileText, FolderTree, Receipt, Settings, Plus, Pencil, Trash2, Shield, X, Eye, EyeOff, Key, Save, RefreshCw, Check, ArrowLeft, RotateCcw, Code, BarChart3, CalendarCheck, ChevronDown, ChevronUp } from 'lucide-react'
 // Lightweight notification
 const toast = {
   success: (msg) => { const el = document.createElement('div'); el.className = 'fixed top-4 right-4 z-[999] px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-lg'; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2500) },
@@ -659,6 +659,252 @@ function SettingsTab() {
 }
 
 // ============================================================
+// TAB: REPORTS (Звіти)
+// ============================================================
+function ReportsTab() {
+  const [reports, setReports] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedReport, setSelectedReport] = useState(null)
+  
+  const monthNames = ['','Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень']
+
+  const money = (v) => {
+    const n = Number(v || 0)
+    return n.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' грн'
+  }
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/monthly-reports`)
+      if (res.ok) setReports(await res.json())
+    } catch (e) { console.error(e) }
+    finally { setLoading(false) }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Видалити звіт і відкрити місяць для повторного закриття?')) return
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/monthly-reports/${id}`, { method: 'DELETE' })
+      if (res.ok) { load(); setSelectedReport(null) }
+    } catch (e) { console.error(e) }
+  }
+
+  if (selectedReport) {
+    const r = selectedReport.report
+    return (
+      <div className="space-y-4" data-testid="report-detail">
+        <button onClick={() => setSelectedReport(null)} className="flex items-center gap-1 text-sm text-corp-primary hover:underline">
+          <ArrowLeft className="w-4 h-4" /> Назад до списку
+        </button>
+        
+        <div className="bg-white rounded-xl border border-corp-border overflow-hidden">
+          <div className="px-6 py-4 border-b bg-slate-50 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-lg">{monthNames[selectedReport.month]} {selectedReport.year}</h3>
+              <p className="text-xs text-slate-500">
+                Закрив: {selectedReport.closed_by} · {selectedReport.closed_at ? new Date(selectedReport.closed_at).toLocaleString('uk-UA') : ''}
+              </p>
+              {selectedReport.note && <p className="text-xs text-slate-500 mt-1">{selectedReport.note}</p>}
+            </div>
+            <button onClick={() => handleDelete(selectedReport.id)}
+              className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1 border border-red-200 px-2 py-1 rounded-lg hover:bg-red-50"
+              data-testid="report-delete-btn">
+              <Trash2 className="w-3 h-3" /> Видалити
+            </button>
+          </div>
+
+          <div className="p-6 space-y-5">
+            {/* Income */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Доходи</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+                  <div className="text-xs text-emerald-600">Загалом</div>
+                  <div className="font-bold text-emerald-800 text-lg">{money(r.income?.total)}</div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <div className="text-xs text-slate-500">Готівка</div>
+                  <div className="font-bold">{money(r.income?.cash)}</div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <div className="text-xs text-slate-500">Безготівка</div>
+                  <div className="font-bold">{money(r.income?.bank)}</div>
+                </div>
+              </div>
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { key: 'rent', label: 'Оренда' },
+                  { key: 'damage', label: 'Шкода' },
+                  { key: 'late', label: 'Прострочка' },
+                  { key: 'additional', label: 'Додатково' },
+                ].map(t => {
+                  const d = r.income?.by_type?.[t.key] || {}
+                  return (
+                    <div key={t.key} className="bg-white rounded-lg p-2 border border-slate-100 text-center">
+                      <div className="text-[10px] text-slate-400">{t.label}</div>
+                      <div className="font-semibold text-sm">{money(d.total)}</div>
+                      <div className="text-[10px] text-slate-400">нал. {money(d.cash)} · банк {money(d.bank)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Deposits */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Застави</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                  <div className="text-xs text-amber-600">Отримано</div>
+                  <div className="font-bold text-amber-800">{money(r.deposits?.total_held)}</div>
+                  <div className="text-[10px] text-amber-500">{r.deposits?.opened_count || 0} застав</div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <div className="text-xs text-slate-500">Утримано</div>
+                  <div className="font-bold">{money(r.deposits?.total_used)}</div>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                  <div className="text-xs text-blue-600">Повернено</div>
+                  <div className="font-bold text-blue-800">{money(r.deposits?.total_refunded)}</div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <div className="text-xs text-slate-500">Закритих</div>
+                  <div className="font-bold">{r.deposits?.closed_count || 0}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Expenses */}
+            <div>
+              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Витрати</h4>
+              <div className="grid grid-cols-3 gap-3 mb-2">
+                <div className="bg-rose-50 rounded-xl p-3 border border-rose-100">
+                  <div className="text-xs text-rose-600">Загалом</div>
+                  <div className="font-bold text-rose-800 text-lg">{money(r.expenses?.total)}</div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <div className="text-xs text-slate-500">Готівка</div>
+                  <div className="font-bold">{money(r.expenses?.cash)}</div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                  <div className="text-xs text-slate-500">Безготівка</div>
+                  <div className="font-bold">{money(r.expenses?.bank)}</div>
+                </div>
+              </div>
+              {r.expenses?.by_category && Object.keys(r.expenses.by_category).length > 0 && (
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-1">
+                  {Object.entries(r.expenses.by_category).map(([cat, d]) => (
+                    <div key={cat} className="flex justify-between text-sm">
+                      <span className="text-slate-600">{cat}</span>
+                      <span className="font-semibold">{money(d.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Refunds */}
+            {(r.refunds?.total || 0) > 0 && (
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Повернення</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-orange-50 rounded-xl p-3 border border-orange-100">
+                    <div className="text-xs text-orange-600">Загалом</div>
+                    <div className="font-bold text-orange-800">{money(r.refunds?.total)}</div>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                    <div className="text-xs text-slate-500">Готівка</div>
+                    <div className="font-bold">{money(r.refunds?.cash)}</div>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                    <div className="text-xs text-slate-500">Безготівка</div>
+                    <div className="font-bold">{money(r.refunds?.bank)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Summary */}
+            <div className="bg-slate-900 rounded-xl p-5 text-white">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-3">Підсумок</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center">
+                  <div className="text-xs text-slate-400">Готівка</div>
+                  <div className="font-bold text-lg">{money(r.summary?.net_cash)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-slate-400">Безготівка</div>
+                  <div className="font-bold text-lg">{money(r.summary?.net_bank)}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xs text-slate-400">Чистий дохід</div>
+                  <div className="font-extrabold text-2xl text-emerald-400">{money(r.summary?.net_total)}</div>
+                </div>
+              </div>
+              <div className="mt-3 text-center text-xs text-slate-400">
+                Замовлень за місяць: {r.orders_count || 0} · Операцій доходу: {r.income?.count || 0}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4" data-testid="reports-tab">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-corp-text-main flex items-center gap-2">
+          <BarChart3 className="w-5 h-5" /> Місячні звіти
+        </h2>
+        <button onClick={load} className="text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1">
+          <RefreshCw className="w-3 h-3" /> Оновити
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-10 text-slate-500">Завантаження...</div>
+      ) : reports.length === 0 ? (
+        <div className="text-center py-10 bg-white rounded-xl border border-corp-border">
+          <CalendarCheck className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+          <p className="text-sm text-slate-500">Ще немає закритих місяців</p>
+          <p className="text-xs text-slate-400">Закрийте місяць у касі → "Закрити місяць"</p>
+        </div>
+      ) : (
+        <div className="grid gap-3">
+          {reports.map(report => (
+            <button key={report.id}
+              onClick={() => setSelectedReport(report)}
+              className="w-full bg-white rounded-xl border border-corp-border p-4 hover:border-corp-primary/40 hover:shadow-sm transition-all text-left"
+              data-testid={`report-item-${report.id}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-corp-text-main">{monthNames[report.month]} {report.year}</span>
+                  <span className="ml-3 text-xs text-slate-400">
+                    Закрив: {report.closed_by} · {report.closed_at ? new Date(report.closed_at).toLocaleDateString('uk-UA') : ''}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-emerald-600 font-semibold">{money(report.report?.income?.total || 0)}</span>
+                  <span className="text-rose-500">{money(report.report?.expenses?.total || 0)}</span>
+                  <span className="font-bold">{money(report.report?.summary?.net_total || 0)}</span>
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                </div>
+              </div>
+              {report.note && <p className="text-xs text-slate-400 mt-1">{report.note}</p>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ============================================================
 // MAIN
 // ============================================================
 const TABS = [
@@ -666,6 +912,7 @@ const TABS = [
   { key: 'documents', label: 'Документи', Icon: FileText },
   { key: 'categories', label: 'Категорії', Icon: FolderTree },
   { key: 'expenses', label: 'Витрати', Icon: Receipt },
+  { key: 'reports', label: 'Звіти', Icon: BarChart3 },
   { key: 'settings', label: 'Налаштування', Icon: Settings },
 ]
 
@@ -698,6 +945,7 @@ export default function AdminPanel() {
         {activeTab === 'documents' && <DocumentsTab />}
         {activeTab === 'categories' && <CategoriesTab />}
         {activeTab === 'expenses' && <ExpenseCatsTab />}
+        {activeTab === 'reports' && <ReportsTab />}
         {activeTab === 'settings' && <SettingsTab />}
       </div>
     </div>

@@ -16,6 +16,7 @@ import DamageHubApp from './pages/DamageHubApp';
 // Legacy: import DamageCabinet from './pages/DamageCabinet';
 // Legacy: TasksCabinet removed — now in PersonalCabinet /cabinet?tab=tasks
 import PackingCabinet from './pages/PackingCabinet';
+// @ts-ignore
 import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
 import CatalogBoard from './pages/CatalogBoard';

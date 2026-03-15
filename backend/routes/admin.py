@@ -637,3 +637,64 @@ async def delete_category(
     except Exception as e:
         rh_db.rollback()
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
+# ============================================================
+# DOCUMENT STATS
+# ============================================================
+@router.get("/document-stats")
+async def get_document_stats(
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    require_admin(authorization)
+    rows = rh_db.execute(text("SELECT doc_type, COUNT(*) FROM documents GROUP BY doc_type")).fetchall()
+    return {r[0]: r[1] for r in rows}
+
+# ============================================================
+# COMPANY SETTINGS
+# ============================================================
+@router.get("/settings")
+async def get_settings(
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    require_admin(authorization)
+    try:
+        rows = rh_db.execute(text("SELECT setting_key, setting_value FROM system_settings")).fetchall()
+        return {r[0]: r[1] for r in rows}
+    except:
+        return {
+            "name": "ФОП Николенко Наталя Станіславівна",
+            "tax_status": "платник єдиного податку",
+            "tax_id": "", "iban": "", "address": "м. Київ",
+            "signer_name": "Николенко Н.С.", "signer_role": "",
+            "warehouse_address": "м. Київ, вул. Будіндустрії 4"
+        }
+
+@router.put("/settings")
+async def update_settings(
+    data: dict,
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    require_admin(authorization)
+    try:
+        rh_db.execute(text("""
+            CREATE TABLE IF NOT EXISTS system_settings (
+                setting_key VARCHAR(100) PRIMARY KEY,
+                setting_value TEXT,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        """))
+        rh_db.commit()
+        for key, value in data.items():
+            rh_db.execute(text("""
+                INSERT INTO system_settings (setting_key, setting_value) VALUES (:k, :v)
+                ON DUPLICATE KEY UPDATE setting_value = :v
+            """), {"k": key, "v": str(value) if value else ""})
+        rh_db.commit()
+        return {"success": True}
+    except Exception as e:
+        rh_db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

@@ -421,12 +421,16 @@ function SettingsTab() {
 
   const fields = [
     { key: 'name', label: 'Назва ФОП / Компанії' },
+    { key: 'short_name', label: 'Коротка назва (бренд)' },
     { key: 'tax_status', label: 'Податковий статус' },
     { key: 'tax_id', label: 'Код за ДРФО (ІПН)' },
     { key: 'iban', label: 'IBAN (р/р)' },
     { key: 'bank_name', label: 'Банк' },
     { key: 'address', label: 'Юридична адреса' },
     { key: 'warehouse_address', label: 'Адреса складу' },
+    { key: 'phone', label: 'Телефон' },
+    { key: 'email', label: 'Email' },
+    { key: 'website', label: 'Вебсайт' },
     { key: 'signer_name', label: 'Підписант (ПІБ)' },
     { key: 'signer_role', label: 'Посада підписанта' },
   ]

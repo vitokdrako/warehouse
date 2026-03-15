@@ -7,7 +7,7 @@ import requests
 import os
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://unified-comms-48.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://unified-chat-37.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 TEST_EMAIL = "vitokdrako@gmail.com"

@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 import json
+from services.company_config import get_company_config
 
 # ============================================================
 # КОНВЕРТАЦІЯ СУМИ В СЛОВА (УКРАЇНСЬКА)
@@ -302,21 +303,16 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
     executor_type = options.get("executor_type", "fop")
     executor = EXECUTORS.get(executor_type, EXECUTORS["fop"])
     
-    company = {
-        "name": executor.get("short_name", executor.get("name", "FarforDecorOrenda")),
-        "legal_name": executor.get("name", "ФОП Трофімова Вікторія Сергіївна"),
-        "address": executor.get("address", ""),
-        "warehouse": "м. Харків, Військовий провулок, 1",
-        "phone": "+380 XX XXX XX XX",
-        "email": "rfarfordecor@gmail.com.ua",
-        "website": "https://www.farforrent.com.ua",
-        "tax_id": executor.get("edrpou", ""),
-        "edrpou": executor.get("edrpou", ""),
-        "iban": executor.get("iban", ""),
+    company = get_company_config(db)
+    # Merge executor-specific data
+    company.update({
+        "tax_id": executor.get("edrpou", company["tax_id"]),
+        "edrpou": executor.get("edrpou", company["edrpou"]),
+        "iban": executor.get("iban", company["iban"]),
         "mfo": executor.get("mfo", ""),
-        "bank_name": executor.get("bank", ""),
-        "director_name": executor.get("director", ""),
-        "tax_status": executor.get("tax_status", ""),
+        "bank_name": executor.get("bank", company["bank_name"]),
+        "director_name": executor.get("director", company["director_name"]),
+        "tax_status": executor.get("tax_status", company["tax_status"]),
         # Правові документи
         "terms_url": "https://www.farforrent.com.ua/terms",
         "privacy_url": "https://www.farforrent.com.ua/privacy",
@@ -333,7 +329,7 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         # Робочі години
         "working_hours": "пн-пт 10:00-18:00",
         "issue_hours": "пн-сб 10:00-17:00",
-    }
+    })
     
     # === ДАНІ ПЛАТНИКА (PAYER PROFILE) ===
     payer = {
@@ -551,13 +547,7 @@ def build_damage_settlement_data(db: Session, order_id: str, options: dict) -> d
     total_deduction = damage_amount + cleaning_fee + late_fee
     refund_amount = max(0, deposit - total_deduction)
     
-    company = {
-        "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Николенко Наталя Станіславівна",
-        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
-        "phone": "+380 XX XXX XX XX",
-        "email": "rfarfordecor@gmail.com.ua",
-    }
+    company = get_company_config(db)
     
     return {
         "order": order,
@@ -657,6 +647,8 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
     months_ua = ["січня","лютого","березня","квітня","травня","червня",
                  "липня","серпня","вересня","жовтня","листопада","грудня"]
     
+    company = get_company_config(db)
+    
     return {
         "meta": {
             "act_day": now.strftime("%d"),
@@ -664,8 +656,8 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
             "act_year": now.strftime("%Y"),
         },
         "landlord": {
-            "name": "FarforDecorOrenda",
-            "legal_name": "ФОП Николенко Наталя Станіславівна",
+            "name": company["short_name"],
+            "legal_name": company["legal_name"],
         },
         "tenant": {
             "legal_name": order_row[3] or "",
@@ -907,11 +899,7 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
         "preparation_notes": preparation_notes or ""
     }
     
-    company = {
-        "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Николенко Наталя Станіславівна",
-        "phone": "+380 XX XXX XX XX"
-    }
+    company = get_company_config(db)
     
     return {
         "issue_card": issue_card,
@@ -929,14 +917,7 @@ def build_return_data(db: Session, order_id: str, options: dict) -> dict:
     order_data = build_order_data(db, order_id, options)
     
     # Company data
-    company = {
-        "name": "FarforRent",
-        "legal_name": "ФОП Николенко Наталя Станіславівна",
-        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
-        "warehouse": "м. Харків, Військовий провулок, 1",
-        "phone": "+380 XX XXX XX XX",
-        "email": "info@farforrent.com.ua",
-    }
+    company = get_company_config(db)
     
     # Спробуємо отримати дані з return_cards
     receivers = []
@@ -982,16 +963,7 @@ def build_return_data(db: Session, order_id: str, options: dict) -> dict:
 def build_damage_data(db: Session, damage_case_id: str, options: dict) -> dict:
     """Збирає дані кейсу пошкодження для документа"""
     # Company data
-    company = {
-        "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Николенко Наталя Станіславівна",
-        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
-        "warehouse": "м. Харків, Військовий провулок, 1",
-        "phone": "+380 XX XXX XX XX",
-        "email": "rfarfordecor@gmail.com.ua",
-        "iban": "UA043220010000026003340091618",
-        "edrpou": "3606801844",
-    }
+    company = get_company_config(db)
     
     # If damage_case_id is actually an order_id, get order data
     if damage_case_id:
@@ -1018,11 +990,7 @@ def build_damage_data(db: Session, damage_case_id: str, options: dict) -> dict:
 
 def build_vendor_task_data(db: Session, vendor_task_id: str, options: dict) -> dict:
     """Збирає дані завдання підрядника для документа"""
-    company = {
-        "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Николенко Наталя Станіславівна",
-        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
-    }
+    company = get_company_config(db)
     
     # Try to get vendor task from database
     vendor_task = options.get("vendor_task", {
@@ -1142,13 +1110,7 @@ def build_order_modification_data(db: Session, order_id: str, options: dict) -> 
     except Exception as e:
         print(f"Warning: Could not fetch refused items: {e}")
     
-    company = {
-        "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Николенко Наталя Станіславівна",
-        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
-        "phone": "+380 XX XXX XX XX",
-        "email": "rfarfordecor@gmail.com.ua",
-    }
+    company = get_company_config(db)
     
     return {
         "order": order,
@@ -1320,13 +1282,7 @@ def build_damage_breakdown_data(db: Session, order_id: str, options: dict) -> di
             "stage_label": stage_labels.get(stage, stage)
         })
     
-    company = {
-        "name": "FarforDecorOrenda",
-        "legal_name": "ФОП Николенко Наталя Станіславівна",
-        "address": "61082, Харківська обл., м. Харків, просп. Московський, буд. 216/3А, кв. 46",
-        "phone": "+380 XX XXX XX XX",
-        "email": "rfarfordecor@gmail.com.ua",
-    }
+    company = get_company_config(db)
     
     return {
         "order": order,

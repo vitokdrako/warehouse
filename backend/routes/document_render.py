@@ -22,6 +22,7 @@ import uuid
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from database_rentalhub import get_rh_db
+from services.company_config import get_landlord_config, get_company_config
 
 router = APIRouter(prefix="/api/documents/render", tags=["document-rendering"])
 
@@ -35,23 +36,6 @@ jinja_env = Environment(
     loader=FileSystemLoader(TEMPLATES_DIR),
     autoescape=select_autoescape(['html', 'xml'])
 )
-
-# ============================================================
-# CONSTANTS
-# ============================================================
-
-LANDLORD_CONFIG = {
-    "name": "Фізична особа-підприємець Николенко Наталя Станіславівна",
-    "tax_status": "платник єдиного податку",
-    "tax_id": "3606801844",
-    "iban": "UA043220010000026003340091618",
-    "bank_name": "ПАТ \"УНІВЕРСАЛ БАНК\"",
-    "address": "м. Київ",
-    "signer_name": "Николенко Н.С.",
-    "signer_role": ""
-}
-
-WAREHOUSE_ADDRESS = "м. Київ, вул. Будіндустрії 4"
 
 PAYER_TYPE_LABELS = {
     "individual": "Фізична особа",
@@ -141,6 +125,9 @@ def build_document_context(
 ) -> Dict[str, Any]:
     """Build full document context from database"""
     
+    landlord = get_landlord_config(db)
+    company = get_company_config(db)
+    
     context = {
         "meta": {
             "doc_type": doc_type,
@@ -150,7 +137,8 @@ def build_document_context(
         },
         "agreement": {},
         "order": {},
-        "landlord": LANDLORD_CONFIG.copy(),
+        "landlord": {k: v for k, v in landlord.items() if k != "warehouse_address"},
+        "company": company,
         "tenant": {},
         "items": [],
         "totals": {},
@@ -195,7 +183,7 @@ def build_document_context(
                 "issue_date": issue_date["formatted"],
                 "return_date": return_date["formatted"],
                 "days": order_row[7] or 1,
-                "warehouse_address": WAREHOUSE_ADDRESS,
+                "warehouse_address": landlord.get("warehouse_address", "м. Київ, вул. Будіндустрії 4"),
                 "pickup_time": "17:00",
                 "deal_mode": order_row[12] or "rent"
             }

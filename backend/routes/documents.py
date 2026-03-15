@@ -11,6 +11,7 @@ import json
 import os
 
 from database_rentalhub import get_rh_db
+from services.company_config import get_company_config
 
 # Base URL for images - use backend URL from environment
 BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL", "https://backrentalhub.farforrent.com.ua")
@@ -797,10 +798,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
             "grand_total": grand_total
         },
-        "company": {
-            "phone": "(097) 123 09 93, (093) 375 09 40",
-            "email": "info@farforrent.com.ua"
-        },
+        "company": get_company_config(db),
         "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None  # Can be set to "ПОПЕРЕДНІЙ" or "ЗАТВЕРДЖЕНО"
@@ -901,7 +899,7 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
             "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
             "grand_total": grand_total
         },
-        "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
+        "company": get_company_config(db),
         "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None,
@@ -1019,7 +1017,7 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
             "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
             "grand_total": grand_total
         },
-        "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
+        "company": get_company_config(db),
         "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None
@@ -1362,10 +1360,7 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
         "rental_end_date": _format_date_ua(order[7]),
         "return_date": _format_date_ua(order[9] or order[7]),
         "totals": {"items_count": len(items), "quantity": total_qty},
-        "company": {
-            "phone": "(097) 123 09 93, (093) 375 09 40",
-            "email": "info@farforrent.com.ua"
-        },
+        "company": get_company_config(db),
     }
 
 
@@ -1454,10 +1449,7 @@ async def preview_picking_list(order_id: int, db: Session = Depends(get_rh_db)):
         "items": formatted_items,
         "totals": {"items_count": len(items), "quantity": total_qty},
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
-        "company": {
-            "phone": "(097) 123 09 93, (093) 375 09 40",
-            "email": "info@farforrent.com.ua"
-        },
+        "company": get_company_config(db),
     }
     
     template = jinja_env.get_template("documents/picking_list.html")

@@ -1,60 +1,57 @@
 <analysis>**original_problem_statement:**
-The user's initial project was a broad stabilization and refactoring effort. The focus of this session was to build a major new feature: a Personal Cabinet for employees (Managers, Props Masters) to centralize their workflow.
+The user's initial project was a broad stabilization and refactoring effort. The focus of this session was to continue evolving the Personal Cabinet and perform major UI/UX refactoring across the application.
 
 **Core requirements for this session:**
-1.  **Build a Personal Cabinet** containing:
-    *   A user profile (name, photo, role).
-    *   A task manager integrated with the existing calendar.
-    *   A new internal chat system similar to Telegram/Slack, with channels, threads, and DMs.
-    *   User-specific statistics.
-2.  **CRITICAL:** The entire implementation must use the existing **MySQL** database.
-3.  **Task Manager Optimization:** Improve the existing task manager and calendar, integrating it seamlessly into the new Personal Cabinet.
-4.  **Chat Enhancements (User-driven):**
-    *   Integrate the task manager with the chat, so creating/updating tasks posts notifications.
-    *   Add the ability to upload images/files to the chat.
-    *   Add the ability to close chat threads that are no longer active.
-5.  **Code Cleanup:** Deprecate and remove the old standalone task manager page once its functionality is fully migrated to the Personal Cabinet.
-6.  **New Request:** Integrate the separate, existing order chat into the Personal Cabinet as a new tab to unify all communication channels.
+1.  **Integrate Order Chat:** Integrate the separate, existing order chat into the Personal Cabinet as a new tab to unify all communication channels.
+2.  **Role-Based Landing Pages:** Implement logic so that different user roles are redirected to specific pages upon login (e.g., Managers to a Manager Cabinet).
+3.  **UI/UX Cleanup & Refactoring:**
+    *   Refactor the client payer selection form to match new business logic.
+    *   Clean up the main manager dashboard, removing redundant buttons and moving key actions to more appropriate locations.
+    *   Redesign the main calendar to match the new corporate design system, add features, and remove the legacy calendar.
+    *   Completely overhaul the Admin Panel to be a modern, functional hub for managing users, documents, and company settings.
+4.  **Dynamic Document Management:** Ensure that company data used in generated documents (quotes, contracts) is managed from the new Admin Panel, not hardcoded.
+5.  **Populate Company Data:** Update the system with the user's actual company details for use in documents.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is live and a major new feature, the Personal Cabinet, has been successfully built and deployed.
--   **Personal Cabinet ():** A multi-tabbed interface serving as a central hub for employees. It's accessible via a new button in the main navigation.
--   **Profile Tab:** Displays the logged-in user's information.
--   **Task Manager Tab:** A full-featured Kanban board for tasks, with filters (My tasks, All tasks), status columns (To Do, In Progress, Done), a My Day Focus section, and a modal for creating new tasks. It has completely replaced the old task page.
--   **Chat Tab:** A Telegram-style chat interface with public channels, direct messages, and threaded conversations. It supports file uploads (images display inline) and allows authorized users to close/reopen threads.
--   **Task/Chat Integration:** Creating a new task or changing its status automatically posts a linked message in the Загальний (General) chat channel, creating a dedicated thread for discussion.
--   **Calendar Integration:** Clicking on a task in the  now navigates the user directly to the relevant task details within the Personal Cabinet's task tab.
--   **Code Refactoring:** The old standalone  page has been deleted, and its route () now cleanly redirects to . All links have been updated.
+The application is a comprehensive rental management hub. A significant amount of refactoring and feature enhancement was completed in this session.
+-   **Personal Cabinet ():** Now contains tabs for Profile, Tasks (Kanban), Team Chat, and the newly integrated **Order Chats**. It features unread message counters for both chat tabs.
+-   **Manager Cabinet ():** A dedicated view for managers, now serving as their default landing page. It includes a button to create new orders.
+-   **Role-Based Redirects:** The login page () now redirects users based on their role (, , ) to different starting pages.
+-   **Redesigned Calendar ():** The  has been completely rewritten with the new corporate design system, featuring day/week/month views, task priority, and a task creation modal. The old calendar has been deleted.
+-   **Refactored Admin Panel ():** The  is now a modern, tabbed interface for managing **Users** (with role-based badges), **Documents** (with usage statistics and template indicators), and **Settings** (for dynamic company data).
+-   **Dynamic Document Data:** The backend is partially refactored to pull company information for documents from the database ( table), though a final fix is pending.
+-   **UI Cleanup:** The main  has been decluttered, with several buttons (New Order, Tasks, Chat, Refresh) removed or relocated. The client payer form () has been updated as per the user's request.
 
 **Last working item**:
--   **Last item agent was working:** The user requested integrating the existing order chat functionality into the new Personal Cabinet. The agent had just started exploring the existing codebase (, ,  table) to understand how the current order chat works before planning the integration.
--   **Status:** NOT STARTED
+-   **Last item agent was working:** The agent was refactoring the document generation logic in  to use company data from the database instead of hardcoded constants. The agent discovered that document templates inconsistently use both  and  as context variables. The attempt to render a document failed because the context was only being populated with the  key, while the template expected .
+-   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** both. This will require new backend endpoints to fetch order-specific chats and significant frontend work to create a new tab in the Personal Cabinet to display them.
+-   **Which testing method agent to use?** backend testing agent. The agent should test by rendering a document (e.g., a quote for an order) and verifying that the company details are correctly populated from the database.
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Integrate Order Chat into Personal Cabinet (P0)**
+-   **Issue 1: Document Context Variable Mismatch (P0)**
 -   **Issue 2:  endpoint is unstable (P2)**
 -   **Issue 3: Moodboard export is likely broken (P2)**
 -   **Issue 4: Recurring Calendar Timezone Bug (P2)**
 
 **Issues Detail:**
--   **Issue 1: Integrate Order Chat into Personal Cabinet**
-    -   **Attempted fixes:** None. The agent was in the preliminary investigation phase.
+-   **Issue 1: Document Context Variable Mismatch**
+    -   **Attempted fixes:** The agent correctly identified that  in  was only adding  to the context. A test render returned an empty  context initially, but further debugging showed the data fetching function worked correctly. The root cause was identified: some templates use  while the new context only provides .
     -   **Next debug checklist:**
-        1.  Analyze  and the  database table to understand the data source and logic for the current order chat.
-        2.  Design and implement a new backend API endpoint (e.g., in ) to fetch a list of active orders with chat history. The user wants this to be a separate tab.
-        3.  Design and implement another endpoint to fetch the full chat history for a single order, similar to how team chat messages are fetched.
-        4.  Create a new Чати по замовленням (Order Chats) tab within .
-        5.  This new tab should display a list of active orders. Clicking an order should display its chat history in a familiar UI.
-        6.  Once complete, identify the entry point for the old order chat on the main page and remove it to avoid duplication.
-    -   **Why fix this issue and what will be achieved with the fix?** To centralize all application chats (team-based and order-based) into a single unified interface, streamlining the user's workflow and decluttering the UI.
-    -   **Status:** NOT STARTED
+        1.  Open .
+        2.  Locate the  function.
+        3.  Inside this function, after fetching the company settings (), ensure the data is added to the  dictionary under **both** keys.
+            
+        4.  This will provide backward compatibility for all templates without needing to modify them.
+        5.  Restart the backend server to apply changes.
+        6.  Retest by generating a document (like a 'quote') for an existing order and confirm the company data appears correctly.
+    -   **Why fix this issue and what will be achieved with the fix?** This will complete the Dynamic Document Management feature, allowing admins to update company details in one place () and have it reflect across all generated documents, removing hardcoded values.
+    -   **Status:** IN PROGRESS
     -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** both
+    -   **Should Test frontend/backend/both after fix?** backend
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
@@ -75,16 +72,14 @@ The application is live and a major new feature, the Personal Cabinet, has been 
     -   Create an HR/Ops Module.
 
 **Completed work in this session**
--   **Built Personal Cabinet:** Created a new, central hub at  with Profile, Tasks, and Chat tabs using .
--   **Implemented Advanced Task Manager:**
-    -   Developed a full-featured Kanban board, My Day Focus panel, and task creation functionality within the cabinet.
-    -   Updated  so clicking a task now navigates to the cabinet.
--   **Implemented Advanced Internal Chat:**
-    -   Built a full-featured, MySQL-based chat system in .
-    -   Features include channels, DMs, threads, image/file uploads (stored in ), and the ability to close/reopen threads.
--   **Task-Chat Integration:** Modified  to automatically post notifications to a dedicated chat thread upon task creation and status changes.
--   **Refactored Task Management:** Successfully deprecated the old , removed it, and redirected the  route to  in . Updated all relevant navigation links.
--   **Testing:** Successfully used the testing agent three times to validate the backend and frontend of the Personal Cabinet, Task Manager, and Chat features, with all tests passing.
+-   **Integrated Order Chat:** Successfully built and integrated the order-specific chat into the Personal Cabinet as a new tab ().
+-   **Added Unread Counter:** Implemented a backend endpoint and frontend logic to show a notification badge for new order notes on the cabinet tab.
+-   **Implemented Role-Based Redirects:** Modified  to redirect users to different dashboards (, ) based on their role after login.
+-   **Refactored Admin Panel:** Completely rebuilt the  page into a modern, three-tab panel () for managing Users, Documents, and company Settings.
+-   **Redesigned Calendar:** Rewrote  with the new design system, added task priorities, and improved UI/UX for day, week, and month views. Deleted the old calendar ().
+-   **Populated Company Data:** Filled the  table and  constant with the user's real company information.
+-   **Refactored Payer Form:** Updated the  to use the new payer types (ТОВ, ФОП, Фізична особа) and tax systems.
+-   **Cleaned up UI:** Removed multiple redundant buttons (New Order, Tasks, Chat) from  and relocated the New Order button to .
 
 **Earlier issues found/mentioned but not fixed**
 -   ** endpoint instability:** Mentioned in the initial handoff, not addressed as it was lower priority.
@@ -98,54 +93,47 @@ The application is live and a major new feature, the Personal Cabinet, has been 
 
 
 **Key Technical Concepts**
--   **Full-Stack Feature Development (MySQL):** Successfully built a complex, multi-tab feature (Cabinet, Tasks, Chat) from scratch using React, FastAPI, and a pure MySQL backend.
--   **UI/UX Consolidation & Refactoring:** Replaced a standalone feature page () with a more powerful, integrated tab within a central hub (), significantly improving navigation and user workflow. The old component was cleanly removed and a redirect was implemented.
--   **Cross-Module Integration:** Implemented logic where actions in one module (Tasks) trigger automated events in another (Chat) via backend API calls, creating a cohesive system.
--   **Backend File Handling:** Implemented file uploads in FastAPI, saving them to a persistent server directory () and serving them via a static route in .
--   **Complex Frontend State Management:** Managed complex state in the  component for multiple tabs, API data, modals, and real-time UI updates for the Kanban board and chat.
+-   **Large-Scale UI Refactoring:** Successfully executed major redesigns of core application components (Admin Panel, Calendar) to align with a new, consistent design system.
+-   **Dynamic Configuration:** Migrated hardcoded application settings (company data) to a database table () managed via a new UI, making the application more flexible.
+-   **Role-Based Access Control (RBAC):** Implemented a foundational piece of RBAC by controlling user navigation flow based on roles fetched from the backend.
+-   **Code Consolidation:** Centralized user workflows by moving functionality (order creation, chats) from a general dashboard into more specific, role-oriented cabinets.
 
 **key DB schema**
--   **chat_channels:** (uid=0(root) gid=0(root) groups=0(root), , , , )
--   **chat_participants:** (uid=0(root) gid=0(root) groups=0(root), , )
--   **chat_messages:** (uid=0(root) gid=0(root) groups=0(root), , , , , , )
--   **chat_threads:** (uid=0(root) gid=0(root) groups=0(root), , , , , )
--   **tasks:** (uid=0(root) gid=0(root) groups=0(root), , , , , , etc.)
--   **order_internal_notes:** (To be investigated) The source for existing order-specific chats.
+-   **system_settings:** (uid=0(root) gid=0(root) groups=0(root), , , , ) - **NEW**, stores dynamic configuration for the app, such as company details.
 
 **All files of reference**
--   **/app/frontend/src/pages/PersonalCabinet.jsx**: The new, all-in-one component for profile, tasks, and team chat.
--   **/app/backend/routes/team_chat.py**: Contains all backend logic for the new team chat feature.
--   **/app/backend/routes/cabinet.py**: Contains all backend logic for the profile and task manager tabs.
--   **/app/backend/routes/tasks.py**: Contains the logic for task CRUD and the integration hook that posts to the chat.
--   **/app/frontend/src/App.tsx**: Contains the new routing for  and the redirect from .
--   **/app/backend/routes/orders.py**: **To be investigated** for the next task (order chat integration).
+-   **/app/backend/routes/documents.py**: Contains the document generation logic that needs the final fix.
+-   **/app/frontend/src/pages/AdminPanel.jsx**: The new, fully refactored admin panel component.
+-   **/app/frontend/src/pages/UnifiedCalendarNew.jsx**: The new, fully redesigned calendar component.
+-   **/app/frontend/src/pages/PersonalCabinet.jsx**: The central hub, now containing the integrated order chat.
+-   **/app/frontend/src/pages/Login.tsx**: Contains the new role-based redirect logic.
+-   **/app/backend/routes/admin_panel.py**: The backend service for the new admin panel.
 
 **Critical Info for New Agent**
 -   **Ви повинні спілкуватися українською мовою. (You must communicate in Ukrainian.)**
--   Your immediate task is to act on the user's latest request: **integrate the existing order-specific chat into the Personal Cabinet**. This will likely involve creating a new Order Chats tab.
--   The entire architecture is **MySQL-only**. The production database () is connected and should be used for all schema changes and development.
--   The Personal Cabinet feature is now the central point for internal workflows. The next step is to consolidate the final piece of communication (order chats) into it.
+-   Your immediate task is to fix the bug in  where document generation fails due to an incomplete context. You need to ensure the context dictionary contains both  and  keys pointing to the company data fetched from the database.
+-   The application has undergone significant UI and architectural changes. The new Admin Panel () and redesigned Calendar () are the source of truth for their respective functionalities.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_1.json
--   /app/test_reports/iteration_2.json
--   /app/test_reports/iteration_3.json
--   /app/test_reports/iteration_4.json
+-   /app/test_reports/iteration_5.json
+-   /app/test_reports/iteration_6.json
+-   /app/test_reports/iteration_7.json
+-   /app/test_reports/iteration_8.json
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **[LATEST] User asks to integrate the existing order chat into the Personal Cabinet.** They suggest it could be a new tab and want to remove the old entry point from the main page. **Status: Pending (Next Action Item).**
-2.  **User confirms that the old  is no longer needed** and agrees with the plan to remove it and redirect all links to the new cabinet. **Status: Completed.**
-3.  Agent asks for confirmation to delete the old  as its functionality is now duplicated in the Personal Cabinet. **Status: Responded by user.**
-4.  User sees the final result and asks if the old task cabinet is now redundant. **Status: Responded by agent.**
-5.  **Agent finishes the task-chat integration, file uploads, and thread closing features.** The work was validated by the testing agent. **Status: Completed.**
-6.  **User loves the idea of task-chat integration and also asks for file uploads and the ability to close threads.** Approves the plan to implement all three. **Status: Completed.**
-7.  Agent suggests an enhancement: integrating tasks with chat for automatic notifications. **Status: Responded by user.**
-8.  **Agent finishes the Task Manager implementation and refactoring.** The work was validated by the testing agent. **Status: Completed.**
-9.  **User approves the plan to refactor the task manager** and improve the calendar, tying it all into the Personal Cabinet. **Status: Completed.**
-10. Agent proposes a detailed plan to optimize the task manager and integrate it. **Status: Responded by user.**
+1.  **User confirms company data is now missing from documents.** This triggered the current debugging effort.
+2.  **User asks to check all documents** to ensure they are managed from the admin page.
+3.  **User confirms the new company data in the Admin Panel is correct** but it's not appearing in the generated PDF.
+4.  **User provides an invoice with correct company data** and asks for it to be populated in the system.
+5.  **User requests a complete overhaul of the Admin Panel** to manage users, documents, and settings, and to remove unused tabs.
+6.  **User asks for suggestions to improve the Calendar** and wants the design to match the Personal Cabinet.
+7.  **User asks to delete the old calendar** and focus on improving the new one.
+8.  **User asks to move the New Order button** from the dashboard to the manager cabinet and clean up other dashboard buttons.
+9.  **User asks to remove the Tasks button** from the dashboard as it's now in the Personal Cabinet.
+10. **User requests to fix the payer selection form** with specific types and tax systems.
 
 **Project Health Check:**
--   **Broken:** None.
+-   **Broken:** Document generation is currently broken due to the context issue.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
@@ -153,14 +141,15 @@ The application is live and a major new feature, the Personal Cabinet, has been 
 -   **OpenCart:** Reads product information and orders from an external MySQL database.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. The agent was used successfully after each major feature implementation (Cabinet/Chat, Task Manager, Chat Enhancements).
+-   **Testing agent used after significant changes:** YES. Used multiple times to validate the Calendar and Admin Panel refactors.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None permanent. Test reports are available.
--   **Known regressions:** None.
+-   **Test files created:** None.
+-   **Known regressions:** Document generation is a new regression introduced during the refactoring.
 
 **Credentials to test flow:**
--   **RentalHub Admin:**  / 
--   **Production DB:** The backend is configured to use the  database. Credentials are in .
+-   **Admin:**  / 
+-   **Manager:**  / 
+-   **Requisitor:**  /  (Note: Agent found this password to be incorrect, but the redirect logic for the role works).
 
 **What agent forgot to execute**
--   The agent correctly followed the user's priorities, focusing on building the extensive Personal Cabinet feature. Older, lower-priority bugs ( instability, moodboard export, timezone bug) from the initial handoff were not addressed as per the user's direction and remain in the backlog.</analysis>
+-   The agent correctly prioritized the user's stream of refactoring requests. The final fix for the document generation was in progress when the session ended. Older, lower-priority bugs remain in the backlog as they were not prioritized by the user.</analysis>

@@ -37,6 +37,13 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - All document templates use DB data via `system_settings` table
 - Both `company.*` and `landlord.*` template variables resolved from DB
 
+#### Рахунок-оферта Redesign — March 2026
+- Redesigned `invoice_offer.html` in quote.html visual style
+- Sections: Замовник, Деталі оренди, Товари (№, Найменування, SKU, К-сть, Оренда/день, Оренда/термін, Завдаток)
+- Added: Умови оплати (payment terms with green highlights), Реквізити для оплати (bank details from DB)
+- Updated `preview_invoice_offer` and `download_invoice_offer_pdf` endpoints with new data format
+- Added МФО (MFO bank code) to system_settings and company_config
+
 #### Template Editor — Feb 2026
 - **DB-first template loading**: Custom `DBOverrideLoader` for Jinja2 (checks DB before file system)
 - **Template CRUD API**: GET/PUT/POST (reset) endpoints at `/api/admin/templates/*`

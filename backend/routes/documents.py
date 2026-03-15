@@ -1124,51 +1124,80 @@ async def preview_annex(
 @router.get("/invoice-offer/{order_id}/preview", response_class=HTMLResponse)
 async def preview_invoice_offer(
     order_id: int,
-    executor_type: str = Query("tov", description="tov or fop"),
     db: Session = Depends(get_rh_db)
 ):
-    """Generate HTML preview of invoice offer (Рахунок-оферта)"""
+    """Generate HTML preview of invoice offer (Рахунок-оферта) - official document with bank details"""
     
     order, items = _get_order_with_items(db, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
-    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
+    if not rental_days and order[6] and order[7]:
+        rental_days = (order[7] - order[6]).days + 1
     
+    # Format items
     formatted_items = []
+    rent_total = 0.0
+    deposit_total = 0.0
+    
     for item in items:
-        # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
+        qty = item[3] or 1
+        rental_price_day = float(item[4] or item[8] or 0)
+        total_rental = float(item[5] or 0)
+        
+        # Deposit = purchase_price * qty (full item value as deposit)
+        purchase_price = float(item[9] or 0)
+        deposit_per_item = purchase_price * qty
+        
+        rent_total += total_rental
+        deposit_total += deposit_per_item
+        
         formatted_items.append({
-            "name": item[2],
-            "quantity": item[3],
-            "price_per_day": _format_currency(item[4]),
-            "total_rental": _format_currency(item[5]),
-            "deposit": _format_currency(float(item[8] or item[4] or 0) * (item[3] or 1))
+            "product_name": item[2],
+            "sku": item[7] or "—",
+            "quantity": qty,
+            "rental_price_day_fmt": _format_currency(rental_price_day),
+            "rental_total_fmt": _format_currency(total_rental),
+            "deposit_fmt": _format_currency(deposit_per_item),
         })
     
-    invoice_number = f"Р-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    # Totals
+    order_rent = float(order[11] or 0) if order[11] else rent_total
+    order_deposit = float(order[12] or 0) if order[12] else deposit_total
+    discount_amount = float(order[23] or 0) if order[23] else 0
+    discount_percent = order[24] or 0
+    grand_total = order_rent - discount_amount + order_deposit
+    
+    # Delivery type
+    delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
+    delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
+    
+    company = get_company_config(db)
     
     template_data = {
-        "invoice_number": invoice_number,
-        "invoice_date": datetime.now().strftime("%d.%m.%Y"),
-        "executor": executor,
-        "client": {"name": order[3], "phone": order[4] or order[21], "email": order[5] or order[22], "tax_id": None},
         "order": {
-            "number": order[1],
-            "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}",
+            "order_number": order[1],
+            "customer_name": order[3],
+            "customer_phone": order[4] or order[21],
+            "customer_email": order[5] or order[22],
+            "phone": order[4] or order[21],
+            "email": order[5] or order[22],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
             "rental_days": rental_days,
-            "delivery_method": "Самовивіз"
+            "delivery_type_label": delivery_type_label,
+            "discount_percent": discount_percent,
         },
         "items": formatted_items,
-        "rental_days": rental_days,
         "totals": {
-            "rental": _format_currency(order[11]),
-            "deposit": _format_currency(order[12]),
-            "discount": "0,00",
-            "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))
+            "rental_fmt": _format_currency(order_rent),
+            "deposit_fmt": _format_currency(order_deposit),
+            "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "grand_total_fmt": _format_currency(grand_total),
         },
-        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     }
     
     template = jinja_env.get_template("documents/invoice_offer.html")
@@ -1178,32 +1207,71 @@ async def preview_invoice_offer(
 @router.get("/invoice-offer/{order_id}/pdf")
 async def download_invoice_offer_pdf(
     order_id: int,
-    executor_type: str = Query("tov"),
     db: Session = Depends(get_rh_db)
 ):
-    """Download invoice offer as PDF"""
+    """Download invoice offer as PDF (print dialog)"""
     
     order, items = _get_order_with_items(db, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
-    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
+    if not rental_days and order[6] and order[7]:
+        rental_days = (order[7] - order[6]).days + 1
     
-    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
-    formatted_items = [{"name": it[2], "quantity": it[3], "price_per_day": _format_currency(it[4]),
-                        "total_rental": _format_currency(it[5]), "deposit": _format_currency(float(it[8] or it[4] or 0) * (it[3] or 1))} for it in items]
+    formatted_items = []
+    rent_total = 0.0
+    deposit_total = 0.0
     
-    invoice_number = f"Р-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    for item in items:
+        qty = item[3] or 1
+        rental_price_day = float(item[4] or item[8] or 0)
+        total_rental = float(item[5] or 0)
+        purchase_price = float(item[9] or 0)
+        deposit_per_item = purchase_price * qty
+        rent_total += total_rental
+        deposit_total += deposit_per_item
+        formatted_items.append({
+            "product_name": item[2],
+            "sku": item[7] or "—",
+            "quantity": qty,
+            "rental_price_day_fmt": _format_currency(rental_price_day),
+            "rental_total_fmt": _format_currency(total_rental),
+            "deposit_fmt": _format_currency(deposit_per_item),
+        })
+    
+    order_rent = float(order[11] or 0) if order[11] else rent_total
+    order_deposit = float(order[12] or 0) if order[12] else deposit_total
+    discount_amount = float(order[23] or 0) if order[23] else 0
+    discount_percent = order[24] or 0
+    grand_total = order_rent - discount_amount + order_deposit
+    
+    delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
+    delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
+    
+    company = get_company_config(db)
     
     template_data = {
-        "invoice_number": invoice_number, "invoice_date": datetime.now().strftime("%d.%m.%Y"),
-        "executor": executor,
-        "client": {"name": order[3], "phone": order[4] or order[21], "email": order[5] or order[22], "tax_id": None},
-        "order": {"number": order[1], "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}", "rental_days": rental_days, "delivery_method": "Самовивіз"},
-        "items": formatted_items, "rental_days": rental_days,
-        "totals": {"rental": _format_currency(order[11]), "deposit": _format_currency(order[12]), "discount": "0,00", "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))},
-        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+        "order": {
+            "order_number": order[1],
+            "customer_name": order[3],
+            "customer_phone": order[4] or order[21],
+            "customer_email": order[5] or order[22],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days,
+            "delivery_type_label": delivery_type_label,
+            "discount_percent": discount_percent,
+        },
+        "items": formatted_items,
+        "totals": {
+            "rental_fmt": _format_currency(order_rent),
+            "deposit_fmt": _format_currency(order_deposit),
+            "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "grand_total_fmt": _format_currency(grand_total),
+        },
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     }
     
     template = jinja_env.get_template("documents/invoice_offer.html")

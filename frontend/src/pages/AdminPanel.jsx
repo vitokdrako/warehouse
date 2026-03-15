@@ -617,6 +617,7 @@ function SettingsTab() {
     { key: 'tax_status', label: 'Податковий статус' },
     { key: 'tax_id', label: 'Код за ДРФО (ІПН)' },
     { key: 'iban', label: 'IBAN (р/р)' },
+    { key: 'mfo', label: 'МФО' },
     { key: 'bank_name', label: 'Банк' },
     { key: 'address', label: 'Юридична адреса' },
     { key: 'warehouse_address', label: 'Адреса складу' },

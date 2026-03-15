@@ -78,4 +78,5 @@ def get_company_config(db: Session) -> dict:
         "director_name": settings.get("signer_name", DEFAULTS["signer_name"]),
         "tax_status": settings.get("tax_status", DEFAULTS["tax_status"]),
         "signer_name": settings.get("signer_name", DEFAULTS["signer_name"]),
+        "mfo": settings.get("mfo", "322001"),
     }

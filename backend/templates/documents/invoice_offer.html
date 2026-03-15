@@ -1,345 +1,377 @@
-<!DOCTYPE html>
+<!-- /backend/templates/documents/invoice_offer.html -->
+<!doctype html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <title>Рахунок-оферта {{ invoice_number }}</title>
-    <style>
-        @page {
-            size: A4;
-            margin: 15mm;
-        }
-        
-        body {
-            font-family: 'DejaVu Sans', Arial, sans-serif;
-            font-size: 10pt;
-            line-height: 1.4;
-            color: #333;
-        }
-        
-        .header {
-            border-bottom: 3px solid #2c5282;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .header-table {
-            width: 100%;
-        }
-        
-        .logo {
-            font-size: 18pt;
-            font-weight: bold;
-            color: #2c5282;
-        }
-        
-        .logo-subtitle {
-            font-size: 9pt;
-            color: #666;
-        }
-        
-        .invoice-title {
-            text-align: right;
-        }
-        
-        .invoice-title h1 {
-            font-size: 16pt;
-            margin: 0;
-            color: #2c5282;
-        }
-        
-        .invoice-number {
-            font-size: 14pt;
-            font-weight: bold;
-        }
-        
-        .invoice-date {
-            font-size: 10pt;
-            color: #666;
-        }
-        
-        .section {
-            margin-bottom: 15px;
-        }
-        
-        .section-title {
-            font-size: 10pt;
-            font-weight: bold;
-            color: #2c5282;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-        }
-        
-        .info-box {
-            background: #f7fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 5px;
-            padding: 12px;
-        }
-        
-        .two-columns {
-            display: flex;
-            gap: 20px;
-        }
-        
-        .two-columns > div {
-            flex: 1;
-        }
-        
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-        
-        .items-table th {
-            background: #2c5282;
-            color: white;
-            padding: 10px 5px;
-            font-size: 9pt;
-            text-align: center;
-            border: 1px solid #1a365d;
-        }
-        
-        .items-table td {
-            padding: 8px 5px;
-            border: 1px solid #e2e8f0;
-            font-size: 9pt;
-        }
-        
-        .items-table tr:nth-child(even) {
-            background: #f7fafc;
-        }
-        
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        
-        .totals-section {
-            margin-top: 20px;
-        }
-        
-        .totals-table {
-            width: 350px;
-            margin-left: auto;
-            border-collapse: collapse;
-        }
-        
-        .totals-table td {
-            padding: 8px 12px;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .totals-table .total-row {
-            background: #2c5282;
-            color: white;
-            font-weight: bold;
-            font-size: 12pt;
-        }
-        
-        .totals-table .total-row td {
-            border-color: #1a365d;
-        }
-        
-        .totals-table .deposit-row {
-            background: #fef3c7;
-        }
-        
-        .payment-details {
-            margin-top: 20px;
-            padding: 15px;
-            background: #ebf8ff;
-            border: 1px solid #90cdf4;
-            border-radius: 5px;
-        }
-        
-        .payment-details h3 {
-            margin: 0 0 10px 0;
-            color: #2c5282;
-            font-size: 11pt;
-        }
-        
-        .bank-details {
-            font-family: 'Courier New', monospace;
-            font-size: 10pt;
-        }
-        
-        .notes {
-            margin-top: 20px;
-            padding: 10px;
-            background: #fffbeb;
-            border: 1px solid #fcd34d;
-            border-radius: 5px;
-            font-size: 9pt;
-        }
-        
-        .footer {
-            margin-top: 30px;
-            padding-top: 15px;
-            border-top: 1px solid #e2e8f0;
-            font-size: 9pt;
-            color: #666;
-        }
-        
-        .signature-section {
-            margin-top: 30px;
-        }
-        
-        .signature-line {
-            border-bottom: 1px solid #333;
-            width: 200px;
-            display: inline-block;
-            margin: 0 10px;
-        }
-        
-        .validity {
-            color: #c53030;
-            font-weight: bold;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Рахунок-оферта — {{ order.order_number }}</title>
+  <style>
+    :root{
+      --ink:#111827;
+      --muted:#6B7280;
+      --line:#E5E7EB;
+      --soft:#F3F4F6;
+      --paper:#FFFFFF;
+      --accent:#0F172A;
+      --good:#16A34A;
+      --warn:#B45309;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#f6f7fb;color:var(--ink);font:14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif}
+    .page{
+      width:210mm;
+      min-height:297mm;
+      margin:12mm auto;
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:14px;
+      box-shadow:0 10px 30px rgba(15,23,42,.08);
+      overflow:hidden;
+    }
+    .pad{padding:18mm}
+    .topbar{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+      padding:14mm 18mm 12mm 18mm;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, #f8f9fa, #f3f4f6);
+    }
+    .brand{display:flex;align-items:flex-start;gap:14px}
+    .logo{width:60px;height:60px;flex:none}
+    .logo img{width:100%;height:100%;object-fit:contain}
+    .brand-info{display:flex;flex-direction:column;gap:2px}
+    .brand h1{margin:0;font-size:18px;letter-spacing:.2px;color:var(--ink);font-weight:800}
+    .brand .address{color:var(--muted);font-size:11px;line-height:1.4}
+    .brand .contacts{color:var(--muted);font-size:11px;line-height:1.4}
+    .brand .contacts a{color:var(--muted);text-decoration:none}
+    .docmeta{min-width:240px;text-align:right}
+    .docmeta .title{font-size:22px;font-weight:800;margin:0;color:var(--ink)}
+    .docmeta .row{margin-top:6px;color:var(--muted);font-size:12px}
+    .docmeta .pill{
+      display:inline-block;margin-top:10px;
+      padding:6px 12px;border-radius:999px;
+      background:var(--soft);border:1px solid var(--line);
+      color:var(--ink);font-size:11px;font-weight:600;
+    }
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+    .card{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:14px 16px;
+      background:#fff;
+    }
+    .card h3{
+      margin:0 0 10px 0;
+      font-size:11px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      font-weight:700;
+    }
+    .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px}
+    .k{color:var(--muted);font-size:13px}
+    .v{color:var(--ink);font-weight:600;word-break:break-word;font-size:13px}
+    .v.normal{font-weight:500}
+
+    .sectionTitle{
+      margin:20px 0 12px 0;
+      font-size:13px;
+      font-weight:800;
+      letter-spacing:.02em;
+      color:var(--ink);
+    }
+
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    thead th{
+      position:sticky;top:0;
+      background:#f8f9fa;
+      color:var(--ink);
+      font-size:11px;
+      font-weight:700;
+      padding:12px 10px;
+      text-align:left;
+      border-bottom:2px solid var(--line);
+      text-transform:uppercase;
+      letter-spacing:.05em;
+    }
+    thead th:first-child{border-top-left-radius:10px}
+    thead th:last-child{border-top-right-radius:10px}
+    tbody td{
+      padding:12px 10px;
+      border-bottom:1px solid var(--line);
+      vertical-align:middle;
+    }
+    tbody tr:last-child td{border-bottom:none}
+    .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+    .right{text-align:right}
+    .center{text-align:center}
+    .nowrap{white-space:nowrap}
+    .sku{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:6px;
+      border:1px solid var(--line);
+      background:var(--soft);
+      font-weight:700;
+      font-size:11px;
+    }
+
+    .bottomRow{
+      margin-top:16px;
+      display:grid;
+      grid-template-columns: 1fr 340px;
+      gap:14px;
+      align-items:start;
+    }
+    .totals{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:16px;
+      background:linear-gradient(180deg,#ffffff,#fafafa);
+    }
+    .totals h3{
+      margin:0 0 12px 0;
+      font-size:11px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.1em;
+      font-weight:800;
+    }
+    .trow{display:flex;justify-content:space-between;gap:12px;padding:6px 0}
+    .trow .label{color:var(--muted);font-size:13px}
+    .trow .val{font-weight:700;font-size:13px}
+    .divider{height:1px;background:var(--line);margin:10px 0}
+    .grand{
+      display:flex;justify-content:space-between;align-items:baseline;
+      padding-top:8px;
+    }
+    .grand .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:900}
+    .grand .val{font-size:20px;font-weight:900;color:var(--ink)}
+
+    /* Payment terms */
+    .terms-box{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:14px 16px;
+      background:#fff;
+      line-height:1.6;
+      font-size:12px;
+      color:var(--ink);
+    }
+    .terms-box ul{margin:8px 0 0 0;padding:0 0 0 18px}
+    .terms-box li{margin-bottom:6px}
+    .terms-box .highlight{
+      background:#dcfce7;
+      padding:2px 6px;
+      border-radius:4px;
+      font-weight:600;
+      color:#15803d;
+    }
+
+    /* Bank details */
+    .bank-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+    .bank-table td{
+      padding:10px 14px;
+      border:1px solid var(--line);
+      vertical-align:top;
+    }
+    .bank-table td:first-child{
+      width:160px;
+      color:var(--muted);
+      font-weight:600;
+      background:var(--soft);
+    }
+    .bank-table td:last-child{
+      font-weight:700;
+      color:var(--ink);
+    }
+
+    footer{
+      padding:10mm 18mm 14mm 18mm;
+      border-top:1px solid var(--line);
+      color:var(--muted);
+      font-size:10px;
+      display:flex;justify-content:space-between;gap:12px;
+      background:#fff;
+    }
+    footer a{color:var(--muted);text-decoration:none}
+
+    @page { size: A4; margin: 10mm; }
+    @media print{
+      body{background:#fff}
+      .page{margin:0;border:none;border-radius:0;box-shadow:none}
+      thead{display:table-header-group;}
+      .docmeta .pill{border:1px solid #ddd}
+    }
+  </style>
 </head>
 <body>
-    <div class="header">
-        <table class="header-table">
-            <tr>
-                <td style="vertical-align: top;">
-                    <div class="logo">FarforRent</div>
-                    <div class="logo-subtitle">Оренда декору для заходів</div>
-                </td>
-                <td class="invoice-title">
-                    <h1>РАХУНОК-ОФЕРТА</h1>
-                    <div class="invoice-number">№ {{ invoice_number }}</div>
-                    <div class="invoice-date">від {{ invoice_date }}</div>
-                </td>
-            </tr>
-        </table>
-    </div>
-    
-    <table style="width: 100%; margin-bottom: 15px;">
-        <tr>
-            <td style="width: 48%; vertical-align: top;">
-                <div class="section">
-                    <div class="section-title">Постачальник</div>
-                    <div class="info-box">
-                        <p style="margin: 0 0 5px 0;"><strong>{{ executor.name }}</strong></p>
-                        <p style="margin: 0; font-size: 9pt;">
-                            {% if executor.edrpou|length > 8 %}ІПН{% else %}ЄДРПОУ{% endif %}: {{ executor.edrpou }}<br>
-                            {{ executor.address }}<br>
-                            {{ executor.tax_status }}
-                        </p>
-                    </div>
-                </div>
-            </td>
-            <td style="width: 4%;"></td>
-            <td style="width: 48%; vertical-align: top;">
-                <div class="section">
-                    <div class="section-title">Покупець</div>
-                    <div class="info-box">
-                        <p style="margin: 0 0 5px 0;"><strong>{{ client.name }}</strong></p>
-                        <p style="margin: 0; font-size: 9pt;">
-                            {% if client.tax_id %}ІПН/ЄДРПОУ: {{ client.tax_id }}<br>{% endif %}
-                            Тел: {{ client.phone }}<br>
-                            Email: {{ client.email }}
-                        </p>
-                    </div>
-                </div>
-            </td>
-        </tr>
-    </table>
-    
-    <div class="section">
-        <div class="section-title">Деталі замовлення</div>
-        <div class="info-box">
-            <table style="width: 100%;">
-                <tr>
-                    <td style="width: 50%;">
-                        <strong>Замовлення:</strong> {{ order.number }}<br>
-                        <strong>Період оренди:</strong> {{ order.rental_period }}
-                    </td>
-                    <td>
-                        <strong>Кількість днів:</strong> {{ order.rental_days }}<br>
-                        <strong>Отримання:</strong> {{ order.delivery_method }}
-                    </td>
-                </tr>
-            </table>
+  <div class="page">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">
+          <img src="https://customer-assets.emergentagent.com/job_docgen-hub-8/artifacts/qoruqs09_logo%20%281%29.svg" alt="FarforDecorOrenda" />
         </div>
+        <div class="brand-info">
+          <h1>{{ company.short_name or company.name }}</h1>
+          <div class="address">{{ company.warehouse or company.address }}</div>
+          <div class="contacts">
+            Тел: {{ company.phone }}<br/>
+            <a href="mailto:{{ company.email }}">{{ company.email }}</a> &#8226;
+            <a href="{{ company.website }}">{{ company.website | replace('https://', '') }}</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="docmeta">
+        <p class="title">Рахунок-оферта</p>
+        <div class="row">&#8470; <strong class="mono">{{ order.order_number }}</strong></div>
+        <div class="row">Дата: <strong class="mono">{{ generated_at }}</strong></div>
+        <div class="pill">Офіційний документ</div>
+      </div>
     </div>
-    
-    <table class="items-table">
+
+    <div class="pad">
+      <div class="grid2">
+        <div class="card">
+          <h3>Замовник</h3>
+          <div class="kv">
+            <div class="k">ПІБ</div><div class="v">{{ order.customer_name or "—" }}</div>
+            <div class="k">Телефон</div><div class="v normal">{{ order.customer_phone or order.phone or "—" }}</div>
+            <div class="k">Email</div><div class="v normal" style="font-size:12px;overflow-wrap:break-word">{{ order.customer_email or order.email or "—" }}</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Деталі оренди</h3>
+          <div class="kv">
+            <div class="k">Замовлення</div><div class="v mono">{{ order.order_number }}</div>
+            <div class="k">Період оренди</div>
+            <div class="v">
+              <span class="mono">{{ order.rental_start_date }}</span> — <span class="mono">{{ order.rental_end_date }}</span>
+              ({{ order.rental_days }} дн.)
+            </div>
+            <div class="k">Отримання</div><div class="v normal">{{ order.delivery_type_label or "Самовивіз" }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sectionTitle">Товари</div>
+
+      <table>
         <thead>
-            <tr>
-                <th style="width: 30px;">№</th>
-                <th>Найменування</th>
-                <th style="width: 60px;">К-сть</th>
-                <th style="width: 80px;">Ціна/день</th>
-                <th style="width: 80px;">Днів</th>
-                <th style="width: 100px;">Сума оренди</th>
-                <th style="width: 100px;">Завдаток</th>
-            </tr>
+          <tr>
+            <th style="width:36px">&#8470;</th>
+            <th>Найменування</th>
+            <th style="width:80px">SKU</th>
+            <th style="width:55px" class="center">К-сть</th>
+            <th style="width:120px" class="right nowrap">Оренда / день</th>
+            <th style="width:130px" class="right nowrap" style="background:#dcfce7">Оренда / термін</th>
+            <th style="width:120px" class="right nowrap" style="background:#dcfce7">Завдаток</th>
+          </tr>
         </thead>
         <tbody>
-            {% for item in items %}
+          {% for item in items %}
             <tr>
-                <td class="text-center">{{ loop.index }}</td>
-                <td>{{ item.name }}</td>
-                <td class="text-center">{{ item.quantity }}</td>
-                <td class="text-right">{{ item.price_per_day }} ₴</td>
-                <td class="text-center">{{ rental_days }}</td>
-                <td class="text-right">{{ item.total_rental }} ₴</td>
-                <td class="text-right">{{ item.deposit }} ₴</td>
+              <td class="center mono" style="color:var(--muted)">{{ loop.index }}</td>
+              <td style="font-weight:700">{{ item.product_name }}</td>
+              <td><span class="sku mono">{{ item.sku or "—" }}</span></td>
+              <td class="center mono">{{ item.quantity }}</td>
+              <td class="right mono">{{ item.rental_price_day_fmt }} &#8372;</td>
+              <td class="right mono" style="font-weight:700">{{ item.rental_total_fmt }} &#8372;</td>
+              <td class="right mono" style="font-weight:700">{{ item.deposit_fmt }} &#8372;</td>
             </tr>
-            {% endfor %}
+          {% endfor %}
         </tbody>
-    </table>
-    
-    <div class="totals-section">
-        <table class="totals-table">
-            <tr>
-                <td>Оренда:</td>
-                <td class="text-right">{{ totals.rental }} ₴</td>
-            </tr>
-            {% if totals.discount and totals.discount != '0,00' %}
-            <tr>
-                <td>Знижка:</td>
-                <td class="text-right">-{{ totals.discount }} ₴</td>
-            </tr>
-            {% endif %}
-            <tr class="deposit-row">
-                <td><strong>Завдаток (застава):</strong></td>
-                <td class="text-right"><strong>{{ totals.deposit }} ₴</strong></td>
-            </tr>
-            <tr class="total-row">
-                <td>ДО СПЛАТИ:</td>
-                <td class="text-right">{{ totals.total }} ₴</td>
-            </tr>
-        </table>
-    </div>
-    
-    <div class="payment-details">
-        <h3>Реквізити для оплати</h3>
-        <div class="bank-details">
-            <strong>Отримувач:</strong> {{ executor.name }}<br>
-            <strong>IBAN:</strong> {{ executor.iban }}<br>
-            <strong>Банк:</strong> {{ executor.bank }}<br>
-            <strong>Призначення:</strong> Оплата за оренду декору згідно рах. {{ invoice_number }}
+      </table>
+
+      <div class="bottomRow">
+        <!-- Payment terms -->
+        <div class="terms-box">
+          <strong>Умови оплати</strong>
+          <ul>
+            <li>Вартість оренди сплачується <span class="highlight">повністю перед видачею</span> замовлення</li>
+            <li><span class="highlight">Завдаток</span> сплачується повністю до видачі замовлення</li>
+            <li><span class="highlight">Завдаток</span> повертається після перевірки стану замовлення</li>
+          </ul>
         </div>
+
+        <!-- Totals -->
+        <div class="totals">
+          <h3>Підсумок</h3>
+
+          <div class="trow">
+            <div class="label">Оренда ({{ order.rental_days or 1 }} {{ 'день' if (order.rental_days or 1) == 1 else 'днів' }})</div>
+            <div class="val mono">{{ totals.rental_fmt }} &#8372;</div>
+          </div>
+
+          {% if totals.discount_fmt %}
+            <div class="trow">
+              <div class="label">Знижка {{ order.discount_percent or '' }}%</div>
+              <div class="val mono" style="color:#16A34A">-{{ totals.discount_fmt }} &#8372;</div>
+            </div>
+          {% endif %}
+
+          <div class="divider"></div>
+
+          <div class="trow" style="padding:4px 0">
+            <div class="label" style="font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:700">Завдаток</div>
+            <div class="val mono" style="font-size:16px;font-weight:800;color:var(--warn)">{{ totals.deposit_fmt }} &#8372;</div>
+          </div>
+
+          <div class="divider" style="margin:12px 0"></div>
+
+          <div class="grand">
+            <div class="label">РАЗОМ</div>
+            <div class="val mono">{{ totals.grand_total_fmt }} &#8372;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bank details -->
+      <div class="sectionTitle" style="margin-top:24px">Реквізити для оплати</div>
+      <table class="bank-table">
+        <tr>
+          <td>Отримувач:</td>
+          <td>{{ company.legal_name }}</td>
+        </tr>
+        <tr>
+          <td>IBAN:</td>
+          <td class="mono">{{ company.iban }}</td>
+        </tr>
+        <tr>
+          <td>ЄДРПОУ/ІПН:</td>
+          <td class="mono">{{ company.tax_id }}</td>
+        </tr>
+        <tr>
+          <td>МФО:</td>
+          <td class="mono">{{ company.mfo }}</td>
+        </tr>
+        <tr>
+          <td>Банк:</td>
+          <td>{{ company.bank_name }}</td>
+        </tr>
+        <tr>
+          <td>Призначення:</td>
+          <td>Оплата за оренду декору, замовлення {{ order.order_number }}</td>
+        </tr>
+      </table>
     </div>
-    
-    <div class="notes">
-        <strong>Важливо:</strong>
-        <ul style="margin: 5px 0; padding-left: 20px;">
-            <li>Рахунок дійсний протягом <span class="validity">3 банківських днів</span></li>
-            <li>Застава повертається після повернення майна в належному стані</li>
-            <li>Оплата рахунку означає згоду з умовами оренди</li>
-        </ul>
-    </div>
-    
-    <div class="signature-section">
-        <p>
-            Постачальник: <span class="signature-line"></span> / {{ executor.director or executor.short_name }} /
-        </p>
-    </div>
-    
-    <div class="footer">
-        <p>Документ згенеровано системою RentalHub • {{ generated_at }}</p>
-    </div>
+
+    <footer>
+      <div>
+        {{ company.short_name or company.name }} &#8226; Оренда декору для заходів<br/>
+        {{ company.warehouse or company.address }}<br/>
+        Тел: {{ company.phone }} &#8226; {{ company.email }}
+      </div>
+      <div style="text-align:right">
+        Документ згенеровано системою RentalHub<br/>
+        <span class="mono">{{ generated_at }}</span>
+      </div>
+    </footer>
+  </div>
 </body>
 </html>

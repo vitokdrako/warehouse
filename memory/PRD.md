@@ -60,6 +60,16 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Payer types: Фізична особа, ФОП, ТОВ
 - Deleted old calendar (UniversalOpsCalendar)
 
+#### Акт взаєморозрахунків (Settlement Act) — March 15, 2026
+- New endpoint: `GET /api/documents/settlement-act/{order_id}/preview` — generates full financial summary
+- New endpoint: `GET /api/documents/settlement-act/{order_id}/pdf` — print-ready version
+- Manager override: `?final_amount=X&manager_note=Y` query params for manual final balance
+- Template: `/app/backend/templates/documents/settlement_act.html` — styled as quote
+- Sections: Замовник, Деталі оренди, Нарахування, Оплати, Застава, Підсумок, Підписи
+- Frontend: Settlement modal in `LeftRailDocuments.jsx` for returning/returned/completed orders
+- Admin: Template available in admin panel template editor
+- Tested: 11/11 pytest tests PASSED
+
 ## Key Files
 - `/app/frontend/src/pages/AdminPanel.jsx` — Admin panel (5 tabs + template editor)
 - `/app/backend/routes/admin.py` — Admin API (users, doc stats, settings, templates)
@@ -79,6 +89,7 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 ### P0 (Completed)
 - ~~Document Context Variable Mismatch~~ — Fixed
 - ~~Template Editor~~ — Implemented
+- ~~Settlement Act (Акт взаєморозрахунків)~~ — Implemented (March 15, 2026)
 
 ### P1
 - Post-Deployment Health Check

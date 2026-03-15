@@ -1,61 +1,73 @@
 <analysis>**original_problem_statement:**
-The user's initial project was a broad stabilization and refactoring effort. The focus of this session was to continue evolving the Personal Cabinet and perform major UI/UX refactoring across the application.
+The user has requested the implementation of a Settlement Document (Акт взаєморозрахунків) to be generated upon order return.
 
-**Core requirements for this session:**
-1.  **Integrate Order Chat:** Integrate the separate, existing order chat into the Personal Cabinet as a new tab to unify all communication channels.
-2.  **Role-Based Landing Pages:** Implement logic so that different user roles are redirected to specific pages upon login (e.g., Managers to a Manager Cabinet).
-3.  **UI/UX Cleanup & Refactoring:**
-    *   Refactor the client payer selection form to match new business logic.
-    *   Clean up the main manager dashboard, removing redundant buttons and moving key actions to more appropriate locations.
-    *   Redesign the main calendar to match the new corporate design system, add features, and remove the legacy calendar.
-    *   Completely overhaul the Admin Panel to be a modern, functional hub for managing users, documents, and company settings.
-4.  **Dynamic Document Management:** Ensure that company data used in generated documents (quotes, contracts) is managed from the new Admin Panel, not hardcoded.
-5.  **Populate Company Data:** Update the system with the user's actual company details for use in documents.
+**PRODUCT REQUIREMENTS:**
+1.  **Comprehensive Financial Summary:** The document must consolidate all financial transactions related to an order:
+    *   Initial order cost (items, services, discounts).
+    *   Security deposit paid.
+    *   All payments made by the client.
+    *   Additional charges for damages (from a defect act).
+    *   Additional charges for overdue returns.
+2.  **Manager Control:** The system should calculate a suggested final balance, but the Manager must have the ability to manually input/override the final amount to be paid by the client or refunded to them. This final, manager-approved amount is what should be displayed in the settlement document.
+3.  **Document Generation:** The final output should be a generatable PDF document available in the order return interface.
+4.  The agent was also asked to first investigate the existing order return workflow in the manager's cabinet before proposing a solution.
 
 **User's preferred language**: українська
 
 **what currently exists?**
-The application is a comprehensive rental management hub. A significant amount of refactoring and feature enhancement was completed in this session.
--   **Personal Cabinet ():** Now contains tabs for Profile, Tasks (Kanban), Team Chat, and the newly integrated **Order Chats**. It features unread message counters for both chat tabs.
--   **Manager Cabinet ():** A dedicated view for managers, now serving as their default landing page. It includes a button to create new orders.
--   **Role-Based Redirects:** The login page () now redirects users based on their role (, , ) to different starting pages.
--   **Redesigned Calendar ():** The  has been completely rewritten with the new corporate design system, featuring day/week/month views, task priority, and a task creation modal. The old calendar has been deleted.
--   **Refactored Admin Panel ():** The  is now a modern, tabbed interface for managing **Users** (with role-based badges), **Documents** (with usage statistics and template indicators), and **Settings** (for dynamic company data).
--   **Dynamic Document Data:** The backend is partially refactored to pull company information for documents from the database ( table), though a final fix is pending.
--   **UI Cleanup:** The main  has been decluttered, with several buttons (New Order, Tasks, Chat, Refresh) removed or relocated. The client payer form () has been updated as per the user's request.
+The application is a robust rental management platform. The agent has just completed a major refactoring effort, centralizing all hardcoded company information into a database-managed system via the Admin Panel. A powerful live document template editor has also been implemented, allowing admins to edit, preview, and save Jinja2 templates directly from the UI.
+
+The system has a detailed order return workspace () which includes functionalities for adding damage reports and manual financial charges. The backend has corresponding API endpoints to handle these actions and calculate a financial snapshot for any given order. The foundation for the settlement document is largely in place; what's missing is the document itself and the logic to consolidate all financial data into it.
 
 **Last working item**:
--   **Last item agent was working:** The agent was refactoring the document generation logic in  to use company data from the database instead of hardcoded constants. The agent discovered that document templates inconsistently use both  and  as context variables. The attempt to render a document failed because the context was only being populated with the  key, while the template expected .
--   **Status:** IN PROGRESS
+-   **Last item agent was working:** The agent was in the **investigation phase** for the Settlement Document feature. It thoroughly analyzed the existing frontend and backend code related to the order return process, including , , , and the financial API endpoints in . The agent has confirmed that the core components for adding manual charges and calculating financial summaries are already implemented. The next step is to devise and propose an implementation plan.
+-   **Status:** NOT STARTED
 -   **Agent Testing Done:** N
--   **Which testing method agent to use?** backend testing agent. The agent should test by rendering a document (e.g., a quote for an order) and verifying that the company details are correctly populated from the database.
+-   **Which testing method agent to use?** both
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1: Document Context Variable Mismatch (P0)**
--   **Issue 2:  endpoint is unstable (P2)**
--   **Issue 3: Moodboard export is likely broken (P2)**
--   **Issue 4: Recurring Calendar Timezone Bug (P2)**
+-   **Issue 1:  endpoint is unstable (P2)**
+-   **Issue 2: Moodboard export is likely broken (P2)**
+-   **Issue 3: Recurring Calendar Timezone Bug (P2)**
 
 **Issues Detail:**
--   **Issue 1: Document Context Variable Mismatch**
-    -   **Attempted fixes:** The agent correctly identified that  in  was only adding  to the context. A test render returned an empty  context initially, but further debugging showed the data fetching function worked correctly. The root cause was identified: some templates use  while the new context only provides .
-    -   **Next debug checklist:**
-        1.  Open .
-        2.  Locate the  function.
-        3.  Inside this function, after fetching the company settings (), ensure the data is added to the  dictionary under **both** keys.
-            
-        4.  This will provide backward compatibility for all templates without needing to modify them.
-        5.  Restart the backend server to apply changes.
-        6.  Retest by generating a document (like a 'quote') for an existing order and confirm the company data appears correctly.
-    -   **Why fix this issue and what will be achieved with the fix?** This will complete the Dynamic Document Management feature, allowing admins to update company details in one place () and have it reflect across all generated documents, removing hardcoded values.
-    -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
+-   **Issue 1:  endpoint instability**
+    -   **Attempted fixes:** None in this session.
+    -   **Next debug checklist:** Review the endpoint logic in the backend, trace data flow from an issue to an order, and check for edge cases or missing data validation.
+    -   **Why fix this issue and what will be achieved with the fix?** Stabilizing this core business logic will improve manager workflow efficiency.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** backend
+    -   **Blocked on other issue:** None.
+-   **Issue 2: Moodboard export is likely broken**
+    -   **Attempted fixes:** None in this session.
+    -   **Next debug checklist:** Investigate the moodboard generation and export logic, likely within  or a related service. Test the feature to reproduce the error.
+    -   **Why fix this issue and what will be achieved with the fix?** Restore a client-facing feature.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on other issue:** None.
+-   **Issue 3: Recurring Calendar Timezone Bug**
+    -   **Attempted fixes:** None in this session.
+    -   **Next debug checklist:** Review all date/time handling in the calendar components () and corresponding backend endpoints. Ensure all dates are handled consistently, preferably in UTC on the backend and converted to the user's local timezone on the frontend.
+    -   **Why fix this issue and what will be achieved with the fix?** Prevents scheduling errors and improves the reliability of a core operational tool.
+    -   **Status:** NOT STARTED
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** both
     -   **Blocked on other issue:** None.
 
 **In progress Task List**:
--   None.
+-   **Task 1: Generate Settlement Document on Order Return (P0)**
+    -   **Where to resume:** The investigation is complete. The next step is to present a plan to the user for approval. The plan should include:
+        1.  Creating a new document template named .
+        2.  Creating a new backend endpoint (e.g., ) that gathers all financial data: initial cost, payments, deposit, and all manager-added charges from the  table.
+        3.  Adding a Generate Settlement button in .
+        4.  Implementing a mechanism for the manager to input a final settlement amount, which will be passed to the document generation context.
+    -   **What will be achieved with this?** This will provide managers with a critical tool to finalize financial interactions with clients after an order is returned, creating a clear, official record of all charges, payments, and the final balance.
+    -   **Status:** NOT STARTED
+    -   **Should Test frontend/backend/both after fix?** both
+    -   **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
@@ -72,19 +84,16 @@ The application is a comprehensive rental management hub. A significant amount o
     -   Create an HR/Ops Module.
 
 **Completed work in this session**
--   **Integrated Order Chat:** Successfully built and integrated the order-specific chat into the Personal Cabinet as a new tab ().
--   **Added Unread Counter:** Implemented a backend endpoint and frontend logic to show a notification badge for new order notes on the cabinet tab.
--   **Implemented Role-Based Redirects:** Modified  to redirect users to different dashboards (, ) based on their role after login.
--   **Refactored Admin Panel:** Completely rebuilt the  page into a modern, three-tab panel () for managing Users, Documents, and company Settings.
--   **Redesigned Calendar:** Rewrote  with the new design system, added task priorities, and improved UI/UX for day, week, and month views. Deleted the old calendar ().
--   **Populated Company Data:** Filled the  table and  constant with the user's real company information.
--   **Refactored Payer Form:** Updated the  to use the new payer types (ТОВ, ФОП, Фізична особа) and tax systems.
--   **Cleaned up UI:** Removed multiple redundant buttons (New Order, Tasks, Chat) from  and relocated the New Order button to .
+-   **Resolved Document Context Mismatch:** Centralized all company data retrieval into a single utility (), removing all hardcoded values from document generation logic and ensuring both  and  template variables work.
+-   **Implemented Live Document Template Editor:** Built a new feature in the Admin Panel allowing administrators to edit, preview, and save document templates directly to the database. This includes a custom Jinja2 loader () that prioritizes DB templates over file-based ones.
+-   **Refactored Invoice-Offer Document:** Redesigned the  template for visual consistency with the quote, updated its backend endpoint to include additional services, and added required banking details.
+-   **Improved Document Accessibility in UI:** Added context-aware buttons for generating the  in the order workspace () and for accessing all of a customer's documents from the main Clients Tab ().
+-   **Comprehensive Testing:** Successfully used the testing agent to validate all backend and frontend changes, ensuring the stability of the newly implemented features.
 
 **Earlier issues found/mentioned but not fixed**
--   ** endpoint instability:** Mentioned in the initial handoff, not addressed as it was lower priority.
--   **Moodboard export is likely broken:** Mentioned in the initial handoff, not addressed.
--   **Recurring Calendar Timezone Bug:** Mentioned in the initial handoff, not addressed.
+-    endpoint instability.
+-   Moodboard export is likely broken.
+-   Recurring Calendar Timezone Bug.
 
 **Known issue recurrence from previous fork**
 -   None.
@@ -93,47 +102,47 @@ The application is a comprehensive rental management hub. A significant amount o
 
 
 **Key Technical Concepts**
--   **Large-Scale UI Refactoring:** Successfully executed major redesigns of core application components (Admin Panel, Calendar) to align with a new, consistent design system.
--   **Dynamic Configuration:** Migrated hardcoded application settings (company data) to a database table () managed via a new UI, making the application more flexible.
--   **Role-Based Access Control (RBAC):** Implemented a foundational piece of RBAC by controlling user navigation flow based on roles fetched from the backend.
--   **Code Consolidation:** Centralized user workflows by moving functionality (order creation, chats) from a general dashboard into more specific, role-oriented cabinets.
+-   **Live Template Editing:** A new system allowing admins to edit Jinja2 templates from the UI. Changes are saved to a new  table and are prioritized for rendering over filesystem templates via a custom .
+-   **Centralized Configuration Management:** All hardcoded company details were migrated to the  table and are now fetched exclusively through a new  utility, making the app's branding and legal info fully dynamic.
+-   **Contextual UI Integration:** New features (e.g., document buttons) were deeply integrated into existing, complex components like  and , improving user workflow without disrupting the existing UI.
 
 **key DB schema**
--   **system_settings:** (uid=0(root) gid=0(root) groups=0(root), , , , ) - **NEW**, stores dynamic configuration for the app, such as company details.
+-   **document_templates:** (uid=0(root) gid=0(root) groups=0(root), , , , ) - **NEW**, stores user-modified Jinja2 templates.
+-   **system_settings:** ,  - **MODIFIED**, added keys for , , , , and .
 
 **All files of reference**
--   **/app/backend/routes/documents.py**: Contains the document generation logic that needs the final fix.
--   **/app/frontend/src/pages/AdminPanel.jsx**: The new, fully refactored admin panel component.
--   **/app/frontend/src/pages/UnifiedCalendarNew.jsx**: The new, fully redesigned calendar component.
--   **/app/frontend/src/pages/PersonalCabinet.jsx**: The central hub, now containing the integrated order chat.
--   **/app/frontend/src/pages/Login.tsx**: Contains the new role-based redirect logic.
--   **/app/backend/routes/admin_panel.py**: The backend service for the new admin panel.
+-   **/app/frontend/src/pages/manager/ReturnOrderWorkspace.jsx**: The primary UI for handling returns, where the new Settlement Document button will be added.
+-   **/app/frontend/src/components/finances/FinancialSnapshot.jsx**: Component that displays the current financial summary of an order.
+-   **/app/frontend/src/components/finances/AddChargeForm.jsx**: The form managers use to add manual charges upon return.
+-   **/app/backend/routes/finances.py**: The backend service for all financial calculations, charges, and snapshots. This will be key for gathering data.
+-   **/app/backend/routes/documents.py**: The logical place to add the new endpoint for generating the settlement document.
+-   **/app/frontend/src/pages/AdminPanel.jsx**: The home of the new live template editor.
 
 **Critical Info for New Agent**
 -   **Ви повинні спілкуватися українською мовою. (You must communicate in Ukrainian.)**
--   Your immediate task is to fix the bug in  where document generation fails due to an incomplete context. You need to ensure the context dictionary contains both  and  keys pointing to the company data fetched from the database.
--   The application has undergone significant UI and architectural changes. The new Admin Panel () and redesigned Calendar () are the source of truth for their respective functionalities.
+-   Your immediate task is to design and implement the Settlement Document feature.
+-   The previous agent has already completed the necessary investigation. Your next step is to formulate a clear plan and seek user approval before coding.
+-   The plan should leverage the existing document generation system (now with live editing) and financial APIs. A key requirement is to allow the manager to input a final settlement amount, which must be reflected in the generated document. This is not just a data dump; it's a manager-driven financial report.
 
 **documents and test reports created in this job**
--   /app/test_reports/iteration_5.json
--   /app/test_reports/iteration_6.json
--   /app/test_reports/iteration_7.json
--   /app/test_reports/iteration_8.json
+-   /app/test_reports/iteration_9.json
+-   /app/test_reports/iteration_10.json
+-   /app/test_reports/iteration_11.json
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User confirms company data is now missing from documents.** This triggered the current debugging effort.
-2.  **User asks to check all documents** to ensure they are managed from the admin page.
-3.  **User confirms the new company data in the Admin Panel is correct** but it's not appearing in the generated PDF.
-4.  **User provides an invoice with correct company data** and asks for it to be populated in the system.
-5.  **User requests a complete overhaul of the Admin Panel** to manage users, documents, and settings, and to remove unused tabs.
-6.  **User asks for suggestions to improve the Calendar** and wants the design to match the Personal Cabinet.
-7.  **User asks to delete the old calendar** and focus on improving the new one.
-8.  **User asks to move the New Order button** from the dashboard to the manager cabinet and clean up other dashboard buttons.
-9.  **User asks to remove the Tasks button** from the dashboard as it's now in the Personal Cabinet.
-10. **User requests to fix the payer selection form** with specific types and tax systems.
+1.  **User (NEW TASK):** Create a Settlement Document for order returns. It must include all costs, payments, deposits, damages, and overdue fees. The manager must be able to set the final amount to be paid or refunded. First, investigate the current return process.
+2.  **User:** Shared a screenshot of how the  should look.
+3.  **User:** Add the  generation button to the order view, make generated documents accessible from the client's profile page, and verify that the quote includes additional services.
+4.  **User:** We need the ability to edit document templates directly.
+5.  **User:** The template editor should be in the admin panel and have both an HTML editor and a code editor for developers. Templates should be saved in the database.
+6.  **Agent:** Completed the investigation of the return process.
+7.  **Agent:** Finished implementation of the  and improved document accessibility.
+8.  **Agent:** Finished implementation of the live document template editor.
+9.  **Agent:** Finished the refactoring of hardcoded company data.
+10. **Agent:** Started and finished the full investigation of the codebase to prepare for the Settlement Document task.
 
 **Project Health Check:**
--   **Broken:** Document generation is currently broken due to the context issue.
+-   **Broken:** None. The major document generation bug from the previous session has been fixed.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
@@ -141,15 +150,15 @@ The application is a comprehensive rental management hub. A significant amount o
 -   **OpenCart:** Reads product information and orders from an external MySQL database.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES. Used multiple times to validate the Calendar and Admin Panel refactors.
+-   **Testing agent used after significant changes:** YES. Used multiple times to validate the template editor, invoice-offer, and dynamic company data features.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
 -   **Test files created:** None.
--   **Known regressions:** Document generation is a new regression introduced during the refactoring.
+-   **Known regressions:** None from this session.
 
 **Credentials to test flow:**
 -   **Admin:**  / 
 -   **Manager:**  / 
--   **Requisitor:**  /  (Note: Agent found this password to be incorrect, but the redirect logic for the role works).
+-   **Requisitor:**  / 
 
 **What agent forgot to execute**
--   The agent correctly prioritized the user's stream of refactoring requests. The final fix for the document generation was in progress when the session ended. Older, lower-priority bugs remain in the backlog as they were not prioritized by the user.</analysis>
+-   The agent correctly prioritized and executed the user's most recent requests. The Settlement Document is the next logical task in the queue. Older, lower-priority backlog items were not addressed, which is the correct behavior.</analysis>

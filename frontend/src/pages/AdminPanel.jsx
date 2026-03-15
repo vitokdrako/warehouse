@@ -205,6 +205,7 @@ const ALL_DOC_TYPES = [
   { key: 'invoice_additional', name: 'Додатковий рахунок', desc: 'Рахунок на додаткові послуги' },
   { key: 'goods_invoice', name: 'Видаткова накладна', desc: 'Накладна на товар' },
   { key: 'service_act', name: 'Акт наданих послуг', desc: 'Підтвердження послуг' },
+  { key: 'settlement_act', name: 'Акт взаєморозрахунків', desc: 'Фінальний розрахунок при поверненні' },
 ]
 
 function DocumentsTab() {

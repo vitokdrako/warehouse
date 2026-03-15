@@ -2198,3 +2198,231 @@ async def download_service_act_pdf(
     print_script = '<script>window.onload = function() { window.print(); }</script>'
     html_content = html_content.replace('</body>', f'{print_script}</body>')
     return HTMLResponse(content=html_content, media_type="text/html")
+
+
+
+# ============================================================
+# SETTLEMENT ACT (Акт взаєморозрахунків)
+# ============================================================
+
+@router.get("/settlement-act/{order_id}/preview", response_class=HTMLResponse)
+async def preview_settlement_act(
+    order_id: int,
+    final_amount: Optional[float] = Query(None, description="Manager override: final amount (positive = client pays, negative = refund to client)"),
+    manager_note: Optional[str] = Query(None, description="Manager note for override"),
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Generate Settlement Act (Акт взаєморозрахунків) for an order.
+    Consolidates all financial data: rent, payments, deposit, damages, late fees.
+    Manager can override final settlement amount via final_amount parameter.
+    """
+    # === 1. ORDER INFO ===
+    order_row = db.execute(text("""
+        SELECT o.order_id, o.order_number, o.customer_name, o.customer_phone,
+               o.customer_email, o.status, o.total_price, o.deposit_amount,
+               o.rental_start_date, o.rental_end_date,
+               COALESCE(o.discount_amount, 0) as discount_amount,
+               COALESCE(o.discount_percent, 0) as discount_percent
+        FROM orders o WHERE o.order_id = :order_id
+    """), {"order_id": order_id}).fetchone()
+
+    if not order_row:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+
+    status_labels = {
+        "pending": "Очікує", "confirmed": "Підтверджено", "processing": "Комплектація",
+        "ready_for_issue": "Готове", "issued": "Видано", "on_rent": "В оренді",
+        "returning": "Повернення", "returned": "Повернено", "completed": "Завершено",
+        "cancelled": "Скасовано", "partial_return": "Часткове повернення"
+    }
+
+    # === 2. PAYMENTS ===
+    payments_rows = db.execute(text("""
+        SELECT id, payment_type, method, amount, currency,
+               payer_name, occurred_at, note, status, description
+        FROM fin_payments
+        WHERE order_id = :order_id
+        ORDER BY occurred_at ASC
+    """), {"order_id": order_id}).fetchall()
+
+    rent_paid = 0
+    damage_paid = 0
+    late_paid = 0
+    payments_detail = []
+    type_labels = {"rent": "Оренда", "additional": "Донарахування", "damage": "Пошкодження",
+                   "deposit": "Застава", "late": "Прострочення", "advance": "Передплата", "refund": "Повернення"}
+    method_labels = {"cash": "Готівка", "card": "Картка", "bank": "Безготівка",
+                     "iban": "IBAN", "online": "Онлайн", "p2p": "P2P"}
+
+    for p in payments_rows:
+        amt = float(p[3] or 0)
+        ptype = p[1]
+        status = p[8]
+        if status in ('completed', 'confirmed'):
+            if ptype in ('rent', 'additional'):
+                rent_paid += amt
+            elif ptype == 'damage':
+                damage_paid += amt
+            elif ptype == 'late':
+                late_paid += amt
+
+        payments_detail.append({
+            "date": _format_date_ua(p[6]),
+            "type_label": type_labels.get(ptype, ptype),
+            "method_label": method_labels.get(p[2], p[2] or "—"),
+            "amount": _format_currency(amt),
+            "note": p[9] or p[7] or ""
+        })
+
+    total_paid = rent_paid + damage_paid + late_paid
+
+    # === 3. DEPOSIT ===
+    deposit_row = db.execute(text("""
+        SELECT id, held_amount, used_amount, refunded_amount, status,
+               actual_amount, currency, exchange_rate
+        FROM fin_deposit_holds
+        WHERE order_id = :order_id LIMIT 1
+    """), {"order_id": order_id}).fetchone()
+
+    dep_held_uah = 0
+    dep_actual = 0
+    dep_currency = "UAH"
+    dep_used = 0
+    dep_refunded = 0
+    dep_available = 0
+
+    if deposit_row:
+        dep_held_uah = float(deposit_row[1] or 0)
+        dep_actual = float(deposit_row[5]) if deposit_row[5] else dep_held_uah
+        dep_currency = deposit_row[6] or "UAH"
+        dep_used = float(deposit_row[2] or 0)
+        dep_refunded = float(deposit_row[3] or 0)
+        dep_available = dep_held_uah - dep_used - dep_refunded
+
+    currency_symbol = {"UAH": "грн", "USD": "$", "EUR": "€"}.get(dep_currency, dep_currency)
+
+    # === 4. DAMAGE ===
+    damage_total_val = db.execute(text("""
+        SELECT COALESCE(SUM(fee), 0) FROM product_damage_history WHERE order_id = :order_id
+    """), {"order_id": order_id}).scalar() or 0
+
+    damage_items_rows = db.execute(text("""
+        SELECT pdh.id, p.sku, COALESCE(p.name, 'Ручне нарахування'), pdh.damage_type, pdh.fee, pdh.note
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON p.product_id = pdh.product_id
+        WHERE pdh.order_id = :order_id
+        ORDER BY pdh.created_at
+    """), {"order_id": order_id}).fetchall()
+
+    damage_items = [{
+        "sku": r[1] or "—", "name": r[2] or r[3] or "—",
+        "fee": _format_currency(float(r[4] or 0)), "note": r[5] or ""
+    } for r in damage_items_rows]
+
+    # === 5. LATE FEES ===
+    late_total_val = db.execute(text("""
+        SELECT COALESCE(SUM(amount), 0) FROM fin_payments
+        WHERE order_id = :order_id AND payment_type = 'late'
+    """), {"order_id": order_id}).scalar() or 0
+
+    # === 6. ADDITIONAL SERVICES ===
+    additional_services = db.execute(text("""
+        SELECT name, amount FROM order_additional_services
+        WHERE order_id = :order_id ORDER BY id
+    """), {"order_id": order_id}).fetchall()
+    additional_services_list = [
+        {"name": r[0], "amount": _format_currency(float(r[1] or 0))}
+        for r in additional_services
+    ]
+    additional_total = sum(float(r[1] or 0) for r in additional_services)
+
+    # === 7. CALCULATE TOTALS ===
+    rent_total = float(order_row[6] or 0)
+    discount = float(order_row[10] or 0)
+    discount_percent = float(order_row[11] or 0)
+    rent_after_discount = rent_total - discount
+
+    grand_total_charges = rent_after_discount + additional_total + float(damage_total_val) + float(late_total_val)
+
+    # Calculated balance: positive = client owes, negative = refund to client
+    # Balance = total charges - all payments - deposit held in UAH
+    calculated_balance = grand_total_charges - total_paid - dep_held_uah
+
+    # Manager override
+    is_manager_override = final_amount is not None
+    final_balance = final_amount if is_manager_override else calculated_balance
+
+    # === 8. BUILD TEMPLATE CONTEXT ===
+    template_data = {
+        "company": get_company_config(db),
+        "order": {
+            "order_number": order_row[1],
+            "customer_name": order_row[2] or "—",
+            "customer_phone": order_row[3] or "—",
+            "customer_email": order_row[4] or "",
+            "rental_start": _format_date_ua(order_row[8]),
+            "rental_end": _format_date_ua(order_row[9]),
+            "status_label": status_labels.get(order_row[5], order_row[5] or "—"),
+        },
+        "charges": {
+            "rent_total": _format_currency(rent_total),
+            "discount": _format_currency(discount),
+            "discount_raw": discount,
+            "discount_percent": f"{discount_percent:.0f}" if discount_percent else None,
+            "additional_services": additional_services_list,
+            "damage_total": _format_currency(float(damage_total_val)),
+            "damage_total_raw": float(damage_total_val),
+            "late_total": _format_currency(float(late_total_val)),
+            "late_total_raw": float(late_total_val),
+            "grand_total": _format_currency(grand_total_charges),
+        },
+        "damage_items": damage_items,
+        "payments_summary": {
+            "rent_paid": _format_currency(rent_paid),
+            "rent_paid_raw": rent_paid,
+            "damage_paid": _format_currency(damage_paid),
+            "damage_paid_raw": damage_paid,
+            "late_paid": _format_currency(late_paid),
+            "late_paid_raw": late_paid,
+            "total_paid": _format_currency(total_paid),
+        },
+        "payments_detail": payments_detail,
+        "deposit": {
+            "display_held": f"{_format_currency(dep_actual)} {currency_symbol}" if dep_currency != "UAH" else f"{_format_currency(dep_held_uah)} грн",
+            "held_uah": _format_currency(dep_held_uah),
+            "used": dep_used,
+            "used_display": _format_currency(dep_used),
+            "refunded": dep_refunded,
+            "refunded_display": _format_currency(dep_refunded),
+            "available": dep_available,
+            "available_display": f"{_format_currency(dep_available)} грн",
+        },
+        "settlement": {
+            "calculated_balance": calculated_balance,
+            "final_balance": final_balance,
+            "final_balance_display": _format_currency(abs(final_balance)),
+            "refund_display": _format_currency(abs(final_balance)),
+            "is_manager_override": is_manager_override,
+            "manager_note": manager_note or "",
+        },
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+    }
+
+    template = jinja_env.get_template("documents/settlement_act.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/settlement-act/{order_id}/pdf")
+async def download_settlement_act_pdf(
+    order_id: int,
+    final_amount: Optional[float] = Query(None),
+    manager_note: Optional[str] = Query(None),
+    db: Session = Depends(get_rh_db)
+):
+    """Download Settlement Act as printable HTML (with auto-print)"""
+    response = await preview_settlement_act(order_id, final_amount, manager_note, db)
+    html_content = response.body.decode()
+    print_script = '<script>window.onload = function() { window.print(); }</script>'
+    html_content = html_content.replace('</body>', f'{print_script}</body>')
+    return HTMLResponse(content=html_content, media_type="text/html")

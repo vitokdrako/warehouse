@@ -728,6 +728,7 @@ TEMPLATE_FILE_MAP = {
     "defect_act": "defect_act/v1.html",
     "damage_settlement_act": "damage_settlement_act/v1.html",
     "deposit_settlement_act": "deposit_settlement_act/v1.html",
+    "settlement_act": "settlement_act.html",
     "deposit_refund_act": "deposit_refund_act/v1.html",
     "invoice_legal": "invoice_legal/v1.html",
     "invoice_additional": "invoice_additional/v1.html",

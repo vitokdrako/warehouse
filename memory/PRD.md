@@ -104,7 +104,9 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Post-Deployment Health Check
 - Simplify `laundry_items`
 - Delete legacy routes (`damages.py`, `audit.py`)
-- Monthly Cash Desk Closing
+- ~~Monthly Cash Desk Closing~~ — **Done (March 15, 2026)**
+  - Backend: close-month, monthly-reports CRUD endpoints
+  - Frontend: KasaPage "Закрити місяць" button + AdminPanel "Звіти" tab
 
 ### P2
 - Document templates (Акт повернення)

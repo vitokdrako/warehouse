@@ -66,9 +66,11 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Manager override: `?final_amount=X&manager_note=Y` query params for manual final balance
 - Template: `/app/backend/templates/documents/settlement_act.html` — styled as quote
 - Sections: Замовник, Деталі оренди, Нарахування, Оплати, Застава, Підсумок, Підписи
-- Frontend: Settlement modal in `LeftRailDocuments.jsx` for returning/returned/completed orders
+- Frontend integration:
+  - `LeftRailDocuments.jsx`: settlement_act for returning/returned/completed orders with modal
+  - `ReturnSettlementPage.jsx`: "Акт взаєморозрахунків" + "Акт повернення" + "Дефектний акт" buttons in "Документи та дії" section
 - Admin: Template available in admin panel template editor
-- Tested: 11/11 pytest tests PASSED
+- Tested: All backend/frontend tests PASSED
 
 ## Key Files
 - `/app/frontend/src/pages/AdminPanel.jsx` — Admin panel (5 tabs + template editor)

@@ -1167,7 +1167,18 @@ async def preview_invoice_offer(
     order_deposit = float(order[12] or 0) if order[12] else deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
-    grand_total = order_rent - discount_amount + order_deposit
+    
+    # Additional services
+    service_fee = float(order[25] or 0)
+    service_fee_name = order[26] or "Додаткова послуга"
+    
+    additional_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services 
+        WHERE order_id = :oid
+    """), {"oid": order_id}).fetchall()
+    additional_services = [{"name": row[0], "amount": _format_currency(row[1])} for row in additional_services_raw]
+    
+    grand_total = order_rent - discount_amount + service_fee + order_deposit
     
     # Delivery type
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
@@ -1188,14 +1199,19 @@ async def preview_invoice_offer(
             "rental_days": rental_days,
             "delivery_type_label": delivery_type_label,
             "discount_percent": discount_percent,
+            "service_fee": service_fee,
+            "service_fee_name": service_fee_name,
         },
         "items": formatted_items,
         "totals": {
             "rental_fmt": _format_currency(order_rent),
             "deposit_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
+            "service_fee_name": service_fee_name if service_fee > 0 else None,
             "grand_total_fmt": _format_currency(grand_total),
         },
+        "additional_services": additional_services,
         "company": company,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     }
@@ -1244,7 +1260,16 @@ async def download_invoice_offer_pdf(
     order_deposit = float(order[12] or 0) if order[12] else deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
-    grand_total = order_rent - discount_amount + order_deposit
+    
+    service_fee = float(order[25] or 0)
+    service_fee_name = order[26] or "Додаткова послуга"
+    
+    additional_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services WHERE order_id = :oid
+    """), {"oid": order_id}).fetchall()
+    additional_services = [{"name": row[0], "amount": _format_currency(row[1])} for row in additional_services_raw]
+    
+    grand_total = order_rent - discount_amount + service_fee + order_deposit
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
@@ -1268,8 +1293,11 @@ async def download_invoice_offer_pdf(
             "rental_fmt": _format_currency(order_rent),
             "deposit_fmt": _format_currency(order_deposit),
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
+            "service_fee_name": service_fee_name if service_fee > 0 else None,
             "grand_total_fmt": _format_currency(grand_total),
         },
+        "additional_services": additional_services,
         "company": company,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     }

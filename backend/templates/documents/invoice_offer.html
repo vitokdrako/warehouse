@@ -315,6 +315,20 @@
             </div>
           {% endif %}
 
+          {% if additional_services and additional_services|length > 0 %}
+            {% for svc in additional_services %}
+            <div class="trow">
+              <div class="label">{{ svc.name }}</div>
+              <div class="val mono">{{ svc.amount }} &#8372;</div>
+            </div>
+            {% endfor %}
+          {% elif totals.service_fee_fmt %}
+            <div class="trow">
+              <div class="label">{{ totals.service_fee_name or "Додаткова послуга" }}</div>
+              <div class="val mono">{{ totals.service_fee_fmt }} &#8372;</div>
+            </div>
+          {% endif %}
+
           <div class="divider"></div>
 
           <div class="trow" style="padding:4px 0">

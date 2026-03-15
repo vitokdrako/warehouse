@@ -4,6 +4,7 @@
  * Частина Finance Hub
  */
 import React, { useState, useEffect, useCallback } from "react";
+import { FileText, Receipt } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
@@ -1056,32 +1057,56 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                         completed: "bg-green-100 text-green-700", cancelled: "bg-rose-100 text-rose-700"
                       };
                       return (
-                        <a
+                        <div
                           key={order.order_id}
-                          href={`/order/${order.order_id}/estimate`}
                           data-testid={`client-order-${order.order_id}`}
-                          className="block px-4 py-3 rounded-xl border border-slate-200 hover:border-slate-400 hover:shadow-sm transition cursor-pointer"
+                          className="px-4 py-3 rounded-xl border border-slate-200 hover:border-slate-400 hover:shadow-sm transition"
                         >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="font-mono font-semibold text-sm text-slate-900">#{order.order_number}</span>
-                              <span className="text-xs text-slate-500 ml-2">
-                                {order.rental_start_date ? new Date(order.rental_start_date).toLocaleDateString("uk-UA") : "—"}
-                              </span>
+                          <a href={`/order/${order.order_id}/estimate`} className="block cursor-pointer">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="font-mono font-semibold text-sm text-slate-900">#{order.order_number}</span>
+                                <span className="text-xs text-slate-500 ml-2">
+                                  {order.rental_start_date ? new Date(order.rental_start_date).toLocaleDateString("uk-UA") : "—"}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-slate-800">{total.toLocaleString()} грн</span>
+                                <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", statusColor[order.status] || "bg-slate-100 text-slate-600")}>
+                                  {statusMap[order.status] || order.status}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-slate-800">{total.toLocaleString()} грн</span>
-                              <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", statusColor[order.status] || "bg-slate-100 text-slate-600")}>
-                                {statusMap[order.status] || order.status}
-                              </span>
-                            </div>
+                            {order.service_fee > 0 && (
+                              <div className="text-xs text-amber-600 mt-1">
+                                + {order.service_fee_name || "Дод. послуга"}: {Number(order.service_fee).toLocaleString()} грн
+                              </div>
+                            )}
+                          </a>
+                          {/* Document quick links */}
+                          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                            <a
+                              href={`${BACKEND_URL}/api/documents/estimate/${order.order_id}/preview`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-lg bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                              data-testid={`order-${order.order_id}-estimate-link`}
+                            >
+                              <FileText className="w-3 h-3" />
+                              Кошторис
+                            </a>
+                            <a
+                              href={`${BACKEND_URL}/api/documents/invoice-offer/${order.order_id}/preview`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-lg bg-blue-50 border border-blue-200 text-blue-600 hover:bg-blue-100 hover:text-blue-800 transition-colors"
+                              data-testid={`order-${order.order_id}-invoice-link`}
+                            >
+                              <Receipt className="w-3 h-3" />
+                              Рахунок-оферта
+                            </a>
                           </div>
-                          {order.service_fee > 0 && (
-                            <div className="text-xs text-amber-600 mt-1">
-                              + {order.service_fee_name || "Дод. послуга"}: {Number(order.service_fee).toLocaleString()} грн
-                            </div>
-                          )}
-                        </a>
+                        </div>
                       );
                     })}
                   </div>

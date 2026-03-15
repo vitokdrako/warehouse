@@ -20,12 +20,15 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 const DOCS_BY_STATUS = {
   'pending': [
     { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
+    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
   ],
   'awaiting_customer': [
     { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
+    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
   ],
   'draft': [
     { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
+    { type: 'invoice_offer', name: 'Рахунок-оферта', icon: '📄', emailRequired: true },
   ],
   'confirmed': [
     { type: 'estimate', name: 'Кошторис', icon: '📋', emailRequired: true },
@@ -172,6 +175,12 @@ export default function LeftRailDocuments({
       return
     }
     
+    // Для Рахунку-оферти - завжди відкриваємо прямий preview
+    if (docType === 'invoice_offer') {
+      window.open(`${BACKEND_URL}/api/documents/invoice-offer/${orderId}/preview`, '_blank')
+      return
+    }
+    
     // Для Акту передачі - завжди відкриваємо прямий preview
     if (docType === 'issue_act') {
       window.open(`${BACKEND_URL}/api/documents/issue-act/${orderId}/preview?executor_type=fop`, '_blank')
@@ -216,8 +225,22 @@ export default function LeftRailDocuments({
           window.open(`${BACKEND_URL}/api/documents/estimate/${orderId}/preview`, '_blank')
         }
         setGenerating(null)
-        // Повертаємо fake data для Кошторису
         return { id: null, doc_type: 'estimate', entity_id: orderId }
+      } catch (err) {
+        setError(err.message)
+        setGenerating(null)
+        return null
+      }
+    }
+    
+    // Для Рахунку-оферти - використовуємо прямий endpoint
+    if (docType === 'invoice_offer') {
+      try {
+        if (openPreview) {
+          window.open(`${BACKEND_URL}/api/documents/invoice-offer/${orderId}/preview`, '_blank')
+        }
+        setGenerating(null)
+        return { id: null, doc_type: 'invoice_offer', entity_id: orderId }
       } catch (err) {
         setError(err.message)
         setGenerating(null)
@@ -558,8 +581,7 @@ export default function LeftRailDocuments({
             const versionInfo = docVersions[doc.type]
             const hasVersion = versionInfo?.exists
             
-            // Пропускаємо invoice_offer зі списку — він тепер у секції рахунків
-            if (doc.type === 'invoice_offer' && showInvoiceSection) return null
+            // invoice_offer тепер показується як прямий документ (без секції рахунків)
             
             return (
               <div 
@@ -580,7 +602,7 @@ export default function LeftRailDocuments({
                 </div>
                 
                 {/* Версія - для документів на льоту завжди показуємо "Актуальний" */}
-                {['estimate', 'issue_act', 'picking_list'].includes(doc.type) && (
+                {['estimate', 'invoice_offer', 'issue_act', 'picking_list'].includes(doc.type) && (
                   <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
                     <span>✓ Актуальний</span>
                     <span className="text-slate-400">•</span>
@@ -588,7 +610,7 @@ export default function LeftRailDocuments({
                   </div>
                 )}
                 
-                {!['estimate', 'issue_act', 'picking_list'].includes(doc.type) && hasVersion && (
+                {!['estimate', 'invoice_offer', 'issue_act', 'picking_list'].includes(doc.type) && hasVersion && (
                   <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
                     <span>✓ v{versionInfo.version}</span>
                     <span className="text-slate-400">•</span>
@@ -596,7 +618,7 @@ export default function LeftRailDocuments({
                   </div>
                 )}
                 
-                {!['estimate', 'issue_act', 'picking_list'].includes(doc.type) && !hasVersion && (
+                {!['estimate', 'invoice_offer', 'issue_act', 'picking_list'].includes(doc.type) && !hasVersion && (
                   <div className="text-xs text-slate-400 mb-2">
                     Документ ще не згенеровано
                   </div>
@@ -606,14 +628,14 @@ export default function LeftRailDocuments({
                   {/* Перегляд - для документів на льоту завжди активний */}
                   <button
                     onClick={() => viewLastDocument(doc.type)}
-                    disabled={!['estimate', 'issue_act', 'picking_list'].includes(doc.type) && !hasVersion}
+                    disabled={!['estimate', 'invoice_offer', 'issue_act', 'picking_list'].includes(doc.type) && !hasVersion}
                     className={`
                       flex items-center gap-1 px-2 py-1 text-xs rounded
-                      ${['estimate', 'issue_act', 'picking_list'].includes(doc.type) || hasVersion 
+                      ${['estimate', 'invoice_offer', 'issue_act', 'picking_list'].includes(doc.type) || hasVersion 
                         ? 'bg-white border hover:bg-slate-100' 
                         : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
                     `}
-                    title={['estimate', 'issue_act', 'picking_list'].includes(doc.type) ? 'Переглянути документ' : (hasVersion ? 'Переглянути останню версію' : 'Спочатку згенеруйте документ')}
+                    title={['estimate', 'invoice_offer', 'issue_act', 'picking_list'].includes(doc.type) ? 'Переглянути документ' : (hasVersion ? 'Переглянути останню версію' : 'Спочатку згенеруйте документ')}
                   >
                     <Eye className="w-3 h-3" />
                     Перегляд

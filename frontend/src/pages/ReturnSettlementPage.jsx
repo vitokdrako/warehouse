@@ -10,7 +10,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Package, AlertTriangle, CheckCircle, Clock, Layers,
   DollarSign, Shield, RotateCcw, Banknote, X, ImageOff, 
-  ArrowLeftRight, CalendarDays, Timer, FileText, Lock
+  ArrowLeftRight, CalendarDays, Timer, FileText, Lock,
+  Calculator, Printer, Eye, ScrollText
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -50,6 +51,11 @@ export default function ReturnSettlementPage() {
   const [payType, setPayType] = useState('rent');
   const [payMethod, setPayMethod] = useState('cash');
   const [payAmount, setPayAmount] = useState('');
+
+  // Settlement Act modal
+  const [showSettlement, setShowSettlement] = useState(false);
+  const [settlementAmount, setSettlementAmount] = useState('');
+  const [settlementNote, setSettlementNote] = useState('');
 
   // Load all data
   useEffect(() => {
@@ -716,6 +722,47 @@ export default function ReturnSettlementPage() {
                 Документи та дії
               </div>
 
+              {/* Settlement Act */}
+              <button
+                onClick={() => setShowSettlement(true)}
+                className="w-full py-3 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-xl transition-colors flex items-center justify-center gap-2"
+                data-testid="generate-settlement-act"
+              >
+                <Calculator className="w-4 h-4" />
+                Акт взаєморозрахунків
+              </button>
+
+              {/* Return Act */}
+              <button
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    const res = await authFetch(`${BACKEND_URL}/api/documents/generate`, {
+                      method: 'POST',
+                      body: JSON.stringify({ doc_type: 'return_act', entity_type: 'order', entity_id: String(orderId) }),
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      if (data.preview_url) {
+                        window.open(`${BACKEND_URL}${data.preview_url}`, '_blank');
+                      } else if (data.document_id) {
+                        window.open(`${BACKEND_URL}/api/documents/${data.document_id}/preview`, '_blank');
+                      }
+                    } else {
+                      const err = await res.json().catch(() => ({}));
+                      alert(`Помилка: ${err.detail || 'Не вдалося згенерувати'}`);
+                    }
+                  } catch (e) { alert(`Помилка: ${e.message}`); }
+                  finally { setSaving(false); }
+                }}
+                disabled={saving}
+                className="w-full py-3 text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                data-testid="generate-return-act"
+              >
+                <ScrollText className="w-4 h-4" />
+                Акт повернення
+              </button>
+
               {/* Generate Defect Act */}
               {damage && damage.total > 0 && (
                 <button
@@ -794,6 +841,88 @@ export default function ReturnSettlementPage() {
           </div>
         </div>
       </div>
+
+      {/* Settlement Act Modal */}
+      {showSettlement && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSettlement(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()} data-testid="settlement-modal">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calculator className="w-5 h-5 text-slate-600" />
+                <h3 className="font-semibold text-slate-800">Акт взаєморозрахунків</h3>
+              </div>
+              <button onClick={() => setShowSettlement(false)} className="text-slate-400 hover:text-slate-600" data-testid="settlement-modal-close">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-slate-600">
+                Система автоматично розрахує підсумок на основі всіх оплат, нарахувань та застави.
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 block mb-1">Фінальна сума (необов'язково)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={settlementAmount}
+                      onChange={(e) => setSettlementAmount(e.target.value)}
+                      placeholder="Авто (залишити порожнім)"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                      data-testid="settlement-amount-input"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">грн</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">Додатне — клієнт доплачує, від'ємне — повернення</p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 block mb-1">Примітка менеджера</label>
+                  <textarea
+                    value={settlementNote}
+                    onChange={(e) => setSettlementNote(e.target.value)}
+                    placeholder="Коментар до розрахунку..."
+                    rows={2}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none"
+                    data-testid="settlement-note-input"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (settlementAmount) params.set('final_amount', settlementAmount);
+                    if (settlementNote.trim()) params.set('manager_note', settlementNote.trim());
+                    const qs = params.toString();
+                    window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/preview${qs ? '?' + qs : ''}`, '_blank');
+                    setShowSettlement(false);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium"
+                  data-testid="settlement-preview-btn"
+                >
+                  <Eye className="w-4 h-4" />
+                  Переглянути
+                </button>
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (settlementAmount) params.set('final_amount', settlementAmount);
+                    if (settlementNote.trim()) params.set('manager_note', settlementNote.trim());
+                    const qs = params.toString();
+                    window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/pdf${qs ? '?' + qs : ''}`, '_blank');
+                    setShowSettlement(false);
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-white border border-slate-300 rounded-lg hover:bg-slate-50 font-medium"
+                  data-testid="settlement-print-btn"
+                >
+                  <Printer className="w-4 h-4" />
+                  Друк
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1681,11 +1681,13 @@ async def add_order_charge(order_id: int, data: dict, db: Session = Depends(get_
     
     try:
         if charge_type == "damage":
-            # Для шкоди - додаємо в product_damage_history (без прив'язки до товару)
+            # Для шкоди - додаємо в product_damage_history (UUID id, без прив'язки до товару)
+            import uuid
+            new_id = str(uuid.uuid4())
             db.execute(text("""
-                INSERT INTO product_damage_history (order_id, product_id, damage_type, qty, fee, note, created_at)
-                VALUES (:order_id, 0, 'manual_charge', 1, :fee, :note, NOW())
-            """), {"order_id": order_id, "fee": amount, "note": note or "Ручне донарахування шкоди"})
+                INSERT INTO product_damage_history (id, order_id, product_id, stage, damage_type, qty, fee, note, created_at, source)
+                VALUES (:id, :order_id, 0, 'return', 'manual_charge', 1, :fee, :note, NOW(), 'manager_charge')
+            """), {"id": new_id, "order_id": order_id, "fee": amount, "note": note or "Ручне донарахування шкоди"})
         else:
             # Для прострочення - додаємо в fin_payments з типом 'late'
             db.execute(text("""

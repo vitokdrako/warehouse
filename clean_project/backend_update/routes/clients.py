@@ -354,24 +354,37 @@ async def get_client(client_id: int, db: Session = Depends(get_rh_db)):
         SELECT 
             o.order_id, o.order_number, o.status, o.total_price,
             o.rental_start_date, o.created_at, o.source,
-            pp.display_name as payer_name
+            pp.display_name as payer_name,
+            COALESCE(o.service_fee, 0) as service_fee,
+            COALESCE(o.discount_amount, 0) as discount_amount,
+            o.service_fee_name
         FROM orders o
         LEFT JOIN payer_profiles pp ON pp.id = o.payer_profile_id
         WHERE o.client_user_id = :client_id
         ORDER BY o.created_at DESC
-        LIMIT 10
+        LIMIT 20
     """), {"client_id": client_id})
     
-    client["recent_orders"] = [{
-        "order_id": o[0],
-        "order_number": o[1],
-        "status": o[2],
-        "total_price": float(o[3]) if o[3] else 0,
-        "rental_start_date": o[4].isoformat() if o[4] else None,
-        "created_at": o[5].isoformat() if o[5] else None,
-        "source": o[6],
-        "payer_name": o[7]
-    } for o in orders_result]
+    client["recent_orders"] = []
+    for o in orders_result:
+        tp = float(o[3]) if o[3] else 0
+        sf = float(o[8]) if o[8] else 0
+        da = float(o[9]) if o[9] else 0
+        total_to_pay = round(max(0, tp - da) + sf, 2)
+        client["recent_orders"].append({
+            "order_id": o[0],
+            "order_number": o[1],
+            "status": o[2],
+            "total_price": tp,
+            "rental_start_date": o[4].isoformat() if o[4] else None,
+            "created_at": o[5].isoformat() if o[5] else None,
+            "source": o[6],
+            "payer_name": o[7],
+            "service_fee": sf,
+            "service_fee_name": o[10] or "",
+            "discount_amount": da,
+            "total_to_pay": total_to_pay,
+        })
     
     # Статистика
     stats = db.execute(text("""
@@ -614,6 +627,104 @@ async def unlink_payer_from_client(client_id: int, payer_id: int, db: Session = 
         raise HTTPException(status_code=404, detail="Зв'язок не знайдено")
     
     return {"success": True, "message": "Платника відв'язано"}
+
+
+@router.post("/sync-from-orders")
+async def sync_clients_from_orders(db: Session = Depends(get_rh_db)):
+    """
+    Знайти всі ордери без client_user_id
+    і створити/прив'язати клієнтів автоматично.
+    """
+    # 1. Завантажити всіх існуючих клієнтів у словник
+    all_clients = db.execute(text("""
+        SELECT id, email_normalized, phone, full_name FROM client_users WHERE is_active = 1
+    """)).fetchall()
+    
+    email_map = {}  # email_normalized -> client_id
+    phone_map = {}  # last 9 digits -> client_id
+    
+    for c in all_clients:
+        cid, email_n, phone, name = c[0], (c[1] or '').strip(), (c[2] or '').strip(), c[3]
+        if email_n and '@' in email_n:
+            email_map[email_n] = cid
+        if phone:
+            digits = ''.join(ch for ch in phone if ch.isdigit())
+            if len(digits) >= 9:
+                phone_map[digits[-9:]] = cid
+    
+    # 2. Знайти всі непов'язані ордери
+    result = db.execute(text("""
+        SELECT order_id, customer_name, customer_phone, customer_email
+        FROM orders
+        WHERE (client_user_id IS NULL OR client_user_id = 0)
+          AND customer_name IS NOT NULL AND customer_name != ''
+        ORDER BY created_at ASC
+    """))
+    unlinked = result.fetchall()
+    
+    created = 0
+    linked = 0
+    errors = 0
+    
+    for row in unlinked:
+        order_id, name, phone, email = row[0], (row[1] or '').strip(), (row[2] or '').strip(), (row[3] or '').strip()
+        email_normalized = email.lower().strip() if email else ''
+        
+        try:
+            found_client_id = None
+            
+            # Пошук по email
+            if email_normalized and '@' in email_normalized:
+                found_client_id = email_map.get(email_normalized)
+            
+            # Пошук по телефону
+            if not found_client_id and phone:
+                digits = ''.join(ch for ch in phone if ch.isdigit())
+                if len(digits) >= 9:
+                    found_client_id = phone_map.get(digits[-9:])
+            
+            if not found_client_id and name:
+                # Створити нового клієнта
+                db.execute(text("""
+                    INSERT INTO client_users 
+                        (email, email_normalized, full_name, phone, source, is_active, created_at, updated_at)
+                    VALUES (:email, :email_norm, :name, :phone, 'opencart', 1, NOW(), NOW())
+                """), {
+                    "email": email or None,
+                    "email_norm": email_normalized,
+                    "name": name,
+                    "phone": phone or None
+                })
+                found_client_id = db.execute(text("SELECT LAST_INSERT_ID()")).scalar()
+                created += 1
+                # Додати в кеш для наступних ордерів
+                if email_normalized and '@' in email_normalized:
+                    email_map[email_normalized] = found_client_id
+                if phone:
+                    digits = ''.join(ch for ch in phone if ch.isdigit())
+                    if len(digits) >= 9:
+                        phone_map[digits[-9:]] = found_client_id
+            
+            if found_client_id:
+                db.execute(text("""
+                    UPDATE orders SET client_user_id = :cid WHERE order_id = :oid
+                """), {"cid": found_client_id, "oid": order_id})
+                linked += 1
+                
+        except Exception as e:
+            errors += 1
+            logger.error(f"Error syncing client for order {order_id}: {e}")
+            continue
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "total_unlinked": len(unlinked),
+        "clients_created": created,
+        "orders_linked": linked,
+        "errors": errors
+    }
 
 
 @router.get("/resolve/by-email")

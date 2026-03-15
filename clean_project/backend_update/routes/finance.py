@@ -1681,11 +1681,13 @@ async def add_order_charge(order_id: int, data: dict, db: Session = Depends(get_
     
     try:
         if charge_type == "damage":
-            # Для шкоди - додаємо в product_damage_history (без прив'язки до товару)
+            # Для шкоди - додаємо в product_damage_history (UUID id, без прив'язки до товару)
+            import uuid
+            new_id = str(uuid.uuid4())
             db.execute(text("""
-                INSERT INTO product_damage_history (order_id, product_id, damage_type, qty, fee, note, created_at)
-                VALUES (:order_id, 0, 'manual_charge', 1, :fee, :note, NOW())
-            """), {"order_id": order_id, "fee": amount, "note": note or "Ручне донарахування шкоди"})
+                INSERT INTO product_damage_history (id, order_id, product_id, stage, damage_type, qty, fee, note, created_at, source)
+                VALUES (:id, :order_id, 0, 'return', 'manual_charge', 1, :fee, :note, NOW(), 'manager_charge')
+            """), {"id": new_id, "order_id": order_id, "fee": amount, "note": note or "Ручне донарахування шкоди"})
         else:
             # Для прострочення - додаємо в fin_payments з типом 'late'
             db.execute(text("""
@@ -2999,3 +3001,312 @@ async def get_kasa_data(
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================================
+# MONTHLY CLOSE (Закриття місяця)
+# ============================================================
+
+def _ensure_monthly_reports_table(db: Session):
+    """Create monthly_reports table if not exists"""
+    db.execute(text("""
+        CREATE TABLE IF NOT EXISTS monthly_reports (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            year INT NOT NULL,
+            month INT NOT NULL,
+            report_data JSON NOT NULL,
+            closed_by VARCHAR(255),
+            closed_by_id INT,
+            closed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            note TEXT,
+            UNIQUE KEY uk_year_month (year, month)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """))
+    db.commit()
+
+
+@router.post("/close-month")
+async def close_month(
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Закрити місяць: зібрати всі фінансові дані за вказаний місяць,
+    зберегти як звіт в БД. Після закриття дані фіксуються.
+    data: { year: int, month: int, note?: str, closed_by?: str, closed_by_id?: int }
+    """
+    _ensure_monthly_reports_table(db)
+    
+    year = data.get("year")
+    month = data.get("month")
+    note = data.get("note", "")
+    closed_by = data.get("closed_by", "")
+    closed_by_id = data.get("closed_by_id")
+    
+    if not year or not month:
+        raise HTTPException(status_code=400, detail="Вкажіть рік та місяць")
+    
+    # Check if already closed
+    existing = db.execute(text("""
+        SELECT id FROM monthly_reports WHERE year = :year AND month = :month
+    """), {"year": year, "month": month}).fetchone()
+    
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Місяць {month:02d}/{year} вже закрито")
+    
+    # === COLLECT ALL DATA FOR THE MONTH ===
+    month_start = f"{year}-{month:02d}-01"
+    if month == 12:
+        month_end = f"{year+1}-01-01"
+    else:
+        month_end = f"{year}-{month+1:02d}-01"
+    
+    params = {"month_start": month_start, "month_end": month_end}
+    
+    # 1. INCOME
+    income_rows = db.execute(text("""
+        SELECT payment_type, method, SUM(amount) as total, COUNT(*) as cnt
+        FROM fin_payments
+        WHERE payment_type IN ('rent', 'additional', 'damage', 'late')
+        AND status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+        GROUP BY payment_type, method
+    """), params).fetchall()
+    
+    income_by_type = {}
+    income_by_method = {"cash": 0, "bank": 0}
+    income_total = 0
+    income_count = 0
+    for r in income_rows:
+        ptype = r[0]
+        method = r[1] or 'cash'
+        amt = float(r[2] or 0)
+        cnt = int(r[3] or 0)
+        
+        if ptype not in income_by_type:
+            income_by_type[ptype] = {"cash": 0, "bank": 0, "total": 0, "count": 0}
+        income_by_type[ptype][method if method in ("cash", "bank") else "bank"] += amt
+        income_by_type[ptype]["total"] += amt
+        income_by_type[ptype]["count"] += cnt
+        
+        income_by_method[method if method in ("cash", "bank") else "bank"] += amt
+        income_total += amt
+        income_count += cnt
+    
+    # 2. DEPOSITS
+    deposits_data = db.execute(text("""
+        SELECT 
+            COUNT(*) as cnt,
+            COALESCE(SUM(held_amount), 0) as total_held,
+            COALESCE(SUM(used_amount), 0) as total_used,
+            COALESCE(SUM(refunded_amount), 0) as total_refunded
+        FROM fin_deposit_holds
+        WHERE opened_at >= :month_start AND opened_at < :month_end
+    """), params).fetchone()
+    
+    deposits_closed = db.execute(text("""
+        SELECT COUNT(*), COALESCE(SUM(refunded_amount), 0)
+        FROM fin_deposit_holds
+        WHERE closed_at >= :month_start AND closed_at < :month_end
+    """), params).fetchone()
+    
+    deposit_payments = db.execute(text("""
+        SELECT method, SUM(amount) as total
+        FROM fin_payments
+        WHERE payment_type = 'deposit'
+        AND status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+        GROUP BY method
+    """), params).fetchall()
+    dep_by_method = {}
+    for r in deposit_payments:
+        dep_by_method[r[0] or 'cash'] = float(r[1] or 0)
+    
+    # 3. EXPENSES
+    expenses_rows = db.execute(text("""
+        SELECT e.expense_type, c.name, e.method, SUM(e.amount) as total, COUNT(*) as cnt
+        FROM fin_expenses e
+        LEFT JOIN fin_categories c ON c.id = e.category_id
+        WHERE e.status = 'posted'
+        AND e.occurred_at >= :month_start AND e.occurred_at < :month_end
+        GROUP BY e.expense_type, c.name, e.method
+    """), params).fetchall()
+    
+    expenses_by_category = {}
+    expenses_by_method = {"cash": 0, "bank": 0}
+    expenses_total = 0
+    expenses_count = 0
+    collection_total = 0
+    for r in expenses_rows:
+        etype = r[0]
+        cat_name = r[1] or "Без категорії"
+        method = r[2] or 'cash'
+        amt = float(r[3] or 0)
+        cnt = int(r[4] or 0)
+        
+        if etype == 'collection':
+            collection_total += amt
+            continue
+        
+        key = cat_name
+        if key not in expenses_by_category:
+            expenses_by_category[key] = {"cash": 0, "bank": 0, "total": 0, "count": 0}
+        expenses_by_category[key][method if method in ("cash", "bank") else "bank"] += amt
+        expenses_by_category[key]["total"] += amt
+        expenses_by_category[key]["count"] += cnt
+        
+        expenses_by_method[method if method in ("cash", "bank") else "bank"] += amt
+        expenses_total += amt
+        expenses_count += cnt
+    
+    # 4. REFUNDS
+    refunds_data = db.execute(text("""
+        SELECT method, SUM(amount) as total, COUNT(*) as cnt
+        FROM fin_payments
+        WHERE payment_type = 'refund'
+        AND status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+        GROUP BY method
+    """), params).fetchall()
+    
+    refunds_by_method = {"cash": 0, "bank": 0}
+    refunds_total = 0
+    refunds_count = 0
+    for r in refunds_data:
+        method = r[0] or 'cash'
+        amt = float(r[1] or 0)
+        cnt = int(r[2] or 0)
+        refunds_by_method[method if method in ("cash", "bank") else "bank"] += amt
+        refunds_total += amt
+        refunds_count += cnt
+    
+    # 5. ORDERS COUNT
+    orders_count = db.execute(text("""
+        SELECT COUNT(DISTINCT order_id) FROM fin_payments
+        WHERE status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+    """), params).scalar() or 0
+    
+    # === BUILD REPORT ===
+    import json
+    report = {
+        "period": {"year": year, "month": month, "label": f"{month:02d}/{year}"},
+        "income": {
+            "total": income_total,
+            "cash": income_by_method["cash"],
+            "bank": income_by_method["bank"],
+            "count": income_count,
+            "by_type": {
+                "rent": income_by_type.get("rent", {"total": 0, "cash": 0, "bank": 0, "count": 0}),
+                "damage": income_by_type.get("damage", {"total": 0, "cash": 0, "bank": 0, "count": 0}),
+                "late": income_by_type.get("late", {"total": 0, "cash": 0, "bank": 0, "count": 0}),
+                "additional": income_by_type.get("additional", {"total": 0, "cash": 0, "bank": 0, "count": 0}),
+            }
+        },
+        "deposits": {
+            "opened_count": int(deposits_data[0] or 0),
+            "total_held": float(deposits_data[1] or 0),
+            "total_used": float(deposits_data[2] or 0),
+            "total_refunded": float(deposits_data[3] or 0),
+            "closed_count": int(deposits_closed[0] or 0),
+            "closed_refunded": float(deposits_closed[1] or 0),
+            "received_cash": dep_by_method.get("cash", 0),
+            "received_bank": dep_by_method.get("bank", 0),
+        },
+        "expenses": {
+            "total": expenses_total,
+            "cash": expenses_by_method["cash"],
+            "bank": expenses_by_method["bank"],
+            "count": expenses_count,
+            "by_category": expenses_by_category,
+        },
+        "refunds": {
+            "total": refunds_total,
+            "cash": refunds_by_method["cash"],
+            "bank": refunds_by_method["bank"],
+            "count": refunds_count,
+        },
+        "collection": {"total": collection_total},
+        "orders_count": orders_count,
+        "summary": {
+            "net_cash": income_by_method["cash"] - expenses_by_method["cash"] - refunds_by_method["cash"],
+            "net_bank": income_by_method["bank"] - expenses_by_method["bank"] - refunds_by_method["bank"],
+            "net_total": income_total - expenses_total - refunds_total,
+        }
+    }
+    
+    # Save to DB
+    db.execute(text("""
+        INSERT INTO monthly_reports (year, month, report_data, closed_by, closed_by_id, note)
+        VALUES (:year, :month, :report_data, :closed_by, :closed_by_id, :note)
+    """), {
+        "year": year, "month": month,
+        "report_data": json.dumps(report, ensure_ascii=False),
+        "closed_by": closed_by,
+        "closed_by_id": closed_by_id,
+        "note": note,
+    })
+    db.commit()
+    
+    return {"success": True, "report": report}
+
+
+@router.get("/monthly-reports")
+async def get_monthly_reports(db: Session = Depends(get_rh_db)):
+    """Отримати список всіх закритих місяців"""
+    _ensure_monthly_reports_table(db)
+    
+    rows = db.execute(text("""
+        SELECT id, year, month, report_data, closed_by, closed_by_id, closed_at, note
+        FROM monthly_reports
+        ORDER BY year DESC, month DESC
+    """)).fetchall()
+    
+    import json
+    return [{
+        "id": r[0],
+        "year": r[1],
+        "month": r[2],
+        "report": json.loads(r[3]) if isinstance(r[3], str) else r[3],
+        "closed_by": r[4],
+        "closed_by_id": r[5],
+        "closed_at": r[6].isoformat() if r[6] else None,
+        "note": r[7],
+    } for r in rows]
+
+
+@router.get("/monthly-reports/{report_id}")
+async def get_monthly_report_detail(report_id: int, db: Session = Depends(get_rh_db)):
+    """Отримати деталі конкретного місячного звіту"""
+    _ensure_monthly_reports_table(db)
+    
+    row = db.execute(text("""
+        SELECT id, year, month, report_data, closed_by, closed_by_id, closed_at, note
+        FROM monthly_reports WHERE id = :id
+    """), {"id": report_id}).fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Звіт не знайдено")
+    
+    import json
+    return {
+        "id": row[0],
+        "year": row[1],
+        "month": row[2],
+        "report": json.loads(row[3]) if isinstance(row[3], str) else row[3],
+        "closed_by": row[4],
+        "closed_by_id": row[5],
+        "closed_at": row[6].isoformat() if row[6] else None,
+        "note": row[7],
+    }
+
+
+@router.delete("/monthly-reports/{report_id}")
+async def delete_monthly_report(report_id: int, db: Session = Depends(get_rh_db)):
+    """Видалити (відкрити) закритий місяць - тільки для адміна"""
+    _ensure_monthly_reports_table(db)
+    
+    db.execute(text("DELETE FROM monthly_reports WHERE id = :id"), {"id": report_id})
+    db.commit()
+    return {"success": True}

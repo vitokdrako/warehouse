@@ -17,9 +17,11 @@ except (ImportError, OSError):
 # Шлях до шаблонів
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'templates', 'documents')
 
-# Jinja2 environment
+# Jinja2 environment with DB override
+from services.template_loader import DBOverrideLoader
+_file_loader = FileSystemLoader(TEMPLATES_DIR)
 jinja_env = Environment(
-    loader=FileSystemLoader(TEMPLATES_DIR),
+    loader=DBOverrideLoader(_file_loader),
     autoescape=select_autoescape(['html', 'xml'])
 )
 

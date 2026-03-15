@@ -701,3 +701,298 @@ async def update_settings(
     except Exception as e:
         rh_db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# DOCUMENT TEMPLATES
+# ============================================================
+
+TEMPLATE_FILE_MAP = {
+    "quote": "quote.html",
+    "quote_email": "quote_email.html",
+    "invoice_offer": "invoice_offer.html",
+    "invoice_payment": "invoice_payment.html",
+    "master_agreement": "master_agreement.html",
+    "annex_to_contract": "annex_to_contract.html",
+    "annex": "annex.html",
+    "issue_act": "issue_act.html",
+    "return_act": "return_act.html",
+    "picking_list": "picking_list.html",
+    "order_modification": "order_modification.html",
+    "service_act": "service_act.html",
+    "estimate": "estimate.html",
+    "processing_list": "processing_list.html",
+    "laundry_batch": "laundry_batch.html",
+    # Subdirectory templates (doc_engine)
+    "contract_rent": "contract_rent/v1.html",
+    "defect_act": "defect_act/v1.html",
+    "damage_settlement_act": "damage_settlement_act/v1.html",
+    "deposit_settlement_act": "deposit_settlement_act/v1.html",
+    "deposit_refund_act": "deposit_refund_act/v1.html",
+    "invoice_legal": "invoice_legal/v1.html",
+    "invoice_additional": "invoice_additional/v1.html",
+    "goods_invoice": "goods_invoice/v1.html",
+    "damage_report": "damage_report/v1.html",
+    "damage_invoice": "damage_invoice/v1.html",
+    "delivery_note": "delivery_note/v1.html",
+    "rental_extension": "rental_extension/v1.html",
+    "partial_return_act": "partial_return_act/v1.html",
+    "return_intake_checklist": "return_intake_checklist/v1.html",
+    "issue_checklist": "issue_checklist/v1.html",
+    "vendor_work_act": "vendor_work_act/v1.html",
+}
+
+TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "documents")
+
+
+def _ensure_templates_table(db):
+    db.execute(text("""
+        CREATE TABLE IF NOT EXISTS document_templates (
+            doc_type VARCHAR(100) PRIMARY KEY,
+            template_content LONGTEXT NOT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_by VARCHAR(100)
+        )
+    """))
+    db.commit()
+
+
+@router.get("/templates")
+async def list_templates(
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    """List all templates with source info (file / db)."""
+    require_admin(authorization)
+    _ensure_templates_table(rh_db)
+
+    db_rows = rh_db.execute(text(
+        "SELECT doc_type, updated_at, updated_by FROM document_templates"
+    )).fetchall()
+    db_map = {r[0]: {"updated_at": r[1].isoformat() if r[1] else None, "updated_by": r[2]} for r in db_rows}
+
+    result = []
+    for doc_type, file_path in TEMPLATE_FILE_MAP.items():
+        full_path = os.path.join(TEMPLATES_DIR, file_path)
+        has_file = os.path.exists(full_path)
+        in_db = doc_type in db_map
+        result.append({
+            "doc_type": doc_type,
+            "file_path": file_path,
+            "has_file": has_file,
+            "source": "db" if in_db else ("file" if has_file else "missing"),
+            "updated_at": db_map[doc_type]["updated_at"] if in_db else None,
+            "updated_by": db_map[doc_type]["updated_by"] if in_db else None,
+        })
+    return result
+
+
+@router.get("/templates/{doc_type}")
+async def get_template(
+    doc_type: str,
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    """Get template content — DB first, file fallback."""
+    require_admin(authorization)
+    _ensure_templates_table(rh_db)
+
+    # Check DB
+    row = rh_db.execute(text(
+        "SELECT template_content, updated_at, updated_by FROM document_templates WHERE doc_type = :dt"
+    ), {"dt": doc_type}).fetchone()
+
+    if row:
+        return {
+            "doc_type": doc_type,
+            "source": "db",
+            "content": row[0],
+            "updated_at": row[1].isoformat() if row[1] else None,
+            "updated_by": row[2],
+        }
+
+    # File fallback
+    file_path = TEMPLATE_FILE_MAP.get(doc_type)
+    if not file_path:
+        raise HTTPException(status_code=404, detail=f"Шаблон '{doc_type}' не знайдено")
+    full_path = os.path.join(TEMPLATES_DIR, file_path)
+    if not os.path.exists(full_path):
+        raise HTTPException(status_code=404, detail=f"Файл шаблону не знайдено: {file_path}")
+
+    with open(full_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    return {"doc_type": doc_type, "source": "file", "content": content, "updated_at": None, "updated_by": None}
+
+
+@router.put("/templates/{doc_type}")
+async def save_template(
+    doc_type: str,
+    data: dict,
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    """Save template to DB."""
+    user = require_admin(authorization)
+    _ensure_templates_table(rh_db)
+
+    content = data.get("content", "")
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Шаблон не може бути порожнім")
+
+    rh_db.execute(text("""
+        INSERT INTO document_templates (doc_type, template_content, updated_by)
+        VALUES (:dt, :content, :by)
+        ON DUPLICATE KEY UPDATE template_content = :content, updated_by = :by
+    """), {"dt": doc_type, "content": content, "by": user.get("email", "admin")})
+    rh_db.commit()
+    return {"success": True, "message": "Шаблон збережено"}
+
+
+@router.post("/templates/{doc_type}/reset")
+async def reset_template(
+    doc_type: str,
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    """Reset template — delete DB override, revert to file."""
+    require_admin(authorization)
+    _ensure_templates_table(rh_db)
+
+    rh_db.execute(text("DELETE FROM document_templates WHERE doc_type = :dt"), {"dt": doc_type})
+    rh_db.commit()
+
+    # Return file content
+    file_path = TEMPLATE_FILE_MAP.get(doc_type)
+    if file_path:
+        full_path = os.path.join(TEMPLATES_DIR, file_path)
+        if os.path.exists(full_path):
+            with open(full_path, "r", encoding="utf-8") as f:
+                return {"success": True, "content": f.read(), "source": "file"}
+
+    return {"success": True, "content": "", "source": "missing"}
+
+
+@router.get("/templates/{doc_type}/preview")
+async def preview_template(
+    doc_type: str,
+    order_id: int = 7403,
+    authorization: str = Header(None),
+    rh_db: Session = Depends(get_rh_db)
+):
+    """Render template preview with real order data."""
+    require_admin(authorization)
+
+    from jinja2 import Environment
+    from services.template_loader import DBOverrideLoader
+    from jinja2 import FileSystemLoader
+    from services.company_config import get_company_config, get_landlord_config
+
+    _ensure_templates_table(rh_db)
+
+    # Get template content
+    row = rh_db.execute(text(
+        "SELECT template_content FROM document_templates WHERE doc_type = :dt"
+    ), {"dt": doc_type}).fetchone()
+
+    if row and row[0]:
+        content = row[0]
+    else:
+        file_path = TEMPLATE_FILE_MAP.get(doc_type)
+        if not file_path:
+            raise HTTPException(status_code=404, detail="Шаблон не знайдено")
+        full_path = os.path.join(TEMPLATES_DIR, file_path)
+        if not os.path.exists(full_path):
+            raise HTTPException(status_code=404, detail="Файл не знайдено")
+        with open(full_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+    # Build minimal context for preview
+    company = get_company_config(rh_db)
+    landlord = get_landlord_config(rh_db)
+
+    context = {
+        "company": company,
+        "landlord": landlord,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "meta": {"doc_type": doc_type, "status": "draft", "watermark_text": ""},
+        "order": {},
+        "items": [],
+        "totals": {},
+    }
+
+    # Try to load order data
+    try:
+        o = rh_db.execute(text("""
+            SELECT order_id, order_number, customer_name, customer_phone,
+                   rental_start_date, rental_end_date, rental_days,
+                   total_price, deposit_amount
+            FROM orders WHERE order_id = :oid
+        """), {"oid": order_id}).fetchone()
+        if o:
+            context["order"] = {
+                "order_number": o[1] or f"OC-{o[0]}",
+                "customer_name": o[2] or "",
+                "customer_phone": o[3] or "",
+                "phone": o[3] or "",
+                "email": "",
+                "rental_start_date": o[4].strftime("%d.%m.%Y") if o[4] else "",
+                "rental_end_date": o[5].strftime("%d.%m.%Y") if o[5] else "",
+                "rental_days": o[6] or 1,
+                "total_price": float(o[7] or 0),
+                "total_price_fmt": f"{float(o[7] or 0):,.2f}".replace(",", " "),
+                "deposit_amount": float(o[8] or 0),
+                "deposit_amount_fmt": f"{float(o[8] or 0):,.2f}".replace(",", " "),
+                "delivery_type_label": "Самовивіз",
+                "city": "Київ",
+                "delivery_address": company.get("warehouse", ""),
+                "discount_amount": 0,
+                "discount_percent": 0,
+                "service_fee": 0,
+                "service_fee_name": "",
+                "customer_email": "",
+                "event_type": "",
+                "customer_comment": "",
+            }
+            items = rh_db.execute(text("""
+                SELECT product_name, quantity, price, total_rental
+                FROM order_items WHERE order_id = :oid AND status = 'active'
+            """), {"oid": order_id}).fetchall()
+            context["items"] = [
+                {"product_name": i[0], "name": i[0], "quantity": i[1], "price_per_day_fmt": f"{float(i[2] or 0):,.2f}",
+                 "rental_price_fmt": f"{float(i[2] or 0):,.2f}", "loss_fmt": "0,00", "deposit_fmt": "0,00",
+                 "sku": "—", "image_url": None, "note": None}
+                for i in items
+            ]
+            context["totals"] = {
+                "rent_total_fmt": context["order"]["total_price_fmt"],
+                "deposit_total_fmt": context["order"]["deposit_amount_fmt"],
+                "loss_total_fmt": "0,00",
+                "grand_total_fmt": context["order"]["total_price_fmt"],
+                "grand_total": context["order"]["total_price"],
+            }
+    except Exception as e:
+        context["_preview_error"] = str(e)
+
+    # Additional context keys for various templates
+    context.setdefault("additional_services", [])
+    context.setdefault("executor", {"name": company["legal_name"], "short_name": company["short_name"]})
+    context.setdefault("client", {"name": context["order"].get("customer_name", ""), "phone": context["order"].get("customer_phone", "")})
+    context.setdefault("tenant", {"legal_name": context["order"].get("customer_name", ""), "signer_name": context["order"].get("customer_name", ""), "signer_role": ""})
+    context.setdefault("agreement", {"contract_number": ""})
+    context.setdefault("damage", {"has_damage": False, "rows": [], "total": 0})
+    context.setdefault("annex", {"number": 1, "date": datetime.now().strftime("%d.%m.%Y")})
+    context.setdefault("signatures", {})
+    context.setdefault("return_data", {})
+
+    # Render
+    try:
+        env = Environment(autoescape=False)
+        # Register custom filters
+        env.filters['money'] = lambda v: f"{float(v or 0):,.2f}".replace(",", " ")
+        env.filters['date'] = lambda v, fmt="%d.%m.%Y": str(v) if v else ""
+        template = env.from_string(content)
+        html = template.render(**context)
+        return {"success": True, "html": html}
+    except Exception as e:
+        return {"success": False, "error": str(e), "html": f"<pre style='color:red'>Помилка рендерингу:\n{str(e)}</pre>"}

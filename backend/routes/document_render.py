@@ -32,8 +32,10 @@ router = APIRouter(prefix="/api/documents/render", tags=["document-rendering"])
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "documents")
 
+from services.template_loader import DBOverrideLoader
+_file_loader_render = FileSystemLoader(TEMPLATES_DIR)
 jinja_env = Environment(
-    loader=FileSystemLoader(TEMPLATES_DIR),
+    loader=DBOverrideLoader(_file_loader_render),
     autoescape=select_autoescape(['html', 'xml'])
 )
 

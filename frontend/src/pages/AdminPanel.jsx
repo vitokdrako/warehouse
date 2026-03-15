@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CorporateHeader from '../components/CorporateHeader'
-import { Users, FileText, FolderTree, Receipt, Settings, Plus, Pencil, Trash2, Shield, X, Eye, EyeOff, Key, Save, RefreshCw, Check } from 'lucide-react'
+import { Users, FileText, FolderTree, Receipt, Settings, Plus, Pencil, Trash2, Shield, X, Eye, EyeOff, Key, Save, RefreshCw, Check, ArrowLeft, RotateCcw, Code } from 'lucide-react'
 // Lightweight notification
 const toast = {
   success: (msg) => { const el = document.createElement('div'); el.className = 'fixed top-4 right-4 z-[999] px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium shadow-lg'; el.textContent = msg; document.body.appendChild(el); setTimeout(() => el.remove(), 2500) },
@@ -209,41 +209,233 @@ const ALL_DOC_TYPES = [
 
 function DocumentsTab() {
   const [docStats, setDocStats] = useState({})
+  const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(null) // { doc_type, name, desc }
+  const [editorContent, setEditorContent] = useState('')
+  const [editorSource, setEditorSource] = useState('file')
+  const [previewHtml, setPreviewHtml] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [orderIdForPreview, setOrderIdForPreview] = useState('7403')
+  const [editorTab, setEditorTab] = useState('code') // 'code' | 'preview'
 
   useEffect(() => {
     (async () => {
       try {
-        const r = await authFetch(`${BACKEND_URL}/api/admin/document-stats`)
-        if (r.ok) setDocStats(await r.json())
+        const [statsRes, tplRes] = await Promise.all([
+          authFetch(`${BACKEND_URL}/api/admin/document-stats`),
+          authFetch(`${BACKEND_URL}/api/admin/templates`),
+        ])
+        if (statsRes.ok) setDocStats(await statsRes.json())
+        if (tplRes.ok) setTemplates(await tplRes.json())
       } catch (e) { console.error(e) }
       setLoading(false)
     })()
   }, [])
 
+  const openEditor = async (doc) => {
+    setEditing(doc)
+    setEditorTab('code')
+    setPreviewHtml('')
+    try {
+      const r = await authFetch(`${BACKEND_URL}/api/admin/templates/${doc.key}`)
+      if (r.ok) {
+        const data = await r.json()
+        setEditorContent(data.content || '')
+        setEditorSource(data.source)
+      }
+    } catch (e) { console.error(e) }
+  }
+
+  const loadPreview = async () => {
+    setPreviewLoading(true)
+    try {
+      const r = await authFetch(`${BACKEND_URL}/api/admin/templates/${editing.key}/preview?order_id=${orderIdForPreview}`)
+      if (r.ok) {
+        const data = await r.json()
+        setPreviewHtml(data.html || data.error || '')
+      }
+    } catch (e) { setPreviewHtml(`<pre style="color:red">${e.message}</pre>`) }
+    setPreviewLoading(false)
+  }
+
+  const saveTemplate = async () => {
+    setSaving(true)
+    try {
+      const r = await authFetch(`${BACKEND_URL}/api/admin/templates/${editing.key}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editorContent })
+      })
+      if (r.ok) {
+        setEditorSource('db')
+        setTemplates(prev => prev.map(t => t.doc_type === editing.key ? { ...t, source: 'db' } : t))
+        toast.success('Шаблон збережено')
+      }
+    } catch (e) { toast.error('Помилка збереження') }
+    setSaving(false)
+  }
+
+  const resetTemplate = async () => {
+    if (!window.confirm('Скинути до оригінального файлу? Зміни в БД будуть видалені.')) return
+    try {
+      const r = await authFetch(`${BACKEND_URL}/api/admin/templates/${editing.key}/reset`, { method: 'POST' })
+      if (r.ok) {
+        const data = await r.json()
+        setEditorContent(data.content || '')
+        setEditorSource('file')
+        setTemplates(prev => prev.map(t => t.doc_type === editing.key ? { ...t, source: 'file' } : t))
+        toast.success('Шаблон скинуто до оригіналу')
+      }
+    } catch (e) { toast.error('Помилка скидання') }
+  }
+
   if (loading) return <div className="text-center py-8 text-corp-text-muted animate-pulse">Завантаження...</div>
+
+  // Full-screen template editor
+  if (editing) {
+    return (
+      <div className="space-y-0" data-testid="template-editor">
+        {/* Editor Header */}
+        <div className="flex items-center justify-between gap-3 pb-4 border-b border-corp-border mb-4">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setEditing(null)} className="p-2 hover:bg-corp-bg-light rounded-lg transition-colors" data-testid="template-editor-close">
+              <ArrowLeft size={18} className="text-corp-text-muted" />
+            </button>
+            <div>
+              <div className="text-sm font-semibold text-corp-text-dark flex items-center gap-2">
+                {editing.name}
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${editorSource === 'db' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}>
+                  {editorSource === 'db' ? 'Змінено (БД)' : 'Оригінал (файл)'}
+                </span>
+              </div>
+              <div className="text-xs text-corp-text-muted">{editing.key}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {editorSource === 'db' && (
+              <button onClick={resetTemplate} className="px-3 py-1.5 text-xs rounded-lg border border-corp-border text-corp-text-muted hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors" data-testid="template-reset-btn">
+                <RotateCcw size={13} className="inline mr-1" />Скинути
+              </button>
+            )}
+            <button onClick={saveTemplate} disabled={saving}
+              className="px-4 py-1.5 text-xs rounded-lg bg-corp-primary text-white hover:bg-corp-primary-dark transition-colors disabled:opacity-50" data-testid="template-save-btn">
+              <Save size={13} className="inline mr-1" />{saving ? 'Збереження...' : 'Зберегти'}
+            </button>
+          </div>
+        </div>
+
+        {/* Editor Tabs */}
+        <div className="flex items-center gap-1 mb-3">
+          <button onClick={() => setEditorTab('code')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${editorTab === 'code' ? 'bg-corp-bg-dark text-white' : 'text-corp-text-muted hover:bg-corp-bg-light'}`}
+            data-testid="tab-code">
+            <Code size={13} className="inline mr-1" />Код шаблону
+          </button>
+          <button onClick={() => { setEditorTab('preview'); loadPreview() }}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${editorTab === 'preview' ? 'bg-corp-bg-dark text-white' : 'text-corp-text-muted hover:bg-corp-bg-light'}`}
+            data-testid="tab-preview">
+            <Eye size={13} className="inline mr-1" />Попередній перегляд
+          </button>
+          {editorTab === 'preview' && (
+            <div className="ml-auto flex items-center gap-2">
+              <label className="text-xs text-corp-text-muted">Замовлення #</label>
+              <input value={orderIdForPreview} onChange={e => setOrderIdForPreview(e.target.value)}
+                className="w-20 px-2 py-1 text-xs rounded-lg border border-corp-border focus:outline-none focus:border-corp-primary"
+                data-testid="preview-order-id" />
+              <button onClick={loadPreview} className="px-2 py-1 text-xs rounded-lg bg-corp-bg-light hover:bg-corp-bg-dark hover:text-white transition-colors" data-testid="preview-refresh-btn">
+                <RefreshCw size={12} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Code Editor */}
+        {editorTab === 'code' && (
+          <div className="relative rounded-xl border border-corp-border overflow-hidden bg-[#1e1e2e]" data-testid="code-editor-container">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-[#181825] border-b border-[#313244]">
+              <span className="text-[10px] text-[#6c7086] font-mono">HTML / Jinja2</span>
+              <span className="text-[10px] text-[#6c7086]">{editorContent.length} символів</span>
+            </div>
+            <textarea
+              value={editorContent}
+              onChange={e => setEditorContent(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Tab') {
+                  e.preventDefault()
+                  const start = e.target.selectionStart
+                  const end = e.target.selectionEnd
+                  const val = e.target.value
+                  setEditorContent(val.substring(0, start) + '  ' + val.substring(end))
+                  setTimeout(() => { e.target.selectionStart = e.target.selectionEnd = start + 2 }, 0)
+                }
+              }}
+              spellCheck={false}
+              className="w-full font-mono text-xs leading-5 p-4 bg-[#1e1e2e] text-[#cdd6f4] resize-none focus:outline-none"
+              style={{ minHeight: '500px', tabSize: 2, fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace" }}
+              data-testid="code-editor-textarea"
+            />
+          </div>
+        )}
+
+        {/* Preview */}
+        {editorTab === 'preview' && (
+          <div className="rounded-xl border border-corp-border overflow-hidden bg-white" data-testid="preview-container">
+            {previewLoading ? (
+              <div className="p-8 text-center text-corp-text-muted animate-pulse">Рендеринг...</div>
+            ) : previewHtml ? (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full border-0"
+                style={{ minHeight: '600px' }}
+                title="Попередній перегляд"
+                data-testid="preview-iframe"
+              />
+            ) : (
+              <div className="p-8 text-center text-corp-text-muted text-sm">Натисніть "Попередній перегляд" для рендерингу</div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Template grid
+  const tplMap = {}
+  templates.forEach(t => { tplMap[t.doc_type] = t })
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-corp-text-muted">{ALL_DOC_TYPES.length} типів документів</div>
+      <div className="text-sm text-corp-text-muted">{ALL_DOC_TYPES.length} типів документів • Натисніть для редагування шаблону</div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {ALL_DOC_TYPES.map(doc => {
           const count = docStats[doc.key] || 0
-          const hasTemplate = ['master_agreement', 'annex_to_contract', 'issue_act', 'return_act', 'defect_act', 'quote', 'invoice_offer'].includes(doc.key)
+          const tpl = tplMap[doc.key]
+          const hasFile = tpl?.has_file ?? true
+          const source = tpl?.source || 'file'
           return (
-            <div key={doc.key} className="bg-white rounded-xl border border-corp-border p-4 hover:shadow-sm transition-shadow" data-testid={`doc-${doc.key}`}>
+            <div key={doc.key}
+              onClick={() => openEditor(doc)}
+              className="bg-white rounded-xl border border-corp-border p-4 hover:shadow-md hover:border-corp-primary/40 transition-all cursor-pointer group"
+              data-testid={`doc-${doc.key}`}>
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-corp-text-dark">{doc.name}</div>
+                  <div className="text-sm font-semibold text-corp-text-dark group-hover:text-corp-primary transition-colors">{doc.name}</div>
                   <div className="text-xs text-corp-text-muted mt-0.5">{doc.desc}</div>
                 </div>
-                {hasTemplate && <div className="px-2 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] font-medium text-emerald-700 flex-shrink-0">Шаблон</div>}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {source === 'db' && (
+                    <div className="px-1.5 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-[10px] font-medium text-amber-700">Змінено</div>
+                  )}
+                  {hasFile && (
+                    <div className="px-1.5 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[10px] font-medium text-emerald-700">Шаблон</div>
+                  )}
+                </div>
               </div>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-corp-border/50">
                 <span className="text-xs text-corp-text-muted">Створено: <span className="font-semibold text-corp-text-dark">{count}</span></span>
-                {count > 0 && <div className="w-16 h-1.5 rounded-full bg-corp-bg-light overflow-hidden">
-                  <div className="h-full bg-corp-primary rounded-full" style={{ width: `${Math.min(100, (count / 63) * 100)}%` }} />
-                </div>}
+                <Pencil size={14} className="text-corp-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
           )

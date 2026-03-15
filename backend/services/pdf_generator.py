@@ -37,9 +37,11 @@ PDF_OUTPUT_DIR = Path(__file__).parent.parent / "generated_pdfs"
 # Ensure output directory exists
 PDF_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Jinja2 environment
+# Jinja2 environment with DB override
+from services.template_loader import DBOverrideLoader
+_file_loader_pdf = FileSystemLoader(str(TEMPLATES_DIR))
 jinja_env = Environment(
-    loader=FileSystemLoader(str(TEMPLATES_DIR)),
+    loader=DBOverrideLoader(_file_loader_pdf),
     autoescape=True
 )
 

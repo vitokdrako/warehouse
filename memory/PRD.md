@@ -39,10 +39,12 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 
 #### Рахунок-оферта Redesign — March 2026
 - Redesigned `invoice_offer.html` in quote.html visual style
-- Sections: Замовник, Деталі оренди, Товари (№, Найменування, SKU, К-сть, Оренда/день, Оренда/термін, Завдаток)
-- Added: Умови оплати (payment terms with green highlights), Реквізити для оплати (bank details from DB)
-- Updated `preview_invoice_offer` and `download_invoice_offer_pdf` endpoints with new data format
-- Added МФО (MFO bank code) to system_settings and company_config
+- Sections: Замовник, Деталі оренди, Товари (SKU, Оренда/день, Оренда/термін, Завдаток)
+- Added: Умови оплати, Реквізити для оплати (bank details from DB), Додаткові послуги
+- Updated `preview_invoice_offer` and `download_invoice_offer_pdf` endpoints
+- Added МФО to system_settings and company_config
+- Added invoice_offer to LeftRailDocuments for all order statuses (pending → processing)
+- Added Кошторис + Рахунок-оферта links in ClientsTab order list
 
 #### Template Editor — Feb 2026
 - **DB-first template loading**: Custom `DBOverrideLoader` for Jinja2 (checks DB before file system)

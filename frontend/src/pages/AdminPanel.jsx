@@ -422,8 +422,9 @@ function SettingsTab() {
   const fields = [
     { key: 'name', label: 'Назва ФОП / Компанії' },
     { key: 'tax_status', label: 'Податковий статус' },
-    { key: 'tax_id', label: 'ІПН / ЄДРПОУ' },
-    { key: 'iban', label: 'IBAN' },
+    { key: 'tax_id', label: 'Код за ДРФО (ІПН)' },
+    { key: 'iban', label: 'IBAN (р/р)' },
+    { key: 'bank_name', label: 'Банк' },
     { key: 'address', label: 'Юридична адреса' },
     { key: 'warehouse_address', label: 'Адреса складу' },
     { key: 'signer_name', label: 'Підписант (ПІБ)' },

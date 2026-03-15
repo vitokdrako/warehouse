@@ -665,9 +665,12 @@ async def get_settings(
         return {r[0]: r[1] for r in rows}
     except:
         return {
-            "name": "ФОП Николенко Наталя Станіславівна",
+            "name": "Фізична особа-підприємець Николенко Наталя Станіславівна",
             "tax_status": "платник єдиного податку",
-            "tax_id": "", "iban": "", "address": "м. Київ",
+            "tax_id": "3606801844",
+            "iban": "UA043220010000026003340091618",
+            "bank_name": "ПАТ \"УНІВЕРСАЛ БАНК\"",
+            "address": "м. Київ",
             "signer_name": "Николенко Н.С.", "signer_role": "",
             "warehouse_address": "м. Київ, вул. Будіндустрії 4"
         }

@@ -12,7 +12,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # Import route modules AFTER loading env
-from routes import inventory, clients, orders, tasks,  finance, test_orders, settings, pdf, users, issue_cards, return_cards, photos, qr_codes, email, catalog, archive, warehouse, extended_catalog,  products, auth, image_proxy, price_sync, damage_cases, admin, product_damage_history, product_reservations, inventory_adjustments, sync, product_cleaning, migrations, product_images, event_tool_integration, user_tracking, laundry, documents, analytics, product_sets, expense_management, export, template_admin, order_modifications, order_internal_notes, order_sync, partial_returns, uploads, payer_profiles, dashboard_overview, calendar_events, return_versions, event_tool, master_agreements, order_annexes, document_policy, document_render, document_signatures, document_pdf, document_manual_fields, document_email, team_chat, cabinet
+from routes import inventory, clients, orders, tasks, damages, finance, test_orders, settings, pdf, users, issue_cards, return_cards, photos, qr_codes, email, catalog, archive, warehouse, extended_catalog, audit, products, auth, image_proxy, price_sync, damage_cases, admin, product_damage_history, product_reservations, inventory_adjustments, sync, product_cleaning, migrations, product_images, event_tool_integration, user_tracking, laundry, documents, analytics, product_sets, expense_management, export, template_admin, order_modifications, order_internal_notes, order_sync, partial_returns, uploads, payer_profiles, dashboard_overview, calendar_events, return_versions, event_tool, master_agreements, order_annexes, document_policy, document_render, document_signatures, document_pdf, document_manual_fields, document_email, team_chat, cabinet
 
 # Create the main app
 app = FastAPI(title="Rental Hub API")
@@ -82,6 +82,7 @@ app.include_router(orders.decor_router)  # ✅ Додано для сумісн�
 app.include_router(test_orders.router)
 app.include_router(auth.router)
 app.include_router(tasks.router)
+app.include_router(damages.router)
 app.include_router(finance.router)
 app.include_router(finance.manager_router)  # /api/manager/finance/* для ManagerDashboard
 app.include_router(settings.router)
@@ -96,6 +97,7 @@ app.include_router(catalog.router)
 app.include_router(archive.router)
 app.include_router(warehouse.router)
 app.include_router(extended_catalog.router)
+app.include_router(audit.router)
 app.include_router(products.router)
 app.include_router(image_proxy.router)
 app.include_router(price_sync.router)

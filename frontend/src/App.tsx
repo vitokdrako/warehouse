@@ -18,7 +18,6 @@ import DamageHubApp from './pages/DamageHubApp';
 import PackingCabinet from './pages/PackingCabinet';
 import AdminPanel from './pages/AdminPanel';
 import ExtendedCatalog from './pages/ExtendedCatalog';
-import UniversalOpsCalendar from './pages/UniversalOpsCalendar';
 import CatalogBoard from './pages/CatalogBoard';
 // Legacy: import FinanceHub from './pages/FinanceHub';  // Перенесено в ManagerCabinet як вкладку "Каса"
 // New unified workspace components
@@ -232,14 +231,6 @@ function App() {
           />
           
           {/* Legacy calendar - залишаємо для сумісності */}
-          <Route 
-            path="/calendar-old" 
-            element={
-              <ProtectedRoute>
-                <UniversalOpsCalendar />
-              </ProtectedRoute>
-            } 
-          />
           
           <Route 
             path="/catalog" 

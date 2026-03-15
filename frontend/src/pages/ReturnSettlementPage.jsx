@@ -57,6 +57,14 @@ export default function ReturnSettlementPage() {
   const [settlementAmount, setSettlementAmount] = useState('');
   const [settlementNote, setSettlementNote] = useState('');
 
+  // Editable charge forms
+  const [showLateFeeForm, setShowLateFeeForm] = useState(false);
+  const [lateFeeAmount, setLateFeeAmount] = useState('');
+  const [lateFeeNote, setLateFeeNote] = useState('');
+  const [showDamageChargeForm, setShowDamageChargeForm] = useState(false);
+  const [damageChargeAmount, setDamageChargeAmount] = useState('');
+  const [damageChargeNote, setDamageChargeNote] = useState('');
+
   // Load all data
   useEffect(() => {
     let mounted = true;
@@ -118,6 +126,30 @@ export default function ReturnSettlementPage() {
         body: JSON.stringify({ type: 'late', amount, note }),
       });
       if (res.ok) {
+        setShowLateFeeForm(false);
+        setLateFeeAmount('');
+        setLateFeeNote('');
+        await Promise.all([reloadSnapshot(), reloadCharges()]);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Помилка: ${err.detail || 'Не вдалося нарахувати'}`);
+      }
+    } catch (e) { alert(`Помилка: ${e.message}`); }
+    finally { setSaving(false); }
+  };
+
+  const handleAddDamageCharge = async (amount, note) => {
+    if (!amount || amount <= 0) return;
+    setSaving(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/order/${orderId}/charges/add`, {
+        method: 'POST',
+        body: JSON.stringify({ type: 'damage', amount, note }),
+      });
+      if (res.ok) {
+        setShowDamageChargeForm(false);
+        setDamageChargeAmount('');
+        setDamageChargeNote('');
         await Promise.all([reloadSnapshot(), reloadCharges()]);
       } else {
         const err = await res.json().catch(() => ({}));
@@ -555,19 +587,57 @@ export default function ReturnSettlementPage() {
                           </div>
                         )}
                         {/* Button to add calculated late fee if not yet charged */}
-                        {calcLate > 0 && lateTotal === 0 && (
+                        {calcLate > 0 && lateTotal === 0 && !showLateFeeForm && (
                           <button
                             onClick={() => {
+                              setLateFeeAmount(String(calcLate));
                               const note = parts.filter(p => p.lateDays > 0).map(p => `${p.displayNumber}: ${p.lateDays} дн.`).join(', ');
-                              handleAddLateFee(calcLate, `Прострочка: ${note}`);
+                              setLateFeeNote(`Прострочка: ${note}`);
+                              setShowLateFeeForm(true);
                             }}
                             disabled={saving}
                             className="w-full mt-1 py-2 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                             data-testid="add-late-fee-btn"
                           >
                             <Timer className="w-3 h-3" />
-                            Нарахувати {money(calcLate)}
+                            Нарахувати прострочку ({money(calcLate)})
                           </button>
+                        )}
+                        {showLateFeeForm && (
+                          <div className="mt-2 p-3 bg-red-50/80 border border-red-200 rounded-xl space-y-2" data-testid="late-fee-form">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-red-700">Нарахувати прострочку</span>
+                              <button onClick={() => setShowLateFeeForm(false)} className="text-red-400 hover:text-red-600"><X className="w-3.5 h-3.5" /></button>
+                            </div>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                value={lateFeeAmount}
+                                onChange={(e) => setLateFeeAmount(e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-red-300 rounded-lg focus:ring-2 focus:ring-red-300 bg-white"
+                                placeholder="Сума"
+                                data-testid="late-fee-amount"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-red-400">грн</span>
+                            </div>
+                            <input
+                              type="text"
+                              value={lateFeeNote}
+                              onChange={(e) => setLateFeeNote(e.target.value)}
+                              className="w-full px-3 py-1.5 text-xs border border-red-200 rounded-lg bg-white"
+                              placeholder="Примітка"
+                              data-testid="late-fee-note"
+                            />
+                            <button
+                              onClick={() => handleAddLateFee(Number(lateFeeAmount), lateFeeNote)}
+                              disabled={saving || !lateFeeAmount || Number(lateFeeAmount) <= 0}
+                              className="w-full py-2 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 flex items-center justify-center gap-1"
+                              data-testid="late-fee-submit"
+                            >
+                              <Timer className="w-3 h-3" />
+                              Нарахувати {lateFeeAmount ? money(Number(lateFeeAmount)) : ''}
+                            </button>
+                          </div>
                         )}
                       </div>
                     );
@@ -575,8 +645,8 @@ export default function ReturnSettlementPage() {
 
                   {/* Damage */}
                   {damage && damage.total > 0 && (
-                    <>
-                      <div className="flex justify-between pt-2 border-t border-slate-100">
+                    <div className="pt-2 border-t border-slate-100 space-y-1">
+                      <div className="flex justify-between font-medium">
                         <span className="text-rose-600">Шкода</span>
                         <span className="font-semibold text-rose-600">{money(damage.total)}</span>
                       </div>
@@ -586,7 +656,65 @@ export default function ReturnSettlementPage() {
                           <span className="text-emerald-600">{money(damage.paid)}</span>
                         </div>
                       )}
-                    </>
+                      {damage.due > 0 && (
+                        <div className="flex justify-between text-xs font-medium">
+                          <span className="text-rose-500">До сплати</span>
+                          <span className="text-rose-600">{money(damage.due)}</span>
+                        </div>
+                      )}
+                      {/* Editable damage charge button - only when system detected damage but no charge made */}
+                      {damage.total > 0 && !charges?.damage?.total && !showDamageChargeForm && (
+                        <button
+                          onClick={() => {
+                            setDamageChargeAmount(String(damage.total));
+                            setDamageChargeNote('Нарахування за пошкодження');
+                            setShowDamageChargeForm(true);
+                          }}
+                          disabled={saving}
+                          className="w-full mt-1 py-2 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                          data-testid="add-damage-charge-btn"
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          Нарахувати шкоду ({money(damage.total)})
+                        </button>
+                      )}
+                      {showDamageChargeForm && (
+                        <div className="mt-2 p-3 bg-rose-50/80 border border-rose-200 rounded-xl space-y-2" data-testid="damage-charge-form">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-rose-700">Нарахувати шкоду</span>
+                            <button onClick={() => setShowDamageChargeForm(false)} className="text-rose-400 hover:text-rose-600"><X className="w-3.5 h-3.5" /></button>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={damageChargeAmount}
+                              onChange={(e) => setDamageChargeAmount(e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-rose-300 rounded-lg focus:ring-2 focus:ring-rose-300 bg-white"
+                              placeholder="Сума"
+                              data-testid="damage-charge-amount"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-rose-400">грн</span>
+                          </div>
+                          <input
+                            type="text"
+                            value={damageChargeNote}
+                            onChange={(e) => setDamageChargeNote(e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs border border-rose-200 rounded-lg bg-white"
+                            placeholder="Примітка"
+                            data-testid="damage-charge-note"
+                          />
+                          <button
+                            onClick={() => handleAddDamageCharge(Number(damageChargeAmount), damageChargeNote)}
+                            disabled={saving || !damageChargeAmount || Number(damageChargeAmount) <= 0}
+                            className="w-full py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg disabled:opacity-50 flex items-center justify-center gap-1"
+                            data-testid="damage-charge-submit"
+                          >
+                            <AlertTriangle className="w-3 h-3" />
+                            Нарахувати {damageChargeAmount ? money(Number(damageChargeAmount)) : ''}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {/* Deposit */}
@@ -722,9 +850,11 @@ export default function ReturnSettlementPage() {
                 Документи та дії
               </div>
 
-              {/* Settlement Act */}
+              {/* Settlement Act - opens directly, no modal */}
               <button
-                onClick={() => setShowSettlement(true)}
+                onClick={() => {
+                  window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/preview`, '_blank');
+                }}
                 className="w-full py-3 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-900 rounded-xl transition-colors flex items-center justify-center gap-2"
                 data-testid="generate-settlement-act"
               >
@@ -842,87 +972,6 @@ export default function ReturnSettlementPage() {
         </div>
       </div>
 
-      {/* Settlement Act Modal */}
-      {showSettlement && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowSettlement(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()} data-testid="settlement-modal">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-slate-600" />
-                <h3 className="font-semibold text-slate-800">Акт взаєморозрахунків</h3>
-              </div>
-              <button onClick={() => setShowSettlement(false)} className="text-slate-400 hover:text-slate-600" data-testid="settlement-modal-close">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <p className="text-sm text-slate-600">
-                Система автоматично розрахує підсумок на основі всіх оплат, нарахувань та застави.
-              </p>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-medium text-slate-500 block mb-1">Фінальна сума (необов'язково)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={settlementAmount}
-                      onChange={(e) => setSettlementAmount(e.target.value)}
-                      placeholder="Авто (залишити порожнім)"
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-                      data-testid="settlement-amount-input"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">грн</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">Додатне — клієнт доплачує, від'ємне — повернення</p>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-500 block mb-1">Примітка менеджера</label>
-                  <textarea
-                    value={settlementNote}
-                    onChange={(e) => setSettlementNote(e.target.value)}
-                    placeholder="Коментар до розрахунку..."
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none"
-                    data-testid="settlement-note-input"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    const params = new URLSearchParams();
-                    if (settlementAmount) params.set('final_amount', settlementAmount);
-                    if (settlementNote.trim()) params.set('manager_note', settlementNote.trim());
-                    const qs = params.toString();
-                    window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/preview${qs ? '?' + qs : ''}`, '_blank');
-                    setShowSettlement(false);
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium"
-                  data-testid="settlement-preview-btn"
-                >
-                  <Eye className="w-4 h-4" />
-                  Переглянути
-                </button>
-                <button
-                  onClick={() => {
-                    const params = new URLSearchParams();
-                    if (settlementAmount) params.set('final_amount', settlementAmount);
-                    if (settlementNote.trim()) params.set('manager_note', settlementNote.trim());
-                    const qs = params.toString();
-                    window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/pdf${qs ? '?' + qs : ''}`, '_blank');
-                    setShowSettlement(false);
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-white border border-slate-300 rounded-lg hover:bg-slate-50 font-medium"
-                  data-testid="settlement-print-btn"
-                >
-                  <Printer className="w-4 h-4" />
-                  Друк
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

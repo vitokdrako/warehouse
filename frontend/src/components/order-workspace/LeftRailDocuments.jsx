@@ -1,6 +1,6 @@
 /* eslint-disable */
 import React, { useState, useEffect } from 'react'
-import { FileText, Printer, Download, Mail, Eye, ChevronDown, ChevronUp, RefreshCw, History, Clock, Receipt, Calculator, X } from 'lucide-react'
+import { FileText, Printer, Download, Mail, Eye, ChevronDown, ChevronUp, RefreshCw, History, Clock, Receipt } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
@@ -88,10 +88,6 @@ export default function LeftRailDocuments({
   const [invoiceDropdownOpen, setInvoiceDropdownOpen] = useState(false)
   const [generatingInvoice, setGeneratingInvoice] = useState(false)
   const [availableInvoices, setAvailableInvoices] = useState({ has_payer: false, payer: null, available_types: [] })
-  const [settlementModal, setSettlementModal] = useState(false)
-  const [settlementAmount, setSettlementAmount] = useState('')
-  const [settlementNote, setSettlementNote] = useState('')
-  const [settlementLoading, setSettlementLoading] = useState(false)
   const getToken = () => localStorage.getItem('token')
 
   // ОПТИМІЗАЦІЯ Phase 2: Використовуємо batch endpoint замість N окремих запитів
@@ -200,9 +196,9 @@ export default function LeftRailDocuments({
       return
     }
     
-    // Для Акту взаєморозрахунків - відкриваємо модалку
+    // Для Акту взаєморозрахунків - відкриваємо прямо
     if (docType === 'settlement_act') {
-      setSettlementModal(true)
+      window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/preview`, '_blank')
       return
     }
     
@@ -291,10 +287,10 @@ export default function LeftRailDocuments({
       }
     }
     
-    // Для Акту взаєморозрахунків - відкриваємо модалку
+    // Для Акту взаєморозрахунків - відкриваємо прямо
     if (docType === 'settlement_act') {
       setGenerating(null)
-      setSettlementModal(true)
+      window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/preview`, '_blank')
       return null
     }
     
@@ -769,110 +765,6 @@ export default function LeftRailDocuments({
         </div>
       )}
       
-      {/* Settlement Act Modal */}
-      {settlementModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSettlementModal(false)}>
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4" onClick={e => e.stopPropagation()} data-testid="settlement-modal">
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calculator className="w-5 h-5 text-slate-600" />
-                <h3 className="font-semibold text-slate-800">Акт взаєморозрахунків</h3>
-              </div>
-              <button
-                onClick={() => setSettlementModal(false)}
-                className="text-slate-400 hover:text-slate-600"
-                data-testid="settlement-modal-close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 space-y-4">
-              <p className="text-sm text-slate-600">
-                Система автоматично розрахує підсумок на основі всіх оплат, нарахувань та застави.
-              </p>
-              
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-medium text-slate-500 block mb-1">
-                    Фінальна сума (необов'язково)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={settlementAmount}
-                      onChange={(e) => setSettlementAmount(e.target.value)}
-                      placeholder="Авто (залишити порожнім)"
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
-                      data-testid="settlement-amount-input"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">грн</span>
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Додатне — клієнт доплачує, від'ємне — повернення клієнту
-                  </p>
-                </div>
-                
-                <div>
-                  <label className="text-xs font-medium text-slate-500 block mb-1">
-                    Примітка менеджера
-                  </label>
-                  <textarea
-                    value={settlementNote}
-                    onChange={(e) => setSettlementNote(e.target.value)}
-                    placeholder="Коментар до розрахунку..."
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 resize-none"
-                    data-testid="settlement-note-input"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => {
-                    const params = new URLSearchParams()
-                    if (settlementAmount && settlementAmount !== '') {
-                      params.set('final_amount', settlementAmount)
-                    }
-                    if (settlementNote.trim()) {
-                      params.set('manager_note', settlementNote.trim())
-                    }
-                    const qs = params.toString()
-                    window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/preview${qs ? '?' + qs : ''}`, '_blank')
-                    setSettlementModal(false)
-                  }}
-                  disabled={settlementLoading}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-medium"
-                  data-testid="settlement-preview-btn"
-                >
-                  <Eye className="w-4 h-4" />
-                  Переглянути
-                </button>
-                <button
-                  onClick={() => {
-                    const params = new URLSearchParams()
-                    if (settlementAmount && settlementAmount !== '') {
-                      params.set('final_amount', settlementAmount)
-                    }
-                    if (settlementNote.trim()) {
-                      params.set('manager_note', settlementNote.trim())
-                    }
-                    const qs = params.toString()
-                    window.open(`${BACKEND_URL}/api/documents/settlement-act/${orderId}/pdf${qs ? '?' + qs : ''}`, '_blank')
-                    setSettlementModal(false)
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-white border border-slate-300 rounded-lg hover:bg-slate-50 font-medium"
-                  data-testid="settlement-print-btn"
-                >
-                  <Printer className="w-4 h-4" />
-                  Друк
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* History Modal */}
       {historyModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setHistoryModal(null)}>

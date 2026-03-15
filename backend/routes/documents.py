@@ -2320,11 +2320,16 @@ async def preview_settlement_act(
         "fee": _format_currency(float(r[4] or 0)), "note": r[5] or ""
     } for r in damage_items_rows]
 
-    # === 5. LATE FEES ===
-    late_total_val = db.execute(text("""
+    # === 5. LATE FEES (from fin_payments - manager-decided amounts) ===
+    late_total_row = db.execute(text("""
         SELECT COALESCE(SUM(amount), 0) FROM fin_payments
         WHERE order_id = :order_id AND payment_type = 'late'
-    """), {"order_id": order_id}).scalar() or 0
+    """), {"order_id": order_id}).fetchone()
+    late_final = float(late_total_row[0]) if late_total_row else 0
+
+    # === 5b. DAMAGE (from product_damage_history - manager-decided amounts) ===
+    # Use damage_total_val already computed above
+    damage_final = float(damage_total_val)
 
     # === 6. ADDITIONAL SERVICES ===
     additional_services = db.execute(text("""
@@ -2343,7 +2348,7 @@ async def preview_settlement_act(
     discount_percent = float(order_row[11] or 0)
     rent_after_discount = rent_total - discount
 
-    grand_total_charges = rent_after_discount + additional_total + float(damage_total_val) + float(late_total_val)
+    grand_total_charges = rent_after_discount + additional_total + damage_final + late_final
 
     # Calculated balance: positive = client owes, negative = refund to client
     # Balance = total charges - all payments - deposit held in UAH
@@ -2371,10 +2376,10 @@ async def preview_settlement_act(
             "discount_raw": discount,
             "discount_percent": f"{discount_percent:.0f}" if discount_percent else None,
             "additional_services": additional_services_list,
-            "damage_total": _format_currency(float(damage_total_val)),
-            "damage_total_raw": float(damage_total_val),
-            "late_total": _format_currency(float(late_total_val)),
-            "late_total_raw": float(late_total_val),
+            "damage_total": _format_currency(damage_final),
+            "damage_total_raw": damage_final,
+            "late_total": _format_currency(late_final),
+            "late_total_raw": late_final,
             "grand_total": _format_currency(grand_total_charges),
         },
         "damage_items": damage_items,

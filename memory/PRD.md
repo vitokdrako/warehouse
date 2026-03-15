@@ -27,19 +27,23 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 #### Admin Panel Rebuild (`/admin`) — March 15, 2026
 - **5 tabs**: Користувачі, Документи, Категорії, Витрати, Налаштування
 - Users: CRUD, role badges, password reset, 9 users
-- Documents: 17 doc types overview with creation stats and template badges
+- Documents: 17 doc types with template editor (view, edit, preview, save to DB)
 - Categories: 155 product categories with search
 - Expense Categories: 13 categories, CRUD
-- Settings: editable company data (ФОП, ІПН, IBAN, адреса, телефон, email, вебсайт) saved to `system_settings` table
-- Removed: Підрядники (0), Працівники (0), Зарплати (0), Логи (фейкові)
-- Full corp-* design system, CorporateHeader, lucide icons, custom toasts
+- Settings: editable company data (ФОП, ІПН, IBAN, адреса, телефон, email, вебсайт)
 
 #### Dynamic Document Company Data — Feb 2026
-- Created `services/company_config.py` — central utility for fetching company data from DB
-- All document templates (quote, issue_act, picking_list, master_agreement, etc.) now use DB data
-- Both `company.*` and `landlord.*` template variables resolved from `system_settings` table
-- Admin Panel Settings tab extended with phone, email, website, short_name fields
-- Changes in Admin Panel immediately reflect in all generated documents
+- Created `services/company_config.py` — central utility for company data from DB
+- All document templates use DB data via `system_settings` table
+- Both `company.*` and `landlord.*` template variables resolved from DB
+
+#### Template Editor — Feb 2026
+- **DB-first template loading**: Custom `DBOverrideLoader` for Jinja2 (checks DB before file system)
+- **Template CRUD API**: GET/PUT/POST (reset) endpoints at `/api/admin/templates/*`
+- **Code editor**: Dark-themed monospace editor with tab support, character count
+- **Live preview**: Renders template with real order data in iframe
+- **Save/Reset flow**: Save stores to `document_templates` DB table; Reset deletes from DB, reverts to file
+- **Source badges**: "Оригінал (файл)" / "Змінено (БД)" indicators
 
 #### Other Changes
 - Role-based login: manager → /manager-cabinet, admin/requisitor → /manager
@@ -48,20 +52,24 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Deleted old calendar (UniversalOpsCalendar)
 
 ## Key Files
-- `/app/frontend/src/pages/AdminPanel.jsx` — Admin panel (5 tabs)
-- `/app/frontend/src/pages/UnifiedCalendarNew.jsx` — Calendar
-- `/app/frontend/src/pages/PersonalCabinet.jsx` — Cabinet (5 tabs)
-- `/app/backend/routes/admin.py` — Admin API (users, document-stats, settings)
-- `/app/backend/routes/cabinet.py` — Cabinet API
+- `/app/frontend/src/pages/AdminPanel.jsx` — Admin panel (5 tabs + template editor)
+- `/app/backend/routes/admin.py` — Admin API (users, doc stats, settings, templates)
+- `/app/backend/services/template_loader.py` — DBOverrideLoader for Jinja2
 - `/app/backend/services/company_config.py` — Central company data from DB
 - `/app/backend/routes/documents.py` — Document generation endpoints
 - `/app/backend/routes/document_render.py` — Template rendering engine
 - `/app/backend/services/doc_engine/data_builders.py` — Document data builders
+- `/app/backend/services/doc_engine/render.py` — HTML/PDF render engine
+
+## DB Schema (New)
+- `system_settings`: (setting_key PK, setting_value) — company data
+- `document_templates`: (doc_type PK, template_content LONGTEXT, updated_at, updated_by) — template overrides
 
 ## Prioritized Backlog
 
 ### P0 (Completed)
-- ~~Document Context Variable Mismatch~~ — Fixed Feb 2026
+- ~~Document Context Variable Mismatch~~ — Fixed
+- ~~Template Editor~~ — Implemented
 
 ### P1
 - Post-Deployment Health Check

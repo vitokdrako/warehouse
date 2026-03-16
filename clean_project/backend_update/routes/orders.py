@@ -2878,81 +2878,8 @@ async def complete_return(
         # Статус 'returned' автоматично "розморожує" товари в order_items
         print(f"[Orders] Замовлення {order_id} повернуто (товари розморожені)")
         
-        # ✅ ОПТИМІЗОВАНО: Записуємо в product_damage_history (єдине джерело істини)
-        tasks_created = 0
-        try:
-            order_items_result = db.execute(text("""
-                SELECT oi.product_id, p.sku, p.name, oi.quantity, p.category_name, p.rental_price
-                FROM order_items oi
-                LEFT JOIN products p ON oi.product_id = p.product_id
-                WHERE oi.order_id = :order_id
-                  AND (oi.status IS NULL OR oi.status != 'refused')
-            """), {"order_id": order_id})
-            
-            order_items = [dict(row._mapping) for row in order_items_result]
-            
-            items_returned = return_data.get('items_returned', [])
-            damaged_skus = set()
-            for item in items_returned:
-                findings = item.get('findings', [])
-                if findings and len(findings) > 0:
-                    damaged_skus.add(item.get('sku'))
-            
-            print(f"[Orders] Знайдено {len(damaged_skus)} пошкоджених товарів: {damaged_skus}")
-            
-            import uuid as _uuid
-            for item in order_items:
-                sku = item.get('sku')
-                if not sku:
-                    continue
-                
-                processing_type = 'restoration' if sku in damaged_skus else 'wash'
-                qty = item.get('quantity') or 1
-                label = 'реставрацію' if sku in damaged_skus else 'мийку'
-                print(f"[Orders] Товар {sku} ({item.get('name', '?')}) → {label}")
-                
-                try:
-                    pdh_id = str(_uuid.uuid4())
-                    db.execute(text("""
-                        INSERT INTO product_damage_history (
-                            id, product_id, sku, product_name, category,
-                            order_id, order_number, stage, damage_type, damage_code,
-                            severity, fee, qty, processed_qty,
-                            processing_type, processing_status,
-                            source, created_by, created_at, updated_at
-                        ) VALUES (
-                            :id, :product_id, :sku, :name, :category,
-                            :order_id, :order_number, 'return', 'Після повернення', 'auto_return',
-                            'low', 0, :qty, 0,
-                            :processing_type, 'pending',
-                            'auto_return', :created_by, NOW(), NOW()
-                        )
-                    """), {
-                        "id": pdh_id,
-                        "product_id": item.get('product_id') or 0,
-                        "sku": sku,
-                        "name": item.get('name', ''),
-                        "category": item.get('category_name', ''),
-                        "order_id": order_id,
-                        "order_number": return_data.get('order_number', ''),
-                        "qty": qty,
-                        "processing_type": processing_type,
-                        "created_by": return_data.get('returned_by', 'System')
-                    })
-                    
-                    # Заморозити товар
-                    db.execute(text("""
-                        UPDATE products SET frozen_quantity = COALESCE(frozen_quantity, 0) + :qty
-                        WHERE product_id = :pid
-                    """), {"qty": qty, "pid": item.get('product_id') or 0})
-                    
-                    tasks_created += 1
-                except Exception as e:
-                    print(f"[Orders] Помилка створення PDH для {sku}: {e}")
-            
-            print(f"[Orders] ✅ Створено {tasks_created} записів в product_damage_history (з {len(order_items)} товарів)")
-        except Exception as e:
-            print(f"[Orders] Помилка при створенні записів PDH (не критично): {e}")
+        # Розподілення товарів (мийка/реставрація) НЕ робиться автоматично.
+        # Реквізитор сам вирішує через механізм розподілення в кабінеті.
         
         # Створити фінансову транзакцію для збитків (якщо є)
         if total_fees > 0:

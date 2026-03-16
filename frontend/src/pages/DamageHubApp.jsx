@@ -182,20 +182,20 @@ const QueueItemCard = ({ item, onComplete, onDelete, onPhotoClick, completing })
   };
 
   return (
-    <div className={`p-3 rounded-xl border bg-white transition-all hover:shadow-sm ${isInProgress ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200'}`}>
-      <div className="flex gap-3">
+    <div className={`p-2.5 sm:p-3 rounded-xl border bg-white transition-all hover:shadow-sm ${isInProgress ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200'}`}>
+      <div className="flex gap-2 sm:gap-3">
         {/* Photo */}
         {photoUrl ? (
           <img
             src={photoUrl}
             alt={item.product_name}
-            className="w-14 h-14 rounded-lg object-cover border border-slate-200 cursor-pointer hover:opacity-80 flex-shrink-0"
+            className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg object-cover border border-slate-200 cursor-pointer hover:opacity-80 flex-shrink-0"
             onClick={() => onPhotoClick?.(photoUrl, item.product_name)}
             onError={handleImageError}
           />
         ) : (
-          <div className="w-14 h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
-            <Package className="w-5 h-5 text-slate-400" />
+          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0">
+            <Package className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400" />
           </div>
         )}
         
@@ -241,7 +241,7 @@ const QueueItemCard = ({ item, onComplete, onDelete, onPhotoClick, completing })
       </div>
       
       {/* Action */}
-      <div className="mt-2 flex items-center justify-end gap-1.5">
+      <div className="mt-2 flex items-center justify-end gap-1.5 flex-wrap">
         <button
           onClick={() => onDelete(item.id)}
           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors flex items-center gap-1"
@@ -842,15 +842,25 @@ export default function DamageHubApp() {
       
       {/* Toolbar */}
       <div className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <h1 className="text-lg font-bold text-slate-800">Кабінет шкоди</h1>
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-4 py-2.5 sm:py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-base sm:text-lg font-bold text-slate-800">Кабінет шкоди</h1>
+            <button
+              onClick={loadAll}
+              disabled={loading}
+              className="sm:hidden p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-50 transition"
+              title="Оновити"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
           
-          <div className="flex items-center gap-3 flex-1 max-w-md">
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:max-w-md">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Пошук за назвою, артикулом або замовленням..."
+                placeholder="Пошук..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-300 transition"
@@ -862,7 +872,7 @@ export default function DamageHubApp() {
           <button
             onClick={loadAll}
             disabled={loading}
-            className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-50 transition"
+            className="hidden sm:block p-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 disabled:opacity-50 transition"
             title="Оновити"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -871,10 +881,10 @@ export default function DamageHubApp() {
       </div>
 
       {/* Three columns */}
-      <div className="max-w-[1600px] mx-auto px-4 py-4">
-        <div className="grid grid-cols-3 gap-4 h-[calc(100vh-140px)]" data-testid="damage-hub-columns">
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-4 py-3 sm:py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:h-[calc(100vh-140px)]" data-testid="damage-hub-columns">
           {/* Мийка */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col" data-testid="wash-column">
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col h-[60vh] md:h-[70vh] lg:h-full" data-testid="wash-column">
             <QueueColumn
               title="Мийка"
               icon={Droplets}
@@ -892,7 +902,7 @@ export default function DamageHubApp() {
           </div>
           
           {/* Реставрація */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col" data-testid="restore-column">
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col h-[60vh] md:h-[70vh] lg:h-full" data-testid="restore-column">
             <QueueColumn
               title="Реставрація"
               icon={Wrench}
@@ -910,7 +920,7 @@ export default function DamageHubApp() {
           </div>
           
           {/* Пральня */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col" data-testid="laundry-column">
+          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white flex flex-col h-[60vh] md:h-[70vh] lg:h-full" data-testid="laundry-column">
             <LaundryColumn
               items={laundryItems}
               loading={loading}

@@ -99,11 +99,15 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - ~~Document Context Variable Mismatch~~ — Fixed
 - ~~Template Editor~~ — Implemented
 - ~~Settlement Act (Акт взаєморозрахунків)~~ — Implemented (March 15, 2026)
+- ~~Mobile Responsive Damages Cabinet~~ — **Done (March 16, 2026)**
+  - Grid: 1 col (mobile) → 2 col (tablet) → 3 col (desktop)
+  - Toolbar stacks vertically on mobile, separate refresh button
+  - Column heights adapt: 60vh/70vh/full
 
 ### P1
 - Post-Deployment Health Check
 - Simplify `laundry_items`
-- Delete legacy routes (`damages.py`, `audit.py`)
+- Clarify purpose of `damages.py` and `audit.py` (user confirmed they are in active use — DO NOT delete)
 - ~~Monthly Cash Desk Closing~~ — **Done (March 15, 2026)**
   - Backend: close-month, monthly-reports CRUD endpoints
   - Frontend: KasaPage "Закрити місяць" button + AdminPanel "Звіти" tab

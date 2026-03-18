@@ -2592,7 +2592,7 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                 "id": "dmg_due", "type": "damage_pending",
                 "at": None, "label": "Шкода (очікує)",
                 "amount": damage["due"], "status": "warn",
-                "meta": ", ".join([d["name"] for d in damage_items[:3]])
+                "meta": ", ".join([d["name"] or "—" for d in damage_items[:3]])
             })
         
         # Sort timeline by date (newest first, pending last)

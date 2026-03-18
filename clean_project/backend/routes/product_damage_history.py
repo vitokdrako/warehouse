@@ -119,11 +119,15 @@ async def create_damage_record(
     - photo_url: URL фото (опціонально)
     - note: Примітка (опціонально)
     - created_by: Хто зафіксував (опціонально)
-    - processing_type: 'none', 'wash', 'restoration', 'laundry'
+    - processing_type: 'awaiting_assignment', 'wash', 'restoration', 'laundry', 'returned_to_stock'
+    
+    ВАЖЛИВО: За замовчуванням processing_type = 'awaiting_assignment' (очікує розподілу)
+    Це проміжний стан поки менеджер не обере тип обробки (мийка/прання/хімчистка/реставрація/на склад)
     """
     try:
         damage_id = str(uuid.uuid4())
-        processing_type = damage_data.get("processing_type", "none")
+        # За замовчуванням - очікує розподілу (проміжний стан)
+        processing_type = damage_data.get("processing_type", "awaiting_assignment")
         stage = damage_data.get("stage", "return")
         order_id = damage_data.get("order_id")
         product_id = damage_data.get("product_id")
@@ -205,7 +209,9 @@ async def create_damage_record(
             "note": damage_data.get("note"),
             "created_by": damage_data.get("created_by", "system"),
             "processing_type": processing_type,
-            "processing_status": "pending" if processing_type != "none" else "completed"
+            # awaiting_assignment та інші типи мають status = 'pending'
+            # returned_to_stock має status = 'completed' (одразу готово)
+            "processing_status": "completed" if processing_type == "returned_to_stock" else "pending"
         })
         
         # Заморозити товар при записі шкоди (не для pre_issue)
@@ -216,19 +222,25 @@ async def create_damage_record(
             if is_total_loss:
                 # Повна втрата - товар списаний
                 new_state = 'written_off'
+            elif processing_type == "returned_to_stock":
+                # Повернуто на склад одразу - не заморожувати
+                new_state = None
             else:
                 # Звичайна шкода - товар заморожений до обробки
                 new_state = 'damaged'
             
-            db.execute(text("""
-                UPDATE products 
-                SET state = :state
-                WHERE product_id = :product_id
-            """), {
-                "product_id": product_id,
-                "state": new_state
-            })
-            print(f"[DamageHistory] 🔒 Товар {product_id} заморожено, state={new_state}")
+            if new_state:
+                db.execute(text("""
+                    UPDATE products 
+                    SET state = :state,
+                        frozen_quantity = COALESCE(frozen_quantity, 0) + :qty
+                    WHERE product_id = :product_id
+                """), {
+                    "product_id": product_id,
+                    "state": new_state,
+                    "qty": qty
+                })
+                print(f"[DamageHistory] 🔒 Товар {product_id} заморожено, state={new_state}, frozen_qty +{qty}")
         
         db.commit()
         
@@ -319,7 +331,8 @@ async def get_order_damage_history(
                 pdh.damage_type, pdh.damage_code, pdh.severity, pdh.fee,
                 pdh.photo_url, pdh.note, pdh.created_by, pdh.created_at,
                 pdh.processing_type, pdh.processing_status, pdh.sent_to_processing_at,
-                p.image_url as product_image
+                p.image_url as product_image,
+                pdh.qty, pdh.fee_per_item
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.order_id = :order_id
@@ -328,6 +341,10 @@ async def get_order_damage_history(
         
         history = []
         for row in result:
+            qty = row[20] if len(row) > 20 and row[20] else 1
+            fee_per_item = row[21] if len(row) > 21 and row[21] else 0
+            fee = float(row[11]) if row[11] else 0.0
+            
             history.append({
                 "id": row[0],
                 "product_id": row[1],
@@ -341,8 +358,10 @@ async def get_order_damage_history(
                 "damage_type": row[8],
                 "damage_code": row[9],
                 "severity": row[10],
-                "fee": float(row[11]) if row[11] else 0.0,
-                "charged_to_client": float(row[11]) > 0 if row[11] else False,
+                "fee": fee,
+                "fee_per_item": float(fee_per_item) if fee_per_item else (fee / qty if qty > 0 else fee),
+                "qty": qty,
+                "charged_to_client": fee > 0,
                 "photo_url": row[12],
                 "note": row[13],
                 "created_by": row[14],
@@ -363,6 +382,54 @@ async def get_order_damage_history(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Помилка читання: {str(e)}")
+
+
+
+@router.patch("/{damage_id}")
+async def update_damage_record(
+    damage_id: str,
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """Оновити запис про пошкодження (qty, fee, fee_per_item, note)"""
+    try:
+        # Формуємо SET частину запиту
+        updates = []
+        params = {"damage_id": damage_id}
+        
+        if "qty" in data:
+            updates.append("qty = :qty")
+            params["qty"] = data["qty"]
+        
+        if "fee" in data:
+            updates.append("fee = :fee")
+            params["fee"] = data["fee"]
+            
+        if "fee_per_item" in data:
+            updates.append("fee_per_item = :fee_per_item")
+            params["fee_per_item"] = data["fee_per_item"]
+            
+        if "note" in data:
+            updates.append("note = :note")
+            params["note"] = data["note"]
+            
+        if "processing_type" in data:
+            updates.append("processing_type = :processing_type")
+            params["processing_type"] = data["processing_type"]
+        
+        if not updates:
+            return {"success": False, "message": "Немає даних для оновлення"}
+        
+        query = f"UPDATE product_damage_history SET {', '.join(updates)} WHERE id = :damage_id"
+        db.execute(text(query), params)
+        db.commit()
+        
+        return {"success": True, "message": "Запис оновлено"}
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка оновлення: {str(e)}")
+
 
 
 @router.get("/sku/{sku}")
@@ -636,7 +703,7 @@ async def get_damage_cases_grouped(db: Session = Depends(get_rh_db)):
                 o.customer_phone,
                 o.status as order_status,
                 COALESCE((SELECT SUM(amount) FROM fin_payments WHERE order_id = pdh.order_id AND payment_type = 'damage'), 0) as damage_paid,
-                SUM(CASE WHEN pdh.processing_type IS NULL OR pdh.processing_type = '' OR pdh.processing_type = 'none' THEN 1 ELSE 0 END) as pending_assignment,
+                SUM(CASE WHEN pdh.processing_type IS NULL OR pdh.processing_type = '' OR pdh.processing_type = 'none' OR pdh.processing_type = 'awaiting_assignment' THEN 1 ELSE 0 END) as pending_assignment,
                 SUM(CASE WHEN pdh.processing_status = 'completed' THEN 1 ELSE 0 END) as completed_count
             FROM product_damage_history pdh
             LEFT JOIN orders o ON o.order_id = pdh.order_id
@@ -785,7 +852,7 @@ async def get_wash_queue(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'wash'
-            AND COALESCE(pdh.processing_status, '') != 'hidden'
+            AND COALESCE(pdh.processing_status, '') NOT IN ('hidden', 'completed', 'returned_to_stock', 'deleted')
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
@@ -887,7 +954,7 @@ async def get_restoration_queue(db: Session = Depends(get_rh_db)):
             FROM product_damage_history pdh
             LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'restoration'
-            AND COALESCE(pdh.processing_status, '') != 'hidden'
+            AND COALESCE(pdh.processing_status, '') NOT IN ('hidden', 'completed', 'returned_to_stock', 'deleted')
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
@@ -985,17 +1052,22 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 pdh.returned_from_processing_at, pdh.processing_notes,
                 pdh.laundry_batch_id, pdh.laundry_item_id,
                 pdh.created_at, pdh.created_by,
-                lb.laundry_company, lb.status as batch_status
+                lb.laundry_company, lb.status as batch_status,
+                p.image_url as product_image,
+                pdh.qty, pdh.processed_qty
             FROM product_damage_history pdh
             LEFT JOIN laundry_batches lb ON pdh.laundry_batch_id = lb.id
+            LEFT JOIN products p ON pdh.product_id = p.product_id
             WHERE pdh.processing_type = 'laundry'
-            AND COALESCE(pdh.processing_status, '') != 'hidden'
+            AND COALESCE(pdh.processing_status, '') NOT IN ('hidden', 'completed', 'returned_to_stock', 'deleted')
             ORDER BY pdh.sent_to_processing_at DESC, pdh.created_at DESC
         """))
         
         pdh_product_ids = set()
         for row in result:
             pdh_product_ids.add(row[1])
+            qty = row[23] or 1
+            processed_qty = row[24] or 0
             items.append({
                 "id": row[0],
                 "product_id": row[1],
@@ -1019,6 +1091,10 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 "created_by": row[19],
                 "laundry_company": row[20],
                 "batch_status": row[21],
+                "product_image": row[22],
+                "qty": qty,
+                "processed_qty": processed_qty,
+                "remaining_qty": qty - processed_qty,
                 "source": "damage_history"
             })
         
@@ -1039,6 +1115,9 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 "sku": row[1],
                 "product_name": row[2],
                 "category": row[3],
+                "qty": row[4] or 1,
+                "processed_qty": 0,
+                "remaining_qty": row[4] or 1,
                 "order_id": None,
                 "order_number": None,
                 "damage_type": "Внутрішня обробка",
@@ -1056,6 +1135,7 @@ async def get_laundry_queue(db: Session = Depends(get_rh_db)):
                 "created_by": "system",
                 "laundry_company": None,
                 "batch_status": None,
+                "product_image": row[5],
                 "source": "quick_action"
             })
         
@@ -1097,9 +1177,9 @@ async def send_to_wash(damage_id: str, data: dict, db: Session = Depends(get_rh_
         # Оновити стан товару в inventory
         if product_id:
             db.execute(text("""
-                UPDATE inventory 
-                SET product_state = 'in_washing', 
-                    cleaning_status = 'washing',
+                UPDATE products 
+                SET product_state = 'in_wash', 
+                    cleaning_status = 'wash',
                     updated_at = NOW()
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
@@ -1146,7 +1226,7 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
         # Оновити стан товару в inventory
         if product_id:
             db.execute(text("""
-                UPDATE inventory 
+                UPDATE products 
                 SET product_state = 'in_restoration', 
                     cleaning_status = 'restoration',
                     updated_at = NOW()
@@ -1216,12 +1296,10 @@ async def send_to_laundry(damage_id: str, data: dict, db: Session = Depends(get_
 @router.post("/{damage_id}/send-to-washing")
 async def send_to_washing(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """
-    Додати товар до черги прання.
-    НЕ створює партію - лише позначає товар як 'washing' без batch_id.
-    Партія формується окремо через /api/laundry/queue/add-to-batch
+    Додати товар до черги прання (wash).
+    НЕ створює партію - лише позначає товар як 'wash' без batch_id.
     """
     try:
-        # Отримати інформацію про товар
         damage_info = db.execute(text("""
             SELECT product_id, sku, product_name, category, order_id, order_number, processing_type
             FROM product_damage_history
@@ -1231,16 +1309,14 @@ async def send_to_washing(damage_id: str, data: dict, db: Session = Depends(get_
         if not damage_info:
             raise HTTPException(status_code=404, detail="Damage record not found")
         
-        # Перевірка чи товар вже відправлений на обробку
         if damage_info[6] and damage_info[6] != 'none':
             raise HTTPException(status_code=400, detail=f"Товар вже відправлено на {damage_info[6]}")
         
         notes = data.get("notes", "")
         
-        # Оновити damage record - позначити як washing БЕЗ batch_id (черга)
         db.execute(text("""
             UPDATE product_damage_history
-            SET processing_type = 'washing',
+            SET processing_type = 'wash',
                 processing_status = 'pending',
                 sent_to_processing_at = NOW(),
                 processing_notes = :notes,
@@ -1285,12 +1361,19 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
     category = data.get("category")
     queue_type = data.get("queue_type", "laundry")
     notes = data.get("notes", "")
+    quantity = int(data.get("quantity", 1))
+    if quantity < 1:
+        quantity = 1
     
     if not product_id or not sku:
         raise HTTPException(status_code=400, detail="product_id та sku обов'язкові")
     
-    if queue_type not in ('washing', 'laundry'):
-        raise HTTPException(status_code=400, detail="queue_type має бути 'washing' або 'laundry'")
+    if queue_type not in ('wash', 'laundry', 'restoration'):
+        # Backward compatibility: washing → wash
+        if queue_type == 'washing':
+            queue_type = 'wash'
+        else:
+            raise HTTPException(status_code=400, detail="queue_type має бути 'wash', 'restoration' або 'laundry'")
     
     try:
         damage_id = str(uuid.uuid4())
@@ -1302,7 +1385,7 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
                 damage_type, note, sent_to_processing_at, created_at
             ) VALUES (
                 :id, :product_id, :sku, :product_name, :category,
-                1, 0, :processing_type, 'pending',
+                :qty, 0, :processing_type, 'pending',
                 'quick_add', :notes, NOW(), NOW()
             )
         """), {
@@ -1311,9 +1394,17 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
             "sku": sku,
             "product_name": product_name,
             "category": category,
+            "qty": quantity,
             "processing_type": queue_type,
             "notes": notes
         })
+        
+        # Заморозити товар у каталозі
+        db.execute(text("""
+            UPDATE products 
+            SET frozen_quantity = COALESCE(frozen_quantity, 0) + :qty
+            WHERE product_id = :pid
+        """), {"qty": quantity, "pid": product_id})
         
         db.commit()
         
@@ -1391,11 +1482,13 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
             "notes": data.get("notes", "")
         })
         
-        # Повернути товар на склад (збільшити quantity)
+        # Повернути товар на склад - зменшити in_laundry та frozen_quantity
         if product_id and completed_qty > 0:
+            # Зменшити in_laundry (кількість на мийці/пранні/хімчистці)
             db.execute(text("""
                 UPDATE products 
-                SET quantity = quantity + :qty
+                SET in_laundry = GREATEST(0, COALESCE(in_laundry, 0) - :qty),
+                    frozen_quantity = GREATEST(0, COALESCE(frozen_quantity, 0) - :qty)
                 WHERE product_id = :product_id
             """), {"product_id": product_id, "qty": completed_qty})
             
@@ -1403,19 +1496,20 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
             if is_fully_completed:
                 db.execute(text("""
                     UPDATE products 
-                    SET product_state = 'shelf'
+                    SET state = 'ok'
                     WHERE product_id = :product_id
+                    AND in_laundry <= 0 AND frozen_quantity <= 0
                 """), {"product_id": product_id})
                 
                 db.execute(text("""
-                    UPDATE inventory 
+                    UPDATE products 
                     SET product_state = 'available', 
                         cleaning_status = 'clean',
                         updated_at = NOW()
                     WHERE product_id = :product_id
                 """), {"product_id": product_id})
             
-            print(f"[DamageHistory] 🔓 Товар {product_id}: оброблено {completed_qty} шт, всього {new_processed}/{total_qty}")
+            print(f"[DamageHistory] 🔓 Товар {product_id}: оброблено {completed_qty} шт, всього {new_processed}/{total_qty}, in_laundry -={completed_qty}")
         
         db.commit()
         
@@ -1622,14 +1716,34 @@ async def mark_processing_failed(damage_id: str, data: dict, db: Session = Depen
 @router.post("/{damage_id}/return-to-stock")
 async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_rh_db)):
     """
-    Повернути товар на склад БЕЗ обробки.
-    Використовується коли шкода незначна або не потребує ремонту.
-    Розморожує товар і робить його доступним для оренди.
+    Повернути товар на склад (повністю або частково).
+    Якщо передано return_qty < qty — часткове повернення (залишок лишається в черзі).
+    Розморожує вказану кількість і робить її доступною.
     """
     try:
-        # Отримати product_id з damage record
+        notes = data.get("notes", "Повернуто на склад")
+        return_qty = data.get("return_qty")  # None = повне повернення
+        
+        # --- Quick action items (quick_{product_id}) ---
+        if str(damage_id).startswith("quick_"):
+            product_id = int(str(damage_id).replace("quick_", ""))
+            unfreeze = return_qty or 1
+            db.execute(text("""
+                UPDATE products 
+                SET product_state = 'shelf',
+                    frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - :qty, 0)
+                WHERE product_id = :pid
+            """), {"pid": product_id, "qty": unfreeze})
+            db.execute(text("""
+                UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                WHERE product_id = :pid
+            """), {"pid": product_id})
+            db.commit()
+            return {"success": True, "message": f"Повернуто {unfreeze} шт на склад"}
+        
+        # --- Regular damage history records ---
         damage_record = db.execute(text("""
-            SELECT product_id, sku, product_name, qty 
+            SELECT product_id, sku, product_name, qty, laundry_batch_id, laundry_item_id, COALESCE(processed_qty, 0)
             FROM product_damage_history 
             WHERE id = :damage_id
         """), {"damage_id": damage_id}).fetchone()
@@ -1638,51 +1752,83 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
             raise HTTPException(status_code=404, detail="Запис не знайдено")
         
         product_id = damage_record[0]
+        batch_id = damage_record[4]
+        laundry_item_id = damage_record[5]
+        total_qty = damage_record[3] or 1
+        already_processed = damage_record[6] or 0
+        remaining = total_qty - already_processed
         
-        # 1. Оновити запис шкоди - позначити як оброблений (просто повернуто)
-        db.execute(text("""
-            UPDATE product_damage_history
-            SET processing_type = 'returned_to_stock',
-                processing_status = 'completed',
-                returned_from_processing_at = NOW(),
-                processing_notes = :notes
-            WHERE id = :damage_id
-        """), {
-            "damage_id": damage_id,
-            "notes": data.get("notes", "Повернуто на склад без обробки")
-        })
+        # Визначити кількість для повернення
+        qty_to_return = min(return_qty or remaining, remaining)
+        if qty_to_return < 1:
+            qty_to_return = remaining
         
-        # 2. Розморозити товар - встановити state = 'available' або 'shelf'
+        is_full_return = (already_processed + qty_to_return) >= total_qty
+        
+        if is_full_return:
+            # Повне повернення — закриваємо запис
+            db.execute(text("""
+                UPDATE product_damage_history
+                SET processing_type = 'returned_to_stock',
+                    processing_status = 'completed',
+                    processed_qty = :total,
+                    returned_from_processing_at = NOW(),
+                    processing_notes = :notes
+                WHERE id = :damage_id
+            """), {"damage_id": damage_id, "notes": notes, "total": total_qty})
+        else:
+            # Часткове повернення — збільшуємо processed_qty, запис лишається в черзі
+            db.execute(text("""
+                UPDATE product_damage_history
+                SET processed_qty = COALESCE(processed_qty, 0) + :qty,
+                    processing_notes = CONCAT(COALESCE(processing_notes, ''), '\nЧасткове: ', :qty_str, ' шт. ', :notes)
+                WHERE id = :damage_id
+            """), {"damage_id": damage_id, "qty": qty_to_return, "qty_str": str(qty_to_return), "notes": notes})
+        
+        # Якщо елемент був у партії — оновити повернення
+        if batch_id:
+            if laundry_item_id:
+                if is_full_return:
+                    db.execute(text("UPDATE laundry_items SET returned_quantity = quantity WHERE id = :lid"), {"lid": laundry_item_id})
+                else:
+                    db.execute(text("UPDATE laundry_items SET returned_quantity = returned_quantity + :qty WHERE id = :lid"), {"lid": laundry_item_id, "qty": qty_to_return})
+            db.execute(text("""
+                UPDATE laundry_batches 
+                SET returned_items = (SELECT COALESCE(SUM(returned_quantity), 0) FROM laundry_items WHERE batch_id = :bid)
+                WHERE id = :bid
+            """), {"bid": batch_id})
+            batch_info = db.execute(text("SELECT total_items, returned_items FROM laundry_batches WHERE id = :bid"), {"bid": batch_id}).fetchone()
+            if batch_info and batch_info[1] >= batch_info[0]:
+                db.execute(text("UPDATE laundry_batches SET status = 'returned' WHERE id = :bid"), {"bid": batch_id})
+        
+        # Розморозити вказану кількість
         if product_id:
             db.execute(text("""
                 UPDATE products 
-                SET product_state = 'shelf'
+                SET product_state = CASE WHEN :is_full THEN 'shelf' ELSE product_state END,
+                    frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - :qty, 0)
                 WHERE product_id = :product_id
-            """), {"product_id": product_id})
+            """), {"product_id": product_id, "qty": qty_to_return, "is_full": is_full_return})
             
-            # Оновити стан в inventory - доступний
-            db.execute(text("""
-                UPDATE inventory 
-                SET product_state = 'available', 
-                    cleaning_status = 'clean',
-                    updated_at = NOW()
-                WHERE product_id = :product_id
-            """), {"product_id": product_id})
+            if is_full_return:
+                db.execute(text("UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
             
-            # Записати в історію
             try:
                 db.execute(text("""
                     INSERT INTO product_history (product_id, action, actor, details, created_at)
                     VALUES (:product_id, 'ПОВЕРНУТО НА СКЛАД', 'system', :details, NOW())
-                """), {
-                    "product_id": product_id,
-                    "details": f"Повернуто з кабінету шкоди. Без обробки. Доступний для оренди."
-                })
+                """), {"product_id": product_id, "details": f"{'Повністю' if is_full_return else f'Частково {qty_to_return} шт'} з кабінету шкоди. {notes}"})
             except Exception:
-                pass  # Ігноруємо помилки запису історії
+                pass
         
         db.commit()
-        return {"success": True, "message": "Товар повернуто на склад і доступний для оренди"}
+        return {
+            "success": True, 
+            "message": f"Повернуто {qty_to_return} шт" + (" (повністю)" if is_full_return else f" (залишок: {remaining - qty_to_return} шт)"),
+            "qty_returned": qty_to_return,
+            "is_full": is_full_return,
+            "remaining": remaining - qty_to_return
+        }
         
     except HTTPException:
         raise
@@ -1861,6 +2007,20 @@ async def delete_damage_record(
         - reason: Причина видалення (опціонально)
     """
     try:
+        # Quick action items (quick_{product_id}) — не в базі, просто повертаємо на полицю
+        if str(damage_id).startswith("quick_"):
+            product_id = int(str(damage_id).replace("quick_", ""))
+            db.execute(text("""
+                UPDATE products SET product_state = 'shelf', state = 'available', frozen_quantity = 0
+                WHERE product_id = :pid
+            """), {"pid": product_id})
+            db.execute(text("""
+                UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                WHERE product_id = :pid
+            """), {"pid": product_id})
+            db.commit()
+            return {"success": True, "message": "Товар видалено з черги", "deleted_record": {"product_id": product_id, "sku": f"quick_{product_id}"}}
+        
         # Перевірити чи існує запис
         check_result = db.execute(text("""
             SELECT id, product_id, sku, product_name, damage_type, photo_url
@@ -2163,4 +2323,118 @@ async def write_off_item(
     except Exception as e:
         db.rollback()
         print(f"[WriteOff] ❌ Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/fix-frozen-quantities")
+async def fix_frozen_quantities(
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Одноразовий фікс: перерахувати frozen_quantity для товарів,
+    де кількість вже повернута з пральні але frozen_quantity не було зменшено.
+    """
+    try:
+        # Знайти всі товари з frozen_quantity > 0
+        frozen = db.execute(text("""
+            SELECT product_id, sku, name, frozen_quantity 
+            FROM products 
+            WHERE frozen_quantity > 0
+        """)).fetchall()
+        
+        fixes = []
+        
+        for row in frozen:
+            pid = row[0]
+            sku = row[1]
+            name = row[2]
+            current_frozen = row[3] or 0
+            
+            # Порахувати скільки реально в обробці (не повернуто)
+            # 1. damage_history записи з активним processing_type, 
+            #    які НЕ прив'язані до партії (ті що в партії рахуються через laundry_items)
+            active_damage = db.execute(text("""
+                SELECT COALESCE(SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)), 0)
+                FROM product_damage_history
+                WHERE product_id = :pid
+                AND processing_type IN ('wash', 'restoration', 'laundry')
+                AND COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+                AND (laundry_batch_id IS NULL OR laundry_batch_id = '')
+            """), {"pid": pid}).scalar() or 0
+            
+            # 2. laundry_items що ще не повернуті (з незавершених партій)
+            active_laundry = db.execute(text("""
+                SELECT COALESCE(SUM(li.quantity - COALESCE(li.returned_quantity, 0)), 0)
+                FROM laundry_items li
+                JOIN laundry_batches lb ON li.batch_id = lb.id
+                WHERE li.product_id = :pid
+                AND lb.status NOT IN ('cancelled')
+                AND li.quantity > COALESCE(li.returned_quantity, 0)
+            """), {"pid": pid}).scalar() or 0
+            
+            correct_frozen = int(active_damage) + int(active_laundry)
+            
+            if correct_frozen != current_frozen:
+                db.execute(text("""
+                    UPDATE products SET frozen_quantity = :correct WHERE product_id = :pid
+                """), {"correct": correct_frozen, "pid": pid})
+                
+                fixes.append({
+                    "product_id": pid,
+                    "sku": sku,
+                    "name": str(name)[:50] if name else "",
+                    "was_frozen": current_frozen,
+                    "now_frozen": correct_frozen,
+                    "active_damage": int(active_damage),
+                    "active_laundry": int(active_laundry)
+                })
+        
+        db.commit()
+        
+        return {
+            "success": True,
+            "fixed_count": len(fixes),
+            "fixes": fixes
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fix-returned-batch-items")
+async def fix_returned_batch_items(db: Session = Depends(get_rh_db)):
+    """
+    Одноразовий фікс: закрити product_damage_history записи
+    які прив'язані до повернених партій пральні.
+    """
+    try:
+        # Знайти damage_history записи де партія вже повернена
+        stale = db.execute(text("""
+            SELECT pdh.id, pdh.product_id, pdh.sku, pdh.qty,
+                   lb.id as batch_id, lb.status as batch_status
+            FROM product_damage_history pdh
+            JOIN laundry_batches lb ON pdh.laundry_batch_id = lb.id
+            WHERE pdh.processing_type = 'laundry'
+            AND COALESCE(pdh.processing_status, '') NOT IN ('completed', 'returned_to_stock')
+            AND lb.status IN ('returned', 'completed')
+        """)).fetchall()
+        
+        fixes = []
+        for row in stale:
+            db.execute(text("""
+                UPDATE product_damage_history
+                SET processing_status = 'completed',
+                    processing_type = 'returned_to_stock',
+                    processed_qty = COALESCE(qty, 1),
+                    returned_from_processing_at = NOW()
+                WHERE id = :pid
+            """), {"pid": row[0]})
+            fixes.append({"id": row[0], "sku": row[2], "qty": row[3], "batch": row[4]})
+        
+        db.commit()
+        return {"success": True, "fixed_count": len(fixes), "fixes": fixes}
+    except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

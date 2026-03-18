@@ -1177,7 +1177,7 @@ async def send_to_wash(damage_id: str, data: dict, db: Session = Depends(get_rh_
         # Оновити стан товару в inventory
         if product_id:
             db.execute(text("""
-                UPDATE inventory 
+                UPDATE products 
                 SET product_state = 'in_wash', 
                     cleaning_status = 'wash',
                     updated_at = NOW()
@@ -1226,7 +1226,7 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
         # Оновити стан товару в inventory
         if product_id:
             db.execute(text("""
-                UPDATE inventory 
+                UPDATE products 
                 SET product_state = 'in_restoration', 
                     cleaning_status = 'restoration',
                     updated_at = NOW()
@@ -1502,7 +1502,7 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
                 """), {"product_id": product_id})
                 
                 db.execute(text("""
-                    UPDATE inventory 
+                    UPDATE products 
                     SET product_state = 'available', 
                         cleaning_status = 'clean',
                         updated_at = NOW()
@@ -1735,7 +1735,7 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
                 WHERE product_id = :pid
             """), {"pid": product_id, "qty": unfreeze})
             db.execute(text("""
-                UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.commit()
@@ -1811,7 +1811,7 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
             """), {"product_id": product_id, "qty": qty_to_return, "is_full": is_full_return})
             
             if is_full_return:
-                db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
+                db.execute(text("UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
             
             try:
                 db.execute(text("""
@@ -2015,7 +2015,7 @@ async def delete_damage_record(
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.execute(text("""
-                UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.commit()

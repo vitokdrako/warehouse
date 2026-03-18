@@ -126,21 +126,43 @@ async def get_items_by_category(
         rent_filter = availability in ('in_rent', 'reserved')
         
         if processing_filter:
-            # Знайти товари на обробці з products.state
-            db_state = state_filter_map[availability]
+            # Знайти товари на обробці з product_damage_history (SSOT)
+            pdh_type_map = {
+                'on_wash': ('wash', 'washing'),
+                'on_restoration': ('restoration',),
+                'on_laundry': ('laundry',)
+            }
+            pdh_types = pdh_type_map[availability]
+            pdh_type_placeholders = ','.join(f"'{t}'" for t in pdh_types)
             
-            sql_parts = ["""
+            # Спочатку знайти product_ids з PDH
+            pdh_product_result = db.execute(text(f"""
+                SELECT product_id, SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)) as active_qty
+                FROM product_damage_history
+                WHERE processing_type IN ({pdh_type_placeholders})
+                AND COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+                GROUP BY product_id
+                HAVING active_qty > 0
+            """)).fetchall()
+            
+            pdh_product_ids = [row[0] for row in pdh_product_result]
+            
+            if not pdh_product_ids:
+                return {"items": [], "stats": {"total": 0, "available": 0, "in_rent": 0, "reserved": 0, "on_wash": 0, "on_restoration": 0, "on_laundry": 0}, "date_filter_active": bool(date_from and date_to)}
+            
+            pdh_ids_str = ','.join(str(int(pid)) for pid in pdh_product_ids)
+            sql_parts = [f"""
                 SELECT 
                     p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url,
                     p.category_name, p.subcategory_name,
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description, p.state, p.frozen_quantity, p.in_laundry
+                    p.description, p.state, p.frozen_quantity, p.in_laundry, p.family_id
                 FROM products p
-                WHERE p.status = 1 AND p.state = :db_state AND COALESCE(p.frozen_quantity, 0) > 0
+                WHERE p.status = 1 AND p.product_id IN ({pdh_ids_str})
             """]
-            params = {"db_state": db_state}
+            params = {}
             
         elif rent_filter:
             # Знайти товари в оренді або резерві
@@ -187,7 +209,7 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description, p.state, p.frozen_quantity, p.in_laundry
+                    p.description, p.state, p.frozen_quantity, p.in_laundry, p.family_id
                 FROM products p
                 WHERE p.status = 1 AND p.product_id IN :rent_ids
             """]
@@ -202,7 +224,7 @@ async def get_items_by_category(
                     p.quantity, p.zone, p.aisle, p.shelf,
                     p.color, p.material, p.size,
                     p.cleaning_status, p.product_state,
-                    p.description, p.state, p.frozen_quantity, p.in_laundry
+                    p.description, p.state, p.frozen_quantity, p.in_laundry, p.family_id
                 FROM products p
                 WHERE p.status = 1
             """]
@@ -314,28 +336,24 @@ async def get_items_by_category(
             """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)),
             {"date_from": date_from, "date_to": date_to})
         else:
-            # Без дат - показуємо поточний стан
-            reserved_result = db.execute(text("""
-                SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+            # Без дат - показуємо поточний стан: один запит замість трьох
+            combined_result = db.execute(text("""
+                SELECT 
+                    oi.product_id,
+                    SUM(CASE WHEN o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending') THEN oi.quantity ELSE 0 END) as reserved,
+                    SUM(CASE WHEN o.status IN ('issued', 'on_rent') THEN oi.quantity ELSE 0 END) as in_rent
                 FROM order_items oi
                 JOIN orders o ON oi.order_id = o.order_id
                 WHERE oi.product_id IN :product_ids
-                AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+                AND o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending', 'issued', 'on_rent')
                 AND o.rental_end_date >= CURDATE()
                 GROUP BY oi.product_id
             """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
-            reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
-            
-            in_rent_result = db.execute(text("""
-                SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
-                FROM order_items oi
-                JOIN orders o ON oi.order_id = o.order_id
-                WHERE oi.product_id IN :product_ids
-                AND o.status IN ('issued', 'on_rent')
-                AND o.rental_end_date >= CURDATE()
-                GROUP BY oi.product_id
-            """).bindparams(product_ids=tuple(product_ids) if len(product_ids) > 1 else (product_ids[0],)))
-            in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
+            reserved_dict = {}
+            in_rent_dict = {}
+            for row in combined_result:
+                reserved_dict[row[0]] = int(row[1] or 0)
+                in_rent_dict[row[0]] = int(row[2] or 0)
             
             who_has_result = db.execute(text("""
                 SELECT 
@@ -408,9 +426,33 @@ async def get_items_by_category(
             pass
         # ========== КІНЕЦЬ ЧАСТКОВИХ ПОВЕРНЕНЬ ==========
         
-        # Тепер НЕ потрібно окремо запитувати product_damage_history
-        # Статус обробки беремо напряму з products.state та products.frozen_quantity
-        # row[18] = state, row[19] = frozen_quantity
+        # Тепер рахуємо реальні дані обробки з product_damage_history
+        processing_dict = {}  # product_id -> {wash: N, restoration: N, laundry: N}
+        try:
+            processing_rows = db.execute(text("""
+                SELECT product_id, processing_type, 
+                       SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)) as active_qty
+                FROM product_damage_history
+                WHERE processing_type IN ('wash', 'restoration', 'laundry', 'washing')
+                AND COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+                GROUP BY product_id, processing_type
+            """)).fetchall()
+            for pr in processing_rows:
+                pid = pr[0]
+                ptype = pr[1]
+                pqty = int(pr[2] or 0)
+                if pqty <= 0:
+                    continue
+                if pid not in processing_dict:
+                    processing_dict[pid] = {"wash": 0, "restoration": 0, "laundry": 0}
+                if ptype in ('wash', 'washing'):
+                    processing_dict[pid]["wash"] += pqty
+                elif ptype == 'restoration':
+                    processing_dict[pid]["restoration"] += pqty
+                elif ptype == 'laundry':
+                    processing_dict[pid]["laundry"] += pqty
+        except Exception:
+            pass
         
         # Формуємо результат
         items = []
@@ -435,34 +477,19 @@ async def get_items_by_category(
             partial_return_qty = partial_return_info["qty"]
             in_rent_qty += partial_return_qty  # Рахуємо як "в оренді"
             
-            # Отримуємо статус з products.state та frozen_quantity, in_laundry
-            product_state = row[18] if len(row) > 18 else None  # state
-            frozen_qty = row[19] if len(row) > 19 else 0  # frozen_quantity
-            frozen_qty = frozen_qty or 0
-            in_laundry_qty = row[20] if len(row) > 20 else 0  # in_laundry (на мийці)
-            in_laundry_qty = in_laundry_qty or 0
+            # Отримуємо реальні кількості з product_damage_history
+            product_state = row[18] if len(row) > 18 else None
+            family_id = row[21] if len(row) > 21 else None
             
-            # Визначаємо кількість на обробці
-            on_wash_qty = 0
-            on_restoration_qty = 0
-            on_laundry_qty = 0
+            # Кількість на обробці з реальних даних кабінету шкоди (SSOT)
+            proc = processing_dict.get(product_id, {"wash": 0, "restoration": 0, "laundry": 0})
+            on_wash_qty = proc["wash"]
+            on_restoration_qty = proc["restoration"]
+            on_laundry_qty = proc["laundry"]
             
-            # Спочатку перевіряємо in_laundry (це пріоритет - реальні дані з обробки)
-            if in_laundry_qty > 0:
-                on_wash_qty = in_laundry_qty
-            # Потім дивимось на state для інших типів обробки
-            elif product_state == 'on_wash':
-                on_wash_qty = frozen_qty
-            elif product_state == 'on_repair':
-                on_restoration_qty = frozen_qty
-            elif product_state == 'on_laundry':
-                on_laundry_qty = frozen_qty
-            elif product_state == 'processing':
-                # Для generic processing state - рахуємо як на реставрації
-                on_restoration_qty = frozen_qty
-            
-            # Доступно = всього - резерв - в оренді - заморожено
-            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - frozen_qty)
+            # Доступно = всього - резерв - в оренді - на обробці (з PDH, а не frozen_quantity)
+            total_processing = on_wash_qty + on_restoration_qty + on_laundry_qty
+            available_qty = max(0, total_qty - reserved_qty - in_rent_qty - total_processing)
             
             # Stats
             stats["total"] += total_qty
@@ -522,7 +549,8 @@ async def get_items_by_category(
                 "cleaning_status": row[15],
                 "product_state": product_state,  # Тепер з products.state
                 "description": row[17],
-                "who_has": conflicts
+                "who_has": conflicts,
+                "family_id": family_id
             })
         
         return {
@@ -583,34 +611,57 @@ async def get_catalog_items(
     in_rent_dict = {}
     in_restore_dict = {}
     
+    # Реальні дані обробки з product_damage_history
+    processing_dict = {}
+    try:
+        proc_rows = db.execute(text("""
+            SELECT product_id, processing_type,
+                   SUM(COALESCE(qty, 1) - COALESCE(processed_qty, 0)) as active_qty
+            FROM product_damage_history
+            WHERE processing_type IN ('wash', 'restoration', 'laundry', 'washing')
+            AND COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+            GROUP BY product_id, processing_type
+        """)).fetchall()
+        for pr in proc_rows:
+            pid, ptype, pqty = pr[0], pr[1], int(pr[2] or 0)
+            if pqty <= 0:
+                continue
+            if pid not in processing_dict:
+                processing_dict[pid] = {"wash": 0, "restoration": 0, "laundry": 0}
+            if ptype in ('wash', 'washing'):
+                processing_dict[pid]["wash"] += pqty
+            elif ptype == 'restoration':
+                processing_dict[pid]["restoration"] += pqty
+            elif ptype == 'laundry':
+                processing_dict[pid]["laundry"] += pqty
+    except Exception:
+        pass
+    
     if include_reservations:
-        # Резерви (замовлення на комплектації, готові до видачі, очікують клієнта)
-        reserved_result = db.execute(text("""
-            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as reserved
+        # Об'єднаний запит: резерви + оренда за один раз
+        combined_result = db.execute(text("""
+            SELECT 
+                oi.product_id,
+                SUM(CASE WHEN o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending') THEN oi.quantity ELSE 0 END) as reserved,
+                SUM(CASE WHEN o.status IN ('issued', 'on_rent') THEN oi.quantity ELSE 0 END) as in_rent
             FROM order_items oi
             JOIN orders o ON oi.order_id = o.order_id
-            WHERE o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending')
+            WHERE o.status IN ('processing', 'ready_for_issue', 'awaiting_customer', 'pending', 'issued', 'on_rent')
             AND o.rental_end_date >= CURDATE()
             GROUP BY oi.product_id
         """))
-        reserved_dict = {row[0]: int(row[1]) for row in reserved_result}
+        for row in combined_result:
+            reserved_dict[row[0]] = int(row[1] or 0)
+            in_rent_dict[row[0]] = int(row[2] or 0)
         
-        # В оренді (видані замовлення)
-        in_rent_result = db.execute(text("""
-            SELECT oi.product_id, COALESCE(SUM(oi.quantity), 0) as in_rent
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.order_id
-            WHERE o.status IN ('issued', 'on_rent')
-            AND o.rental_end_date >= CURDATE()
-            GROUP BY oi.product_id
-        """))
-        in_rent_dict = {row[0]: int(row[1]) for row in in_rent_result}
-        
-        # На реставрації (товари зі статусом cleaning.status = 'repair')
+        # На реставрації - тепер з product_damage_history (єдине джерело)
         in_restore_result = db.execute(text("""
-            SELECT pcs.product_id, 1 as in_restore
-            FROM product_cleaning_status pcs
-            WHERE pcs.status = 'repair'
+            SELECT pdh.product_id, SUM(COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) as restore_qty
+            FROM product_damage_history pdh
+            WHERE pdh.processing_type = 'restoration'
+            AND COALESCE(pdh.processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+            AND (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0
+            GROUP BY pdh.product_id
         """))
         in_restore_dict = {row[0]: int(row[1]) for row in in_restore_result}
     
@@ -619,10 +670,6 @@ async def get_catalog_items(
         family_id = row[14] if len(row) > 14 else None
         family_name = row[15] if len(row) > 15 else None
         family_description = row[16] if len(row) > 16 else None
-        frozen_qty = row[17] if len(row) > 17 else 0
-        frozen_qty = frozen_qty or 0
-        in_laundry_qty = row[18] if len(row) > 18 else 0
-        in_laundry_qty = in_laundry_qty or 0
         product_state = row[19] if len(row) > 19 else None
         
         normalized_image = normalize_image_url(row[4])
@@ -634,10 +681,15 @@ async def get_catalog_items(
         in_rent_qty = in_rent_dict.get(product_id, 0)
         in_restore_qty = in_restore_dict.get(product_id, 0)
         
-        # Визначити on_wash - prioritize in_laundry field
-        on_wash_qty = in_laundry_qty if in_laundry_qty > 0 else (frozen_qty if product_state == 'on_wash' else 0)
+        # Визначити on_wash/restoration/laundry з реальних даних кабінету шкоди (SSOT)
+        proc = processing_dict.get(product_id, {"wash": 0, "restoration": 0, "laundry": 0})
+        on_wash_qty = proc["wash"]
+        on_restoration_qty = proc["restoration"]
+        on_laundry_qty = proc["laundry"]
         
-        available_qty = max(0, total_qty - reserved_qty - in_rent_qty - frozen_qty)
+        # Доступно = всього - резерв - в оренді - на обробці (з PDH)
+        total_processing = on_wash_qty + on_restoration_qty + on_laundry_qty
+        available_qty = max(0, total_qty - reserved_qty - in_rent_qty - total_processing)
         
         items.append({
             "id": row[0],
@@ -667,8 +719,10 @@ async def get_catalog_items(
             "rented": in_rent_qty,
             "in_restore": in_restore_qty,
             "on_wash": on_wash_qty,
-            "frozen_quantity": frozen_qty,
-            "in_laundry": in_laundry_qty,
+            "on_restoration": on_restoration_qty,
+            "on_laundry": on_laundry_qty,
+            "frozen_quantity": total_processing,
+            "in_laundry": on_laundry_qty,
             "location": {
                 "zone": row[11] or "",
                 "aisle": row[12] or "",
@@ -790,68 +844,118 @@ async def get_family_products(
 
 
 
+
+@router.get("/products-lite")
+async def get_products_lite(
+    search: str = None,
+    category: str = None,
+    limit: int = 10000,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Легкий ендпоінт для FamiliesManager - мінімум полів, максимум швидкості
+    """
+    sql = """
+        SELECT 
+            p.product_id, p.sku, p.name, p.image_url,
+            p.category_name, p.family_id, p.color, p.quantity
+        FROM products p
+        WHERE p.status = 1
+    """
+    params = {}
+    
+    if search:
+        sql += " AND (p.name LIKE :search OR p.sku LIKE :search)"
+        params['search'] = f"%{search}%"
+    
+    if category:
+        sql += " AND (p.category_name LIKE :category OR p.subcategory_name LIKE :category)"
+        params['category'] = f"%{category}%"
+    
+    sql += f" ORDER BY p.product_id DESC LIMIT {limit}"
+    
+    result = db.execute(text(sql), params).fetchall()
+    
+    items = []
+    for row in result:
+        img = normalize_image_url(row[3])
+        items.append({
+            "product_id": row[0],
+            "sku": row[1],
+            "name": row[2],
+            "image": img,
+            "cover": img,
+            "category": row[4],
+            "category_name": row[4],
+            "family_id": row[5],
+            "color": row[6],
+            "quantity": row[7] or 0
+        })
+    
+    return items
+
+
 @router.get("/families")
 async def get_all_families(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Отримати всі набори з їх товарами
+    Отримати всі набори з їх товарами (оптимізовано - один JOIN замість N+1)
     """
     try:
-        # Отримати всі набори
-        families_result = db.execute(text("""
-            SELECT id, name, description FROM product_families ORDER BY name
-        """))
+        # Один запит замість 1 + N окремих запитів
+        result = db.execute(text("""
+            SELECT 
+                pf.id as family_id,
+                pf.name as family_name,
+                pf.description as family_description,
+                p.product_id,
+                p.sku,
+                p.name as product_name,
+                p.image_url,
+                p.color,
+                p.material,
+                p.rental_price,
+                p.price,
+                p.quantity,
+                p.category_name,
+                p.family_id as product_family_id
+            FROM product_families pf
+            LEFT JOIN products p ON p.family_id = pf.id AND p.status = 1
+            ORDER BY pf.name, p.sku
+        """)).fetchall()
         
-        families = []
-        for fam_row in families_result:
-            family_id = fam_row[0]
-            
-            # Отримати товари для кожного набору з усіма потрібними полями
-            products_result = db.execute(text("""
-                SELECT 
-                    p.product_id, 
-                    p.sku, 
-                    p.name, 
-                    p.image_url,
-                    p.color,
-                    p.material,
-                    p.rental_price,
-                    p.price,
-                    p.quantity,
-                    p.category_name,
-                    p.family_id
-                FROM products p
-                WHERE p.family_id = :family_id
-                ORDER BY p.sku
-            """), {"family_id": family_id})
-            
-            products = []
-            for prod_row in products_result:
-                products.append({
-                    "product_id": prod_row[0],
-                    "sku": prod_row[1],
-                    "name": prod_row[2],
-                    "cover": normalize_image_url(prod_row[3]),
-                    "image": normalize_image_url(prod_row[3]),
-                    "image_url": normalize_image_url(prod_row[3]),
-                    "color": prod_row[4],
-                    "material": prod_row[5],
-                    "rental_price": float(prod_row[6]) if prod_row[6] else 0,
-                    "price": float(prod_row[7]) if prod_row[7] else 0,
-                    "quantity": prod_row[8] or 0,
-                    "category_name": prod_row[9],
-                    "family_id": prod_row[10]
+        # Групуємо результати в Python
+        families_map = {}
+        for row in result:
+            fid = row[0]
+            if fid not in families_map:
+                families_map[fid] = {
+                    "id": fid,
+                    "name": row[1],
+                    "description": row[2],
+                    "products": []
+                }
+            # Якщо є продукт (LEFT JOIN може дати NULL)
+            if row[3] is not None:
+                img = normalize_image_url(row[6])
+                families_map[fid]["products"].append({
+                    "product_id": row[3],
+                    "sku": row[4],
+                    "name": row[5],
+                    "cover": img,
+                    "image": img,
+                    "image_url": img,
+                    "color": row[7],
+                    "material": row[8],
+                    "rental_price": float(row[9]) if row[9] else 0,
+                    "price": float(row[10]) if row[10] else 0,
+                    "quantity": row[11] or 0,
+                    "category_name": row[12],
+                    "family_id": row[13]
                 })
-            
-            families.append({
-                "id": family_id,
-                "name": fam_row[1],
-                "description": fam_row[2],
-                "products": products
-            })
         
-        return families
+        return list(families_map.values())
         
     except Exception as e:
         raise HTTPException(
@@ -943,18 +1047,21 @@ async def assign_products_to_family(
     db: Session = Depends(get_rh_db)
 ):
     """
-    Прив'язати товари до набору
+    Прив'язати товари до набору (batch операції)
     """
     try:
         product_ids = data.get("product_ids", [])
+        if not product_ids:
+            return {"success": True, "message": "Немає товарів для прив'язки", "product_ids": None}
         
-        # Оновлюємо family_id в products
-        for product_id in product_ids:
-            db.execute(text("""
-                UPDATE products SET family_id = :family_id WHERE product_id = :product_id
-            """), {"family_id": family_id, "product_id": product_id})
+        # Batch UPDATE - один запит замість циклу
+        placeholders = ','.join(str(int(pid)) for pid in product_ids)
+        db.execute(text(f"""
+            UPDATE products SET family_id = :family_id 
+            WHERE product_id IN ({placeholders})
+        """), {"family_id": family_id})
         
-        # Оновлюємо колонку product_ids в product_families
+        # Отримати всі product_ids для цієї family
         all_products = db.execute(text("""
             SELECT product_id FROM products WHERE family_id = :family_id ORDER BY product_id
         """), {"family_id": family_id}).fetchall()
@@ -965,12 +1072,13 @@ async def assign_products_to_family(
             UPDATE product_families SET product_ids = :product_ids WHERE id = :family_id
         """), {"product_ids": product_ids_str, "family_id": family_id})
         
-        # Оновлюємо таблицю product_family_items
+        # Оновити product_family_items - batch операція
         db.execute(text("DELETE FROM product_family_items WHERE family_id = :family_id"), {"family_id": family_id})
-        for product_id in product_ids:
-            db.execute(text("""
-                INSERT INTO product_family_items (family_id, product_id) VALUES (:family_id, :product_id)
-            """), {"family_id": family_id, "product_id": product_id})
+        if all_products:
+            values = ','.join(f"({family_id},{p[0]})" for p in all_products)
+            db.execute(text(f"""
+                INSERT INTO product_family_items (family_id, product_id) VALUES {values}
+            """))
         
         db.commit()
         
@@ -1180,9 +1288,8 @@ async def check_availability(
     ✅ MIGRATED: Using RentalHub DB
     """
     result = db.execute(text("""
-        SELECT p.product_id, p.name, p.quantity, i.quantity as inventory_qty
+        SELECT p.product_id, p.name, p.quantity, p.quantity as inventory_qty
         FROM products p
-        LEFT JOIN inventory i ON p.product_id = i.product_id
         WHERE p.sku = :sku AND p.status = 1
     """), {"sku": sku})
     

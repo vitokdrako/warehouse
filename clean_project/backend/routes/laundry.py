@@ -45,7 +45,7 @@ class LaundryBatchUpdate(BaseModel):
 class LaundryItemReturn(BaseModel):
     item_id: str
     returned_quantity: int
-    condition_after: str
+    condition_after: str = "clean"
     photo_after: Optional[str] = None
     notes: Optional[str] = None
 
@@ -98,12 +98,12 @@ def parse_item(row):
 async def get_laundry_queue(type: str = "laundry", db: Session = Depends(get_rh_db)):
     """
     Отримати чергу товарів для формування партії прання або хімчистки.
-    Це товари з processing_type='washing' або 'laundry' які ще не додані в партію.
+    Це товари з processing_type='wash' або 'laundry' які ще не додані в партію.
     
     Query params:
-        type: 'washing' або 'laundry' (default: 'laundry')
+        type: 'wash' або 'laundry' (default: 'laundry')
     """
-    processing_type = type if type in ('washing', 'laundry') else 'laundry'
+    processing_type = type if type in ('wash', 'laundry') else 'laundry'
     
     result = db.execute(text("""
         SELECT 
@@ -169,14 +169,14 @@ async def add_queue_items_to_batch(
         - laundry_company: str - назва хімчистки/пральні (для нової партії)
         - complexity: str - складність обробки ('light', 'normal', 'heavy')
         - expected_return_date: str (optional) - очікувана дата повернення
-        - batch_type: str - тип партії ('washing' або 'laundry')
+        - batch_type: str - тип партії ('wash' або 'laundry')
     """
     item_ids = data.get("item_ids", [])
     batch_id = data.get("batch_id")
     laundry_company = data.get("laundry_company", "Хімчистка")
     complexity = data.get("complexity", "normal")  # light, normal, heavy
     expected_return_date = data.get("expected_return_date")
-    batch_type = data.get("batch_type", "laundry")  # washing or laundry
+    batch_type = data.get("batch_type", "laundry")  # wash or laundry
     
     # Отримати поточного користувача (якщо є)
     created_by = data.get("created_by", "system")
@@ -187,7 +187,7 @@ async def add_queue_items_to_batch(
     try:
         # Якщо партія не вказана - створити нову
         if not batch_id:
-            prefix = "WB" if batch_type == "washing" else "LB"
+            prefix = "WB" if batch_type == "wash" else "LB"
             batch_id = f"BATCH-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
             batch_number = f"{prefix}-{datetime.now().strftime('%Y%m%d%H%M%S')}"
             
@@ -295,7 +295,7 @@ async def get_laundry_batches(
     """
     Отримати список партій
     Status: sent, partial_return, returned, completed
-    Type: washing, laundry (optional filter by batch_type)
+    Type: wash, laundry (optional filter by batch_type)
     """
     sql = "SELECT * FROM laundry_batches WHERE 1=1"
     params = {}
@@ -306,7 +306,7 @@ async def get_laundry_batches(
     if laundry_company:
         sql += " AND laundry_company = :company"
         params['company'] = laundry_company
-    if type and type in ('washing', 'laundry'):
+    if type and type in ('wash', 'laundry'):
         sql += " AND COALESCE(batch_type, 'laundry') = :batch_type"
         params['batch_type'] = type
     
@@ -459,7 +459,7 @@ async def create_laundry_batch(
             
             # Оновити стан товару в inventory - позначити як "в хімчистці"
             db.execute(text("""
-                UPDATE inventory 
+                UPDATE products 
                 SET product_state = 'in_laundry', 
                     cleaning_status = 'sent_to_laundry',
                     updated_at = NOW()
@@ -584,7 +584,7 @@ async def return_laundry_items(
             # Повернути товар на склад (розморозити)
             db.execute(text("""
                 UPDATE products 
-                SET quantity = quantity + :qty
+                SET frozen_quantity = GREATEST(COALESCE(frozen_quantity, 0) - :qty, 0)
                 WHERE product_id = :product_id
             """), {
                 "qty": item_return.returned_quantity,
@@ -596,12 +596,42 @@ async def return_laundry_items(
             if new_returned >= item["quantity"]:
                 # Товар повністю повернуто - оновити стан на "доступний"
                 db.execute(text("""
-                    UPDATE inventory 
+                    UPDATE products 
                     SET product_state = 'available', 
                         cleaning_status = 'clean',
                         updated_at = NOW()
                     WHERE product_id = :product_id
                 """), {"product_id": item["product_id"]})
+            
+            # Оновити product_damage_history якщо прив'язаний
+            try:
+                # Знайти damage_history запис через laundry_item_id
+                pdh_row = db.execute(text("""
+                    SELECT id FROM product_damage_history 
+                    WHERE laundry_item_id = :lid
+                    AND processing_type = 'laundry'
+                    LIMIT 1
+                """), {"lid": item_return.item_id}).fetchone()
+                
+                if pdh_row:
+                    pdh_id = pdh_row[0]
+                    if new_returned >= item["quantity"]:
+                        db.execute(text("""
+                            UPDATE product_damage_history
+                            SET processing_status = 'completed',
+                                processing_type = 'returned_to_stock',
+                                processed_qty = qty,
+                                returned_from_processing_at = NOW()
+                            WHERE id = :pid
+                        """), {"pid": pdh_id})
+                    else:
+                        db.execute(text("""
+                            UPDATE product_damage_history
+                            SET processed_qty = COALESCE(processed_qty, 0) + :rqty
+                            WHERE id = :pid
+                        """), {"pid": pdh_id, "rqty": item_return.returned_quantity})
+            except Exception:
+                pass
             
             total_returned += item_return.returned_quantity
         
@@ -803,7 +833,7 @@ async def get_batch_preview(
         })
     
     # Determine colors based on batch type
-    if batch["batch_type"] == "washing":
+    if batch["batch_type"] == "wash":
         batch_type_name = "Прання"
         primary_color = "#0891b2"  # cyan-600
         dark_color = "#0e7490"     # cyan-700

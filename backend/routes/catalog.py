@@ -1288,9 +1288,8 @@ async def check_availability(
     ✅ MIGRATED: Using RentalHub DB
     """
     result = db.execute(text("""
-        SELECT p.product_id, p.name, p.quantity, i.quantity as inventory_qty
+        SELECT p.product_id, p.name, p.quantity, p.quantity as inventory_qty
         FROM products p
-        LEFT JOIN inventory i ON p.product_id = i.product_id
         WHERE p.sku = :sku AND p.status = 1
     """), {"sku": sku})
     

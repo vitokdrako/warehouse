@@ -1412,26 +1412,62 @@ export default function ReauditCabinetFull({
                                   const token = localStorage.getItem('token')
                                   const headers: any = { 'Content-Type': 'application/json' }
                                   if (token) headers['Authorization'] = `Bearer ${token}`
-                                  const response = await fetch(`${BACKEND_URL}/api/damage-cases/create`, {
-                                    method: 'POST', headers,
-                                    body: JSON.stringify({
-                                      product_id: selected.product_id,
-                                      qty: damageData.qty,
-                                      action_type: damageData.action_type,
-                                      description: damageData.description,
-                                      severity: damageData.severity,
-                                      estimated_cost: 0
+
+                                  if (damageData.action_type === 'total_loss') {
+                                    // Повна втрата: quick-add + write-off
+                                    const addRes = await fetch(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
+                                      method: 'POST', headers,
+                                      body: JSON.stringify({
+                                        product_id: selected.product_id,
+                                        sku: selected.sku || `SKU-${selected.product_id}`,
+                                        product_name: selected.name,
+                                        category: selected.categoryName || '',
+                                        queue_type: 'wash',
+                                        quantity: damageData.qty,
+                                        notes: damageData.description
+                                      })
                                     })
-                                  })
-                                  const result = await response.json()
-                                  if (result.success) {
-                                    alert(`✅ ${result.message}`)
-                                    setShowDamageForm(false)
-                                    setDamageData({ description: '', severity: 'minor', estimated_cost: 0, create_damage_case: false, photo_url: '', action_type: '', qty: 1 })
-                                    loadItems(); loadStats()
+                                    const addResult = await addRes.json()
+                                    if (!addResult.success) { alert('❌ ' + (addResult.detail || 'Помилка')); return }
+                                    // Одразу списуємо
+                                    const woRes = await fetch(`${BACKEND_URL}/api/product-damage-history/${addResult.damage_id}/write-off`, {
+                                      method: 'POST', headers,
+                                      body: JSON.stringify({ qty: damageData.qty, reason: damageData.description })
+                                    })
+                                    const woResult = await woRes.json()
+                                    if (woRes.ok) {
+                                      alert(`✅ Списано ${damageData.qty} од.`)
+                                    } else {
+                                      alert('❌ ' + (woResult.detail || 'Помилка списання'))
+                                      return
+                                    }
                                   } else {
-                                    alert('❌ ' + (result.detail || 'Помилка'))
+                                    // Мийка / Реставрація / Пральня — quick-add-to-queue
+                                    const queueMap: any = { washing: 'wash', restoration: 'restoration', laundry: 'laundry' }
+                                    const response = await fetch(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
+                                      method: 'POST', headers,
+                                      body: JSON.stringify({
+                                        product_id: selected.product_id,
+                                        sku: selected.sku || `SKU-${selected.product_id}`,
+                                        product_name: selected.name,
+                                        category: selected.categoryName || '',
+                                        queue_type: queueMap[damageData.action_type] || damageData.action_type,
+                                        quantity: damageData.qty,
+                                        notes: `[${damageData.severity}] ${damageData.description}`
+                                      })
+                                    })
+                                    const result = await response.json()
+                                    if (result.success) {
+                                      const labels: any = { washing: 'мийку', restoration: 'реставрацію', laundry: 'пральню' }
+                                      alert(`✅ Відправлено на ${labels[damageData.action_type] || damageData.action_type}`)
+                                    } else {
+                                      alert('❌ ' + (result.detail || 'Помилка'))
+                                      return
+                                    }
                                   }
+                                  setShowDamageForm(false)
+                                  setDamageData({ description: '', severity: 'minor', estimated_cost: 0, create_damage_case: false, photo_url: '', action_type: '', qty: 1 })
+                                  loadItems(); loadStats()
                                 } catch (e) { alert('Помилка: ' + String(e)) }
                               }}>
                                 ✅ Підтвердити

@@ -77,6 +77,12 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Client sync based on email uniqueness
 - Product dimensions from OpenCart (height, width, depth)
 
+#### Bug Fixes — March 18, 2026 (Session 2)
+- Fixed `Unknown column 'updated_at'` in products table — removed from all UPDATE statements in laundry.py (2), product_damage_history.py (7)
+- Fixed SKU: `quick-add-to-queue` now fetches real SKU from DB instead of trusting client (SKU-9183 → PO9183)
+- Fixed `stock` → `quantity` in write-off endpoint
+- Fixed `case_number` NameError in damage_cases.py
+
 ## Key Files
 - `/app/frontend/src/pages/ReauditCabinetFull.tsx` — Re-audit cabinet
 - `/app/frontend/src/pages/ReturnSettlementPage.jsx` — Return settlement

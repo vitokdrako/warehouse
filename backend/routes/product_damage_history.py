@@ -1179,8 +1179,7 @@ async def send_to_wash(damage_id: str, data: dict, db: Session = Depends(get_rh_
             db.execute(text("""
                 UPDATE products 
                 SET product_state = 'in_wash', 
-                    cleaning_status = 'wash',
-                    updated_at = NOW()
+                    cleaning_status = 'wash'
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
         
@@ -1228,8 +1227,7 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
             db.execute(text("""
                 UPDATE products 
                 SET product_state = 'in_restoration', 
-                    cleaning_status = 'restoration',
-                    updated_at = NOW()
+                    cleaning_status = 'restoration'
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
         
@@ -1365,8 +1363,20 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
     if quantity < 1:
         quantity = 1
     
-    if not product_id or not sku:
-        raise HTTPException(status_code=400, detail="product_id та sku обов'язкові")
+    if not product_id:
+        raise HTTPException(status_code=400, detail="product_id обов'язковий")
+    
+    # Завжди підтягуємо реальний SKU та назву з БД
+    product_row = db.execute(text(
+        "SELECT sku, name, category_name FROM products WHERE product_id = :pid"
+    ), {"pid": product_id}).fetchone()
+    
+    if product_row:
+        sku = product_row[0] or sku or f"PO{product_id}"
+        product_name = product_name or product_row[1] or ""
+        category = category or product_row[2] or ""
+    elif not sku:
+        sku = f"PO{product_id}"
     
     if queue_type not in ('wash', 'laundry', 'restoration'):
         # Backward compatibility: washing → wash
@@ -1504,8 +1514,7 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
                 db.execute(text("""
                     UPDATE products 
                     SET product_state = 'available', 
-                        cleaning_status = 'clean',
-                        updated_at = NOW()
+                        cleaning_status = 'clean'
                     WHERE product_id = :product_id
                 """), {"product_id": product_id})
             
@@ -1735,7 +1744,7 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
                 WHERE product_id = :pid
             """), {"pid": product_id, "qty": unfreeze})
             db.execute(text("""
-                UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                UPDATE products SET product_state = 'available', cleaning_status = 'clean'
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.commit()
@@ -1811,7 +1820,7 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
             """), {"product_id": product_id, "qty": qty_to_return, "is_full": is_full_return})
             
             if is_full_return:
-                db.execute(text("UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
+                db.execute(text("UPDATE products SET product_state = 'available', cleaning_status = 'clean' WHERE product_id = :product_id"), {"product_id": product_id})
             
             try:
                 db.execute(text("""
@@ -2015,7 +2024,7 @@ async def delete_damage_record(
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.execute(text("""
-                UPDATE products SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                UPDATE products SET product_state = 'available', cleaning_status = 'clean'
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.commit()
@@ -2268,8 +2277,7 @@ async def write_off_item(
         # 2. Зменшуємо кількість в products
         db.execute(text("""
             UPDATE products
-            SET stock = GREATEST(0, stock - :qty),
-                updated_at = NOW()
+            SET quantity = GREATEST(0, COALESCE(quantity, 0) - :qty)
             WHERE product_id = :pid
         """), {"qty": write_off_qty, "pid": product_id})
         

@@ -735,10 +735,9 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
     
-    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
-    # rent_before_discount = order_rent + discount_amount (до знижки)
-    rent_after_discount = order_rent  # Сума після знижки = те що в БД
-    grand_total = rent_after_discount + service_fee  # Фінальна сума (зі знижкою + послуги)
+    # Кошторис: order_rent = повна вартість оренди (ДО знижки)
+    # grand_total = order_rent - знижка + послуги = сума до оплати
+    grand_total = order_rent - discount_amount + service_fee
     
     # Delivery type label mapping
     delivery_type_labels = {
@@ -858,8 +857,7 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
         discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    rent_after_discount = order_rent
-    grand_total = rent_after_discount + service_fee
+    grand_total = order_rent - discount_amount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
@@ -975,8 +973,7 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
         discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    rent_after_discount = order_rent
-    grand_total = rent_after_discount + service_fee
+    grand_total = order_rent - discount_amount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")

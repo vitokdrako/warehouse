@@ -421,10 +421,9 @@ async def create_payment(data: PaymentCreate):
     from datetime import datetime
     import os
     
-    # === P1: ANNEX VALIDATION ===
-    # IF deal_mode = "rent" AND payment_type = "rent" THEN annex_id REQUIRED
+    # === P1: ANNEX VALIDATION (optional for rent mode) ===
+    # IF deal_mode = "rent" AND payment_type = "rent" - try to use annex_id if available
     if data.payment_type == "rent" and data.order_id:
-        # Check if order is rent mode
         conn_check = pymysql.connect(
             host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
             port=int(os.environ.get('RH_DB_PORT', 3306)),
@@ -441,15 +440,11 @@ async def create_payment(data: PaymentCreate):
             """, (data.order_id,))
             order_row = cursor_check.fetchone()
             
+            # Тільки для режиму rent з договором - спробуємо взяти annex_id
             if order_row and order_row.get('deal_mode') == 'rent':
-                # Use provided annex_id or fall back to active_annex_id
                 if not data.annex_id and order_row.get('active_annex_id'):
                     data.annex_id = order_row['active_annex_id']
-                elif not data.annex_id:
-                    raise HTTPException(
-                        status_code=400, 
-                        detail="Для оренди (rent payment) потрібен annex_id. Спочатку створіть додаток до договору."
-                    )
+                # НЕ блокуємо оплату якщо немає annex_id - це опціонально
         finally:
             conn_check.close()
     
@@ -545,36 +540,81 @@ async def list_expenses(category_code: Optional[str] = None, expense_type: Optio
                           "order_id": r[9], "employee_id": r[10], "vendor_id": r[11], "status": r[12]} for r in result]}
 
 @router.post("/expenses")
-async def create_expense(data: ExpenseCreate, db: Session = Depends(get_rh_db)):
-    """Record a new expense with ledger entries."""
-    occurred_at = datetime.fromisoformat(data.occurred_at) if data.occurred_at else datetime.now()
+async def create_expense(data: ExpenseCreate):
+    """Record a new expense with ledger entries using direct connection."""
+    import pymysql
+    import os
     
-    cat = db.execute(text("SELECT id, type FROM fin_categories WHERE code = :code"), {"code": data.category_code}).fetchone()
-    if not cat:
-        raise HTTPException(status_code=400, detail=f"Category not found: {data.category_code}")
-    
-    debit_acc = "INV_ASSETS" if data.expense_type == "investment" else ("VENDORS" if data.vendor_id else "OPEX")
-    credit_acc = "CASH" if data.method == "cash" else "BANK"
+    conn = pymysql.connect(
+        host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
+        port=int(os.environ.get('RH_DB_PORT', 3306)),
+        user=os.environ.get('RH_DB_USERNAME', 'farforre_rentalhub'),
+        password=os.environ.get('RH_DB_PASSWORD', '-nu+3Gp54L'),
+        database=os.environ.get('RH_DB_DATABASE', 'farforre_rentalhub'),
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False
+    )
     
     try:
-        tx_id = post_transaction(db, "expense" if data.expense_type == "expense" else "investment_purchase",
-                                 data.amount, debit_acc, credit_acc, "order" if data.order_id else None, data.order_id,
-                                 category_id=cat[0], order_id=data.order_id, vendor_id=data.vendor_id,
-                                 employee_id=data.employee_id, note=data.note, occurred_at=occurred_at)
+        cursor = conn.cursor()
+        occurred_at = datetime.fromisoformat(data.occurred_at) if data.occurred_at else datetime.now()
         
-        db.execute(text("""
-            INSERT INTO fin_expenses (expense_type, category_id, amount, method, vendor_id, occurred_at, note, order_id, employee_id, receipt_file_key, tx_id)
-            VALUES (:expense_type, :category_id, :amount, :method, :vendor_id, :occurred_at, :note, :order_id, :employee_id, :receipt_file_key, :tx_id)
-        """), {"expense_type": data.expense_type, "category_id": cat[0], "amount": data.amount, "method": data.method,
-               "vendor_id": data.vendor_id, "occurred_at": occurred_at, "note": data.note, "order_id": data.order_id,
-               "employee_id": data.employee_id, "receipt_file_key": data.receipt_file_key, "tx_id": tx_id})
-        expense_id = db.execute(text("SELECT LAST_INSERT_ID()")).fetchone()[0]
+        # Find category
+        cursor.execute("SELECT id, type FROM fin_categories WHERE code = %s", (data.category_code,))
+        cat = cursor.fetchone()
+        if not cat:
+            raise HTTPException(status_code=400, detail=f"Category not found: {data.category_code}")
         
-        db.commit()
+        debit_acc = "INV_ASSETS" if data.expense_type == "investment" else ("VENDORS" if data.vendor_id else "OPEX")
+        credit_acc = "CASH" if data.method == "cash" else "BANK"
+        
+        # Get account IDs
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (debit_acc,))
+        debit_acc_id = cursor.fetchone()['id']
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (credit_acc,))
+        credit_acc_id = cursor.fetchone()['id']
+        
+        # Create transaction
+        cursor.execute("""
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, category_id, note)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            "expense" if data.expense_type == "expense" else "investment_purchase",
+            data.amount, occurred_at,
+            "order" if data.order_id else None, data.order_id,
+            cat['id'], data.note
+        ))
+        tx_id = cursor.lastrowid
+        
+        # Ledger entries
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id, vendor_id, employee_id)
+            VALUES (%s, %s, 'D', %s, %s, %s, %s)
+        """, (tx_id, debit_acc_id, data.amount, data.order_id, data.vendor_id, data.employee_id))
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id, vendor_id, employee_id)
+            VALUES (%s, %s, 'C', %s, %s, %s, %s)
+        """, (tx_id, credit_acc_id, data.amount, data.order_id, data.vendor_id, data.employee_id))
+        
+        # Create expense record
+        cursor.execute("""
+            INSERT INTO fin_expenses (expense_type, category_id, amount, method, vendor_id, occurred_at, note, order_id, employee_id, receipt_file_key, tx_id, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'posted')
+        """, (data.expense_type, cat['id'], data.amount, data.method, data.vendor_id,
+              occurred_at, data.note, data.order_id, data.employee_id, data.receipt_file_key, tx_id))
+        expense_id = cursor.lastrowid
+        
+        conn.commit()
         return {"success": True, "expense_id": expense_id, "tx_id": tx_id}
+    except HTTPException:
+        conn.rollback()
+        raise
     except Exception as e:
-        db.rollback()
+        conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 
 # ============================================================
@@ -651,6 +691,145 @@ async def create_simple_expense(data: SimpleExpenseCreate, db: Session = Depends
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# COLLECTION (Інкасація - вилучення грошей з каси)
+# ============================================================
+
+class CollectionCreate(BaseModel):
+    amount: float
+    method: str = "cash"  # cash | bank
+    note: Optional[str] = None
+    collected_by: Optional[str] = None
+
+@router.post("/collection")
+async def create_collection(data: CollectionCreate):
+    """Інкасація — вилучення грошей з каси (готівка або безготівка)."""
+    import pymysql
+    import os
+    
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Сума має бути більше 0")
+    
+    conn = pymysql.connect(
+        host=os.environ.get('RH_DB_HOST', 'farforre.mysql.tools'),
+        port=int(os.environ.get('RH_DB_PORT', 3306)),
+        user=os.environ.get('RH_DB_USERNAME', 'farforre_rentalhub'),
+        password=os.environ.get('RH_DB_PASSWORD', '-nu+3Gp54L'),
+        database=os.environ.get('RH_DB_DATABASE', 'farforre_rentalhub'),
+        charset='utf8mb4',
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=False
+    )
+    
+    try:
+        cursor = conn.cursor()
+        method_label = "готівка" if data.method == "cash" else "безготівка"
+        
+        # Ensure COLLECTION category exists
+        cursor.execute("SELECT id FROM fin_categories WHERE code = 'COLLECTION'")
+        cat = cursor.fetchone()
+        if not cat:
+            cursor.execute("""
+                INSERT INTO fin_categories (code, name, type) 
+                VALUES ('COLLECTION', 'Інкасація', 'expense')
+            """)
+            conn.commit()
+            cursor.execute("SELECT id FROM fin_categories WHERE code = 'COLLECTION'")
+            cat = cursor.fetchone()
+        
+        category_id = cat['id']
+        
+        # Credit account (source) = CASH or BANK
+        credit_acc = "CASH" if data.method == "cash" else "BANK"
+        # Debit account = owner withdrawal
+        debit_acc = "OPEX"
+        
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (debit_acc,))
+        debit_acc_row = cursor.fetchone()
+        cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", (credit_acc,))
+        credit_acc_row = cursor.fetchone()
+        
+        if not debit_acc_row or not credit_acc_row:
+            raise HTTPException(status_code=500, detail="Accounts not configured")
+        
+        # Create transaction
+        note_text = f"Інкасація ({method_label})"
+        if data.note:
+            note_text += f": {data.note}"
+        if data.collected_by:
+            note_text += f" (by {data.collected_by})"
+        
+        cursor.execute("""
+            INSERT INTO fin_transactions (tx_type, amount, occurred_at, note)
+            VALUES ('collection', %s, NOW(), %s)
+        """, (data.amount, note_text))
+        tx_id = cursor.lastrowid
+        
+        # Ledger entries
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount)
+            VALUES (%s, %s, 'D', %s)
+        """, (tx_id, debit_acc_row['id'], data.amount))
+        cursor.execute("""
+            INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount)
+            VALUES (%s, %s, 'C', %s)
+        """, (tx_id, credit_acc_row['id'], data.amount))
+        
+        # Create expense record
+        cursor.execute("""
+            INSERT INTO fin_expenses (expense_type, category_id, amount, method, occurred_at, note, status)
+            VALUES ('collection', %s, %s, %s, NOW(), %s, 'posted')
+        """, (category_id, data.amount, data.method, note_text))
+        expense_id = cursor.lastrowid
+        
+        conn.commit()
+        return {"success": True, "expense_id": expense_id, "tx_id": tx_id, "amount": data.amount, "method": data.method}
+    except HTTPException:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@router.get("/collections")
+async def list_collections(period: str = "month", db: Session = Depends(get_rh_db)):
+    """Список інкасацій за період."""
+    date_filter = ""
+    if period == "day":
+        date_filter = "AND e.occurred_at >= CURDATE()"
+    elif period == "week":
+        date_filter = "AND e.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+    elif period == "month":
+        date_filter = "AND MONTH(e.occurred_at) = MONTH(CURDATE()) AND YEAR(e.occurred_at) = YEAR(CURDATE())"
+    
+    rows = db.execute(text(f"""
+        SELECT e.id, e.amount, e.method, e.occurred_at, e.note
+        FROM fin_expenses e
+        WHERE e.expense_type = 'collection' AND e.status = 'posted'
+        {date_filter}
+        ORDER BY e.occurred_at DESC
+    """)).fetchall()
+    
+    items = []
+    total_cash = 0
+    total_bank = 0
+    for r in rows:
+        amt = float(r[1] or 0)
+        method = r[2] or 'cash'
+        if method == 'cash':
+            total_cash += amt
+        else:
+            total_bank += amt
+        items.append({
+            "id": r[0], "amount": amt, "method": method,
+            "date": r[3].isoformat() if r[3] else None, "note": r[4],
+        })
+    
+    return {"items": items, "total_cash": total_cash, "total_bank": total_bank, "total": total_cash + total_bank, "count": len(items)}
 
 @router.get("/expenses/all")
 async def list_all_expenses(limit: int = 100, db: Session = Depends(get_rh_db)):
@@ -1460,8 +1639,12 @@ async def get_order_charges(order_id: int, db: Session = Depends(get_rh_db)):
             "accepted_by": r[5]
         } for r in late_payments]
         
-        late_total = sum(l["amount"] for l in late_list if l["status"] == "pending")
+        late_charged = sum(l["amount"] for l in late_list if l["status"] == "pending")
         late_paid = sum(l["amount"] for l in late_list if l["status"] in ("completed", "confirmed"))
+        # Нарахування (pending) = що менеджер вирішив стягнути
+        # Оплата (confirmed) = що клієнт сплатив
+        # Due = нарахування - оплата
+        late_due = max(0, late_charged - late_paid)
         
         return {
             "order_id": order_id,
@@ -1472,12 +1655,12 @@ async def get_order_charges(order_id: int, db: Session = Depends(get_rh_db)):
                 "items": damage_list
             },
             "late": {
-                "total": late_total + late_paid,
+                "total": late_charged,
                 "paid": late_paid,
-                "due": late_total,
+                "due": late_due,
                 "items": late_list
             },
-            "grand_total_due": max(0, float(damage_total) - float(damage_paid)) + late_total
+            "grand_total_due": max(0, float(damage_total) - float(damage_paid)) + late_due
         }
         
     except Exception as e:
@@ -1502,11 +1685,13 @@ async def add_order_charge(order_id: int, data: dict, db: Session = Depends(get_
     
     try:
         if charge_type == "damage":
-            # Для шкоди - додаємо в product_damage_history (без прив'язки до товару)
+            # Для шкоди - додаємо в product_damage_history (UUID id, без прив'язки до товару)
+            import uuid
+            new_id = str(uuid.uuid4())
             db.execute(text("""
-                INSERT INTO product_damage_history (order_id, product_id, damage_type, qty, fee, note, created_at)
-                VALUES (:order_id, 0, 'manual_charge', 1, :fee, :note, NOW())
-            """), {"order_id": order_id, "fee": amount, "note": note or "Ручне донарахування шкоди"})
+                INSERT INTO product_damage_history (id, order_id, product_id, stage, damage_type, qty, fee, note, created_at, source)
+                VALUES (:id, :order_id, 0, 'return', 'manual_charge', 1, :fee, :note, NOW(), 'manager_charge')
+            """), {"id": new_id, "order_id": order_id, "fee": amount, "note": note or "Ручне донарахування шкоди"})
         else:
             # Для прострочення - додаємо в fin_payments з типом 'late'
             db.execute(text("""
@@ -1782,14 +1967,14 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
                 -- Готівка
                 (SELECT COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0) 
                  - COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
-                 FROM fin_payments WHERE status = 'completed') as cash_balance,
+                 FROM fin_payments WHERE status IN ('completed', 'confirmed')) as cash_balance,
                 -- Безготівка
                 (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0)
                  - COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
-                 FROM fin_payments WHERE status = 'completed') as bank_balance,
+                 FROM fin_payments WHERE status IN ('completed', 'confirmed')) as bank_balance,
                 -- Виручка цей місяць
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-                 WHERE status = 'completed' AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())) as month_revenue,
+                 WHERE status IN ('completed', 'confirmed') AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())) as month_revenue,
                 -- Витрати цей місяць
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_expenses 
                  WHERE status = 'posted' AND MONTH(occurred_at) = MONTH(CURRENT_DATE()) AND YEAR(occurred_at) = YEAR(CURRENT_DATE())) as month_expenses,
@@ -1808,8 +1993,8 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
                 COALESCE(SUM(used_amount), 0) as used,
                 COALESCE(SUM(refunded_amount), 0) as refunded,
                 COUNT(*) as cnt
-            FROM fin_deposits
-            WHERE status IN ('held', 'partial')
+            FROM fin_deposit_holds
+            WHERE status IN ('held', 'partial', 'holding', 'partially_used')
             GROUP BY currency
         """))
         
@@ -2282,13 +2467,17 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             "accepted_by": r[5]
         } for r in late_rows]
         
-        late_due = sum(l["amount"] for l in late_items if l["status"] == "pending")
+        late_charged = sum(l["amount"] for l in late_items if l["status"] == "pending")
         late_paid_total = sum(l["amount"] for l in late_items if l["status"] in ("completed", "confirmed"))
+        # Нарахування (pending) = що менеджер вирішив стягнути
+        # Оплата (confirmed) = що клієнт сплатив
+        # Due = нарахування - оплата
+        late_due_calc = max(0, late_charged - late_paid_total)
         
         late = {
-            "total": late_due + late_paid_total,
+            "total": late_charged,
             "paid": late_paid_total,
-            "due": late_due,
+            "due": late_due_calc,
             "items": late_items
         }
         
@@ -2331,13 +2520,15 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                 }
         
         # === 8. TOTALS ===
-        total_rental = float(order_row[5] or 0)
-        discount = float(order_row[9] or 0)
-        total_after_discount = total_rental - discount
+        # ВАЖЛИВО: total_price в БД = сума ВЖЕ зі знижкою
+        total_price_stored = float(order_row[5] or 0)  # 79,812 (після знижки)
+        discount = float(order_row[9] or 0)              # 8,868
+        rental_before_discount = total_price_stored + discount  # 88,680 (до знижки)
+        total_after_discount = total_price_stored               # 79,812 (після знижки)
         rent_due = max(0, total_after_discount - rent_paid - advance_paid)
         
         totals = {
-            "rental_total": total_rental,
+            "rental_total": rental_before_discount,
             "discount": discount,
             "discount_percent": float(order_row[10] or 0),
             "rental_after_discount": total_after_discount,
@@ -2551,3 +2742,581 @@ async def get_payouts_stats_optimized(db: Session = Depends(get_rh_db)):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================================
+# KASA (CASH REGISTER) - 3-column view
+# ============================================================
+
+@router.get("/kasa")
+async def get_kasa_data(
+    period: str = "month",
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Каса — три колонки:
+    1. Дохід (оплати оренди): готівка/безготівка, ордер, дата
+    2. Депозити: прийняті/повернуті/утримані
+    3. Витрати: опис, сума, метод, дата
+    """
+    try:
+        # Date filter
+        date_filter_payments = ""
+        date_filter_expenses = ""
+        date_filter_deposits = ""
+        params = {}
+        
+        if period == "day":
+            date_filter_payments = "AND p.occurred_at >= CURDATE()"
+            date_filter_expenses = "AND e.occurred_at >= CURDATE()"
+            date_filter_deposits = "AND d.opened_at >= CURDATE()"
+        elif period == "week":
+            date_filter_payments = "AND p.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+            date_filter_expenses = "AND e.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+            date_filter_deposits = "AND d.opened_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
+        elif period == "month":
+            date_filter_payments = "AND MONTH(p.occurred_at) = MONTH(CURDATE()) AND YEAR(p.occurred_at) = YEAR(CURDATE())"
+            date_filter_expenses = "AND MONTH(e.occurred_at) = MONTH(CURDATE()) AND YEAR(e.occurred_at) = YEAR(CURDATE())"
+            date_filter_deposits = "AND MONTH(d.opened_at) = MONTH(CURDATE()) AND YEAR(d.opened_at) = YEAR(CURDATE())"
+        elif period == "all":
+            pass  # no filter
+        
+        # === 1. INCOME (rent/damage/late/additional payments) ===
+        income_rows = db.execute(text(f"""
+            SELECT p.id, p.payment_type, p.method, p.amount, p.currency,
+                   p.occurred_at, p.note, p.status,
+                   p.accepted_by_name, p.description,
+                   o.order_number, o.customer_name, p.order_id
+            FROM fin_payments p
+            LEFT JOIN orders o ON o.order_id = p.order_id
+            WHERE p.payment_type IN ('rent', 'additional', 'damage', 'late')
+            AND p.status IN ('completed', 'confirmed')
+            {date_filter_payments}
+            ORDER BY p.occurred_at DESC
+        """))
+        
+        income = []
+        income_cash_total = 0
+        income_bank_total = 0
+        for r in income_rows:
+            amt = float(r[3] or 0)
+            method = r[2] or 'cash'
+            if method == 'cash':
+                income_cash_total += amt
+            else:
+                income_bank_total += amt
+            
+            type_labels = {"rent": "Оренда", "additional": "Донарахування", "damage": "Шкода", "late": "Прострочення"}
+            income.append({
+                "id": r[0],
+                "type": r[1],
+                "type_label": type_labels.get(r[1], r[1]),
+                "method": method,
+                "amount": amt,
+                "currency": r[4] or "UAH",
+                "date": r[5].isoformat() if r[5] else None,
+                "note": r[6],
+                "status": r[7],
+                "accepted_by": r[8],
+                "description": r[9],
+                "order_number": r[10],
+                "customer_name": r[11],
+                "order_id": r[12],
+            })
+        
+        # === 2. DEPOSITS ===
+        deposit_rows = db.execute(text(f"""
+            SELECT d.id, d.order_id, d.held_amount, d.actual_amount, d.currency,
+                   d.exchange_rate, d.used_amount, d.refunded_amount, d.status,
+                   d.opened_at, d.closed_at, d.note,
+                   o.order_number, o.customer_name,
+                   d.expected_amount
+            FROM fin_deposit_holds d
+            LEFT JOIN orders o ON o.order_id = d.order_id
+            WHERE 1=1 {date_filter_deposits}
+            ORDER BY d.opened_at DESC
+        """))
+        
+        deposits = []
+        deposits_held_total = 0
+        deposits_refunded_total = 0
+        deposits_used_total = 0
+        for r in deposit_rows:
+            held = float(r[2] or 0)
+            actual = float(r[3] or 0) if r[3] else held
+            used = float(r[6] or 0)
+            refunded = float(r[7] or 0)
+            available = held - used - refunded
+            currency = r[4] or 'UAH'
+            
+            deposits_held_total += held
+            deposits_refunded_total += refunded
+            deposits_used_total += used
+            
+            deposits.append({
+                "id": r[0],
+                "order_id": r[1],
+                "held_amount": held,
+                "actual_amount": actual,
+                "currency": currency,
+                "exchange_rate": float(r[5]) if r[5] else 1.0,
+                "used_amount": used,
+                "refunded_amount": refunded,
+                "available": max(0, available),
+                "status": r[8],
+                "opened_at": r[9].isoformat() if r[9] else None,
+                "closed_at": r[10].isoformat() if r[10] else None,
+                "note": r[11],
+                "order_number": r[12],
+                "customer_name": r[13],
+                "expected_amount": float(r[14] or 0),
+            })
+        
+        # Deposit payments (to know cash/bank)
+        dep_payments = db.execute(text(f"""
+            SELECT p.method, SUM(p.amount) as total
+            FROM fin_payments p
+            WHERE p.payment_type = 'deposit'
+            AND p.status IN ('completed', 'confirmed')
+            {date_filter_payments}
+            GROUP BY p.method
+        """))
+        dep_by_method = {}
+        for r in dep_payments:
+            dep_by_method[r[0] or 'cash'] = float(r[1] or 0)
+        
+        # === 3. EXPENSES ===
+        expense_rows = db.execute(text(f"""
+            SELECT e.id, e.expense_type, c.code, c.name, e.amount, e.currency,
+                   e.method, e.occurred_at, e.note, e.status, e.order_id
+            FROM fin_expenses e
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            WHERE e.status = 'posted'
+            {date_filter_expenses}
+            ORDER BY e.occurred_at DESC
+        """))
+        
+        expenses = []
+        expenses_cash_total = 0
+        expenses_bank_total = 0
+        for r in expense_rows:
+            amt = float(r[4] or 0)
+            method = r[6] or 'cash'
+            if method == 'cash':
+                expenses_cash_total += amt
+            else:
+                expenses_bank_total += amt
+            
+            expenses.append({
+                "id": r[0],
+                "expense_type": r[1],
+                "category_code": r[2],
+                "category_name": r[3] or "Без категорії",
+                "amount": amt,
+                "currency": r[5] or "UAH",
+                "method": method,
+                "date": r[7].isoformat() if r[7] else None,
+                "note": r[8],
+                "status": r[9],
+                "order_id": r[10],
+            })
+        
+        # Refund payments (to show in expenses column)
+        refund_rows = db.execute(text(f"""
+            SELECT p.id, p.method, p.amount, p.occurred_at, p.note,
+                   o.order_number, o.customer_name, p.order_id
+            FROM fin_payments p
+            LEFT JOIN orders o ON o.order_id = p.order_id
+            WHERE p.payment_type = 'refund'
+            AND p.status IN ('completed', 'confirmed')
+            {date_filter_payments}
+            ORDER BY p.occurred_at DESC
+        """))
+        
+        refunds = []
+        for r in refund_rows:
+            amt = float(r[2] or 0)
+            method = r[1] or 'cash'
+            if method == 'cash':
+                expenses_cash_total += amt
+            else:
+                expenses_bank_total += amt
+            refunds.append({
+                "id": r[0],
+                "method": method,
+                "amount": amt,
+                "date": r[3].isoformat() if r[3] else None,
+                "note": r[4],
+                "order_number": r[5],
+                "customer_name": r[6],
+                "order_id": r[7],
+            })
+        
+        # Collection (Інкасація) totals
+        collection_rows = db.execute(text(f"""
+            SELECT e.method, SUM(e.amount) as total
+            FROM fin_expenses e
+            WHERE e.expense_type = 'collection' AND e.status = 'posted'
+            {date_filter_expenses}
+            GROUP BY e.method
+        """)).fetchall()
+        collection_cash = 0
+        collection_bank = 0
+        for r in collection_rows:
+            if (r[0] or 'cash') == 'cash':
+                collection_cash += float(r[1] or 0)
+            else:
+                collection_bank += float(r[1] or 0)
+        
+        return {
+            "period": period,
+            "income": {
+                "items": income,
+                "cash_total": income_cash_total,
+                "bank_total": income_bank_total,
+                "total": income_cash_total + income_bank_total,
+                "count": len(income),
+            },
+            "deposits": {
+                "items": deposits,
+                "held_total": deposits_held_total,
+                "refunded_total": deposits_refunded_total,
+                "used_total": deposits_used_total,
+                "available_total": deposits_held_total - deposits_refunded_total - deposits_used_total,
+                "cash_received": dep_by_method.get('cash', 0),
+                "bank_received": dep_by_method.get('bank', 0),
+                "count": len(deposits),
+            },
+            "expenses": {
+                "items": expenses,
+                "refunds": refunds,
+                "cash_total": expenses_cash_total,
+                "bank_total": expenses_bank_total,
+                "total": expenses_cash_total + expenses_bank_total,
+                "count": len(expenses) + len(refunds),
+            },
+            "collection": {
+                "cash_total": collection_cash,
+                "bank_total": collection_bank,
+                "total": collection_cash + collection_bank,
+            },
+            "summary": {
+                "net_cash": income_cash_total - expenses_cash_total,
+                "net_bank": income_bank_total - expenses_bank_total,
+                "net_total": (income_cash_total + income_bank_total) - (expenses_cash_total + expenses_bank_total),
+            }
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================================
+# MONTHLY CLOSE (Закриття місяця)
+# ============================================================
+
+def _ensure_monthly_reports_table(db: Session):
+    """Create monthly_reports table if not exists"""
+    db.execute(text("""
+        CREATE TABLE IF NOT EXISTS monthly_reports (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            year INT NOT NULL,
+            month INT NOT NULL,
+            report_data JSON NOT NULL,
+            closed_by VARCHAR(255),
+            closed_by_id INT,
+            closed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            note TEXT,
+            UNIQUE KEY uk_year_month (year, month)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """))
+    db.commit()
+
+
+@router.post("/close-month")
+async def close_month(
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Закрити місяць: зібрати всі фінансові дані за вказаний місяць,
+    зберегти як звіт в БД. Після закриття дані фіксуються.
+    data: { year: int, month: int, note?: str, closed_by?: str, closed_by_id?: int }
+    """
+    _ensure_monthly_reports_table(db)
+    
+    year = data.get("year")
+    month = data.get("month")
+    note = data.get("note", "")
+    closed_by = data.get("closed_by", "")
+    closed_by_id = data.get("closed_by_id")
+    
+    if not year or not month:
+        raise HTTPException(status_code=400, detail="Вкажіть рік та місяць")
+    
+    # Check if already closed
+    existing = db.execute(text("""
+        SELECT id FROM monthly_reports WHERE year = :year AND month = :month
+    """), {"year": year, "month": month}).fetchone()
+    
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Місяць {month:02d}/{year} вже закрито")
+    
+    # === COLLECT ALL DATA FOR THE MONTH ===
+    month_start = f"{year}-{month:02d}-01"
+    if month == 12:
+        month_end = f"{year+1}-01-01"
+    else:
+        month_end = f"{year}-{month+1:02d}-01"
+    
+    params = {"month_start": month_start, "month_end": month_end}
+    
+    # 1. INCOME
+    income_rows = db.execute(text("""
+        SELECT payment_type, method, SUM(amount) as total, COUNT(*) as cnt
+        FROM fin_payments
+        WHERE payment_type IN ('rent', 'additional', 'damage', 'late')
+        AND status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+        GROUP BY payment_type, method
+    """), params).fetchall()
+    
+    income_by_type = {}
+    income_by_method = {"cash": 0, "bank": 0}
+    income_total = 0
+    income_count = 0
+    for r in income_rows:
+        ptype = r[0]
+        method = r[1] or 'cash'
+        amt = float(r[2] or 0)
+        cnt = int(r[3] or 0)
+        
+        if ptype not in income_by_type:
+            income_by_type[ptype] = {"cash": 0, "bank": 0, "total": 0, "count": 0}
+        income_by_type[ptype][method if method in ("cash", "bank") else "bank"] += amt
+        income_by_type[ptype]["total"] += amt
+        income_by_type[ptype]["count"] += cnt
+        
+        income_by_method[method if method in ("cash", "bank") else "bank"] += amt
+        income_total += amt
+        income_count += cnt
+    
+    # 2. DEPOSITS
+    deposits_data = db.execute(text("""
+        SELECT 
+            COUNT(*) as cnt,
+            COALESCE(SUM(held_amount), 0) as total_held,
+            COALESCE(SUM(used_amount), 0) as total_used,
+            COALESCE(SUM(refunded_amount), 0) as total_refunded
+        FROM fin_deposit_holds
+        WHERE opened_at >= :month_start AND opened_at < :month_end
+    """), params).fetchone()
+    
+    deposits_closed = db.execute(text("""
+        SELECT COUNT(*), COALESCE(SUM(refunded_amount), 0)
+        FROM fin_deposit_holds
+        WHERE closed_at >= :month_start AND closed_at < :month_end
+    """), params).fetchone()
+    
+    deposit_payments = db.execute(text("""
+        SELECT method, SUM(amount) as total
+        FROM fin_payments
+        WHERE payment_type = 'deposit'
+        AND status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+        GROUP BY method
+    """), params).fetchall()
+    dep_by_method = {}
+    for r in deposit_payments:
+        dep_by_method[r[0] or 'cash'] = float(r[1] or 0)
+    
+    # 3. EXPENSES
+    expenses_rows = db.execute(text("""
+        SELECT e.expense_type, c.name, e.method, SUM(e.amount) as total, COUNT(*) as cnt
+        FROM fin_expenses e
+        LEFT JOIN fin_categories c ON c.id = e.category_id
+        WHERE e.status = 'posted'
+        AND e.occurred_at >= :month_start AND e.occurred_at < :month_end
+        GROUP BY e.expense_type, c.name, e.method
+    """), params).fetchall()
+    
+    expenses_by_category = {}
+    expenses_by_method = {"cash": 0, "bank": 0}
+    expenses_total = 0
+    expenses_count = 0
+    collection_total = 0
+    for r in expenses_rows:
+        etype = r[0]
+        cat_name = r[1] or "Без категорії"
+        method = r[2] or 'cash'
+        amt = float(r[3] or 0)
+        cnt = int(r[4] or 0)
+        
+        if etype == 'collection':
+            collection_total += amt
+            continue
+        
+        key = cat_name
+        if key not in expenses_by_category:
+            expenses_by_category[key] = {"cash": 0, "bank": 0, "total": 0, "count": 0}
+        expenses_by_category[key][method if method in ("cash", "bank") else "bank"] += amt
+        expenses_by_category[key]["total"] += amt
+        expenses_by_category[key]["count"] += cnt
+        
+        expenses_by_method[method if method in ("cash", "bank") else "bank"] += amt
+        expenses_total += amt
+        expenses_count += cnt
+    
+    # 4. REFUNDS
+    refunds_data = db.execute(text("""
+        SELECT method, SUM(amount) as total, COUNT(*) as cnt
+        FROM fin_payments
+        WHERE payment_type = 'refund'
+        AND status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+        GROUP BY method
+    """), params).fetchall()
+    
+    refunds_by_method = {"cash": 0, "bank": 0}
+    refunds_total = 0
+    refunds_count = 0
+    for r in refunds_data:
+        method = r[0] or 'cash'
+        amt = float(r[1] or 0)
+        cnt = int(r[2] or 0)
+        refunds_by_method[method if method in ("cash", "bank") else "bank"] += amt
+        refunds_total += amt
+        refunds_count += cnt
+    
+    # 5. ORDERS COUNT
+    orders_count = db.execute(text("""
+        SELECT COUNT(DISTINCT order_id) FROM fin_payments
+        WHERE status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+    """), params).scalar() or 0
+    
+    # === BUILD REPORT ===
+    import json
+    report = {
+        "period": {"year": year, "month": month, "label": f"{month:02d}/{year}"},
+        "income": {
+            "total": income_total,
+            "cash": income_by_method["cash"],
+            "bank": income_by_method["bank"],
+            "count": income_count,
+            "by_type": {
+                "rent": income_by_type.get("rent", {"total": 0, "cash": 0, "bank": 0, "count": 0}),
+                "damage": income_by_type.get("damage", {"total": 0, "cash": 0, "bank": 0, "count": 0}),
+                "late": income_by_type.get("late", {"total": 0, "cash": 0, "bank": 0, "count": 0}),
+                "additional": income_by_type.get("additional", {"total": 0, "cash": 0, "bank": 0, "count": 0}),
+            }
+        },
+        "deposits": {
+            "opened_count": int(deposits_data[0] or 0),
+            "total_held": float(deposits_data[1] or 0),
+            "total_used": float(deposits_data[2] or 0),
+            "total_refunded": float(deposits_data[3] or 0),
+            "closed_count": int(deposits_closed[0] or 0),
+            "closed_refunded": float(deposits_closed[1] or 0),
+            "received_cash": dep_by_method.get("cash", 0),
+            "received_bank": dep_by_method.get("bank", 0),
+        },
+        "expenses": {
+            "total": expenses_total,
+            "cash": expenses_by_method["cash"],
+            "bank": expenses_by_method["bank"],
+            "count": expenses_count,
+            "by_category": expenses_by_category,
+        },
+        "refunds": {
+            "total": refunds_total,
+            "cash": refunds_by_method["cash"],
+            "bank": refunds_by_method["bank"],
+            "count": refunds_count,
+        },
+        "collection": {"total": collection_total},
+        "orders_count": orders_count,
+        "summary": {
+            "net_cash": income_by_method["cash"] - expenses_by_method["cash"] - refunds_by_method["cash"],
+            "net_bank": income_by_method["bank"] - expenses_by_method["bank"] - refunds_by_method["bank"],
+            "net_total": income_total - expenses_total - refunds_total,
+        }
+    }
+    
+    # Save to DB
+    db.execute(text("""
+        INSERT INTO monthly_reports (year, month, report_data, closed_by, closed_by_id, note)
+        VALUES (:year, :month, :report_data, :closed_by, :closed_by_id, :note)
+    """), {
+        "year": year, "month": month,
+        "report_data": json.dumps(report, ensure_ascii=False),
+        "closed_by": closed_by,
+        "closed_by_id": closed_by_id,
+        "note": note,
+    })
+    db.commit()
+    
+    return {"success": True, "report": report}
+
+
+@router.get("/monthly-reports")
+async def get_monthly_reports(db: Session = Depends(get_rh_db)):
+    """Отримати список всіх закритих місяців"""
+    _ensure_monthly_reports_table(db)
+    
+    rows = db.execute(text("""
+        SELECT id, year, month, report_data, closed_by, closed_by_id, closed_at, note
+        FROM monthly_reports
+        ORDER BY year DESC, month DESC
+    """)).fetchall()
+    
+    import json
+    return [{
+        "id": r[0],
+        "year": r[1],
+        "month": r[2],
+        "report": json.loads(r[3]) if isinstance(r[3], str) else r[3],
+        "closed_by": r[4],
+        "closed_by_id": r[5],
+        "closed_at": r[6].isoformat() if r[6] else None,
+        "note": r[7],
+    } for r in rows]
+
+
+@router.get("/monthly-reports/{report_id}")
+async def get_monthly_report_detail(report_id: int, db: Session = Depends(get_rh_db)):
+    """Отримати деталі конкретного місячного звіту"""
+    _ensure_monthly_reports_table(db)
+    
+    row = db.execute(text("""
+        SELECT id, year, month, report_data, closed_by, closed_by_id, closed_at, note
+        FROM monthly_reports WHERE id = :id
+    """), {"id": report_id}).fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Звіт не знайдено")
+    
+    import json
+    return {
+        "id": row[0],
+        "year": row[1],
+        "month": row[2],
+        "report": json.loads(row[3]) if isinstance(row[3], str) else row[3],
+        "closed_by": row[4],
+        "closed_by_id": row[5],
+        "closed_at": row[6].isoformat() if row[6] else None,
+        "note": row[7],
+    }
+
+
+@router.delete("/monthly-reports/{report_id}")
+async def delete_monthly_report(report_id: int, db: Session = Depends(get_rh_db)):
+    """Видалити (відкрити) закритий місяць - тільки для адміна"""
+    _ensure_monthly_reports_table(db)
+    
+    db.execute(text("DELETE FROM monthly_reports WHERE id = :id"), {"id": report_id})
+    db.commit()
+    return {"success": True}

@@ -2269,13 +2269,14 @@ async def preview_settlement_act(
             elif ptype == 'late':
                 late_paid += amt
 
-        payments_detail.append({
-            "date": _format_date_ua(p[6]),
-            "type_label": type_labels.get(ptype, ptype),
-            "method_label": method_labels.get(p[2], p[2] or "—"),
-            "amount": _format_currency(amt),
-            "note": p[9] or p[7] or ""
-        })
+            # Тільки реальні оплати (confirmed/completed) в деталях
+            payments_detail.append({
+                "date": _format_date_ua(p[6]),
+                "type_label": type_labels.get(ptype, ptype),
+                "method_label": method_labels.get(p[2], p[2] or "—"),
+                "amount": _format_currency(amt),
+                "note": p[9] or p[7] or ""
+            })
 
     total_paid = rent_paid + damage_paid + late_paid
 
@@ -2322,10 +2323,10 @@ async def preview_settlement_act(
         "fee": _format_currency(float(r[4] or 0)), "note": r[5] or ""
     } for r in damage_items_rows]
 
-    # === 5. LATE FEES (from fin_payments - manager-decided amounts) ===
+    # === 5. LATE FEES (from fin_payments - тільки нарахування менеджера, status='pending') ===
     late_total_row = db.execute(text("""
         SELECT COALESCE(SUM(amount), 0) FROM fin_payments
-        WHERE order_id = :order_id AND payment_type = 'late'
+        WHERE order_id = :order_id AND payment_type = 'late' AND status = 'pending'
     """), {"order_id": order_id}).fetchone()
     late_final = float(late_total_row[0]) if late_total_row else 0
 

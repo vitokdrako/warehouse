@@ -11,6 +11,7 @@ import json
 import os
 
 from database_rentalhub import get_rh_db
+from services.company_config import get_company_config
 
 # Base URL for images - use backend URL from environment
 BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL", "https://backrentalhub.farforrent.com.ua")
@@ -26,6 +27,14 @@ def _get_full_image_url(image_url: str) -> str:
     # Remove leading slash if present
     image_path = image_url.lstrip("/")
     return f"{BACKEND_BASE_URL}/{image_path}"
+
+def _email_to_name(val: str) -> str:
+    """Convert email to display name: katia@farforrent.com.ua -> Katia"""
+    if not val:
+        return "—"
+    if "@" in val:
+        return val.split("@")[0].capitalize()
+    return val
 from services.doc_engine.registry import DOC_REGISTRY, get_doc_config, get_docs_for_entity
 from services.doc_engine.data_builders import build_document_data
 from services.doc_engine.render import render_html, render_pdf, get_template_path
@@ -43,6 +52,52 @@ async def list_document_types():
         {"doc_type": key, **value}
         for key, value in DOC_REGISTRY.items()
     ]
+
+
+@router.get("/available-invoices/{order_id}")
+async def get_available_invoices(order_id: int, db: Session = Depends(get_rh_db)):
+    """Get available invoice/document types for an order based on its payer profile"""
+    
+    payer = _get_order_payer(db, order_id)
+    
+    result = {
+        "has_payer": payer is not None,
+        "payer": None,
+        "available_types": []
+    }
+    
+    if not payer:
+        return result
+    
+    result["payer"] = {
+        "id": payer["id"],
+        "type": payer["type"],
+        "display_name": payer["display_name"],
+        "edrpou": payer.get("edrpou"),
+        "tax_mode": payer.get("tax_mode")
+    }
+    
+    payer_type = payer["type"]  # fop, tov, individual, fop_simple
+    
+    # Always available: invoice payment and service act
+    if payer_type in ("fop", "fop_simple"):
+        result["available_types"] = [
+            {"value": "invoice_payment_fop", "label": "Рахунок на оплату (ФОП)", "endpoint": "invoice-payment", "executor_type": "fop"},
+            {"value": "service_act_fop", "label": "Акт надання послуг (ФОП)", "endpoint": "service-act", "executor_type": "fop"},
+        ]
+    elif payer_type == "tov":
+        result["available_types"] = [
+            {"value": "invoice_payment_tov", "label": "Рахунок на оплату (ТОВ)", "endpoint": "invoice-payment", "executor_type": "tov"},
+            {"value": "service_act_tov", "label": "Акт надання послуг (ТОВ)", "endpoint": "service-act", "executor_type": "tov"},
+        ]
+    else:
+        # Individual - show both FOP options (most common for rental)
+        result["available_types"] = [
+            {"value": "invoice_payment_fop", "label": "Рахунок на оплату (ФОП)", "endpoint": "invoice-payment", "executor_type": "fop"},
+            {"value": "service_act_fop", "label": "Акт надання послуг (ФОП)", "endpoint": "service-act", "executor_type": "fop"},
+        ]
+    
+    return result
 
 @router.get("/types/{entity_type}")
 async def list_documents_for_entity(entity_type: str):
@@ -636,6 +691,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     formatted_items = []
     rent_total = 0.0
     deposit_total = 0.0
+    loss_total = 0.0  # Загальна сума збитку
     
     for item in items:
         # item structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price, purchase_price]
@@ -643,12 +699,15 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         rental_price_day = float(item[4] or item[8] or 0)  # Use order price or product rental_price
         total_rental = float(item[5] or 0)
         
-        # Deposit = 50% of purchase_price (item[9]) * quantity
+        # Збиток = повна вартість товару (purchase_price * qty)
+        # Завдаток = 50% від збитку
         purchase_price = float(item[9] or 0)
-        deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
+        loss_per_item = purchase_price * qty  # Повна сума збитку
+        deposit_per_item = loss_per_item / 2 if loss_per_item > 0 else 0  # 50% = завдаток
         
         rent_total += total_rental
         deposit_total += deposit_per_item
+        loss_total += loss_per_item  # Загальна сума збитку
         
         formatted_items.append({
             "product_name": item[2],
@@ -656,7 +715,8 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
             "quantity": qty,
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
-            "deposit_fmt": _format_currency(deposit_per_item),
+            "loss_fmt": _format_currency(loss_per_item),  # Збиток (повна ціна)
+            "deposit_fmt": _format_currency(deposit_per_item),  # Завдаток (50%)
             "image_url": _get_full_image_url(item[6]),
             "note": None
         })
@@ -667,10 +727,18 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount  # Повна сума до знижки
+    # Якщо відсоток 0, але є сума — розрахувати динамічно
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # Разом до сплати = Оренда - Знижка + Послуга (БЕЗ завдатку)
-    grand_total = order_rent - discount_amount + service_fee
+    
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    # rent_before_discount = order_rent + discount_amount (до знижки)
+    rent_after_discount = order_rent  # Сума після знижки = те що в БД
+    grand_total = rent_after_discount + service_fee  # Фінальна сума (зі знижкою + послуги)
     
     # Delivery type label mapping
     delivery_type_labels = {
@@ -680,6 +748,16 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         None: "Самовивіз"
     }
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
+    
+    # Завантажити індивідуальні додаткові послуги
+    additional_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services 
+        WHERE order_id = :oid ORDER BY id
+    """), {"oid": order_id}).fetchall()
+    additional_services = [
+        {"name": row[0], "amount": float(row[1] or 0), "amount_fmt": _format_currency(float(row[1] or 0))}
+        for row in additional_services_raw
+    ]
     
     # Build template data matching quote.html structure
     template_data = {
@@ -713,18 +791,17 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(order_rent),
-            "deposit_total_fmt": _format_currency(order_deposit),
+            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
+            "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50% від збитку)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
             "grand_total": grand_total
         },
-        "company": {
-            "phone": "(097) 123 09 93, (093) 375 09 40",
-            "email": "info@farforrent.com.ua"
-        },
+        "company": get_company_config(db),
+        "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None  # Can be set to "ПОПЕРЕДНІЙ" or "ЗАТВЕРДЖЕНО"
     }
@@ -748,21 +825,25 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     formatted_items = []
     rent_total = 0.0
     deposit_total = 0.0
+    loss_total = 0.0  # Загальна сума збитку
     
     for item in items:
         qty = item[3] or 1
         rental_price_day = float(item[4] or item[8] or 0)
         total_rental = float(item[5] or 0)
         purchase_price = float(item[9] or 0)
-        deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
+        loss_per_item = purchase_price * qty  # Повна сума збитку
+        deposit_per_item = loss_per_item / 2 if loss_per_item > 0 else 0  # 50% = завдаток
         
         rent_total += total_rental
         deposit_total += deposit_per_item
+        loss_total += loss_per_item
         
         formatted_items.append({
             "product_name": item[2], "sku": item[7] or "—", "quantity": qty,
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
+            "loss_fmt": _format_currency(loss_per_item),  # Збиток (повна ціна)
             "deposit_fmt": _format_currency(deposit_per_item),
             "image_url": _get_full_image_url(item[6]), "note": None
         })
@@ -771,13 +852,28 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    grand_total = order_rent - discount_amount + service_fee
+    rent_after_discount = order_rent
+    grand_total = rent_after_discount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
     
+    # Завантажити індивідуальні додаткові послуги (PDF)
+    pdf_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services 
+        WHERE order_id = :oid ORDER BY id
+    """), {"oid": order_id}).fetchall()
+    additional_services = [
+        {"name": row[0], "amount": float(row[1] or 0), "amount_fmt": _format_currency(float(row[1] or 0))}
+        for row in pdf_services_raw
+    ]
+
     template_data = {
         "order": {
             "order_number": order[1], "customer_name": order[3],
@@ -795,13 +891,17 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(order_rent), "deposit_total_fmt": _format_currency(order_deposit),
+            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
+            "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50%)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total), "grand_total": grand_total
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total": grand_total
         },
-        "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
+        "company": get_company_config(db),
+        "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None,
         "auto_print": True  # Trigger print dialog
@@ -839,16 +939,19 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     formatted_items = []
     rent_total = 0.0
     deposit_total = 0.0
+    loss_total = 0.0  # Загальна сума збитку
     
     for item in items:
         qty = item[3] or 1
         rental_price_day = float(item[4] or item[8] or 0)
         total_rental = float(item[5] or 0)
         purchase_price = float(item[9] or 0)
-        deposit_per_item = (purchase_price / 2) * qty if purchase_price > 0 else 0
+        loss_per_item = purchase_price * qty  # Повна сума збитку
+        deposit_per_item = loss_per_item / 2 if loss_per_item > 0 else 0  # 50% = завдаток
         
         rent_total += total_rental
         deposit_total += deposit_per_item
+        loss_total += loss_per_item
         
         formatted_items.append({
             "product_name": item[2],
@@ -856,6 +959,7 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
             "quantity": qty,
             "rental_price_fmt": _format_currency(rental_price_day),
             "price_per_day_fmt": _format_currency(rental_price_day),
+            "loss_fmt": _format_currency(loss_per_item),  # Збиток (повна ціна)
             "deposit_fmt": _format_currency(deposit_per_item),
             "image_url": _get_full_image_url(item[6]),
             "note": None
@@ -865,14 +969,28 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # Разом до сплати = Оренда - Знижка + Послуга (БЕЗ завдатку)
-    grand_total = order_rent - discount_amount + service_fee
+    rent_after_discount = order_rent
+    grand_total = rent_after_discount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
     
+    # Завантажити індивідуальні додаткові послуги (Email)
+    email_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services 
+        WHERE order_id = :oid ORDER BY id
+    """), {"oid": order_id}).fetchall()
+    additional_services = [
+        {"name": row[0], "amount": float(row[1] or 0), "amount_fmt": _format_currency(float(row[1] or 0))}
+        for row in email_services_raw
+    ]
+
     template_data = {
         "order": {
             "order_number": order[1], "customer_name": order[3],
@@ -890,13 +1008,17 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(order_rent), "deposit_total_fmt": _format_currency(order_deposit),
+            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
+            "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50%)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total), "grand_total": grand_total
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total": grand_total
         },
-        "company": {"phone": "(097) 123 09 93, (093) 375 09 40", "email": "info@farforrent.com.ua"},
+        "company": get_company_config(db),
+        "additional_services": additional_services,
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "watermark": None
     }
@@ -1002,51 +1124,97 @@ async def preview_annex(
 @router.get("/invoice-offer/{order_id}/preview", response_class=HTMLResponse)
 async def preview_invoice_offer(
     order_id: int,
-    executor_type: str = Query("tov", description="tov or fop"),
     db: Session = Depends(get_rh_db)
 ):
-    """Generate HTML preview of invoice offer (Рахунок-оферта)"""
+    """Generate HTML preview of invoice offer (Рахунок-оферта) - official document with bank details"""
     
     order, items = _get_order_with_items(db, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
-    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
+    if not rental_days and order[6] and order[7]:
+        rental_days = (order[7] - order[6]).days + 1
     
+    # Format items
     formatted_items = []
+    rent_total = 0.0
+    deposit_total = 0.0
+    
     for item in items:
-        # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
+        qty = item[3] or 1
+        rental_price_day = float(item[4] or item[8] or 0)
+        total_rental = float(item[5] or 0)
+        
+        # Deposit = purchase_price * qty (full item value as deposit)
+        purchase_price = float(item[9] or 0)
+        deposit_per_item = purchase_price * qty
+        
+        rent_total += total_rental
+        deposit_total += deposit_per_item
+        
         formatted_items.append({
-            "name": item[2],
-            "quantity": item[3],
-            "price_per_day": _format_currency(item[4]),
-            "total_rental": _format_currency(item[5]),
-            "deposit": _format_currency(float(item[8] or item[4] or 0) * (item[3] or 1))
+            "product_name": item[2],
+            "sku": item[7] or "—",
+            "quantity": qty,
+            "rental_price_day_fmt": _format_currency(rental_price_day),
+            "rental_total_fmt": _format_currency(total_rental),
+            "deposit_fmt": _format_currency(deposit_per_item),
         })
     
-    invoice_number = f"Р-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    # Totals
+    order_rent = float(order[11] or 0) if order[11] else rent_total
+    order_deposit = float(order[12] or 0) if order[12] else deposit_total
+    discount_amount = float(order[23] or 0) if order[23] else 0
+    discount_percent = order[24] or 0
+    
+    # Additional services
+    service_fee = float(order[25] or 0)
+    service_fee_name = order[26] or "Додаткова послуга"
+    
+    additional_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services 
+        WHERE order_id = :oid
+    """), {"oid": order_id}).fetchall()
+    additional_services = [{"name": row[0], "amount": _format_currency(row[1])} for row in additional_services_raw]
+    
+    # ВАЖЛИВО: order_rent (total_price) вже зі знижкою — не віднімаємо ще раз
+    grand_total = order_rent + service_fee + order_deposit
+    
+    # Delivery type
+    delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
+    delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
+    
+    company = get_company_config(db)
     
     template_data = {
-        "invoice_number": invoice_number,
-        "invoice_date": datetime.now().strftime("%d.%m.%Y"),
-        "executor": executor,
-        "client": {"name": order[3], "phone": order[4] or order[21], "email": order[5] or order[22], "tax_id": None},
         "order": {
-            "number": order[1],
-            "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}",
+            "order_number": order[1],
+            "customer_name": order[3],
+            "customer_phone": order[4] or order[21],
+            "customer_email": order[5] or order[22],
+            "phone": order[4] or order[21],
+            "email": order[5] or order[22],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
             "rental_days": rental_days,
-            "delivery_method": "Самовивіз"
+            "delivery_type_label": delivery_type_label,
+            "discount_percent": discount_percent,
+            "service_fee": service_fee,
+            "service_fee_name": service_fee_name,
         },
         "items": formatted_items,
-        "rental_days": rental_days,
         "totals": {
-            "rental": _format_currency(order[11]),
-            "deposit": _format_currency(order[12]),
-            "discount": "0,00",
-            "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))
+            "rental_fmt": _format_currency(order_rent),
+            "deposit_fmt": _format_currency(order_deposit),
+            "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
+            "service_fee_name": service_fee_name if service_fee > 0 else None,
+            "grand_total_fmt": _format_currency(grand_total),
         },
-        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+        "additional_services": additional_services,
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     }
     
     template = jinja_env.get_template("documents/invoice_offer.html")
@@ -1056,32 +1224,84 @@ async def preview_invoice_offer(
 @router.get("/invoice-offer/{order_id}/pdf")
 async def download_invoice_offer_pdf(
     order_id: int,
-    executor_type: str = Query("tov"),
     db: Session = Depends(get_rh_db)
 ):
-    """Download invoice offer as PDF"""
+    """Download invoice offer as PDF (print dialog)"""
     
     order, items = _get_order_with_items(db, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
-    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
+    if not rental_days and order[6] and order[7]:
+        rental_days = (order[7] - order[6]).days + 1
     
-    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
-    formatted_items = [{"name": it[2], "quantity": it[3], "price_per_day": _format_currency(it[4]),
-                        "total_rental": _format_currency(it[5]), "deposit": _format_currency(float(it[8] or it[4] or 0) * (it[3] or 1))} for it in items]
+    formatted_items = []
+    rent_total = 0.0
+    deposit_total = 0.0
     
-    invoice_number = f"Р-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    for item in items:
+        qty = item[3] or 1
+        rental_price_day = float(item[4] or item[8] or 0)
+        total_rental = float(item[5] or 0)
+        purchase_price = float(item[9] or 0)
+        deposit_per_item = purchase_price * qty
+        rent_total += total_rental
+        deposit_total += deposit_per_item
+        formatted_items.append({
+            "product_name": item[2],
+            "sku": item[7] or "—",
+            "quantity": qty,
+            "rental_price_day_fmt": _format_currency(rental_price_day),
+            "rental_total_fmt": _format_currency(total_rental),
+            "deposit_fmt": _format_currency(deposit_per_item),
+        })
+    
+    order_rent = float(order[11] or 0) if order[11] else rent_total
+    order_deposit = float(order[12] or 0) if order[12] else deposit_total
+    discount_amount = float(order[23] or 0) if order[23] else 0
+    discount_percent = order[24] or 0
+    
+    service_fee = float(order[25] or 0)
+    service_fee_name = order[26] or "Додаткова послуга"
+    
+    additional_services_raw = db.execute(text("""
+        SELECT name, amount FROM order_additional_services WHERE order_id = :oid
+    """), {"oid": order_id}).fetchall()
+    additional_services = [{"name": row[0], "amount": _format_currency(row[1])} for row in additional_services_raw]
+    
+    # ВАЖЛИВО: order_rent (total_price) вже зі знижкою — не віднімаємо ще раз
+    grand_total = order_rent + service_fee + order_deposit
+    
+    delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
+    delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
+    
+    company = get_company_config(db)
     
     template_data = {
-        "invoice_number": invoice_number, "invoice_date": datetime.now().strftime("%d.%m.%Y"),
-        "executor": executor,
-        "client": {"name": order[3], "phone": order[4] or order[21], "email": order[5] or order[22], "tax_id": None},
-        "order": {"number": order[1], "rental_period": f"{_format_date_ua(order[6])} — {_format_date_ua(order[7])}", "rental_days": rental_days, "delivery_method": "Самовивіз"},
-        "items": formatted_items, "rental_days": rental_days,
-        "totals": {"rental": _format_currency(order[11]), "deposit": _format_currency(order[12]), "discount": "0,00", "total": _format_currency((float(order[11] or 0) + float(order[12] or 0)))},
-        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+        "order": {
+            "order_number": order[1],
+            "customer_name": order[3],
+            "customer_phone": order[4] or order[21],
+            "customer_email": order[5] or order[22],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days,
+            "delivery_type_label": delivery_type_label,
+            "discount_percent": discount_percent,
+        },
+        "items": formatted_items,
+        "totals": {
+            "rental_fmt": _format_currency(order_rent),
+            "deposit_fmt": _format_currency(order_deposit),
+            "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
+            "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
+            "service_fee_name": service_fee_name if service_fee > 0 else None,
+            "grand_total_fmt": _format_currency(grand_total),
+        },
+        "additional_services": additional_services,
+        "company": company,
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
     }
     
     template = jinja_env.get_template("documents/invoice_offer.html")
@@ -1098,84 +1318,240 @@ async def download_invoice_offer_pdf(
 # ISSUE ACT (АКТ ВИДАЧІ)
 # ============================================================
 
-@router.get("/issue-act/{order_id}/preview", response_class=HTMLResponse)
-async def preview_issue_act(
-    order_id: int,
-    executor_type: str = Query("tov"),
-    db: Session = Depends(get_rh_db)
-):
-    """Generate HTML preview of issue act (Акт видачі)"""
-    
+def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"):
+    """Build data for the issue act template."""
     order, items = _get_order_with_items(db, order_id)
     if not order:
-        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+        return None
     
     executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
     
-    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
-    formatted_items = [{"name": it[2], "quantity": it[3]} for it in items]
-    total_qty = sum(it[3] for it in items)
+    # Load per-item packaging from issue_cards
+    item_packaging_map = {}
+    ITEM_PACK_LABELS = {
+        "native_cover": "Рідний чохол",
+        "native_box": "Рідна коробка",
+        "felt": "Войлок",
+        "special": "Спец. пакування",
+        # "other" handled separately with other_text
+        # Legacy keys
+        "cover": "Чохол",
+        "box": "Коробка",
+    }
+    try:
+        ic_row = db.execute(text("""
+            SELECT items FROM issue_cards WHERE order_id = :oid ORDER BY id DESC LIMIT 1
+        """), {"oid": order_id}).fetchone()
+        if ic_row and ic_row[0]:
+            ic_items = json.loads(ic_row[0]) if isinstance(ic_row[0], str) else ic_row[0]
+            for ic_item in ic_items:
+                item_id = ic_item.get("id")
+                pkg = ic_item.get("packaging", {})
+                if item_id and pkg:
+                    labels = []
+                    for key, label in ITEM_PACK_LABELS.items():
+                        if pkg.get(key):
+                            labels.append(label)
+                    if pkg.get("other"):
+                        other_text = pkg.get("other_text", "")
+                        labels.append(f"Інше: {other_text}" if other_text else "Інше")
+                    # Store by both int and str for reliable matching
+                    item_packaging_map[int(item_id)] = labels
+                    item_packaging_map[str(item_id)] = labels
+    except Exception:
+        pass
+    
+    # Format items with full details
+    formatted_items = []
+    total_qty = 0
+    for it in items:
+        qty = it[3] or 1
+        total_qty += qty
+        sku = it[7] or "—"
+        item_id = it[1]  # product_id to match issue_cards items
+        
+        # Per-item packaging
+        pack_labels = item_packaging_map.get(item_id, [])
+        
+        # Load damage history for this product by SKU
+        damages = []
+        if sku and sku != "—":
+            try:
+                damage_rows = db.execute(text("""
+                    SELECT damage_type, note, photo_url, stage, created_at, created_by
+                    FROM product_damage_history
+                    WHERE sku = :sku
+                    ORDER BY created_at DESC
+                """), {"sku": sku}).fetchall()
+                for d in damage_rows:
+                    damages.append({
+                        "damage_type": d[0] or "Дефект",
+                        "note": d[1],
+                        "photo_url": d[2],
+                        "stage": d[3],
+                        "created_at": _format_date_ua(d[4]) if d[4] else "",
+                        "created_by": d[5] or ""
+                    })
+            except Exception:
+                pass
+        
+        formatted_items.append({
+            "name": it[2],
+            "sku": sku,
+            "quantity": qty,
+            "image_url": _get_full_image_url(it[6]),
+            "damages": damages,
+            "has_damage": len(damages) > 0,
+            "packaging_labels": pack_labels,
+            "has_packaging": len(pack_labels) > 0,
+        })
+    
+    # Load packaging
+    packaging_items = []
+    PACKAGING_LABELS = {
+        "bag_s": "Сумка S",
+        "bag_m": "Сумка M",
+        "bag_l": "Сумка L",
+        "cover": "Чохол",
+        "black_box": "Чорний ящик",
+    }
+    try:
+        pkg_rows = db.execute(text("""
+            SELECT item_key, quantity FROM order_packaging
+            WHERE order_id = :oid AND quantity > 0
+        """), {"oid": order_id}).fetchall()
+        for r in pkg_rows:
+            packaging_items.append({
+                "key": r[0],
+                "label": PACKAGING_LABELS.get(r[0], r[0]),
+                "quantity": r[1]
+            })
+    except Exception:
+        pass
     
     act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
     
-    template_data = {
+    return {
         "act_number": act_number,
         "act_date": datetime.now().strftime("%d.%m.%Y"),
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "executor": executor,
-        "client": {"name": order[3], "phone": order[4] or order[21], "contact_person": order[3]},
-        "order": {"number": order[1]},
+        "client": {
+            "name": order[3],
+            "phone": order[4] or order[21],
+            "email": order[5] or order[22] or "",
+            "contact_person": order[3]
+        },
+        "order": {
+            "number": order[1],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days,
+        },
         "items": formatted_items,
+        "packaging": packaging_items,
+        "has_packaging": len(packaging_items) > 0,
+        "has_any_damage": any(it["has_damage"] for it in formatted_items),
         "rental_days": rental_days,
         "rental_start_date": _format_date_ua(order[6]),
         "rental_end_date": _format_date_ua(order[7]),
         "return_date": _format_date_ua(order[9] or order[7]),
-        "totals": {"items_count": len(items), "quantity": total_qty}
+        "totals": {"items_count": len(items), "quantity": total_qty},
+        "company": get_company_config(db),
     }
+
+
+@router.get("/issue-act/{order_id}/preview", response_class=HTMLResponse)
+async def preview_issue_act(
+    order_id: int,
+    executor_type: str = Query("fop"),
+    db: Session = Depends(get_rh_db)
+):
+    """Generate HTML preview of issue act (Акт видачі)"""
+    template_data = _build_issue_act_data(db, order_id, executor_type)
+    if not template_data:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
     template = jinja_env.get_template("documents/issue_act.html")
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
-@router.get("/issue-act/{order_id}/pdf")
+@router.get("/issue-act/{order_id}/pdf", response_class=HTMLResponse)
 async def download_issue_act_pdf(
     order_id: int,
-    executor_type: str = Query("tov"),
+    executor_type: str = Query("fop"),
     db: Session = Depends(get_rh_db)
 ):
-    """Download issue act as PDF"""
+    """Generate printable HTML for issue act (use browser Print to PDF)"""
+    template_data = _build_issue_act_data(db, order_id, executor_type)
+    if not template_data:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    template = jinja_env.get_template("documents/issue_act.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+
+# ============================================================
+# PICKING LIST (ЛИСТ КОМПЛЕКТАЦІЇ)
+# ============================================================
+
+@router.get("/picking-list/{order_id}/preview", response_class=HTMLResponse)
+async def preview_picking_list(order_id: int, db: Session = Depends(get_rh_db)):
+    """Generate HTML preview of picking list (Лист комплектації)"""
     
     order, items = _get_order_with_items(db, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Замовлення не знайдено")
     
-    executor = EXECUTORS.get(executor_type, EXECUTORS["tov"])
     rental_days = order[15] or 1
     
-    # New structure: [id, product_id, product_name, quantity, price, total_rental, image_url, sku, rental_price]
-    formatted_items = [{"name": it[2], "quantity": it[3]} for it in items]
-    total_qty = sum(it[3] for it in items)
-    
-    act_number = f"В-{datetime.now().strftime('%Y')}-{order[0]:06d}"
+    # Format items with full details + location from products
+    formatted_items = []
+    total_qty = 0
+    for it in items:
+        qty = it[3] or 1
+        total_qty += qty
+        
+        # Get location from products table
+        location = "—"
+        if it[1]:
+            try:
+                loc_row = db.execute(text("""
+                    SELECT zone, aisle, shelf FROM products WHERE product_id = :pid
+                """), {"pid": it[1]}).fetchone()
+                if loc_row:
+                    parts = [str(x) for x in [loc_row[0], loc_row[1], loc_row[2]] if x]
+                    location = "-".join(parts) if parts else "—"
+            except Exception:
+                pass
+        
+        formatted_items.append({
+            "name": it[2],
+            "sku": it[7] or "—",
+            "quantity": qty,
+            "image_url": _get_full_image_url(it[6]),
+            "location": location,
+        })
     
     template_data = {
-        "act_number": act_number, "act_date": datetime.now().strftime("%d.%m.%Y"),
-        "executor": executor,
-        "client": {"name": order[3], "phone": order[4] or order[21], "contact_person": order[3]},
-        "order": {"number": order[1]},
-        "items": formatted_items, "rental_days": rental_days,
-        "rental_start_date": _format_date_ua(order[6]), "rental_end_date": _format_date_ua(order[7]),
-        "return_date": _format_date_ua(order[9] or order[7]),
-        "totals": {"items_count": len(items), "quantity": total_qty}
+        "order": {
+            "number": order[1],
+            "customer_name": order[3],
+            "customer_phone": order[4] or order[21],
+            "rental_start_date": _format_date_ua(order[6]),
+            "rental_end_date": _format_date_ua(order[7]),
+            "rental_days": rental_days,
+        },
+        "items": formatted_items,
+        "totals": {"items_count": len(items), "quantity": total_qty},
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+        "company": get_company_config(db),
     }
     
-    template = jinja_env.get_template("documents/issue_act.html")
-    html_content = template.render(**template_data)
-    
-    font_config = WeasyFontConfig()
-    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 15mm; }', font_config=font_config)], font_config=font_config)
-    
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Akt_vydachi_{order[1]}.pdf"})
+    template = jinja_env.get_template("documents/picking_list.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
 @router.get("/annex/{order_id}/pdf")
@@ -1227,10 +1603,7 @@ async def download_annex_pdf(order_id: int, agreement_id: Optional[int] = Query(
     template = jinja_env.get_template("documents/annex.html")
     html_content = template.render(**template_data)
     
-    font_config = WeasyFontConfig()
-    pdf_bytes = WeasyHTML(string=html_content).write_pdf(stylesheets=[WeasyCSS(string='@page { size: A4; margin: 15mm; }', font_config=font_config)], font_config=font_config)
-    
-    return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=Dodatok_{annex_number}_{order[1]}.pdf"})
+    return HTMLResponse(content=html_content, media_type="text/html")
 
 async def get_latest_documents_batch(
     request: LatestBatchRequest,
@@ -1338,3 +1711,728 @@ async def get_document_history(
         "total_versions": len(versions),
         "versions": versions
     }
+
+
+# ============================================================
+# PROCESSING QUEUE LISTS (Списки мийки / реставрації / партій)
+# ============================================================
+
+@router.get("/processing-list/{queue_type}/preview", response_class=HTMLResponse)
+async def preview_processing_list(queue_type: str, db: Session = Depends(get_rh_db)):
+    """Generate HTML list of items in processing queue (wash/restoration)"""
+    
+    if queue_type not in ('wash', 'restoration', 'laundry'):
+        raise HTTPException(status_code=400, detail="queue_type must be 'wash', 'restoration' or 'laundry'")
+    
+    titles = {'wash': 'Мийка', 'restoration': 'Реставрація', 'laundry': 'Пральня'}
+    
+    rows = db.execute(text("""
+        SELECT pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.damage_type,
+               pdh.note, pdh.created_at, pdh.created_by, pdh.order_number,
+               pdh.photo_url, pdh.processing_status, pdh.qty, pdh.processed_qty,
+               p.image_url AS product_image
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON p.product_id = pdh.product_id
+        WHERE pdh.processing_type = :ptype
+          AND COALESCE(pdh.processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+          AND (COALESCE(pdh.qty, 1) - COALESCE(pdh.processed_qty, 0)) > 0
+        ORDER BY pdh.created_at DESC
+    """), {"ptype": queue_type}).fetchall()
+    
+    items = []
+    for r in rows:
+        total_qty = r[11] or 1
+        processed = r[12] or 0
+        remaining = total_qty - processed
+        items.append({
+            "sku": r[2] or "—",
+            "name": r[3] or "—",
+            "damage_type": r[4] or "—",
+            "note": r[5] or "",
+            "created_at": r[6].strftime("%d.%m.%Y %H:%M") if r[6] else "—",
+            "created_by": _email_to_name(r[7]),
+            "order_number": r[8] or "—",
+            "image_url": _get_full_image_url(r[13] or r[9]),
+            "status": r[10] or "pending",
+            "qty": remaining,
+            "total_qty": total_qty,
+            "processed_qty": processed,
+        })
+    
+    template_data = {
+        "title": titles.get(queue_type, queue_type),
+        "queue_type": queue_type,
+        "items": items,
+        "total_count": len(items),
+        "total_qty": sum(i["qty"] for i in items),
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+    }
+    
+    template = jinja_env.get_template("documents/processing_list.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/laundry-batch/{batch_id}/preview", response_class=HTMLResponse)
+async def preview_laundry_batch(batch_id: str, db: Session = Depends(get_rh_db)):
+    """Generate HTML list of items in a laundry batch"""
+    
+    batch_row = db.execute(text("""
+        SELECT id, batch_number, laundry_company, status, sent_date, 
+               total_items, returned_items, created_by, batch_type, notes
+        FROM laundry_batches WHERE id = :bid
+    """), {"bid": batch_id}).fetchone()
+    
+    if not batch_row:
+        raise HTTPException(status_code=404, detail="Партію не знайдено")
+    
+    items_rows = db.execute(text("""
+        SELECT li.id, li.batch_id, li.product_name, li.sku, li.quantity,
+               li.returned_quantity, li.notes, li.category,
+               p.image_url AS product_image
+        FROM laundry_items li
+        LEFT JOIN products p ON li.product_id = p.product_id
+        WHERE li.batch_id = :bid
+        ORDER BY li.product_name
+    """), {"bid": batch_id}).fetchall()
+    
+    items = []
+    for r in items_rows:
+        items.append({
+            "name": r[2] or "—",
+            "sku": r[3] or "—",
+            "quantity": r[4] or 1,
+            "returned_qty": r[5] or 0,
+            "notes": r[6] or "",
+            "damage_type": r[7] or "—",
+            "order_number": "—",
+            "sent_by": _email_to_name(batch_row[7]),
+            "image_url": _get_full_image_url(r[8]),
+        })
+    
+    status_labels = {
+        'sent': 'Відправлено',
+        'partial_return': 'Часткове повернення',
+        'returned': 'Повернено',
+        'completed': 'Завершено',
+    }
+    batch_type_labels = {'laundry': 'Хімчистка', 'washing': 'Прання'}
+    
+    template_data = {
+        "title": f"Партія {batch_type_labels.get(batch_row[8], 'Пральня')}",
+        "batch": {
+            "number": batch_row[1],
+            "company": batch_row[2],
+            "status": status_labels.get(batch_row[3], batch_row[3]),
+            "sent_date": batch_row[4].strftime("%d.%m.%Y") if batch_row[4] else "—",
+            "total_items": batch_row[5] or 0,
+            "returned_items": batch_row[6] or 0,
+            "created_by": _email_to_name(batch_row[7]),
+            "batch_type": batch_type_labels.get(batch_row[8], batch_row[8] or "—"),
+            "notes": batch_row[9] or "",
+        },
+        "items": items,
+        "total_qty": sum(i["quantity"] for i in items),
+        "total_returned": sum(i["returned_qty"] for i in items),
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+    }
+    
+    template = jinja_env.get_template("documents/processing_list.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+
+# ============================================================
+# INVOICE PAYMENT (РАХУНОК НА ОПЛАТУ) & SERVICE ACT (АКТ НАДАННЯ ПОСЛУГ)
+# ============================================================
+
+def _number_to_text_ua(amount: float) -> str:
+    """Convert number to Ukrainian text for documents"""
+    units = ['', 'одна', 'дві', 'три', 'чотири', "п'ять", 'шість', 'сім', 'вісім', "дев'ять"]
+    teens = ['десять', 'одинадцять', 'дванадцять', 'тринадцять', 'чотирнадцять',
+             "п'ятнадцять", 'шістнадцять', 'сімнадцять', 'вісімнадцять', "дев'ятнадцять"]
+    tens = ['', 'десять', 'двадцять', 'тридцять', 'сорок', "п'ятдесят",
+            'шістдесят', 'сімдесят', 'вісімдесят', "дев'яносто"]
+    hundreds = ['', 'сто', 'двісті', 'триста', 'чотириста', "п'ятсот",
+                'шістсот', 'сімсот', 'вісімсот', "дев'ятсот"]
+    
+    int_part = int(amount)
+    kopecks = round((amount - int_part) * 100)
+    
+    if int_part == 0:
+        result = "нуль"
+    else:
+        parts = []
+        # Thousands
+        thousands = int_part // 1000
+        remainder = int_part % 1000
+        
+        if thousands > 0:
+            if thousands == 1:
+                parts.append("одна тисяча")
+            elif thousands == 2:
+                parts.append("дві тисячі")
+            elif thousands in (3, 4):
+                t_units = ['', 'одна', 'дві', 'три', 'чотири']
+                parts.append(f"{t_units[thousands]} тисячі")
+            elif 5 <= thousands <= 20:
+                t_text = []
+                if thousands >= 10:
+                    t_text.append(teens[thousands - 10] if thousands < 20 else tens[thousands // 10])
+                else:
+                    t_text.append(units[thousands] if thousands < 10 else teens[thousands - 10])
+                parts.append(f"{''.join(t_text)} тисяч")
+            else:
+                parts.append(f"{thousands} тисяч")
+        
+        if remainder > 0:
+            h = remainder // 100
+            t = (remainder % 100) // 10
+            u = remainder % 10
+            
+            if h > 0:
+                parts.append(hundreds[h])
+            
+            if t == 1:
+                parts.append(teens[u])
+            else:
+                if t > 0:
+                    parts.append(tens[t])
+                if u > 0:
+                    parts.append(units[u])
+        
+        result = ' '.join(parts)
+    
+    result = result.strip()
+    if result:
+        result = result[0].upper() + result[1:]
+    
+    # Гривень / гривня / гривні
+    last_digit = int_part % 10
+    last_two = int_part % 100
+    if last_two in (11, 12, 13, 14):
+        hrn_word = "гривень"
+    elif last_digit == 1:
+        hrn_word = "гривня"
+    elif last_digit in (2, 3, 4):
+        hrn_word = "гривні"
+    else:
+        hrn_word = "гривень"
+    
+    return f"{result} {hrn_word} {kopecks:02d} копійок"
+
+
+def _get_order_payer(db: Session, order_id: int):
+    """Get payer profile linked to the order's client (default payer)"""
+    # First check if order has a direct payer_profile_id
+    order_payer = db.execute(text("""
+        SELECT pp.id, pp.type, pp.display_name, pp.legal_name, pp.edrpou,
+               pp.iban, pp.email_for_docs, pp.phone_for_docs,
+               pp.signatory_name, pp.signatory_basis, pp.tax_mode
+        FROM orders o
+        JOIN payer_profiles pp ON pp.id = o.payer_profile_id
+        WHERE o.order_id = :order_id AND pp.is_active = TRUE
+    """), {"order_id": order_id}).fetchone()
+    
+    if order_payer:
+        return {
+            "id": order_payer[0], "type": order_payer[1],
+            "display_name": order_payer[2], "legal_name": order_payer[3],
+            "edrpou": order_payer[4], "iban": order_payer[5],
+            "email_for_docs": order_payer[6], "phone_for_docs": order_payer[7],
+            "signatory_name": order_payer[8], "signatory_basis": order_payer[9],
+            "tax_mode": order_payer[10]
+        }
+    
+    # Try via client_user_id on order
+    client_payer = db.execute(text("""
+        SELECT pp.id, pp.type, pp.display_name, pp.legal_name, pp.edrpou,
+               pp.iban, pp.email_for_docs, pp.phone_for_docs,
+               pp.signatory_name, pp.signatory_basis, pp.tax_mode
+        FROM orders o
+        JOIN client_payer_links cpl ON cpl.client_user_id = o.client_user_id AND cpl.is_default = TRUE
+        JOIN payer_profiles pp ON pp.id = cpl.payer_profile_id
+        WHERE o.order_id = :order_id AND pp.is_active = TRUE
+    """), {"order_id": order_id}).fetchone()
+    
+    if client_payer:
+        return {
+            "id": client_payer[0], "type": client_payer[1],
+            "display_name": client_payer[2], "legal_name": client_payer[3],
+            "edrpou": client_payer[4], "iban": client_payer[5],
+            "email_for_docs": client_payer[6], "phone_for_docs": client_payer[7],
+            "signatory_name": client_payer[8], "signatory_basis": client_payer[9],
+            "tax_mode": client_payer[10]
+        }
+    
+    # Fallback: match by customer_name -> client_users.full_name
+    name_payer = db.execute(text("""
+        SELECT pp.id, pp.type, pp.display_name, pp.legal_name, pp.edrpou,
+               pp.iban, pp.email_for_docs, pp.phone_for_docs,
+               pp.signatory_name, pp.signatory_basis, pp.tax_mode
+        FROM orders o
+        JOIN client_users cu ON cu.full_name COLLATE utf8mb4_unicode_ci = o.customer_name COLLATE utf8mb4_unicode_ci
+        JOIN client_payer_links cpl ON cpl.client_user_id = cu.id AND cpl.is_default = TRUE
+        JOIN payer_profiles pp ON pp.id = cpl.payer_profile_id
+        WHERE o.order_id = :order_id AND pp.is_active = TRUE
+        LIMIT 1
+    """), {"order_id": order_id}).fetchone()
+    
+    if name_payer:
+        return {
+            "id": name_payer[0], "type": name_payer[1],
+            "display_name": name_payer[2], "legal_name": name_payer[3],
+            "edrpou": name_payer[4], "iban": name_payer[5],
+            "email_for_docs": name_payer[6], "phone_for_docs": name_payer[7],
+            "signatory_name": name_payer[8], "signatory_basis": name_payer[9],
+            "tax_mode": name_payer[10]
+        }
+    
+    return None
+
+
+def _format_date_ua_long_nominative(date_val) -> str:
+    """Format date to 'DD місяця YYYY р.' for documents"""
+    if not date_val:
+        return "__ ________ 202_ р."
+    if isinstance(date_val, str):
+        try:
+            date_val = datetime.fromisoformat(date_val.replace('Z', '+00:00'))
+        except:
+            return date_val
+    months = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+              'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня']
+    return f"{date_val.day:02d} {months[date_val.month - 1]} {date_val.year} р."
+
+
+@router.get("/invoice-payment/{order_id}/preview", response_class=HTMLResponse)
+async def preview_invoice_payment(
+    order_id: int,
+    executor_type: str = Query("fop", description="fop or tov"),
+    payer_id: Optional[int] = Query(None, description="Override payer profile ID"),
+    db: Session = Depends(get_rh_db)
+):
+    """Generate HTML preview of Invoice for Payment (Рахунок на оплату)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["fop"])
+    
+    # Get payer
+    if payer_id:
+        payer_row = db.execute(text("""
+            SELECT id, type, display_name, legal_name, edrpou, iban,
+                   email_for_docs, phone_for_docs, signatory_name, signatory_basis, tax_mode
+            FROM payer_profiles WHERE id = :id AND is_active = TRUE
+        """), {"id": payer_id}).fetchone()
+        payer = {
+            "id": payer_row[0], "type": payer_row[1], "display_name": payer_row[2],
+            "legal_name": payer_row[3], "edrpou": payer_row[4], "iban": payer_row[5],
+            "email_for_docs": payer_row[6], "signatory_name": payer_row[8]
+        } if payer_row else None
+    else:
+        payer = _get_order_payer(db, order_id)
+    
+    if not payer:
+        raise HTTPException(status_code=400, detail="Не знайдено платника для замовлення. Додайте платника в картці клієнта.")
+    
+    # Calculate totals
+    total_amount = float(order[11] or 0)
+    discount = float(order[23] or 0)
+    service_fee = float(order[25] or 0)
+    grand_total = total_amount - discount + service_fee
+    if grand_total <= 0:
+        grand_total = total_amount
+    
+    # Build items for invoice (simplified: one line "Прокат декору")
+    formatted_items = []
+    if items:
+        formatted_items.append({
+            "num": 1,
+            "name": "Прокат декору",
+            "quantity": 1,
+            "unit": "послуга",
+            "price": _format_currency(grand_total),
+            "amount": _format_currency(grand_total)
+        })
+    
+    # Generate invoice number based on order
+    invoice_number = order[0]
+    
+    template_data = {
+        "invoice_number": invoice_number,
+        "invoice_date": _format_date_ua_long_nominative(datetime.now()),
+        "executor": executor,
+        "payer": payer,
+        "items": formatted_items,
+        "total_fmt": _format_currency(grand_total),
+        "total_items_count": len(formatted_items),
+        "total_text": _number_to_text_ua(grand_total),
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+    }
+    
+    template = jinja_env.get_template("documents/invoice_payment.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/invoice-payment/{order_id}/pdf")
+async def download_invoice_payment_pdf(
+    order_id: int,
+    executor_type: str = Query("fop"),
+    payer_id: Optional[int] = Query(None),
+    db: Session = Depends(get_rh_db)
+):
+    """Download Invoice for Payment as printable HTML"""
+    response = await preview_invoice_payment(order_id, executor_type, payer_id, db)
+    html_content = response.body.decode()
+    print_script = '<script>window.onload = function() { window.print(); }</script>'
+    html_content = html_content.replace('</body>', f'{print_script}</body>')
+    return HTMLResponse(content=html_content, media_type="text/html")
+
+
+@router.get("/service-act/{order_id}/preview", response_class=HTMLResponse)
+async def preview_service_act(
+    order_id: int,
+    executor_type: str = Query("fop", description="fop or tov"),
+    payer_id: Optional[int] = Query(None),
+    act_date: Optional[str] = Query(None, description="Act date in YYYY-MM-DD format"),
+    db: Session = Depends(get_rh_db)
+):
+    """Generate HTML preview of Service Act (Акт надання послуг)"""
+    
+    order, items = _get_order_with_items(db, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    executor = EXECUTORS.get(executor_type, EXECUTORS["fop"])
+    
+    # Get payer
+    if payer_id:
+        payer_row = db.execute(text("""
+            SELECT id, type, display_name, legal_name, edrpou, iban,
+                   email_for_docs, phone_for_docs, signatory_name, signatory_basis, tax_mode
+            FROM payer_profiles WHERE id = :id AND is_active = TRUE
+        """), {"id": payer_id}).fetchone()
+        payer = {
+            "id": payer_row[0], "type": payer_row[1], "display_name": payer_row[2],
+            "legal_name": payer_row[3], "edrpou": payer_row[4], "iban": payer_row[5],
+            "email_for_docs": payer_row[6], "signatory_name": payer_row[8],
+            "signatory_basis": payer_row[9]
+        } if payer_row else None
+    else:
+        payer = _get_order_payer(db, order_id)
+    
+    if not payer:
+        raise HTTPException(status_code=400, detail="Не знайдено платника для замовлення. Додайте платника в картці клієнта.")
+    
+    # Calculate totals
+    total_amount = float(order[11] or 0)
+    discount = float(order[23] or 0)
+    service_fee = float(order[25] or 0)
+    grand_total = total_amount - discount + service_fee
+    if grand_total <= 0:
+        grand_total = total_amount
+    
+    # Signatory short names
+    executor_short = executor.get("short_name", executor["name"])
+    payer_short = payer.get("display_name", "")
+    # Build short name from display_name: "ФОП Мельник Олександр Анатолійович" -> "Мельник О.А."
+    parts = payer_short.replace("ФОП ", "").replace("ТОВ ", "").split()
+    if len(parts) >= 3:
+        payer_initials = f"{parts[0]} {parts[1][0]}.{parts[2][0]}."
+    elif len(parts) >= 2:
+        payer_initials = f"{parts[0]} {parts[1][0]}."
+    else:
+        payer_initials = payer_short
+    
+    # Determine act date: rental start date (видача)
+    if act_date:
+        try:
+            parsed_date = datetime.fromisoformat(act_date)
+        except:
+            parsed_date = datetime.now()
+    else:
+        parsed_date = order[6] or order[7] or datetime.now()  # rental_start_date or rental_end_date or now
+    
+    formatted_items = []
+    if items:
+        formatted_items.append({
+            "num": 1,
+            "name": "Прокат декору",
+            "quantity": 1,
+            "unit": "шт",
+            "price": _format_currency(grand_total),
+            "amount": _format_currency(grand_total)
+        })
+    
+    act_number = order[0]
+    
+    template_data = {
+        "act_number": act_number,
+        "act_date": _format_date_ua_long_nominative(parsed_date),
+        "act_date_short": _format_date_ua(parsed_date),
+        "executor": executor,
+        "payer": payer,
+        "payer_initials": payer_initials,
+        "items": formatted_items,
+        "total_fmt": _format_currency(grand_total),
+        "total_text": _number_to_text_ua(grand_total),
+        "contract_name": "Основний",
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
+    }
+    
+    template = jinja_env.get_template("documents/service_act.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/service-act/{order_id}/pdf")
+async def download_service_act_pdf(
+    order_id: int,
+    executor_type: str = Query("fop"),
+    payer_id: Optional[int] = Query(None),
+    act_date: Optional[str] = Query(None),
+    db: Session = Depends(get_rh_db)
+):
+    """Download Service Act as printable HTML"""
+    response = await preview_service_act(order_id, executor_type, payer_id, act_date, db)
+    html_content = response.body.decode()
+    print_script = '<script>window.onload = function() { window.print(); }</script>'
+    html_content = html_content.replace('</body>', f'{print_script}</body>')
+    return HTMLResponse(content=html_content, media_type="text/html")
+
+
+
+# ============================================================
+# SETTLEMENT ACT (Акт взаєморозрахунків)
+# ============================================================
+
+@router.get("/settlement-act/{order_id}/preview", response_class=HTMLResponse)
+async def preview_settlement_act(
+    order_id: int,
+    final_amount: Optional[float] = Query(None, description="Manager override: final amount (positive = client pays, negative = refund to client)"),
+    manager_note: Optional[str] = Query(None, description="Manager note for override"),
+    db: Session = Depends(get_rh_db)
+):
+    """
+    Generate Settlement Act (Акт взаєморозрахунків) for an order.
+    Consolidates all financial data: rent, payments, deposit, damages, late fees.
+    Manager can override final settlement amount via final_amount parameter.
+    """
+    # === 1. ORDER INFO ===
+    order_row = db.execute(text("""
+        SELECT o.order_id, o.order_number, o.customer_name, o.customer_phone,
+               o.customer_email, o.status, o.total_price, o.deposit_amount,
+               o.rental_start_date, o.rental_end_date,
+               COALESCE(o.discount_amount, 0) as discount_amount,
+               COALESCE(o.discount_percent, 0) as discount_percent
+        FROM orders o WHERE o.order_id = :order_id
+    """), {"order_id": order_id}).fetchone()
+
+    if not order_row:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+
+    status_labels = {
+        "pending": "Очікує", "confirmed": "Підтверджено", "processing": "Комплектація",
+        "ready_for_issue": "Готове", "issued": "Видано", "on_rent": "В оренді",
+        "returning": "Повернення", "returned": "Повернено", "completed": "Завершено",
+        "cancelled": "Скасовано", "partial_return": "Часткове повернення"
+    }
+
+    # === 2. PAYMENTS ===
+    payments_rows = db.execute(text("""
+        SELECT id, payment_type, method, amount, currency,
+               payer_name, occurred_at, note, status, description
+        FROM fin_payments
+        WHERE order_id = :order_id
+        ORDER BY occurred_at ASC
+    """), {"order_id": order_id}).fetchall()
+
+    rent_paid = 0
+    damage_paid = 0
+    late_paid = 0
+    payments_detail = []
+    type_labels = {"rent": "Оренда", "additional": "Донарахування", "damage": "Пошкодження",
+                   "deposit": "Застава", "late": "Прострочення", "advance": "Передплата", "refund": "Повернення"}
+    method_labels = {"cash": "Готівка", "card": "Картка", "bank": "Безготівка",
+                     "iban": "IBAN", "online": "Онлайн", "p2p": "P2P"}
+
+    for p in payments_rows:
+        amt = float(p[3] or 0)
+        ptype = p[1]
+        status = p[8]
+        if status in ('completed', 'confirmed'):
+            if ptype in ('rent', 'additional'):
+                rent_paid += amt
+            elif ptype == 'damage':
+                damage_paid += amt
+            elif ptype == 'late':
+                late_paid += amt
+
+            # Тільки реальні оплати (confirmed/completed) в деталях
+            payments_detail.append({
+                "date": _format_date_ua(p[6]),
+                "type_label": type_labels.get(ptype, ptype),
+                "method_label": method_labels.get(p[2], p[2] or "—"),
+                "amount": _format_currency(amt),
+                "note": p[9] or p[7] or ""
+            })
+
+    total_paid = rent_paid + damage_paid + late_paid
+
+    # === 3. DEPOSIT ===
+    deposit_row = db.execute(text("""
+        SELECT id, held_amount, used_amount, refunded_amount, status,
+               actual_amount, currency, exchange_rate
+        FROM fin_deposit_holds
+        WHERE order_id = :order_id LIMIT 1
+    """), {"order_id": order_id}).fetchone()
+
+    dep_held_uah = 0
+    dep_actual = 0
+    dep_currency = "UAH"
+    dep_used = 0
+    dep_refunded = 0
+    dep_available = 0
+
+    if deposit_row:
+        dep_held_uah = float(deposit_row[1] or 0)
+        dep_actual = float(deposit_row[5]) if deposit_row[5] else dep_held_uah
+        dep_currency = deposit_row[6] or "UAH"
+        dep_used = float(deposit_row[2] or 0)
+        dep_refunded = float(deposit_row[3] or 0)
+        dep_available = dep_held_uah - dep_used - dep_refunded
+
+    currency_symbol = {"UAH": "грн", "USD": "$", "EUR": "€"}.get(dep_currency, dep_currency)
+
+    # === 4. DAMAGE ===
+    damage_total_val = db.execute(text("""
+        SELECT COALESCE(SUM(fee), 0) FROM product_damage_history WHERE order_id = :order_id
+    """), {"order_id": order_id}).scalar() or 0
+
+    damage_items_rows = db.execute(text("""
+        SELECT pdh.id, p.sku, COALESCE(p.name, 'Ручне нарахування'), pdh.damage_type, pdh.fee, pdh.note
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON p.product_id = pdh.product_id
+        WHERE pdh.order_id = :order_id
+        ORDER BY pdh.created_at
+    """), {"order_id": order_id}).fetchall()
+
+    damage_items = [{
+        "sku": r[1] or "—", "name": r[2] or r[3] or "—",
+        "fee": _format_currency(float(r[4] or 0)), "note": r[5] or ""
+    } for r in damage_items_rows]
+
+    # === 5. LATE FEES (from fin_payments - тільки нарахування менеджера, status='pending') ===
+    late_total_row = db.execute(text("""
+        SELECT COALESCE(SUM(amount), 0) FROM fin_payments
+        WHERE order_id = :order_id AND payment_type = 'late' AND status = 'pending'
+    """), {"order_id": order_id}).fetchone()
+    late_final = float(late_total_row[0]) if late_total_row else 0
+
+    # === 5b. DAMAGE (from product_damage_history - manager-decided amounts) ===
+    # Use damage_total_val already computed above
+    damage_final = float(damage_total_val)
+
+    # === 6. ADDITIONAL SERVICES ===
+    additional_services = db.execute(text("""
+        SELECT name, amount FROM order_additional_services
+        WHERE order_id = :order_id ORDER BY id
+    """), {"order_id": order_id}).fetchall()
+    additional_services_list = [
+        {"name": r[0], "amount": _format_currency(float(r[1] or 0))}
+        for r in additional_services
+    ]
+    additional_total = sum(float(r[1] or 0) for r in additional_services)
+
+    # === 7. CALCULATE TOTALS ===
+    # ВАЖЛИВО: total_price в БД = сума ВЖЕ зі знижкою
+    total_price_stored = float(order_row[6] or 0)  # 79,812 (після знижки)
+    discount = float(order_row[10] or 0)             # 8,868
+    discount_percent = float(order_row[11] or 0)
+    rent_total = total_price_stored + discount       # 88,680 (до знижки)
+    rent_after_discount = total_price_stored          # 79,812 (після знижки)
+
+    grand_total_charges = rent_after_discount + additional_total + damage_final + late_final
+
+    # Calculated balance: positive = client owes, negative = refund to client
+    # Balance = total charges - all payments - deposit held in UAH
+    calculated_balance = grand_total_charges - total_paid - dep_held_uah
+
+    # Manager override
+    is_manager_override = final_amount is not None
+    final_balance = final_amount if is_manager_override else calculated_balance
+
+    # === 8. BUILD TEMPLATE CONTEXT ===
+    template_data = {
+        "company": get_company_config(db),
+        "order": {
+            "order_number": order_row[1],
+            "customer_name": order_row[2] or "—",
+            "customer_phone": order_row[3] or "—",
+            "customer_email": order_row[4] or "",
+            "rental_start": _format_date_ua(order_row[8]),
+            "rental_end": _format_date_ua(order_row[9]),
+            "status_label": status_labels.get(order_row[5], order_row[5] or "—"),
+        },
+        "charges": {
+            "rent_total": _format_currency(rent_total),
+            "discount": _format_currency(discount),
+            "discount_raw": discount,
+            "discount_percent": f"{discount_percent:.0f}" if discount_percent else None,
+            "additional_services": additional_services_list,
+            "damage_total": _format_currency(damage_final),
+            "damage_total_raw": damage_final,
+            "late_total": _format_currency(late_final),
+            "late_total_raw": late_final,
+            "grand_total": _format_currency(grand_total_charges),
+        },
+        "damage_items": damage_items,
+        "payments_summary": {
+            "rent_paid": _format_currency(rent_paid),
+            "rent_paid_raw": rent_paid,
+            "damage_paid": _format_currency(damage_paid),
+            "damage_paid_raw": damage_paid,
+            "late_paid": _format_currency(late_paid),
+            "late_paid_raw": late_paid,
+            "total_paid": _format_currency(total_paid),
+        },
+        "payments_detail": payments_detail,
+        "deposit": {
+            "display_held": f"{_format_currency(dep_actual)} {currency_symbol}" if dep_currency != "UAH" else f"{_format_currency(dep_held_uah)} грн",
+            "held_uah": _format_currency(dep_held_uah),
+            "used": dep_used,
+            "used_display": _format_currency(dep_used),
+            "refunded": dep_refunded,
+            "refunded_display": _format_currency(dep_refunded),
+            "available": dep_available,
+            "available_display": f"{_format_currency(dep_available)} грн",
+        },
+        "settlement": {
+            "calculated_balance": calculated_balance,
+            "final_balance": final_balance,
+            "final_balance_display": _format_currency(abs(final_balance)),
+            "refund_display": _format_currency(abs(final_balance)),
+            "is_manager_override": is_manager_override,
+            "manager_note": manager_note or "",
+        },
+        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
+    }
+
+    template = jinja_env.get_template("documents/settlement_act.html")
+    return HTMLResponse(content=template.render(**template_data), media_type="text/html")
+
+
+@router.get("/settlement-act/{order_id}/pdf")
+async def download_settlement_act_pdf(
+    order_id: int,
+    final_amount: Optional[float] = Query(None),
+    manager_note: Optional[str] = Query(None),
+    db: Session = Depends(get_rh_db)
+):
+    """Download Settlement Act as printable HTML (with auto-print)"""
+    response = await preview_settlement_act(order_id, final_amount, manager_note, db)
+    html_content = response.body.decode()
+    print_script = '<script>window.onload = function() { window.print(); }</script>'
+    html_content = html_content.replace('</body>', f'{print_script}</body>')
+    return HTMLResponse(content=html_content, media_type="text/html")

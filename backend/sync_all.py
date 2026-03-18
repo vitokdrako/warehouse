@@ -255,8 +255,8 @@ def sync_product_categories():
         return 0
 
 def sync_product_quantities():
-    """Update quantities, prices, colors and materials"""
-    log("📊 Updating product details (quantity, price, color, material)...")
+    """Update quantities, prices, colors, materials and dimensions"""
+    log("📊 Updating product details (quantity, price, color, material, dimensions)...")
     try:
         oc = mysql.connector.connect(**OC)
         rh = mysql.connector.connect(**RH)
@@ -280,6 +280,7 @@ def sync_product_quantities():
         oc_cur.execute(f"""
             SELECT 
                 p.product_id, p.quantity, p.price,
+                p.height, p.width, p.length,
                 MAX(CASE WHEN ad.name = 'Колір' THEN pa.text END) as color,
                 MAX(CASE WHEN ad.name = 'Матеріал' THEN pa.text END) as material
             FROM oc_product p
@@ -290,22 +291,36 @@ def sync_product_quantities():
         """)
         
         count = 0
+        dims_count = 0
         for p in oc_cur.fetchall():
+            oc_height = float(p['height'] or 0) if p['height'] else None
+            oc_width = float(p['width'] or 0) if p['width'] else None
+            oc_depth = float(p['length'] or 0) if p['length'] else None  # OC length → RH depth_cm
+            
+            # COALESCE — не перезаписуємо ручні дані з переобліку
             rh_cur.execute("""
                 UPDATE products 
-                SET quantity = %s, price = %s, color = %s, material = %s
+                SET quantity = %s, price = %s, color = %s, material = %s,
+                    height_cm = COALESCE(height_cm, %s),
+                    width_cm = COALESCE(width_cm, %s),
+                    depth_cm = COALESCE(depth_cm, %s)
                 WHERE product_id = %s
             """, (
                 p['quantity'] or 0, 
                 p['price'],
                 (p['color'] or '')[:100] if p.get('color') else None,
                 (p['material'] or '')[:100] if p.get('material') else None,
+                oc_height if oc_height and oc_height > 0 else None,
+                oc_width if oc_width and oc_width > 0 else None,
+                oc_depth if oc_depth and oc_depth > 0 else None,
                 p['product_id']
             ))
             count += 1
+            if (oc_height and oc_height > 0) or (oc_width and oc_width > 0) or (oc_depth and oc_depth > 0):
+                dims_count += 1
         
         rh.commit()
-        log(f"  ✅ Updated {count} products")
+        log(f"  ✅ Updated {count} products ({dims_count} with dimensions)")
         
         oc_cur.close()
         rh_cur.close()

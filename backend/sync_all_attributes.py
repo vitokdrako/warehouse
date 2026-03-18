@@ -63,15 +63,20 @@ try:
             color = p['color']
             material = p['material']
             
-            # Format size as "Width×Length×Height cm"
+            # Розміри з OpenCart → окремі колонки в RentalHub
+            oc_height = float(p['height'] or 0) if p['height'] else None
+            oc_width = float(p['width'] or 0) if p['width'] else None
+            oc_depth = float(p['length'] or 0) if p['length'] else None  # OC length → RH depth_cm
+            
+            # Текстовий size для зворотної сумісності
             size = None
             dims = []
-            if p['width'] and float(p['width']) > 0:
-                dims.append(f"{float(p['width']):.0f}")
-            if p['length'] and float(p['length']) > 0:
-                dims.append(f"{float(p['length']):.0f}")
-            if p['height'] and float(p['height']) > 0:
-                dims.append(f"{float(p['height']):.0f}")
+            if oc_width and oc_width > 0:
+                dims.append(f"{oc_width:.0f}")
+            if oc_depth and oc_depth > 0:
+                dims.append(f"{oc_depth:.0f}")
+            if oc_height and oc_height > 0:
+                dims.append(f"{oc_height:.0f}")
             
             if dims:
                 if len(dims) == 3:
@@ -81,11 +86,23 @@ try:
                 elif len(dims) == 1:
                     size = f"{dims[0]} см"
             
+            # Оновити колір, матеріал, size (завжди)
+            # Розміри (height_cm, width_cm, depth_cm) — тільки якщо в RH ще NULL
+            # Щоб не перезаписувати ручні дані з переобліку
             rh_cur.execute("""
                 UPDATE products 
-                SET color = %s, material = %s, size = %s
+                SET color = %s, material = %s, size = %s,
+                    height_cm = COALESCE(height_cm, %s),
+                    width_cm = COALESCE(width_cm, %s),
+                    depth_cm = COALESCE(depth_cm, %s)
                 WHERE product_id = %s
-            """, (color, material, size, p['product_id']))
+            """, (
+                color, material, size,
+                oc_height if oc_height and oc_height > 0 else None,
+                oc_width if oc_width and oc_width > 0 else None,
+                oc_depth if oc_depth and oc_depth > 0 else None,
+                p['product_id']
+            ))
             
             total_updated += 1
             if color:
@@ -107,9 +124,9 @@ try:
     # Show samples
     print("\nSample products with full attributes:")
     rh_cur.execute("""
-        SELECT product_id, name, color, material, size 
+        SELECT product_id, name, color, material, size, height_cm, width_cm, depth_cm, diameter_cm
         FROM products 
-        WHERE (color IS NOT NULL OR material IS NOT NULL OR size IS NOT NULL)
+        WHERE (color IS NOT NULL OR material IS NOT NULL OR size IS NOT NULL OR height_cm IS NOT NULL)
         ORDER BY RAND()
         LIMIT 5
     """)
@@ -119,7 +136,8 @@ try:
         print(f"  Name: {row[1][:50]}")
         print(f"  Color: {row[2] or '-'}")
         print(f"  Material: {row[3] or '-'}")
-        print(f"  Size: {row[4] or '-'}")
+        print(f"  Size (text): {row[4] or '-'}")
+        print(f"  Height: {row[5] or '-'} cm | Width: {row[6] or '-'} cm | Depth: {row[7] or '-'} cm | Diameter: {row[8] or '-'} cm")
     
     oc_cur.close()
     rh_cur.close()

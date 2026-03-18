@@ -108,6 +108,10 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
   - Fixed in 7 places: finance.py snapshot + documents.py (settlement act, invoice offer, quote preview/PDF/email)
   - Improved "Загальний розрахунок" to show: Вартість ордеру → Знижка → Оренда зі знижкою
   - Connected product photos via `getImageUrl()` from imageHelper.js on return page
+- ~~Late Fees Double Counting~~ — **Fixed (March 18, 2026)**
+  - Root cause: both charge (pending) and payment (confirmed) summed as "total" in fin_payments
+  - Fixed: total = sum(pending charges), due = charges - payments
+  - Improved payment history UI: charges shown in amber "нараховано", payments in green, system records (discount/loss) in grey
 
 ### P1
 - Post-Deployment Health Check

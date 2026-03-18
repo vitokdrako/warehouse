@@ -780,14 +780,19 @@ export default function ReturnSettlementPage() {
                   <div className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-wide">Історія оплат</div>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {payments.map((p) => {
-                      const typeLabels = { rent: 'Оренда', additional: 'Донарах.', damage: 'Шкода', deposit: 'Застава', late: 'Простр.', advance: 'Передпл.' };
+                      const typeLabels = { rent: 'Оренда', additional: 'Донарах.', damage: 'Шкода', deposit: 'Застава', late: 'Прострочка', advance: 'Передпл.', discount: 'Знижка', loss: 'Втрата' };
+                      const isCharge = p.status === 'pending';
+                      const isSystem = ['discount', 'loss'].includes(p.payment_type);
+                      const methodText = isCharge ? 'нараховано' : isSystem ? '' : (p.method === 'cash' ? 'гот.' : p.method === 'card' ? 'безгот.' : (p.method || ''));
+                      const amountColor = isCharge ? 'text-amber-600' : isSystem ? 'text-slate-500' : 'text-emerald-700';
+                      const prefix = isCharge ? '' : '+';
                       return (
                         <div key={p.id} className="flex items-center justify-between text-xs bg-slate-50 rounded-lg px-2.5 py-1.5">
                           <div>
                             <span className="text-slate-700 font-medium">{typeLabels[p.payment_type] || p.payment_type}</span>
-                            <span className="text-slate-400 ml-1">{p.method === 'cash' ? 'гот.' : 'безгот.'}</span>
+                            {methodText && <span className={`ml-1 ${isCharge ? 'text-amber-500' : 'text-slate-400'}`}>{methodText}</span>}
                           </div>
-                          <span className="font-bold text-emerald-700">+{money(p.amount)}</span>
+                          <span className={`font-bold ${amountColor}`}>{prefix}{money(p.amount)}</span>
                         </div>
                       );
                     })}

@@ -1639,8 +1639,12 @@ async def get_order_charges(order_id: int, db: Session = Depends(get_rh_db)):
             "accepted_by": r[5]
         } for r in late_payments]
         
-        late_total = sum(l["amount"] for l in late_list if l["status"] == "pending")
+        late_charged = sum(l["amount"] for l in late_list if l["status"] == "pending")
         late_paid = sum(l["amount"] for l in late_list if l["status"] in ("completed", "confirmed"))
+        # Нарахування (pending) = що менеджер вирішив стягнути
+        # Оплата (confirmed) = що клієнт сплатив
+        # Due = нарахування - оплата
+        late_due = max(0, late_charged - late_paid)
         
         return {
             "order_id": order_id,
@@ -1651,12 +1655,12 @@ async def get_order_charges(order_id: int, db: Session = Depends(get_rh_db)):
                 "items": damage_list
             },
             "late": {
-                "total": late_total + late_paid,
+                "total": late_charged,
                 "paid": late_paid,
-                "due": late_total,
+                "due": late_due,
                 "items": late_list
             },
-            "grand_total_due": max(0, float(damage_total) - float(damage_paid)) + late_total
+            "grand_total_due": max(0, float(damage_total) - float(damage_paid)) + late_due
         }
         
     except Exception as e:
@@ -2463,13 +2467,17 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             "accepted_by": r[5]
         } for r in late_rows]
         
-        late_due = sum(l["amount"] for l in late_items if l["status"] == "pending")
+        late_charged = sum(l["amount"] for l in late_items if l["status"] == "pending")
         late_paid_total = sum(l["amount"] for l in late_items if l["status"] in ("completed", "confirmed"))
+        # Нарахування (pending) = що менеджер вирішив стягнути
+        # Оплата (confirmed) = що клієнт сплатив
+        # Due = нарахування - оплата
+        late_due_calc = max(0, late_charged - late_paid_total)
         
         late = {
-            "total": late_due + late_paid_total,
+            "total": late_charged,
             "paid": late_paid_total,
-            "due": late_due,
+            "due": late_due_calc,
             "items": late_items
         }
         

@@ -7,6 +7,7 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - **Frontend**: React + Tailwind CSS + Shadcn UI (JSX/TSX)
 - **Backend**: FastAPI (Python) + MySQL (farforre_rentalhub)
 - **Auth**: JWT-based (24h token)
+- **Production**: Frontend at https://rentalhub.farforrent.com.ua/, Backend at https://backrentalhub.farforrent.com.ua/
 
 ## What's Been Implemented
 
@@ -41,93 +42,84 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Redesigned `invoice_offer.html` in quote.html visual style
 - Sections: Замовник, Деталі оренди, Товари (SKU, Оренда/день, Оренда/термін, Завдаток)
 - Added: Умови оплати, Реквізити для оплати (bank details from DB), Додаткові послуги
-- Updated `preview_invoice_offer` and `download_invoice_offer_pdf` endpoints
-- Added МФО to system_settings and company_config
-- Added invoice_offer to LeftRailDocuments for all order statuses (pending → processing)
-- Added Кошторис + Рахунок-оферта links in ClientsTab order list
 
 #### Template Editor — Feb 2026
-- **DB-first template loading**: Custom `DBOverrideLoader` for Jinja2 (checks DB before file system)
-- **Template CRUD API**: GET/PUT/POST (reset) endpoints at `/api/admin/templates/*`
-- **Code editor**: Dark-themed monospace editor with tab support, character count
+- **DB-first template loading**: Custom `DBOverrideLoader` for Jinja2
+- **Template CRUD API**: GET/PUT/POST (reset) endpoints
+- **Code editor**: Dark-themed monospace editor with tab support
 - **Live preview**: Renders template with real order data in iframe
-- **Save/Reset flow**: Save stores to `document_templates` DB table; Reset deletes from DB, reverts to file
-- **Source badges**: "Оригінал (файл)" / "Змінено (БД)" indicators
-
-#### Other Changes
-- Role-based login: manager → /manager-cabinet, admin/requisitor → /manager
-- Dashboard cleanup: removed redundant buttons
-- Payer types: Фізична особа, ФОП, ТОВ
-- Deleted old calendar (UniversalOpsCalendar)
+- **Save/Reset flow**: Save stores to `document_templates` DB table
 
 #### Акт взаєморозрахунків (Settlement Act) — March 15, 2026
-- New endpoint: `GET /api/documents/settlement-act/{order_id}/preview` — generates full financial summary
-- New endpoint: `GET /api/documents/settlement-act/{order_id}/pdf` — print-ready version
-- Template: `/app/backend/templates/documents/settlement_act.html` — styled as quote
-- Sections: Замовник, Деталі оренди, Нарахування, Оплати, Застава, Підсумок, Підписи
-- Auto-collects: rent, discount, additional services, payments, deposit, manager-charged damage, manager-charged late fees
-- **No modal** — opens directly with all data auto-gathered
-- Frontend integration:
-  - `LeftRailDocuments.jsx`: settlement_act for returning/returned/completed orders (direct open)
-  - `ReturnSettlementPage.jsx`:
-    - "Акт взаєморозрахунків" button (direct auto-open)
-    - "Акт повернення" button
-    - "Дефектний акт" button (conditional)
-    - **Editable late fee form**: System suggests amount, manager can change before applying
-    - **Editable damage charge form**: System suggests amount, manager can change before applying
-- Admin: Template available in admin panel template editor
-- Tested: All backend/frontend tests PASSED
-- Fixed: UUID-based ID generation for manual damage charges in product_damage_history
+- Full financial summary with auto-collected data
+- Frontend integration with editable late fee and damage charge forms
+
+#### Financial Bugs Fixed — March 18, 2026
+- Fixed double-discount bug in 7 places
+- Fixed late fees double counting (pending vs confirmed)
+- Improved payment history UI
+
+#### Partial Deposit Refund — March 18, 2026
+- Full flow: UI, backend logic, Settlement Act updates
+
+#### `inventory` Table Refactor — March 18, 2026
+- Removed ALL dependencies on legacy `inventory` table
+- All product state management now in `products` table
+
+#### Re-audit Cabinet Refactor — March 18, 2026
+- Replaced complex damage form with 4 direct-action buttons (Wash/Restoration/Laundry/Total Loss)
+- Backend: `quick-add-to-queue` and `damage-cases/create` endpoints
+- Fixed `case_number` NameError in `damage_cases.py`
+- Fixed TypeScript build error (added `sku` to `AuditItem` interface)
+
+#### `sync_all.py` — March 18, 2026
+- Merged production version with dimension sync
+- Client sync based on email uniqueness
+- Product dimensions from OpenCart (height, width, depth)
 
 ## Key Files
-- `/app/frontend/src/pages/AdminPanel.jsx` — Admin panel (5 tabs + template editor)
-- `/app/backend/routes/admin.py` — Admin API (users, doc stats, settings, templates)
-- `/app/backend/services/template_loader.py` — DBOverrideLoader for Jinja2
-- `/app/backend/services/company_config.py` — Central company data from DB
-- `/app/backend/routes/documents.py` — Document generation endpoints
-- `/app/backend/routes/document_render.py` — Template rendering engine
-- `/app/backend/services/doc_engine/data_builders.py` — Document data builders
-- `/app/backend/services/doc_engine/render.py` — HTML/PDF render engine
+- `/app/frontend/src/pages/ReauditCabinetFull.tsx` — Re-audit cabinet
+- `/app/frontend/src/pages/ReturnSettlementPage.jsx` — Return settlement
+- `/app/backend/routes/damage_cases.py` — Damage case creation
+- `/app/backend/routes/product_damage_history.py` — Damage history + quick-add
+- `/app/backend/routes/finance.py` — Financial calculations
+- `/app/backend/routes/documents.py` — Document generation
+- `/app/backend/sync_all.py` — Production data sync script
 
-## DB Schema (New)
+## DB Schema (Key Tables)
+- `products`: Single source of truth for product state (product_state, cleaning_status, width_cm, height_cm, depth_cm, diameter_cm)
+- `fin_payments`: Uses `status` (pending=charges, confirmed=payments)
+- `fin_deposit_events`: Partial deposit refund history
 - `system_settings`: (setting_key PK, setting_value) — company data
-- `document_templates`: (doc_type PK, template_content LONGTEXT, updated_at, updated_by) — template overrides
+- `document_templates`: (doc_type PK, template_content LONGTEXT) — template overrides
 
 ## Prioritized Backlog
 
-### P0 (Completed)
-- ~~Document Context Variable Mismatch~~ — Fixed
-- ~~Template Editor~~ — Implemented
-- ~~Settlement Act (Акт взаєморозрахунків)~~ — Implemented (March 15, 2026)
-- ~~Mobile Responsive Damages Cabinet~~ — **Done (March 16, 2026)**
-  - Grid: 1 col (mobile) → 2 col (tablet) → 3 col (desktop)
-  - Toolbar stacks vertically on mobile, separate refresh button
-  - Column heights adapt: 60vh/70vh/full
-- ~~Double Discount Bug~~ — **Fixed (March 18, 2026)**
-  - Root cause: `total_price` in DB already includes discount, but code subtracted discount again
-  - Fixed in 7 places: finance.py snapshot + documents.py (settlement act, invoice offer, quote preview/PDF/email)
-  - Improved "Загальний розрахунок" to show: Вартість ордеру → Знижка → Оренда зі знижкою
-  - Connected product photos via `getImageUrl()` from imageHelper.js on return page
-- ~~Late Fees Double Counting~~ — **Fixed (March 18, 2026)**
-  - Root cause: both charge (pending) and payment (confirmed) summed as "total" in fin_payments
-  - Fixed: total = sum(pending charges), due = charges - payments
-  - Improved payment history UI: charges shown in amber "нараховано", payments in green, system records (discount/loss) in grey
+### P0 (All Completed)
+- ~~Mobile Responsive Damages Cabinet~~
+- ~~Double Discount Bug~~
+- ~~Late Fees Double Counting~~
+- ~~Frontend Build Error~~ — Fixed March 18, 2026
+- ~~Backend case_number NameError~~ — Fixed March 18, 2026
 
 ### P1
 - Post-Deployment Health Check
-- Simplify `laundry_items`
-- Clarify purpose of `damages.py` and `audit.py` (user confirmed they are in active use — DO NOT delete)
-- ~~Monthly Cash Desk Closing~~ — **Done (March 15, 2026)**
-  - Backend: close-month, monthly-reports CRUD endpoints
-  - Frontend: KasaPage "Закрити місяць" button + AdminPanel "Звіти" tab
+- Simplify `laundry_items` table/logic
+- Clarify purpose of `damages.py` and `audit.py` (confirmed in active use)
 
 ### P2
-- Document templates (Акт повернення)
-- Fix convert-to-order, moodboard, timezone bugs
+- Fix `convert-to-order` endpoint instability
+- Fix moodboard export
+- Fix calendar timezone bug
+- Document template: "Акт повернення" (Return Act)
 
 ### P3
-- WebSocket, RBAC, Financial Report, HR, Telegram bot
+- WebSocket real-time updates
+- Unify `NewOrderViewWorkspace.jsx` and `IssueCardWorkspace.jsx`
+- Full RBAC
+- HR/Ops Module
+- Telegram bot integration
 
 ## Credentials
 - Admin: vitokdrako@gmail.com / test123
-- Manager: max@farforrent.com.ua / test123
+- Manager: max@test.com / test123

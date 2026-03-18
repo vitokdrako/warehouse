@@ -13,13 +13,14 @@ interface AuditItem {
   id: string
   product_id: number
   code: string
+  sku?: string
   name: string
   description?: string
   careInstructions?: string
   category: string
-  categoryName?: string      // ✅ NEW: Окрема категорія для редагування
-  subcategoryName?: string   // ✅ NEW: Окрема підкатегорія
-  zone: string  // ✅ Єдине поле для локації (напр. "6 / A / 12")
+  categoryName?: string
+  subcategoryName?: string
+  zone: string
   qty: number
   status: AuditStatus
   lastAuditDate: string
@@ -34,12 +35,10 @@ interface AuditItem {
   color?: string
   material?: string
   size?: string
-  // ✅ NEW: Розміри окремо
   heightCm?: number
   widthCm?: number
   depthCm?: number
   diameterCm?: number
-  // ✅ NEW: Форма та хештеги
   shape?: string
   hashtags?: string[]
   imageUrl?: string

@@ -17,7 +17,7 @@ import os
 from datetime import datetime, date, timedelta
 
 # Configuration
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://repair-workflow-12.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://reaudit-workflow-fix.preview.emergentagent.com').rstrip('/')
 
 # Test data
 TEST_PAYER_PROFILE_ID = 1

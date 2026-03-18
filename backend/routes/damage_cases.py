@@ -151,7 +151,7 @@ async def create_damage_case(
         return {
             'success': True,
             'damage_id': damage_id,
-            'case_number': case_number,
+            'case_number': damage_id[:8].upper(),
             'message': message,
             'action_type': action_type,
             'qty': qty,

@@ -66,7 +66,7 @@
     {
       "file": "/app/backend/.env",
       "issue": "CORS_ORIGINS missing preview URL causing 401 Unauthorized for cabinet/chat API calls from browser",
-      "fix": "Added https://repair-workflow-12.preview.emergentagent.com to CORS_ORIGINS"
+      "fix": "Added https://reaudit-workflow-fix.preview.emergentagent.com to CORS_ORIGINS"
     }
   ],
   "seed_data_creation": "No new seed data. Used existing 4 default channels (Загальний, Склад, Доставка, Термінове), 1 DM, 9 users, test messages from pytest",

@@ -1321,202 +1321,130 @@ export default function ReauditCabinetFull({
 
                     {showDamageForm ? (
                       <div className="space-y-2">
-                        <div>
-                          <label className="block text-[10px] text-corp-text-main mb-1">Опис пошкодження</label>
-                          <textarea
-                            value={damageData.description}
-                            onChange={(e) => setDamageData({...damageData, description: e.target.value})}
-                            placeholder="напр. Тріщина 5см на ніжці, подряпина на стільниці..."
-                            className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                            rows={3}
-                          />
-                        </div>
-                        
-                        {/* Завантаження фото пошкодження */}
-                        <div>
-                          <label className="block text-[10px] text-corp-text-main mb-1">📷 Фото пошкодження</label>
-                          <div className="flex items-start gap-2">
-                            <input 
-                              type="file" 
-                              accept="image/jpeg,image/jpg,image/png,image/webp"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0]
-                                if (file) {
-                                  setUploadingImage(true)
-                                  const formData = new FormData()
-                                  formData.append('file', file)
-                                  try {
-                                    const response = await fetch(`${BACKEND_URL}/api/products/upload-image`, {
-                                      method: 'POST',
-                                      body: formData
-                                    })
-                                    const result = await response.json()
-                                    if (response.ok) {
-                                      setDamageData({...damageData, photo_url: result.url})
-                                    }
-                                  } catch (error) {
-                                    alert('Помилка завантаження фото')
-                                  } finally {
-                                    setUploadingImage(false)
-                                  }
-                                }
-                              }}
-                              className="flex-1 rounded-lg border border-slate-200 px-2 py-1 text-[11px]"
-                              disabled={uploadingImage}
+                        {/* 4 кнопки дій */}
+                        {!damageData.action_type && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button onClick={() => setDamageData({...damageData, action_type: 'washing'})}
+                              className="py-2.5 px-2 text-xs font-medium rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                              🧼 Мийка
+                            </button>
+                            <button onClick={() => setDamageData({...damageData, action_type: 'restoration'})}
+                              className="py-2.5 px-2 text-xs font-medium rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition">
+                              🔧 Реставрація
+                            </button>
+                            <button onClick={() => setDamageData({...damageData, action_type: 'laundry'})}
+                              className="py-2.5 px-2 text-xs font-medium rounded-lg border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 transition">
+                              👔 Пральня
+                            </button>
+                            <button onClick={() => setDamageData({...damageData, action_type: 'total_loss'})}
+                              className="py-2.5 px-2 text-xs font-medium rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition">
+                              💔 Повна втрата
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Форма після вибору дії */}
+                        {damageData.action_type && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">
+                                {damageData.action_type === 'washing' && '🧼 Мийка'}
+                                {damageData.action_type === 'restoration' && '🔧 Реставрація'}
+                                {damageData.action_type === 'laundry' && '👔 Пральня'}
+                                {damageData.action_type === 'total_loss' && '💔 Повна втрата'}
+                              </span>
+                              <button onClick={() => setDamageData({...damageData, action_type: ''})}
+                                className="text-[10px] text-slate-400 hover:text-slate-600">← Назад</button>
+                            </div>
+
+                            <textarea
+                              value={damageData.description}
+                              onChange={(e) => setDamageData({...damageData, description: e.target.value})}
+                              placeholder="Причина..."
+                              className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                              rows={2}
                             />
-                            {damageData.photo_url && (
-                              <div className="relative">
-                                <img 
-                                  src={`${BACKEND_URL}${damageData.photo_url}`}
-                                  alt="Пошкодження" 
-                                  className="h-16 w-16 rounded-lg border border-orange-200 object-cover"
+
+                            <div className={`grid ${damageData.action_type === 'total_loss' ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
+                              <div>
+                                <label className="block text-[10px] text-corp-text-main mb-1">Кількість</label>
+                                <input type="number" min="1" max={selected?.qty || 1}
+                                  value={damageData.qty}
+                                  onChange={(e) => setDamageData({...damageData, qty: parseInt(e.target.value) || 1})}
+                                  className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => setDamageData({...damageData, photo_url: ''})}
-                                  className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1 text-[10px] text-white hover:bg-rose-600"
-                                >
-                                  ✕
-                                </button>
+                                <div className="mt-0.5 text-[9px] text-corp-text-muted">Макс: {selected?.qty || 0}</div>
+                              </div>
+                              {damageData.action_type !== 'total_loss' && (
+                                <div>
+                                  <label className="block text-[10px] text-corp-text-main mb-1">Ступінь</label>
+                                  <select value={damageData.severity}
+                                    onChange={(e) => setDamageData({...damageData, severity: e.target.value})}
+                                    className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm">
+                                    <option value="minor">Незначне</option>
+                                    <option value="critical">Критичне</option>
+                                  </select>
+                                </div>
+                              )}
+                            </div>
+
+                            {damageData.action_type === 'total_loss' ? (
+                              <div className="rounded-lg bg-rose-50 border border-rose-200 p-2 text-[11px] text-rose-700">
+                                ⚠️ {damageData.qty} од. буде списано назавжди
+                              </div>
+                            ) : (
+                              <div className="rounded-lg bg-blue-50 border border-blue-200 p-2 text-[11px] text-blue-700">
+                                ℹ️ {damageData.qty} од. буде заморожено
                               </div>
                             )}
-                            {uploadingImage && (
-                              <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-                                <div className="text-[9px] text-slate-400">...</div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-[10px] text-corp-text-main mb-1">🔧 Тип дії</label>
-                          <select
-                            value={damageData.action_type}
-                            onChange={(e) => setDamageData({...damageData, action_type: e.target.value})}
-                            className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                          >
-                            <option value="restoration">🔧 Реставрація (заморожує товар)</option>
-                            <option value="washing">🧼 Мийка (заморожує товар)</option>
-                            <option value="laundry">👔 Хімчистка (заморожує товар)</option>
-                            <option value="total_loss">💔 Повна втрата (віднімає кількість)</option>
-                          </select>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-2">
-                          <div>
-                            <label className="block text-[10px] text-corp-text-main mb-1">Кількість</label>
-                            <input
-                              type="number"
-                              min="1"
-                              max={selected?.qty || 1}
-                              value={damageData.qty}
-                              onChange={(e) => setDamageData({...damageData, qty: parseInt(e.target.value) || 1})}
-                              className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                            />
-                            <div className="mt-0.5 text-[9px] text-corp-text-muted">Макс: {selected?.qty || 0}</div>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] text-corp-text-main mb-1">Ступінь</label>
-                            <select
-                              value={damageData.severity}
-                              onChange={(e) => setDamageData({...damageData, severity: e.target.value})}
-                              className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                            >
-                              <option value="minor">Незначне</option>
-                              <option value="critical">Критичне</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] text-corp-text-main mb-1">Вартість ₴</label>
-                            <input
-                              type="number"
-                              value={damageData.estimated_cost}
-                              onChange={(e) => setDamageData({...damageData, estimated_cost: parseFloat(e.target.value) || 0})}
-                              className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
-                            />
-                          </div>
-                        </div>
-                        
-                        {damageData.action_type === 'total_loss' && (
-                          <div className="rounded-lg bg-rose-50 border border-rose-200 p-2 text-[11px] text-rose-700">
-                            ⚠️ Увага: Повна втрата віднімає {damageData.qty} од. від загальної кількості товару!
-                          </div>
-                        )}
-                        
-                        {damageData.action_type !== 'total_loss' && (
-                          <div className="rounded-lg bg-blue-50 border border-blue-200 p-2 text-[11px] text-blue-700">
-                            ℹ️ {damageData.qty} од. буде заморожено до завершення процедури
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <PillButton tone="amber" onClick={async () => {
-                            if (!damageData.description.trim()) {
-                              alert('Введіть опис пошкодження')
-                              return
-                            }
-                            
-                            if (damageData.qty <= 0 || damageData.qty > (selected?.qty || 0)) {
-                              alert(`Некоректна кількість. Доступно: ${selected?.qty || 0}`)
-                              return
-                            }
-                            
-                            try {
-                              const token = localStorage.getItem('token')
-                              const headers: any = { 'Content-Type': 'application/json' }
-                              if (token) {
-                                headers['Authorization'] = `Bearer ${token}`
-                              }
-                              
-                              const response = await fetch(`${BACKEND_URL}/api/damage-cases/create`, {
-                                method: 'POST',
-                                headers,
-                                body: JSON.stringify({
-                                  product_id: selected.product_id,
-                                  qty: damageData.qty,
-                                  action_type: damageData.action_type,
-                                  description: damageData.description,
-                                  estimated_cost: damageData.estimated_cost
-                                })
-                              })
-                              const result = await response.json()
-                              if (result.success) {
-                                alert(`✅ ${result.message}\n\nНомер кейсу: ${result.case_number || result.damage_id}`)
+
+                            <div className="flex gap-2">
+                              <PillButton tone="amber" onClick={async () => {
+                                if (!damageData.description.trim()) {
+                                  alert('Введіть причину')
+                                  return
+                                }
+                                if (damageData.qty <= 0 || damageData.qty > (selected?.qty || 0)) {
+                                  alert(`Некоректна кількість. Доступно: ${selected?.qty || 0}`)
+                                  return
+                                }
+                                try {
+                                  const token = localStorage.getItem('token')
+                                  const headers: any = { 'Content-Type': 'application/json' }
+                                  if (token) headers['Authorization'] = `Bearer ${token}`
+                                  const response = await fetch(`${BACKEND_URL}/api/damage-cases/create`, {
+                                    method: 'POST', headers,
+                                    body: JSON.stringify({
+                                      product_id: selected.product_id,
+                                      qty: damageData.qty,
+                                      action_type: damageData.action_type,
+                                      description: damageData.description,
+                                      severity: damageData.severity,
+                                      estimated_cost: 0
+                                    })
+                                  })
+                                  const result = await response.json()
+                                  if (result.success) {
+                                    alert(`✅ ${result.message}`)
+                                    setShowDamageForm(false)
+                                    setDamageData({ description: '', severity: 'minor', estimated_cost: 0, create_damage_case: false, photo_url: '', action_type: '', qty: 1 })
+                                    loadItems(); loadStats()
+                                  } else {
+                                    alert('❌ ' + (result.detail || 'Помилка'))
+                                  }
+                                } catch (e) { alert('Помилка: ' + String(e)) }
+                              }}>
+                                ✅ Підтвердити
+                              </PillButton>
+                              <PillButton tone="slate" onClick={() => {
                                 setShowDamageForm(false)
-                                setDamageData({ 
-                                  description: '', 
-                                  severity: 'minor', 
-                                  estimated_cost: 0, 
-                                  create_damage_case: false, 
-                                  photo_url: '',
-                                  action_type: 'restoration',
-                                  qty: 1
-                                })
-                                loadItems()
-                                loadStats()
-                              } else {
-                                alert('❌ ' + (result.detail || 'Помилка створення кейсу'))
-                              }
-                            } catch (e) {
-                              alert('Помилка: ' + String(e))
-                            }
-                          }}>
-                            💾 Створити кейс
-                          </PillButton>
-                          <PillButton tone="slate" onClick={() => {
-                            setShowDamageForm(false)
-                            setDamageData({ 
-                              description: '', 
-                              severity: 'minor', 
-                              estimated_cost: 0, 
-                              create_damage_case: false, 
-                              photo_url: '',
-                              action_type: 'restoration',
-                              qty: 1
-                            })
-                          }}>
-                            ❌ Скасувати
-                          </PillButton>
-                        </div>
+                                setDamageData({ description: '', severity: 'minor', estimated_cost: 0, create_damage_case: false, photo_url: '', action_type: '', qty: 1 })
+                              }}>
+                                Скасувати
+                              </PillButton>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div>

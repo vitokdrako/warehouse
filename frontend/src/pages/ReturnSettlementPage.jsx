@@ -177,15 +177,26 @@ export default function ReturnSettlementPage() {
     finally { setSaving(false); }
   };
 
+  // Deposit partial refund
+  const [showDepositRefund, setShowDepositRefund] = useState(false);
+  const [refundAmount, setRefundAmount] = useState('');
+  const [refundNote, setRefundNote] = useState('');
+  const [refundMethod, setRefundMethod] = useState('cash');
+
   const handleDepositRefund = async () => {
     const deposit = snapshot?.deposit;
     if (!deposit) return;
+    const amt = parseFloat(refundAmount);
+    if (!amt || amt <= 0) { alert('Вкажіть суму'); return; }
     const available = deposit.available ?? (deposit.held_amount - (deposit.used_amount || 0) - (deposit.refunded_amount || 0));
-    if (available <= 0) return;
-    if (!window.confirm(`Повернути заставу: ${money(available)}?`)) return;
+    if (amt > available) { alert(`Максимум для повернення: ${money(available)}`); return; }
     setSaving(true);
     try {
-      await authFetch(`${BACKEND_URL}/api/finance/deposits/${deposit.id}/refund?amount=${available}&method=cash`, { method: 'POST' });
+      const noteText = refundNote.trim() || 'Повернення застави';
+      await authFetch(`${BACKEND_URL}/api/finance/deposits/${deposit.id}/refund?amount=${amt}&method=${refundMethod}&note=${encodeURIComponent(noteText)}`, { method: 'POST' });
+      setShowDepositRefund(false);
+      setRefundAmount('');
+      setRefundNote('');
       await reloadSnapshot();
     } catch (e) { alert(`Помилка: ${e.message}`); }
     finally { setSaving(false); }
@@ -755,6 +766,18 @@ export default function ReturnSettlementPage() {
                           <span className="text-slate-700">Доступно</span>
                           <span className="text-emerald-600">{money(depositAvailable)}</span>
                         </div>
+                        {/* Історія повернень застави */}
+                        {deposit.events && deposit.events.filter(e => e.event_type === 'refunded').length > 0 && (
+                          <div className="mt-1 pt-1 border-t border-slate-100">
+                            <div className="text-[10px] font-semibold text-slate-400 mb-1">Повернення:</div>
+                            {deposit.events.filter(e => e.event_type === 'refunded').map((e, i) => (
+                              <div key={i} className="flex items-center justify-between text-[10px] text-blue-600 bg-blue-50/50 rounded px-1.5 py-0.5 mb-0.5">
+                                <span className="truncate max-w-[60%]">{e.note || 'Повернення застави'}</span>
+                                <span className="font-medium">{money(e.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
@@ -812,13 +835,47 @@ export default function ReturnSettlementPage() {
                       <Banknote className="w-4 h-4" /> Прийняти оплату
                     </button>
                     <div className="flex gap-2">
-                      {deposit && depositAvailable > 0 && (
-                        <button onClick={handleDepositRefund} disabled={saving}
+                      {deposit && depositAvailable > 0 && !showDepositRefund && (
+                        <button onClick={() => { setRefundAmount(depositAvailable.toString()); setShowDepositRefund(true); }} disabled={saving}
                           className="flex-1 py-2.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                           data-testid="refund-btn"
                         >
                           <RotateCcw className="w-3.5 h-3.5" /> Повернути заставу
                         </button>
+                      )}
+                      {showDepositRefund && (
+                        <div className="flex-1 bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-blue-800">Повернення застави</span>
+                            <button onClick={() => setShowDepositRefund(false)} className="text-blue-400 hover:text-blue-600"><X className="w-3.5 h-3.5" /></button>
+                          </div>
+                          <div className="text-[10px] text-blue-600">Доступно: {money(depositAvailable)}</div>
+                          <input
+                            type="number" value={refundAmount} onChange={(e) => setRefundAmount(e.target.value)}
+                            placeholder="Сума повернення" max={depositAvailable} min={0} step="0.01"
+                            className="w-full text-xs border border-blue-300 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                            data-testid="refund-amount"
+                          />
+                          <input
+                            type="text" value={refundNote} onChange={(e) => setRefundNote(e.target.value)}
+                            placeholder="Причина (необов'язково)"
+                            className="w-full text-xs border border-blue-300 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                            data-testid="refund-note"
+                          />
+                          <div className="flex gap-2">
+                            <select value={refundMethod} onChange={(e) => setRefundMethod(e.target.value)}
+                              className="text-xs border border-blue-300 rounded-lg px-2 py-1.5 bg-white" data-testid="refund-method">
+                              <option value="cash">Готівка</option>
+                              <option value="bank">Безготівка</option>
+                            </select>
+                            <button onClick={handleDepositRefund} disabled={saving || !refundAmount}
+                              className="flex-1 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition disabled:opacity-50"
+                              data-testid="refund-confirm-btn"
+                            >
+                              {saving ? '...' : 'Повернути'}
+                            </button>
+                          </div>
+                        </div>
                       )}
                       {deposit && depositAvailable > 0 && damage?.due > 0 && (
                         <button onClick={handleDepositUse} disabled={saving}

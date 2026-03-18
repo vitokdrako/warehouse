@@ -2425,6 +2425,17 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                 "note": deposit_row[11],
                 "display_amount": f"{actual:,.0f} {currency}" if currency != 'UAH' else f"₴{actual:,.0f}"
             }
+            # Додати events із fin_deposit_events
+            dep_events = db.execute(text("""
+                SELECT event_type, amount, occurred_at, note
+                FROM fin_deposit_events WHERE deposit_id = :dep_id
+                ORDER BY occurred_at DESC
+            """), {"dep_id": deposit_row[0]}).fetchall()
+            deposit["events"] = [
+                {"event_type": e[0], "amount": float(e[1] or 0), 
+                 "date": e[2].isoformat() if e[2] else None, "note": e[3]}
+                for e in dep_events
+            ]
         
         # === 4. DAMAGE ===
         damage_total = db.execute(text("""

@@ -2302,6 +2302,21 @@ async def preview_settlement_act(
 
     currency_symbol = {"UAH": "грн", "USD": "$", "EUR": "€"}.get(dep_currency, dep_currency)
 
+    # Deposit refund events (для деталізації в акті)
+    deposit_refund_events = []
+    if deposit_row:
+        dep_events = db.execute(text("""
+            SELECT event_type, amount, occurred_at, note
+            FROM fin_deposit_events WHERE deposit_id = :dep_id AND event_type = 'refunded'
+            ORDER BY occurred_at
+        """), {"dep_id": deposit_row[0]}).fetchall()
+        deposit_refund_events = [
+            {"amount": _format_currency(float(e[1] or 0)),
+             "date": _format_date_ua(e[2]),
+             "note": e[3] or "Повернення застави"}
+            for e in dep_events
+        ]
+
     # === 4. DAMAGE ===
     damage_total_val = db.execute(text("""
         SELECT COALESCE(SUM(fee), 0) FROM product_damage_history WHERE order_id = :order_id
@@ -2404,6 +2419,7 @@ async def preview_settlement_act(
             "refunded_display": _format_currency(dep_refunded),
             "available": dep_available,
             "available_display": f"{_format_currency(dep_available)} грн",
+            "refund_events": deposit_refund_events,
         },
         "settlement": {
             "calculated_balance": calculated_balance,

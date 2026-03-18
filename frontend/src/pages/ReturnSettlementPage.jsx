@@ -13,6 +13,7 @@ import {
   ArrowLeftRight, CalendarDays, Timer, FileText, Lock,
   Calculator, Printer, Eye, ScrollText
 } from 'lucide-react';
+import { getImageUrl, handleImageError } from '../utils/imageHelper';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
@@ -433,12 +434,12 @@ export default function ReturnSettlementPage() {
                         {part.returnedItems.map((item, i) => {
                           const sku = item.sku || item.article;
                           const hasDmg = damageMap[sku];
-                          const img = productImageMap[sku] || item.image || item.photo;
+                          const img = getImageUrl(productImageMap[sku] || item.image || item.photo);
                           return (
                             <div key={i} className={`flex gap-3 p-3 rounded-xl border ${hasDmg ? 'border-rose-200 bg-rose-50/50' : 'border-slate-100 bg-slate-50/40'}`}>
                               <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0 border border-slate-200">
                                 {img ? (
-                                  <img src={img} alt={item.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display='none'; e.target.nextSibling && (e.target.nextSibling.style.display='flex'); }} />
+                                  <img src={img} alt={item.name} className="w-full h-full object-cover" onError={handleImageError} />
                                 ) : null}
                                 <div className={`w-full h-full items-center justify-center text-slate-400 ${img ? 'hidden' : 'flex'}`}><ImageOff className="w-5 h-5" /></div>
                               </div>
@@ -540,13 +541,26 @@ export default function ReturnSettlementPage() {
 
               {totals && (
                 <div className="space-y-3 text-sm">
+                  {/* Вартість ордеру (до знижки) */}
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Оренда</span>
-                    <div>
-                      <span className="font-semibold">{money(totals.rental_after_discount)}</span>
-                      {totals.discount > 0 && <span className="text-xs text-emerald-600 ml-1">(-{money(totals.discount)})</span>}
-                    </div>
+                    <span className="text-slate-600">Вартість ордеру</span>
+                    <span className="font-semibold">{money(totals.rental_total)}</span>
                   </div>
+                  {/* Знижка */}
+                  {totals.discount > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-emerald-600">Знижка {totals.discount_percent > 0 ? `(${totals.discount_percent}%)` : ''}</span>
+                      <span className="font-semibold text-emerald-600">-{money(totals.discount)}</span>
+                    </div>
+                  )}
+                  {/* Сума зі знижкою */}
+                  {totals.discount > 0 && (
+                    <div className="flex justify-between pt-1 border-t border-slate-100">
+                      <span className="text-slate-700 font-medium">Оренда (зі знижкою)</span>
+                      <span className="font-bold text-slate-800">{money(totals.rental_after_discount)}</span>
+                    </div>
+                  )}
+                  {/* Оплачено */}
                   <div className="flex justify-between">
                     <span className="text-slate-600">Оплачено</span>
                     <span className="font-semibold text-emerald-600">{money(totals.rent_paid + totals.advance_paid)}</span>

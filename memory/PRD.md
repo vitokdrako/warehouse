@@ -103,6 +103,11 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
   - Grid: 1 col (mobile) → 2 col (tablet) → 3 col (desktop)
   - Toolbar stacks vertically on mobile, separate refresh button
   - Column heights adapt: 60vh/70vh/full
+- ~~Double Discount Bug~~ — **Fixed (March 18, 2026)**
+  - Root cause: `total_price` in DB already includes discount, but code subtracted discount again
+  - Fixed in 7 places: finance.py snapshot + documents.py (settlement act, invoice offer, quote preview/PDF/email)
+  - Improved "Загальний розрахунок" to show: Вартість ордеру → Знижка → Оренда зі знижкою
+  - Connected product photos via `getImageUrl()` from imageHelper.js on return page
 
 ### P1
 - Post-Deployment Health Check

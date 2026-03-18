@@ -727,15 +727,17 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount  # Повна сума до знижки
     # Якщо відсоток 0, але є сума — розрахувати динамічно
-    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
-        discount_percent = round((discount_amount / order_rent) * 100, 1)
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
     
-    # ВАЖЛИВО: order_rent (total_price) = вартість ДО знижки
-    rent_before_discount = order_rent  # Повна сума оренди до знижки
-    rent_after_discount = max(0, order_rent - discount_amount)  # Сума після знижки
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    # rent_before_discount = order_rent + discount_amount (до знижки)
+    rent_after_discount = order_rent  # Сума після знижки = те що в БД
     grand_total = rent_after_discount + service_fee  # Фінальна сума (зі знижкою + послуги)
     
     # Delivery type label mapping
@@ -850,14 +852,13 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
-    # Якщо відсоток 0, але є сума — розрахувати динамічно
-    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
-        discount_percent = round((discount_amount / order_rent) * 100, 1)
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # ВАЖЛИВО: order_rent вже включає знижку
-    rent_before_discount = order_rent  # total_price = вартість ДО знижки
-    rent_after_discount = max(0, order_rent - discount_amount)
+    rent_after_discount = order_rent
     grand_total = rent_after_discount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
@@ -968,14 +969,13 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
-    # Якщо відсоток 0, але є сума — розрахувати динамічно
-    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
-        discount_percent = round((discount_amount / order_rent) * 100, 1)
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # ВАЖЛИВО: order_rent вже включає знижку
-    rent_before_discount = order_rent  # total_price = вартість ДО знижки
-    rent_after_discount = max(0, order_rent - discount_amount)
+    rent_after_discount = order_rent
     grand_total = rent_after_discount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
@@ -1178,7 +1178,8 @@ async def preview_invoice_offer(
     """), {"oid": order_id}).fetchall()
     additional_services = [{"name": row[0], "amount": _format_currency(row[1])} for row in additional_services_raw]
     
-    grand_total = order_rent - discount_amount + service_fee + order_deposit
+    # ВАЖЛИВО: order_rent (total_price) вже зі знижкою — не віднімаємо ще раз
+    grand_total = order_rent + service_fee + order_deposit
     
     # Delivery type
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
@@ -1269,7 +1270,8 @@ async def download_invoice_offer_pdf(
     """), {"oid": order_id}).fetchall()
     additional_services = [{"name": row[0], "amount": _format_currency(row[1])} for row in additional_services_raw]
     
-    grand_total = order_rent - discount_amount + service_fee + order_deposit
+    # ВАЖЛИВО: order_rent (total_price) вже зі знижкою — не віднімаємо ще раз
+    grand_total = order_rent + service_fee + order_deposit
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
@@ -2343,10 +2345,12 @@ async def preview_settlement_act(
     additional_total = sum(float(r[1] or 0) for r in additional_services)
 
     # === 7. CALCULATE TOTALS ===
-    rent_total = float(order_row[6] or 0)
-    discount = float(order_row[10] or 0)
+    # ВАЖЛИВО: total_price в БД = сума ВЖЕ зі знижкою
+    total_price_stored = float(order_row[6] or 0)  # 79,812 (після знижки)
+    discount = float(order_row[10] or 0)             # 8,868
     discount_percent = float(order_row[11] or 0)
-    rent_after_discount = rent_total - discount
+    rent_total = total_price_stored + discount       # 88,680 (до знижки)
+    rent_after_discount = total_price_stored          # 79,812 (після знижки)
 
     grand_total_charges = rent_after_discount + additional_total + damage_final + late_final
 

@@ -2512,13 +2512,15 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                 }
         
         # === 8. TOTALS ===
-        total_rental = float(order_row[5] or 0)
-        discount = float(order_row[9] or 0)
-        total_after_discount = total_rental - discount
+        # ВАЖЛИВО: total_price в БД = сума ВЖЕ зі знижкою
+        total_price_stored = float(order_row[5] or 0)  # 79,812 (після знижки)
+        discount = float(order_row[9] or 0)              # 8,868
+        rental_before_discount = total_price_stored + discount  # 88,680 (до знижки)
+        total_after_discount = total_price_stored               # 79,812 (після знижки)
         rent_due = max(0, total_after_discount - rent_paid - advance_paid)
         
         totals = {
-            "rental_total": total_rental,
+            "rental_total": rental_before_discount,
             "discount": discount,
             "discount_percent": float(order_row[10] or 0),
             "rental_after_discount": total_after_discount,

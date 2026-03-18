@@ -791,13 +791,13 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "rent_total_fmt": _format_currency(order_rent),  # Вартість оренди (зі знижкою, до сплати)
             "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
             "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50% від збитку)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда + послуги)
             "grand_total": grand_total
         },
         "company": get_company_config(db),
@@ -891,13 +891,13 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "rent_total_fmt": _format_currency(order_rent),  # Вартість оренди (зі знижкою, до сплати)
             "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
             "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50%)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда + послуги)
             "grand_total": grand_total
         },
         "company": get_company_config(db),
@@ -1008,13 +1008,13 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "rent_total_fmt": _format_currency(order_rent),  # Вартість оренди (зі знижкою, до сплати)
             "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
             "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50%)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда + послуги)
             "grand_total": grand_total
         },
         "company": get_company_config(db),

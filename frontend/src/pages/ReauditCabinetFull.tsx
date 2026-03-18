@@ -994,7 +994,7 @@ export default function ReauditCabinetFull({
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] text-corp-text-muted mb-1">Глибина</label>
+                          <label className="block text-[9px] text-corp-text-muted mb-1">Довжина</label>
                           <input
                             type="number"
                             step="0.1"
@@ -1201,8 +1201,17 @@ export default function ReauditCabinetFull({
                       <span className="font-medium text-corp-text-dark">{selected.material || '—'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-corp-text-main">📏 Розмір:</span>
-                      <span className="font-medium text-corp-text-dark">{selected.size || '—'}</span>
+                      <span className="text-corp-text-main">📏 Розміри (см):</span>
+                      <span className="font-medium text-corp-text-dark">
+                        {(selected.heightCm || selected.widthCm || selected.depthCm || selected.diameterCm) ? (
+                          [
+                            selected.heightCm ? `В:${selected.heightCm}` : null,
+                            selected.widthCm ? `Ш:${selected.widthCm}` : null,
+                            selected.depthCm ? `Д:${selected.depthCm}` : null,
+                            selected.diameterCm ? `⌀${selected.diameterCm}` : null,
+                          ].filter(Boolean).join(' × ')
+                        ) : '—'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-corp-text-main">📍 Місце:</span>

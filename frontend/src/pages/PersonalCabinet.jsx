@@ -463,24 +463,24 @@ function ChatTab({ currentUserId }) {
     try { const res = await authFetch(`${BACKEND_URL}/api/chat/team`); if (res.ok) setTeam(await res.json()); } catch {}
   }, []);
 
-  const loadMessages = useCallback(async (chId) => {
+  const loadMessages = useCallback(async (chId, scroll = false) => {
     if (!chId) return;
-    try { const res = await authFetch(`${BACKEND_URL}/api/chat/channels/${chId}/messages`); if (res.ok) { setMessages(await res.json()); setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); } } catch {}
+    try { const res = await authFetch(`${BACKEND_URL}/api/chat/channels/${chId}/messages`); if (res.ok) { setMessages(await res.json()); if (scroll) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); } } catch {}
   }, []);
 
   useEffect(() => { loadChannels(); loadTeam(); }, [loadChannels, loadTeam]);
 
   useEffect(() => {
     if (!activeChannel) return;
-    loadMessages(activeChannel.id);
-    pollRef.current = setInterval(() => { loadMessages(activeChannel.id); loadChannels(); }, 5000);
+    loadMessages(activeChannel.id, true);
+    pollRef.current = setInterval(() => { loadMessages(activeChannel.id, false); loadChannels(); }, 5000);
     return () => clearInterval(pollRef.current);
   }, [activeChannel, loadMessages, loadChannels]);
 
   const sendMessage = async () => {
     if (!newMsg.trim() || !activeChannel) return;
     await authFetch(`${BACKEND_URL}/api/chat/channels/${activeChannel.id}/messages`, { method: 'POST', body: JSON.stringify({ message: newMsg.trim() }) });
-    setNewMsg(''); loadMessages(activeChannel.id); loadChannels();
+    setNewMsg(''); loadMessages(activeChannel.id, true); loadChannels();
   };
 
   const sendThreadReply = async () => {
@@ -785,9 +785,7 @@ function OrderChatsTab() {
     }
   }, [selectedOrder, loadMessages]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Auto-scroll removed — only scroll after sending
 
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedOrder || sending) return;
@@ -800,6 +798,7 @@ function OrderChatsTab() {
         setNewMessage('');
         loadMessages(selectedOrder.order_id);
         loadOrders();
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       }
     } catch (e) { console.error('[OrderChats] send error', e); }
     setSending(false);

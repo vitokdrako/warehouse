@@ -465,7 +465,7 @@ function ChatTab({ currentUserId }) {
 
   const loadMessages = useCallback(async (chId, scroll = false) => {
     if (!chId) return;
-    try { const res = await authFetch(`${BACKEND_URL}/api/chat/channels/${chId}/messages`); if (res.ok) { setMessages(await res.json()); if (scroll) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100); } } catch {}
+    try { const res = await authFetch(`${BACKEND_URL}/api/chat/channels/${chId}/messages`); if (res.ok) { setMessages(await res.json()); } } catch {}
   }, []);
 
   useEffect(() => { loadChannels(); loadTeam(); }, [loadChannels, loadTeam]);
@@ -798,7 +798,6 @@ function OrderChatsTab() {
         setNewMessage('');
         loadMessages(selectedOrder.order_id);
         loadOrders();
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       }
     } catch (e) { console.error('[OrderChats] send error', e); }
     setSending(false);

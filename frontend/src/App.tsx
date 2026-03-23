@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 
 // Legal Footer
@@ -421,11 +421,17 @@ function App() {
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         </div>
-        {/* Legal Footer - показується на всіх сторінках */}
-        <LegalFooter />
+        {/* Legal Footer - показується на всіх сторінках, крім кабінету на мобільному */}
+        <FooterWrapper />
       </div>
     </Router>
   );
+}
+
+function FooterWrapper() {
+  const location = useLocation();
+  const hideMobile = location.pathname === '/cabinet';
+  return <LegalFooter className={hideMobile ? 'hidden sm:block' : ''} />;
 }
 
 export default App;

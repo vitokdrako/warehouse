@@ -542,7 +542,7 @@ function ChatTab({ currentUserId }) {
   const LockOpen = ({ className }) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>;
 
   return (
-    <div className="flex h-[calc(100vh-200px)] bg-white rounded-xl border border-corp-border overflow-hidden" data-testid="chat-tab">
+    <div className="flex h-[calc(100dvh-140px)] sm:h-[calc(100vh-200px)] bg-white rounded-xl border border-corp-border overflow-hidden" data-testid="chat-tab">
       {/* Sidebar */}
       <div className={cls('flex-shrink-0 border-r border-corp-border flex flex-col bg-corp-bg-light', activeChannel ? 'hidden sm:flex w-72' : 'w-full sm:w-72')}>
         <div className="p-3 space-y-2 border-b border-corp-border">
@@ -820,7 +820,7 @@ function OrderChatsTab() {
   const filteredOrders = orders;
 
   return (
-    <div className="flex h-[calc(100vh-200px)] bg-white rounded-xl border border-corp-border overflow-hidden" data-testid="order-chats-tab">
+    <div className="flex h-[calc(100dvh-140px)] sm:h-[calc(100vh-200px)] bg-white rounded-xl border border-corp-border overflow-hidden" data-testid="order-chats-tab">
       {/* Left sidebar — orders list */}
       <div className={cls('flex-shrink-0 border-r border-corp-border flex flex-col bg-corp-bg-light',
         selectedOrder ? 'hidden sm:flex w-72 lg:w-80' : 'w-full sm:w-72 lg:w-80')}>
@@ -1061,8 +1061,8 @@ export default function PersonalCabinet() {
   return (
     <div className="min-h-screen bg-corp-bg-page" data-testid="personal-cabinet">
       <CorporateHeader cabinetName="Особистий кабінет" showBackButton onBackClick={() => navigate('/manager')} />
-      <div className="mx-auto max-w-6xl px-3 sm:px-6 py-4">
-        <div className="flex gap-1 mb-5 bg-white rounded-xl p-1.5 border border-corp-border overflow-x-auto" data-testid="cabinet-tabs">
+      <div className="mx-auto max-w-6xl px-2 sm:px-6 py-2 sm:py-4">
+        <div className="flex gap-1 mb-2 sm:mb-5 bg-white rounded-xl p-1.5 border border-corp-border overflow-x-auto" data-testid="cabinet-tabs">
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (

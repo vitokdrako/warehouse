@@ -6,6 +6,27 @@ import { User, MessageSquare, CheckSquare, Users, Send, Hash, Lock, Plus, ArrowL
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 
+// Notification sound - короткий "дзінь"
+const playNotificationSound = (() => {
+  let audioCtx = null;
+  return () => {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(1174, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.25);
+    } catch {}
+  };
+})();
+
 const authFetch = (url, opts = {}) => {
   const token = localStorage.getItem('token');
   return fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...opts.headers } });
@@ -1009,6 +1030,12 @@ export default function PersonalCabinet() {
   const [unread, setUnread] = useState(0);
   const [orderNotesNew, setOrderNotesNew] = useState(0);
   const navigate = useNavigate();
+  const prevUnreadRef = useRef(0);
+  const prevOrderNotesRef = useRef(0);
+  const activeTabRef = useRef(activeTab);
+
+  // Тримаємо актуальну вкладку в ref для доступу з polling
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   const currentUserId = (() => {
     try { const u = JSON.parse(localStorage.getItem('user') || '{}'); return u.user_id || u.id; } catch { return null; }
@@ -1038,8 +1065,26 @@ export default function PersonalCabinet() {
           authFetch(`${BACKEND_URL}/api/chat/unread`),
           authFetch(`${BACKEND_URL}/api/cabinet/order-notes-new`),
         ]);
-        if (r.ok) { const d = await r.json(); setUnread(d.unread || 0); }
-        if (on.ok) { const d = await on.json(); setOrderNotesNew(d.count || 0); }
+        if (r.ok) {
+          const d = await r.json();
+          const newUnread = d.unread || 0;
+          // Звук тільки якщо не в чаті і є нові повідомлення
+          if (newUnread > prevUnreadRef.current && activeTabRef.current !== 'chat') {
+            playNotificationSound();
+          }
+          prevUnreadRef.current = newUnread;
+          // Якщо в чаті — показуємо 0 (повідомлення вже прочитані)
+          setUnread(activeTabRef.current === 'chat' ? 0 : newUnread);
+        }
+        if (on.ok) {
+          const d = await on.json();
+          const newNotes = d.count || 0;
+          if (newNotes > prevOrderNotesRef.current && activeTabRef.current !== 'orders') {
+            playNotificationSound();
+          }
+          prevOrderNotesRef.current = newNotes;
+          setOrderNotesNew(activeTabRef.current === 'orders' ? 0 : newNotes);
+        }
       } catch {}
     }, 15000);
     return () => clearInterval(interval);
@@ -1048,6 +1093,9 @@ export default function PersonalCabinet() {
   const switchTab = (tab) => {
     setActiveTab(tab);
     setSearchParams({ tab });
+    // Скидаємо лічильник при вході в чат/замовлення
+    if (tab === 'chat') setUnread(0);
+    if (tab === 'orders') setOrderNotesNew(0);
   };
 
   const tabs = [

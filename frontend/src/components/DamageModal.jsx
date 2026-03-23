@@ -64,7 +64,8 @@ export default function DamageModal({
   order, // { order_id, order_number }
   stage, // 'pre_issue', 'return', 'audit'
   onSave, // Callback after saving
-  existingHistory = [] // Optional: existing damage history to display
+  existingHistory = [], // Optional: existing damage history to display
+  versionId = null // Optional: ID часткового повернення
 }) {
   const [formData, setFormData] = useState({
     category: 'Меблі',
@@ -312,6 +313,7 @@ export default function DamageModal({
               loss_amount: totalFee,
               order_id: order?.order_id,
               order_number: order?.order_number,
+              version_id: versionId || null,
               skip_damage_record: true  // DamageModal вже створив запис вище
             })
           } catch (lossErr) {

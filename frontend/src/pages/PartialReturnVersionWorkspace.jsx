@@ -574,6 +574,7 @@ export default function PartialReturnVersionWorkspace() {
         }}
         stage="return"
         onSave={handleSaveDamage}
+        versionId={parseInt(versionId) || null}
       />
     </div>
   )

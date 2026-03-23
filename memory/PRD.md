@@ -77,6 +77,11 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Client sync based on email uniqueness
 - Product dimensions from OpenCart (height, width, depth)
 
+#### Total Loss Implementation — March 18, 2026
+- Two-step confirmation in PartialReturnModal (summary → confirm write-off)
+- process-loss endpoint: reduces quantity, creates fin_payments, product_damage_history, product_history
+- damage_code='TOTAL_LOSS', processing_type='total_loss', processing_status='written_off'
+
 #### Bug Fixes — March 18, 2026 (Session 2)
 - Fixed `Unknown column 'updated_at'` in products table — removed from all UPDATE statements in laundry.py (2), product_damage_history.py (7)
 - Fixed SKU: `quick-add-to-queue` now fetches real SKU from DB instead of trusting client (SKU-9183 → PO9183)

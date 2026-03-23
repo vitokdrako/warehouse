@@ -307,14 +307,29 @@ export default function ReturnOrderWorkspace() {
   }
   
   const handleSaveDamage = (damageRecord) => {
-    setItems(items => items.map(it => 
-      it.id === damageModal.itemId 
-        ? { ...it, findings: [...it.findings, damageRecord] } 
-        : it
-    ))
+    const isTotalLoss = damageRecord.damage_code === 'TOTAL_LOSS' || damageRecord.kindCode === 'TOTAL_LOSS'
+    const lossQty = isTotalLoss ? (parseInt(damageRecord.qty) || 1) : 0
+    
+    setItems(items => items.map(it => {
+      if (it.id !== damageModal.itemId) return it
+      const newReturnedQty = isTotalLoss 
+        ? Math.min(it.rented_qty, it.returned_qty + lossQty)
+        : it.returned_qty
+      return { 
+        ...it, 
+        findings: [...it.findings, damageRecord],
+        returned_qty: newReturnedQty
+      }
+    }))
     setDamageFee(prev => prev + (Number(damageRecord.fee) || 0))
     setTimeline(prev => [
-      { text: `Зафіксовано пошкодження: ${damageRecord.category} - ${damageRecord.kind}`, at: nowISO(), tone: 'amber' },
+      { 
+        text: isTotalLoss 
+          ? `Списано (повна втрата): ${damageRecord.category || ''} - ${damageRecord.kind || ''} x${lossQty}` 
+          : `Зафіксовано пошкодження: ${damageRecord.category} - ${damageRecord.kind}`, 
+        at: nowISO(), 
+        tone: isTotalLoss ? 'red' : 'amber' 
+      },
       ...prev
     ])
     setDamageModal({ open: false, itemId: null })

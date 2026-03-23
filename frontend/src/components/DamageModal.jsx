@@ -230,6 +230,7 @@ export default function DamageModal({
       const damageRecord = {
         id: 'pd-' + Math.floor(Math.random()*90000+100),
         kind: isPreIssue ? 'pre_existing' : formData.kindCode,
+        damage_code: formData.kindCode,
         category: formData.category,
         severity: formData.severity,
         note: formData.note,

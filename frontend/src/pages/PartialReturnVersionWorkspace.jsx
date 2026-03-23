@@ -189,11 +189,16 @@ export default function PartialReturnVersionWorkspace() {
         version_id: versionId
       })
       
+      const isTotalLoss = damageData.damage_code === 'TOTAL_LOSS' || damageData.kindCode === 'TOTAL_LOSS'
+      const lossQty = isTotalLoss ? (parseInt(damageData.qty) || 1) : 0
+      
       // Оновлюємо локальний стан
       setItems(prev => prev.map(item => {
         if (item.id === damageModal.item?.id) {
+          const newQty = isTotalLoss ? Math.max(0, item.qty - lossQty) : item.qty
           return {
             ...item,
+            qty: newQty,
             findings: [...(item.findings || []), damageData],
             has_damage_history: true
           }
@@ -202,15 +207,15 @@ export default function PartialReturnVersionWorkspace() {
       }))
       
       // Оновлюємо суму шкоди
-      setDamageFee(prev => prev + (damageData.amount || 0))
+      setDamageFee(prev => prev + (damageData.amount || damageData.fee || 0))
       
       setDamageModal({ open: false, item: null })
-      toast({ title: 'Шкоду зафіксовано' })
+      toast({ title: isTotalLoss ? 'Товар списано' : 'Шкоду зафіксовано' })
       
     } catch (err) {
       console.error('[VersionWorkspace] Error saving damage:', err)
       toast({
-        title: '❌ Помилка',
+        title: 'Помилка',
         description: 'Не вдалося зберегти шкоду',
         variant: 'destructive'
       })

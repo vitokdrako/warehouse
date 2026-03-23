@@ -1344,18 +1344,26 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
             ic_items = json.loads(ic_row[0]) if isinstance(ic_row[0], str) else ic_row[0]
             for ic_item in ic_items:
                 item_id = ic_item.get("id")
+                sku = ic_item.get("sku")
                 pkg = ic_item.get("packaging", {})
-                if item_id and pkg:
+                if pkg:
                     labels = []
                     for key, label in ITEM_PACK_LABELS.items():
-                        if pkg.get(key):
-                            labels.append(label)
+                        val = pkg.get(key)
+                        qty = int(val) if isinstance(val, (int, float)) else (1 if val else 0)
+                        if qty > 0:
+                            labels.append(f"{label}: {qty}" if qty > 1 else label)
                     if pkg.get("other"):
                         other_text = pkg.get("other_text", "")
-                        labels.append(f"Інше: {other_text}" if other_text else "Інше")
-                    # Store by both int and str for reliable matching
-                    item_packaging_map[int(item_id)] = labels
-                    item_packaging_map[str(item_id)] = labels
+                        other_qty = int(pkg["other"]) if isinstance(pkg["other"], (int, float)) else 1
+                        other_label = f"Інше ({other_text})" if other_text else "Інше"
+                        labels.append(f"{other_label}: {other_qty}" if other_qty > 1 else other_label)
+                    if labels:
+                        if item_id:
+                            item_packaging_map[int(item_id)] = labels
+                            item_packaging_map[str(item_id)] = labels
+                        if sku:
+                            item_packaging_map[sku] = labels
     except Exception:
         pass
     
@@ -1369,7 +1377,7 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
         item_id = it[1]  # product_id to match issue_cards items
         
         # Per-item packaging
-        pack_labels = item_packaging_map.get(item_id, [])
+        pack_labels = item_packaging_map.get(item_id, []) or item_packaging_map.get(sku, [])
         
         # Load damage history for this product by SKU
         damages = []

@@ -291,6 +291,28 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
             </div>
           )}
           
+          {/* Issued Packaging per item */}
+          {item.issued_packaging && Object.keys(item.issued_packaging).filter(k => k !== 'other_text').some(k => (parseInt(item.issued_packaging[k]) || 0) > 0) && (
+            <div className="rounded-lg bg-blue-50 border border-blue-200 p-2">
+              <div className="text-[10px] text-blue-600 font-semibold mb-1 flex items-center gap-1">
+                <Package className="w-3 h-3" /> Видано пакування:
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { key: 'native_cover', label: 'Чохол' },
+                  { key: 'native_box', label: 'Коробка' },
+                  { key: 'felt', label: 'Войлок' },
+                  { key: 'special', label: 'Спец.' },
+                  { key: 'other', label: item.issued_packaging?.other_text || 'Інше' },
+                ].filter(o => (parseInt(item.issued_packaging?.[o.key]) || 0) > 0).map(o => (
+                  <span key={o.key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-medium">
+                    {o.label}: {item.issued_packaging[o.key]}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Serials */}
           {serials.length > 0 && (
             <div>

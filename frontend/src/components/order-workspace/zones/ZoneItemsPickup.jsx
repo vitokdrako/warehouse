@@ -86,6 +86,10 @@ function CompactItemCard({
   ]
   
   const selectedPackaging = packagingOptions.filter(p => item.packaging?.[p.key]).map(p => p.label)
+
+  const packagingSummary = packagingOptions
+    .filter(p => (parseInt(item.packaging?.[p.key]) || 0) > 0)
+    .map(p => `${p.label}: ${item.packaging[p.key]}`)
   
   // Обробка кліку на фото
   const handlePhotoClick = (e) => {
@@ -287,7 +291,7 @@ function CompactItemCard({
               Пакування
             </span>
             <span className="text-slate-800 font-medium">
-              {selectedPackaging.length > 0 ? selectedPackaging.join(', ') : 'Не обрано'}
+              {packagingSummary.length > 0 ? packagingSummary.join(', ') : 'Не обрано'}
             </span>
           </button>
           
@@ -391,36 +395,50 @@ function CompactItemCard({
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
-            <div className="p-3 grid grid-cols-2 gap-2">
-              {packagingOptions.map(opt => (
-                <label 
-                  key={opt.key}
-                  className={`
-                    flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors
-                    ${item.packaging?.[opt.key] ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}
-                    ${opt.key === 'other' ? 'col-span-2' : ''}
-                  `}
-                >
-                  <input 
-                    type="checkbox" 
-                    checked={!!item.packaging?.[opt.key]} 
-                    onChange={(e) => !readOnly && onPackagingChange?.(item.id, opt.key, opt.key === 'other' ? (e.target.checked ? (item.packaging?.other_text || '') || true : false) : e.target.checked)} 
-                    disabled={readOnly}
-                    className="w-5 h-5 rounded" 
-                  />
-                  <span className="text-sm font-medium">{opt.label}</span>
-                  {opt.key === 'other' && item.packaging?.other && (
-                    <input
-                      type="text"
-                      value={item.packaging?.other_text || ''}
-                      onChange={(e) => !readOnly && onPackagingChange?.(item.id, 'other_text', e.target.value)}
-                      placeholder="Опишіть пакування..."
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 ml-1 px-2 py-1 text-sm border border-slate-200 rounded-lg focus:ring-1 focus:ring-emerald-400"
-                    />
-                  )}
-                </label>
-              ))}
+            <div className="p-3 space-y-2">
+              {packagingOptions.map(opt => {
+                const qty = parseInt(item.packaging?.[opt.key]) || 0
+                return (
+                  <div 
+                    key={opt.key}
+                    className={`
+                      flex items-center gap-3 p-3 rounded-xl border transition-colors
+                      ${qty > 0 ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200'}
+                    `}
+                  >
+                    <span className="flex-1 text-sm font-medium text-slate-800">{opt.label}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => !readOnly && onPackagingChange?.(item.id, opt.key, Math.max(0, qty - 1))}
+                        disabled={readOnly || qty <= 0}
+                        className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm flex items-center justify-center disabled:opacity-30"
+                      >-</button>
+                      <input
+                        type="number"
+                        value={qty}
+                        onChange={(e) => !readOnly && onPackagingChange?.(item.id, opt.key, Math.max(0, parseInt(e.target.value) || 0))}
+                        disabled={readOnly}
+                        className="w-12 h-8 text-center text-sm font-bold border border-slate-200 rounded-lg"
+                        min="0"
+                      />
+                      <button
+                        onClick={() => !readOnly && onPackagingChange?.(item.id, opt.key, qty + 1)}
+                        disabled={readOnly}
+                        className="w-8 h-8 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold text-sm flex items-center justify-center disabled:opacity-30"
+                      >+</button>
+                    </div>
+                  </div>
+                )
+              })}
+              {item.packaging?.other > 0 && (
+                <input
+                  type="text"
+                  value={item.packaging?.other_text || ''}
+                  onChange={(e) => !readOnly && onPackagingChange?.(item.id, 'other_text', e.target.value)}
+                  placeholder="Опишіть пакування..."
+                  className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-1 focus:ring-emerald-400"
+                />
+              )}
             </div>
           </div>
         </div>

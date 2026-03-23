@@ -174,6 +174,20 @@ export default function ReturnOrderWorkspace() {
       
       setItems(transformedItems)
       
+      // Завантажити пакування per-item з issue card
+      try {
+        const pkgRes = await axios.get(`${BACKEND_URL}/api/issue-cards/by-order/${orderId}/item-packaging`)
+        const pkgMap = pkgRes.data?.packaging || {}
+        if (Object.keys(pkgMap).length > 0) {
+          setItems(prev => prev.map(item => {
+            const pkgData = pkgMap[item.sku]
+            return pkgData ? { ...item, issued_packaging: pkgData.packaging } : item
+          }))
+        }
+      } catch (err) {
+        console.warn('[ReturnWorkspace] Could not load item packaging:', err)
+      }
+      
       // === Завантажити історію пошкоджень для кожного товару ===
       // Це важливо, щоб приймальник бачив попередні дефекти
       const loadDamageHistory = async () => {

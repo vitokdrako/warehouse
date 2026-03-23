@@ -593,3 +593,45 @@ async def get_issue_card_by_order(order_id: int, db: Session = Depends(get_rh_db
         raise HTTPException(status_code=404, detail="Issue card not found for this order")
     
     return parse_issue_card(row, db)
+
+
+@router.get("/by-order/{order_id}/item-packaging")
+async def get_item_packaging_by_order(order_id: int, db: Session = Depends(get_rh_db)):
+    """Повертає пакування per-item з issue card progress."""
+    result = db.execute(text("""
+        SELECT items FROM issue_cards WHERE order_id = :order_id ORDER BY created_at DESC LIMIT 1
+    """), {"order_id": order_id}).fetchone()
+    
+    if not result or not result[0]:
+        return {"packaging": {}}
+    
+    try:
+        items_data = json.loads(result[0]) if isinstance(result[0], str) else result[0]
+    except:
+        return {"packaging": {}}
+    
+    # Збираємо пакування по product_id/sku
+    packaging_map = {}
+    for item in items_data:
+        pkg = item.get("packaging", {})
+        # Фільтруємо тільки ненульові значення
+        filtered = {}
+        for k, v in pkg.items():
+            if k == 'other_text':
+                continue
+            val = int(v) if isinstance(v, (int, float)) else (1 if v else 0)
+            if val > 0:
+                filtered[k] = val
+        if pkg.get('other_text'):
+            filtered['other_text'] = pkg['other_text']
+        
+        if filtered:
+            key = item.get("sku") or str(item.get("id", ""))
+            packaging_map[key] = {
+                "name": item.get("name", ""),
+                "sku": item.get("sku", ""),
+                "qty": item.get("qty", 0),
+                "packaging": filtered
+            }
+    
+    return {"order_id": order_id, "packaging": packaging_map}

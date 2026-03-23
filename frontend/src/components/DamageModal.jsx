@@ -245,14 +245,13 @@ export default function DamageModal({
       if (!compareOnly) {
         // === ПОВНИЙ ЗАПИС: зберігаємо в стан декору ===
         
-        // Якщо stage=return, вимагаємо вибір черги
-        if (stage === 'return' && (!formData.sendTo || formData.sendTo === 'none')) {
+        // Якщо stage=return, вимагаємо вибір черги (крім повної втрати)
+        const isTotalLoss = formData.kindCode === 'TOTAL_LOSS'
+        if (stage === 'return' && !isTotalLoss && (!formData.sendTo || formData.sendTo === 'none')) {
           alert('Оберіть чергу обробки (Мийка / Реставрація / Пральня)')
           setSaving(false)
           return
         }
-        
-        const isTotalLoss = formData.kindCode === 'TOTAL_LOSS'
       
         // Save to damage history API
         const response = await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
@@ -311,7 +310,8 @@ export default function DamageModal({
               qty: formData.qty,
               loss_amount: totalFee,
               order_id: order?.order_id,
-              order_number: order?.order_number
+              order_number: order?.order_number,
+              skip_damage_record: true  // DamageModal вже створив запис вище
             })
           } catch (lossErr) {
             console.warn('[DamageModal] Failed to process loss:', lossErr)
@@ -729,8 +729,8 @@ export default function DamageModal({
             />
           </div>
 
-          {/* Send to Processing - only for return stage */}
-          {stage === 'return' && !isPreIssue && (
+          {/* Send to Processing - only for return stage, NOT for total loss */}
+          {stage === 'return' && !isPreIssue && formData.kindCode !== 'TOTAL_LOSS' && (
             <div className="mb-4">
               <div className="text-slate-500 mb-2 text-sm font-medium">Відправити на обробку *</div>
               <div className="grid grid-cols-3 gap-2">
@@ -786,16 +786,29 @@ export default function DamageModal({
             <PillButton tone='slate' onClick={onClose}>
               Скасувати
             </PillButton>
-            <button
-              onClick={() => handleSave(true)}
-              disabled={saving}
-              className="rounded-full px-4 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white disabled:bg-amber-300"
-            >
-              {saving ? 'Збереження...' : 'Без запису у стан'}
-            </button>
-            <PillButton tone='green' onClick={() => handleSave(false)} disabled={saving}>
-              {saving ? 'Збереження...' : 'В стан декору'}
-            </PillButton>
+            {formData.kindCode === 'TOTAL_LOSS' ? (
+              <button
+                onClick={() => handleSave(false)}
+                disabled={saving}
+                className="rounded-full px-5 py-2 text-sm bg-red-600 hover:bg-red-700 text-white disabled:bg-red-300 font-medium flex items-center gap-2"
+                data-testid="damage-write-off-btn"
+              >
+                {saving ? 'Списання...' : 'Списати'}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleSave(true)}
+                  disabled={saving}
+                  className="rounded-full px-4 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white disabled:bg-amber-300"
+                >
+                  {saving ? 'Збереження...' : 'Без запису у стан'}
+                </button>
+                <PillButton tone='green' onClick={() => handleSave(false)} disabled={saving}>
+                  {saving ? 'Збереження...' : 'В стан декору'}
+                </PillButton>
+              </>
+            )}
           </div>
         </div>
 

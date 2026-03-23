@@ -684,7 +684,7 @@ async def mark_extension_lost(
 
 
 class ProcessLossRequest(BaseModel):
-    """Запит на обробку втрати з модалки пошкоджень"""
+    """Запит на обробку втрати — єдиний endpoint списання"""
     product_id: int
     sku: str
     name: str
@@ -692,6 +692,7 @@ class ProcessLossRequest(BaseModel):
     loss_amount: float
     order_id: Optional[int] = None
     order_number: Optional[str] = None
+    skip_damage_record: bool = False  # True якщо DamageModal вже створив запис
 
 
 @router.post("/process-loss")
@@ -745,31 +746,34 @@ async def process_loss_from_damage_modal(
             })
             print(f"[ProcessLoss] 💰 Створено фінансову транзакцію")
         
-        # 4. Записати в product_damage_history (кабінет шкоди — список списаних)
-        import uuid
-        damage_id = str(uuid.uuid4())
-        db.execute(text("""
-            INSERT INTO product_damage_history 
-            (id, product_id, sku, product_name, order_id, order_number, stage, 
-             damage_type, damage_code, severity, fee, fee_per_item, qty, note,
-             processing_type, processing_status, created_by, created_at)
-            VALUES 
-            (:id, :product_id, :sku, :name, :order_id, :order_number, 'return',
-             'Повна втрата', 'TOTAL_LOSS', 'critical', :fee, :fee_per_item, :qty, :note,
-             'total_loss', 'written_off', 'system', NOW())
-        """), {
-            "id": damage_id,
-            "product_id": data.product_id,
-            "sku": data.sku,
-            "name": data.name,
-            "order_id": data.order_id,
-            "order_number": order_number,
-            "fee": data.loss_amount,
-            "fee_per_item": data.loss_amount / data.qty if data.qty > 0 else data.loss_amount,
-            "qty": data.qty,
-            "note": f"Товар не повернуто клієнтом. Повна втрата. Сума: ₴{data.loss_amount:.2f}"
-        })
-        print(f"[ProcessLoss] 📋 Записано в кабінет шкоди (damage_id: {damage_id})")
+        # 4. Записати в product_damage_history (якщо не створено раніше через DamageModal)
+        if not data.skip_damage_record:
+            import uuid
+            damage_id = str(uuid.uuid4())
+            db.execute(text("""
+                INSERT INTO product_damage_history 
+                (id, product_id, sku, product_name, order_id, order_number, stage, 
+                 damage_type, damage_code, severity, fee, fee_per_item, qty, note,
+                 processing_type, processing_status, created_by, created_at)
+                VALUES 
+                (:id, :product_id, :sku, :name, :order_id, :order_number, 'return',
+                 'Повна втрата', 'TOTAL_LOSS', 'critical', :fee, :fee_per_item, :qty, :note,
+                 'total_loss', 'written_off', 'system', NOW())
+            """), {
+                "id": damage_id,
+                "product_id": data.product_id,
+                "sku": data.sku,
+                "name": data.name,
+                "order_id": data.order_id,
+                "order_number": order_number,
+                "fee": data.loss_amount,
+                "fee_per_item": data.loss_amount / data.qty if data.qty > 0 else data.loss_amount,
+                "qty": data.qty,
+                "note": f"Товар не повернуто клієнтом. Повна втрата. Сума: ₴{data.loss_amount:.2f}"
+            })
+            print(f"[ProcessLoss] 📋 Записано в кабінет шкоди (damage_id: {damage_id})")
+        else:
+            print(f"[ProcessLoss] ℹ️ damage_record пропущено (вже створено через DamageModal)")
         
         db.commit()
         

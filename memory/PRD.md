@@ -1,150 +1,93 @@
-# RentalHub - Product Requirements Document
+# PRD - Rental Management Platform (FarforDecorOrenda)
 
 ## Original Problem Statement
-Build a comprehensive rental management system (RentalHub) for FarforRent — a tableware/decor rental company.
+Build and maintain a comprehensive rental management platform for decorative items (tableware, decor, etc.) with order management, damage tracking, document generation, and financial management.
+
+## User Personas
+- **Admin**: Full access, company configuration
+- **Manager**: Order management, client interaction, damage recording, document generation
+- **Client**: View orders, chat with managers
+
+## Core Requirements
+1. Order lifecycle management (creation → processing → issuance → return → completion)
+2. Damage tracking workflow with three types:
+   - **В стан декору (To State)**: Records damage to product state, requires processing queue on return
+   - **Без запису у стан / Для порівняння (Fixation/Photo Only)**: Documentation-only record, no queue required, stored separately
+   - **Повна втрата (Total Loss)**: Full write-off with financial recording
+3. Document generation (Issue Act, Return Act, Defect Act, Settlement Act)
+4. Financial management (deposits, fees, payments)
+5. Personal cabinet with chat for client communication
+6. Damage Hub for tracking all damage records
+7. Partial return handling with version management
 
 ## Architecture
-- **Frontend**: React + Tailwind CSS + Shadcn UI (JSX/TSX)
-- **Backend**: FastAPI (Python) + MySQL (farforre_rentalhub)
-- **Auth**: JWT-based (24h token)
-- **Production**: Frontend at https://rentalhub.farforrent.com.ua/, Backend at https://backrentalhub.farforrent.com.ua/
+- **Frontend**: React (JSX) with TailwindCSS, Shadcn/UI components
+- **Backend**: FastAPI with SQLAlchemy, MySQL database
+- **Document Engine**: Jinja2 templates → HTML → PDF generation
+- **External**: OpenCart sync, SMTP email
+
+## Key Database Tables
+- `orders`, `order_items` - Order management
+- `product_damage_history` - Central damage log (processing_type: photo_only/written_off/wash/restoration/laundry/none)
+- `return_cards` - Return process data
+- `partial_return_version_items` - Partial return tracking
+- `order_packaging` - Packaging per order
+- `payer_profiles`, `master_agreements` - Legal/financial entities
+- `generated_documents` - Document storage
 
 ## What's Been Implemented
 
-### Core Features (Previous Sessions)
-- Order/Client/Finance/Document/Inventory management
-- Issue/Return cards, Damage cabinet, Email integration
+### Session 1 (Previous forks)
+- Core platform: orders, products, inventory, calendar
+- Financial system: deposits, payments, settlements
+- Document generation framework
+- Personal cabinet with chat
+- Mobile responsiveness
 
-### Session: March 2026
+### Session 2 (Previous fork)
+- Critical bug fixes (build errors, NameError, updated_at column errors)
+- Chat UX improvements (auto-scroll fix, sound notifications)
+- Personal Cabinet mobile responsiveness
+- Total Loss workflow (unified process-loss endpoint)
+- Individual item packaging (quantity inputs)
+- Damage recording refactor (3 types: Total Loss, To State, Fixation)
+- Damage Hub: "Written Off" and "Fixations" tabs
+- Defect Act: photos of damaged items
 
-#### Personal Cabinet (`/cabinet`)
-- Profile, Tasks (Kanban), Chat (Telegram-style), Orders (internal notes), Team tabs
-- Badge counters, Task-Chat integration
+### Session 3 (Current - 2026-03-24)
+- **Defect Act Enhanced**: Now includes ALL damage types with type badges (Фіксація, Втрата, В стан, До видачі) and photos
+- **Return Act Redesigned**: Modern standalone template with comprehensive data - pre-issue damage comparison, packaging, all damage records per item
+- **Backend Fix**: photo_only records no longer freeze product state
+- **Defect Act Button Fix**: Shows when ANY damage records exist (not just when fee total > 0)
+- **DamageModal UX**: Queue selection clarification text added
 
-#### Calendar Redesign (`/calendar`)
-- Day/Week/Month views, corp-* design, filters, today summary
-- Create task from calendar, overdue highlighting, cabinet links
+## Pending Issues (P2)
+1. `convert-to-order` endpoint instability
+2. Moodboard export likely broken
+3. Calendar timezone bug
+4. Re-audit "Total Loss" button logic verification
 
-#### Admin Panel Rebuild (`/admin`) — March 15, 2026
-- **5 tabs**: Користувачі, Документи, Категорії, Витрати, Налаштування
-- Users: CRUD, role badges, password reset, 9 users
-- Documents: 17 doc types with template editor (view, edit, preview, save to DB)
-- Categories: 155 product categories with search
-- Expense Categories: 13 categories, CRUD
-- Settings: editable company data (ФОП, ІПН, IBAN, адреса, телефон, email, вебсайт)
+## Upcoming Tasks
+- (P1) Post-deployment health check
+- (P1) Simplify `laundry_items` table/logic
+- (P0) Display document links in client order history (PersonalCabinet.jsx)
 
-#### Dynamic Document Company Data — Feb 2026
-- Created `services/company_config.py` — central utility for company data from DB
-- All document templates use DB data via `system_settings` table
-- Both `company.*` and `landlord.*` template variables resolved from DB
-
-#### Рахунок-оферта Redesign — March 2026
-- Redesigned `invoice_offer.html` in quote.html visual style
-- Sections: Замовник, Деталі оренди, Товари (SKU, Оренда/день, Оренда/термін, Завдаток)
-- Added: Умови оплати, Реквізити для оплати (bank details from DB), Додаткові послуги
-
-#### Template Editor — Feb 2026
-- **DB-first template loading**: Custom `DBOverrideLoader` for Jinja2
-- **Template CRUD API**: GET/PUT/POST (reset) endpoints
-- **Code editor**: Dark-themed monospace editor with tab support
-- **Live preview**: Renders template with real order data in iframe
-- **Save/Reset flow**: Save stores to `document_templates` DB table
-
-#### Акт взаєморозрахунків (Settlement Act) — March 15, 2026
-- Full financial summary with auto-collected data
-- Frontend integration with editable late fee and damage charge forms
-
-#### Financial Bugs Fixed — March 18, 2026
-- Fixed double-discount bug in 7 places
-- Fixed late fees double counting (pending vs confirmed)
-- Improved payment history UI
-
-#### Partial Deposit Refund — March 18, 2026
-- Full flow: UI, backend logic, Settlement Act updates
-
-#### `inventory` Table Refactor — March 18, 2026
-- Removed ALL dependencies on legacy `inventory` table
-- All product state management now in `products` table
-
-#### Re-audit Cabinet Refactor — March 18, 2026
-- Replaced complex damage form with 4 direct-action buttons (Wash/Restoration/Laundry/Total Loss)
-- Backend: `quick-add-to-queue` and `damage-cases/create` endpoints
-- Fixed `case_number` NameError in `damage_cases.py`
-- Fixed TypeScript build error (added `sku` to `AuditItem` interface)
-
-#### `sync_all.py` — March 18, 2026
-- Merged production version with dimension sync
-- Client sync based on email uniqueness
-- Product dimensions from OpenCart (height, width, depth)
-
-#### Photo Records & Damage Flow Separation — March 18, 2026
-- "Без запису у стан" saves as processing_type='photo_only', no queue required
-- New "Фіксації" section in DamageHub with delete capability
-- New APIs: GET/DELETE /api/product-damage-history/photo-records
-- Defect act collects ALL records (photo_only + state + total_loss) with photos
-- Pre-issue stage never requires processing queue selection
-
-#### Write-off Logic Separation + Written Off Section — March 18, 2026
-- DamageModal TOTAL_LOSS no longer writes to damage processing queues
-- process-loss accepts photo_url, note, created_by, category, severity
-- New "Списані" section in DamageHubApp with full item details
-- New API: GET /api/product-damage-history/written-off
-- Defect act template now shows damage photos
-- Return quantity updates correctly after write-off
-
-#### Total Loss Implementation — March 18, 2026
-- Two-step confirmation in PartialReturnModal (summary → confirm write-off)
-- process-loss endpoint: reduces quantity, creates fin_payments, product_damage_history, product_history
-- damage_code='TOTAL_LOSS', processing_type='total_loss', processing_status='written_off'
-
-#### Bug Fixes — March 18, 2026 (Session 2)
-- Fixed `Unknown column 'updated_at'` in products table — removed from all UPDATE statements in laundry.py (2), product_damage_history.py (7)
-- Fixed SKU: `quick-add-to-queue` now fetches real SKU from DB instead of trusting client (SKU-9183 → PO9183)
-- Fixed `stock` → `quantity` in write-off endpoint
-- Fixed `case_number` NameError in damage_cases.py
+## Future/Backlog Tasks
+- (P3) Real-time updates (WebSockets)
+- (P3) Unify NewOrderViewWorkspace and IssueCardWorkspace
+- (P3) Full RBAC
+- (P3) HR/Ops Module
+- (P3) Telegram bot integration
 
 ## Key Files
-- `/app/frontend/src/pages/ReauditCabinetFull.tsx` — Re-audit cabinet
-- `/app/frontend/src/pages/ReturnSettlementPage.jsx` — Return settlement
-- `/app/backend/routes/damage_cases.py` — Damage case creation
-- `/app/backend/routes/product_damage_history.py` — Damage history + quick-add
-- `/app/backend/routes/finance.py` — Financial calculations
-- `/app/backend/routes/documents.py` — Document generation
-- `/app/backend/sync_all.py` — Production data sync script
-
-## DB Schema (Key Tables)
-- `products`: Single source of truth for product state (product_state, cleaning_status, width_cm, height_cm, depth_cm, diameter_cm)
-- `fin_payments`: Uses `status` (pending=charges, confirmed=payments)
-- `fin_deposit_events`: Partial deposit refund history
-- `system_settings`: (setting_key PK, setting_value) — company data
-- `document_templates`: (doc_type PK, template_content LONGTEXT) — template overrides
-
-## Prioritized Backlog
-
-### P0 (All Completed)
-- ~~Mobile Responsive Damages Cabinet~~
-- ~~Double Discount Bug~~
-- ~~Late Fees Double Counting~~
-- ~~Frontend Build Error~~ — Fixed March 18, 2026
-- ~~Backend case_number NameError~~ — Fixed March 18, 2026
-
-### P1
-- Post-Deployment Health Check
-- Simplify `laundry_items` table/logic
-- Clarify purpose of `damages.py` and `audit.py` (confirmed in active use)
-
-### P2
-- Fix `convert-to-order` endpoint instability
-- Fix moodboard export
-- Fix calendar timezone bug
-- Document template: "Акт повернення" (Return Act)
-
-### P3
-- WebSocket real-time updates
-- Unify `NewOrderViewWorkspace.jsx` and `IssueCardWorkspace.jsx`
-- Full RBAC
-- HR/Ops Module
-- Telegram bot integration
+- `/app/backend/services/doc_engine/data_builders.py` - Document data builders
+- `/app/backend/routes/product_damage_history.py` - Damage CRUD
+- `/app/backend/routes/document_render.py` - Document rendering
+- `/app/backend/templates/documents/return_act/v1.html` - Return Act template
+- `/app/backend/templates/documents/defect_act/v1.html` - Defect Act template
+- `/app/frontend/src/components/DamageModal.jsx` - Damage recording modal
+- `/app/frontend/src/pages/ReturnSettlementPage.jsx` - Return settlement page
+- `/app/frontend/src/pages/DamageHubApp.jsx` - Damage hub dashboard
 
 ## Credentials
 - Admin: vitokdrako@gmail.com / test123

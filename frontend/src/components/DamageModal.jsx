@@ -755,7 +755,8 @@ export default function DamageModal({
           {!isPreIssue && formData.kindCode !== 'TOTAL_LOSS' && (
             <div className="mb-4">
               <div className="text-slate-500 mb-2 text-sm font-medium">
-                Відправити на обробку {stage === 'return' ? '' : '(за бажанням)'}
+                Відправити на обробку
+                <span className="text-xs text-slate-400 ml-1">(обов'язково для «В стан декору», за бажанням для фіксації)</span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {[

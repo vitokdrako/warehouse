@@ -225,6 +225,9 @@ async def create_damage_record(
             elif processing_type == "returned_to_stock":
                 # Повернуто на склад одразу - не заморожувати
                 new_state = None
+            elif processing_type == "photo_only":
+                # Фіксація (фото) — без заморозки товару
+                new_state = None
             else:
                 # Звичайна шкода - товар заморожений до обробки
                 new_state = 'damaged'

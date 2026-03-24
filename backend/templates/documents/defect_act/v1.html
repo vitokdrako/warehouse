@@ -314,6 +314,7 @@
             <th>Найменування</th>
             <th style="width:60px" class="center">К-сть</th>
             <th>Опис дефекту</th>
+            <th style="width:80px" class="center">Тип</th>
             <th style="width:130px" class="right nowrap">Вартість</th>
           </tr>
         </thead>
@@ -333,16 +334,27 @@
                 </div>
                 {% endif %}
               </td>
+              <td class="center" style="font-size:11px">
+                {% if d.is_photo_only %}
+                  <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E40AF;font-weight:600;font-size:10px">Фіксація</span>
+                {% elif d.is_total_loss %}
+                  <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:#FEF2F2;border:1px solid #FECACA;color:#991B1B;font-weight:600;font-size:10px">Втрата</span>
+                {% elif d.stage == 'pre_issue' %}
+                  <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:#F0FDF4;border:1px solid #BBF7D0;color:#166534;font-weight:600;font-size:10px">До видачі</span>
+                {% else %}
+                  <span style="display:inline-block;padding:3px 8px;border-radius:6px;background:#FEF3C7;border:1px solid #FDE68A;color:#92400E;font-weight:600;font-size:10px">В стан</span>
+                {% endif %}
+              </td>
               <td class="right mono nowrap">{{ "%.2f"|format(d.fee or d.amount or 0) }} грн</td>
             </tr>
             {% endfor %}
             <tr class="total-row">
-              <td colspan="5" class="right" style="text-transform:uppercase;letter-spacing:.05em;font-size:12px">Загальна сума:</td>
+              <td colspan="6" class="right" style="text-transform:uppercase;letter-spacing:.05em;font-size:12px">Загальна сума:</td>
               <td class="right mono nowrap" style="color:var(--danger);font-size:16px">{{ "%.2f"|format(damage.total or 0) }} грн</td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="6" class="center" style="color:var(--muted);padding:24px">Немає записів пошкоджень</td>
+              <td colspan="7" class="center" style="color:var(--muted);padding:24px">Немає записів пошкоджень</td>
             </tr>
           {% endif %}
         </tbody>

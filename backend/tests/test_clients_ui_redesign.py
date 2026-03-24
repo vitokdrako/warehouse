@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://reaudit-workflow-fix.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://rental-damage-docs.preview.emergentagent.com')
 
 # Test client ID 10 (Катерина Сєдая)
 TEST_CLIENT_ID = 10

@@ -596,10 +596,11 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
     except:
         pass
     
-    # Get damage items
+    # Get damage items (ALL types: state write, photo_only, written_off)
     damage_result = db.execute(text("""
         SELECT pdh.product_name, pdh.sku, pdh.damage_type, pdh.severity,
-               pdh.fee, pdh.note, pdh.qty, pdh.fee_per_item
+               pdh.fee, pdh.note, pdh.qty, pdh.fee_per_item,
+               pdh.photo_url, pdh.processing_type, pdh.damage_code, pdh.stage
         FROM product_damage_history pdh
         WHERE pdh.order_id = :order_id
         ORDER BY pdh.created_at
@@ -616,6 +617,21 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
     for row in damage_result:
         fee = float(row[4] or 0)
         total_fee += fee
+        proc_type = row[9] or ""
+        damage_code = row[10] or ""
+        stage = row[11] or ""
+        is_photo_only = proc_type == 'photo_only'
+        is_total_loss = damage_code == 'TOTAL_LOSS' or proc_type == 'written_off'
+        
+        if is_photo_only:
+            label = "Фіксація (без запису у стан)"
+        elif is_total_loss:
+            label = "Повна втрата"
+        elif stage == 'pre_issue':
+            label = "До видачі"
+        else:
+            label = "В стан декору"
+        
         damage_rows.append({
             "name": row[0] or "",
             "sku": row[1] or "",
@@ -623,6 +639,12 @@ def build_defect_act_data(db: Session, order_id: str, options: dict) -> dict:
             "amount": fee,
             "fee": fee,
             "qty": int(row[6] or 1),
+            "photo_url": row[8] or "",
+            "processing_type": proc_type,
+            "is_photo_only": is_photo_only,
+            "is_total_loss": is_total_loss,
+            "label": label,
+            "stage": stage,
         })
     
     # Get late fees
@@ -911,52 +933,270 @@ def build_issue_card_data(db: Session, issue_card_id: str, options: dict) -> dic
     }
 
 def build_return_data(db: Session, order_id: str, options: dict) -> dict:
-    """Збирає дані повернення для Акту приймання - читає з return_cards"""
+    """Збирає повні дані повернення для Акту приймання-повернення"""
     
-    # Спочатку отримаємо базові дані замовлення
-    order_data = build_order_data(db, order_id, options)
-    
-    # Company data
     company = get_company_config(db)
     
-    # Спробуємо отримати дані з return_cards
+    # --- Order data ---
+    order_row = db.execute(text("""
+        SELECT order_id, order_number, status, customer_name, customer_phone,
+               customer_email, rental_start_date, rental_end_date, rental_days,
+               total_price, deposit_amount, discount_amount,
+               payer_profile_id, deal_mode
+        FROM orders WHERE order_id = :order_id
+    """), {"order_id": order_id}).fetchone()
+    
+    if not order_row:
+        raise ValueError(f"Order not found: {order_id}")
+    
+    months_ua = ["січня","лютого","березня","квітня","травня","червня",
+                 "липня","серпня","вересня","жовтня","листопада","грудня"]
+    now = datetime.now()
+    
+    order = {
+        "order_id": order_row[0],
+        "order_number": order_row[1] or f"OC-{order_row[0]}",
+        "status": order_row[2],
+        "customer_name": order_row[3] or "",
+        "customer_phone": order_row[4] or "",
+        "customer_email": order_row[5] or "",
+        "rental_start_date": order_row[6].strftime("%d.%m.%Y") if order_row[6] else "",
+        "rental_end_date": order_row[7].strftime("%d.%m.%Y") if order_row[7] else "",
+        "rental_days": order_row[8] or 1,
+        "number": order_row[1] or f"OC-{order_row[0]}",
+    }
+    
+    rent_total = float(order_row[9] or 0)
+    deposit_security = float(order_row[10] or 0)
+    
+    # --- Payer / tenant info ---
+    tenant = {"legal_name": order_row[3] or "", "signer_name": order_row[3] or ""}
+    agreement = {"contract_number": ""}
+    payer_profile_id = order_row[12]
+    if payer_profile_id:
+        payer_row = db.execute(text("""
+            SELECT company_name, payer_type, director_name, edrpou, phone, email
+            FROM payer_profiles WHERE id = :pid
+        """), {"pid": payer_profile_id}).fetchone()
+        if payer_row:
+            tenant["legal_name"] = payer_row[0] or order_row[3] or ""
+            tenant["signer_name"] = payer_row[2] or order_row[3] or ""
+            tenant["phone"] = payer_row[4] or order_row[4] or ""
+            tenant["email"] = payer_row[5] or order_row[5] or ""
+        
+        agr_row = db.execute(text("""
+            SELECT contract_number FROM master_agreements
+            WHERE payer_profile_id = :pid AND status = 'signed'
+            ORDER BY signed_at DESC LIMIT 1
+        """), {"pid": payer_profile_id}).fetchone()
+        if agr_row:
+            agreement["contract_number"] = agr_row[0] or ""
+    
+    # --- Return card data ---
     receivers = []
-    return_items = []
+    return_items_raw = []
     fees = {}
     
     try:
-        result = db.execute(text("""
+        rc = db.execute(text("""
             SELECT items, receivers, notes, fees
-            FROM return_cards
-            WHERE order_id = :order_id
-        """), {"order_id": order_id})
-        
-        row = result.fetchone()
-        if row:
-            # Парсимо JSON поля
-            if row[0]:  # items
-                return_items = json.loads(row[0]) if isinstance(row[0], str) else row[0]
-            if row[1]:  # receivers
-                receivers = json.loads(row[1]) if isinstance(row[1], str) else row[1]
-            if row[3]:  # fees
-                fees = json.loads(row[3]) if isinstance(row[3], str) else row[3]
-    except Exception as e:
-        # Якщо таблиці немає або помилка - використовуємо items з замовлення
+            FROM return_cards WHERE order_id = :order_id
+        """), {"order_id": order_id}).fetchone()
+        if rc:
+            if rc[0]:
+                return_items_raw = json.loads(rc[0]) if isinstance(rc[0], str) else rc[0]
+            if rc[1]:
+                receivers = json.loads(rc[1]) if isinstance(rc[1], str) else rc[1]
+            if rc[3]:
+                fees = json.loads(rc[3]) if isinstance(rc[3], str) else rc[3]
+    except Exception:
         pass
     
-    # Якщо return_items порожній - використовуємо items з замовлення
-    if not return_items:
-        return_items = order_data.get("items", [])
+    # --- Order items + images ---
+    oi_result = db.execute(text("""
+        SELECT oi.product_name, oi.product_id, oi.quantity, oi.price, oi.total_rental, p.sku, p.image_url
+        FROM order_items oi
+        LEFT JOIN products p ON p.product_id = oi.product_id
+        WHERE oi.order_id = :order_id AND (oi.status = 'active' OR oi.status IS NULL)
+    """), {"order_id": order_id})
+    
+    order_items_map = {}
+    for r in oi_result:
+        pid = r[1]
+        order_items_map[pid] = {
+            "name": r[0], "product_id": pid, "qty": r[2],
+            "price_per_day": float(r[3] or 0), "sku": r[5] or "",
+            "image_url": r[6] or "",
+        }
+    
+    # --- Damage records (ALL types) ---
+    dmg_result = db.execute(text("""
+        SELECT product_id, product_name, sku, damage_type, damage_code, severity,
+               fee, note, photo_url, processing_type, stage, qty, fee_per_item, created_by
+        FROM product_damage_history
+        WHERE order_id = :order_id
+        ORDER BY created_at
+    """), {"order_id": order_id})
+    
+    pre_issue_by_product = {}
+    return_damages_by_product = {}
+    all_damages = []
+    damage_total = 0
+    damage_count = 0
+    fixation_count = 0
+    lost_count = 0
+    
+    for d in dmg_result:
+        pid = d[0]
+        proc_type = d[9] or ""
+        stage_val = d[10] or ""
+        damage_code = d[4] or ""
+        is_photo_only = proc_type == 'photo_only'
+        is_total_loss = damage_code == 'TOTAL_LOSS' or proc_type == 'written_off'
+        fee = float(d[6] or 0)
+        
+        rec = {
+            "product_id": pid, "product_name": d[1], "sku": d[2],
+            "damage_type": d[3], "damage_code": damage_code, "severity": d[5],
+            "fee": fee, "note": d[7], "photo_url": d[8] or "",
+            "processing_type": proc_type, "stage": stage_val,
+            "qty": d[11] or 1, "created_by": d[13] or "",
+            "is_photo_only": is_photo_only, "is_total_loss": is_total_loss,
+        }
+        all_damages.append(rec)
+        
+        if stage_val == 'pre_issue':
+            pre_issue_by_product.setdefault(pid, []).append(rec)
+        else:
+            return_damages_by_product.setdefault(pid, []).append(rec)
+            damage_total += fee
+            if is_total_loss:
+                lost_count += 1
+            elif is_photo_only:
+                fixation_count += 1
+            else:
+                damage_count += 1
+    
+    # --- Build final items list ---
+    items = []
+    issued_qty_total = 0
+    returned_qty_total = 0
+    
+    if return_items_raw:
+        for ri in return_items_raw:
+            pid = ri.get('product_id') or ri.get('id')
+            oi = order_items_map.get(pid, {})
+            issued = ri.get('rented_qty') or ri.get('qty') or oi.get('qty', 1)
+            returned = ri.get('returned_qty') or issued
+            findings = ri.get('findings', [])
+            
+            issued_qty_total += issued
+            returned_qty_total += returned
+            
+            pre_dmg = pre_issue_by_product.get(pid, [])
+            ret_dmg = return_damages_by_product.get(pid, [])
+            
+            has_total_loss = any(dd.get('is_total_loss') for dd in ret_dmg)
+            has_return_damage = any(not dd.get('is_photo_only') for dd in ret_dmg)
+            
+            items.append({
+                "name": ri.get('name') or oi.get('name', ''),
+                "sku": ri.get('sku') or oi.get('sku', ''),
+                "image_url": oi.get('image_url', ''),
+                "issued_qty": issued,
+                "returned_qty": returned,
+                "findings": findings,
+                "pre_issue_damages": pre_dmg,
+                "damages": ret_dmg,
+                "has_return_damage": has_return_damage,
+                "is_total_loss": has_total_loss,
+                "has_packaging": False,
+                "packaging_labels": [],
+            })
+    else:
+        for pid, oi in order_items_map.items():
+            pre_dmg = pre_issue_by_product.get(pid, [])
+            ret_dmg = return_damages_by_product.get(pid, [])
+            has_total_loss = any(dd.get('is_total_loss') for dd in ret_dmg)
+            has_return_damage = any(not dd.get('is_photo_only') for dd in ret_dmg)
+            qty = oi.get('qty', 1)
+            issued_qty_total += qty
+            returned_qty_total += qty
+            
+            items.append({
+                "name": oi.get('name', ''),
+                "sku": oi.get('sku', ''),
+                "image_url": oi.get('image_url', ''),
+                "issued_qty": qty,
+                "returned_qty": qty,
+                "findings": [],
+                "pre_issue_damages": pre_dmg,
+                "damages": ret_dmg,
+                "has_return_damage": has_return_damage,
+                "is_total_loss": has_total_loss,
+                "has_packaging": False,
+                "packaging_labels": [],
+            })
+    
+    # --- Packaging ---
+    packaging = []
+    has_packaging = False
+    try:
+        pkg_result = db.execute(text("""
+            SELECT packaging_type, quantity FROM order_packaging WHERE order_id = :oid
+        """), {"oid": order_id})
+        pkg_labels = {"bag": "Мішок", "box": "Коробка", "pallet": "Палета", "crate": "Ящик"}
+        for p in pkg_result:
+            if p[1] and p[1] > 0:
+                has_packaging = True
+                packaging.append({"label": pkg_labels.get(p[0], p[0]), "issued": p[1], "returned": p[1], "missing": 0})
+    except Exception:
+        pass
+    
+    return_totals = {
+        "issued_items": len(items),
+        "returned_items": len(items),
+        "issued_qty": issued_qty_total,
+        "returned_qty": returned_qty_total,
+        "damage_count": damage_count + fixation_count,
+        "lost_count": lost_count,
+        "damage_total": damage_total,
+    }
     
     return {
-        "order": order_data.get("order", {}),
-        "items": return_items,
+        "meta": {
+            "act_day": now.strftime("%d"),
+            "act_month": months_ua[now.month - 1],
+            "act_year": now.strftime("%Y"),
+            "doc_number": "",
+        },
+        "order": order,
+        "client": {
+            "name": order["customer_name"],
+            "phone": order["customer_phone"],
+            "email": order.get("customer_email", ""),
+        },
+        "tenant": tenant,
+        "agreement": agreement,
+        "company": company,
+        "items": items,
         "receivers": receivers,
         "fees": fees,
-        "totals": order_data.get("totals", {}),
-        "company": company,
-        "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),
-        "options": options
+        "totals": return_totals,
+        "has_packaging": has_packaging,
+        "packaging": packaging,
+        "damage": {
+            "has_damage": len(all_damages) > 0,
+            "rows": all_damages,
+            "total": damage_total,
+        },
+        "generated_at": now.strftime("%d.%m.%Y %H:%M"),
+        "return_date": now.strftime("%d.%m.%Y"),
+        "issue_date": order.get("rental_start_date", ""),
+        "late_days": 0,
+        "not_returned_items": [],
+        "executor": {"name": ""},
+        "options": options,
     }
 
 

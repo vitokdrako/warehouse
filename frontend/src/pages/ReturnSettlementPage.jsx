@@ -969,8 +969,8 @@ export default function ReturnSettlementPage() {
                 Акт повернення
               </button>
 
-              {/* Generate Defect Act */}
-              {damage && damage.total > 0 && (
+              {/* Generate Defect Act - show when there are ANY damage records (including photo_only with fee=0) */}
+              {damage && damage.items && damage.items.length > 0 && (
                 <button
                   onClick={async () => {
                     setSaving(true);

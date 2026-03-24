@@ -281,6 +281,71 @@ async def list_entity_documents(
     }
 
 
+@router.post("/batch-by-orders")
+async def batch_documents_by_orders(
+    body: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """Отримати всі згенеровані документи для списку замовлень, згруповані по order_id"""
+    order_ids = body.get("order_ids", [])
+    if not order_ids:
+        return {}
+    
+    placeholders = ",".join([f":oid_{i}" for i in range(len(order_ids))])
+    params = {f"oid_{i}": str(oid) for i, oid in enumerate(order_ids)}
+    
+    result = db.execute(text(f"""
+        SELECT id, doc_type, doc_number, version, status, entity_id, created_at
+        FROM documents
+        WHERE entity_type = 'order' AND entity_id IN ({placeholders})
+        ORDER BY created_at DESC
+    """), params)
+    
+    doc_type_labels = {
+        "issue_act": "Акт видачі",
+        "return_act": "Акт повернення",
+        "defect_act": "Дефектний акт",
+        "contract_rent": "Договір оренди",
+        "invoice_offer": "Рахунок-оферта",
+        "delivery_note": "ТТН",
+        "rental_extension": "Додаткова угода",
+        "damage_settlement_act": "Акт утримання",
+        "deposit_refund_act": "Акт повернення застави",
+        "deposit_settlement_act": "Акт взаєморозрахунків",
+        "invoice_additional": "Додатковий рахунок",
+        "invoice_legal": "Рахунок (юр. особа)",
+        "partial_return_act": "Акт часткового повернення",
+        "settlement_act": "Акт взаєморозрахунків",
+        "service_act": "Акт виконаних робіт",
+        "goods_invoice": "Видаткова накладна",
+        "order_modification": "Дозамовлення",
+    }
+    
+    grouped = {}
+    seen = {}
+    for row in result:
+        oid = str(row[5])
+        doc_type = row[1]
+        key = f"{oid}_{doc_type}"
+        if key in seen:
+            continue
+        seen[key] = True
+        
+        if oid not in grouped:
+            grouped[oid] = []
+        grouped[oid].append({
+            "id": row[0],
+            "doc_type": doc_type,
+            "label": doc_type_labels.get(doc_type, doc_type),
+            "doc_number": row[2],
+            "version": row[3],
+            "preview_url": f"/api/documents/{row[0]}/preview",
+        })
+    
+    return grouped
+
+
+
 # ============ Підписання ============
 
 @router.post("/{document_id}/sign")

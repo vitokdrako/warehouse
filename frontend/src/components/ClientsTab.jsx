@@ -4,7 +4,7 @@
  * Частина Finance Hub
  */
 import React, { useState, useEffect, useCallback } from "react";
-import { FileText, Receipt } from "lucide-react";
+import { FileText, Receipt, ClipboardList, FileCheck, FileWarning, Truck, FilePlus, ScrollText, ExternalLink } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 
@@ -357,6 +357,7 @@ const PayerModal = ({ isOpen, onClose, clientId, payer, onSave }) => {
 const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   const [payers, setPayers] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [orderDocs, setOrderDocs] = useState({});
   const [showPayerModal, setShowPayerModal] = useState(false);
   const [editingPayer, setEditingPayer] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -469,7 +470,18 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
       if (detailRes.ok) {
         const data = await detailRes.json();
         setOrders(data.recent_orders || []);
-        // Merge new CRM fields from detail response into local client state
+        
+        // Load generated documents for all orders
+        const orderIds = (data.recent_orders || []).map(o => String(o.order_id));
+        if (orderIds.length > 0) {
+          try {
+            const docsRes = await authFetch(`${BACKEND_URL}/api/documents/batch-by-orders`, {
+              method: 'POST',
+              body: JSON.stringify({ order_ids: orderIds })
+            });
+            if (docsRes.ok) setOrderDocs(await docsRes.json());
+          } catch (e) { console.warn('[ClientsTab] docs load error', e); }
+        }// Merge new CRM fields from detail response into local client state
         Object.assign(client, {
           is_regular: data.is_regular,
           company: data.company,
@@ -1084,7 +1096,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             )}
                           </a>
                           {/* Document quick links */}
-                          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                          <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-slate-100">
                             <a
                               href={`${BACKEND_URL}/api/documents/estimate/${order.order_id}/preview`}
                               target="_blank"
@@ -1105,6 +1117,37 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                               <Receipt className="w-3 h-3" />
                               Рахунок-оферта
                             </a>
+                            {/* Generated documents (skip invoice_offer since it's shown separately above) */}
+                            {(orderDocs[String(order.order_id)] || []).filter(doc => doc.doc_type !== 'invoice_offer').map(doc => {
+                              const docStyles = {
+                                issue_act: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', hover: 'hover:bg-emerald-100 hover:text-emerald-800', Icon: ClipboardList },
+                                return_act: { bg: 'bg-teal-50', border: 'border-teal-200', text: 'text-teal-700', hover: 'hover:bg-teal-100 hover:text-teal-800', Icon: FileCheck },
+                                defect_act: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-600', hover: 'hover:bg-rose-100 hover:text-rose-800', Icon: FileWarning },
+                                contract_rent: { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-600', hover: 'hover:bg-violet-100 hover:text-violet-800', Icon: ScrollText },
+                                delivery_note: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-600', hover: 'hover:bg-orange-100 hover:text-orange-800', Icon: Truck },
+                                partial_return_act: { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-600', hover: 'hover:bg-cyan-100 hover:text-cyan-800', Icon: FilePlus },
+                                deposit_refund_act: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-600', hover: 'hover:bg-green-100 hover:text-green-800', Icon: FileCheck },
+                                damage_settlement_act: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-600', hover: 'hover:bg-amber-100 hover:text-amber-800', Icon: FileText },
+                                deposit_settlement_act: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-600', hover: 'hover:bg-amber-100 hover:text-amber-800', Icon: FileText },
+                                invoice_additional: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-600', hover: 'hover:bg-indigo-100 hover:text-indigo-800', Icon: Receipt },
+                                invoice_legal: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600', hover: 'hover:bg-blue-100 hover:text-blue-800', Icon: Receipt },
+                                service_act: { bg: 'bg-lime-50', border: 'border-lime-200', text: 'text-lime-600', hover: 'hover:bg-lime-100 hover:text-lime-800', Icon: FileText },
+                              };
+                              const s = docStyles[doc.doc_type] || { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600', hover: 'hover:bg-slate-100 hover:text-slate-800', Icon: FileText };
+                              return (
+                                <a
+                                  key={doc.id}
+                                  href={`${BACKEND_URL}${doc.preview_url}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={cn("flex items-center gap-1 px-2 py-1 text-[11px] rounded-lg border transition-colors", s.bg, s.border, s.text, s.hover)}
+                                  data-testid={`order-${order.order_id}-doc-${doc.doc_type}`}
+                                >
+                                  <s.Icon className="w-3 h-3" />
+                                  {doc.label}
+                                </a>
+                              );
+                            })}
                           </div>
                         </div>
                       );

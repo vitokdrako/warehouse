@@ -2323,7 +2323,8 @@ async def preview_settlement_act(
     late_paid = 0
     payments_detail = []
     type_labels = {"rent": "Оренда", "additional": "Донарахування", "damage": "Пошкодження",
-                   "deposit": "Застава", "late": "Прострочення", "advance": "Передплата", "refund": "Повернення"}
+                   "deposit": "Застава", "late": "Прострочення", "advance": "Передплата",
+                   "refund": "Повернення", "loss": "Втрата"}
     method_labels = {"cash": "Готівка", "card": "Картка", "bank": "Безготівка",
                      "iban": "IBAN", "online": "Онлайн", "p2p": "P2P"}
 
@@ -2441,8 +2442,11 @@ async def preview_settlement_act(
     grand_total_charges = rent_after_discount + additional_total + damage_final + late_final
 
     # Calculated balance: positive = client owes, negative = refund to client
-    # Balance = total charges - all payments - deposit held in UAH
-    calculated_balance = grand_total_charges - total_paid - dep_held_uah
+    # Balance = total charges - all cash payments - net deposit coverage
+    # Net deposit coverage = what's already used for charges + what's still available
+    # (NOT the full held amount, because part was already refunded to client)
+    deposit_net_for_charges = dep_used + max(0, dep_available)
+    calculated_balance = grand_total_charges - total_paid - deposit_net_for_charges
 
     # Manager override
     is_manager_override = final_amount is not None
@@ -2492,6 +2496,7 @@ async def preview_settlement_act(
             "refunded_display": _format_currency(dep_refunded),
             "available": dep_available,
             "available_display": f"{_format_currency(dep_available)} грн",
+            "net_for_charges": _format_currency(deposit_net_for_charges),
             "refund_events": deposit_refund_events,
         },
         "settlement": {

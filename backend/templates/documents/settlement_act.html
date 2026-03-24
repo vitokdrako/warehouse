@@ -386,8 +386,8 @@
         <td class="value">{{ payments_summary.total_paid }} грн</td>
       </tr>
       <tr>
-        <td class="label">Застава (утримано/доступно)</td>
-        <td class="value">{{ deposit.held_uah }} грн</td>
+        <td class="label">Застава (утримано для розрахунків)</td>
+        <td class="value">{{ deposit.net_for_charges }} грн</td>
       </tr>
       {% if settlement.final_balance > 0 %}
       <tr class="row-topay">

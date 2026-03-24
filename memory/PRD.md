@@ -55,7 +55,8 @@ Build and maintain a comprehensive rental management platform for decorative ite
 - **Backend Fix**: photo_only records no longer freeze product state
 - **Defect Act Button Fix**: Shows when ANY damage records exist (not just when fee total > 0)
 - **DamageModal UX**: Queue selection clarification text added
-- **Client Tab Document Links**: New batch endpoint `/api/documents/batch-by-orders` + colored document link badges in ClientsTab (Акт видачі, Акт повернення, Дефектний акт, etc.)
+- **Client Tab Document Links**: New batch endpoint `/api/documents/batch-by-orders` + colored document link badges in ClientsTab
+- **Finance Bug Fix**: Fixed `grand_total_due` calculation - now accounts for deposit deductions (`used_for_damage`) and `loss` type payments when calculating `damage_due`. Previously showed debt even when damage was fully covered by deposit. (Акт видачі, Акт повернення, Дефектний акт, etc.)
 
 ## Pending Issues (P2)
 1. `convert-to-order` endpoint instability

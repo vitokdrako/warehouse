@@ -2382,7 +2382,7 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             if p[8] in ('completed', 'confirmed'):
                 if p[1] == 'rent':
                     rent_paid += float(p[3] or 0)
-                elif p[1] == 'damage':
+                elif p[1] in ('damage', 'loss'):
                     damage_paid += float(p[3] or 0)
                 elif p[1] == 'late':
                     late_paid += float(p[3] or 0)
@@ -2463,6 +2463,19 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             "due": max(0, float(damage_total) - damage_paid),
             "items": damage_items
         }
+        
+        # === 4b. DEPOSIT COVERAGE FOR DAMAGE ===
+        # Утримання із застави покриває шкоду — враховуємо в due
+        deposit_used_for_damage = 0
+        if deposit and deposit.get("events"):
+            for ev in deposit["events"]:
+                if ev["event_type"] == "used_for_damage":
+                    deposit_used_for_damage += ev["amount"]
+        
+        # Шкода покрита = прямі оплати + утримання із застави
+        damage_covered = damage_paid + deposit_used_for_damage
+        damage["deposit_covered"] = deposit_used_for_damage
+        damage["due"] = max(0, float(damage_total) - damage_covered)
         
         # === 5. LATE FEES ===
         late_rows = db.execute(text("""
@@ -2549,8 +2562,10 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             "deposit_expected": float(order_row[6] or 0),
             "deposit_held": deposit["held_amount"] if deposit else 0,
             "deposit_available": deposit["available"] if deposit else 0,
+            "deposit_used_for_damage": deposit_used_for_damage,
             "damage_total": damage["total"],
             "damage_paid": damage["paid"],
+            "damage_deposit_covered": damage.get("deposit_covered", 0),
             "damage_due": damage["due"],
             "late_total": late["total"],
             "late_paid": late["paid"],

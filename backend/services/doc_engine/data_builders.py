@@ -1077,6 +1077,22 @@ def build_return_data(db: Session, order_id: str, options: dict) -> dict:
             else:
                 damage_count += 1
     
+    # --- Calculate loss qty per product ---
+    # Рахуємо лише записи з fee > 0, щоб уникнути дублювання (fee=0 = фіксація перед списанням)
+    loss_qty_by_product = {}
+    for d in all_damages:
+        if d.get('is_total_loss') and d.get('fee', 0) > 0:
+            pid = d['product_id']
+            loss_qty_by_product[pid] = loss_qty_by_product.get(pid, 0) + (d.get('qty', 1) or 1)
+    
+    # Якщо всі loss записи мають fee=0, використаємо MAX qty як fallback
+    for d in all_damages:
+        if d.get('is_total_loss'):
+            pid = d['product_id']
+            if pid not in loss_qty_by_product:
+                current = loss_qty_by_product.get(pid, 0)
+                loss_qty_by_product[pid] = max(current, d.get('qty', 1) or 1)
+    
     # --- Build final items list ---
     items = []
     issued_qty_total = 0
@@ -1089,6 +1105,10 @@ def build_return_data(db: Session, order_id: str, options: dict) -> dict:
             issued = ri.get('rented_qty') or ri.get('qty') or oi.get('qty', 1)
             returned = ri.get('returned_qty') or issued
             findings = ri.get('findings', [])
+            
+            # Віднімаємо втрачені одиниці
+            loss_qty = loss_qty_by_product.get(pid, 0)
+            returned = max(0, returned - loss_qty)
             
             issued_qty_total += issued
             returned_qty_total += returned
@@ -1105,6 +1125,7 @@ def build_return_data(db: Session, order_id: str, options: dict) -> dict:
                 "image_url": oi.get('image_url', ''),
                 "issued_qty": issued,
                 "returned_qty": returned,
+                "loss_qty": loss_qty,
                 "findings": findings,
                 "pre_issue_damages": pre_dmg,
                 "damages": ret_dmg,
@@ -1120,15 +1141,21 @@ def build_return_data(db: Session, order_id: str, options: dict) -> dict:
             has_total_loss = any(dd.get('is_total_loss') for dd in ret_dmg)
             has_return_damage = any(not dd.get('is_photo_only') for dd in ret_dmg)
             qty = oi.get('qty', 1)
+            
+            # Віднімаємо втрачені одиниці
+            loss_qty = loss_qty_by_product.get(pid, 0)
+            returned = max(0, qty - loss_qty)
+            
             issued_qty_total += qty
-            returned_qty_total += qty
+            returned_qty_total += returned
             
             items.append({
                 "name": oi.get('name', ''),
                 "sku": oi.get('sku', ''),
                 "image_url": oi.get('image_url', ''),
                 "issued_qty": qty,
-                "returned_qty": qty,
+                "returned_qty": returned,
+                "loss_qty": loss_qty,
                 "findings": [],
                 "pre_issue_damages": pre_dmg,
                 "damages": ret_dmg,
@@ -1153,13 +1180,15 @@ def build_return_data(db: Session, order_id: str, options: dict) -> dict:
     except Exception:
         pass
     
+    total_lost_qty = sum(loss_qty_by_product.values())
+    
     return_totals = {
         "issued_items": len(items),
-        "returned_items": len(items),
+        "returned_items": len([i for i in items if i["returned_qty"] > 0]),
         "issued_qty": issued_qty_total,
         "returned_qty": returned_qty_total,
         "damage_count": damage_count + fixation_count,
-        "lost_count": lost_count,
+        "lost_count": total_lost_qty,
         "damage_total": damage_total,
     }
     

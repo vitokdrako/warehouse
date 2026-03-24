@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import CorporateHeader from "../components/CorporateHeader";
 import { getImageUrl, handleImageError, FALLBACK_IMAGE } from "../utils/imageHelper";
-import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, ChevronDown, ChevronRight, Plus, Clock, ArrowRight, Printer } from "lucide-react";
+import { Search, Droplets, Wrench, Shirt, Package, RefreshCw, Check, X, ChevronDown, ChevronRight, Plus, Clock, ArrowRight, Printer, Camera, Trash2 } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
 const fmtTime = (d) => d ? new Date(d).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -713,6 +713,8 @@ export default function DamageHubApp() {
   const [writtenOffItems, setWrittenOffItems] = useState([]);
   const [writtenOffStats, setWrittenOffStats] = useState({ total_items: 0, total_loss_amount: 0 });
   const [showWrittenOff, setShowWrittenOff] = useState(false);
+  const [photoRecords, setPhotoRecords] = useState([]);
+  const [showPhotoRecords, setShowPhotoRecords] = useState(false);
   const [batches, setBatches] = useState([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
   
@@ -726,6 +728,7 @@ export default function DamageHubApp() {
         authFetch(`${BACKEND_URL}/api/product-damage-history/processing/restoration`).then(r => r.ok ? r.json() : { items: [] }),
         authFetch(`${BACKEND_URL}/api/product-damage-history/processing/laundry`).then(r => r.ok ? r.json() : { items: [] }),
         authFetch(`${BACKEND_URL}/api/product-damage-history/written-off`).then(r => r.ok ? r.json() : { items: [], total_items: 0, total_loss_amount: 0 }),
+        authFetch(`${BACKEND_URL}/api/product-damage-history/photo-records`).then(r => r.ok ? r.json() : { items: [] }),
       ]);
       
       setWashItems(results[0].status === 'fulfilled' ? (results[0].value.items || []) : []);
@@ -734,6 +737,9 @@ export default function DamageHubApp() {
       if (results[3].status === 'fulfilled') {
         setWrittenOffItems(results[3].value.items || []);
         setWrittenOffStats({ total_items: results[3].value.total_items || 0, total_loss_amount: results[3].value.total_loss_amount || 0 });
+      }
+      if (results[4].status === 'fulfilled') {
+        setPhotoRecords(results[4].value.items || []);
       }
     } catch (e) {
       console.error("Load error:", e);
@@ -946,6 +952,101 @@ export default function DamageHubApp() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Photo Records Section (Фіксації) */}
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-4 pb-3">
+        <button 
+          onClick={() => setShowPhotoRecords(!showPhotoRecords)}
+          className="w-full flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition"
+          data-testid="photo-records-toggle"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-blue-100 rounded-lg"><Camera className="w-4 h-4 text-blue-600" /></div>
+            <span className="font-bold text-sm text-blue-800">Фіксації (фото до видачі / при поверненні)</span>
+            <span className="px-2 py-0.5 bg-blue-200 text-blue-800 rounded-full text-xs font-bold">{photoRecords.length}</span>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-blue-400 transition-transform ${showPhotoRecords ? 'rotate-180' : ''}`} />
+        </button>
+        
+        {showPhotoRecords && (
+          <div className="mt-2 border border-blue-200 rounded-xl overflow-hidden bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-blue-50 border-b border-blue-200">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Фото</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Артикул</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Назва</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Замовлення</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Етап</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Фото фіксації</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Коментар</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-blue-700">Хто / Коли</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-blue-700"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {photoRecords.filter(item => {
+                    if (!searchQuery) return true;
+                    const q = searchQuery.toLowerCase();
+                    return (item.sku || '').toLowerCase().includes(q) || (item.product_name || '').toLowerCase().includes(q) || (item.order_number || '').toLowerCase().includes(q);
+                  }).map(item => (
+                    <tr key={item.id} className="hover:bg-blue-50/50">
+                      <td className="px-3 py-2">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100">
+                          {item.product_image ? <img src={getImageUrl(item.product_image)} alt="" className="w-full h-full object-cover" onError={handleImageError} /> : <span className="flex items-center justify-center w-full h-full text-slate-400 text-xs">—</span>}
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs font-bold text-slate-700">{item.sku}</td>
+                      <td className="px-3 py-2 text-slate-800 text-xs max-w-[160px] truncate">{item.product_name}</td>
+                      <td className="px-3 py-2 text-xs text-slate-600">{item.order_number || '—'}</td>
+                      <td className="px-3 py-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          item.stage === 'pre_issue' ? 'bg-amber-100 text-amber-800' : 
+                          item.stage === 'return' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {item.stage === 'pre_issue' ? 'До видачі' : item.stage === 'return' ? 'Повернення' : item.stage || '—'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        {item.photo_url ? (
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 cursor-pointer border-2 border-blue-200 hover:border-blue-400 transition"
+                            onClick={() => openPhoto(item.photo_url, item.product_name)}>
+                            <img src={getImageUrl(item.photo_url)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+                          </div>
+                        ) : <span className="text-slate-400 text-xs">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-600 max-w-[180px] truncate">{item.note || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">
+                        <div>{item.created_by || '—'}</div>
+                        <div>{fmtTime(item.created_at)}</div>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Видалити фіксацію ${item.sku}?`)) return;
+                            try {
+                              await authFetch(`${BACKEND_URL}/api/product-damage-history/photo-records/${item.id}`, { method: 'DELETE' });
+                              setPhotoRecords(prev => prev.filter(r => r.id !== item.id));
+                            } catch {}
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-red-100 text-slate-400 hover:text-red-600 transition"
+                          title="Видалити"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {photoRecords.length === 0 && (
+                    <tr><td colSpan={9} className="px-3 py-8 text-center text-slate-400 text-sm">Немає фіксацій</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Written Off Section */}

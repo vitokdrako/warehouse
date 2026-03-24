@@ -248,7 +248,7 @@ export default function DamageModal({
         const isTotalLoss = formData.kindCode === 'TOTAL_LOSS'
         
         if (isTotalLoss) {
-          // === ПОВНА ВТРАТА: тільки process-loss, БЕЗ запису в стан декору ===
+          // === ПОВНА ВТРАТА: тільки process-loss ===
           await axios.post(`${BACKEND_URL}/api/partial-returns/process-loss`, {
             product_id: item.inventory_id || item.id,
             sku: item.sku,
@@ -266,14 +266,14 @@ export default function DamageModal({
             severity: formData.severity,
           })
         } else {
-          // === ЗВИЧАЙНЕ ПОШКОДЖЕННЯ: зберігаємо в стан декору ===
+          // === В СТАН ДЕКОРУ ===
+          // На поверненні вимагаємо чергу обробки
           if (stage === 'return' && (!formData.sendTo || formData.sendTo === 'none')) {
             alert('Оберіть чергу обробки (Мийка / Реставрація / Пральня)')
             setSaving(false)
             return
           }
         
-          // Save to damage history API
           const response = await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
             product_id: item.inventory_id || item.id,
             sku: item.sku,
@@ -297,7 +297,6 @@ export default function DamageModal({
             processing_status: formData.sendTo && formData.sendTo !== 'none' ? 'pending' : null
           })
           
-          // Якщо вибрано обробку - оновити стан товару
           if (formData.sendTo && formData.sendTo !== 'none') {
             try {
               const damageId = response.data?.id || response.data?.damage_id
@@ -306,7 +305,6 @@ export default function DamageModal({
                   : formData.sendTo === 'restore' ? 'send-to-restoration'
                   : formData.sendTo === 'laundry' ? 'send-to-laundry'
                   : null
-                
                 if (endpoint) {
                   await axios.post(`${BACKEND_URL}/api/product-damage-history/${damageId}/${endpoint}`, {
                     notes: formData.note || `Відправлено при поверненні замовлення ${order?.order_number || ''}`
@@ -319,23 +317,46 @@ export default function DamageModal({
           }
         }
       } else {
-        // === БЕЗ ЗАПИСУ У СТАН: тільки пушимо у чергу через quick-add (без damage_history) ===
-        if (!formData.sendTo || formData.sendTo === 'none') {
-          alert('Оберіть чергу обробки (Мийка / Реставрація / Пральня)')
-          setSaving(false)
-          return
-        }
-        
-        const queueType = formData.sendTo === 'restore' ? 'restoration' : formData.sendTo
-        await axios.post(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
+        // === БЕЗ ЗАПИСУ У СТАН: фіксація (фото + опис) для порівняння/доказів ===
+        // Зберігаємо як photo_only запис — без черг, без стану декору
+        await axios.post(`${BACKEND_URL}/api/product-damage-history/`, {
           product_id: item.inventory_id || item.id,
           sku: item.sku,
           product_name: item.name,
           category: formData.category,
-          queue_type: queueType,
-          quantity: formData.qty,
-          notes: formData.note || `Без запису. Замовлення ${order?.order_number || ''}`
+          order_id: order?.order_id,
+          order_number: order?.order_number,
+          stage: stage,
+          damage_type: isPreIssue ? 'Існуюча шкода (фіксація)' : (selectedKind?.label || formData.kindCode),
+          damage_code: isPreIssue ? 'pre_existing' : formData.kindCode,
+          severity: formData.severity,
+          fee: totalFee,
+          fee_per_item: isPreIssue ? 0 : formData.fee,
+          qty: formData.qty,
+          photo_url: uploadedPhotoUrl || formData.photoName,
+          note: formData.note,
+          created_by: userName,
+          processing_type: 'photo_only',
+          processing_status: 'documented'
         })
+        
+        // Якщо на поверненні вибрано чергу — також відправити туди
+        if (stage === 'return' && formData.sendTo && formData.sendTo !== 'none') {
+          try {
+            const queueType = formData.sendTo === 'restore' ? 'restoration' : formData.sendTo
+            await axios.post(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
+              product_id: item.inventory_id || item.id,
+              sku: item.sku,
+              product_name: item.name,
+              category: formData.category,
+              queue_type: queueType,
+              quantity: formData.qty,
+              notes: formData.note || `Без запису у стан. Замовлення ${order?.order_number || ''}`
+            })
+          } catch (qErr) {
+            console.warn('[DamageModal] Failed to add to queue:', qErr)
+          }
+        }
       }
       // === кінець повного запису ===
       
@@ -730,10 +751,12 @@ export default function DamageModal({
             />
           </div>
 
-          {/* Send to Processing - only for return stage, NOT for total loss */}
-          {stage === 'return' && !isPreIssue && formData.kindCode !== 'TOTAL_LOSS' && (
+          {/* Send to Processing - optional for pre_issue, required for "В стан" on return, NOT for total loss */}
+          {!isPreIssue && formData.kindCode !== 'TOTAL_LOSS' && (
             <div className="mb-4">
-              <div className="text-slate-500 mb-2 text-sm font-medium">Відправити на обробку *</div>
+              <div className="text-slate-500 mb-2 text-sm font-medium">
+                Відправити на обробку {stage === 'return' ? '' : '(за бажанням)'}
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { value: 'wash', label: 'Мийка', color: 'blue' },

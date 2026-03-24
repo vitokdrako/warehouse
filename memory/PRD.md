@@ -77,6 +77,13 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Client sync based on email uniqueness
 - Product dimensions from OpenCart (height, width, depth)
 
+#### Photo Records & Damage Flow Separation — March 18, 2026
+- "Без запису у стан" saves as processing_type='photo_only', no queue required
+- New "Фіксації" section in DamageHub with delete capability
+- New APIs: GET/DELETE /api/product-damage-history/photo-records
+- Defect act collects ALL records (photo_only + state + total_loss) with photos
+- Pre-issue stage never requires processing queue selection
+
 #### Write-off Logic Separation + Written Off Section — March 18, 2026
 - DamageModal TOTAL_LOSS no longer writes to damage processing queues
 - process-loss accepts photo_url, note, created_by, category, severity

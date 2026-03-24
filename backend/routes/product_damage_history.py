@@ -1338,6 +1338,73 @@ async def send_to_washing(damage_id: str, data: dict, db: Session = Depends(get_
 
 
 
+
+@router.get("/photo-records")
+async def get_photo_records(db: Session = Depends(get_rh_db)):
+    """Список фіксацій (photo_only) — фото до видачі/при поверненні для порівняння."""
+    result = db.execute(text("""
+        SELECT 
+            pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
+            pdh.order_id, pdh.order_number,
+            pdh.damage_type, pdh.severity, pdh.fee,
+            pdh.photo_url, pdh.note,
+            pdh.processing_status,
+            pdh.created_at, pdh.created_by,
+            pdh.qty, pdh.fee_per_item,
+            p.image_url as product_image,
+            pdh.stage, pdh.damage_code
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON pdh.product_id = p.product_id
+        WHERE pdh.processing_type = 'photo_only'
+        ORDER BY pdh.created_at DESC
+    """))
+    
+    items = []
+    for row in result:
+        items.append({
+            "id": row[0],
+            "product_id": row[1],
+            "sku": row[2],
+            "product_name": row[3],
+            "category": row[4],
+            "order_id": row[5],
+            "order_number": row[6],
+            "damage_type": row[7],
+            "severity": row[8],
+            "fee": float(row[9]) if row[9] else 0.0,
+            "photo_url": row[10],
+            "note": row[11],
+            "processing_status": row[12],
+            "created_at": row[13].isoformat() if row[13] else None,
+            "created_by": row[14],
+            "qty": row[15] or 1,
+            "fee_per_item": float(row[16]) if row[16] else 0.0,
+            "product_image": row[17],
+            "stage": row[18] or "",
+            "damage_code": row[19] or "",
+        })
+    
+    return {"items": items, "total": len(items)}
+
+@router.delete("/photo-records/{record_id}")
+async def delete_photo_record(record_id: str, db: Session = Depends(get_rh_db)):
+    """Видалити фіксацію (photo_only запис)."""
+    # Перевіряємо що це саме photo_only запис
+    row = db.execute(text("""
+        SELECT processing_type FROM product_damage_history WHERE id = :id
+    """), {"id": record_id}).fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Запис не знайдено")
+    if row[0] != 'photo_only':
+        raise HTTPException(status_code=400, detail="Можна видаляти тільки фіксації (photo_only)")
+    
+    db.execute(text("DELETE FROM product_damage_history WHERE id = :id"), {"id": record_id})
+    db.commit()
+    
+    return {"success": True, "message": "Фіксацію видалено"}
+
+
 @router.get("/written-off")
 async def get_written_off_items(db: Session = Depends(get_rh_db)):
     """Список всіх списаних товарів (повна втрата)."""

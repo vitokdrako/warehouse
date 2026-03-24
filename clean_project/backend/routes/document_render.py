@@ -243,6 +243,8 @@ def build_document_context(
             damage_rows = []
             damage_total = 0
             for drow in damage_result:
+                proc_type = drow[9] or ""
+                is_photo_only = proc_type == 'photo_only'
                 damage_rows.append({
                     "name": drow[0],
                     "description": drow[1] + (f" - {drow[2]}" if drow[2] else ""),
@@ -252,7 +254,9 @@ def build_document_context(
                     "qty": drow[6] or 1,
                     "severity": drow[7] or "",
                     "damage_code": drow[8] or "",
-                    "processing_type": drow[9] or "",
+                    "processing_type": proc_type,
+                    "is_photo_only": is_photo_only,
+                    "label": "Фіксація" if is_photo_only else ("Повна втрата" if drow[8] == 'TOTAL_LOSS' else "В стан декору"),
                 })
                 damage_total += float(drow[3] or 0)
             

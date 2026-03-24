@@ -2544,11 +2544,22 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                 }
         
         # === 8. TOTALS ===
-        # ВАЖЛИВО: total_price в БД = сума ВЖЕ зі знижкою
-        total_price_stored = float(order_row[5] or 0)  # 79,812 (після знижки)
-        discount = float(order_row[9] or 0)              # 8,868
-        rental_before_discount = total_price_stored + discount  # 88,680 (до знижки)
-        total_after_discount = total_price_stored               # 79,812 (після знижки)
+        # Визначаємо чи total_price зберігає ціну ДО чи ПІСЛЯ знижки
+        # Якщо є платіж типу 'discount' - знижка записана окремо, total_price = ДО знижки
+        total_price_stored = float(order_row[5] or 0)
+        discount = float(order_row[9] or 0)
+        
+        has_discount_payment = any(p['payment_type'] == 'discount' for p in payments)
+        
+        if has_discount_payment and discount > 0:
+            # total_price = ціна ДО знижки, знижка записана окремою оплатою
+            rental_before_discount = total_price_stored
+            total_after_discount = total_price_stored - discount
+        else:
+            # total_price = ціна ПІСЛЯ знижки (або без знижки)
+            rental_before_discount = total_price_stored + discount
+            total_after_discount = total_price_stored
+        
         rent_due = max(0, total_after_discount - rent_paid - advance_paid)
         
         totals = {

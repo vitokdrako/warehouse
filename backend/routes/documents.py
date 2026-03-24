@@ -2432,12 +2432,21 @@ async def preview_settlement_act(
     additional_total = sum(float(r[1] or 0) for r in additional_services)
 
     # === 7. CALCULATE TOTALS ===
-    # ВАЖЛИВО: total_price в БД = сума ВЖЕ зі знижкою
-    total_price_stored = float(order_row[6] or 0)  # 79,812 (після знижки)
-    discount = float(order_row[10] or 0)             # 8,868
+    total_price_stored = float(order_row[6] or 0)
+    discount = float(order_row[10] or 0)
     discount_percent = float(order_row[11] or 0)
-    rent_total = total_price_stored + discount       # 88,680 (до знижки)
-    rent_after_discount = total_price_stored          # 79,812 (після знижки)
+    
+    # Визначаємо чи total_price ДО чи ПІСЛЯ знижки
+    has_discount_payment = any(p[1] == 'discount' for p in payments_rows)
+    
+    if has_discount_payment and discount > 0:
+        # total_price = ціна ДО знижки
+        rent_total = total_price_stored
+        rent_after_discount = total_price_stored - discount
+    else:
+        # total_price = ціна ПІСЛЯ знижки (або без знижки)
+        rent_total = total_price_stored + discount
+        rent_after_discount = total_price_stored
 
     grand_total_charges = rent_after_discount + additional_total + damage_final + late_final
 

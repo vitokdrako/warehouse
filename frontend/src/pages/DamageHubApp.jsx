@@ -1081,6 +1081,7 @@ export default function DamageHubApp() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Фото шкоди</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Коментар</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Хто / Коли / Звідки</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-red-700 w-10"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1111,9 +1112,39 @@ export default function DamageHubApp() {
                       <td className="px-3 py-2 text-xs text-slate-500">
                         <div>{item.created_by || '—'}</div>
                         <div>{fmtTime(item.created_at)}</div>
-                        <div className="text-[10px] text-slate-400">
-                          {item.source === 'return' ? 'Повернення' : item.source === 'reaudit' ? 'Переоблік' : item.order_number || '—'}
+                        <div className="text-[10px]">
+                          {item.source === 'return' || item.stage === 'return' ? (
+                            <span className="text-emerald-600 font-medium">Повернення {item.order_number ? `• ${item.order_number}` : ''}</span>
+                          ) : item.source === 'reaudit' || item.stage === 'reaudit' ? (
+                            <span className="text-blue-500">Переоблік</span>
+                          ) : item.order_number ? (
+                            <span className="text-slate-400">{item.order_number}</span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
                         </div>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          data-testid={`delete-written-off-${item.id}`}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Видалити запис"
+                          onClick={async () => {
+                            if (!window.confirm(`Видалити запис списання "${item.product_name}"?`)) return;
+                            try {
+                              const res = await authFetch(`${BACKEND_URL}/api/product-damage-history/${item.id}`, { method: 'DELETE' });
+                              if (res.ok) {
+                                setWrittenOffItems(prev => prev.filter(i => i.id !== item.id));
+                                setWrittenOffStats(prev => ({
+                                  total_items: prev.total_items - (item.qty || 1),
+                                  total_loss_amount: prev.total_loss_amount - (item.fee || 0)
+                                }));
+                              }
+                            } catch (e) { console.error('Delete error:', e); }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}

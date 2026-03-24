@@ -1337,6 +1337,66 @@ async def send_to_washing(damage_id: str, data: dict, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
+
+@router.get("/written-off")
+async def get_written_off_items(db: Session = Depends(get_rh_db)):
+    """Список всіх списаних товарів (повна втрата)."""
+    result = db.execute(text("""
+        SELECT 
+            pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
+            pdh.order_id, pdh.order_number,
+            pdh.damage_type, pdh.severity, pdh.fee,
+            pdh.photo_url, pdh.note,
+            pdh.processing_status,
+            pdh.created_at, pdh.created_by,
+            pdh.qty, pdh.fee_per_item,
+            p.image_url as product_image,
+            p.quantity as current_stock,
+            pdh.stage
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON pdh.product_id = p.product_id
+        WHERE pdh.damage_code = 'TOTAL_LOSS'
+           OR pdh.processing_type = 'total_loss'
+           OR pdh.processing_status = 'written_off'
+        ORDER BY pdh.created_at DESC
+    """))
+    
+    items = []
+    for row in result:
+        items.append({
+            "id": row[0],
+            "product_id": row[1],
+            "sku": row[2],
+            "product_name": row[3],
+            "category": row[4],
+            "order_id": row[5],
+            "order_number": row[6],
+            "damage_type": row[7],
+            "severity": row[8],
+            "fee": float(row[9]) if row[9] else 0.0,
+            "photo_url": row[10],
+            "note": row[11],
+            "processing_status": row[12],
+            "created_at": row[13].isoformat() if row[13] else None,
+            "created_by": row[14],
+            "qty": row[15] or 1,
+            "fee_per_item": float(row[16]) if row[16] else 0.0,
+            "product_image": row[17],
+            "current_stock": row[18] or 0,
+            "source": row[19] or "return",
+        })
+    
+    total_loss_amount = sum(i["fee"] for i in items)
+    total_items = sum(i["qty"] for i in items)
+    
+    return {
+        "items": items,
+        "total": len(items),
+        "total_items": total_items,
+        "total_loss_amount": total_loss_amount
+    }
+
+
 @router.post("/quick-add-to-queue")
 async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
     """

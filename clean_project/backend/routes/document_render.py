@@ -22,6 +22,7 @@ import uuid
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from database_rentalhub import get_rh_db
+from services.company_config import get_landlord_config, get_company_config
 
 router = APIRouter(prefix="/api/documents/render", tags=["document-rendering"])
 
@@ -31,26 +32,12 @@ router = APIRouter(prefix="/api/documents/render", tags=["document-rendering"])
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "documents")
 
+from services.template_loader import DBOverrideLoader
+_file_loader_render = FileSystemLoader(TEMPLATES_DIR)
 jinja_env = Environment(
-    loader=FileSystemLoader(TEMPLATES_DIR),
+    loader=DBOverrideLoader(_file_loader_render),
     autoescape=select_autoescape(['html', 'xml'])
 )
-
-# ============================================================
-# CONSTANTS
-# ============================================================
-
-LANDLORD_CONFIG = {
-    "name": "ФОП Николенко Наталя Станіславівна",
-    "tax_status": "платник єдиного податку",
-    "tax_id": "",
-    "iban": "",
-    "address": "м. Київ",
-    "signer_name": "Николенко Н.С.",
-    "signer_role": ""
-}
-
-WAREHOUSE_ADDRESS = "м. Київ, вул. Будіндустрії 4"
 
 PAYER_TYPE_LABELS = {
     "individual": "Фізична особа",
@@ -140,6 +127,9 @@ def build_document_context(
 ) -> Dict[str, Any]:
     """Build full document context from database"""
     
+    landlord = get_landlord_config(db)
+    company = get_company_config(db)
+    
     context = {
         "meta": {
             "doc_type": doc_type,
@@ -149,7 +139,8 @@ def build_document_context(
         },
         "agreement": {},
         "order": {},
-        "landlord": LANDLORD_CONFIG.copy(),
+        "landlord": {k: v for k, v in landlord.items() if k != "warehouse_address"},
+        "company": company,
         "tenant": {},
         "items": [],
         "totals": {},
@@ -194,7 +185,7 @@ def build_document_context(
                 "issue_date": issue_date["formatted"],
                 "return_date": return_date["formatted"],
                 "days": order_row[7] or 1,
-                "warehouse_address": WAREHOUSE_ADDRESS,
+                "warehouse_address": landlord.get("warehouse_address", "м. Київ, вул. Будіндустрії 4"),
                 "pickup_time": "17:00",
                 "deal_mode": order_row[12] or "rent"
             }
@@ -242,7 +233,9 @@ def build_document_context(
             # Load damage data
             damage_result = db.execute(text("""
                 SELECT 
-                    pdh.product_name, pdh.damage_type, pdh.note, pdh.fee
+                    pdh.product_name, pdh.damage_type, pdh.note, pdh.fee,
+                    pdh.photo_url, pdh.sku, pdh.qty, pdh.severity,
+                    pdh.damage_code, pdh.processing_type
                 FROM product_damage_history pdh
                 WHERE pdh.order_id = :order_id
             """), {"order_id": order_id})
@@ -253,7 +246,13 @@ def build_document_context(
                 damage_rows.append({
                     "name": drow[0],
                     "description": drow[1] + (f" - {drow[2]}" if drow[2] else ""),
-                    "amount": float(drow[3] or 0)
+                    "amount": float(drow[3] or 0),
+                    "photo_url": drow[4] or "",
+                    "sku": drow[5] or "",
+                    "qty": drow[6] or 1,
+                    "severity": drow[7] or "",
+                    "damage_code": drow[8] or "",
+                    "processing_type": drow[9] or "",
                 })
                 damage_total += float(drow[3] or 0)
             

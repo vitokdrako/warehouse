@@ -692,8 +692,13 @@ class ProcessLossRequest(BaseModel):
     loss_amount: float
     order_id: Optional[int] = None
     order_number: Optional[str] = None
-    version_id: Optional[int] = None  # ID часткового повернення
-    skip_damage_record: bool = False  # True якщо DamageModal вже створив запис
+    version_id: Optional[int] = None
+    skip_damage_record: bool = False
+    photo_url: Optional[str] = None
+    note: Optional[str] = None
+    created_by: Optional[str] = None
+    category: Optional[str] = None
+    severity: Optional[str] = 'critical'
 
 
 @router.post("/process-loss")
@@ -753,26 +758,30 @@ async def process_loss_from_damage_modal(
             damage_id = str(uuid.uuid4())
             db.execute(text("""
                 INSERT INTO product_damage_history 
-                (id, product_id, sku, product_name, order_id, order_number, stage, 
-                 damage_type, damage_code, severity, fee, fee_per_item, qty, note,
+                (id, product_id, sku, product_name, category, order_id, order_number, stage, 
+                 damage_type, damage_code, severity, fee, fee_per_item, qty, photo_url, note,
                  processing_type, processing_status, created_by, created_at)
                 VALUES 
-                (:id, :product_id, :sku, :name, :order_id, :order_number, 'return',
-                 'Повна втрата', 'TOTAL_LOSS', 'critical', :fee, :fee_per_item, :qty, :note,
-                 'total_loss', 'written_off', 'system', NOW())
+                (:id, :product_id, :sku, :name, :category, :order_id, :order_number, 'return',
+                 'Повна втрата', 'TOTAL_LOSS', :severity, :fee, :fee_per_item, :qty, :photo_url, :note,
+                 'total_loss', 'written_off', :created_by, NOW())
             """), {
                 "id": damage_id,
                 "product_id": data.product_id,
                 "sku": data.sku,
                 "name": data.name,
+                "category": data.category or "",
                 "order_id": data.order_id,
                 "order_number": order_number,
+                "severity": data.severity or "critical",
                 "fee": data.loss_amount,
                 "fee_per_item": data.loss_amount / data.qty if data.qty > 0 else data.loss_amount,
                 "qty": data.qty,
-                "note": f"Товар не повернуто клієнтом. Повна втрата. Сума: ₴{data.loss_amount:.2f}"
+                "photo_url": data.photo_url,
+                "note": data.note or f"Повна втрата. Сума: ₴{data.loss_amount:.2f}",
+                "created_by": data.created_by or "system",
             })
-            print(f"[ProcessLoss] 📋 Записано в кабінет шкоди (damage_id: {damage_id})")
+            print(f"[ProcessLoss] 📋 Записано в список списаних (damage_id: {damage_id})")
         else:
             print(f"[ProcessLoss] ℹ️ damage_record пропущено (вже створено через DamageModal)")
         

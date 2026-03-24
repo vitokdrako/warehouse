@@ -77,6 +77,14 @@ Build a comprehensive rental management system (RentalHub) for FarforRent — a 
 - Client sync based on email uniqueness
 - Product dimensions from OpenCart (height, width, depth)
 
+#### Write-off Logic Separation + Written Off Section — March 18, 2026
+- DamageModal TOTAL_LOSS no longer writes to damage processing queues
+- process-loss accepts photo_url, note, created_by, category, severity
+- New "Списані" section in DamageHubApp with full item details
+- New API: GET /api/product-damage-history/written-off
+- Defect act template now shows damage photos
+- Return quantity updates correctly after write-off
+
 #### Total Loss Implementation — March 18, 2026
 - Two-step confirmation in PartialReturnModal (summary → confirm write-off)
 - process-loss endpoint: reduces quantity, creates fin_payments, product_damage_history, product_history

@@ -710,6 +710,9 @@ export default function DamageHubApp() {
   const [washItems, setWashItems] = useState([]);
   const [restoreItems, setRestoreItems] = useState([]);
   const [laundryItems, setLaundryItems] = useState([]);
+  const [writtenOffItems, setWrittenOffItems] = useState([]);
+  const [writtenOffStats, setWrittenOffStats] = useState({ total_items: 0, total_loss_amount: 0 });
+  const [showWrittenOff, setShowWrittenOff] = useState(false);
   const [batches, setBatches] = useState([]);
   const [batchesLoading, setBatchesLoading] = useState(false);
   
@@ -722,11 +725,16 @@ export default function DamageHubApp() {
         authFetch(`${BACKEND_URL}/api/product-damage-history/processing/wash`).then(r => r.ok ? r.json() : { items: [] }),
         authFetch(`${BACKEND_URL}/api/product-damage-history/processing/restoration`).then(r => r.ok ? r.json() : { items: [] }),
         authFetch(`${BACKEND_URL}/api/product-damage-history/processing/laundry`).then(r => r.ok ? r.json() : { items: [] }),
+        authFetch(`${BACKEND_URL}/api/product-damage-history/written-off`).then(r => r.ok ? r.json() : { items: [], total_items: 0, total_loss_amount: 0 }),
       ]);
       
       setWashItems(results[0].status === 'fulfilled' ? (results[0].value.items || []) : []);
       setRestoreItems(results[1].status === 'fulfilled' ? (results[1].value.items || []) : []);
       setLaundryItems(results[2].status === 'fulfilled' ? (results[2].value.items || []) : []);
+      if (results[3].status === 'fulfilled') {
+        setWrittenOffItems(results[3].value.items || []);
+        setWrittenOffStats({ total_items: results[3].value.total_items || 0, total_loss_amount: results[3].value.total_loss_amount || 0 });
+      }
     } catch (e) {
       console.error("Load error:", e);
     } finally {
@@ -938,6 +946,84 @@ export default function DamageHubApp() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Written Off Section */}
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-4 pb-6">
+        <button 
+          onClick={() => setShowWrittenOff(!showWrittenOff)}
+          className="w-full flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition"
+          data-testid="written-off-toggle"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-1.5 bg-red-100 rounded-lg"><X className="w-4 h-4 text-red-600" /></div>
+            <span className="font-bold text-sm text-red-800">Списані</span>
+            <span className="px-2 py-0.5 bg-red-200 text-red-800 rounded-full text-xs font-bold">{writtenOffItems.length}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-red-600">{writtenOffStats.total_items} шт / ₴{writtenOffStats.total_loss_amount.toLocaleString('uk-UA')}</span>
+            <ChevronDown className={`w-4 h-4 text-red-400 transition-transform ${showWrittenOff ? 'rotate-180' : ''}`} />
+          </div>
+        </button>
+        
+        {showWrittenOff && (
+          <div className="mt-2 border border-red-200 rounded-xl overflow-hidden bg-white">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-red-50 border-b border-red-200">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Фото</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Артикул</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Назва</th>
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-red-700">К-сть</th>
+                    <th className="px-3 py-2 text-right text-xs font-semibold text-red-700">Сума</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Фото шкоди</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Коментар</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-red-700">Хто / Коли / Звідки</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {writtenOffItems.filter(item => {
+                    if (!searchQuery) return true;
+                    const q = searchQuery.toLowerCase();
+                    return (item.sku || '').toLowerCase().includes(q) || (item.product_name || '').toLowerCase().includes(q);
+                  }).map(item => (
+                    <tr key={item.id} className="hover:bg-red-50/50">
+                      <td className="px-3 py-2">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex-shrink-0">
+                          <img src={getImageUrl(item.product_image)} alt="" className="w-full h-full object-cover" onError={handleImageError} />
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs font-bold text-slate-700">{item.sku}</td>
+                      <td className="px-3 py-2 text-slate-800 text-xs max-w-[200px] truncate">{item.product_name}</td>
+                      <td className="px-3 py-2 text-center font-bold text-red-700">{item.qty}</td>
+                      <td className="px-3 py-2 text-right font-bold text-red-700">₴{(item.fee || 0).toLocaleString('uk-UA')}</td>
+                      <td className="px-3 py-2">
+                        {item.photo_url ? (
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 cursor-pointer border-2 border-red-200 hover:border-red-400 transition"
+                            onClick={() => openPhoto(item.photo_url, item.product_name)}>
+                            <img src={getImageUrl(item.photo_url)} alt="damage" className="w-full h-full object-cover" onError={handleImageError} />
+                          </div>
+                        ) : <span className="text-slate-400 text-xs">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-600 max-w-[200px] truncate">{item.note || '—'}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500">
+                        <div>{item.created_by || '—'}</div>
+                        <div>{fmtTime(item.created_at)}</div>
+                        <div className="text-[10px] text-slate-400">
+                          {item.source === 'return' ? 'Повернення' : item.source === 'reaudit' ? 'Переоблік' : item.order_number || '—'}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {writtenOffItems.length === 0 && (
+                    <tr><td colSpan={8} className="px-3 py-8 text-center text-slate-400 text-sm">Немає списаних позицій</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Photo Modal */}

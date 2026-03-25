@@ -124,11 +124,11 @@ async def get_audit_items(
         # Status filter — based on last_audit_date (same logic as stats)
         if status_filter and status_filter != 'all':
             if status_filter == 'critical':
-                # Products with active damage records
+                # Products marked critical in audit_records
                 sql_parts.append("""AND p.product_id IN (
-                    SELECT DISTINCT product_id FROM product_damage_history
-                    WHERE COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
-                    AND processing_type IN ('wash', 'restoration', 'laundry')
+                    SELECT ar_c.product_id FROM audit_records ar_c
+                    WHERE ar_c.status = 'critical'
+                    AND ar_c.audit_date = (SELECT MAX(ar_c2.audit_date) FROM audit_records ar_c2 WHERE ar_c2.product_id = ar_c.product_id)
                 )""")
             elif status_filter == 'needs_recount' or status_filter == 'minor':
                 sql_parts.append("AND (p.last_audit_date IS NULL OR DATEDIFF(CURDATE(), p.last_audit_date) > 180)")
@@ -738,10 +738,10 @@ async def get_audit_stats(
         
         # Підрахунок критичних (активні записи в product_damage_history)
         damages_query = text("""
-            SELECT COUNT(*) as damaged
-            FROM product_damage_history
-            WHERE COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
-            AND processing_type IN ('wash', 'restoration', 'laundry')
+            SELECT COUNT(DISTINCT ar_c.product_id) as critical_count
+            FROM audit_records ar_c
+            WHERE ar_c.status = 'critical'
+            AND ar_c.audit_date = (SELECT MAX(ar_c2.audit_date) FROM audit_records ar_c2 WHERE ar_c2.product_id = ar_c.product_id)
         """)
         
         damages_result = db.execute(damages_query).fetchone()

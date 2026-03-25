@@ -107,8 +107,8 @@ async def get_audit_items(
             LEFT JOIN (
                 SELECT product_id, status 
                 FROM audit_records ar1
-                WHERE ar1.audit_date = (
-                    SELECT MAX(ar2.audit_date) FROM audit_records ar2 WHERE ar2.product_id = ar1.product_id
+                WHERE ar1.id = (
+                    SELECT ar2.id FROM audit_records ar2 WHERE ar2.product_id = ar1.product_id ORDER BY ar2.audit_date DESC LIMIT 1
                 )
             ) ar ON p.product_id = ar.product_id
         """]

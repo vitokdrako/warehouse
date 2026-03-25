@@ -922,9 +922,10 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
       )}
       
       {/* Packing progress bar for preparation cards */}
-      {badge === 'preparation' && order?.items?.length > 0 && (() => {
-        const totalQty = order.items.reduce((s, it) => s + (it.qty || it.quantity || 1), 0);
-        const pickedQty = order.items.reduce((s, it) => s + (it.picked_qty || 0), 0);
+      {badge === 'preparation' && (() => {
+        const items = order?.items || [];
+        const totalQty = items.reduce((s, it) => s + (it.qty || it.quantity || 1), 0);
+        const pickedQty = items.reduce((s, it) => s + (it.picked_qty || 0), 0);
         const progress = totalQty > 0 ? Math.round((pickedQty / totalQty) * 100) : 0;
         return (
           <div className="mt-3 pt-3 border-t border-slate-100" data-testid={`packing-progress-${id}`}>

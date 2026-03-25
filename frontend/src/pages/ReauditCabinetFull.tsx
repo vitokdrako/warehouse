@@ -167,7 +167,7 @@ function AuditCard({ item, onClick }: { item: any; onClick: () => void }) {
       )}>
       <div className="relative mb-2">
         <img src={getImageUrl(item.imageUrl, 'thumb') || FALLBACK_IMAGE} alt={item.name} loading="lazy"
-          className="w-full h-24 lg:h-28 object-cover rounded-lg bg-corp-bg-light" onError={handleImageError} />
+          className="w-full h-20 lg:h-24 object-contain rounded-lg bg-white" onError={handleImageError} />
         <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
           {isDisabled && <Badge tone="slate">Вимкнено</Badge>}
           {isCritical && !isDisabled && <Badge tone="red">Критичний</Badge>}

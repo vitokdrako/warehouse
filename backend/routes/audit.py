@@ -1313,6 +1313,12 @@ async def edit_item_full(
             update_params['zone'] = data['zone']
             changes.append(f"Зона: {data['zone']}")
         
+        # === Image URL ===
+        if 'imageUrl' in data and data['imageUrl']:
+            update_fields.append("image_url = :image_url")
+            update_params['image_url'] = data['imageUrl']
+            changes.append(f"Фото оновлено")
+        
         if 'location' in data and data['location']:
             # Парсинг локації (напр. "A1-10" -> aisle=A1, shelf=10)
             import re

@@ -211,32 +211,29 @@ function PhotoUploader({ item, onUploaded }: { item: any; onUploaded: () => void
       formData.append('file', file)
       const uploadRes = await fetch(`${BACKEND_URL}/api/products/upload-image`, { method: 'POST', body: formData })
       const uploadData = await uploadRes.json()
-      if (!uploadRes.ok || !uploadData.success) { alert('Помилка завантаження'); return }
+      if (!uploadRes.ok || !uploadData.success) { alert('Помилка завантаження: ' + (uploadData.detail || '')); return }
 
-      // Update product image_url
       const token = localStorage.getItem('token')
       const headers: any = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
-      await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/edit-full`, {
+      const updateRes = await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/edit-full`, {
         method: 'PUT', headers,
         body: JSON.stringify({ imageUrl: uploadData.path })
       })
-      onUploaded()
+      if (updateRes.ok) onUploaded()
+      else alert('Фото завантажено, але не збережено в БД')
     } catch (err) { alert('Помилка: ' + String(err)) }
     finally { setUploading(false); if (fileRef.current) fileRef.current.value = '' }
   }
 
   return (
-    <div className="relative group">
+    <div className="relative">
       <img src={getImageUrl(item.imageUrl) || FALLBACK_IMAGE} alt={item.name}
-        className="w-full h-48 md:h-64 object-cover rounded-xl bg-corp-bg-light" onError={handleImageError} />
+        className="w-full h-48 md:h-64 object-contain rounded-xl bg-white border border-corp-border" onError={handleImageError} />
       <button onClick={() => fileRef.current?.click()} disabled={uploading}
-        className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition rounded-xl"
+        className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium bg-white/95 text-slate-700 shadow-md border border-corp-border hover:bg-slate-50 transition active:scale-95"
         data-testid="photo-upload-btn">
-        <span className={cls('flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium bg-white/90 text-slate-700 shadow opacity-0 group-hover:opacity-100 transition',
-          uploading && 'opacity-100')}>
-          <Camera className="w-4 h-4" />{uploading ? 'Завантаження...' : 'Змінити фото'}
-        </span>
+        <Camera className="w-4 h-4" />{uploading ? 'Завантаження...' : 'Змінити фото'}
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
     </div>

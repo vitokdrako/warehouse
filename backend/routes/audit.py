@@ -1080,33 +1080,31 @@ async def get_product_history(
 @router.get("/items/{item_id}/rental-history")
 async def get_rental_history(
     item_id: str,
-    db: Session = Depends(get_oc_db)
+    db: Session = Depends(get_rh_db)
 ):
     """
-    Отримати історію оренд товару з OpenCart таблиць
+    Отримати історію оренд товару з RentalHub (orders + order_items)
     """
     try:
         product_id = int(item_id.replace('A-', ''))
         
-        # Використовуємо OpenCart таблиці: oc_order, oc_order_product
         query = text("""
             SELECT 
                 o.order_id,
-                o.invoice_no as order_number,
-                CONCAT(o.firstname, ' ', o.lastname) as client_name,
-                o.telephone as client_phone,
-                o.date_added as rent_date,
-                o.date_modified as rent_return_date,
-                DATEDIFF(o.date_modified, o.date_added) as rental_days,
-                op.quantity,
-                op.total as total_rental,
-                o.payment_method,
-                o.order_status_id,
-                o.date_added as created_at
-            FROM oc_order_product op
-            INNER JOIN oc_order o ON op.order_id = o.order_id
-            WHERE op.product_id = :product_id
-            ORDER BY o.date_added DESC
+                o.order_number,
+                o.customer_name as client_name,
+                COALESCE(o.customer_phone, o.phone) as client_phone,
+                o.rental_start_date as rent_date,
+                o.rental_end_date as rent_return_date,
+                o.rental_days,
+                oi.quantity,
+                oi.total_rental,
+                o.status,
+                o.created_at
+            FROM order_items oi
+            INNER JOIN orders o ON oi.order_id = o.order_id
+            WHERE oi.product_id = :product_id
+            ORDER BY o.created_at DESC
             LIMIT 50
         """)
         
@@ -1115,20 +1113,9 @@ async def get_rental_history(
         
         rental_history = []
         for row in rows:
-            # Конвертувати дати в ISO формат якщо вони є
             rent_date = row[4].isoformat() if hasattr(row[4], 'isoformat') else str(row[4]) if row[4] else None
             rent_return_date = row[5].isoformat() if hasattr(row[5], 'isoformat') else str(row[5]) if row[5] else None
-            created_at = row[11].isoformat() if hasattr(row[11], 'isoformat') else str(row[11]) if row[11] else None
-            
-            # Mapping order_status_id to status name
-            status_map = {
-                1: 'Очікує',
-                2: 'В обробці',
-                3: 'Відправлено',
-                5: 'Завершено',
-                7: 'Скасовано'
-            }
-            status_name = status_map.get(row[10], 'Невідомо')
+            created_at = row[10].isoformat() if hasattr(row[10], 'isoformat') else str(row[10]) if row[10] else None
             
             rental_history.append({
                 'order_id': row[0],
@@ -1140,8 +1127,8 @@ async def get_rental_history(
                 'rental_days': row[6] or 1,
                 'quantity': row[7],
                 'total_rental': float(row[8]) if row[8] else 0.0,
-                'deposit': 0.0,  # TODO: знайти де зберігається застава в OpenCart
-                'status': status_name,
+                'deposit': 0.0,
+                'status': row[9] or 'Невідомо',
                 'created_at': created_at
             })
         

@@ -1366,8 +1366,9 @@ function ProductCard({ item, onClick, dateFilterActive, selectionMode, isSelecte
       {/* Image */}
       <div className="relative mb-2 lg:mb-3">
         <img
-          src={getImageUrl(item.image)}
+          src={getImageUrl(item.image, 'thumb')}
           alt={item.name}
+          loading="lazy"
           className={cls(
             "w-full h-24 lg:h-28 object-cover rounded-lg bg-corp-bg-light",
             selectionMode && "pl-0"

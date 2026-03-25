@@ -12,9 +12,10 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 /**
  * Перетворює шлях до зображення з БД в повний URL
  * @param {string} url - Шлях до зображення з БД
+ * @param {string} size - 'full' | 'thumb' (228x228 для OpenCart кешу)
  * @returns {string|null} - Повний URL або null
  */
-export const getImageUrl = (url) => {
+export const getImageUrl = (url, size = 'full') => {
   if (!url) return null;
   
   // Вже повний URL
@@ -24,7 +25,6 @@ export const getImageUrl = (url) => {
   
   // Новий формат - uploads/ → використовуємо /api/uploads/ для сумісності з nginx
   if (url.startsWith('uploads/')) {
-    // uploads/products/file.jpg → /api/uploads/products/file.jpg
     const path = url.replace('uploads/', '');
     return `${BACKEND_URL}/api/uploads/${path}`;
   }
@@ -42,6 +42,15 @@ export const getImageUrl = (url) => {
   
   // OpenCart формат - catalog/
   if (url.startsWith('catalog/')) {
+    if (size === 'thumb') {
+      // Кешована мініатюра OpenCart: image/cache/catalog/.../image-228x228.jpg
+      const lastDot = url.lastIndexOf('.');
+      if (lastDot > 0) {
+        const base = url.substring(0, lastDot);
+        const ext = url.substring(lastDot);
+        return `https://www.farforrent.com.ua/image/cache/${base}-228x228${ext}`;
+      }
+    }
     return `https://www.farforrent.com.ua/image/${url}`;
   }
   

@@ -3,11 +3,11 @@
  * ReauditCabinetFull - Кабінет переобліку (паттерн CatalogBoard)
  * Картки товарів → клік → модалка з вкладками (Інфо / Редагування / Шкода / Історія)
  */
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { getImageUrl, handleImageError, FALLBACK_IMAGE } from '../utils/imageHelper'
 import CorporateHeader from '../components/CorporateHeader'
 import ProductConditionPanel from '../components/ProductConditionPanel'
-import { Filter, X, ChevronDown, Search, Check, AlertTriangle, Clock, Package, Edit3, History, Shield, Upload, Download, Plus } from 'lucide-react'
+import { Filter, X, ChevronDown, Search, Check, AlertTriangle, Clock, Package, Edit3, History, Shield, Upload, Download, Plus, Camera, Trash2, Power, PowerOff, Eye, EyeOff } from 'lucide-react'
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 const cls = (...a: (string | false | null | undefined)[]) => a.filter(Boolean).join(' ')
@@ -25,7 +25,7 @@ function Badge({ children, tone = 'slate' }: { children: React.ReactNode; tone?:
   return <span className={cls('inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium', t[tone] || t.slate)}>{children}</span>
 }
 
-function PillButton({ children, onClick, tone = 'slate', disabled = false, className = '' }: any) {
+function PillButton({ children, onClick, tone = 'slate', disabled = false, className = '', ...rest }: any) {
   const t: Record<string, string> = {
     slate: 'bg-slate-900 text-white hover:bg-slate-800',
     green: 'bg-emerald-600 text-white hover:bg-emerald-700',
@@ -34,7 +34,7 @@ function PillButton({ children, onClick, tone = 'slate', disabled = false, class
     ghost: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50',
   }
   return (
-    <button type="button" onClick={onClick} disabled={disabled}
+    <button type="button" onClick={onClick} disabled={disabled} {...rest}
       className={cls('rounded-full px-3 py-1.5 text-xs font-medium transition disabled:opacity-40', t[tone], className)}>
       {children}
     </button>
@@ -45,14 +45,14 @@ function PillButton({ children, onClick, tone = 'slate', disabled = false, class
 function KpiStrip({ stats }: { stats: any }) {
   const items = [
     { label: 'Всього', value: stats.total, color: 'text-slate-800' },
-    { label: 'Переоблікавані', value: stats.ok, color: 'text-emerald-600' },
+    { label: 'Переоблік.', value: stats.ok, color: 'text-emerald-600' },
     { label: 'Потребують', value: stats.minor, color: 'text-amber-600' },
     { label: 'Критичні', value: stats.crit, color: 'text-rose-600' },
   ]
   return (
     <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none" data-testid="kpi-strip">
       {items.map(i => (
-        <div key={i.label} className="flex-shrink-0 text-center min-w-[70px]">
+        <div key={i.label} className="flex-shrink-0 text-center min-w-[60px]">
           <div className={cls('text-lg lg:text-xl font-bold', i.color)}>{fmtUA(i.value)}</div>
           <div className="text-[10px] lg:text-xs text-corp-text-muted">{i.label}</div>
         </div>
@@ -62,7 +62,7 @@ function KpiStrip({ stats }: { stats: any }) {
 }
 
 /* ─────────── Sidebar filters ─────────── */
-function Sidebar({ categories, subcategoriesMap, filters, setFilters, onReset, stats, isMobileOpen, onMobileClose }: any) {
+function Sidebar({ categories, subcategoriesMap, filters, setFilters, onReset, isMobileOpen, onMobileClose }: any) {
   const [expanded, setExpanded] = useState({ category: true, status: true, search: true })
   const toggle = (k: string) => setExpanded((p: any) => ({ ...p, [k]: !p[k] }))
 
@@ -75,12 +75,10 @@ function Sidebar({ categories, subcategoriesMap, filters, setFilters, onReset, s
         'fixed inset-y-0 left-0 w-[85%] max-w-[300px] bg-slate-50 lg:bg-transparent overflow-y-auto p-4 lg:p-0',
         isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       )}>
-        {/* Mobile close */}
         <div className="lg:hidden flex items-center justify-between mb-3 pb-2 border-b border-slate-200">
           <h2 className="font-semibold text-slate-800">Фільтри</h2>
           <button onClick={onMobileClose} className="p-2 hover:bg-slate-200 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
-
         {/* Search */}
         <div className="bg-white rounded-xl border border-corp-border overflow-hidden">
           <button onClick={() => toggle('search')} className="w-full flex items-center justify-between p-3">
@@ -94,7 +92,6 @@ function Sidebar({ categories, subcategoriesMap, filters, setFilters, onReset, s
               data-testid="reaudit-search" />
           </div>
         </div>
-
         {/* Category */}
         <div className="bg-white rounded-xl border border-corp-border overflow-hidden">
           <button onClick={() => toggle('category')} className="w-full flex items-center justify-between p-3">
@@ -107,8 +104,7 @@ function Sidebar({ categories, subcategoriesMap, filters, setFilters, onReset, s
               <option value="">Всі категорії</option>
               {categories.map((c: string) => <option key={c} value={c}>{c}</option>)}
             </select>
-            <select value={filters.subcategory}
-              onChange={e => setFilters({ ...filters, subcategory: e.target.value })}
+            <select value={filters.subcategory} onChange={e => setFilters({ ...filters, subcategory: e.target.value })}
               disabled={!filters.category} data-testid="reaudit-subcategory-filter"
               className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm disabled:opacity-50">
               <option value="">{filters.category ? 'Всі підкатегорії' : 'Оберіть категорію'}</option>
@@ -116,19 +112,19 @@ function Sidebar({ categories, subcategoriesMap, filters, setFilters, onReset, s
             </select>
           </div>
         </div>
-
         {/* Status */}
         <div className="bg-white rounded-xl border border-corp-border overflow-hidden">
           <button onClick={() => toggle('status')} className="w-full flex items-center justify-between p-3">
-            <span className="font-semibold text-sm text-corp-text-dark">Статус переобліку</span>
+            <span className="font-semibold text-sm text-corp-text-dark">Статус</span>
             <ChevronDown className={cls('w-4 h-4 text-slate-500 transition-transform lg:hidden', expanded.status && 'rotate-180')} />
           </button>
           <div className={cls('px-3 pb-3 space-y-1', !expanded.status && 'hidden lg:block')}>
             {[
-              { val: '', label: 'Усі', icon: Package },
+              { val: '', label: 'Усі активні', icon: Package },
               { val: 'ok', label: 'Переоблікавані', icon: Check },
               { val: 'needs_recount', label: 'Потребують', icon: Clock },
               { val: 'critical', label: 'Критичні', icon: AlertTriangle },
+              { val: 'disabled', label: 'Відключені', icon: EyeOff },
             ].map(s => (
               <button key={s.val} onClick={() => setFilters({ ...filters, statusFilter: s.val })}
                 className={cls('w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition',
@@ -139,7 +135,6 @@ function Sidebar({ categories, subcategoriesMap, filters, setFilters, onReset, s
             ))}
           </div>
         </div>
-
         <button onClick={() => { onReset(); onMobileClose?.() }}
           className="w-full py-2 text-sm text-corp-text-muted hover:text-rose-600 hover:bg-rose-50 rounded-lg border border-corp-border transition"
           data-testid="reaudit-reset-filters">
@@ -159,25 +154,27 @@ function AuditCard({ item, onClick }: { item: any; onClick: () => void }) {
   const days = item.daysFromLastAudit
   const isOverdue = days > 180
   const isCritical = item.status === 'critical'
+  const isDisabled = item.isDisabled
   const auditLabel = days < 999 ? `${days}д` : 'Ніколи'
 
   return (
     <div onClick={onClick} data-testid={`audit-card-${item.product_id}`}
       className={cls(
         'bg-white rounded-xl border p-2 lg:p-3 hover:shadow-md transition-all cursor-pointer group relative',
-        isCritical ? 'border-rose-300 bg-rose-50/30' : isOverdue ? 'border-amber-300 bg-amber-50/20' : 'border-corp-border'
+        isDisabled ? 'border-slate-300 opacity-60' :
+        isCritical ? 'border-rose-300 bg-rose-50/30' :
+        isOverdue ? 'border-amber-300 bg-amber-50/20' : 'border-corp-border'
       )}>
-      {/* Image */}
       <div className="relative mb-2">
         <img src={getImageUrl(item.imageUrl, 'thumb') || FALLBACK_IMAGE} alt={item.name} loading="lazy"
           className="w-full h-24 lg:h-28 object-cover rounded-lg bg-corp-bg-light" onError={handleImageError} />
         <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
-          {isCritical && <Badge tone="red">Критичний</Badge>}
-          {isOverdue && !isCritical && <Badge tone="amber">{auditLabel}</Badge>}
-          {!isOverdue && !isCritical && <Badge tone="green">{auditLabel}</Badge>}
+          {isDisabled && <Badge tone="slate">Вимкнено</Badge>}
+          {isCritical && !isDisabled && <Badge tone="red">Критичний</Badge>}
+          {isOverdue && !isCritical && !isDisabled && <Badge tone="amber">{auditLabel}</Badge>}
+          {!isOverdue && !isCritical && !isDisabled && <Badge tone="green">{auditLabel}</Badge>}
         </div>
       </div>
-      {/* Info */}
       <div className="space-y-0.5">
         <div className="text-[10px] lg:text-xs text-corp-text-muted">{item.code}</div>
         <div className="font-medium text-corp-text-dark text-xs lg:text-sm line-clamp-2 group-hover:text-corp-primary transition-colors min-h-[32px] lg:min-h-[40px]">
@@ -200,27 +197,65 @@ function AuditCard({ item, onClick }: { item: any; onClick: () => void }) {
   )
 }
 
+/* ─────────── Photo upload ─────────── */
+function PhotoUploader({ item, onUploaded }: { item: any; onUploaded: () => void }) {
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const uploadRes = await fetch(`${BACKEND_URL}/api/products/upload-image`, { method: 'POST', body: formData })
+      const uploadData = await uploadRes.json()
+      if (!uploadRes.ok || !uploadData.success) { alert('Помилка завантаження'); return }
+
+      // Update product image_url
+      const token = localStorage.getItem('token')
+      const headers: any = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/edit-full`, {
+        method: 'PUT', headers,
+        body: JSON.stringify({ imageUrl: uploadData.path })
+      })
+      onUploaded()
+    } catch (err) { alert('Помилка: ' + String(err)) }
+    finally { setUploading(false); if (fileRef.current) fileRef.current.value = '' }
+  }
+
+  return (
+    <div className="relative group">
+      <img src={getImageUrl(item.imageUrl) || FALLBACK_IMAGE} alt={item.name}
+        className="w-full h-48 md:h-64 object-cover rounded-xl bg-corp-bg-light" onError={handleImageError} />
+      <button onClick={() => fileRef.current?.click()} disabled={uploading}
+        className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition rounded-xl"
+        data-testid="photo-upload-btn">
+        <span className={cls('flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium bg-white/90 text-slate-700 shadow opacity-0 group-hover:opacity-100 transition',
+          uploading && 'opacity-100')}>
+          <Camera className="w-4 h-4" />{uploading ? 'Завантаження...' : 'Змінити фото'}
+        </span>
+      </button>
+      <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+    </div>
+  )
+}
+
 /* ─────────── Modal: Tab - Info ─────────── */
-function TabInfo({ item, onMarkAudited, loadDamages, damages }: any) {
+function TabInfo({ item, onMarkAudited, onToggle, onDelete, onShowCondition }: any) {
   const [marking, setMarking] = useState(false)
 
   const handleMark = async () => {
     setMarking(true)
-    try {
-      await onMarkAudited(item)
-    } finally {
-      setMarking(false)
-    }
+    try { await onMarkAudited(item) } finally { setMarking(false) }
   }
 
   return (
     <div className="space-y-4">
-      {/* Photo + meta */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <img src={getImageUrl(item.imageUrl) || FALLBACK_IMAGE} alt={item.name}
-            className="w-full h-48 md:h-64 object-cover rounded-xl bg-corp-bg-light" onError={handleImageError} />
-        </div>
+        <PhotoUploader item={item} onUploaded={() => onMarkAudited(item, true)} />
         <div className="space-y-3">
           <div>
             <div className="text-xs text-corp-text-muted">{item.code}</div>
@@ -236,12 +271,29 @@ function TabInfo({ item, onMarkAudited, loadDamages, damages }: any) {
           <div className="text-xs text-corp-text-muted">
             Останній переоблік: <strong>{item.daysFromLastAudit < 999 ? `${item.daysFromLastAudit} днів тому` : 'Ніколи'}</strong>
           </div>
-          <PillButton tone="green" onClick={handleMark} disabled={marking} data-testid="mark-audited-btn">
-            <span className="flex items-center gap-1"><Check className="w-3.5 h-3.5" />{marking ? 'Зберігаю...' : 'Зафіксувати переоблік'}</span>
-          </PillButton>
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2">
+            <PillButton tone="green" onClick={handleMark} disabled={marking} data-testid="mark-audited-btn">
+              <span className="flex items-center gap-1"><Check className="w-3.5 h-3.5" />{marking ? '...' : 'Переоблік'}</span>
+            </PillButton>
+            <PillButton tone="ghost" onClick={onShowCondition} data-testid="condition-log-btn">
+              <span className="flex items-center gap-1"><History className="w-3.5 h-3.5" />Журнал стану</span>
+            </PillButton>
+          </div>
+          {/* Toggle / Delete */}
+          <div className="flex gap-2 pt-2 border-t border-corp-border">
+            <button onClick={() => onToggle(item)} data-testid="toggle-product-btn"
+              className={cls('flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border transition',
+                item.isDisabled ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' : 'border-amber-200 text-amber-700 hover:bg-amber-50')}>
+              {item.isDisabled ? <><Eye className="w-3.5 h-3.5" />Увімкнути</> : <><EyeOff className="w-3.5 h-3.5" />Вимкнути</>}
+            </button>
+            <button onClick={() => onDelete(item)} data-testid="delete-product-btn"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border border-rose-200 text-rose-600 hover:bg-rose-50 transition">
+              <Trash2 className="w-3.5 h-3.5" />Видалити
+            </button>
+          </div>
         </div>
       </div>
-      {/* Description */}
       {item.description && (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="text-xs font-semibold text-corp-text-dark mb-1">Опис</div>
@@ -254,11 +306,9 @@ function TabInfo({ item, onMarkAudited, loadDamages, damages }: any) {
           <div className="text-xs text-corp-text-main whitespace-pre-wrap">{item.careInstructions}</div>
         </div>
       )}
-      {/* Lifecycle summary */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-corp-text-main">
         <div className="font-semibold text-corp-text-dark mb-1">Життєвий цикл</div>
         <p>Предмет був в оренді <strong>{item.rentalsCount}</strong> разів та приніс <strong>{fmtUA(item.totalProfit)} &#8372;</strong> доходу. Кейсів шкоди: <strong>{item.damagesCount}</strong>.</p>
-        {item.daysFromLastAudit < 999 && <p className="mt-1">Останній переоблік: <strong>{item.daysFromLastAudit}</strong> днів тому.</p>}
       </div>
     </div>
   )
@@ -289,21 +339,14 @@ function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, sh
       const token = localStorage.getItem('token')
       const headers: any = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
-
-      // edit-full
       const editRes = await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/edit-full`, {
-        method: 'PUT', headers,
-        body: JSON.stringify(form)
+        method: 'PUT', headers, body: JSON.stringify(form)
       })
-      const editResult = await editRes.json()
-      if (!editRes.ok) { alert('Помилка: ' + (editResult.detail || '')); return }
-
-      // update-info
+      if (!editRes.ok) { const r = await editRes.json(); alert('Помилка: ' + (r.detail || '')); return }
       await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/update-info`, {
         method: 'PUT', headers,
         body: JSON.stringify({ description: form.description, care_instructions: form.careInstructions })
       })
-
       onSave()
     } catch (e) { alert('Помилка: ' + String(e)) }
     finally { setSaving(false) }
@@ -311,25 +354,18 @@ function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, sh
 
   return (
     <div className="space-y-4 text-xs">
-      {/* Row: name + code */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div><label className="block text-corp-text-muted mb-1">Назва</label>
-          <input value={form.name} onChange={e => f('name', e.target.value)}
-            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" data-testid="edit-name" /></div>
+          <input value={form.name} onChange={e => f('name', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" data-testid="edit-name" /></div>
         <div><label className="block text-corp-text-muted mb-1">SKU</label>
-          <input value={form.code} onChange={e => f('code', e.target.value)}
-            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
+          <input value={form.code} onChange={e => f('code', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
       </div>
-      {/* Prices */}
       <div className="grid grid-cols-2 gap-3">
         <div><label className="block text-corp-text-muted mb-1">Ціна купівлі</label>
-          <input type="number" value={form.price} onChange={e => f('price', Number(e.target.value))}
-            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
-        <div><label className="block text-corp-text-muted mb-1">Ціна оренди / день</label>
-          <input type="number" value={form.rentalPrice} onChange={e => f('rentalPrice', Number(e.target.value))}
-            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
+          <input type="number" value={form.price} onChange={e => f('price', Number(e.target.value))} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
+        <div><label className="block text-corp-text-muted mb-1">Ціна оренди</label>
+          <input type="number" value={form.rentalPrice} onChange={e => f('rentalPrice', Number(e.target.value))} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
       </div>
-      {/* Category */}
       <div className="grid grid-cols-2 gap-3">
         <div><label className="block text-corp-text-muted mb-1">Категорія</label>
           <select value={form.category} onChange={e => { f('category', e.target.value); f('subcategory', '') }}
@@ -338,21 +374,17 @@ function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, sh
             {categories.map((c: string) => <option key={c} value={c}>{c}</option>)}
           </select></div>
         <div><label className="block text-corp-text-muted mb-1">Підкатегорія</label>
-          <select value={form.subcategory} onChange={e => f('subcategory', e.target.value)}
-            disabled={!form.category}
+          <select value={form.subcategory} onChange={e => f('subcategory', e.target.value)} disabled={!form.category}
             className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm disabled:opacity-50">
             <option value="">—</option>
             {(subcategoriesMap[form.category] || []).map((s: string) => <option key={s} value={s}>{s}</option>)}
           </select></div>
       </div>
-      {/* Props */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div><label className="block text-corp-text-muted mb-1">Колір</label>
-          <input value={form.color} onChange={e => f('color', e.target.value)}
-            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
+          <input value={form.color} onChange={e => f('color', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
         <div><label className="block text-corp-text-muted mb-1">Матеріал</label>
-          <input value={form.material} onChange={e => f('material', e.target.value)}
-            className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
+          <input value={form.material} onChange={e => f('material', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
         <div><label className="block text-corp-text-muted mb-1">Форма</label>
           <input value={form.shape} onChange={e => f('shape', e.target.value)} list="shapes-list"
             className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" />
@@ -361,7 +393,6 @@ function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, sh
           <input type="number" value={form.qty} onChange={e => f('qty', Number(e.target.value))} min={0}
             className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" data-testid="edit-qty" /></div>
       </div>
-      {/* Dimensions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div><label className="block text-corp-text-muted mb-1">Висота (см)</label>
           <input type="number" value={form.height} onChange={e => f('height', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
@@ -372,10 +403,8 @@ function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, sh
         <div><label className="block text-corp-text-muted mb-1">Діаметр (см)</label>
           <input type="number" value={form.diameter} onChange={e => f('diameter', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
       </div>
-      {/* Zone */}
       <div><label className="block text-corp-text-muted mb-1">Зона / Стелаж</label>
-        <input value={form.zone} onChange={e => f('zone', e.target.value)}
-          className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" placeholder="A1-10" /></div>
+        <input value={form.zone} onChange={e => f('zone', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" placeholder="A1-10" /></div>
       {/* Hashtags */}
       <div>
         <label className="block text-corp-text-muted mb-1">Хештеги</label>
@@ -395,14 +424,10 @@ function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, sh
           <PillButton tone="ghost" onClick={() => { addTag(tagInput.trim()); setTagInput('') }}>+</PillButton>
         </div>
       </div>
-      {/* Description */}
       <div><label className="block text-corp-text-muted mb-1">Опис</label>
-        <textarea rows={3} value={form.description} onChange={e => f('description', e.target.value)}
-          className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm resize-none" /></div>
+        <textarea rows={3} value={form.description} onChange={e => f('description', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm resize-none" /></div>
       <div><label className="block text-corp-text-muted mb-1">Інструкція по догляду</label>
-        <textarea rows={2} value={form.careInstructions} onChange={e => f('careInstructions', e.target.value)}
-          className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm resize-none" /></div>
-      {/* Save */}
+        <textarea rows={2} value={form.careInstructions} onChange={e => f('careInstructions', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm resize-none" /></div>
       <div className="flex justify-end">
         <PillButton tone="green" onClick={handleSave} disabled={saving} data-testid="save-edit-btn">
           {saving ? 'Зберігаю...' : 'Зберегти зміни'}
@@ -422,18 +447,13 @@ function TabDamage({ item, onDone }: any) {
   const [damages, setDamages] = useState<any[]>([])
   const [loadingDmg, setLoadingDmg] = useState(false)
 
-  useEffect(() => {
-    loadDamages()
-  }, [item.id])
+  useEffect(() => { loadDamages() }, [item.id])
 
   const loadDamages = async () => {
     setLoadingDmg(true)
     try {
       const res = await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/damages`)
-      if (res.ok) {
-        const data = await res.json()
-        setDamages(data.damages || data || [])
-      }
+      if (res.ok) { const d = await res.json(); setDamages(d.damages || d || []) }
     } catch {} finally { setLoadingDmg(false) }
   }
 
@@ -457,13 +477,12 @@ function TabDamage({ item, onDone }: any) {
       if (actionType === 'total_loss') {
         const addRes = await fetch(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
           method: 'POST', headers,
-          body: JSON.stringify({ product_id: item.product_id, sku: item.code || `SKU-${item.product_id}`, product_name: item.name, category: item.categoryName || '', queue_type: 'wash', quantity: qty, notes: description })
+          body: JSON.stringify({ product_id: item.product_id, sku: item.code, product_name: item.name, category: item.categoryName || '', queue_type: 'wash', quantity: qty, notes: description })
         })
         const addResult = await addRes.json()
         if (!addResult.success) { alert('Помилка: ' + (addResult.detail || '')); return }
         const woRes = await fetch(`${BACKEND_URL}/api/product-damage-history/${addResult.damage_id}/write-off`, {
-          method: 'POST', headers,
-          body: JSON.stringify({ qty, reason: description })
+          method: 'POST', headers, body: JSON.stringify({ qty, reason: description })
         })
         if (woRes.ok) alert(`Списано ${qty} од.`)
         else { const r = await woRes.json(); alert('Помилка: ' + (r.detail || '')); return }
@@ -471,23 +490,21 @@ function TabDamage({ item, onDone }: any) {
         const queueMap: any = { washing: 'wash', restoration: 'restoration', laundry: 'laundry' }
         const res = await fetch(`${BACKEND_URL}/api/product-damage-history/quick-add-to-queue`, {
           method: 'POST', headers,
-          body: JSON.stringify({ product_id: item.product_id, sku: item.code || `SKU-${item.product_id}`, product_name: item.name, category: item.categoryName || '', queue_type: queueMap[actionType] || actionType, quantity: qty, notes: `[${severity}] ${description}` })
+          body: JSON.stringify({ product_id: item.product_id, sku: item.code, product_name: item.name, category: item.categoryName || '', queue_type: queueMap[actionType], quantity: qty, notes: `[${severity}] ${description}` })
         })
         const result = await res.json()
         const labels: any = { washing: 'мийку', restoration: 'реставрацію', laundry: 'пральню' }
-        if (result.success) alert(`Відправлено на ${labels[actionType] || actionType}`)
+        if (result.success) alert(`Відправлено на ${labels[actionType]}`)
         else { alert('Помилка: ' + (result.detail || '')); return }
       }
       setActionType(''); setDescription(''); setQty(1)
-      loadDamages()
-      onDone()
+      loadDamages(); onDone()
     } catch (e) { alert('Помилка: ' + String(e)) }
     finally { setSubmitting(false) }
   }
 
   return (
     <div className="space-y-4">
-      {/* Action chooser */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {actions.map(a => (
           <button key={a.key} onClick={() => setActionType(a.key)}
@@ -498,7 +515,6 @@ function TabDamage({ item, onDone }: any) {
           </button>
         ))}
       </div>
-      {/* Form */}
       {actionType && (
         <div className="space-y-3 rounded-xl border border-corp-border p-3 bg-corp-bg-light">
           <div className="grid grid-cols-2 gap-3">
@@ -524,7 +540,6 @@ function TabDamage({ item, onDone }: any) {
           </div>
         </div>
       )}
-      {/* Damage history */}
       <div>
         <div className="text-xs font-semibold text-corp-text-dark mb-2">Історія пошкоджень</div>
         {loadingDmg ? <div className="text-xs text-corp-text-muted">Завантаження...</div> :
@@ -532,8 +547,10 @@ function TabDamage({ item, onDone }: any) {
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {damages.map((d: any, i: number) => (
                 <div key={d.id || i} className="rounded-lg bg-white border border-slate-100 p-2 text-[11px]">
-                  <div className="flex justify-between"><span className="font-medium text-corp-text-dark">{d.date ? new Date(d.date).toLocaleDateString('uk-UA') : (d.created_at ? new Date(d.created_at).toLocaleDateString('uk-UA') : '—')}</span>
-                    <Badge tone={d.action_type === 'total_loss' ? 'red' : 'amber'}>{d.action_type || d.processing_type || '—'}</Badge></div>
+                  <div className="flex justify-between">
+                    <span className="font-medium text-corp-text-dark">{d.date ? new Date(d.date).toLocaleDateString('uk-UA') : (d.created_at ? new Date(d.created_at).toLocaleDateString('uk-UA') : '—')}</span>
+                    <Badge tone={d.action_type === 'total_loss' ? 'red' : 'amber'}>{d.action_type || d.processing_type || '—'}</Badge>
+                  </div>
                   <div className="text-corp-text-main mt-0.5">{d.notes || d.note || d.comment || '—'}</div>
                 </div>
               ))}
@@ -550,14 +567,13 @@ function TabHistory({ item }: any) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const load = async () => {
+    (async () => {
       setLoading(true)
       try {
         const res = await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/rental-history`)
         if (res.ok) { const d = await res.json(); setHistory(d.history || d || []) }
       } catch {} finally { setLoading(false) }
-    }
-    load()
+    })()
   }, [item.id])
 
   return (
@@ -586,10 +602,9 @@ function TabHistory({ item }: any) {
 }
 
 /* ─────────── Product detail modal ─────────── */
-function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, shapes, onItemUpdated }: any) {
+function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, shapes, onItemUpdated, onToggle, onDelete }: any) {
   const [tab, setTab] = useState<'info' | 'edit' | 'damage' | 'history'>('info')
   const [showConditionPanel, setShowConditionPanel] = useState(false)
-  const [damages, setDamages] = useState<any[]>([])
 
   if (!item) return null
 
@@ -600,7 +615,7 @@ function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, s
     { key: 'history', label: 'Історія', icon: History },
   ]
 
-  const handleMarkAudited = async (itm: any) => {
+  const handleMarkAudited = async (itm: any, skipAlert?: boolean) => {
     const token = localStorage.getItem('token')
     const headers: any = { 'Content-Type': 'application/json' }
     if (token) headers['Authorization'] = `Bearer ${token}`
@@ -609,7 +624,7 @@ function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, s
       body: JSON.stringify({ quantity_actual: itm.qty, audited_by: 'Реквізитор', next_audit_days: 180 })
     })
     if (res.ok) {
-      alert('Переоблік зафіксовано!')
+      if (!skipAlert) alert('Переоблік зафіксовано!')
       onItemUpdated()
     } else {
       const r = await res.json()
@@ -622,22 +637,15 @@ function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, s
       <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4" data-testid="product-modal">
         <div className="absolute inset-0 bg-black/40" onClick={onClose} />
         <div className="relative bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col shadow-xl">
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-corp-border bg-corp-bg-light/50">
             <div className="min-w-0">
               <div className="text-xs text-corp-text-muted">{item.code}</div>
               <h2 className="text-base sm:text-lg font-bold text-corp-text-dark truncate">{item.name}</h2>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <PillButton tone="ghost" onClick={() => setShowConditionPanel(true)} className="hidden sm:inline-flex">
-                Журнал стану
-              </PillButton>
-              <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-lg text-corp-text-muted">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-lg text-corp-text-muted flex-shrink-0">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          {/* Tabs */}
           <div className="flex gap-1 px-4 pt-3 pb-2 border-b border-corp-border overflow-x-auto scrollbar-none">
             {tabs.map(t => (
               <button key={t.key} onClick={() => setTab(t.key as any)}
@@ -648,9 +656,8 @@ function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, s
               </button>
             ))}
           </div>
-          {/* Content */}
           <div className="flex-1 overflow-y-auto p-4">
-            {tab === 'info' && <TabInfo item={item} onMarkAudited={handleMarkAudited} loadDamages={() => {}} damages={damages} />}
+            {tab === 'info' && <TabInfo item={item} onMarkAudited={handleMarkAudited} onToggle={onToggle} onDelete={onDelete} onShowCondition={() => setShowConditionPanel(true)} />}
             {tab === 'edit' && <TabEdit item={item} categories={categories} subcategoriesMap={subcategoriesMap} hashtags={hashtags} shapes={shapes} onSave={() => { onItemUpdated(); setTab('info') }} />}
             {tab === 'damage' && <TabDamage item={item} onDone={onItemUpdated} />}
             {tab === 'history' && <TabHistory item={item} />}
@@ -665,7 +672,6 @@ function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, s
 
 /* ════════════ MAIN COMPONENT ════════════ */
 export default function ReauditCabinetFull({ onBackToDashboard, onNavigateToTasks }: { onBackToDashboard?: () => void; onNavigateToTasks?: () => void }) {
-  // Data
   const [items, setItems] = useState<any[]>([])
   const [stats, setStats] = useState({ total: 0, ok: 0, minor: 0, crit: 0 })
   const [categories, setCategories] = useState<string[]>([])
@@ -673,18 +679,13 @@ export default function ReauditCabinetFull({ onBackToDashboard, onNavigateToTask
   const [hashtags, setHashtags] = useState<any[]>([])
   const [shapes, setShapes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
-
-  // Filters
   const [filters, setFilters] = useState({ q: '', category: '', subcategory: '', statusFilter: '' })
   const resetFilters = () => setFilters({ q: '', category: '', subcategory: '', statusFilter: '' })
-
-  // UI
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 60
 
-  // Load data
   const loadItems = useCallback(async () => {
     setLoading(true)
     try {
@@ -731,56 +732,69 @@ export default function ReauditCabinetFull({ onBackToDashboard, onNavigateToTask
   useEffect(() => { loadStats(); loadCategories(); loadDicts() }, [])
   useEffect(() => { setPage(1); loadItems() }, [loadItems])
 
-  // Client-side pagination
-  const paginatedItems = useMemo(() => {
-    const start = 0
-    const end = page * PAGE_SIZE
-    return items.slice(start, end)
-  }, [items, page])
-
+  const paginatedItems = useMemo(() => items.slice(0, page * PAGE_SIZE), [items, page])
   const hasMore = page * PAGE_SIZE < items.length
 
   const handleItemUpdated = () => {
-    loadItems()
-    loadStats()
-    // Re-select the same item to refresh data
-    if (selectedItem) {
-      const updated = items.find((i: any) => i.id === selectedItem.id)
-      if (updated) setSelectedItem(updated)
-    }
+    loadItems(); loadStats()
   }
+
+  const handleToggle = async (itm: any) => {
+    const newStatus = itm.isDisabled ? 1 : 0
+    const msg = newStatus === 0 ? 'Вимкнути цю позицію?' : 'Увімкнути цю позицію?'
+    if (!window.confirm(msg)) return
+    try {
+      const token = localStorage.getItem('token')
+      const headers: any = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch(`${BACKEND_URL}/api/audit/items/${itm.id}/toggle-status`, {
+        method: 'POST', headers, body: JSON.stringify({ status: newStatus })
+      })
+      if (res.ok) {
+        setSelectedItem(null)
+        handleItemUpdated()
+      } else { const r = await res.json(); alert('Помилка: ' + (r.detail || '')) }
+    } catch (e) { alert('Помилка: ' + String(e)) }
+  }
+
+  const handleDelete = async (itm: any) => {
+    if (!window.confirm(`ВИДАЛИТИ "${itm.name}" назавжди? Цю дію не можна скасувати!`)) return
+    try {
+      const token = localStorage.getItem('token')
+      const headers: any = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch(`${BACKEND_URL}/api/audit/items/${itm.id}`, { method: 'DELETE', headers })
+      if (res.ok) {
+        setSelectedItem(null)
+        handleItemUpdated()
+      } else { const r = await res.json(); alert('Помилка: ' + (r.detail || '')) }
+    } catch (e) { alert('Помилка: ' + String(e)) }
+  }
+
+  // Active filter count for badge
+  const activeFilters = [filters.q, filters.category, filters.subcategory, filters.statusFilter].filter(Boolean).length
 
   return (
     <div className="min-h-screen bg-corp-bg-page" data-testid="reaudit-cabinet">
       <CorporateHeader cabinetName="Кабінет переобліку" />
-
       <div className="max-w-screen-2xl mx-auto px-3 lg:px-6 py-4 space-y-4">
-        {/* Top bar: KPI + actions */}
+        {/* KPI strip */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-xl border border-corp-border p-3 lg:p-4">
           <KpiStrip stats={stats} />
-          <div className="flex items-center gap-2 flex-shrink-0 overflow-x-auto">
-            {/* Mobile filter toggle */}
-            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg border border-corp-border hover:bg-slate-50" data-testid="mobile-filter-btn">
-              <Filter className="w-4 h-4" />
-            </button>
-          </div>
         </div>
 
-        {/* Main layout: sidebar + grid */}
+        {/* Main layout */}
         <div className="flex gap-4">
           <Sidebar categories={categories} subcategoriesMap={subcategoriesMap}
-            filters={filters} setFilters={setFilters} onReset={resetFilters} stats={stats}
+            filters={filters} setFilters={setFilters} onReset={resetFilters}
             isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
 
-          {/* Product grid */}
           <div className="flex-1 min-w-0">
-            {/* Count */}
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm text-corp-text-muted">
                 {loading ? 'Завантаження...' : `${items.length} товарів`}
               </div>
             </div>
-
             {loading ? (
               <div className="py-16 text-center text-corp-text-muted">Завантаження...</div>
             ) : items.length === 0 ? (
@@ -807,12 +821,24 @@ export default function ReauditCabinetFull({ onBackToDashboard, onNavigateToTask
         </div>
       </div>
 
+      {/* Floating filter FAB — mobile only */}
+      <button onClick={() => setSidebarOpen(true)} data-testid="mobile-fab-filter"
+        className="lg:hidden fixed bottom-6 right-6 z-30 flex items-center gap-2 bg-[#b5cc18] text-white rounded-full pl-3 pr-4 py-3 shadow-lg hover:shadow-xl transition-all active:scale-95">
+        <Filter className="w-5 h-5" />
+        <span className="text-sm font-semibold">Фільтри</span>
+        {activeFilters > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            {activeFilters}
+          </span>
+        )}
+      </button>
+
       {/* Product detail modal */}
       {selectedItem && (
         <ProductModal item={selectedItem} onClose={() => setSelectedItem(null)}
           categories={categories} subcategoriesMap={subcategoriesMap}
           hashtags={hashtags} shapes={shapes}
-          onItemUpdated={handleItemUpdated} />
+          onItemUpdated={handleItemUpdated} onToggle={handleToggle} onDelete={handleDelete} />
       )}
     </div>
   )

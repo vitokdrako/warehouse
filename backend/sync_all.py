@@ -452,7 +452,7 @@ def sync_product_categories():
         rh_cur = rh.cursor()
         
         # Get all products (limit 200 для категорій)
-        rh_cur.execute("SELECT product_id FROM products LIMIT 200")
+        rh_cur.execute("SELECT product_id FROM products")
         product_ids = [row[0] for row in rh_cur.fetchall()]
         
         if not product_ids:

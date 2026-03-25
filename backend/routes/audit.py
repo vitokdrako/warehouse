@@ -101,7 +101,8 @@ async def get_audit_items(
                 p.depth_cm,
                 p.diameter_cm,
                 p.shape,
-                p.hashtags
+                p.hashtags,
+                p.status as product_status
             FROM products p
             LEFT JOIN (
                 SELECT product_id, status 
@@ -110,19 +111,32 @@ async def get_audit_items(
                     SELECT MAX(ar2.audit_date) FROM audit_records ar2 WHERE ar2.product_id = ar1.product_id
                 )
             ) ar ON p.product_id = ar.product_id
-            WHERE p.status = 1
         """]
+        
+        # Default: show active only. 'disabled' filter overrides this.
+        if status_filter == 'disabled':
+            sql_parts.append("WHERE p.status = 0")
+        else:
+            sql_parts.append("WHERE p.status = 1")
         
         params = {}
         
-        # Status filter (ok, minor/needs_recount, critical)
+        # Status filter — based on last_audit_date (same logic as stats)
         if status_filter and status_filter != 'all':
             if status_filter == 'critical':
-                sql_parts.append("AND ar.status = 'critical'")
+                # Products with active damage records
+                sql_parts.append("""AND p.product_id IN (
+                    SELECT DISTINCT product_id FROM product_damage_history
+                    WHERE COALESCE(processing_status, '') NOT IN ('completed', 'returned_to_stock', 'hidden', 'deleted')
+                    AND processing_type IN ('wash', 'restoration', 'laundry')
+                )""")
             elif status_filter == 'needs_recount' or status_filter == 'minor':
-                sql_parts.append("AND ar.status = 'needs_recount'")
+                sql_parts.append("AND (p.last_audit_date IS NULL OR DATEDIFF(CURDATE(), p.last_audit_date) > 180)")
             elif status_filter == 'ok':
-                sql_parts.append("AND (ar.status = 'ok' OR ar.status IS NULL)")
+                sql_parts.append("AND p.last_audit_date IS NOT NULL AND DATEDIFF(CURDATE(), p.last_audit_date) <= 180")
+            elif status_filter == 'disabled':
+                # Override the WHERE p.status = 1 — show disabled only
+                pass  # handled below
         
         # Category filter
         if category and category != 'all':
@@ -166,8 +180,38 @@ async def get_audit_items(
         # ✅ NEW: Format results from RentalHub DB
         audit_items = []
         
+        # Collect all product IDs first for batch lifecycle query
+        all_product_ids = [row[0] for row in results]
+        
+        # Batch lifecycle metrics — one query for all products
+        lifecycle_map = {}
+        if all_product_ids:
+            ids_str = ','.join(str(pid) for pid in all_product_ids)
+            lifecycle_batch = db.execute(text(f"""
+                SELECT oi.product_id,
+                    COUNT(DISTINCT oi.order_id) as rentals_count,
+                    COALESCE(SUM(oi.total_rental), 0) as total_profit
+                FROM order_items oi
+                WHERE oi.product_id IN ({ids_str})
+                GROUP BY oi.product_id
+            """)).fetchall()
+            for lr in lifecycle_batch:
+                lifecycle_map[lr[0]] = {'rentals': lr[1], 'profit': float(lr[2])}
+            
+            # Batch damages count
+            damages_batch = db.execute(text(f"""
+                SELECT product_id, COUNT(*) as cnt
+                FROM product_damage_history
+                WHERE product_id IN ({ids_str})
+                GROUP BY product_id
+            """)).fetchall()
+            for dr in damages_batch:
+                if dr[0] in lifecycle_map:
+                    lifecycle_map[dr[0]]['damages'] = dr[1]
+                else:
+                    lifecycle_map[dr[0]] = {'rentals': 0, 'profit': 0, 'damages': dr[1]}
+        
         for row in results:
-            # Extract data from row (all columns are accessible by index or name)
             product_id = row[0]
             sku = row[1]
             name = row[2]
@@ -188,115 +232,69 @@ async def get_audit_items(
             cleaning_status = row[17]
             product_state = row[18]
             last_audit_date = row[19]
-            audit_status_db = row[20]  # ✅ from audit_records JOIN
-            # ✅ NEW: Extended attributes
+            audit_status_db = row[20]
             height_cm = row[21]
             width_cm = row[22]
             depth_cm = row[23]
             diameter_cm = row[24]
             shape = row[25]
             hashtags_json = row[26]
+            product_status_val = row[27]
             
-            # Parse hashtags from JSON
             import json
             try:
                 hashtags = json.loads(hashtags_json) if hashtags_json else []
             except:
                 hashtags = []
             
-            # ✅ FIXED: Повертаємо чисті значення zone, aisle, shelf
-            # zone_str для відображення, zone_raw для редагування
-            zone_display = f"Зона {zone}" if zone else "Склад"
-            location_parts = [aisle, shelf] if aisle or shelf else []
-            location_display = " / ".join(filter(None, location_parts)) if location_parts else "Не вказано"
-            
-            # ✅ NEW: Category from snapshot table (already denormalized)
             cat_full = category_name or "Загальне"
             if subcategory_name:
                 cat_full += f" · {subcategory_name}"
             
-            # ✅ NEW: Audit data from products
             last_audit = last_audit_date.isoformat() if last_audit_date else None
             days_from_audit = days_from_date(last_audit_date) if last_audit_date else 999
             
-            # ✅ ENHANCED: Real lifecycle metrics from RentalHub DB
-            # Get data from order_items table
-            lifecycle_query = text("""
-                SELECT 
-                    COUNT(DISTINCT oi.order_id) as rentals_count,
-                    COALESCE(SUM(oi.total_rental), 0) as total_profit,
-                    (SELECT COUNT(*) FROM product_damage_history WHERE product_id = :pid) as damages_count
-                FROM order_items oi
-                WHERE oi.product_id = :pid
-            """)
-            lifecycle_result = db.execute(lifecycle_query, {"pid": product_id}).fetchone()
+            # Lifecycle from batch query
+            lc = lifecycle_map.get(product_id, {})
+            total_rentals = lc.get('rentals', 0)
+            total_profit = lc.get('profit', 0)
+            damages_count = lc.get('damages', 0)
             
-            total_rentals = lifecycle_result[0] if lifecycle_result else 0
-            total_profit = float(lifecycle_result[1]) if lifecycle_result else 0
-            damages_count = lifecycle_result[2] if lifecycle_result else 0
-            
-            # Get last order
-            last_order_query = text("""
-                SELECT order_id 
-                FROM order_items 
-                WHERE product_id = :pid 
-                ORDER BY id DESC 
-                LIMIT 1
-            """)
-            last_order_result = db.execute(last_order_query, {"pid": product_id}).fetchone()
-            last_order_id = str(last_order_result[0]) if last_order_result else None
-            
-            # ✅ NEW: Image URL
             photo_url = normalize_image_url(image_url)
             
-            # ✅ Map DB status to frontend status (from audit_records)
-            # ok = задовільний, needs_recount/minor = потребує переобліку, critical = критичний
-            status_map = {
-                'ok': 'ok',
-                'needs_recount': 'minor', 
-                'critical': 'critical'
-            }
-            item_status = status_map.get(audit_status_db, 'ok') if audit_status_db else 'ok'
-            
-            # ✅ ENHANCED: Complete response object with all fields
             audit_items.append({
                 'id': f"A-{product_id}",
                 'product_id': product_id,
                 'code': sku,
-                'name': html.unescape(name) if name else name,  # ✅ Декодувати HTML entities
-                'description': html.unescape(description) if description else description,  # ✅ Декодувати HTML entities
-                'careInstructions': html.unescape(care_instructions) if care_instructions else None,  # ✅ Інструкція по догляду
+                'name': html.unescape(name) if name else name,
+                'description': html.unescape(description) if description else description,
+                'careInstructions': html.unescape(care_instructions) if care_instructions else None,
                 'category': cat_full,
-                'categoryName': category_name,  # ✅ NEW: Окрема категорія
-                'subcategoryName': subcategory_name,  # ✅ NEW: Окрема підкатегорія
-                'zone': zone or '',  # ✅ Єдине поле для локації
-                'qty': quantity,  # ✅ From products table (single source of truth)
-                'status': item_status,  # ✅ Status from inventory_recount_status
+                'categoryName': category_name,
+                'subcategoryName': subcategory_name,
+                'zone': zone or '',
+                'qty': quantity,
+                'status': 'ok' if days_from_audit <= 180 else 'minor',
                 'lastAuditDate': last_audit or '2024-01-01',
-                'lastAuditBy': None,  # TODO: Add audit_by tracking if needed
-                'nextAuditDate': None,  # TODO: Add next_audit_date calculation if needed
                 'daysFromLastAudit': days_from_audit,
                 'rentalsCount': total_rentals,
-                'lastOrderId': last_order_id,
                 'damagesCount': damages_count,
                 'totalProfit': float(total_profit),
-                'notes': '',
                 'color': color,
                 'material': material,
                 'size': size,
-                # ✅ NEW: Розміри окремо
                 'heightCm': float(height_cm) if height_cm else None,
                 'widthCm': float(width_cm) if width_cm else None,
                 'depthCm': float(depth_cm) if depth_cm else None,
                 'diameterCm': float(diameter_cm) if diameter_cm else None,
-                # ✅ NEW: Форма та хештеги
                 'shape': shape,
                 'hashtags': hashtags,
                 'imageUrl': photo_url,
                 'price': float(price) if price else 0,
-                'rentalPrice': float(rental_price) if rental_price else 0,  # ✅ Ціна оренди за день
+                'rentalPrice': float(rental_price) if rental_price else 0,
                 'cleaningStatus': cleaning_status or 'clean',
-                'productState': product_state or 'available'
+                'productState': product_state or 'available',
+                'isDisabled': product_status_val == 0
             })
         
         return audit_items
@@ -2107,6 +2105,51 @@ async def mark_category_audited(
             status_code=500,
             detail=f"Помилка фіксації переобліку: {str(e)}"
         )
+
+
+
+@router.post("/items/{item_id}/toggle-status")
+async def toggle_product_status(
+    item_id: str,
+    data: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """Включити/відключити товар (status 1/0)"""
+    try:
+        product_id = int(item_id.replace('A-', ''))
+        new_status = data.get('status', 0)  # 0 = disabled, 1 = enabled
+        db.execute(text("UPDATE products SET status = :st WHERE product_id = :pid"), {"st": new_status, "pid": product_id})
+        db.commit()
+        label = "включено" if new_status == 1 else "відключено"
+        return {"success": True, "message": f"Товар {label}"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
+
+@router.delete("/items/{item_id}")
+async def delete_product(
+    item_id: str,
+    db: Session = Depends(get_rh_db)
+):
+    """Повне видалення товару з БД"""
+    try:
+        product_id = int(item_id.replace('A-', ''))
+        # Видалити пов'язані записи
+        db.execute(text("DELETE FROM audit_records WHERE product_id = :pid"), {"pid": product_id})
+        db.execute(text("DELETE FROM product_damage_history WHERE product_id = :pid"), {"pid": product_id})
+        # Видалити сам товар
+        result = db.execute(text("DELETE FROM products WHERE product_id = :pid"), {"pid": product_id})
+        db.commit()
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Товар не знайдено")
+        return {"success": True, "message": "Товар видалено"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
+
 
 
 @router.get("/export")

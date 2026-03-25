@@ -314,12 +314,53 @@ function TabInfo({ item, onMarkAudited, onToggle, onDelete, onShowCondition }: a
   )
 }
 
+/* ─────────── Multi-select pill selector ─────────── */
+function PillMultiSelect({ label, selected, options, onChange, datalistId }: {
+  label: string; selected: string[]; options: { name: string; count: number }[];
+  onChange: (v: string[]) => void; datalistId: string;
+}) {
+  const [input, setInput] = useState('')
+  const add = (v: string) => { const t = v.trim(); if (t && !selected.includes(t)) onChange([...selected, t]) }
+  const remove = (v: string) => onChange(selected.filter(s => s !== v))
+  const filtered = options.filter(o => o.name.toLowerCase().includes(input.toLowerCase()) && !selected.includes(o.name)).slice(0, 12)
+
+  return (
+    <div>
+      <label className="block text-corp-text-muted mb-1 text-xs">{label}</label>
+      <div className="flex flex-wrap gap-1 mb-1.5">
+        {selected.map(s => (
+          <span key={s} className="flex items-center gap-1 bg-corp-primary/10 text-corp-primary rounded-full px-2 py-0.5 text-[10px] font-medium">
+            {s}<button type="button" onClick={() => remove(s)} className="hover:text-rose-600 ml-0.5">&times;</button>
+          </span>
+        ))}
+      </div>
+      <div className="relative">
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add(input); setInput('') } }}
+          placeholder={`Додати ${label.toLowerCase()}...`}
+          className="w-full rounded-lg border border-corp-border px-3 py-1.5 text-sm" />
+        {input.length > 0 && filtered.length > 0 && (
+          <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white rounded-lg border border-corp-border shadow-lg max-h-40 overflow-y-auto">
+            {filtered.map(o => (
+              <button key={o.name} type="button" onClick={() => { add(o.name); setInput('') }}
+                className="w-full text-left px-3 py-1.5 text-sm hover:bg-corp-bg-light flex justify-between items-center">
+                <span>{o.name}</span><span className="text-[10px] text-corp-text-muted">{o.count}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 /* ─────────── Modal: Tab - Edit ─────────── */
-function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, shapes: shapeDict, onSave }: any) {
+function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, shapes: shapeDict, colorDict, materialDict, onSave }: any) {
+  const parseList = (v: string) => v ? v.split(',').map((s: string) => s.trim()).filter(Boolean) : []
   const [form, setForm] = useState({
     name: item.name || '', code: item.code || '',
     price: item.price || 0, rentalPrice: item.rentalPrice || 0,
-    color: item.color || '', material: item.material || '',
+    colors: parseList(item.color || ''), materials: parseList(item.material || ''),
     category: item.categoryName || '', subcategory: item.subcategoryName || '',
     height: item.heightCm || '', width: item.widthCm || '', depth: item.depthCm || '', diameter: item.diameterCm || '',
     shape: item.shape || '', hashtags: item.hashtags || [],
@@ -340,7 +381,11 @@ function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, sh
       const headers: any = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
       const editRes = await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/edit-full`, {
-        method: 'PUT', headers, body: JSON.stringify(form)
+        method: 'PUT', headers, body: JSON.stringify({
+          ...form,
+          color: form.colors.join(', '),
+          material: form.materials.join(', '),
+        })
       })
       if (!editRes.ok) { const r = await editRes.json(); alert('Помилка: ' + (r.detail || '')); return }
       await fetch(`${BACKEND_URL}/api/audit/items/${item.id}/update-info`, {
@@ -380,11 +425,13 @@ function TabEdit({ item, categories, subcategoriesMap, hashtags: hashtagDict, sh
             {(subcategoriesMap[form.category] || []).map((s: string) => <option key={s} value={s}>{s}</option>)}
           </select></div>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div><label className="block text-corp-text-muted mb-1">Колір</label>
-          <input value={form.color} onChange={e => f('color', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
-        <div><label className="block text-corp-text-muted mb-1">Матеріал</label>
-          <input value={form.material} onChange={e => f('material', e.target.value)} className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" /></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <PillMultiSelect label="Колір" selected={form.colors} options={colorDict}
+          onChange={v => f('colors', v)} datalistId="colors-list" />
+        <PillMultiSelect label="Матеріал" selected={form.materials} options={materialDict}
+          onChange={v => f('materials', v)} datalistId="materials-list" />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <div><label className="block text-corp-text-muted mb-1">Форма</label>
           <input value={form.shape} onChange={e => f('shape', e.target.value)} list="shapes-list"
             className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm" />
@@ -602,7 +649,7 @@ function TabHistory({ item }: any) {
 }
 
 /* ─────────── Product detail modal ─────────── */
-function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, shapes, onItemUpdated, onToggle, onDelete }: any) {
+function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, shapes, colorDict, materialDict, onItemUpdated, onToggle, onDelete }: any) {
   const [tab, setTab] = useState<'info' | 'edit' | 'damage' | 'history'>('info')
   const [showConditionPanel, setShowConditionPanel] = useState(false)
 
@@ -658,7 +705,7 @@ function ProductModal({ item, onClose, categories, subcategoriesMap, hashtags, s
           </div>
           <div className="flex-1 overflow-y-auto p-4">
             {tab === 'info' && <TabInfo item={item} onMarkAudited={handleMarkAudited} onToggle={onToggle} onDelete={onDelete} onShowCondition={() => setShowConditionPanel(true)} />}
-            {tab === 'edit' && <TabEdit item={item} categories={categories} subcategoriesMap={subcategoriesMap} hashtags={hashtags} shapes={shapes} onSave={() => { onItemUpdated(); setTab('info') }} />}
+            {tab === 'edit' && <TabEdit item={item} categories={categories} subcategoriesMap={subcategoriesMap} hashtags={hashtags} shapes={shapes} colorDict={colorDict} materialDict={materialDict} onSave={() => { onItemUpdated(); setTab('info') }} />}
             {tab === 'damage' && <TabDamage item={item} onDone={onItemUpdated} />}
             {tab === 'history' && <TabHistory item={item} />}
           </div>
@@ -678,6 +725,8 @@ export default function ReauditCabinetFull({ onBackToDashboard, onNavigateToTask
   const [subcategoriesMap, setSubcategoriesMap] = useState<Record<string, string[]>>({})
   const [hashtags, setHashtags] = useState<any[]>([])
   const [shapes, setShapes] = useState<string[]>([])
+  const [colorDict, setColorDict] = useState<any[]>([])
+  const [materialDict, setMaterialDict] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({ q: '', category: '', subcategory: '', statusFilter: '' })
   const resetFilters = () => setFilters({ q: '', category: '', subcategory: '', statusFilter: '' })
@@ -720,12 +769,16 @@ export default function ReauditCabinetFull({ onBackToDashboard, onNavigateToTask
 
   const loadDicts = async () => {
     try {
-      const [hRes, sRes] = await Promise.all([
+      const [hRes, sRes, cRes, mRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/audit/hashtags`),
         fetch(`${BACKEND_URL}/api/audit/shapes`),
+        fetch(`${BACKEND_URL}/api/audit/colors`),
+        fetch(`${BACKEND_URL}/api/audit/materials`),
       ])
       if (hRes.ok) { const d = await hRes.json(); setHashtags(d.hashtags || d || []) }
       if (sRes.ok) { const d = await sRes.json(); setShapes(d.shapes || d || []) }
+      if (cRes.ok) { const d = await cRes.json(); setColorDict(d.colors || []) }
+      if (mRes.ok) { const d = await mRes.json(); setMaterialDict(d.materials || []) }
     } catch {}
   }
 
@@ -837,7 +890,7 @@ export default function ReauditCabinetFull({ onBackToDashboard, onNavigateToTask
       {selectedItem && (
         <ProductModal item={selectedItem} onClose={() => setSelectedItem(null)}
           categories={categories} subcategoriesMap={subcategoriesMap}
-          hashtags={hashtags} shapes={shapes}
+          hashtags={hashtags} shapes={shapes} colorDict={colorDict} materialDict={materialDict}
           onItemUpdated={handleItemUpdated} onToggle={handleToggle} onDelete={handleDelete} />
       )}
     </div>

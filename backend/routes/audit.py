@@ -2045,6 +2045,48 @@ async def get_audit_categories(db: Session = Depends(get_rh_db)):
 
 
 
+@router.get("/colors")
+async def get_color_dictionary(db: Session = Depends(get_rh_db)):
+    """Словник унікальних кольорів з products"""
+    try:
+        result = db.execute(text("""
+            SELECT color, COUNT(*) as cnt FROM products 
+            WHERE color IS NOT NULL AND color != '' AND status = 1
+            GROUP BY color ORDER BY cnt DESC
+        """)).fetchall()
+        # Split comma-separated values into unique single colors
+        color_counts: dict = {}
+        for row in result:
+            parts = [c.strip() for c in row[0].split(',') if c.strip()]
+            for p in parts:
+                color_counts[p] = color_counts.get(p, 0) + row[1]
+        sorted_colors = sorted(color_counts.items(), key=lambda x: -x[1])
+        return {"colors": [{"name": c, "count": n} for c, n in sorted_colors]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/materials")
+async def get_material_dictionary(db: Session = Depends(get_rh_db)):
+    """Словник унікальних матеріалів з products"""
+    try:
+        result = db.execute(text("""
+            SELECT material, COUNT(*) as cnt FROM products 
+            WHERE material IS NOT NULL AND material != '' AND status = 1
+            GROUP BY material ORDER BY cnt DESC
+        """)).fetchall()
+        mat_counts: dict = {}
+        for row in result:
+            parts = [m.strip() for m in row[0].split(',') if m.strip()]
+            for p in parts:
+                mat_counts[p] = mat_counts.get(p, 0) + row[1]
+        sorted_mats = sorted(mat_counts.items(), key=lambda x: -x[1])
+        return {"materials": [{"name": m, "count": n} for m, n in sorted_mats]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @router.post("/mark-category-audited")
 async def mark_category_audited(
     data: dict,

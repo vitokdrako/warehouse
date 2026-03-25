@@ -59,21 +59,31 @@ async def get_categories(
                     "total_qty": qty
                 })
         
-        # Отримати унікальні кольори
+        # Отримати унікальні кольори (розпарсити через кому)
         colors_result = db.execute(text("""
-            SELECT DISTINCT color FROM products 
+            SELECT color, COUNT(*) as cnt FROM products 
             WHERE status = 1 AND color IS NOT NULL AND color != ''
-            ORDER BY color
+            GROUP BY color ORDER BY cnt DESC
         """))
-        colors = [row[0] for row in colors_result]
+        color_counts = {}
+        for row in colors_result:
+            parts = [c.strip() for c in row[0].split(',') if c.strip()]
+            for p in parts:
+                color_counts[p] = color_counts.get(p, 0) + row[1]
+        colors = sorted(color_counts.keys())
         
-        # Отримати унікальні матеріали
+        # Отримати унікальні матеріали (розпарсити через кому)
         materials_result = db.execute(text("""
-            SELECT DISTINCT material FROM products 
+            SELECT material, COUNT(*) as cnt FROM products 
             WHERE status = 1 AND material IS NOT NULL AND material != ''
-            ORDER BY material
+            GROUP BY material ORDER BY cnt DESC
         """))
-        materials = [row[0] for row in materials_result]
+        mat_counts = {}
+        for row in materials_result:
+            parts = [m.strip() for m in row[0].split(',') if m.strip()]
+            for p in parts:
+                mat_counts[p] = mat_counts.get(p, 0) + row[1]
+        materials = sorted(mat_counts.keys())
         
         return {
             "categories": list(categories_map.values()),
@@ -240,15 +250,27 @@ async def get_items_by_category(
             sql_parts.append("AND p.subcategory_name = :subcategory")
             params['subcategory'] = subcategory
         
-        # Color filter
+        # Color filter (multi-select via comma, LIKE for partial match)
         if color and color != 'all':
-            sql_parts.append("AND p.color = :color")
-            params['color'] = color
+            color_parts = [c.strip() for c in color.split(',') if c.strip()]
+            if color_parts:
+                color_conds = []
+                for i, cp in enumerate(color_parts):
+                    key = f'color_{i}'
+                    color_conds.append(f"p.color LIKE :{key}")
+                    params[key] = f'%{cp}%'
+                sql_parts.append(f"AND ({' OR '.join(color_conds)})")
         
-        # Material filter
+        # Material filter (multi-select via comma, LIKE for partial match)
         if material and material != 'all':
-            sql_parts.append("AND p.material = :material")
-            params['material'] = material
+            mat_parts = [m.strip() for m in material.split(',') if m.strip()]
+            if mat_parts:
+                mat_conds = []
+                for i, mp in enumerate(mat_parts):
+                    key = f'material_{i}'
+                    mat_conds.append(f"p.material LIKE :{key}")
+                    params[key] = f'%{mp}%'
+                sql_parts.append(f"AND ({' OR '.join(mat_conds)})")
         
         # Quantity filter
         if min_qty is not None:

@@ -3,7 +3,7 @@
 // Вкладки: Товари | Набори | Сети
 // Sidebar зліва: дати, категорії, фільтри | Справа: товари
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { getImageUrl, handleImageError } from '../utils/imageHelper'
 import CorporateHeader from '../components/CorporateHeader'
 import FamiliesManager from '../components/catalog/FamiliesManager'
@@ -13,6 +13,57 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
 
 // Utility functions
 const cls = (...a) => a.filter(Boolean).join(' ')
+
+/* ─── Multi-select pill filter for colors/materials ─── */
+function CatalogMultiSelect({ selected, options, onChange, placeholder, testId }) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtered = options.filter(o => o.toLowerCase().includes(search.toLowerCase()) && !selected.includes(o))
+  const toggle = (v) => {
+    if (selected.includes(v)) onChange(selected.filter(s => s !== v))
+    else onChange([...selected, v])
+  }
+
+  return (
+    <div ref={ref} className="relative" data-testid={testId}>
+      <div onClick={() => setOpen(!open)}
+        className="w-full min-h-[36px] flex flex-wrap gap-1 items-center rounded-lg border border-corp-border px-2 py-1.5 cursor-pointer hover:border-corp-primary/50 transition">
+        {selected.length === 0 && <span className="text-sm text-corp-text-muted">{placeholder}</span>}
+        {selected.map(s => (
+          <span key={s} className="flex items-center gap-1 bg-corp-primary/10 text-corp-primary rounded-full px-2 py-0.5 text-[10px] font-medium">
+            {s}
+            <button type="button" onClick={(e) => { e.stopPropagation(); toggle(s) }} className="hover:text-rose-600">&times;</button>
+          </span>
+        ))}
+      </div>
+      {open && (
+        <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white rounded-lg border border-corp-border shadow-lg max-h-48 overflow-hidden flex flex-col">
+          <div className="p-2 border-b border-corp-border">
+            <input value={search} onChange={e => setSearch(e.target.value)} autoFocus
+              placeholder="Пошук..." className="w-full text-sm px-2 py-1 rounded border border-corp-border focus:outline-none" />
+          </div>
+          <div className="overflow-y-auto flex-1">
+            {filtered.length === 0 && <div className="px-3 py-2 text-xs text-corp-text-muted">Нічого не знайдено</div>}
+            {filtered.map(o => (
+              <button key={o} type="button" onClick={() => toggle(o)}
+                className="w-full text-left px-3 py-1.5 text-sm hover:bg-corp-bg-light transition">
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
 
 // Badge component
@@ -1222,34 +1273,28 @@ function Sidebar({
             />
           </div>
           
-          {/* Color */}
+          {/* Color - multi-select pills */}
           <div>
             <label className="text-xs text-corp-text-muted font-medium block mb-1">Колір</label>
-            <select
-              value={filters.color}
-              onChange={(e) => setFilters({ ...filters, color: e.target.value })}
-              className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
-            >
-              <option value="">Всі кольори</option>
-              {colors.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            <CatalogMultiSelect
+              selected={filters.color ? filters.color.split(',').map(s => s.trim()).filter(Boolean) : []}
+              options={colors}
+              onChange={(arr) => setFilters({ ...filters, color: arr.join(',') })}
+              placeholder="Обрати кольори..."
+              testId="catalog-color-filter"
+            />
           </div>
           
-          {/* Material */}
+          {/* Material - multi-select pills */}
           <div>
             <label className="text-xs text-corp-text-muted font-medium block mb-1">Матеріал</label>
-            <select
-              value={filters.material}
-              onChange={(e) => setFilters({ ...filters, material: e.target.value })}
-              className="w-full rounded-lg border border-corp-border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-corp-primary/30"
-            >
-              <option value="">Всі матеріали</option>
-              {materials.map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
+            <CatalogMultiSelect
+              selected={filters.material ? filters.material.split(',').map(s => s.trim()).filter(Boolean) : []}
+              options={materials}
+              onChange={(arr) => setFilters({ ...filters, material: arr.join(',') })}
+              placeholder="Обрати матеріали..."
+              testId="catalog-material-filter"
+            />
           </div>
           
           {/* Quantity */}

@@ -159,12 +159,25 @@ function CompactReturnCard({ item, onSetReturnedQty, onToggleSerial, onOpenDamag
           >
             −
           </button>
-          <div className={`
-            w-8 text-center text-sm font-bold
-            ${isFullyReturned ? 'text-emerald-600' : 'text-slate-800'}
-          `}>
-            {returnedQty}
-          </div>
+          <input
+            type="number"
+            value={returnedQty}
+            onChange={(e) => {
+              if (readOnly) return;
+              const v = Math.max(0, Math.min(rentedQty, parseInt(e.target.value) || 0));
+              onSetReturnedQty?.(item.id, v);
+            }}
+            disabled={readOnly}
+            className={`
+              w-10 h-8 text-center text-sm font-bold border border-slate-200 rounded-lg
+              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+              ${isFullyReturned ? 'text-emerald-600' : 'text-slate-800'}
+              disabled:opacity-50
+            `}
+            min="0"
+            max={rentedQty}
+            data-testid={`return-qty-input-${item.id}`}
+          />
           <button 
             onClick={() => !readOnly && onSetReturnedQty?.(item.id, Math.min(rentedQty, returnedQty + 1))} 
             disabled={readOnly || returnedQty >= rentedQty}

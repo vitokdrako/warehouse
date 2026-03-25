@@ -157,12 +157,24 @@ function CompactItemCard({
           >
             −
           </button>
-          <div className={`
-            w-8 text-center text-sm font-bold
-            ${isComplete ? 'text-emerald-600' : 'text-slate-800'}
-          `}>
-            {pickedQty}
-          </div>
+          <input
+            type="number"
+            value={pickedQty}
+            onChange={(e) => {
+              if (readOnly) return;
+              const v = Math.max(0, parseInt(e.target.value) || 0);
+              onPick?.(item.id, v);
+            }}
+            disabled={readOnly}
+            className={`
+              w-10 h-8 text-center text-sm font-bold border border-slate-200 rounded-lg
+              [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none
+              ${isComplete ? 'text-emerald-600' : 'text-slate-800'}
+              disabled:opacity-50
+            `}
+            min="0"
+            data-testid={`pick-qty-input-${item.id}`}
+          />
           <button 
             onClick={() => !readOnly && onPick?.(item.id, pickedQty + 1)} 
             disabled={readOnly}

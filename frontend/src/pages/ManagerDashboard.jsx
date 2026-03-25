@@ -921,6 +921,27 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
         ) : null
       )}
       
+      {/* Packing progress bar for preparation cards */}
+      {badge === 'preparation' && order?.items?.length > 0 && (() => {
+        const totalQty = order.items.reduce((s, it) => s + (it.qty || it.quantity || 1), 0);
+        const pickedQty = order.items.reduce((s, it) => s + (it.picked_qty || 0), 0);
+        const progress = totalQty > 0 ? Math.round((pickedQty / totalQty) * 100) : 0;
+        return (
+          <div className="mt-3 pt-3 border-t border-slate-100" data-testid={`packing-progress-${id}`}>
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-slate-500">Прогрес комплектації</span>
+              <span className={`font-medium ${progress === 100 ? 'text-emerald-600' : 'text-slate-700'}`}>{progress}%</span>
+            </div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div 
+                className={`h-full rounded-full transition-all duration-300 ${progress === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Cancel button - bigger for mobile */}
       {onCancelByClient && ['awaiting', 'processing', 'preparation', 'ready'].includes(badge) && (
         <button

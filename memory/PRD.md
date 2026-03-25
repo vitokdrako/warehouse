@@ -21,7 +21,7 @@ Build and maintain a comprehensive rental management platform for decorative ite
 7. Partial return handling with version management
 
 ## Architecture
-- **Frontend**: React (JSX) with TailwindCSS, Shadcn/UI components
+- **Frontend**: React (JSX/TSX) with TailwindCSS, Shadcn/UI components
 - **Backend**: FastAPI with SQLAlchemy, MySQL database
 - **Document Engine**: Jinja2 templates -> HTML -> PDF generation
 - **External**: OpenCart sync, SMTP email
@@ -49,14 +49,18 @@ Build and maintain a comprehensive rental management platform for decorative ite
 - Defect Act: photos of damaged items
 - Chat UX improvements (auto-scroll fix, sound notifications)
 
-### Current Session (2026-03-24)
-- **Defect Act Enhanced**: Now includes ALL damage types with type badges (Фіксація, Втрата, В стан, До видачі) and photos
-- **Return Act Redesigned**: Modern standalone template with comprehensive data - pre-issue damage comparison, packaging, all damage records per item
-- **Backend Fix**: photo_only records no longer freeze product state
-- **Defect Act Button Fix**: Shows when ANY damage records exist (not just when fee total > 0)
-- **DamageModal UX**: Queue selection clarification text added
-- **Client Tab Document Links**: New batch endpoint `/api/documents/batch-by-orders` + colored document link badges in ClientsTab
-- **Finance Bug Fix**: Fixed `grand_total_due` calculation - now accounts for deposit deductions (`used_for_damage`) and `loss` type payments when calculating `damage_due`. Previously showed debt even when damage was fully covered by deposit. (Акт видачі, Акт повернення, Дефектний акт, etc.)
+### Session 2026-03-24
+- Defect Act Enhanced: ALL damage types with type badges and photos
+- Return Act Redesigned: Modern standalone template
+- Backend Fix: photo_only records no longer freeze product state
+- Client Tab Document Links: batch endpoint + colored link badges
+- Finance Bug Fix: grand_total_due calculation accounts for deposit deductions and loss payments
+- Damage Hub Enhancement: Written Off list shows order numbers + delete button
+- Production Build: frontend build in /app/clean_project/frontend_build/
+
+### Session 2026-03-25
+- **Global Number Input UX Fix** (App.tsx): Added focusin handler that auto-selects text in all type="number" inputs on focus. Fixes "014" leading zero issue across entire system (26+ files covered).
+- **CatalogBoard.jsx**: Replaced span-only quantity displays with input fields, enabling manual number entry alongside +/- buttons.
 
 ## Pending Issues (P2)
 1. `convert-to-order` endpoint instability
@@ -80,12 +84,15 @@ Build and maintain a comprehensive rental management platform for decorative ite
 - `/app/backend/routes/product_damage_history.py` - Damage CRUD
 - `/app/backend/routes/documents.py` - Document generation + batch endpoint
 - `/app/backend/routes/document_render.py` - Document rendering
+- `/app/backend/routes/finance.py` - Financial calculations (single source of truth)
 - `/app/backend/templates/documents/return_act/v1.html` - Return Act template
 - `/app/backend/templates/documents/defect_act/v1.html` - Defect Act template
+- `/app/frontend/src/App.tsx` - Global number input fix
 - `/app/frontend/src/components/DamageModal.jsx` - Damage recording modal
 - `/app/frontend/src/components/ClientsTab.jsx` - Client CRM with document links
 - `/app/frontend/src/pages/ReturnSettlementPage.jsx` - Return settlement page
 - `/app/frontend/src/pages/DamageHubApp.jsx` - Damage hub dashboard
+- `/app/frontend/src/pages/CatalogBoard.jsx` - Catalog/moodboard
 
 ## Credentials
 - Admin: vitokdrako@gmail.com / test123

@@ -74,7 +74,7 @@
   },
   "test_credentials": {
     "admin": {"email": "vitokdrako@gmail.com", "password": "test123"},
-    "api_base_url": "https://rental-damage-docs.preview.emergentagent.com"
+    "api_base_url": "https://financial-snapshot-11.preview.emergentagent.com"
   },
   "seed_data_creation": "Created and deleted Feb 2026 report during testing",
   "existing_data": "Dec 2025, Nov 2025, Jan 2026 reports exist in DB",

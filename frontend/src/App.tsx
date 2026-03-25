@@ -100,6 +100,19 @@ function App() {
     const interval = setInterval(checkSession, 60 * 1000); // кожну хвилину
     return () => clearInterval(interval);
   }, []);
+
+  // Глобальний фікс: при фокусі на числовий інпут — виділяємо весь текст.
+  // Це дозволяє одразу вводити нове число без ведучих нулів (014 → 14).
+  useEffect(() => {
+    const handleFocusIn = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (target.tagName === 'INPUT' && target.type === 'number') {
+        requestAnimationFrame(() => target.select());
+      }
+    };
+    document.addEventListener('focusin', handleFocusIn);
+    return () => document.removeEventListener('focusin', handleFocusIn);
+  }, []);
   
   const handleBackToDashboard = () => {
     window.location.href = '/dashboard';

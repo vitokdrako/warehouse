@@ -534,7 +534,7 @@ function SetModal({ set, products, onClose, onSave }) {
                     <span className="flex-1 text-sm truncate">{item.name}</span>
                     <div className="flex items-center gap-1">
                       <button onClick={() => updateQty(item.product_id, item.quantity - 1)} className="w-6 h-6 rounded bg-white border hover:bg-corp-bg-page">-</button>
-                      <span className="w-8 text-center text-sm">{item.quantity}</span>
+                      <input type="number" min="1" value={item.quantity} onChange={e => updateQty(item.product_id, Math.max(1, parseInt(e.target.value) || 1))} className="w-10 text-center text-sm border border-corp-border rounded bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                       <button onClick={() => updateQty(item.product_id, item.quantity + 1)} className="w-6 h-6 rounded bg-white border hover:bg-corp-bg-page">+</button>
                     </div>
                     <span className="text-sm text-corp-primary w-20 text-right">{fmtUA(item.rental_price * item.quantity)} ₴</span>
@@ -709,7 +709,7 @@ function CreateSetFromSelectionModal({ selectedProducts, onClose, onSave }) {
                     >
                       −
                     </button>
-                    <span className="w-8 text-center font-medium">{item.quantity}</span>
+                    <input type="number" min="1" value={item.quantity} onChange={e => updateQty(item.product_id, Math.max(1, parseInt(e.target.value) || 1))} className="w-10 text-center font-medium border border-corp-border rounded-lg bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                     <button 
                       onClick={() => updateQty(item.product_id, item.quantity + 1)}
                       className="w-7 h-7 rounded-lg border border-corp-border hover:bg-corp-bg-light flex items-center justify-center text-sm"

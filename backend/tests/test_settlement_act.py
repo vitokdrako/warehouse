@@ -14,7 +14,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://rental-damage-docs.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://financial-snapshot-11.preview.emergentagent.com').rstrip('/')
 
 # Test credentials from review request
 TEST_CREDENTIALS = {

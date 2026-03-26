@@ -690,13 +690,14 @@ const LaundryColumn = ({ items, loading, onComplete, onDelete, onPhotoClick, com
 
 // ============= PHOTO MODAL =============
 const PhotoModal = ({ isOpen, photoUrl, productName, onClose }) => {
-  if (!isOpen) return null;
+  if (!isOpen || !photoUrl) return null;
+  const fullUrl = getImageUrl(photoUrl);
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
-      <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white">
+      <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white z-10">
         <X className="w-6 h-6" />
       </button>
-      <img src={photoUrl} alt={productName} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
+      <img src={fullUrl} alt={productName || ''} className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" onClick={e => e.stopPropagation()} />
     </div>
   );
 };

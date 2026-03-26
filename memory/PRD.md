@@ -1,98 +1,63 @@
-# PRD - Rental Management Platform (FarforDecorOrenda)
+# RentalHub - Rental Management Platform
 
 ## Original Problem Statement
-Build and maintain a comprehensive rental management platform for decorative items (tableware, decor, etc.) with order management, damage tracking, document generation, and financial management.
-
-## User Personas
-- **Admin**: Full access, company configuration
-- **Manager**: Order management, client interaction, damage recording, document generation
-- **Client**: View orders, chat with managers
+Comprehensive rental management platform (React + FastAPI + MySQL) syncing from OpenCart DB. Manages orders, inventory, auditing, damage tracking, issue cards, returns, and financial workflows.
 
 ## Core Requirements
-1. Order lifecycle management (creation -> processing -> issuance -> return -> completion)
-2. Damage tracking workflow with three types:
-   - **В стан декору (To State)**: Records damage to product state, requires processing queue on return
-   - **Без запису у стан / Для порівняння (Fixation/Photo Only)**: Documentation-only record, no queue required, stored separately
-   - **Повна втрата (Total Loss)**: Full write-off with financial recording
-3. Document generation (Issue Act, Return Act, Defect Act, Settlement Act)
-4. Financial management (deposits, fees, payments)
-5. Personal cabinet with chat for client communication
-6. Damage Hub for tracking all damage records
-7. Partial return handling with version management
-
-## Architecture
-- **Frontend**: React (JSX/TSX) with TailwindCSS, Shadcn/UI components
-- **Backend**: FastAPI with SQLAlchemy, MySQL database
-- **Document Engine**: Jinja2 templates -> HTML -> PDF generation
-- **External**: OpenCart sync, SMTP email
-
-## Key Database Tables
-- `orders`, `order_items` - Order management
-- `product_damage_history` - Central damage log (processing_type: photo_only/written_off/wash/restoration/laundry/none)
-- `return_cards` - Return process data
-- `partial_return_version_items` - Partial return tracking
-- `order_packaging` - Packaging per order
-- `payer_profiles`, `master_agreements` - Legal/financial entities
-- `generated_documents` / `documents` - Document storage
+- Multi-role support: Admin, Manager, Requisitor
+- Order lifecycle: Draft → Awaiting → Processing → Issued → Returned
+- Inventory sync from OpenCart
+- Damage tracking with photos and history
+- Financial tracking (payments, deposits, refunds)
+- Calendar, catalog, moodboard features
 
 ## What's Been Implemented
 
-### Previous Sessions
-- Core platform: orders, products, inventory, calendar
-- Financial system: deposits, payments, settlements
-- Document generation framework
-- Personal cabinet with chat, mobile responsiveness
-- Total Loss workflow (unified process-loss endpoint)
-- Individual item packaging (quantity inputs)
-- Damage recording refactor (3 types: Total Loss, To State, Fixation)
-- Damage Hub: "Written Off" and "Fixations" tabs
-- Defect Act: photos of damaged items
-- Chat UX improvements (auto-scroll fix, sound notifications)
+### Completed Features
+- Full order management pipeline
+- Catalog with multi-select color/material filters
+- Reaudit Cabinet (cards UI with thumbnails, filters)
+- OpenCart sync (categories, products, inventory)
+- Database deduplication & cleanup scripts
+- Product disabling/deletion endpoints
+- Damage history tracking (`product_damage_history` table)
+- `has_damage_history` flag on all order items globally
+- Production build workflow (build → copy to clean_project/frontend_build/)
+- **[2026-03-26] Damage warnings on cards:**
+  - Inline ⚠️ SVG icon next to item name in ZoneItemsList (visible without expanding)
+  - Damage badge on ManagerDashboard OrderCards (shows count of damaged items)
+  - DamagePhotoViewer modal on manager cards (quick photo access for client discussions)
+  - Damage badge on return cards in Повернення column
+  - Backend enrichment of issue_cards with damage_items_count, damage_photos, has_damage_items
 
-### Session 2026-03-24
-- Defect Act Enhanced: ALL damage types with type badges and photos
-- Return Act Redesigned: Modern standalone template
-- Backend Fix: photo_only records no longer freeze product state
-- Client Tab Document Links: batch endpoint + colored link badges
-- Finance Bug Fix: grand_total_due calculation accounts for deposit deductions and loss payments
-- Damage Hub Enhancement: Written Off list shows order numbers + delete button
-- Production Build: frontend build in /app/clean_project/frontend_build/
+### Known Issues
+- P1: Multiple photos per product (not started)
+- P2: `convert-to-order` endpoint instability
+- P2: Moodboard export broken
+- P2: Calendar timezone bug
+- P2: Re-audit "Total Loss" button logic
 
-### Session 2026-03-25
-- **Global Number Input UX Fix** (App.tsx): Added focusin handler that auto-selects text in all type="number" inputs on focus. Fixes "014" leading zero issue across entire system (26+ files covered).
-- **CatalogBoard.jsx**: Replaced span-only quantity displays with input fields, enabling manual number entry alongside +/- buttons.
+### Backlog / Future Tasks
+- P1: Post-deployment health check
+- P1: Simplify `laundry_items` table/logic
+- P3: Real-time updates (WebSockets)
+- P3: Unify NewOrderViewWorkspace + IssueCardWorkspace
+- P3: Full RBAC
+- P3: HR/Ops Module
+- P3: Telegram bot integration
 
-## Pending Issues (P2)
-1. `convert-to-order` endpoint instability
-2. Moodboard export likely broken
-3. Calendar timezone bug
-4. Re-audit "Total Loss" button logic verification
+## Architecture
+- Frontend: React (TypeScript/JSX), Tailwind CSS, Shadcn UI
+- Backend: FastAPI, SQLAlchemy (MySQL)
+- Database: MySQL (RentalHub) + OpenCart sync
+- Auth: JWT-based
 
-## Upcoming Tasks
-- (P1) Post-deployment health check
-- (P1) Simplify `laundry_items` table/logic
-
-## Future/Backlog Tasks
-- (P3) Real-time updates (WebSockets)
-- (P3) Unify NewOrderViewWorkspace and IssueCardWorkspace
-- (P3) Full RBAC
-- (P3) HR/Ops Module
-- (P3) Telegram bot integration
-
-## Key Files
-- `/app/backend/services/doc_engine/data_builders.py` - Document data builders
-- `/app/backend/routes/product_damage_history.py` - Damage CRUD
-- `/app/backend/routes/documents.py` - Document generation + batch endpoint
-- `/app/backend/routes/document_render.py` - Document rendering
-- `/app/backend/routes/finance.py` - Financial calculations (single source of truth)
-- `/app/backend/templates/documents/return_act/v1.html` - Return Act template
-- `/app/backend/templates/documents/defect_act/v1.html` - Defect Act template
-- `/app/frontend/src/App.tsx` - Global number input fix
-- `/app/frontend/src/components/DamageModal.jsx` - Damage recording modal
-- `/app/frontend/src/components/ClientsTab.jsx` - Client CRM with document links
-- `/app/frontend/src/pages/ReturnSettlementPage.jsx` - Return settlement page
-- `/app/frontend/src/pages/DamageHubApp.jsx` - Damage hub dashboard
-- `/app/frontend/src/pages/CatalogBoard.jsx` - Catalog/moodboard
+## Key Endpoints
+- GET /api/manager/dashboard/overview - Dashboard data (now with damage enrichment)
+- GET /api/orders/{order_id} - Order details with item damage history
+- GET /api/audit/items - Reaudit board
+- PUT /api/audit/items/{id}/edit-full - Product editing with photo upload
 
 ## Credentials
 - Admin: vitokdrako@gmail.com / test123
+- Manager: max@test.com / test123

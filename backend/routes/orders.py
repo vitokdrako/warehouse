@@ -147,7 +147,9 @@ def parse_order_row(row, db: Session = None):
             if pids_str:
                 try:
                     dmg_rows = db.execute(text(f"""
-                        SELECT product_id, damage_type, damage_code, note, severity, processing_status, created_at
+                        SELECT product_id, damage_type, damage_code, note, severity, 
+                               processing_status, created_at, photo_url, stage, 
+                               order_number, qty, fee, created_by, id
                         FROM product_damage_history
                         WHERE product_id IN ({pids_str})
                         ORDER BY created_at DESC
@@ -158,16 +160,28 @@ def parse_order_row(row, db: Session = None):
                         if k not in dmg_by_pid:
                             dmg_by_pid[k] = []
                         dmg_by_pid[k].append({
+                            'id': dr[13],
                             'type': dr[1] or dr[2] or '',
+                            'damage_type': dr[1] or dr[2] or '',
                             'notes': dr[3] or '',
+                            'note': dr[3] or '',
                             'severity': dr[4] or 'low',
                             'status': dr[5] or '',
                             'date': dr[6].isoformat() if dr[6] else None,
+                            'created_at': dr[6].strftime('%d.%m.%Y %H:%M') if dr[6] else None,
+                            'photo_url': dr[7],
+                            'stage': dr[8] or '',
+                            'stage_label': 'До видачі' if dr[8] == 'pre_issue' else 'При поверненні' if dr[8] == 'return' else 'Аудит' if dr[8] else '',
+                            'order_number': dr[9] or '',
+                            'qty': int(dr[10] or 1),
+                            'fee': float(dr[11] or 0),
+                            'created_by': dr[12] or '',
                         })
                     for it in items:
                         pid = it.get('inventory_id', '')
                         it['damage_history'] = dmg_by_pid.get(pid, [])
                         it['has_damage_history'] = len(it['damage_history']) > 0
+                        it['total_damages'] = len(it['damage_history'])
                         it['pre_damage'] = it['damage_history'][:3]  # top 3 for preview
                 except:
                     pass
@@ -713,7 +727,8 @@ async def get_order_details(
         if ids_str:
             dmg_result = db.execute(text(f"""
                 SELECT product_id, id, processing_type, note, severity, 
-                       processing_status, created_at, damage_type, damage_code
+                       processing_status, created_at, damage_type, damage_code,
+                       photo_url, stage, order_number, qty, fee, created_by
                 FROM product_damage_history
                 WHERE product_id IN ({ids_str})
                 ORDER BY created_at DESC
@@ -726,17 +741,27 @@ async def get_order_details(
                 dmg_map[pid].append({
                     'id': d[1],
                     'type': d[2] or d[7] or '',
+                    'damage_type': d[7] or d[2] or '',
                     'notes': d[3] or '',
+                    'note': d[3] or '',
                     'severity': d[4],
                     'status': d[5],
                     'date': d[6].isoformat() if d[6] else None,
-                    'damage_type': d[7] or '',
-                    'damage_code': d[8] or ''
+                    'created_at': d[6].strftime('%d.%m.%Y %H:%M') if d[6] else None,
+                    'damage_code': d[8] or '',
+                    'photo_url': d[9],
+                    'stage': d[10] or '',
+                    'stage_label': 'До видачі' if d[10] == 'pre_issue' else 'При поверненні' if d[10] == 'return' else 'Аудит' if d[10] else '',
+                    'order_number': d[11] or '',
+                    'qty': int(d[12] or 1),
+                    'fee': float(d[13] or 0),
+                    'created_by': d[14] or '',
                 })
             for it in items:
                 pid = it.get('inventory_id', '')
                 it['damage_history'] = dmg_map.get(pid, [])
                 it['has_damage_history'] = len(it['damage_history']) > 0
+                it['total_damages'] = len(it['damage_history'])
     
     # Get lifecycle info
     lifecycle_result = db.execute(text("""

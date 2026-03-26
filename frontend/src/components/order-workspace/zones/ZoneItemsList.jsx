@@ -113,6 +113,14 @@ function ItemRow({
   isHighlighted = false,
 }) {
   const fmtUA = (n) => (Number(n) || 0).toLocaleString('uk-UA', { maximumFractionDigits: 0 })
+  const [showDamagePhoto, setShowDamagePhoto] = useState(null)
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || ''
+  
+  const getPhotoUrl = (url) => {
+    if (!url) return ''
+    if (url.startsWith('http')) return url
+    return `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`
+  }
   
   const qty = parseInt(item.quantity || item.qty) || 0
   const pricePerDay = parseFloat(item.price_per_day || item.price) || 0
@@ -185,13 +193,50 @@ function ItemRow({
                 📍 <b>{zoneStr}</b>
               </div>
             )}
-            {/* ⚠️ Попередження про пошкодження з журналу стану */}
+            {/* Повна історія пошкоджень з фото */}
             {item.has_damage_history && item.damage_history?.length > 0 && (
-              <div className="mt-1 flex items-center gap-1 px-2 py-1 rounded bg-amber-50 border border-amber-200 text-xs text-amber-700">
-                <span>⚠️</span>
-                <span className="font-medium">Пошкодження ({item.damage_history.length})</span>
-                <span className="text-amber-500">·</span>
-                <span className="truncate">{item.damage_history[0]?.notes || item.damage_history[0]?.type || ''}</span>
+              <div className="mt-1.5 rounded-lg bg-amber-50 border border-amber-200 p-2" data-testid={`damage-history-block-${item.id || item.inventory_id}`}>
+                <div className="flex items-center gap-1 text-xs font-semibold text-amber-700 mb-1.5">
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+                  Історія пошкоджень ({item.damage_history.length})
+                </div>
+                <div className="space-y-1.5 max-h-[180px] overflow-y-auto">
+                  {item.damage_history.slice(0, 5).map((d, idx) => (
+                    <div key={d.id || idx} className="flex items-start gap-2 text-[11px] bg-white rounded-lg p-2 border border-amber-100">
+                      {d.photo_url && (
+                        <img 
+                          src={getPhotoUrl(d.photo_url)} 
+                          alt="" 
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0 cursor-pointer border-2 border-amber-300 hover:border-amber-500 transition-all active:scale-95"
+                          onClick={() => setShowDamagePhoto(getPhotoUrl(d.photo_url))}
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                            d.severity === 'critical' ? 'bg-red-100 text-red-700' :
+                            d.severity === 'high' ? 'bg-orange-100 text-orange-700' :
+                            d.severity === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                          }`}>
+                            {d.damage_type || d.type || '—'}
+                          </span>
+                          <span className="text-amber-500 text-[10px]">{d.stage_label || d.stage || ''}</span>
+                        </div>
+                        {d.note && <div className="text-slate-600 mt-0.5 truncate">{d.note}</div>}
+                        <div className="text-slate-400 text-[10px] mt-0.5 flex items-center gap-2">
+                          {d.created_at && <span>{d.created_at}</span>}
+                          {d.created_by && <span>{d.created_by}</span>}
+                          {d.fee > 0 && <span className="text-amber-600 font-medium">₴{d.fee}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {item.damage_history.length > 5 && (
+                  <div className="text-center text-[10px] text-amber-600 mt-1 font-medium">
+                    + ще {item.damage_history.length - 5} записів
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -272,6 +317,29 @@ function ItemRow({
         >
           ×
         </button>
+      )}
+      
+      {/* Модалка повнорозмірного фото пошкодження */}
+      {showDamagePhoto && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setShowDamagePhoto(null)}
+          data-testid="damage-photo-fullscreen"
+        >
+          <div className="relative max-w-full max-h-full">
+            <img 
+              src={showDamagePhoto} 
+              alt="Фото пошкодження"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+            <button 
+              className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/20 backdrop-blur text-white flex items-center justify-center hover:bg-white/30 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setShowDamagePhoto(null) }}
+            >
+              <span className="text-xl font-bold">✕</span>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

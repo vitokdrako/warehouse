@@ -194,6 +194,60 @@ async def get_dashboard_overview(
             
             for row in cards_result:
                 result["issue_cards"].append(parse_issue_card_simple(row, db))
+            
+            # Enrich issue cards with damage info (batch query)
+            all_product_ids = set()
+            for card in result["issue_cards"]:
+                for it in (card.get("items") or []):
+                    pid = it.get("id") or it.get("product_id") or it.get("inventory_id")
+                    if pid:
+                        try:
+                            all_product_ids.add(int(pid))
+                        except (ValueError, TypeError):
+                            pass
+            
+            if all_product_ids:
+                placeholders = ",".join(str(p) for p in all_product_ids)
+                dmg_result = db.execute(text(f"""
+                    SELECT product_id, photo_url, note, damage_type, severity
+                    FROM product_damage_history
+                    WHERE product_id IN ({placeholders})
+                    ORDER BY created_at DESC
+                """))
+                dmg_by_pid = {}
+                for d in dmg_result:
+                    pid = d[0]
+                    if pid not in dmg_by_pid:
+                        dmg_by_pid[pid] = []
+                    dmg_by_pid[pid].append({
+                        "photo_url": d[1],
+                        "note": d[2],
+                        "damage_type": d[3],
+                        "severity": d[4]
+                    })
+                
+                for card in result["issue_cards"]:
+                    damage_items_count = 0
+                    damage_photos = []
+                    for it in (card.get("items") or []):
+                        pid = it.get("id") or it.get("product_id") or it.get("inventory_id")
+                        if pid:
+                            try:
+                                pid_int = int(pid)
+                            except (ValueError, TypeError):
+                                continue
+                            if pid_int in dmg_by_pid:
+                                damage_items_count += 1
+                                for d in dmg_by_pid[pid_int][:2]:
+                                    if d["photo_url"]:
+                                        damage_photos.append({
+                                            "photo_url": d["photo_url"],
+                                            "note": d["note"] or d["damage_type"] or "",
+                                            "severity": d["severity"] or "low"
+                                        })
+                    card["damage_items_count"] = damage_items_count
+                    card["damage_photos"] = damage_photos[:6]
+                    card["has_damage_items"] = damage_items_count > 0
         except Exception as e:
             print(f"[Dashboard] Error loading issue cards: {e}")
         

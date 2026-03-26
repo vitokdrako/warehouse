@@ -648,6 +648,12 @@ export default function ManagerDashboard() {
                     {card.customer_phone && (
                       <div className="text-xs text-slate-400 mt-0.5">{card.customer_phone}</div>
                     )}
+                    {card.has_damage_items && (
+                      <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1" data-testid={`return-damage-badge-${card.order_id}`}>
+                        <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+                        {card.damage_items_count} поз. з пошкодженнями
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -774,6 +780,57 @@ function Column({ title, subtitle, children, tone }) {
   );
 }
 
+function DamagePhotoViewer({ photos, onClose }) {
+  const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
+  if (!photos || photos.length === 0) return null;
+  
+  const getPhotoUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${BACKEND_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+  
+  return (
+    <div 
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+      data-testid="damage-photo-viewer-overlay"
+    >
+      <div 
+        className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between rounded-t-2xl z-10">
+          <h3 className="font-semibold text-slate-800 text-sm">Фото пошкоджень ({photos.length})</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg font-bold" data-testid="damage-photo-viewer-close">✕</button>
+        </div>
+        <div className="p-4 grid grid-cols-2 gap-3">
+          {photos.map((photo, i) => (
+            <div key={i} className="rounded-xl overflow-hidden border border-slate-200">
+              <img 
+                src={getPhotoUrl(photo.photo_url)} 
+                alt={photo.note || 'Пошкодження'}
+                className="w-full h-36 object-contain bg-slate-50 cursor-pointer"
+                onClick={() => window.open(getPhotoUrl(photo.photo_url), '_blank')}
+              />
+              {photo.note && (
+                <div className="px-2 py-1.5 text-xs text-slate-600 bg-slate-50 border-t border-slate-100 truncate">
+                  <span className={`inline-block w-2 h-2 rounded-full mr-1 ${
+                    photo.severity === 'critical' ? 'bg-red-500' :
+                    photo.severity === 'high' ? 'bg-orange-500' :
+                    photo.severity === 'medium' ? 'bg-amber-500' : 'bg-green-500'
+                  }`}></span>
+                  {photo.note}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDateUpdate, onCancelByClient }) {
   // Маячок - перевіряємо чи ордер змінився з останнього перегляду
   const seenKey = `order_seen_${order?.order_id}`;
@@ -807,6 +864,11 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
   const [issueDate, setIssueDate] = React.useState(order?.issue_date || '');
   const [returnDate, setReturnDate] = React.useState(order?.return_date || '');
   const [isSaving, setIsSaving] = React.useState(false);
+  const [showDamagePhotos, setShowDamagePhotos] = React.useState(false);
+  
+  const hasDamage = order?.has_damage_items;
+  const damagePhotos = order?.damage_photos || [];
+  const damageCount = order?.damage_items_count || 0;
   
   const handleSaveDates = async (e) => {
     e.stopPropagation();
@@ -843,6 +905,17 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
         <div className="flex items-center gap-2 flex-wrap">
           <span className={badgeInfo.css}>{badgeInfo.label}</span>
           <span className="text-corp-text-muted text-sm font-medium">#{id}</span>
+          {hasDamage && (
+            <span 
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-semibold cursor-pointer hover:bg-amber-200 transition-colors"
+              onClick={(e) => { e.stopPropagation(); if (damagePhotos.length > 0) setShowDamagePhotos(true); }}
+              title={`${damageCount} позицій з пошкодженнями`}
+              data-testid={`damage-badge-${order?.order_id}`}
+            >
+              <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+              {damageCount}
+            </span>
+          )}
         </div>
         {badge === 'new' && onDateUpdate && !isEditing && (
           <button 
@@ -854,6 +927,11 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
           </button>
         )}
       </div>
+      
+      {/* Damage photo viewer modal */}
+      {showDamagePhotos && (
+        <DamagePhotoViewer photos={damagePhotos} onClose={() => setShowDamagePhotos(false)} />
+      )}
       
       {/* Customer info - mobile optimized */}
       <div className="mb-3">
@@ -953,6 +1031,18 @@ function OrderCard({ id, name, phone, rent, deposit, badge, onClick, order, onDa
           className="mt-3 w-full text-sm text-rose-600 border-2 border-rose-200 rounded-xl px-3 py-2.5 font-medium hover:bg-rose-50 active:bg-rose-100 transition-colors"
         >
           🚫 Клієнт відмовився
+        </button>
+      )}
+      
+      {/* Damage photos quick access button */}
+      {hasDamage && damagePhotos.length > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowDamagePhotos(true); }}
+          className="mt-2 w-full text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 font-medium hover:bg-amber-100 active:bg-amber-200 transition-colors flex items-center justify-center gap-1.5"
+          data-testid={`damage-photos-btn-${order?.order_id}`}
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M1 8a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 018.07 3h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0016.07 6H17a2 2 0 012 2v7a2 2 0 01-2 2H3a2 2 0 01-2-2V8zm13.5 3a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM10 14a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" /></svg>
+          Фото пошкоджень ({damagePhotos.length})
         </button>
       )}
     </article>

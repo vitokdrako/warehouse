@@ -46,7 +46,7 @@ default_origins = [
     "https://backrentalhub.farforrent.com.ua",
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://data-patch-demo.preview.emergentagent.com",  # Emergent preview
+    "https://item-photos.preview.emergentagent.com",  # Emergent preview
 ]
 
 if cors_origins == '*':

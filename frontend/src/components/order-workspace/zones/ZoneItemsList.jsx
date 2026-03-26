@@ -178,6 +178,15 @@ function ItemRow({
                 📍 <b>{zoneStr}</b>
               </div>
             )}
+            {/* ⚠️ Попередження про пошкодження з журналу стану */}
+            {item.has_damage_history && item.damage_history?.length > 0 && (
+              <div className="mt-1 flex items-center gap-1 px-2 py-1 rounded bg-amber-50 border border-amber-200 text-xs text-amber-700">
+                <span>⚠️</span>
+                <span className="font-medium">Пошкодження ({item.damage_history.length})</span>
+                <span className="text-amber-500">·</span>
+                <span className="truncate">{item.damage_history[0]?.notes || item.damage_history[0]?.type || ''}</span>
+              </div>
+            )}
           </div>
           
           {/* Кількість */}

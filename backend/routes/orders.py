@@ -137,8 +137,40 @@ def parse_order_row(row, db: Session = None):
                     "state": item_row[15] or "shelf"
                 },
                 "pack": "",  # TODO: додати якщо є в products
-                "pre_damage": []  # TODO: завантажити з damages table
+                "pre_damage": []  # will be enriched below
             })
+        
+        # ✅ Enrich items with damage history
+        item_pids = [it.get('inventory_id') for it in items if it.get('inventory_id')]
+        if item_pids:
+            pids_str = ','.join(str(int(p)) for p in item_pids if p.isdigit())
+            if pids_str:
+                try:
+                    dmg_rows = db.execute(text(f"""
+                        SELECT product_id, damage_type, damage_code, note, severity, processing_status, created_at
+                        FROM product_damage_history
+                        WHERE product_id IN ({pids_str})
+                        ORDER BY created_at DESC
+                    """)).fetchall()
+                    dmg_by_pid = {}
+                    for dr in dmg_rows:
+                        k = str(dr[0])
+                        if k not in dmg_by_pid:
+                            dmg_by_pid[k] = []
+                        dmg_by_pid[k].append({
+                            'type': dr[1] or dr[2] or '',
+                            'notes': dr[3] or '',
+                            'severity': dr[4] or 'low',
+                            'status': dr[5] or '',
+                            'date': dr[6].isoformat() if dr[6] else None,
+                        })
+                    for it in items:
+                        pid = it.get('inventory_id', '')
+                        it['damage_history'] = dmg_by_pid.get(pid, [])
+                        it['has_damage_history'] = len(it['damage_history']) > 0
+                        it['pre_damage'] = it['damage_history'][:3]  # top 3 for preview
+                except:
+                    pass
         
         # ✅ Обчислити прогрес комплектації з issue_cards
         try:
@@ -673,6 +705,38 @@ async def get_order_details(
         })
     
     order["items"] = items
+    
+    # ✅ Enrich items with damage history from product_damage_history
+    product_ids = [it.get('inventory_id') for it in items if it.get('inventory_id')]
+    if product_ids:
+        ids_str = ','.join(str(int(pid)) for pid in product_ids if pid.isdigit())
+        if ids_str:
+            dmg_result = db.execute(text(f"""
+                SELECT product_id, id, processing_type, note, severity, 
+                       processing_status, created_at, damage_type, damage_code
+                FROM product_damage_history
+                WHERE product_id IN ({ids_str})
+                ORDER BY created_at DESC
+            """)).fetchall()
+            dmg_map = {}
+            for d in dmg_result:
+                pid = str(d[0])
+                if pid not in dmg_map:
+                    dmg_map[pid] = []
+                dmg_map[pid].append({
+                    'id': d[1],
+                    'type': d[2] or d[7] or '',
+                    'notes': d[3] or '',
+                    'severity': d[4],
+                    'status': d[5],
+                    'date': d[6].isoformat() if d[6] else None,
+                    'damage_type': d[7] or '',
+                    'damage_code': d[8] or ''
+                })
+            for it in items:
+                pid = it.get('inventory_id', '')
+                it['damage_history'] = dmg_map.get(pid, [])
+                it['has_damage_history'] = len(it['damage_history']) > 0
     
     # Get lifecycle info
     lifecycle_result = db.execute(text("""

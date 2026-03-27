@@ -261,6 +261,64 @@ def generate_master_agreement_html(
             "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M")
         }
         
+        # Provide "agreement" wrapper for templates that use {{ agreement.xxx }}
+        template_data["agreement"] = {
+            **agreement_data,
+            "contract_number": agreement_data.get("contract_number", "—"),
+            "contract_date": format_date_ua(snapshot.get("contract_date") or agreement_data.get("valid_from")),
+            "valid_from": format_date_ua(agreement_data.get("valid_from")),
+            "valid_until": format_date_ua_long(agreement_data.get("valid_until")),
+            "signed_at": format_date_ua(agreement_data.get("signed_at")) if agreement_data.get("signed_at") else None,
+            "executor": executor,
+            "client": client,
+        }
+        
+        # Provide "landlord" mapping for DB templates
+        template_data["landlord"] = {
+            "name": executor.get("name", ""),
+            "tax_id": executor.get("edrpou", executor.get("tax_id", "")),
+            "iban": executor.get("iban", ""),
+            "address": executor.get("address", ""),
+        }
+        
+        # Provide "tenant" mapping for DB templates
+        template_data["tenant"] = {
+            "legal_name": client.get("company_name") or client.get("full_name", ""),
+            "signer_name": client.get("director_name") or client.get("full_name", ""),
+            "address": "",
+            "iban": "",
+        }
+        if client.get("bank_details") and isinstance(client["bank_details"], dict):
+            template_data["tenant"]["iban"] = client["bank_details"].get("iban", "")
+            template_data["tenant"]["address"] = client["bank_details"].get("address", "")
+        
+        # Provide "meta" for DB templates (date parts + watermark)
+        contract_date_raw = snapshot.get("contract_date") or agreement_data.get("valid_from")
+        meta_day, meta_month, meta_year = "", "", ""
+        if contract_date_raw:
+            try:
+                from datetime import date as dt_date
+                if isinstance(contract_date_raw, str):
+                    d = datetime.fromisoformat(contract_date_raw).date() if 'T' in contract_date_raw else datetime.strptime(contract_date_raw, "%Y-%m-%d").date()
+                elif isinstance(contract_date_raw, dt_date):
+                    d = contract_date_raw
+                else:
+                    d = None
+                if d:
+                    months_ua = ["січня","лютого","березня","квітня","травня","червня",
+                                "липня","серпня","вересня","жовтня","листопада","грудня"]
+                    meta_day = str(d.day)
+                    meta_month = months_ua[d.month - 1]
+                    meta_year = str(d.year)
+            except:
+                pass
+        template_data["meta"] = {
+            "watermark_text": "" if agreement_data.get("status") == "signed" else "ЧЕРНЕТКА",
+            "contract_day": meta_day,
+            "contract_month": meta_month,
+            "contract_year": meta_year,
+        }
+        
         template = jinja_env.get_template("legal/master_agreement.html")
         return template.render(**template_data)
         

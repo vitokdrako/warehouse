@@ -1008,7 +1008,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                             </div>
                             {/* Create new agreement button */}
                             <Button
-                              variant="primary"
+                              variant="default"
                               size="sm"
                               onClick={handleCreateClientMA}
                               disabled={creatingMA === client.id}
@@ -1033,7 +1033,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                                 PDF
                               </Button>
                               {clientMA.status === 'draft' && (
-                                <Button variant="primary" size="sm" className="text-xs h-7" onClick={() => handleSignClientMA(clientMA.id)}>
+                                <Button variant="default" size="sm" className="text-xs h-7" onClick={() => handleSignClientMA(clientMA.id)}>
                                   Підписати
                                 </Button>
                               )}
@@ -1042,7 +1042,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                               </Button>
                               {(clientMA.status === 'signed' || clientMA.status === 'draft' || clientMA.status === 'sent') && (
                                 <Button 
-                                  variant="danger" 
+                                  variant="destructive" 
                                   size="sm" 
                                   className="text-xs h-7"
                                   onClick={() => setShowTerminateModal(true)}
@@ -1096,7 +1096,7 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                                 Скасувати
                               </Button>
                               <Button 
-                                variant="danger" 
+                                variant="destructive" 
                                 onClick={() => handleTerminateMA(clientMA.id)} 
                                 disabled={terminating || !terminateReason.trim()}
                                 className="flex-1"

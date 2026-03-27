@@ -282,11 +282,24 @@ def generate_master_agreement_html(
         }
         
         # Provide "tenant" mapping for DB templates
+        payer_type = client.get("payer_type", "individual")
+        payer_type_labels = {
+            "individual": "фізична особа",
+            "fop": "фізична особа-підприємець",
+            "tov": "юридична особа (ТОВ)",
+            "pp": "приватне підприємство",
+        }
         template_data["tenant"] = {
             "legal_name": client.get("company_name") or client.get("full_name", ""),
             "signer_name": client.get("director_name") or client.get("full_name", ""),
             "address": "",
             "iban": "",
+            "type": payer_type,
+            "type_label": payer_type_labels.get(payer_type, payer_type or ""),
+            "tax_id": client.get("tax_id", ""),
+            "phone": client.get("phone", ""),
+            "email": client.get("email", ""),
+            "full_name": client.get("full_name", ""),
         }
         if client.get("bank_details") and isinstance(client["bank_details"], dict):
             template_data["tenant"]["iban"] = client["bank_details"].get("iban", "")

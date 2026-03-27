@@ -383,6 +383,9 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
   // Master Agreement state (client-based only)
   const [clientMA, setClientMA] = useState(null);
   const [creatingMA, setCreatingMA] = useState(false);
+  const [showTerminateModal, setShowTerminateModal] = useState(false);
+  const [terminateReason, setTerminateReason] = useState('');
+  const [terminating, setTerminating] = useState(false);
 
   useEffect(() => {
     if (client?.id) {
@@ -609,6 +612,35 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
     } catch (err) {
       console.error("Error sending MA:", err);
       alert("❌ Помилка відправки");
+    }
+  };
+
+  const handleTerminateMA = async (maId) => {
+    if (!terminateReason.trim()) {
+      alert("Вкажіть причину припинення");
+      return;
+    }
+    setTerminating(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/agreements/${maId}/terminate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: terminateReason.trim() })
+      });
+      if (res.ok) {
+        alert("✅ Договір припинено");
+        setShowTerminateModal(false);
+        setTerminateReason('');
+        loadClientData();
+      } else {
+        const err = await res.json();
+        alert(`❌ Помилка: ${err.detail || 'Невідома помилка'}`);
+      }
+    } catch (err) {
+      console.error("Error terminating MA:", err);
+      alert("❌ Помилка припинення");
+    } finally {
+      setTerminating(false);
     }
   };
 
@@ -939,22 +971,61 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                               "text-xs px-2 py-0.5 rounded-full",
                               clientMA.status === 'signed' ? "bg-emerald-100 text-emerald-700" :
                               clientMA.status === 'sent' ? "bg-blue-100 text-blue-700" :
+                              clientMA.status === 'terminated' ? "bg-rose-100 text-rose-700" :
                               "bg-amber-100 text-amber-700"
                             )}>
                               {clientMA.status === 'signed' ? 'Підписано' :
-                               clientMA.status === 'sent' ? 'Відправлено' : 'Чернетка'}
+                               clientMA.status === 'sent' ? 'Відправлено' : 
+                               clientMA.status === 'terminated' ? 'Припинено' : 'Чернетка'}
                             </span>
                           ) : (
                             <span className="text-xs text-slate-400">Не створено</span>
                           )}
                         </div>
-                        {clientMA?.exists ? (
+                        
+                        {clientMA?.exists && clientMA.status === 'terminated' ? (
+                          /* Terminated agreement view */
+                          <div className="mt-2">
+                            <div className="text-sm font-medium text-slate-500 line-through">{clientMA.contract_number}</div>
+                            {clientMA.termination_reason && (
+                              <div className="text-xs text-rose-600 mt-1 bg-rose-50 rounded-lg px-2 py-1 border border-rose-100">
+                                Причина: {clientMA.termination_reason}
+                              </div>
+                            )}
+                            {clientMA.terminated_at && (
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                Припинено: {new Date(clientMA.terminated_at).toLocaleDateString('uk-UA')}
+                              </div>
+                            )}
+                            <div className="flex gap-2 mt-2">
+                              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => window.open(`${BACKEND_URL}/api/agreements/${clientMA.id}/termination-act`, '_blank')}
+                                data-testid="termination-act-btn">
+                                Акт розірвання
+                              </Button>
+                              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => handlePreviewMA(clientMA.id)}>
+                                Договір
+                              </Button>
+                            </div>
+                            {/* Create new agreement button */}
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={handleCreateClientMA}
+                              disabled={creatingMA === client.id}
+                              className="w-full mt-3 text-xs h-9"
+                              data-testid="create-new-agreement-btn"
+                            >
+                              {creatingMA === client.id ? "Створення..." : "Створити новий договір"}
+                            </Button>
+                          </div>
+                        ) : clientMA?.exists ? (
+                          /* Active agreement view */
                           <div className="mt-2">
                             <div className="text-sm font-medium text-slate-800">{clientMA.contract_number}</div>
                             {clientMA.valid_until && (
                               <div className="text-xs text-slate-500 mt-0.5">до {new Date(clientMA.valid_until).toLocaleDateString('uk-UA')}</div>
                             )}
-                            <div className="flex gap-2 mt-2">
+                            <div className="flex gap-2 mt-2 flex-wrap">
                               <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => handlePreviewMA(clientMA.id)}>
                                 Переглянути
                               </Button>
@@ -969,6 +1040,17 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                               <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => handleSendMAEmail(clientMA.id)}>
                                 Email
                               </Button>
+                              {(clientMA.status === 'signed' || clientMA.status === 'draft' || clientMA.status === 'sent') && (
+                                <Button 
+                                  variant="danger" 
+                                  size="sm" 
+                                  className="text-xs h-7"
+                                  onClick={() => setShowTerminateModal(true)}
+                                  data-testid="terminate-agreement-btn"
+                                >
+                                  Припинити
+                                </Button>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -983,6 +1065,49 @@ const ClientDetailDrawer = ({ client, onClose, onUpdate }) => {
                           </Button>
                         )}
                       </div>
+                      
+                      {/* Terminate Modal */}
+                      {showTerminateModal && clientMA?.exists && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.target === e.currentTarget && setShowTerminateModal(false)}>
+                          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl" data-testid="terminate-modal">
+                            <div className="px-5 py-4 border-b border-slate-100">
+                              <h3 className="text-base font-semibold text-slate-900">Припинити договір</h3>
+                              <p className="text-xs text-slate-500 mt-1">Договір №{clientMA.contract_number}</p>
+                            </div>
+                            <div className="p-5 space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Причина припинення *</label>
+                                <textarea
+                                  value={terminateReason}
+                                  onChange={(e) => setTerminateReason(e.target.value)}
+                                  placeholder="Вкажіть причину припинення договору..."
+                                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm min-h-[80px] outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300"
+                                  data-testid="terminate-reason-input"
+                                />
+                              </div>
+                              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                <p className="text-xs text-amber-800">
+                                  Після припинення буде згенеровано Акт розірвання. Ви зможете створити новий договір для цього клієнта.
+                                </p>
+                              </div>
+                            </div>
+                            <div className="px-5 py-4 border-t border-slate-100 flex gap-3">
+                              <Button variant="ghost" onClick={() => { setShowTerminateModal(false); setTerminateReason(''); }} className="flex-1">
+                                Скасувати
+                              </Button>
+                              <Button 
+                                variant="danger" 
+                                onClick={() => handleTerminateMA(clientMA.id)} 
+                                disabled={terminating || !terminateReason.trim()}
+                                className="flex-1"
+                                data-testid="terminate-confirm-btn"
+                              >
+                                {terminating ? "Припинення..." : "Припинити договір"}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

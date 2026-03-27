@@ -739,6 +739,195 @@ def _get_order_with_items(db: Session, order_id: int):
     return order, items
 
 
+def _enrich_template_with_agreement(db: Session, order, template_data: dict, order_id=None, customer_name=None) -> dict:
+    """
+    Enrich template_data with agreement (contract number + date), landlord, tenant, meta.
+    Called from ALL document generation endpoints so templates can reference:
+      {{ agreement.contract_number }}, {{ agreement.contract_date }}
+      {{ tenant.type_label }}, {{ landlord.name }}, etc.
+    """
+    # Find client_user_id from order
+    client_user_id = None
+    if not customer_name and order:
+        customer_name = order[3] if len(order) > 3 else None
+    if not order_id and order:
+        order_id = order[0] if len(order) > 0 else None
+    
+    if order_id:
+        # Try to get client_user_id directly from order
+        try:
+            cuid_row = db.execute(text(
+                "SELECT client_user_id FROM orders WHERE order_id = :oid"
+            ), {"oid": order_id}).fetchone()
+            if cuid_row and cuid_row[0]:
+                client_user_id = cuid_row[0]
+        except:
+            pass
+        
+        # Fallback: match by customer_name
+        if not client_user_id and customer_name:
+            try:
+                cu_row = db.execute(text(
+                    "SELECT id FROM client_users WHERE full_name = :name LIMIT 1"
+                ), {"name": customer_name}).fetchone()
+                if cu_row:
+                    client_user_id = cu_row[0]
+            except:
+                pass
+    
+    # Load client data
+    client_data = {}
+    if client_user_id:
+        try:
+            cr = db.execute(text("""
+                SELECT full_name, email, phone, payer_type, tax_id, company_name, 
+                       director_name, bank_details
+                FROM client_users WHERE id = :cid
+            """), {"cid": client_user_id}).fetchone()
+            if cr:
+                client_data = {
+                    "full_name": cr[0] or "",
+                    "email": cr[1] or "",
+                    "phone": cr[2] or "",
+                    "payer_type": cr[3] or "individual",
+                    "tax_id": cr[4] or "",
+                    "company_name": cr[5] or "",
+                    "director_name": cr[6] or "",
+                    "bank_details": cr[7],
+                }
+        except:
+            pass
+    
+    # Load active master agreement
+    agreement_data = {}
+    if client_user_id:
+        try:
+            ma_row = db.execute(text("""
+                SELECT id, contract_number, valid_from, valid_until, signed_at, status, snapshot_json
+                FROM master_agreements 
+                WHERE client_user_id = :cid AND status = 'signed'
+                AND valid_until >= CURDATE()
+                ORDER BY signed_at DESC LIMIT 1
+            """), {"cid": client_user_id}).fetchone()
+            
+            if not ma_row:
+                # Try draft
+                ma_row = db.execute(text("""
+                    SELECT id, contract_number, valid_from, valid_until, signed_at, status, snapshot_json
+                    FROM master_agreements 
+                    WHERE client_user_id = :cid AND status IN ('draft', 'sent')
+                    ORDER BY created_at DESC LIMIT 1
+                """), {"cid": client_user_id}).fetchone()
+            
+            if ma_row:
+                snapshot = {}
+                if ma_row[6]:
+                    try:
+                        snapshot = json.loads(ma_row[6]) if isinstance(ma_row[6], str) else ma_row[6]
+                    except:
+                        pass
+                
+                contract_date_raw = snapshot.get("contract_date") or (ma_row[2].isoformat() if ma_row[2] else None)
+                
+                agreement_data = {
+                    "id": ma_row[0],
+                    "contract_number": ma_row[1],
+                    "contract_date": _format_date_ua(ma_row[2]),
+                    "contract_date_long": _format_date_ua_long(ma_row[2]),
+                    "valid_from": _format_date_ua(ma_row[2]),
+                    "valid_until": _format_date_ua_long(ma_row[3]),
+                    "signed_at": _format_date_ua(ma_row[4]) if ma_row[4] else None,
+                    "status": ma_row[5],
+                }
+                
+                # Extract executor from snapshot
+                executor_type = snapshot.get("executor_type", "tov")
+                executor = snapshot.get("executor") or EXECUTORS.get(executor_type, EXECUTORS.get("tov", {}))
+                agreement_data["executor"] = executor
+                agreement_data["executor_type"] = executor_type
+        except:
+            pass
+    
+    # Build mappings
+    payer_type = client_data.get("payer_type", "individual")
+    payer_type_labels = {
+        "individual": "фізична особа",
+        "fop": "фізична особа-підприємець",
+        "tov": "юридична особа (ТОВ)",
+        "pp": "приватне підприємство",
+    }
+    
+    executor = agreement_data.get("executor", EXECUTORS.get("tov", {}))
+    
+    template_data["agreement"] = agreement_data
+    
+    template_data["landlord"] = {
+        "name": executor.get("name", ""),
+        "tax_id": executor.get("edrpou", executor.get("tax_id", "")),
+        "iban": executor.get("iban", ""),
+        "address": executor.get("address", ""),
+    }
+    
+    template_data["tenant"] = {
+        "legal_name": client_data.get("company_name") or client_data.get("full_name", customer_name or ""),
+        "signer_name": client_data.get("director_name") or client_data.get("full_name", customer_name or ""),
+        "full_name": client_data.get("full_name", customer_name or ""),
+        "address": "",
+        "iban": "",
+        "type": payer_type,
+        "type_label": payer_type_labels.get(payer_type, payer_type or ""),
+        "tax_id": client_data.get("tax_id", ""),
+        "phone": client_data.get("phone", ""),
+        "email": client_data.get("email", ""),
+    }
+    
+    # Parse bank_details for tenant
+    bd = client_data.get("bank_details")
+    if bd:
+        if isinstance(bd, str):
+            try:
+                bd = json.loads(bd)
+            except:
+                bd = None
+        if isinstance(bd, dict):
+            template_data["tenant"]["iban"] = bd.get("iban", "")
+            template_data["tenant"]["address"] = bd.get("address", "")
+    
+    # Meta (date parts for templates)
+    contract_date_raw = None
+    if agreement_data:
+        try:
+            snapshot = agreement_data.get("_snapshot", {})
+            contract_date_raw = snapshot.get("contract_date") or agreement_data.get("valid_from")
+        except:
+            pass
+    
+    meta_day, meta_month, meta_year = "", "", ""
+    if contract_date_raw:
+        try:
+            from datetime import date as dt_date
+            if isinstance(contract_date_raw, str) and len(contract_date_raw) >= 8:
+                d = datetime.fromisoformat(contract_date_raw).date() if 'T' in contract_date_raw else datetime.strptime(contract_date_raw, "%Y-%m-%d").date()
+                months_ua = ["січня","лютого","березня","квітня","травня","червня",
+                            "липня","серпня","вересня","жовтня","листопада","грудня"]
+                meta_day = str(d.day)
+                meta_month = months_ua[d.month - 1]
+                meta_year = str(d.year)
+        except:
+            pass
+    
+    template_data["meta"] = template_data.get("meta", {})
+    template_data["meta"].update({
+        "watermark_text": "",
+        "contract_day": meta_day,
+        "contract_month": meta_month, 
+        "contract_year": meta_year,
+    })
+    
+    return template_data
+
+
+
 @router.get("/estimate/{order_id}/preview", response_class=HTMLResponse)
 async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     """Generate HTML preview of estimate (Кошторис) using new quote.html template"""
@@ -871,6 +1060,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     }
     
     template = jinja_env.get_template("documents/quote.html")
+    _enrich_template_with_agreement(db, order, template_data)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -971,9 +1161,8 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     }
     
     template = jinja_env.get_template("documents/quote.html")
+    _enrich_template_with_agreement(db, order, template_data)
     html_content = template.render(**template_data)
-    
-    # Add auto-print script
     print_script = '''<script>window.onload = function() { window.print(); }</script>'''
     html_content = html_content.replace('</body>', f'{print_script}</body>')
     
@@ -1176,6 +1365,7 @@ async def preview_annex(
     }
     
     template = jinja_env.get_template("documents/annex.html")
+    _enrich_template_with_agreement(db, order, template_data)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -1280,6 +1470,7 @@ async def preview_invoice_offer(
     }
     
     template = jinja_env.get_template("documents/invoice_offer.html")
+    _enrich_template_with_agreement(db, order, template_data)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -1367,6 +1558,7 @@ async def download_invoice_offer_pdf(
     }
     
     template = jinja_env.get_template("documents/invoice_offer.html")
+    _enrich_template_with_agreement(db, order, template_data)
     html_content = template.render(**template_data)
     
     # Add auto-print script
@@ -1530,6 +1722,9 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
         "totals": {"items_count": len(items), "quantity": total_qty},
         "company": get_company_config(db),
     }
+    
+    _enrich_template_with_agreement(db, order, template_data)
+    return template_data
 
 
 @router.get("/issue-act/{order_id}/preview", response_class=HTMLResponse)
@@ -1671,6 +1866,7 @@ async def download_annex_pdf(order_id: int, agreement_id: Optional[int] = Query(
     }
     
     template = jinja_env.get_template("documents/annex.html")
+    _enrich_template_with_agreement(db, order, template_data)
     html_content = template.render(**template_data)
     
     return HTMLResponse(content=html_content, media_type="text/html")
@@ -2143,6 +2339,7 @@ async def preview_invoice_payment(
     }
     
     template = jinja_env.get_template("documents/invoice_payment.html")
+    _enrich_template_with_agreement(db, order, template_data)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -2253,6 +2450,7 @@ async def preview_service_act(
     }
     
     template = jinja_env.get_template("documents/service_act.html")
+    _enrich_template_with_agreement(db, None, template_data, order_id=order_id)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -2520,6 +2718,7 @@ async def preview_settlement_act(
     }
 
     template = jinja_env.get_template("documents/settlement_act.html")
+    _enrich_template_with_agreement(db, None, template_data, order_id=order_id, customer_name=order_row[2])
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 

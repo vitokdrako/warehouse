@@ -193,6 +193,9 @@
     <div class="docmeta">
       <p class="title">Акт взаєморозрахунків</p>
       <div class="row">{{ order.order_number }}</div>
+      {% if agreement and agreement.contract_number %}
+      <div class="row" style="font-size:13px;color:#555;">згідно Договору №{{ agreement.contract_number }} від {{ agreement.contract_date or "" }}</div>
+      {% endif %}
       <div class="row">від {{ generated_at }}</div>
       {% if settlement.final_balance > 0 %}
       <span class="pill pill-danger">До сплати клієнтом</span>

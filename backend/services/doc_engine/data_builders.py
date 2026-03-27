@@ -367,13 +367,23 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         try:
             profile_result = db.execute(text("""
                 SELECT payer_type, company_name, edrpou, iban, bank_name, 
-                       director_name, address, tax_number, is_vat_payer
+                       director_name, address, tax_number, is_vat_payer, tax_mode
                 FROM payer_profiles WHERE id = :id
             """), {"id": payer_profile_id})
             profile_row = profile_result.fetchone()
             if profile_row:
+                raw_type = profile_row[0] or "individual"
+                tax_mode = profile_row[9] or "simplified"
+                
+                # Нормалізація: tov/fop/company + tax_mode → llc_simple/fop_general і т.д.
+                normalized_type = raw_type
+                if raw_type == "tov" or raw_type == "company":
+                    normalized_type = "llc_general" if tax_mode == "general" else "llc_simple"
+                elif raw_type == "fop" and tax_mode:
+                    normalized_type = "fop_general" if tax_mode == "general" else "fop_simple"
+                
                 payer = {
-                    "payer_type": profile_row[0] or "individual",
+                    "payer_type": normalized_type,
                     "company_name": profile_row[1] or order["customer_name"],
                     "edrpou": profile_row[2],
                     "iban": profile_row[3],

@@ -399,6 +399,24 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
     else:
         item_type = "service"  # За замовчуванням для фіз. осіб
     
+    # === ДОГОВІР (AGREEMENT) ===
+    # Договір прив'язаний до замовлення (через client_user_id), а НЕ до платника
+    agreement = {"contract_number": ""}
+    try:
+        cuid_row = db.execute(text(
+            "SELECT client_user_id FROM orders WHERE order_id = :oid"
+        ), {"oid": order_id_int}).fetchone()
+        if cuid_row and cuid_row[0]:
+            ma_row = db.execute(text("""
+                SELECT contract_number FROM master_agreements 
+                WHERE client_user_id = :cuid AND status = 'signed'
+                ORDER BY signed_at DESC LIMIT 1
+            """), {"cuid": cuid_row[0]}).fetchone()
+            if ma_row and ma_row[0]:
+                agreement["contract_number"] = ma_row[0]
+    except Exception as e:
+        print(f"Warning: Could not load agreement for order {order_id}: {e}")
+    
     # Розрахунок балансу
     rent_due = max(0, total_rent - rent_paid)
     damage_due = max(0, total_damage - damage_paid)
@@ -433,6 +451,7 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
         "deposit_data": deposit_data,
         "company": company,
         "payer": payer,
+        "agreement": agreement,
         "item_type": item_type,
         "total_words": number_to_words_ua(total_rent),
         "generated_at": datetime.now().strftime("%d.%m.%Y %H:%M"),

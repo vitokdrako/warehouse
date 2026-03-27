@@ -7,7 +7,7 @@ import os
 import io
 from PIL import Image
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://item-photos.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://rental-invoicing-1.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 TEST_EMAIL = "vitokdrako@gmail.com"

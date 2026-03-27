@@ -2295,7 +2295,8 @@ async def preview_invoice_payment(
         payer = {
             "id": payer_row[0], "type": payer_row[1], "display_name": payer_row[2],
             "legal_name": payer_row[3], "edrpou": payer_row[4], "iban": payer_row[5],
-            "email_for_docs": payer_row[6], "signatory_name": payer_row[8]
+            "email_for_docs": payer_row[6], "signatory_name": payer_row[8],
+            "tax_mode": payer_row[10]
         } if payer_row else None
     else:
         payer = _get_order_payer(db, order_id)
@@ -2311,14 +2312,27 @@ async def preview_invoice_payment(
     if grand_total <= 0:
         grand_total = total_amount
     
-    # Build items for invoice (simplified: one line "Прокат декору")
+    # Determine item name based on payer type (simplified vs general)
+    payer_type = payer.get("type", "") or ""
+    tax_mode = payer.get("tax_mode", "") or ""
+    # Нормалізація: fop/tov + tax_mode → визначаємо simplified чи general
+    is_general = False
+    if payer_type in ["fop_general", "llc_general"]:
+        is_general = True
+    elif payer_type in ["fop", "tov", "company"] and tax_mode == "general":
+        is_general = True
+    
+    item_name = "Квіткова композиція" if is_general else "Прокат декору"
+    item_unit = "шт." if is_general else "послуга"
+    
+    # Build items for invoice
     formatted_items = []
     if items:
         formatted_items.append({
             "num": 1,
-            "name": "Прокат декору",
+            "name": item_name,
             "quantity": 1,
-            "unit": "послуга",
+            "unit": item_unit,
             "price": _format_currency(grand_total),
             "amount": _format_currency(grand_total)
         })
@@ -2385,7 +2399,7 @@ async def preview_service_act(
             "id": payer_row[0], "type": payer_row[1], "display_name": payer_row[2],
             "legal_name": payer_row[3], "edrpou": payer_row[4], "iban": payer_row[5],
             "email_for_docs": payer_row[6], "signatory_name": payer_row[8],
-            "signatory_basis": payer_row[9]
+            "signatory_basis": payer_row[9], "tax_mode": payer_row[10]
         } if payer_row else None
     else:
         payer = _get_order_payer(db, order_id)
@@ -2422,13 +2436,20 @@ async def preview_service_act(
     else:
         parsed_date = order[6] or order[7] or datetime.now()  # rental_start_date or rental_end_date or now
     
+    # Determine item name based on payer type
+    payer_type_sa = payer.get("type", "") or ""
+    tax_mode_sa = payer.get("tax_mode", "") or ""
+    is_general_sa = payer_type_sa in ["fop_general", "llc_general"] or (payer_type_sa in ["fop", "tov", "company"] and tax_mode_sa == "general")
+    sa_item_name = "Квіткова композиція" if is_general_sa else "Прокат декору"
+    sa_item_unit = "шт" if is_general_sa else "шт"
+    
     formatted_items = []
     if items:
         formatted_items.append({
             "num": 1,
-            "name": "Прокат декору",
+            "name": sa_item_name,
             "quantity": 1,
-            "unit": "шт",
+            "unit": sa_item_unit,
             "price": _format_currency(grand_total),
             "amount": _format_currency(grand_total)
         })

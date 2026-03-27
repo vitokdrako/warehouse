@@ -710,7 +710,6 @@ async def update_settings(
 TEMPLATE_FILE_MAP = {
     "quote": "quote.html",
     "invoice_offer": "invoice_offer.html",
-    "invoice_payment": "invoice_payment.html",
     "master_agreement": "master_agreement.html",
     "issue_act": "issue_act.html",
     "settlement_act": "settlement_act.html",

@@ -78,6 +78,13 @@ PAYER_TYPES = {
         "requires_edrpou": True,
         "vat_applicable": True  # Залежить від tax_mode
     },
+    "tov": {
+        "label": "ТОВ",
+        "tax_system": "varies",
+        "documents": ["quote", "invoice_offer", "master_agreement", "annex", "service_act", "goods_invoice"],
+        "requires_edrpou": True,
+        "vat_applicable": True
+    },
     "company": {
         "label": "Юридична особа",
         "tax_system": "varies",

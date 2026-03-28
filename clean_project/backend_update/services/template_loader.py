@@ -33,13 +33,20 @@ class DBOverrideLoader(BaseLoader):
     @staticmethod
     def _extract_doc_type(template):
         name = template.replace("documents/", "").replace("\\", "/")
+        # "legal/master_agreement.html" -> "master_agreement"
         # "quote/v1.html" -> "quote"
+        # "contract_rent/v1.html" -> "contract_rent"
         if "/" in name:
-            name = name.split("/")[0]
+            parts = name.split("/")
+            # If first part is a known directory prefix, use the second part
+            if parts[0] in ("legal",) and len(parts) > 1:
+                name = parts[1]
+            else:
+                name = parts[0]
         # "quote.html" -> "quote"
         if name.endswith(".html"):
             name = name[:-5]
         # Skip base/partial templates
-        if name.startswith("_") or name in ("legal", ""):
+        if name.startswith("_") or name == "":
             return None
         return name

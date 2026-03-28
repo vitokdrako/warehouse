@@ -193,6 +193,9 @@
     <div class="docmeta">
       <p class="title">Акт взаєморозрахунків</p>
       <div class="row">{{ order.order_number }}</div>
+      {% if agreement and agreement.contract_number %}
+      <div class="row" style="font-size:13px;color:#555;">згідно Договору №{{ agreement.contract_number }} від {{ agreement.contract_date or "" }}</div>
+      {% endif %}
       <div class="row">від {{ generated_at }}</div>
       {% if settlement.final_balance > 0 %}
       <span class="pill pill-danger">До сплати клієнтом</span>
@@ -361,6 +364,12 @@
         <td class="label">Вже повернено</td>
         <td class="value">{{ deposit.refunded_display }} грн</td>
       </tr>
+      {% for event in deposit.refund_events %}
+      <tr>
+        <td class="label" style="padding-left:20px; font-size:11px; color:#64748b">↳ {{ event.date }}: {{ event.note }}</td>
+        <td class="value" style="font-size:11px; color:#64748b">{{ event.amount }} грн</td>
+      </tr>
+      {% endfor %}
       {% endif %}
       <tr style="font-weight:600">
         <td class="label" style="font-weight:600">Залишок застави</td>
@@ -380,8 +389,8 @@
         <td class="value">{{ payments_summary.total_paid }} грн</td>
       </tr>
       <tr>
-        <td class="label">Застава (утримано/доступно)</td>
-        <td class="value">{{ deposit.held_uah }} грн</td>
+        <td class="label">Застава (утримано для розрахунків)</td>
+        <td class="value">{{ deposit.net_for_charges }} грн</td>
       </tr>
       {% if settlement.final_balance > 0 %}
       <tr class="row-topay">

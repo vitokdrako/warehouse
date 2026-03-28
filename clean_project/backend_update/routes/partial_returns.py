@@ -684,7 +684,7 @@ async def mark_extension_lost(
 
 
 class ProcessLossRequest(BaseModel):
-    """Запит на обробку втрати з модалки пошкоджень"""
+    """Запит на обробку втрати — єдиний endpoint списання"""
     product_id: int
     sku: str
     name: str
@@ -692,6 +692,13 @@ class ProcessLossRequest(BaseModel):
     loss_amount: float
     order_id: Optional[int] = None
     order_number: Optional[str] = None
+    version_id: Optional[int] = None
+    skip_damage_record: bool = False
+    photo_url: Optional[str] = None
+    note: Optional[str] = None
+    created_by: Optional[str] = None
+    category: Optional[str] = None
+    severity: Optional[str] = 'critical'
 
 
 @router.post("/process-loss")
@@ -744,6 +751,100 @@ async def process_loss_from_damage_modal(
                 "description": f"ПОВНА ВТРАТА: {data.sku} x{data.qty} = ₴{data.loss_amount:.2f}"
             })
             print(f"[ProcessLoss] 💰 Створено фінансову транзакцію")
+        
+        # 4. Записати в product_damage_history (якщо не створено раніше через DamageModal)
+        if not data.skip_damage_record:
+            import uuid
+            damage_id = str(uuid.uuid4())
+            db.execute(text("""
+                INSERT INTO product_damage_history 
+                (id, product_id, sku, product_name, category, order_id, order_number, stage, 
+                 damage_type, damage_code, severity, fee, fee_per_item, qty, photo_url, note,
+                 processing_type, processing_status, created_by, created_at)
+                VALUES 
+                (:id, :product_id, :sku, :name, :category, :order_id, :order_number, 'return',
+                 'Повна втрата', 'TOTAL_LOSS', :severity, :fee, :fee_per_item, :qty, :photo_url, :note,
+                 'total_loss', 'written_off', :created_by, NOW())
+            """), {
+                "id": damage_id,
+                "product_id": data.product_id,
+                "sku": data.sku,
+                "name": data.name,
+                "category": data.category or "",
+                "order_id": data.order_id,
+                "order_number": order_number,
+                "severity": data.severity or "critical",
+                "fee": data.loss_amount,
+                "fee_per_item": data.loss_amount / data.qty if data.qty > 0 else data.loss_amount,
+                "qty": data.qty,
+                "photo_url": data.photo_url,
+                "note": data.note or f"Повна втрата. Сума: ₴{data.loss_amount:.2f}",
+                "created_by": data.created_by or "system",
+            })
+            print(f"[ProcessLoss] 📋 Записано в список списаних (damage_id: {damage_id})")
+        else:
+            print(f"[ProcessLoss] ℹ️ damage_record пропущено (вже створено через DamageModal)")
+        
+        # 5. Оновити partial_return_version_items (якщо є version_id)
+        if data.version_id:
+            # Зменшити qty в версії
+            db.execute(text("""
+                UPDATE partial_return_version_items 
+                SET qty = GREATEST(0, qty - :loss_qty)
+                WHERE version_id = :vid AND product_id = :pid
+            """), {
+                "vid": data.version_id,
+                "pid": data.product_id,
+                "loss_qty": data.qty
+            })
+            # Видалити рядки з qty = 0
+            db.execute(text("""
+                DELETE FROM partial_return_version_items 
+                WHERE version_id = :vid AND qty = 0
+            """), {"vid": data.version_id})
+            # Перевірити чи залишились товари у версії
+            remaining = db.execute(text("""
+                SELECT COUNT(*) FROM partial_return_version_items 
+                WHERE version_id = :vid AND qty > 0
+            """), {"vid": data.version_id}).scalar()
+            if remaining == 0:
+                # Всі товари списані — закриваємо версію
+                db.execute(text("""
+                    UPDATE partial_return_versions 
+                    SET status = 'returned', updated_at = NOW()
+                    WHERE version_id = :vid
+                """), {"vid": data.version_id})
+                print(f"[ProcessLoss] 📋 Версія {data.version_id} закрита — всі товари списані")
+            else:
+                # Оновити total_price версії
+                db.execute(text("""
+                    UPDATE partial_return_versions 
+                    SET total_price = (
+                        SELECT COALESCE(SUM(qty * daily_rate), 0) 
+                        FROM partial_return_version_items 
+                        WHERE version_id = :vid
+                    )
+                    WHERE version_id = :vid
+                """), {"vid": data.version_id})
+            print(f"[ProcessLoss] 📋 Оновлено version_items (version_id: {data.version_id}, залишилось: {remaining})")
+        
+        # 6. Оновити order_extensions (якщо є)
+        if data.order_id:
+            db.execute(text("""
+                UPDATE order_extensions 
+                SET qty = GREATEST(0, qty - :loss_qty)
+                WHERE order_id = :oid AND product_id = :pid AND status = 'active'
+            """), {
+                "oid": data.order_id,
+                "pid": data.product_id,
+                "loss_qty": data.qty
+            })
+            # Закрити extensions з qty = 0
+            db.execute(text("""
+                UPDATE order_extensions 
+                SET status = 'completed', notes = CONCAT(COALESCE(notes,''), ' | Списано: повна втрата')
+                WHERE order_id = :oid AND product_id = :pid AND qty = 0 AND status = 'active'
+            """), {"oid": data.order_id, "pid": data.product_id})
         
         db.commit()
         

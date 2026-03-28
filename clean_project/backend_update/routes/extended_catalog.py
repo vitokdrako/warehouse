@@ -125,10 +125,9 @@ async def get_extended_product_info(
             p.product_id, p.sku, p.name, p.description, p.price, 
             p.image_url, p.status,
             p.category_id, p.category_name, p.subcategory_id, p.subcategory_name,
-            i.quantity, i.zone, i.aisle, i.shelf,
-            i.cleaning_status, i.product_state
+            p.quantity, p.zone, p.aisle, p.shelf,
+            p.cleaning_status, p.product_state
         FROM products p
-        LEFT JOIN inventory i ON p.product_id = i.product_id
         WHERE p.product_id = :product_id
     """), {"product_id": product_id})
     
@@ -223,40 +222,18 @@ async def update_product_inventory(
     Оновити інвентар товару
     ✅ MIGRATED: Using RentalHub DB
     """
-    # Check if inventory record exists
-    result = db.execute(text("""
-        SELECT product_id FROM inventory WHERE product_id = :id
-    """), {"id": product_id})
+    # Update product fields directly (inventory merged into products)
+    set_clauses = []
+    params = {"product_id": product_id}
     
-    exists = result.fetchone()
+    for field in ['quantity', 'zone', 'aisle', 'shelf', 'cleaning_status', 'product_state']:
+        if field in data:
+            set_clauses.append(f"{field} = :{field}")
+            params[field] = data[field]
     
-    if exists:
-        # Update
-        set_clauses = []
-        params = {"product_id": product_id}
-        
-        for field in ['quantity', 'zone', 'aisle', 'shelf', 'cleaning_status', 'product_state']:
-            if field in data:
-                set_clauses.append(f"{field} = :{field}")
-                params[field] = data[field]
-        
-        if set_clauses:
-            sql = f"UPDATE inventory SET {', '.join(set_clauses)} WHERE product_id = :product_id"
-            db.execute(text(sql), params)
-    else:
-        # Insert
-        db.execute(text("""
-            INSERT INTO inventory (product_id, quantity, zone, aisle, shelf, cleaning_status, product_state)
-            VALUES (:product_id, :quantity, :zone, :aisle, :shelf, :cleaning_status, :product_state)
-        """), {
-            "product_id": product_id,
-            "quantity": data.get('quantity', 0),
-            "zone": data.get('zone'),
-            "aisle": data.get('aisle'),
-            "shelf": data.get('shelf'),
-            "cleaning_status": data.get('cleaning_status', 'clean'),
-            "product_state": data.get('product_state', 'good')
-        })
+    if set_clauses:
+        sql = f"UPDATE products SET {', '.join(set_clauses)} WHERE product_id = :product_id"
+        db.execute(text(sql), params)
     
     db.commit()
     return {"message": "Inventory updated", "product_id": product_id}

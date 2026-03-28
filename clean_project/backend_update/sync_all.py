@@ -57,6 +57,60 @@ def log(msg):
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
+def ensure_client_from_order(cursor, customer_name, phone, email):
+    """
+    Знайти або створити клієнта в client_users на основі даних ордеру.
+    Повертає client_user_id або None.
+    Унікальний ідентифікатор — email. Без email клієнт не створюється.
+    """
+    if not customer_name:
+        return None
+    
+    email = (email or '').strip()
+    email_normalized = email.lower().strip() if email else ''
+    
+    # Без email — не створюємо і не шукаємо
+    if not email_normalized or '@' not in email_normalized:
+        return None
+    
+    # Пошук по email
+    cursor.execute(
+        "SELECT id FROM client_users WHERE email_normalized = %s LIMIT 1",
+        (email_normalized,)
+    )
+    row = cursor.fetchone()
+    if row:
+        client_id = row[0] if isinstance(row, tuple) else row['id']
+        phone = (phone or '').strip()
+        if phone:
+            cursor.execute(
+                """UPDATE client_users 
+                   SET phone = COALESCE(NULLIF(phone, ''), %s),
+                       last_order_date = CURDATE(), updated_at = NOW() 
+                   WHERE id = %s""",
+                (phone, client_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE client_users SET last_order_date = CURDATE(), updated_at = NOW() WHERE id = %s",
+                (client_id,)
+            )
+        return client_id
+    
+    # Не знайдено — створити нового клієнта
+    phone = (phone or '').strip()
+    cursor.execute("""
+        INSERT INTO client_users 
+            (email, email_normalized, full_name, phone, source, is_active, created_at, updated_at, last_order_date)
+        VALUES (%s, %s, %s, %s, 'opencart', 1, NOW(), NOW(), CURDATE())
+    """, (email, email_normalized, customer_name, phone or None))
+    
+    cursor.execute("SELECT LAST_INSERT_ID()")
+    new_id = cursor.fetchone()
+    return new_id[0] if new_id else None
+
+
+
 # ============================================================
 # IMAGE FUNCTIONS
 # ============================================================
@@ -398,7 +452,7 @@ def sync_product_categories():
         rh_cur = rh.cursor()
         
         # Get all products (limit 200 для категорій)
-        rh_cur.execute("SELECT product_id FROM products LIMIT 200")
+        rh_cur.execute("SELECT product_id FROM products")
         product_ids = [row[0] for row in rh_cur.fetchall()]
         
         if not product_ids:
@@ -463,8 +517,8 @@ def sync_product_categories():
 
 
 def sync_product_quantities():
-    """Update quantities, prices and SKU (color/material managed locally in RentalHub)"""
-    log("📊 Updating product details (sku, quantity, price)...")
+    """Update quantities, prices, SKU and dimensions (color/material managed locally in RentalHub)"""
+    log("📊 Updating product details (sku, quantity, price, dimensions)...")
     try:
         oc = mysql.connector.connect(**OC)
         rh = mysql.connector.connect(**RH)
@@ -486,15 +540,16 @@ def sync_product_quantities():
         
         ids_str = ','.join(map(str, product_ids))
         
-        # Get updated data from OpenCart (sku, quantity, price, ean)
+        # Get updated data from OpenCart (sku, quantity, price, ean + dimensions)
         oc_cur.execute(f"""
-            SELECT p.product_id, p.model as sku, p.quantity, p.price, p.ean
+            SELECT p.product_id, p.model as sku, p.quantity, p.price, p.ean,
+                   p.height, p.width, p.length
             FROM oc_product p
             WHERE p.product_id IN ({ids_str})
         """)
         
         count = 0
-        sku_updated = 0
+        dims_count = 0
         for p in oc_cur.fetchall():
             # Маппінг полів:
             # OpenCart model → RentalHub sku (артикул)
@@ -504,24 +559,41 @@ def sync_product_quantities():
             rental_price = float(p['price']) if p.get('price') else 0
             purchase_price = float(p['ean']) if p.get('ean') else 0
             
+            # Розміри: OC height→height_cm, OC width→width_cm, OC length→depth_cm
+            # diameter_cm — не чіпаємо (заповнюється з переобліку)
+            oc_height = float(p['height'] or 0) if p['height'] else None
+            oc_width = float(p['width'] or 0) if p['width'] else None
+            oc_depth = float(p['length'] or 0) if p['length'] else None
+            
+            has_dims = (oc_height and oc_height > 0) or (oc_width and oc_width > 0) or (oc_depth and oc_depth > 0)
+            
             # ⚠️ НЕ оновлюємо color та material - вони керуються локально в RentalHub
             # ✅ SKU оновлюється з OpenCart
+            # ✅ Розміри: COALESCE — тільки якщо в RH ще NULL (не перезаписуємо ручні дані з переобліку)
             rh_cur.execute("""
                 UPDATE products 
-                SET sku = %s, quantity = %s, price = %s, rental_price = %s
+                SET sku = %s, quantity = %s, price = %s, rental_price = %s,
+                    height_cm = COALESCE(height_cm, %s),
+                    width_cm = COALESCE(width_cm, %s),
+                    depth_cm = COALESCE(depth_cm, %s)
                 WHERE product_id = %s
             """, (
                 sku,             # OpenCart model → артикул
                 p['quantity'] or 0, 
                 purchase_price,  # OpenCart ean → вартість товару
                 rental_price,    # OpenCart price → ціна оренди
+                oc_height if oc_height and oc_height > 0 else None,
+                oc_width if oc_width and oc_width > 0 else None,
+                oc_depth if oc_depth and oc_depth > 0 else None,
                 p['product_id']
             ))
             if rh_cur.rowcount > 0:
                 count += 1
+            if has_dims:
+                dims_count += 1
         
         rh.commit()
-        log(f"  ✅ Updated {count} products (sku synced, color/material preserved)")
+        log(f"  ✅ Updated {count} products ({dims_count} with dimensions, color/material preserved)")
         
         oc_cur.close()
         rh_cur.close()
@@ -707,6 +779,19 @@ def sync_orders_from_opencart():
                         client_comment
                     ))
                 
+                # ✅ Автостворення/прив'язка клієнта (тільки по email)
+                try:
+                    client_user_id = ensure_client_from_order(
+                        rh_cur, customer_name, 
+                        order['telephone'], order['email']
+                    )
+                    if client_user_id:
+                        rh_cur.execute("""
+                            UPDATE orders SET client_user_id = %s WHERE order_id = %s
+                        """, (client_user_id, order_id))
+                except Exception as ce:
+                    log(f"  ⚠️  Client auto-create error for order {order_id}: {ce}")
+                
                 rh_conn.commit()
                 synced_count += 1
                 log(f"  ✅ Synced order #{order_id} ({customer_name})" + (f" + comment" if client_comment else ""))
@@ -731,133 +816,6 @@ def sync_orders_from_opencart():
         return 0
 
 
-# ============================================================
-# 👤 SYNC CLIENTS (Автоматичне створення клієнтів з ордерів)
-# ============================================================
-
-def sync_clients():
-    """
-    Знаходить всі ордери без client_user_id і створює/прив'язує клієнтів.
-    Унікальність перевіряється по email (email_normalized).
-    Якщо email немає — пошук по телефону (останні 9 цифр).
-    """
-    log("👤 Syncing clients from orders...")
-    rh = get_rh_connection()
-    cursor = rh.cursor(pymysql.cursors.DictCursor)
-
-    try:
-        # 1. Завантажити всіх існуючих клієнтів у кеш
-        cursor.execute("""
-            SELECT id, email_normalized, phone, full_name
-            FROM client_users WHERE is_active = 1
-        """)
-        all_clients = cursor.fetchall()
-
-        email_map = {}
-        phone_map = {}
-
-        for c in all_clients:
-            cid = c['id']
-            email_n = (c.get('email_normalized') or '').strip().lower()
-            phone = (c.get('phone') or '').strip()
-
-            if email_n and '@' in email_n:
-                email_map[email_n] = cid
-            if phone:
-                digits = ''.join(ch for ch in phone if ch.isdigit())
-                if len(digits) >= 9:
-                    phone_map[digits[-9:]] = cid
-
-        log(f"  Existing clients: {len(all_clients)} (emails: {len(email_map)}, phones: {len(phone_map)})")
-
-        # 2. Знайти всі непов'язані ордери
-        cursor.execute("""
-            SELECT order_id, customer_name, customer_phone, customer_email
-            FROM orders
-            WHERE (client_user_id IS NULL OR client_user_id = 0)
-              AND customer_name IS NOT NULL AND customer_name != ''
-            ORDER BY created_at ASC
-        """)
-        unlinked = cursor.fetchall()
-
-        if not unlinked:
-            log("  No unlinked orders found")
-            return 0
-
-        log(f"  Found {len(unlinked)} unlinked orders")
-
-        created = 0
-        linked = 0
-        errors = 0
-
-        for row in unlinked:
-            order_id = row['order_id']
-            name = (row.get('customer_name') or '').strip()
-            phone = (row.get('customer_phone') or '').strip()
-            email = (row.get('customer_email') or '').strip()
-            email_normalized = email.lower().strip() if email else ''
-
-            try:
-                found_client_id = None
-
-                # Пошук по email
-                if email_normalized and '@' in email_normalized:
-                    found_client_id = email_map.get(email_normalized)
-
-                # Пошук по телефону
-                if not found_client_id and phone:
-                    digits = ''.join(ch for ch in phone if ch.isdigit())
-                    if len(digits) >= 9:
-                        found_client_id = phone_map.get(digits[-9:])
-
-                # Якщо клієнта не знайдено — створюємо нового
-                if not found_client_id and name:
-                    cursor.execute("""
-                        INSERT INTO client_users
-                            (email, email_normalized, full_name, phone, source, is_active, created_at, updated_at)
-                        VALUES (%s, %s, %s, %s, 'opencart', 1, NOW(), NOW())
-                    """, (email or None, email_normalized, name, phone or None))
-
-                    found_client_id = cursor.lastrowid
-                    created += 1
-
-                    # Додати в кеш
-                    if email_normalized and '@' in email_normalized:
-                        email_map[email_normalized] = found_client_id
-                    if phone:
-                        digits = ''.join(ch for ch in phone if ch.isdigit())
-                        if len(digits) >= 9:
-                            phone_map[digits[-9:]] = found_client_id
-
-                    log(f"  ✅ Created client: {name} ({email or phone or 'no contact'})")
-
-                # Прив'язати клієнта до ордеру
-                if found_client_id:
-                    cursor.execute("""
-                        UPDATE orders SET client_user_id = %s WHERE order_id = %s
-                    """, (found_client_id, order_id))
-                    linked += 1
-
-            except Exception as e:
-                errors += 1
-                log(f"  ❌ Error for order {order_id}: {e}")
-                continue
-
-        rh.commit()
-        log(f"  👤 Clients: created={created}, linked={linked}, errors={errors}")
-        return created
-
-    except Exception as e:
-        log(f"  ❌ Client sync error: {e}")
-        import traceback
-        traceback.print_exc()
-        return 0
-    finally:
-        cursor.close()
-        rh.close()
-
-
-
 def main():
     print("=" * 60)
     print("🔄 RENTALHUB AUTO-SYNC (PRODUCTION)")
@@ -878,9 +836,6 @@ def main():
     
     order_count = sync_orders_from_opencart()
     
-    # 👤 Auto-create and link clients from orders
-    client_count = sync_clients()
-    
     total_duration = time.time() - total_start
     
     print("\n" + "=" * 60)
@@ -892,7 +847,6 @@ def main():
     print(f"Quantity updates: {qty_update_count}")
     print(f"🖼️  Images downloaded: {img_count}")
     print(f"📦 NEW ORDERS: {order_count}")
-    print(f"👤 NEW CLIENTS: {client_count}")
     print(f"Duration: {total_duration:.1f}s")
     print("=" * 60)
 

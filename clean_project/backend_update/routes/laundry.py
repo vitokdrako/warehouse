@@ -459,10 +459,9 @@ async def create_laundry_batch(
             
             # Оновити стан товару в inventory - позначити як "в хімчистці"
             db.execute(text("""
-                UPDATE inventory 
+                UPDATE products 
                 SET product_state = 'in_laundry', 
-                    cleaning_status = 'sent_to_laundry',
-                    updated_at = NOW()
+                    cleaning_status = 'sent_to_laundry'
                 WHERE product_id = :product_id
             """), {"product_id": item.product_id})
         
@@ -596,10 +595,9 @@ async def return_laundry_items(
             if new_returned >= item["quantity"]:
                 # Товар повністю повернуто - оновити стан на "доступний"
                 db.execute(text("""
-                    UPDATE inventory 
+                    UPDATE products 
                     SET product_state = 'available', 
-                        cleaning_status = 'clean',
-                        updated_at = NOW()
+                        cleaning_status = 'clean'
                     WHERE product_id = :product_id
                 """), {"product_id": item["product_id"]})
             

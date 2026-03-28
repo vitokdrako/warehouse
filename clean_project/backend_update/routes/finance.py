@@ -1639,8 +1639,12 @@ async def get_order_charges(order_id: int, db: Session = Depends(get_rh_db)):
             "accepted_by": r[5]
         } for r in late_payments]
         
-        late_total = sum(l["amount"] for l in late_list if l["status"] == "pending")
+        late_charged = sum(l["amount"] for l in late_list if l["status"] == "pending")
         late_paid = sum(l["amount"] for l in late_list if l["status"] in ("completed", "confirmed"))
+        # Нарахування (pending) = що менеджер вирішив стягнути
+        # Оплата (confirmed) = що клієнт сплатив
+        # Due = нарахування - оплата
+        late_due = max(0, late_charged - late_paid)
         
         return {
             "order_id": order_id,
@@ -1651,12 +1655,12 @@ async def get_order_charges(order_id: int, db: Session = Depends(get_rh_db)):
                 "items": damage_list
             },
             "late": {
-                "total": late_total + late_paid,
+                "total": late_charged,
                 "paid": late_paid,
-                "due": late_total,
+                "due": late_due,
                 "items": late_list
             },
-            "grand_total_due": max(0, float(damage_total) - float(damage_paid)) + late_total
+            "grand_total_due": max(0, float(damage_total) - float(damage_paid)) + late_due
         }
         
     except Exception as e:
@@ -2378,7 +2382,7 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             if p[8] in ('completed', 'confirmed'):
                 if p[1] == 'rent':
                     rent_paid += float(p[3] or 0)
-                elif p[1] == 'damage':
+                elif p[1] in ('damage', 'loss'):
                     damage_paid += float(p[3] or 0)
                 elif p[1] == 'late':
                     late_paid += float(p[3] or 0)
@@ -2421,6 +2425,17 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                 "note": deposit_row[11],
                 "display_amount": f"{actual:,.0f} {currency}" if currency != 'UAH' else f"₴{actual:,.0f}"
             }
+            # Додати events із fin_deposit_events
+            dep_events = db.execute(text("""
+                SELECT event_type, amount, occurred_at, note
+                FROM fin_deposit_events WHERE deposit_id = :dep_id
+                ORDER BY occurred_at DESC
+            """), {"dep_id": deposit_row[0]}).fetchall()
+            deposit["events"] = [
+                {"event_type": e[0], "amount": float(e[1] or 0), 
+                 "date": e[2].isoformat() if e[2] else None, "note": e[3]}
+                for e in dep_events
+            ]
         
         # === 4. DAMAGE ===
         damage_total = db.execute(text("""
@@ -2449,6 +2464,19 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             "items": damage_items
         }
         
+        # === 4b. DEPOSIT COVERAGE FOR DAMAGE ===
+        # Утримання із застави покриває шкоду — враховуємо в due
+        deposit_used_for_damage = 0
+        if deposit and deposit.get("events"):
+            for ev in deposit["events"]:
+                if ev["event_type"] == "used_for_damage":
+                    deposit_used_for_damage += ev["amount"]
+        
+        # Шкода покрита = прямі оплати + утримання із застави
+        damage_covered = damage_paid + deposit_used_for_damage
+        damage["deposit_covered"] = deposit_used_for_damage
+        damage["due"] = max(0, float(damage_total) - damage_covered)
+        
         # === 5. LATE FEES ===
         late_rows = db.execute(text("""
             SELECT id, amount, status, note, occurred_at, accepted_by_name
@@ -2463,13 +2491,17 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             "accepted_by": r[5]
         } for r in late_rows]
         
-        late_due = sum(l["amount"] for l in late_items if l["status"] == "pending")
+        late_charged = sum(l["amount"] for l in late_items if l["status"] == "pending")
         late_paid_total = sum(l["amount"] for l in late_items if l["status"] in ("completed", "confirmed"))
+        # Нарахування (pending) = що менеджер вирішив стягнути
+        # Оплата (confirmed) = що клієнт сплатив
+        # Due = нарахування - оплата
+        late_due_calc = max(0, late_charged - late_paid_total)
         
         late = {
-            "total": late_due + late_paid_total,
+            "total": late_charged,
             "paid": late_paid_total,
-            "due": late_due,
+            "due": late_due_calc,
             "items": late_items
         }
         
@@ -2512,13 +2544,26 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                 }
         
         # === 8. TOTALS ===
-        total_rental = float(order_row[5] or 0)
+        # Визначаємо чи total_price зберігає ціну ДО чи ПІСЛЯ знижки
+        # Якщо є платіж типу 'discount' - знижка записана окремо, total_price = ДО знижки
+        total_price_stored = float(order_row[5] or 0)
         discount = float(order_row[9] or 0)
-        total_after_discount = total_rental - discount
+        
+        has_discount_payment = any(p['payment_type'] == 'discount' for p in payments)
+        
+        if has_discount_payment and discount > 0:
+            # total_price = ціна ДО знижки, знижка записана окремою оплатою
+            rental_before_discount = total_price_stored
+            total_after_discount = total_price_stored - discount
+        else:
+            # total_price = ціна ПІСЛЯ знижки (або без знижки)
+            rental_before_discount = total_price_stored + discount
+            total_after_discount = total_price_stored
+        
         rent_due = max(0, total_after_discount - rent_paid - advance_paid)
         
         totals = {
-            "rental_total": total_rental,
+            "rental_total": rental_before_discount,
             "discount": discount,
             "discount_percent": float(order_row[10] or 0),
             "rental_after_discount": total_after_discount,
@@ -2528,8 +2573,10 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             "deposit_expected": float(order_row[6] or 0),
             "deposit_held": deposit["held_amount"] if deposit else 0,
             "deposit_available": deposit["available"] if deposit else 0,
+            "deposit_used_for_damage": deposit_used_for_damage,
             "damage_total": damage["total"],
             "damage_paid": damage["paid"],
+            "damage_deposit_covered": damage.get("deposit_covered", 0),
             "damage_due": damage["due"],
             "late_total": late["total"],
             "late_paid": late["paid"],
@@ -2582,7 +2629,7 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                 "id": "dmg_due", "type": "damage_pending",
                 "at": None, "label": "Шкода (очікує)",
                 "amount": damage["due"], "status": "warn",
-                "meta": ", ".join([d["name"] for d in damage_items[:3]])
+                "meta": ", ".join([d["name"] or "—" for d in damage_items[:3]])
             })
         
         # Sort timeline by date (newest first, pending last)

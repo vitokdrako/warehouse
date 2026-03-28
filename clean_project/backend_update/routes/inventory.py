@@ -49,9 +49,8 @@ async def get_inventory(
     sql_query = """
         SELECT 
             p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url, p.description,
-            i.quantity, p.zone, p.aisle, p.shelf
+            p.quantity, p.zone, p.aisle, p.shelf
         FROM products p
-        LEFT JOIN inventory i ON p.product_id = i.product_id
         WHERE p.status = 1
     """
     
@@ -99,9 +98,8 @@ async def get_inventory_item(item_id: str, db: Session = Depends(get_rh_db)):  #
         result_db = db.execute(text("""
             SELECT 
                 p.product_id, p.sku, p.name, p.price, p.rental_price, p.image_url, p.description,
-                i.quantity, p.zone, p.aisle, p.shelf, i.cleaning_status, i.product_state
+                p.quantity, p.zone, p.aisle, p.shelf, p.cleaning_status, p.product_state
             FROM products p
-            LEFT JOIN inventory i ON p.product_id = i.product_id
             WHERE p.product_id = :product_id
         """), {"product_id": int(item_id)})
         

@@ -94,7 +94,7 @@
         </div>
         <div class="row">
             <span class="label">Договір:</span>
-            
+            {% if agreement and agreement.contract_number %}№{{ agreement.contract_number }} від {{ agreement.contract_date or "" }}{% endif %}
         </div>
     </div>
     

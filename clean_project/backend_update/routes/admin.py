@@ -709,38 +709,17 @@ async def update_settings(
 
 TEMPLATE_FILE_MAP = {
     "quote": "quote.html",
-    "quote_email": "quote_email.html",
     "invoice_offer": "invoice_offer.html",
-    "invoice_payment": "invoice_payment.html",
     "master_agreement": "master_agreement.html",
-    "annex_to_contract": "annex_to_contract.html",
-    "annex": "annex.html",
     "issue_act": "issue_act.html",
-    "return_act": "return_act.html",
-    "picking_list": "picking_list.html",
-    "order_modification": "order_modification.html",
-    "service_act": "service_act.html",
-    "estimate": "estimate.html",
-    "processing_list": "processing_list.html",
-    "laundry_batch": "laundry_batch.html",
-    # Subdirectory templates (doc_engine)
-    "contract_rent": "contract_rent/v1.html",
-    "defect_act": "defect_act/v1.html",
-    "damage_settlement_act": "damage_settlement_act/v1.html",
-    "deposit_settlement_act": "deposit_settlement_act/v1.html",
     "settlement_act": "settlement_act.html",
-    "deposit_refund_act": "deposit_refund_act/v1.html",
+    "picking_list": "picking_list.html",
+    "service_act": "service_act.html",
+    # Subdirectory templates (doc_engine)
+    "defect_act": "defect_act/v1.html",
+    "deposit_settlement_act": "deposit_settlement_act/v1.html",
     "invoice_legal": "invoice_legal/v1.html",
-    "invoice_additional": "invoice_additional/v1.html",
     "goods_invoice": "goods_invoice/v1.html",
-    "damage_report": "damage_report/v1.html",
-    "damage_invoice": "damage_invoice/v1.html",
-    "delivery_note": "delivery_note/v1.html",
-    "rental_extension": "rental_extension/v1.html",
-    "partial_return_act": "partial_return_act/v1.html",
-    "return_intake_checklist": "return_intake_checklist/v1.html",
-    "issue_checklist": "issue_checklist/v1.html",
-    "vendor_work_act": "vendor_work_act/v1.html",
 }
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "documents")

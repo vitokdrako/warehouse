@@ -225,6 +225,9 @@ async def create_damage_record(
             elif processing_type == "returned_to_stock":
                 # Повернуто на склад одразу - не заморожувати
                 new_state = None
+            elif processing_type == "photo_only":
+                # Фіксація (фото) — без заморозки товару
+                new_state = None
             else:
                 # Звичайна шкода - товар заморожений до обробки
                 new_state = 'damaged'
@@ -1177,10 +1180,9 @@ async def send_to_wash(damage_id: str, data: dict, db: Session = Depends(get_rh_
         # Оновити стан товару в inventory
         if product_id:
             db.execute(text("""
-                UPDATE inventory 
+                UPDATE products 
                 SET product_state = 'in_wash', 
-                    cleaning_status = 'wash',
-                    updated_at = NOW()
+                    cleaning_status = 'wash'
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
         
@@ -1226,10 +1228,9 @@ async def send_to_restoration(damage_id: str, data: dict, db: Session = Depends(
         # Оновити стан товару в inventory
         if product_id:
             db.execute(text("""
-                UPDATE inventory 
+                UPDATE products 
                 SET product_state = 'in_restoration', 
-                    cleaning_status = 'restoration',
-                    updated_at = NOW()
+                    cleaning_status = 'restoration'
                 WHERE product_id = :product_id
             """), {"product_id": product_id})
         
@@ -1339,6 +1340,133 @@ async def send_to_washing(damage_id: str, data: dict, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail=f"Помилка: {str(e)}")
 
 
+
+
+@router.get("/photo-records")
+async def get_photo_records(db: Session = Depends(get_rh_db)):
+    """Список фіксацій (photo_only) — фото до видачі/при поверненні для порівняння."""
+    result = db.execute(text("""
+        SELECT 
+            pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
+            pdh.order_id, pdh.order_number,
+            pdh.damage_type, pdh.severity, pdh.fee,
+            pdh.photo_url, pdh.note,
+            pdh.processing_status,
+            pdh.created_at, pdh.created_by,
+            pdh.qty, pdh.fee_per_item,
+            p.image_url as product_image,
+            pdh.stage, pdh.damage_code
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON pdh.product_id = p.product_id
+        WHERE pdh.processing_type = 'photo_only'
+        ORDER BY pdh.created_at DESC
+    """))
+    
+    items = []
+    for row in result:
+        items.append({
+            "id": row[0],
+            "product_id": row[1],
+            "sku": row[2],
+            "product_name": row[3],
+            "category": row[4],
+            "order_id": row[5],
+            "order_number": row[6],
+            "damage_type": row[7],
+            "severity": row[8],
+            "fee": float(row[9]) if row[9] else 0.0,
+            "photo_url": row[10],
+            "note": row[11],
+            "processing_status": row[12],
+            "created_at": row[13].isoformat() if row[13] else None,
+            "created_by": row[14],
+            "qty": row[15] or 1,
+            "fee_per_item": float(row[16]) if row[16] else 0.0,
+            "product_image": row[17],
+            "stage": row[18] or "",
+            "damage_code": row[19] or "",
+        })
+    
+    return {"items": items, "total": len(items)}
+
+@router.delete("/photo-records/{record_id}")
+async def delete_photo_record(record_id: str, db: Session = Depends(get_rh_db)):
+    """Видалити фіксацію (photo_only запис)."""
+    # Перевіряємо що це саме photo_only запис
+    row = db.execute(text("""
+        SELECT processing_type FROM product_damage_history WHERE id = :id
+    """), {"id": record_id}).fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="Запис не знайдено")
+    if row[0] != 'photo_only':
+        raise HTTPException(status_code=400, detail="Можна видаляти тільки фіксації (photo_only)")
+    
+    db.execute(text("DELETE FROM product_damage_history WHERE id = :id"), {"id": record_id})
+    db.commit()
+    
+    return {"success": True, "message": "Фіксацію видалено"}
+
+
+@router.get("/written-off")
+async def get_written_off_items(db: Session = Depends(get_rh_db)):
+    """Список всіх списаних товарів (повна втрата)."""
+    result = db.execute(text("""
+        SELECT 
+            pdh.id, pdh.product_id, pdh.sku, pdh.product_name, pdh.category,
+            pdh.order_id, pdh.order_number,
+            pdh.damage_type, pdh.severity, pdh.fee,
+            pdh.photo_url, pdh.note,
+            pdh.processing_status,
+            pdh.created_at, pdh.created_by,
+            pdh.qty, pdh.fee_per_item,
+            p.image_url as product_image,
+            p.quantity as current_stock,
+            pdh.stage
+        FROM product_damage_history pdh
+        LEFT JOIN products p ON pdh.product_id = p.product_id
+        WHERE pdh.damage_code = 'TOTAL_LOSS'
+           OR pdh.processing_type = 'total_loss'
+           OR pdh.processing_status = 'written_off'
+        ORDER BY pdh.created_at DESC
+    """))
+    
+    items = []
+    for row in result:
+        items.append({
+            "id": row[0],
+            "product_id": row[1],
+            "sku": row[2],
+            "product_name": row[3],
+            "category": row[4],
+            "order_id": row[5],
+            "order_number": row[6],
+            "damage_type": row[7],
+            "severity": row[8],
+            "fee": float(row[9]) if row[9] else 0.0,
+            "photo_url": row[10],
+            "note": row[11],
+            "processing_status": row[12],
+            "created_at": row[13].isoformat() if row[13] else None,
+            "created_by": row[14],
+            "qty": row[15] or 1,
+            "fee_per_item": float(row[16]) if row[16] else 0.0,
+            "product_image": row[17],
+            "current_stock": row[18] or 0,
+            "source": row[19] or "return",
+        })
+    
+    total_loss_amount = sum(i["fee"] for i in items)
+    total_items = sum(i["qty"] for i in items)
+    
+    return {
+        "items": items,
+        "total": len(items),
+        "total_items": total_items,
+        "total_loss_amount": total_loss_amount
+    }
+
+
 @router.post("/quick-add-to-queue")
 async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
     """
@@ -1365,8 +1493,20 @@ async def quick_add_to_queue(data: dict, db: Session = Depends(get_rh_db)):
     if quantity < 1:
         quantity = 1
     
-    if not product_id or not sku:
-        raise HTTPException(status_code=400, detail="product_id та sku обов'язкові")
+    if not product_id:
+        raise HTTPException(status_code=400, detail="product_id обов'язковий")
+    
+    # Завжди підтягуємо реальний SKU та назву з БД
+    product_row = db.execute(text(
+        "SELECT sku, name, category_name FROM products WHERE product_id = :pid"
+    ), {"pid": product_id}).fetchone()
+    
+    if product_row:
+        sku = product_row[0] or sku or f"PO{product_id}"
+        product_name = product_name or product_row[1] or ""
+        category = category or product_row[2] or ""
+    elif not sku:
+        sku = f"PO{product_id}"
     
     if queue_type not in ('wash', 'laundry', 'restoration'):
         # Backward compatibility: washing → wash
@@ -1502,10 +1642,9 @@ async def complete_processing(damage_id: str, data: dict, db: Session = Depends(
                 """), {"product_id": product_id})
                 
                 db.execute(text("""
-                    UPDATE inventory 
+                    UPDATE products 
                     SET product_state = 'available', 
-                        cleaning_status = 'clean',
-                        updated_at = NOW()
+                        cleaning_status = 'clean'
                     WHERE product_id = :product_id
                 """), {"product_id": product_id})
             
@@ -1735,7 +1874,7 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
                 WHERE product_id = :pid
             """), {"pid": product_id, "qty": unfreeze})
             db.execute(text("""
-                UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                UPDATE products SET product_state = 'available', cleaning_status = 'clean'
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.commit()
@@ -1811,7 +1950,7 @@ async def return_to_stock(damage_id: str, data: dict, db: Session = Depends(get_
             """), {"product_id": product_id, "qty": qty_to_return, "is_full": is_full_return})
             
             if is_full_return:
-                db.execute(text("UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW() WHERE product_id = :product_id"), {"product_id": product_id})
+                db.execute(text("UPDATE products SET product_state = 'available', cleaning_status = 'clean' WHERE product_id = :product_id"), {"product_id": product_id})
             
             try:
                 db.execute(text("""
@@ -2015,7 +2154,7 @@ async def delete_damage_record(
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.execute(text("""
-                UPDATE inventory SET product_state = 'available', cleaning_status = 'clean', updated_at = NOW()
+                UPDATE products SET product_state = 'available', cleaning_status = 'clean'
                 WHERE product_id = :pid
             """), {"pid": product_id})
             db.commit()
@@ -2268,8 +2407,7 @@ async def write_off_item(
         # 2. Зменшуємо кількість в products
         db.execute(text("""
             UPDATE products
-            SET stock = GREATEST(0, stock - :qty),
-                updated_at = NOW()
+            SET quantity = GREATEST(0, COALESCE(quantity, 0) - :qty)
             WHERE product_id = :pid
         """), {"qty": write_off_qty, "pid": product_id})
         

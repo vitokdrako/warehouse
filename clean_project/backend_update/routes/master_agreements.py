@@ -409,13 +409,32 @@ async def get_active_agreement(payer_profile_id: int, db: Session = Depends(get_
 
 @router.get("/client/{client_user_id}")
 async def get_client_agreement(client_user_id: int, db: Session = Depends(get_rh_db)):
-    """Get active agreement for client"""
+    """Get active agreement for client (or terminated if no active)"""
+    
+    # Ensure columns exist
+    has_terminated_cols = True
+    try:
+        db.execute(text("SELECT terminated_at FROM master_agreements LIMIT 0"))
+    except Exception:
+        has_terminated_cols = False
+        try:
+            db.execute(text("""
+                ALTER TABLE master_agreements 
+                ADD COLUMN terminated_at DATETIME NULL,
+                ADD COLUMN termination_reason TEXT NULL
+            """))
+            db.commit()
+            has_terminated_cols = True
+        except Exception:
+            pass
+    
+    terminated_select = ", ma.terminated_at, ma.termination_reason" if has_terminated_cols else ", NULL, NULL"
     
     # First try to find signed agreement
-    result = db.execute(text("""
+    result = db.execute(text(f"""
         SELECT 
-            id, contract_number, valid_from, valid_until, signed_at, status, pdf_path
-        FROM master_agreements 
+            id, contract_number, valid_from, valid_until, signed_at, status, pdf_path {terminated_select}
+        FROM master_agreements ma
         WHERE client_user_id = :cid 
         AND status = 'signed'
         AND valid_until >= CURDATE()
@@ -427,13 +446,27 @@ async def get_client_agreement(client_user_id: int, db: Session = Depends(get_rh
     
     # If no signed, try to find draft
     if not row:
-        result = db.execute(text("""
+        result = db.execute(text(f"""
             SELECT 
-                id, contract_number, valid_from, valid_until, signed_at, status, pdf_path
-            FROM master_agreements 
+                id, contract_number, valid_from, valid_until, signed_at, status, pdf_path {terminated_select}
+            FROM master_agreements ma
             WHERE client_user_id = :cid 
             AND status IN ('draft', 'sent')
             ORDER BY created_at DESC
+            LIMIT 1
+        """), {"cid": client_user_id})
+        row = result.fetchone()
+    
+    # If no active/draft, check for terminated (show most recent)
+    if not row:
+        terminated_order = "terminated_at DESC, created_at DESC" if has_terminated_cols else "created_at DESC"
+        result = db.execute(text(f"""
+            SELECT 
+                id, contract_number, valid_from, valid_until, signed_at, status, pdf_path {terminated_select}
+            FROM master_agreements ma
+            WHERE client_user_id = :cid 
+            AND status = 'terminated'
+            ORDER BY {terminated_order}
             LIMIT 1
         """), {"cid": client_user_id})
         row = result.fetchone()
@@ -449,7 +482,9 @@ async def get_client_agreement(client_user_id: int, db: Session = Depends(get_rh
         "valid_until": row[3].isoformat() if row[3] else None,
         "signed_at": row[4].isoformat() if row[4] else None,
         "status": row[5],
-        "pdf_path": row[6]
+        "pdf_path": row[6],
+        "terminated_at": row[7].isoformat() if row[7] else None,
+        "termination_reason": row[8] if len(row) > 8 else None
     }
 
 
@@ -802,3 +837,219 @@ async def expire_old_agreements(db: Session = Depends(get_rh_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ============================================================
+# TERMINATE AGREEMENT
+# ============================================================
+
+class TerminateAgreementRequest(BaseModel):
+    reason: str
+    terminated_at: Optional[str] = None  # ISO date, default = today
+
+@router.post("/{agreement_id}/terminate")
+async def terminate_agreement(
+    agreement_id: int,
+    data: TerminateAgreementRequest,
+    db: Session = Depends(get_rh_db)
+):
+    """Terminate (припинити) a master agreement with reason"""
+    
+    # Check agreement exists
+    agreement = db.execute(text("""
+        SELECT id, contract_number, status, client_user_id, snapshot_json,
+               valid_from, valid_until
+        FROM master_agreements WHERE id = :id
+    """), {"id": agreement_id}).fetchone()
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Договір не знайдено")
+    
+    if agreement[2] == 'terminated':
+        raise HTTPException(status_code=400, detail="Договір вже припинено")
+    
+    terminated_at = data.terminated_at or datetime.now().strftime("%Y-%m-%d")
+    
+    # Ensure columns exist
+    try:
+        db.execute(text("""
+            SELECT terminated_at FROM master_agreements LIMIT 0
+        """))
+    except Exception:
+        db.execute(text("""
+            ALTER TABLE master_agreements 
+            ADD COLUMN terminated_at DATETIME NULL,
+            ADD COLUMN termination_reason TEXT NULL
+        """))
+        db.commit()
+    
+    # Update agreement
+    db.execute(text("""
+        UPDATE master_agreements 
+        SET status = 'terminated',
+            terminated_at = :terminated_at,
+            termination_reason = :reason
+        WHERE id = :id
+    """), {
+        "id": agreement_id,
+        "terminated_at": terminated_at,
+        "reason": data.reason
+    })
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"Договір №{agreement[1]} припинено",
+        "contract_number": agreement[1],
+        "terminated_at": terminated_at
+    }
+
+
+# ============================================================
+# TERMINATION ACT PREVIEW / PDF
+# ============================================================
+
+@router.get("/{agreement_id}/termination-act")
+async def termination_act_preview(agreement_id: int, db: Session = Depends(get_rh_db)):
+    """Generate HTML preview of termination act"""
+    from fastapi.responses import HTMLResponse
+    
+    # Ensure columns exist
+    try:
+        db.execute(text("SELECT terminated_at FROM master_agreements LIMIT 0"))
+    except Exception:
+        db.execute(text("""
+            ALTER TABLE master_agreements 
+            ADD COLUMN terminated_at DATETIME NULL,
+            ADD COLUMN termination_reason TEXT NULL
+        """))
+        db.commit()
+    
+    agreement = db.execute(text("""
+        SELECT 
+            ma.id, ma.contract_number, ma.status, ma.valid_from, ma.valid_until,
+            ma.signed_at, ma.client_user_id, ma.snapshot_json, ma.note,
+            cu.full_name, cu.email, cu.phone, cu.payer_type, cu.tax_id, cu.bank_details,
+            ma.terminated_at, ma.termination_reason
+        FROM master_agreements ma
+        LEFT JOIN client_users cu ON cu.id = ma.client_user_id
+        WHERE ma.id = :id
+    """), {"id": agreement_id}).fetchone()
+    
+    if not agreement:
+        raise HTTPException(status_code=404, detail="Договір не знайдено")
+    
+    # Parse snapshot
+    snapshot = None
+    if agreement[7]:
+        try:
+            snapshot = json.loads(agreement[7]) if isinstance(agreement[7], str) else agreement[7]
+        except:
+            snapshot = {}
+    snapshot = snapshot or {}
+    
+    executor_type = snapshot.get("executor_type", "tov")
+    executor = snapshot.get("executor") or EXECUTORS.get(executor_type, EXECUTORS["tov"])
+    
+    # Format dates
+    def fmt_date(d):
+        if not d: return "___________"
+        if isinstance(d, str):
+            try:
+                d = datetime.fromisoformat(d).date() if 'T' in d else datetime.strptime(d, "%Y-%m-%d").date()
+            except:
+                return d
+        months = ["січня","лютого","березня","квітня","травня","червня",
+                  "липня","серпня","вересня","жовтня","листопада","грудня"]
+        return f"«{d.day}» {months[d.month-1]} {d.year} р."
+    
+    contract_date = fmt_date(snapshot.get("contract_date") or agreement[3])
+    termination_date = fmt_date(agreement[15])
+    
+    client_name = agreement[9] or "—"
+    
+    html = f"""<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Акт розірвання договору №{agreement[1]}</title>
+<style>
+  @page {{ margin: 20mm; size: A4; }}
+  body {{ font-family: 'Times New Roman', serif; font-size: 14px; line-height: 1.6; color: #000; margin: 0; padding: 20px; }}
+  .center {{ text-align: center; }}
+  .bold {{ font-weight: bold; }}
+  .mt {{ margin-top: 30px; }}
+  .mt2 {{ margin-top: 15px; }}
+  .signatures {{ display: flex; justify-content: space-between; margin-top: 60px; }}
+  .sig-block {{ width: 45%; }}
+  .sig-line {{ border-bottom: 1px solid #000; margin-top: 40px; padding-bottom: 2px; }}
+  p {{ text-indent: 40px; margin: 8px 0; text-align: justify; }}
+  .no-indent {{ text-indent: 0; }}
+</style>
+</head>
+<body>
+<div class="center bold" style="font-size: 16px;">
+  УГОДА<br>
+  про розірвання Договору оренди декору<br>
+  №{agreement[1]} від {contract_date}
+</div>
+
+<p class="no-indent mt2" style="text-align: right;">
+  {termination_date}
+</p>
+
+<p>
+  {executor.get('name', 'Орендодавець')}, далі — «Орендодавець», з однієї сторони, та 
+  {client_name}, далі — «Орендар», з іншої сторони, 
+  разом іменовані «Сторони», уклали цю Угоду про наступне:
+</p>
+
+<p class="bold">1.</p>
+<p>
+  Сторони домовились розірвати Договір оренди декору №{agreement[1]} від {contract_date} 
+  (далі — «Договір»).
+</p>
+
+<p class="bold">2.</p>
+<p>
+  Причина розірвання: {agreement[16] or 'за взаємною згодою Сторін'}.
+</p>
+
+<p class="bold">3.</p>
+<p>
+  Договір вважається розірваним з дати підписання цієї Угоди.
+</p>
+
+<p class="bold">4.</p>
+<p>
+  Сторони підтверджують, що не мають одна до одної взаємних претензій за Договором.
+</p>
+
+<p class="bold">5.</p>
+<p>
+  Ця Угода складена у двох примірниках, по одному для кожної зі Сторін, 
+  що мають однакову юридичну силу.
+</p>
+
+<div class="signatures">
+  <div class="sig-block">
+    <div class="bold">ОРЕНДОДАВЕЦЬ:</div>
+    <div class="mt2">{executor.get('name', '')}</div>
+    <div>ЄДРПОУ: {executor.get('edrpou', '')}</div>
+    <div class="sig-line"></div>
+    <div style="font-size: 12px; color: #666;">підпис</div>
+  </div>
+  <div class="sig-block">
+    <div class="bold">ОРЕНДАР:</div>
+    <div class="mt2">{client_name}</div>
+    <div>&nbsp;</div>
+    <div class="sig-line"></div>
+    <div style="font-size: 12px; color: #666;">підпис</div>
+  </div>
+</div>
+
+</body>
+</html>"""
+    
+    return HTMLResponse(content=html, media_type="text/html")

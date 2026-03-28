@@ -281,6 +281,71 @@ async def list_entity_documents(
     }
 
 
+@router.post("/batch-by-orders")
+async def batch_documents_by_orders(
+    body: dict,
+    db: Session = Depends(get_rh_db)
+):
+    """Отримати всі згенеровані документи для списку замовлень, згруповані по order_id"""
+    order_ids = body.get("order_ids", [])
+    if not order_ids:
+        return {}
+    
+    placeholders = ",".join([f":oid_{i}" for i in range(len(order_ids))])
+    params = {f"oid_{i}": str(oid) for i, oid in enumerate(order_ids)}
+    
+    result = db.execute(text(f"""
+        SELECT id, doc_type, doc_number, version, status, entity_id, created_at
+        FROM documents
+        WHERE entity_type = 'order' AND entity_id IN ({placeholders})
+        ORDER BY created_at DESC
+    """), params)
+    
+    doc_type_labels = {
+        "issue_act": "Акт видачі",
+        "return_act": "Акт повернення",
+        "defect_act": "Дефектний акт",
+        "contract_rent": "Договір оренди",
+        "invoice_offer": "Рахунок-оферта",
+        "delivery_note": "ТТН",
+        "rental_extension": "Додаткова угода",
+        "damage_settlement_act": "Акт утримання",
+        "deposit_refund_act": "Акт повернення застави",
+        "deposit_settlement_act": "Акт взаєморозрахунків",
+        "invoice_additional": "Додатковий рахунок",
+        "invoice_legal": "Рахунок (юр. особа)",
+        "partial_return_act": "Акт часткового повернення",
+        "settlement_act": "Акт взаєморозрахунків",
+        "service_act": "Акт виконаних робіт",
+        "goods_invoice": "Видаткова накладна",
+        "order_modification": "Дозамовлення",
+    }
+    
+    grouped = {}
+    seen = {}
+    for row in result:
+        oid = str(row[5])
+        doc_type = row[1]
+        key = f"{oid}_{doc_type}"
+        if key in seen:
+            continue
+        seen[key] = True
+        
+        if oid not in grouped:
+            grouped[oid] = []
+        grouped[oid].append({
+            "id": row[0],
+            "doc_type": doc_type,
+            "label": doc_type_labels.get(doc_type, doc_type),
+            "doc_number": row[2],
+            "version": row[3],
+            "preview_url": f"/api/documents/{row[0]}/preview",
+        })
+    
+    return grouped
+
+
+
 # ============ Підписання ============
 
 @router.post("/{document_id}/sign")
@@ -674,6 +739,195 @@ def _get_order_with_items(db: Session, order_id: int):
     return order, items
 
 
+def _enrich_template_with_agreement(db: Session, order, template_data: dict, order_id=None, customer_name=None) -> dict:
+    """
+    Enrich template_data with agreement (contract number + date), landlord, tenant, meta.
+    Called from ALL document generation endpoints so templates can reference:
+      {{ agreement.contract_number }}, {{ agreement.contract_date }}
+      {{ tenant.type_label }}, {{ landlord.name }}, etc.
+    """
+    # Find client_user_id from order
+    client_user_id = None
+    if not customer_name and order:
+        customer_name = order[3] if len(order) > 3 else None
+    if not order_id and order:
+        order_id = order[0] if len(order) > 0 else None
+    
+    if order_id:
+        # Try to get client_user_id directly from order
+        try:
+            cuid_row = db.execute(text(
+                "SELECT client_user_id FROM orders WHERE order_id = :oid"
+            ), {"oid": order_id}).fetchone()
+            if cuid_row and cuid_row[0]:
+                client_user_id = cuid_row[0]
+        except:
+            pass
+        
+        # Fallback: match by customer_name
+        if not client_user_id and customer_name:
+            try:
+                cu_row = db.execute(text(
+                    "SELECT id FROM client_users WHERE full_name = :name LIMIT 1"
+                ), {"name": customer_name}).fetchone()
+                if cu_row:
+                    client_user_id = cu_row[0]
+            except:
+                pass
+    
+    # Load client data
+    client_data = {}
+    if client_user_id:
+        try:
+            cr = db.execute(text("""
+                SELECT full_name, email, phone, payer_type, tax_id, company_name, 
+                       director_name, bank_details
+                FROM client_users WHERE id = :cid
+            """), {"cid": client_user_id}).fetchone()
+            if cr:
+                client_data = {
+                    "full_name": cr[0] or "",
+                    "email": cr[1] or "",
+                    "phone": cr[2] or "",
+                    "payer_type": cr[3] or "individual",
+                    "tax_id": cr[4] or "",
+                    "company_name": cr[5] or "",
+                    "director_name": cr[6] or "",
+                    "bank_details": cr[7],
+                }
+        except:
+            pass
+    
+    # Load active master agreement
+    agreement_data = {}
+    if client_user_id:
+        try:
+            ma_row = db.execute(text("""
+                SELECT id, contract_number, valid_from, valid_until, signed_at, status, snapshot_json
+                FROM master_agreements 
+                WHERE client_user_id = :cid AND status = 'signed'
+                AND valid_until >= CURDATE()
+                ORDER BY signed_at DESC LIMIT 1
+            """), {"cid": client_user_id}).fetchone()
+            
+            if not ma_row:
+                # Try draft
+                ma_row = db.execute(text("""
+                    SELECT id, contract_number, valid_from, valid_until, signed_at, status, snapshot_json
+                    FROM master_agreements 
+                    WHERE client_user_id = :cid AND status IN ('draft', 'sent')
+                    ORDER BY created_at DESC LIMIT 1
+                """), {"cid": client_user_id}).fetchone()
+            
+            if ma_row:
+                snapshot = {}
+                if ma_row[6]:
+                    try:
+                        snapshot = json.loads(ma_row[6]) if isinstance(ma_row[6], str) else ma_row[6]
+                    except:
+                        pass
+                
+                contract_date_raw = snapshot.get("contract_date") or (ma_row[2].isoformat() if ma_row[2] else None)
+                
+                agreement_data = {
+                    "id": ma_row[0],
+                    "contract_number": ma_row[1],
+                    "contract_date": _format_date_ua(ma_row[2]),
+                    "contract_date_long": _format_date_ua_long(ma_row[2]),
+                    "valid_from": _format_date_ua(ma_row[2]),
+                    "valid_until": _format_date_ua_long(ma_row[3]),
+                    "signed_at": _format_date_ua(ma_row[4]) if ma_row[4] else None,
+                    "status": ma_row[5],
+                }
+                
+                # Extract executor from snapshot
+                executor_type = snapshot.get("executor_type", "tov")
+                executor = snapshot.get("executor") or EXECUTORS.get(executor_type, EXECUTORS.get("tov", {}))
+                agreement_data["executor"] = executor
+                agreement_data["executor_type"] = executor_type
+        except:
+            pass
+    
+    # Build mappings
+    payer_type = client_data.get("payer_type", "individual")
+    payer_type_labels = {
+        "individual": "фізична особа",
+        "fop": "фізична особа-підприємець",
+        "tov": "юридична особа (ТОВ)",
+        "pp": "приватне підприємство",
+    }
+    
+    executor = agreement_data.get("executor", EXECUTORS.get("tov", {}))
+    
+    template_data["agreement"] = agreement_data
+    
+    template_data["landlord"] = {
+        "name": executor.get("name", ""),
+        "tax_id": executor.get("edrpou", executor.get("tax_id", "")),
+        "iban": executor.get("iban", ""),
+        "address": executor.get("address", ""),
+    }
+    
+    template_data["tenant"] = {
+        "legal_name": client_data.get("company_name") or client_data.get("full_name", customer_name or ""),
+        "signer_name": client_data.get("director_name") or client_data.get("full_name", customer_name or ""),
+        "full_name": client_data.get("full_name", customer_name or ""),
+        "address": "",
+        "iban": "",
+        "type": payer_type,
+        "type_label": payer_type_labels.get(payer_type, payer_type or ""),
+        "tax_id": client_data.get("tax_id", ""),
+        "phone": client_data.get("phone", ""),
+        "email": client_data.get("email", ""),
+    }
+    
+    # Parse bank_details for tenant
+    bd = client_data.get("bank_details")
+    if bd:
+        if isinstance(bd, str):
+            try:
+                bd = json.loads(bd)
+            except:
+                bd = None
+        if isinstance(bd, dict):
+            template_data["tenant"]["iban"] = bd.get("iban", "")
+            template_data["tenant"]["address"] = bd.get("address", "")
+    
+    # Meta (date parts for templates)
+    contract_date_raw = None
+    if agreement_data:
+        try:
+            snapshot = agreement_data.get("_snapshot", {})
+            contract_date_raw = snapshot.get("contract_date") or agreement_data.get("valid_from")
+        except:
+            pass
+    
+    meta_day, meta_month, meta_year = "", "", ""
+    if contract_date_raw:
+        try:
+            from datetime import date as dt_date
+            if isinstance(contract_date_raw, str) and len(contract_date_raw) >= 8:
+                d = datetime.fromisoformat(contract_date_raw).date() if 'T' in contract_date_raw else datetime.strptime(contract_date_raw, "%Y-%m-%d").date()
+                months_ua = ["січня","лютого","березня","квітня","травня","червня",
+                            "липня","серпня","вересня","жовтня","листопада","грудня"]
+                meta_day = str(d.day)
+                meta_month = months_ua[d.month - 1]
+                meta_year = str(d.year)
+        except:
+            pass
+    
+    template_data["meta"] = template_data.get("meta", {})
+    template_data["meta"].update({
+        "watermark_text": "",
+        "contract_day": meta_day,
+        "contract_month": meta_month, 
+        "contract_year": meta_year,
+    })
+    
+    return template_data
+
+
+
 @router.get("/estimate/{order_id}/preview", response_class=HTMLResponse)
 async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     """Generate HTML preview of estimate (Кошторис) using new quote.html template"""
@@ -727,16 +981,17 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount  # Повна сума до знижки
     # Якщо відсоток 0, але є сума — розрахувати динамічно
-    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
-        discount_percent = round((discount_amount / order_rent) * 100, 1)
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
     
-    # ВАЖЛИВО: order_rent (total_price) = вартість ДО знижки
-    rent_before_discount = order_rent  # Повна сума оренди до знижки
-    rent_after_discount = max(0, order_rent - discount_amount)  # Сума після знижки
-    grand_total = rent_after_discount + service_fee  # Фінальна сума (зі знижкою + послуги)
+    # Кошторис: order_rent = повна вартість оренди (ДО знижки)
+    # grand_total = order_rent - знижка + послуги = сума до оплати
+    grand_total = order_rent - discount_amount + service_fee
     
     # Delivery type label mapping
     delivery_type_labels = {
@@ -789,13 +1044,13 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "rent_total_fmt": _format_currency(order_rent),  # Вартість оренди (зі знижкою, до сплати)
             "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
             "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50% від збитку)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда + послуги)
             "grand_total": grand_total
         },
         "company": get_company_config(db),
@@ -805,6 +1060,7 @@ async def preview_estimate(order_id: int, db: Session = Depends(get_rh_db)):
     }
     
     template = jinja_env.get_template("documents/quote.html")
+    _enrich_template_with_agreement(db, order, template_data)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -850,15 +1106,13 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
-    # Якщо відсоток 0, але є сума — розрахувати динамічно
-    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
-        discount_percent = round((discount_amount / order_rent) * 100, 1)
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # ВАЖЛИВО: order_rent вже включає знижку
-    rent_before_discount = order_rent  # total_price = вартість ДО знижки
-    rent_after_discount = max(0, order_rent - discount_amount)
-    grand_total = rent_after_discount + service_fee
+    grand_total = order_rent - discount_amount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
@@ -890,13 +1144,13 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "rent_total_fmt": _format_currency(order_rent),  # Вартість оренди (зі знижкою, до сплати)
             "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
             "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50%)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда + послуги)
             "grand_total": grand_total
         },
         "company": get_company_config(db),
@@ -907,9 +1161,8 @@ async def download_estimate_pdf(order_id: int, db: Session = Depends(get_rh_db))
     }
     
     template = jinja_env.get_template("documents/quote.html")
+    _enrich_template_with_agreement(db, order, template_data)
     html_content = template.render(**template_data)
-    
-    # Add auto-print script
     print_script = '''<script>window.onload = function() { window.print(); }</script>'''
     html_content = html_content.replace('</body>', f'{print_script}</body>')
     
@@ -968,15 +1221,13 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
     order_deposit = deposit_total
     discount_amount = float(order[23] or 0) if order[23] else 0
     discount_percent = order[24] or 0
-    # Якщо відсоток 0, але є сума — розрахувати динамічно
-    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and order_rent > 0:
-        discount_percent = round((discount_amount / order_rent) * 100, 1)
+    # ВАЖЛИВО: order_rent (total_price) = вартість ВЖЕ зі знижкою
+    rent_before_discount = order_rent + discount_amount
+    if (not discount_percent or discount_percent == 0) and discount_amount > 0 and rent_before_discount > 0:
+        discount_percent = round((discount_amount / rent_before_discount) * 100, 1)
     service_fee = float(order[25] or 0)
     service_fee_name = order[26] or "Додаткова послуга"
-    # ВАЖЛИВО: order_rent вже включає знижку
-    rent_before_discount = order_rent  # total_price = вартість ДО знижки
-    rent_after_discount = max(0, order_rent - discount_amount)
-    grand_total = rent_after_discount + service_fee
+    grand_total = order_rent - discount_amount + service_fee
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
@@ -1008,13 +1259,13 @@ async def send_estimate_email(order_id: int, request: SendEstimateEmailRequest, 
         },
         "items": formatted_items,
         "totals": {
-            "rent_total_fmt": _format_currency(rent_before_discount),  # Вартість ордеру (ДО знижки)
+            "rent_total_fmt": _format_currency(order_rent),  # Вартість оренди (зі знижкою, до сплати)
             "loss_total_fmt": _format_currency(loss_total),  # Повна сума збитку
             "deposit_total_fmt": _format_currency(order_deposit),  # Завдаток (50%)
             "discount_fmt": _format_currency(discount_amount) if discount_amount > 0 else None,
             "service_fee_fmt": _format_currency(service_fee) if service_fee > 0 else None,
             "service_fee_name": service_fee_name if service_fee > 0 else None,
-            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда - знижка + послуги)
+            "grand_total_fmt": _format_currency(grand_total),  # РАЗОМ (оренда + послуги)
             "grand_total": grand_total
         },
         "company": get_company_config(db),
@@ -1114,6 +1365,7 @@ async def preview_annex(
     }
     
     template = jinja_env.get_template("documents/annex.html")
+    _enrich_template_with_agreement(db, order, template_data)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -1178,7 +1430,8 @@ async def preview_invoice_offer(
     """), {"oid": order_id}).fetchall()
     additional_services = [{"name": row[0], "amount": _format_currency(row[1])} for row in additional_services_raw]
     
-    grand_total = order_rent - discount_amount + service_fee + order_deposit
+    # ВАЖЛИВО: order_rent (total_price) вже зі знижкою — не віднімаємо ще раз
+    grand_total = order_rent + service_fee + order_deposit
     
     # Delivery type
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
@@ -1217,6 +1470,7 @@ async def preview_invoice_offer(
     }
     
     template = jinja_env.get_template("documents/invoice_offer.html")
+    _enrich_template_with_agreement(db, order, template_data)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -1269,7 +1523,8 @@ async def download_invoice_offer_pdf(
     """), {"oid": order_id}).fetchall()
     additional_services = [{"name": row[0], "amount": _format_currency(row[1])} for row in additional_services_raw]
     
-    grand_total = order_rent - discount_amount + service_fee + order_deposit
+    # ВАЖЛИВО: order_rent (total_price) вже зі знижкою — не віднімаємо ще раз
+    grand_total = order_rent + service_fee + order_deposit
     
     delivery_type_labels = {"self_pickup": "Самовивіз", "delivery": "Доставка", "self": "Самовивіз", None: "Самовивіз"}
     delivery_type_label = delivery_type_labels.get(order[18], order[18] or "Самовивіз")
@@ -1303,6 +1558,7 @@ async def download_invoice_offer_pdf(
     }
     
     template = jinja_env.get_template("documents/invoice_offer.html")
+    _enrich_template_with_agreement(db, order, template_data)
     html_content = template.render(**template_data)
     
     # Add auto-print script
@@ -1345,18 +1601,26 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
             ic_items = json.loads(ic_row[0]) if isinstance(ic_row[0], str) else ic_row[0]
             for ic_item in ic_items:
                 item_id = ic_item.get("id")
+                sku = ic_item.get("sku")
                 pkg = ic_item.get("packaging", {})
-                if item_id and pkg:
+                if pkg:
                     labels = []
                     for key, label in ITEM_PACK_LABELS.items():
-                        if pkg.get(key):
-                            labels.append(label)
+                        val = pkg.get(key)
+                        qty = int(val) if isinstance(val, (int, float)) else (1 if val else 0)
+                        if qty > 0:
+                            labels.append(f"{label}: {qty}" if qty > 1 else label)
                     if pkg.get("other"):
                         other_text = pkg.get("other_text", "")
-                        labels.append(f"Інше: {other_text}" if other_text else "Інше")
-                    # Store by both int and str for reliable matching
-                    item_packaging_map[int(item_id)] = labels
-                    item_packaging_map[str(item_id)] = labels
+                        other_qty = int(pkg["other"]) if isinstance(pkg["other"], (int, float)) else 1
+                        other_label = f"Інше ({other_text})" if other_text else "Інше"
+                        labels.append(f"{other_label}: {other_qty}" if other_qty > 1 else other_label)
+                    if labels:
+                        if item_id:
+                            item_packaging_map[int(item_id)] = labels
+                            item_packaging_map[str(item_id)] = labels
+                        if sku:
+                            item_packaging_map[sku] = labels
     except Exception:
         pass
     
@@ -1370,7 +1634,7 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
         item_id = it[1]  # product_id to match issue_cards items
         
         # Per-item packaging
-        pack_labels = item_packaging_map.get(item_id, [])
+        pack_labels = item_packaging_map.get(item_id, []) or item_packaging_map.get(sku, [])
         
         # Load damage history for this product by SKU
         damages = []
@@ -1458,6 +1722,9 @@ def _build_issue_act_data(db: Session, order_id: int, executor_type: str = "fop"
         "totals": {"items_count": len(items), "quantity": total_qty},
         "company": get_company_config(db),
     }
+    
+    _enrich_template_with_agreement(db, order, template_data)
+    return template_data
 
 
 @router.get("/issue-act/{order_id}/preview", response_class=HTMLResponse)
@@ -1599,6 +1866,7 @@ async def download_annex_pdf(order_id: int, agreement_id: Optional[int] = Query(
     }
     
     template = jinja_env.get_template("documents/annex.html")
+    _enrich_template_with_agreement(db, order, template_data)
     html_content = template.render(**template_data)
     
     return HTMLResponse(content=html_content, media_type="text/html")
@@ -2027,7 +2295,8 @@ async def preview_invoice_payment(
         payer = {
             "id": payer_row[0], "type": payer_row[1], "display_name": payer_row[2],
             "legal_name": payer_row[3], "edrpou": payer_row[4], "iban": payer_row[5],
-            "email_for_docs": payer_row[6], "signatory_name": payer_row[8]
+            "email_for_docs": payer_row[6], "signatory_name": payer_row[8],
+            "tax_mode": payer_row[10]
         } if payer_row else None
     else:
         payer = _get_order_payer(db, order_id)
@@ -2043,14 +2312,27 @@ async def preview_invoice_payment(
     if grand_total <= 0:
         grand_total = total_amount
     
-    # Build items for invoice (simplified: one line "Прокат декору")
+    # Determine item name based on payer type (simplified vs general)
+    payer_type = payer.get("type", "") or ""
+    tax_mode = payer.get("tax_mode", "") or ""
+    # Нормалізація: fop/tov + tax_mode → визначаємо simplified чи general
+    is_general = False
+    if payer_type in ["fop_general", "llc_general"]:
+        is_general = True
+    elif payer_type in ["fop", "tov", "company"] and tax_mode == "general":
+        is_general = True
+    
+    item_name = "Квіткова композиція" if is_general else "Прокат декору"
+    item_unit = "шт." if is_general else "послуга"
+    
+    # Build items for invoice
     formatted_items = []
     if items:
         formatted_items.append({
             "num": 1,
-            "name": "Прокат декору",
+            "name": item_name,
             "quantity": 1,
-            "unit": "послуга",
+            "unit": item_unit,
             "price": _format_currency(grand_total),
             "amount": _format_currency(grand_total)
         })
@@ -2071,6 +2353,7 @@ async def preview_invoice_payment(
     }
     
     template = jinja_env.get_template("documents/invoice_payment.html")
+    _enrich_template_with_agreement(db, order, template_data)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -2116,7 +2399,7 @@ async def preview_service_act(
             "id": payer_row[0], "type": payer_row[1], "display_name": payer_row[2],
             "legal_name": payer_row[3], "edrpou": payer_row[4], "iban": payer_row[5],
             "email_for_docs": payer_row[6], "signatory_name": payer_row[8],
-            "signatory_basis": payer_row[9]
+            "signatory_basis": payer_row[9], "tax_mode": payer_row[10]
         } if payer_row else None
     else:
         payer = _get_order_payer(db, order_id)
@@ -2153,13 +2436,20 @@ async def preview_service_act(
     else:
         parsed_date = order[6] or order[7] or datetime.now()  # rental_start_date or rental_end_date or now
     
+    # Determine item name based on payer type
+    payer_type_sa = payer.get("type", "") or ""
+    tax_mode_sa = payer.get("tax_mode", "") or ""
+    is_general_sa = payer_type_sa in ["fop_general", "llc_general"] or (payer_type_sa in ["fop", "tov", "company"] and tax_mode_sa == "general")
+    sa_item_name = "Квіткова композиція" if is_general_sa else "Прокат декору"
+    sa_item_unit = "шт" if is_general_sa else "шт"
+    
     formatted_items = []
     if items:
         formatted_items.append({
             "num": 1,
-            "name": "Прокат декору",
+            "name": sa_item_name,
             "quantity": 1,
-            "unit": "шт",
+            "unit": sa_item_unit,
             "price": _format_currency(grand_total),
             "amount": _format_currency(grand_total)
         })
@@ -2181,6 +2471,7 @@ async def preview_service_act(
     }
     
     template = jinja_env.get_template("documents/service_act.html")
+    _enrich_template_with_agreement(db, None, template_data, order_id=order_id)
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 
@@ -2251,7 +2542,8 @@ async def preview_settlement_act(
     late_paid = 0
     payments_detail = []
     type_labels = {"rent": "Оренда", "additional": "Донарахування", "damage": "Пошкодження",
-                   "deposit": "Застава", "late": "Прострочення", "advance": "Передплата", "refund": "Повернення"}
+                   "deposit": "Застава", "late": "Прострочення", "advance": "Передплата",
+                   "refund": "Повернення", "loss": "Втрата"}
     method_labels = {"cash": "Готівка", "card": "Картка", "bank": "Безготівка",
                      "iban": "IBAN", "online": "Онлайн", "p2p": "P2P"}
 
@@ -2267,13 +2559,14 @@ async def preview_settlement_act(
             elif ptype == 'late':
                 late_paid += amt
 
-        payments_detail.append({
-            "date": _format_date_ua(p[6]),
-            "type_label": type_labels.get(ptype, ptype),
-            "method_label": method_labels.get(p[2], p[2] or "—"),
-            "amount": _format_currency(amt),
-            "note": p[9] or p[7] or ""
-        })
+            # Тільки реальні оплати (confirmed/completed) в деталях
+            payments_detail.append({
+                "date": _format_date_ua(p[6]),
+                "type_label": type_labels.get(ptype, ptype),
+                "method_label": method_labels.get(p[2], p[2] or "—"),
+                "amount": _format_currency(amt),
+                "note": p[9] or p[7] or ""
+            })
 
     total_paid = rent_paid + damage_paid + late_paid
 
@@ -2302,6 +2595,21 @@ async def preview_settlement_act(
 
     currency_symbol = {"UAH": "грн", "USD": "$", "EUR": "€"}.get(dep_currency, dep_currency)
 
+    # Deposit refund events (для деталізації в акті)
+    deposit_refund_events = []
+    if deposit_row:
+        dep_events = db.execute(text("""
+            SELECT event_type, amount, occurred_at, note
+            FROM fin_deposit_events WHERE deposit_id = :dep_id AND event_type = 'refunded'
+            ORDER BY occurred_at
+        """), {"dep_id": deposit_row[0]}).fetchall()
+        deposit_refund_events = [
+            {"amount": _format_currency(float(e[1] or 0)),
+             "date": _format_date_ua(e[2]),
+             "note": e[3] or "Повернення застави"}
+            for e in dep_events
+        ]
+
     # === 4. DAMAGE ===
     damage_total_val = db.execute(text("""
         SELECT COALESCE(SUM(fee), 0) FROM product_damage_history WHERE order_id = :order_id
@@ -2320,10 +2628,10 @@ async def preview_settlement_act(
         "fee": _format_currency(float(r[4] or 0)), "note": r[5] or ""
     } for r in damage_items_rows]
 
-    # === 5. LATE FEES (from fin_payments - manager-decided amounts) ===
+    # === 5. LATE FEES (from fin_payments - тільки нарахування менеджера, status='pending') ===
     late_total_row = db.execute(text("""
         SELECT COALESCE(SUM(amount), 0) FROM fin_payments
-        WHERE order_id = :order_id AND payment_type = 'late'
+        WHERE order_id = :order_id AND payment_type = 'late' AND status = 'pending'
     """), {"order_id": order_id}).fetchone()
     late_final = float(late_total_row[0]) if late_total_row else 0
 
@@ -2343,16 +2651,30 @@ async def preview_settlement_act(
     additional_total = sum(float(r[1] or 0) for r in additional_services)
 
     # === 7. CALCULATE TOTALS ===
-    rent_total = float(order_row[6] or 0)
+    total_price_stored = float(order_row[6] or 0)
     discount = float(order_row[10] or 0)
     discount_percent = float(order_row[11] or 0)
-    rent_after_discount = rent_total - discount
+    
+    # Визначаємо чи total_price ДО чи ПІСЛЯ знижки
+    has_discount_payment = any(p[1] == 'discount' for p in payments_rows)
+    
+    if has_discount_payment and discount > 0:
+        # total_price = ціна ДО знижки
+        rent_total = total_price_stored
+        rent_after_discount = total_price_stored - discount
+    else:
+        # total_price = ціна ПІСЛЯ знижки (або без знижки)
+        rent_total = total_price_stored + discount
+        rent_after_discount = total_price_stored
 
     grand_total_charges = rent_after_discount + additional_total + damage_final + late_final
 
     # Calculated balance: positive = client owes, negative = refund to client
-    # Balance = total charges - all payments - deposit held in UAH
-    calculated_balance = grand_total_charges - total_paid - dep_held_uah
+    # Balance = total charges - all cash payments - net deposit coverage
+    # Net deposit coverage = what's already used for charges + what's still available
+    # (NOT the full held amount, because part was already refunded to client)
+    deposit_net_for_charges = dep_used + max(0, dep_available)
+    calculated_balance = grand_total_charges - total_paid - deposit_net_for_charges
 
     # Manager override
     is_manager_override = final_amount is not None
@@ -2402,6 +2724,8 @@ async def preview_settlement_act(
             "refunded_display": _format_currency(dep_refunded),
             "available": dep_available,
             "available_display": f"{_format_currency(dep_available)} грн",
+            "net_for_charges": _format_currency(deposit_net_for_charges),
+            "refund_events": deposit_refund_events,
         },
         "settlement": {
             "calculated_balance": calculated_balance,
@@ -2415,6 +2739,7 @@ async def preview_settlement_act(
     }
 
     template = jinja_env.get_template("documents/settlement_act.html")
+    _enrich_template_with_agreement(db, None, template_data, order_id=order_id, customer_name=order_row[2])
     return HTMLResponse(content=template.render(**template_data), media_type="text/html")
 
 

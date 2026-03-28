@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <title>Договір оренди майна № {{ agreement.contract_number }}</title>
   <style>
-    {% include "_partials/base.css" %}
+    {% include "documents/_partials/base.css" %}
   </style>
 </head>
 <body>
 {% if meta.watermark_text %}<div class="watermark">{{ meta.watermark_text }}</div>{% endif %}
 <div class="page">
-  {% include "_partials/header.html" %}
+  {% include "documents/_partials/header.html" %}
 
   <h1>ДОГОВІР № {{ agreement.contract_number }} оренди майна</h1>
   
@@ -116,7 +116,7 @@
     </div>
   </div>
 
-  {% include "_partials/footer_sign.html" %}
+  {% include "documents/_partials/footer_sign.html" %}
 </div>
 </body>
 </html>

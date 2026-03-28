@@ -29,11 +29,12 @@
 {% set is_llc = payer.payer_type in ['llc_simple', 'llc_general'] %}
 {% set item_name = 'Квіткова композиція' if is_general else 'Прокат декору' %}
 
-{# Визначаємо префікс для покупця #}
+{# Визначаємо префікс для покупця (без regex_search - чиста Jinja логіка) #}
+{% set cn_lower = (payer.company_name or '')|lower|trim %}
 {% set buyer_prefix = '' %}
-{% if is_fop and not (payer.company_name or '')|lower|trim|regex_search('^фоп\\s') %}
+{% if is_fop and not cn_lower.startswith('фоп ') and not cn_lower.startswith('фоп\n') %}
     {% set buyer_prefix = 'ФОП ' %}
-{% elif is_llc and not (payer.company_name or '')|lower|trim|regex_search('^тов\\s') %}
+{% elif is_llc and not cn_lower.startswith('тов ') and not cn_lower.startswith('тов\n') %}
     {% set buyer_prefix = 'ТОВ ' %}
 {% endif %}
 
@@ -46,7 +47,7 @@
 </div>
 
 <div class="header-info">
-    <p><span class="label">Покупець:</span> <strong>{% if is_fop %}ФОП {% elif is_llc %}ТОВ {% endif %}{{ payer.company_name or order.customer_name }}</strong></p>
+    <p><span class="label">Покупець:</span> <strong>{{ buyer_prefix }}{{ payer.company_name or order.customer_name }}</strong></p>
     {% if is_general and (payer.address or payer.edrpou or payer.iban) %}
     <div class="buyer-details">
         {% if payer.address %}{{ payer.address }}{% endif %}
@@ -58,7 +59,7 @@
     {% endif %}
 </div>
 
-<p style="margin: 20px 0;"><span class="label">Договір:</span> Основний</p>
+<p style="margin: 20px 0;"><span class="label">Договір:</span> {{ agreement.contract_number if agreement and agreement.contract_number else 'Основний' }}</p>
 
 <table class="items-table">
     <thead>

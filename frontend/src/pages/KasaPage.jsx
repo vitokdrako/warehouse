@@ -311,7 +311,8 @@ function ManagerDebtsView() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
   const [managers, setManagers] = useState([]);
-  const [availableUsers, setAvailableUsers] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const [showAddPanel, setShowAddPanel] = useState(false);
 
   const loadManagers = () => {
@@ -323,25 +324,28 @@ function ManagerDebtsView() {
       .then(r => r.json()).then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
   };
-  const loadAvailable = () => {
-    authFetch(`${BACKEND_URL}/api/finance/available-managers`).then(r => r.json()).then(setAvailableUsers).catch(() => {});
+  const searchClients = (q) => {
+    setSearchQuery(q);
+    if (q.length < 2) { setSearchResults([]); return; }
+    authFetch(`${BACKEND_URL}/api/finance/available-managers?q=${encodeURIComponent(q)}`)
+      .then(r => r.json()).then(setSearchResults).catch(() => {});
   };
   useEffect(() => { loadManagers(); loadDebts(); }, []);
 
-  const addManager = async (user) => {
+  const addManager = async (client) => {
     await authFetch(`${BACKEND_URL}/api/finance/event-managers`, {
-      method: 'POST', body: JSON.stringify({ user_id: user.user_id, name: user.name })
+      method: 'POST', body: JSON.stringify({ client_user_id: client.client_user_id, name: client.name })
     });
+    setSearchQuery(''); setSearchResults([]);
     loadManagers(); loadDebts();
   };
-  const removeManager = async (uid) => {
-    await authFetch(`${BACKEND_URL}/api/finance/event-managers/${uid}`, { method: 'DELETE' });
+  const removeManager = async (cid) => {
+    await authFetch(`${BACKEND_URL}/api/finance/event-managers/${cid}`, { method: 'DELETE' });
     loadManagers(); loadDebts();
   };
 
   const money = (v) => Number(v || 0).toLocaleString('uk-UA', { minimumFractionDigits: 0 });
   const toggle = (m) => setExpanded(p => ({ ...p, [m]: !p[m] }));
-  const mgrIds = managers.map(m => m.user_id);
 
   return (
     <div className="max-w-[1800px] mx-auto px-4 py-6 space-y-4">
@@ -352,17 +356,17 @@ function ManagerDebtsView() {
             <h2 className="text-sm font-bold text-slate-800">Івент-менеджери</h2>
             <div className="flex items-center gap-1.5 flex-wrap">
               {managers.map(m => (
-                <span key={m.user_id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700">
+                <span key={m.client_user_id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700">
                   {m.name}
-                  <button onClick={() => removeManager(m.user_id)} className="ml-0.5 text-blue-400 hover:text-red-500" data-testid={`remove-mgr-${m.user_id}`}>
+                  <button onClick={() => removeManager(m.client_user_id)} className="ml-0.5 text-blue-400 hover:text-red-500" data-testid={`remove-mgr-${m.client_user_id}`}>
                     <X className="w-3 h-3" />
                   </button>
                 </span>
               ))}
-              {managers.length === 0 && <span className="text-xs text-slate-400">Додайте менеджерів</span>}
+              {managers.length === 0 && <span className="text-xs text-slate-400">Додайте менеджерів зі списку клієнтів</span>}
             </div>
           </div>
-          <button onClick={() => { setShowAddPanel(!showAddPanel); if (!showAddPanel) loadAvailable(); }}
+          <button onClick={() => setShowAddPanel(!showAddPanel)}
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold"
             data-testid="add-manager-btn">
             <Plus className="w-3.5 h-3.5" />
@@ -370,16 +374,23 @@ function ManagerDebtsView() {
           </button>
         </div>
         {showAddPanel && (
-          <div className="p-3 bg-blue-50 border-b border-blue-100 flex flex-wrap gap-1.5">
-            {availableUsers.filter(u => !mgrIds.includes(u.user_id)).map(u => (
-              <button key={u.user_id} onClick={() => addManager(u)}
-                className="px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-xs font-medium text-slate-700 hover:bg-blue-100 hover:border-blue-300 transition-colors"
-                data-testid={`add-user-${u.user_id}`}>
-                {u.name} <span className="text-slate-400 ml-1">({u.role})</span>
-              </button>
-            ))}
-            {availableUsers.filter(u => !mgrIds.includes(u.user_id)).length === 0 && (
-              <span className="text-xs text-slate-400">Всі користувачі вже додані</span>
+          <div className="p-3 bg-blue-50 border-b border-blue-100 space-y-2">
+            <input type="text" value={searchQuery} onChange={e => searchClients(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-blue-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder="Пошук клієнта за ім'ям..." data-testid="search-client-input" autoFocus />
+            {searchResults.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {searchResults.map(c => (
+                  <button key={c.client_user_id} onClick={() => addManager(c)}
+                    className="px-3 py-1.5 rounded-lg bg-white border border-blue-200 text-xs font-medium text-slate-700 hover:bg-blue-100 transition-colors"
+                    data-testid={`add-client-${c.client_user_id}`}>
+                    {c.name} {c.phone && <span className="text-slate-400 ml-1">{c.phone}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchQuery.length >= 2 && searchResults.length === 0 && (
+              <div className="text-xs text-slate-400">Нічого не знайдено</div>
             )}
           </div>
         )}

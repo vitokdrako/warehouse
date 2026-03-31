@@ -3581,48 +3581,54 @@ async def get_cash_summaries(limit: int = 30, db: Session = Depends(get_rh_db)):
 
 @router.get("/event-managers")
 async def list_event_managers(db: Session = Depends(get_rh_db)):
-    """Список івент-менеджерів"""
+    """Список івент-менеджерів (з клієнтів)"""
     rows = db.execute(text("""
-        SELECT em.id, em.user_id, em.name, em.is_active
+        SELECT em.id, em.client_user_id, em.name, em.is_active
         FROM event_managers em WHERE em.is_active = 1
         ORDER BY em.name
     """))
-    return [{"id": r[0], "user_id": r[1], "name": r[2]} for r in rows]
+    return [{"id": r[0], "client_user_id": r[1], "name": r[2]} for r in rows]
 
 
 @router.get("/available-managers")
-async def list_available_managers(db: Session = Depends(get_rh_db)):
-    """Список всіх користувачів, яких можна додати як менеджерів"""
-    rows = db.execute(text("""
-        SELECT u.user_id, CONCAT(u.firstname, ' ', u.lastname) as name, u.role
-        FROM users u WHERE u.is_active = 1
-        ORDER BY u.firstname
-    """))
-    return [{"user_id": r[0], "name": r[1], "role": r[2]} for r in rows]
+async def list_available_managers(q: Optional[str] = None, db: Session = Depends(get_rh_db)):
+    """Пошук клієнтів для додавання як івент-менеджерів"""
+    query = """
+        SELECT cu.id, cu.full_name, cu.phone
+        FROM client_users cu
+        WHERE cu.id NOT IN (SELECT client_user_id FROM event_managers WHERE is_active = 1)
+    """
+    params = {}
+    if q:
+        query += " AND cu.full_name LIKE :q"
+        params["q"] = f"%{q}%"
+    query += " ORDER BY cu.full_name LIMIT 20"
+    rows = db.execute(text(query), params)
+    return [{"client_user_id": r[0], "name": r[1], "phone": r[2]} for r in rows]
 
 
 @router.post("/event-managers")
 async def add_event_manager(data: dict, db: Session = Depends(get_rh_db)):
     """Додати івент-менеджера"""
-    user_id = data.get("user_id")
+    client_user_id = data.get("client_user_id")
     name = data.get("name", "")
-    if not user_id:
-        raise HTTPException(status_code=400, detail="user_id required")
+    if not client_user_id:
+        raise HTTPException(status_code=400, detail="client_user_id required")
     try:
         db.execute(text("""
-            INSERT INTO event_managers (user_id, name, is_active) VALUES (:uid, :name, 1)
+            INSERT INTO event_managers (client_user_id, name, is_active) VALUES (:cid, :name, 1)
             ON DUPLICATE KEY UPDATE is_active = 1, name = :name
-        """), {"uid": user_id, "name": name})
+        """), {"cid": client_user_id, "name": name})
         db.commit()
         return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/event-managers/{user_id}")
-async def remove_event_manager(user_id: int, db: Session = Depends(get_rh_db)):
+@router.delete("/event-managers/{client_user_id}")
+async def remove_event_manager(client_user_id: int, db: Session = Depends(get_rh_db)):
     """Видалити івент-менеджера"""
-    db.execute(text("UPDATE event_managers SET is_active = 0 WHERE user_id = :uid"), {"uid": user_id})
+    db.execute(text("UPDATE event_managers SET is_active = 0 WHERE client_user_id = :cid"), {"cid": client_user_id})
     db.commit()
     return {"success": True}
 
@@ -3635,9 +3641,9 @@ async def remove_event_manager(user_id: int, db: Session = Depends(get_rh_db)):
 async def get_manager_debts(db: Session = Depends(get_rh_db)):
     """Борги замовлень згруповані по івент-менеджерах (тільки обрані менеджери)"""
     try:
-        # Список обраних менеджерів
+        # Список обраних менеджерів (клієнтів)
         mgr_rows = db.execute(text(
-            "SELECT user_id, name FROM event_managers WHERE is_active = 1"
+            "SELECT client_user_id, name FROM event_managers WHERE is_active = 1"
         ))
         selected_managers = {r[0]: r[1] for r in mgr_rows}
         
@@ -3650,16 +3656,16 @@ async def get_manager_debts(db: Session = Depends(get_rh_db)):
         rows = db.execute(text(f"""
             SELECT o.order_id, o.order_number, o.customer_name, o.status,
                    o.total_price, o.discount_amount, o.service_fee,
-                   o.rental_start_date, o.manager_id,
+                   o.rental_start_date, o.client_user_id,
                    COALESCE((SELECT SUM(p.amount) FROM fin_payments p 
                              WHERE p.order_id = o.order_id 
                              AND p.payment_type IN ('rent','additional')
                              AND p.status IN ('completed','confirmed')), 0) as paid_amount
             FROM orders o
             WHERE o.status NOT IN ('cancelled', 'deleted')
-            AND o.manager_id IN ({placeholders})
+            AND o.client_user_id IN ({placeholders})
             HAVING paid_amount < (o.total_price - COALESCE(o.discount_amount,0) + COALESCE(o.service_fee,0))
-            ORDER BY o.manager_id, o.rental_start_date
+            ORDER BY o.client_user_id, o.rental_start_date
         """))
         
         managers = {}
@@ -3677,7 +3683,7 @@ async def get_manager_debts(db: Session = Depends(get_rh_db)):
                 continue
             
             mgr_id = r[8]
-            manager_name = selected_managers.get(mgr_id, f"Менеджер #{mgr_id}")
+            manager_name = selected_managers.get(mgr_id, f"Клієнт #{mgr_id}")
             if manager_name not in managers:
                 managers[manager_name] = {"manager": manager_name, "total_debt": 0, "orders": []}
             

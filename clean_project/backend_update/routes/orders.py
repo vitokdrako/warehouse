@@ -873,6 +873,31 @@ async def get_order_details(
             "created_at": f_row[4].isoformat() if f_row[4] else None
         })
     
+    # Paid rent/deposit from fin_transactions
+    pay_result = db.execute(text("""
+        SELECT 
+            COALESCE(SUM(CASE WHEN tx_type IN ('rent_payment', 'additional_payment') THEN amount ELSE 0 END), 0) as paid_rent,
+            COALESCE(SUM(CASE WHEN tx_type = 'deposit_payment' THEN amount ELSE 0 END), 0) as paid_deposit
+        FROM fin_transactions 
+        WHERE entity_type = 'order' AND entity_id = :order_id
+          AND status != 'voided'
+    """), {"order_id": order_id}).fetchone()
+    order["paid_rent"] = float(pay_result[0]) if pay_result else 0.0
+    order["paid_deposit"] = float(pay_result[1]) if pay_result else 0.0
+
+    # Payments list for history display
+    payments_result = db.execute(text("""
+        SELECT fp.id, fp.payment_type, fp.method, fp.amount, fp.occurred_at, fp.note
+        FROM fin_payments fp
+        WHERE fp.order_id = :order_id AND fp.status IN ('completed', 'confirmed')
+        ORDER BY fp.occurred_at DESC
+    """), {"order_id": order_id}).fetchall()
+    order["payments"] = [{
+        "id": p[0], "payment_type": p[1], "method": p[2],
+        "amount": float(p[3]), "created_at": p[4].isoformat() if p[4] else None,
+        "note": p[5]
+    } for p in payments_result]
+
     order["lifecycle"] = lifecycle
     order["issue_cards"] = issue_cards
     order["return_cards"] = return_cards

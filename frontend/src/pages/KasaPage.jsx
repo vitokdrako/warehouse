@@ -186,7 +186,7 @@ export default function KasaPage({ embedded = false }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <IncomeColumn items={filteredIncome} totals={income} navigate={navigate} onAdd={() => setModal('income')} closedMonths={closedMonths} />
+            <IncomeColumn items={filteredIncome} totals={income} navigate={navigate} onAdd={() => setModal('income')} closedMonths={closedMonths} carryOver={data?.carry_over_balance || 0} />
             <DepositsColumn items={filteredDeposits} totals={deposits} navigate={navigate} onAdd={() => setModal('deposit')} closedMonths={closedMonths} />
             <ExpensesColumn items={filteredExpenses} totals={expenses} onAdd={() => setModal('expense')} closedMonths={closedMonths} />
           </div>
@@ -1061,6 +1061,14 @@ function ExpensesColumn({ items, totals, onAdd, closedMonths = [] }) {
           );
         })}
       </div>
+      {closedMonths.length > 0 && (
+        <div className="p-3 pt-0 space-y-1.5 border-t border-slate-100">
+          {closedMonths.map(cm => {
+            const key = `${cm.year}-${String(cm.month).padStart(2,'0')}`;
+            return <ClosedMonthBar key={key} month={cm} type="expenses" items={closedPeriods[key] || []} />;
+          })}
+        </div>
+      )}
     </section>
   );
 }

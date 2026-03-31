@@ -3405,14 +3405,15 @@ async def get_expected_income(
         # All orders with events in the target month
         rows = db.execute(text("""
             SELECT o.order_id, o.order_number, o.customer_name, o.status,
-                   o.total_price, o.discount, o.service_fee,
+                   o.total_price, o.discount_amount, o.service_fee,
                    o.rental_start_date, o.rental_end_date,
-                   o.assigned_manager_name,
+                   CONCAT(u.firstname, ' ', u.lastname),
                    COALESCE((SELECT SUM(p.amount) FROM fin_payments p 
                              WHERE p.order_id = o.order_id 
                              AND p.payment_type IN ('rent','additional')
                              AND p.status IN ('completed','confirmed')), 0) as paid_amount
             FROM orders o
+            LEFT JOIN users u ON u.user_id = o.manager_id
             WHERE o.status NOT IN ('cancelled', 'deleted')
             AND (
                 (MONTH(o.rental_start_date) = :month AND YEAR(o.rental_start_date) = :year)
@@ -3575,27 +3576,90 @@ async def get_cash_summaries(limit: int = 30, db: Session = Depends(get_rh_db)):
 
 
 # ============================================================
+# EVENT MANAGERS (Список івент-менеджерів)
+# ============================================================
+
+@router.get("/event-managers")
+async def list_event_managers(db: Session = Depends(get_rh_db)):
+    """Список івент-менеджерів"""
+    rows = db.execute(text("""
+        SELECT em.id, em.user_id, em.name, em.is_active
+        FROM event_managers em WHERE em.is_active = 1
+        ORDER BY em.name
+    """))
+    return [{"id": r[0], "user_id": r[1], "name": r[2]} for r in rows]
+
+
+@router.get("/available-managers")
+async def list_available_managers(db: Session = Depends(get_rh_db)):
+    """Список всіх користувачів, яких можна додати як менеджерів"""
+    rows = db.execute(text("""
+        SELECT u.user_id, CONCAT(u.firstname, ' ', u.lastname) as name, u.role
+        FROM users u WHERE u.is_active = 1
+        ORDER BY u.firstname
+    """))
+    return [{"user_id": r[0], "name": r[1], "role": r[2]} for r in rows]
+
+
+@router.post("/event-managers")
+async def add_event_manager(data: dict, db: Session = Depends(get_rh_db)):
+    """Додати івент-менеджера"""
+    user_id = data.get("user_id")
+    name = data.get("name", "")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id required")
+    try:
+        db.execute(text("""
+            INSERT INTO event_managers (user_id, name, is_active) VALUES (:uid, :name, 1)
+            ON DUPLICATE KEY UPDATE is_active = 1, name = :name
+        """), {"uid": user_id, "name": name})
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/event-managers/{user_id}")
+async def remove_event_manager(user_id: int, db: Session = Depends(get_rh_db)):
+    """Видалити івент-менеджера"""
+    db.execute(text("UPDATE event_managers SET is_active = 0 WHERE user_id = :uid"), {"uid": user_id})
+    db.commit()
+    return {"success": True}
+
+
+# ============================================================
 # MANAGER DEBTS (Борги менеджерів)
 # ============================================================
 
 @router.get("/manager-debts")
 async def get_manager_debts(db: Session = Depends(get_rh_db)):
-    """Борги замовлень згруповані по івент-менеджерах"""
+    """Борги замовлень згруповані по івент-менеджерах (тільки обрані менеджери)"""
     try:
-        rows = db.execute(text("""
+        # Список обраних менеджерів
+        mgr_rows = db.execute(text(
+            "SELECT user_id, name FROM event_managers WHERE is_active = 1"
+        ))
+        selected_managers = {r[0]: r[1] for r in mgr_rows}
+        
+        if not selected_managers:
+            return {"managers": [], "total_debt": 0, "managers_count": 0}
+        
+        mgr_ids = list(selected_managers.keys())
+        placeholders = ",".join(str(m) for m in mgr_ids)
+        
+        rows = db.execute(text(f"""
             SELECT o.order_id, o.order_number, o.customer_name, o.status,
-                   o.total_price, o.discount, o.service_fee,
-                   o.rental_start_date, o.assigned_manager_name,
+                   o.total_price, o.discount_amount, o.service_fee,
+                   o.rental_start_date, o.manager_id,
                    COALESCE((SELECT SUM(p.amount) FROM fin_payments p 
                              WHERE p.order_id = o.order_id 
                              AND p.payment_type IN ('rent','additional')
                              AND p.status IN ('completed','confirmed')), 0) as paid_amount
             FROM orders o
-            WHERE o.status NOT IN ('cancelled', 'deleted', 'completed_paid')
-            AND o.assigned_manager_name IS NOT NULL
-            AND o.assigned_manager_name != ''
-            HAVING paid_amount < (o.total_price - COALESCE(o.discount,0) + COALESCE(o.service_fee,0))
-            ORDER BY o.assigned_manager_name, o.rental_start_date
+            WHERE o.status NOT IN ('cancelled', 'deleted')
+            AND o.manager_id IN ({placeholders})
+            HAVING paid_amount < (o.total_price - COALESCE(o.discount_amount,0) + COALESCE(o.service_fee,0))
+            ORDER BY o.manager_id, o.rental_start_date
         """))
         
         managers = {}
@@ -3612,12 +3676,13 @@ async def get_manager_debts(db: Session = Depends(get_rh_db)):
             if debt <= 0:
                 continue
             
-            manager = r[8] or "Не призначено"
-            if manager not in managers:
-                managers[manager] = {"manager": manager, "total_debt": 0, "orders": []}
+            mgr_id = r[8]
+            manager_name = selected_managers.get(mgr_id, f"Менеджер #{mgr_id}")
+            if manager_name not in managers:
+                managers[manager_name] = {"manager": manager_name, "total_debt": 0, "orders": []}
             
-            managers[manager]["total_debt"] += debt
-            managers[manager]["orders"].append({
+            managers[manager_name]["total_debt"] += debt
+            managers[manager_name]["orders"].append({
                 "order_id": r[0],
                 "order_number": r[1],
                 "customer_name": r[2],

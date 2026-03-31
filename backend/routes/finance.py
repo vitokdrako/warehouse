@@ -1990,9 +1990,11 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
                 (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'damage', 'late') THEN amount ELSE 0 END), 0)
                  - COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
                  FROM fin_payments WHERE status IN ('completed', 'confirmed')) as bank_balance,
-                -- Виручка цей місяць
+                -- Виручка цей місяць (тільки дохід: оренда, донарахування, шкода, прострочення)
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
-                 WHERE status IN ('completed', 'confirmed') AND MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())) as month_revenue,
+                 WHERE status IN ('completed', 'confirmed') 
+                 AND payment_type IN ('rent', 'additional', 'damage', 'late')
+                 AND MONTH(occurred_at) = MONTH(CURRENT_DATE()) AND YEAR(occurred_at) = YEAR(CURRENT_DATE())) as month_revenue,
                 -- Витрати цей місяць
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_expenses 
                  WHERE status = 'posted' AND MONTH(occurred_at) = MONTH(CURRENT_DATE()) AND YEAR(occurred_at) = YEAR(CURRENT_DATE())) as month_expenses,

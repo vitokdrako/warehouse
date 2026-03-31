@@ -814,95 +814,92 @@ function NoteDisplay({ note, description }) {
   );
 }
 
-/* ========== CLOSED MONTH COLLAPSIBLE BAR ========== */
-function ClosedMonthBar({ month, type }) {
+/* ========== CLOSED MONTH COLLAPSIBLE BAR (with full items list) ========== */
+function ClosedMonthBar({ month, type, items = [] }) {
   const [open, setOpen] = useState(false);
   
   const configs = {
-    income: {
-      label: 'Дохід',
-      total: month.income_total || 0,
-      color: 'emerald',
-      details: [
-        { label: 'Готівка', value: month.income_cash || 0 },
-        { label: 'Безготівка', value: month.income_bank || 0 },
-        { label: 'Записів', value: month.income_count || 0, raw: true },
-      ]
-    },
-    deposits: {
-      label: 'Застави',
-      total: month.deposits_held || 0,
-      color: 'amber',
-      details: [
-        { label: 'Прийнято', value: month.deposits_held || 0 },
-        { label: 'Повернено', value: month.deposits_refunded || 0 },
-        { label: 'Записів', value: month.deposits_count || 0, raw: true },
-      ]
-    },
-    expenses: {
-      label: 'Витрати',
-      total: month.expenses_total || 0,
-      color: 'rose',
-      details: [
-        { label: 'Готівка', value: month.expenses_cash || 0 },
-        { label: 'Чистий дохід', value: month.net_total || 0 },
-      ]
-    },
+    income: { label: 'Дохід', total: month.income_total || 0, color: 'emerald', borderCls: 'border-emerald-200', bgCls: 'bg-emerald-50', textCls: 'text-emerald-800' },
+    deposits: { label: 'Застави', total: month.deposits_held || 0, color: 'amber', borderCls: 'border-amber-200', bgCls: 'bg-amber-50', textCls: 'text-amber-800' },
+    expenses: { label: 'Витрати', total: month.expenses_total || 0, color: 'rose', borderCls: 'border-rose-200', bgCls: 'bg-rose-50', textCls: 'text-rose-800' },
   };
-  
   const cfg = configs[type] || configs.income;
-  const borderColor = `border-${cfg.color}-200`;
-  const bgColor = `bg-${cfg.color}-50`;
-  const textColor = `text-${cfg.color}-800`;
   
   return (
-    <div className={`rounded-xl border ${borderColor} overflow-hidden`} data-testid={`closed-month-${month.month}-${type}`}>
+    <div className={`rounded-xl border ${cfg.borderCls} overflow-hidden`} data-testid={`closed-month-${month.month}-${type}`}>
       <button onClick={() => setOpen(!open)}
-        className={`w-full flex items-center justify-between px-3 py-2 ${bgColor} hover:brightness-95 transition-all`}>
+        className={`w-full flex items-center justify-between px-3 py-2 ${cfg.bgCls} hover:brightness-95 transition-all`}>
         <div className="flex items-center gap-2">
-          <Check className={`w-3.5 h-3.5 ${textColor}`} />
-          <span className={`text-xs font-bold ${textColor}`}>{month.label}</span>
+          <Check className={`w-3.5 h-3.5 ${cfg.textCls}`} />
+          <span className={`text-xs font-bold ${cfg.textCls}`}>{month.label}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-bold ${textColor}`}>{money(cfg.total)}</span>
-          <ChevronDown className={`w-3.5 h-3.5 ${textColor} transition-transform ${open ? 'rotate-180' : ''}`} />
+          <span className={`text-xs font-bold ${cfg.textCls}`}>{money(cfg.total)}</span>
+          <span className="text-[10px] text-slate-400">{items.length}</span>
+          <ChevronDown className={`w-3.5 h-3.5 ${cfg.textCls} transition-transform ${open ? 'rotate-180' : ''}`} />
         </div>
       </button>
-      {open && (
-        <div className={`px-3 py-2 ${bgColor} bg-opacity-50 border-t ${borderColor}`}>
-          <div className="grid grid-cols-2 gap-1">
-            {cfg.details.map((d, i) => (
-              <div key={i} className="text-[11px] text-slate-600">
-                <span className="text-slate-400">{d.label}: </span>
-                <span className="font-semibold">{d.raw ? d.value : money(d.value)}</span>
+      {open && items.length > 0 && (
+        <div className={`max-h-[300px] overflow-y-auto divide-y divide-slate-100`}>
+          {items.map((item, idx) => (
+            <div key={item.id || idx} className="px-3 py-1.5 flex items-center justify-between hover:bg-slate-50 text-xs">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-slate-700">{item.order_number || item.category_name || '—'}</span>
+                  {item.type_label && <span className="text-[10px] text-slate-400">{item.type_label}</span>}
+                  {item.status && type === 'deposits' && <span className="text-[10px] px-1 rounded bg-slate-100 text-slate-500">{item.status}</span>}
+                </div>
+                <div className="text-[11px] text-slate-400 truncate">{item.customer_name || item.note || ''}</div>
               </div>
-            ))}
-          </div>
-          {type === 'income' && (
-            <div className="mt-1.5 pt-1.5 border-t border-slate-200 text-[11px]">
-              <span className="text-slate-400">Каса: </span>
-              <span className="font-semibold text-slate-700">{money(month.opening_cash || 0)} → {money(month.closing_cash || 0)}</span>
+              <div className="text-right flex-shrink-0 ml-2">
+                <div className={`font-bold ${type === 'expenses' ? 'text-rose-600' : type === 'deposits' ? 'text-amber-700' : 'text-emerald-700'}`}>
+                  {type === 'expenses' ? '-' : '+'}{money(item.amount || item.actual_amount || 0)}
+                </div>
+                <div className="text-[10px] text-slate-400">{fmtDate(item.date || item.opened_at)}</div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
+      )}
+      {open && items.length === 0 && (
+        <div className="px-3 py-2 text-[11px] text-slate-400 text-center">Немає записів</div>
       )}
     </div>
   );
 }
 
 /* ========== COLUMN 1: INCOME ========== */
-function IncomeColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
+function IncomeColumn({ items, totals, navigate, onAdd, closedMonths = [], carryOver = 0 }) {
+  // Split items: open (current) vs closed (archived)
+  const openItems = items.filter(i => !i._closed);
+  const closedPeriods = {};
+  items.filter(i => i._closed).forEach(i => {
+    const p = i._period || 'unknown';
+    if (!closedPeriods[p]) closedPeriods[p] = [];
+    closedPeriods[p].push(i);
+  });
+  
+  // Totals for open items only
+  const openCash = openItems.filter(i => i.method === 'cash').reduce((s, i) => s + (i.amount || 0), 0);
+  const openBank = openItems.filter(i => i.method !== 'cash').reduce((s, i) => s + (i.amount || 0), 0);
+  const openTotal = openCash + openBank;
+
   return (
-    <section className="rounded-2xl border border-emerald-200 ring-2 ring-emerald-100 bg-white shadow-sm" data-testid="income-column">
-      <ColumnHeader icon={TrendingUp} title="Дохід" count={items.length} total={totals.total} color="emerald" onAdd={onAdd}>
+    <section className="rounded-2xl border border-emerald-200 ring-2 ring-emerald-100 bg-white shadow-sm flex flex-col" data-testid="income-column">
+      <ColumnHeader icon={TrendingUp} title="Дохід" count={openItems.length} total={openTotal} color="emerald" onAdd={onAdd}>
         <div className="flex gap-3 text-[11px] text-slate-500 mt-1">
-          <span><Banknote className="w-3 h-3 inline mr-0.5" />{money(totals.cash_total)}</span>
-          <span><CreditCard className="w-3 h-3 inline mr-0.5" />{money(totals.bank_total)}</span>
+          <span><Banknote className="w-3 h-3 inline mr-0.5" />{money(openCash)}</span>
+          <span><CreditCard className="w-3 h-3 inline mr-0.5" />{money(openBank)}</span>
         </div>
       </ColumnHeader>
-      <div className="p-3 space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto">
-        {closedMonths.map(cm => <ClosedMonthBar key={`cm-${cm.year}-${cm.month}`} month={cm} type="income" />)}
-        {items.length === 0 && closedMonths.length === 0 ? <EmptyState text="Немає оплат за цей період" /> : items.map(item => (
+      {carryOver > 0 && (
+        <div className="mx-3 mb-1 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-between" data-testid="carry-over-balance">
+          <span className="text-[11px] text-blue-700 font-medium">Перенесено з мін. місяця</span>
+          <span className="text-xs font-bold text-blue-800">{money(carryOver)}</span>
+        </div>
+      )}
+      <div className="p-3 space-y-1.5 max-h-[calc(100vh-380px)] overflow-y-auto flex-1">
+        {openItems.length === 0 ? <EmptyState text="Немає нових оплат" /> : openItems.map(item => (
           <div key={item.id}
             className="px-3 py-2.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all cursor-pointer group"
             onClick={() => item.order_id && navigate(`/order/${item.order_id}/view`)}
@@ -927,15 +924,31 @@ function IncomeColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
           </div>
         ))}
       </div>
+      {closedMonths.length > 0 && (
+        <div className="p-3 pt-0 space-y-1.5 border-t border-slate-100">
+          {closedMonths.map(cm => {
+            const key = `${cm.year}-${String(cm.month).padStart(2,'0')}`;
+            return <ClosedMonthBar key={key} month={cm} type="income" items={closedPeriods[key] || []} />;
+          })}
+        </div>
+      )}
     </section>
   );
 }
 
 /* ========== COLUMN 2: DEPOSITS ========== */
 function DepositsColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
+  const openItems = items.filter(i => !i._closed);
+  const closedPeriods = {};
+  items.filter(i => i._closed).forEach(i => {
+    const p = i._period || 'unknown';
+    if (!closedPeriods[p]) closedPeriods[p] = [];
+    closedPeriods[p].push(i);
+  });
+
   return (
-    <section className="rounded-2xl border border-amber-200 ring-2 ring-amber-100 bg-white shadow-sm" data-testid="deposits-column">
-      <ColumnHeader icon={Shield} title="Застави" count={items.length} total={totals.held_total} color="amber" onAdd={onAdd}>
+    <section className="rounded-2xl border border-amber-200 ring-2 ring-amber-100 bg-white shadow-sm flex flex-col" data-testid="deposits-column">
+      <ColumnHeader icon={Shield} title="Застави" count={openItems.length} total={totals.held_total} color="amber" onAdd={onAdd}>
         <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-amber-100 text-[11px]">
           <span className="text-slate-500"><Banknote className="w-3 h-3 inline mr-0.5" />Гот: {money(totals.cash_received || 0)}</span>
           <span className="text-slate-500"><CreditCard className="w-3 h-3 inline mr-0.5" />Безгот: {money(totals.bank_received || 0)}</span>
@@ -943,11 +956,11 @@ function DepositsColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
           <span className="text-blue-500">Поверн: {money(totals.refunded_total)}</span>
         </div>
       </ColumnHeader>
-      <div className="p-3 space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto">
-        {closedMonths.map(cm => <ClosedMonthBar key={`cm-${cm.year}-${cm.month}`} month={cm} type="deposits" />)}
-        {items.length === 0 && closedMonths.length === 0 ? <EmptyState text="Немає застав за цей період" /> : items.map(item => {
+      <div className="p-3 space-y-1.5 max-h-[calc(100vh-380px)] overflow-y-auto flex-1">
+        {openItems.length === 0 ? <EmptyState text="Немає нових застав" /> : openItems.map(item => {
           const statusCfg = {
             holding: { label: 'Активна', cls: 'bg-amber-100 text-amber-700' },
+            held: { label: 'Активна', cls: 'bg-amber-100 text-amber-700' },
             partially_used: { label: 'Частк.', cls: 'bg-orange-100 text-orange-700' },
             fully_used: { label: 'Використано', cls: 'bg-rose-100 text-rose-700' },
             refunded: { label: 'Повернуто', cls: 'bg-blue-100 text-blue-700' },
@@ -982,23 +995,42 @@ function DepositsColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
           );
         })}
       </div>
+      {closedMonths.length > 0 && (
+        <div className="p-3 pt-0 space-y-1.5 border-t border-slate-100">
+          {closedMonths.map(cm => {
+            const key = `${cm.year}-${String(cm.month).padStart(2,'0')}`;
+            return <ClosedMonthBar key={key} month={cm} type="deposits" items={closedPeriods[key] || []} />;
+          })}
+        </div>
+      )}
     </section>
   );
 }
 
 /* ========== COLUMN 3: EXPENSES ========== */
 function ExpensesColumn({ items, totals, onAdd, closedMonths = [] }) {
+  const openItems = items.filter(i => !i._closed);
+  const closedPeriods = {};
+  items.filter(i => i._closed).forEach(i => {
+    const p = i._period || 'unknown';
+    if (!closedPeriods[p]) closedPeriods[p] = [];
+    closedPeriods[p].push(i);
+  });
+  
+  const openCash = openItems.filter(i => i.method === 'cash').reduce((s, i) => s + (i.amount || 0), 0);
+  const openBank = openItems.filter(i => i.method !== 'cash').reduce((s, i) => s + (i.amount || 0), 0);
+  const openTotal = openCash + openBank;
+
   return (
-    <section className="rounded-2xl border border-rose-200 ring-2 ring-rose-100 bg-white shadow-sm" data-testid="expenses-column">
-      <ColumnHeader icon={TrendingDown} title="Витрати" count={items.length} total={totals.total} color="rose" onAdd={onAdd}>
+    <section className="rounded-2xl border border-rose-200 ring-2 ring-rose-100 bg-white shadow-sm flex flex-col" data-testid="expenses-column">
+      <ColumnHeader icon={TrendingDown} title="Витрати" count={openItems.length} total={openTotal} color="rose" onAdd={onAdd}>
         <div className="flex gap-3 text-[11px] text-slate-500 mt-1">
-          <span><Banknote className="w-3 h-3 inline mr-0.5" />{money(totals.cash_total)}</span>
-          <span><CreditCard className="w-3 h-3 inline mr-0.5" />{money(totals.bank_total)}</span>
+          <span><Banknote className="w-3 h-3 inline mr-0.5" />{money(openCash)}</span>
+          <span><CreditCard className="w-3 h-3 inline mr-0.5" />{money(openBank)}</span>
         </div>
       </ColumnHeader>
-      <div className="p-3 space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto">
-        {closedMonths.map(cm => <ClosedMonthBar key={`cm-${cm.year}-${cm.month}`} month={cm} type="expenses" />)}
-        {items.length === 0 && closedMonths.length === 0 ? <EmptyState text="Немає витрат за цей період" /> : items.map((item, idx) => {
+      <div className="p-3 space-y-1.5 max-h-[calc(100vh-380px)] overflow-y-auto flex-1">
+        {openItems.length === 0 ? <EmptyState text="Немає нових витрат" /> : openItems.map((item, idx) => {
           const isRefund = item.expense_type === 'refund';
           const isCollection = item.expense_type === 'collection' || item.category_code === 'COLLECTION';
           return (

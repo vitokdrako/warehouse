@@ -1976,21 +1976,19 @@ async def delete_expense_category(category_id: int, db: Session = Depends(get_rh
 @router.get("/hub/overview")
 async def get_hub_overview(db: Session = Depends(get_rh_db)):
     """
-    Finance Hub 2.0 - Головний огляд (спрощена версія)
+    Finance Hub 2.0 - Головний огляд
+    Готівка = фактичний залишок каси (з cash_summaries або monthly_reports)
+    Безготівка = накопичений баланс банку
+    Виручка = дохід поточного місяця
     """
     try:
-        # Один запит для платежів та витрат
         result = db.execute(text("""
             SELECT 
-                -- Готівка
-                (SELECT COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'damage', 'late') THEN amount ELSE 0 END), 0) 
-                 - COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
-                 FROM fin_payments WHERE status IN ('completed', 'confirmed')) as cash_balance,
-                -- Безготівка
+                -- Безготівка (накопичена)
                 (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'damage', 'late') THEN amount ELSE 0 END), 0)
                  - COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
                  FROM fin_payments WHERE status IN ('completed', 'confirmed')) as bank_balance,
-                -- Виручка цей місяць (тільки дохід: оренда, донарахування, шкода, прострочення)
+                -- Виручка цей місяць
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
                  WHERE status IN ('completed', 'confirmed') 
                  AND payment_type IN ('rent', 'additional', 'damage', 'late')
@@ -2003,6 +2001,24 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
         """))
         
         row = result.fetchone()
+        
+        # Готівка = фактичний залишок каси
+        # 1) Спробувати з cash_summaries (найсвіжіший запис)
+        cash_row = db.execute(text("""
+            SELECT actual_cash FROM cash_summaries 
+            ORDER BY date DESC LIMIT 1
+        """)).fetchone()
+        
+        if cash_row:
+            cash = float(cash_row[0] or 0)
+        else:
+            # Fallback: порахувати з платежів
+            cash_fallback = db.execute(text("""
+                SELECT COALESCE(SUM(CASE WHEN payment_type IN ('rent', 'additional', 'damage', 'late') THEN amount ELSE 0 END), 0)
+                     - COALESCE(SUM(CASE WHEN payment_type = 'refund' THEN amount ELSE 0 END), 0)
+                FROM fin_payments WHERE method = 'cash' AND status IN ('completed', 'confirmed')
+            """)).fetchone()
+            cash = float(cash_fallback[0] or 0) if cash_fallback else 0
         
         # Застави по валютах
         deposits_result = db.execute(text("""
@@ -2028,11 +2044,10 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
                 "count": r[5] or 0
             }
         
-        cash = float(row[0] or 0) if row else 0
-        bank = float(row[1] or 0) if row else 0
-        revenue = float(row[2] or 0) if row else 0
-        expenses = float(row[3] or 0) if row else 0
-        total_orders = int(row[4] or 0) if row else 0
+        bank = float(row[0] or 0) if row else 0
+        revenue = float(row[1] or 0) if row else 0
+        expenses = float(row[2] or 0) if row else 0
+        total_orders = int(row[3] or 0) if row else 0
         
         return {
             "cash": {"balance": cash, "currency": "UAH"},

@@ -1983,11 +1983,11 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
         result = db.execute(text("""
             SELECT 
                 -- Готівка
-                (SELECT COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0) 
+                (SELECT COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'late') THEN amount ELSE 0 END), 0) 
                  - COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
                  FROM fin_payments WHERE status IN ('completed', 'confirmed')) as cash_balance,
                 -- Безготівка
-                (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'damage') THEN amount ELSE 0 END), 0)
+                (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'late') THEN amount ELSE 0 END), 0)
                  - COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
                  FROM fin_payments WHERE status IN ('completed', 'confirmed')) as bank_balance,
                 -- Виручка цей місяць
@@ -3138,7 +3138,7 @@ async def close_month(
     income_rows = db.execute(text("""
         SELECT payment_type, method, SUM(amount) as total, COUNT(*) as cnt
         FROM fin_payments
-        WHERE payment_type IN ('rent', 'additional', 'damage', 'late')
+        WHERE payment_type IN ('rent', 'additional', 'late')
         AND status IN ('completed', 'confirmed')
         AND occurred_at >= :month_start AND occurred_at < :month_end
         GROUP BY payment_type, method

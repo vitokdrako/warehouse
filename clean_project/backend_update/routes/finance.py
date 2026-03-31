@@ -1977,33 +1977,51 @@ async def delete_expense_category(category_id: int, db: Session = Depends(get_rh
 async def get_hub_overview(db: Session = Depends(get_rh_db)):
     """
     Finance Hub 2.0 - Головний огляд
-    Готівка = фактичний залишок каси (з cash_summaries або monthly_reports)
-    Безготівка = накопичений баланс банку
-    Виручка = дохід поточного місяця
+    Готівка = фактичний залишок каси (з cash_summaries)
+    Після закриття місяця — виручка/витрати скидаються на 0 (інкасація)
     """
     try:
+        _ensure_monthly_reports_table(db)
+        
+        # Визначити "робочий" місяць: якщо поточний місяць закрито — показуємо наступний
+        from datetime import date
+        today = date.today()
+        current_year, current_month = today.year, today.month
+        
+        closed_check = db.execute(text("""
+            SELECT id FROM monthly_reports WHERE year = :y AND month = :m
+        """), {"y": current_year, "m": current_month}).fetchone()
+        
+        if closed_check:
+            # Поточний місяць закрито — показуємо наступний (виручка/витрати = 0)
+            if current_month == 12:
+                work_year, work_month = current_year + 1, 1
+            else:
+                work_year, work_month = current_year, current_month + 1
+        else:
+            work_year, work_month = current_year, current_month
+        
         result = db.execute(text("""
             SELECT 
                 -- Безготівка (накопичена)
                 (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'damage', 'late') THEN amount ELSE 0 END), 0)
                  - COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
                  FROM fin_payments WHERE status IN ('completed', 'confirmed')) as bank_balance,
-                -- Виручка цей місяць
+                -- Виручка робочого місяця
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_payments 
                  WHERE status IN ('completed', 'confirmed') 
                  AND payment_type IN ('rent', 'additional', 'damage', 'late')
-                 AND MONTH(occurred_at) = MONTH(CURRENT_DATE()) AND YEAR(occurred_at) = YEAR(CURRENT_DATE())) as month_revenue,
-                -- Витрати цей місяць
+                 AND MONTH(occurred_at) = :wm AND YEAR(occurred_at) = :wy) as month_revenue,
+                -- Витрати робочого місяця
                 (SELECT COALESCE(SUM(amount), 0) FROM fin_expenses 
-                 WHERE status = 'posted' AND MONTH(occurred_at) = MONTH(CURRENT_DATE()) AND YEAR(occurred_at) = YEAR(CURRENT_DATE())) as month_expenses,
+                 WHERE status = 'posted' AND MONTH(occurred_at) = :wm2 AND YEAR(occurred_at) = :wy2) as month_expenses,
                 -- Кількість ордерів
                 (SELECT COUNT(*) FROM orders WHERE status NOT IN ('cancelled', 'archived')) as total_orders
-        """))
+        """), {"wm": work_month, "wy": work_year, "wm2": work_month, "wy2": work_year})
         
         row = result.fetchone()
         
-        # Готівка = фактичний залишок каси
-        # 1) Спробувати з cash_summaries (найсвіжіший запис)
+        # Готівка = фактичний залишок каси з cash_summaries
         cash_row = db.execute(text("""
             SELECT actual_cash FROM cash_summaries 
             ORDER BY date DESC LIMIT 1
@@ -2012,7 +2030,6 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
         if cash_row:
             cash = float(cash_row[0] or 0)
         else:
-            # Fallback: порахувати з платежів
             cash_fallback = db.execute(text("""
                 SELECT COALESCE(SUM(CASE WHEN payment_type IN ('rent', 'additional', 'damage', 'late') THEN amount ELSE 0 END), 0)
                      - COALESCE(SUM(CASE WHEN payment_type = 'refund' THEN amount ELSE 0 END), 0)
@@ -2049,6 +2066,8 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
         expenses = float(row[2] or 0) if row else 0
         total_orders = int(row[3] or 0) if row else 0
         
+        month_label = f"{work_month:02d}/{work_year}"
+        
         return {
             "cash": {"balance": cash, "currency": "UAH"},
             "bank": {"balance": bank, "currency": "UAH"},
@@ -2056,7 +2075,9 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
             "month": {
                 "revenue": {"total": revenue},
                 "expenses": expenses,
-                "profit": revenue - expenses
+                "profit": revenue - expenses,
+                "label": month_label,
+                "closed": bool(closed_check),
             },
             "orders": {
                 "total": total_orders,

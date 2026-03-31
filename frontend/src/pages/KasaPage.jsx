@@ -66,6 +66,17 @@ export default function KasaPage({ embedded = false }) {
   const expenses = data?.expenses || { items: [], refunds: [], cash_total: 0, bank_total: 0, total: 0 };
   const summary = data?.summary || { net_cash: 0, net_bank: 0, net_total: 0 };
   const closedMonths = data?.closed_months || [];
+  const carryOver = data?.carry_over_balance || 0;
+
+  // Фактичний баланс каси = перенесений залишок + (відкриті доходи - відкриті витрати)
+  const openIncItems = income.items.filter(i => !i._closed);
+  const openExpItems = [...expenses.items, ...expenses.refunds].filter(i => !i._closed);
+  const openCashIn = openIncItems.filter(i => i.method === 'cash').reduce((s, i) => s + (i.amount || 0), 0);
+  const openBankIn = openIncItems.filter(i => i.method !== 'cash').reduce((s, i) => s + (i.amount || 0), 0);
+  const openCashOut = openExpItems.filter(i => i.method === 'cash').reduce((s, i) => s + (i.amount || 0), 0);
+  const openBankOut = openExpItems.filter(i => i.method !== 'cash').reduce((s, i) => s + (i.amount || 0), 0);
+  const actualCash = carryOver + openCashIn - openCashOut;
+  const actualBank = openBankIn - openBankOut;
 
   const filteredIncome = filterBySearch(income.items);
   const filteredDeposits = filterBySearch(deposits.items);
@@ -117,21 +128,8 @@ export default function KasaPage({ embedded = false }) {
 
           {data && (
             <div className="flex items-center gap-6 mt-3 pt-3 border-t border-slate-100 text-sm" data-testid="summary-bar">
-              <SummaryPill icon={TrendingUp} label="Дохід" value={money(income.total)} color="emerald" />
-              <SummaryPill icon={Banknote} label="Готівка" value={money(income.cash_total)} color="green" sub />
-              <SummaryPill icon={CreditCard} label="Безготівка" value={money(income.bank_total)} color="blue" sub />
-              <div className="h-5 w-px bg-slate-200" />
-              <SummaryPill icon={Shield} label="Застави" value={money(deposits.held_total)} color="amber" />
-              <div className="h-5 w-px bg-slate-200" />
-              <SummaryPill icon={TrendingDown} label="Витрати" value={money(expenses.total)} color="rose" />
-              <div className="h-5 w-px bg-slate-200" />
-              {data?.collection?.total > 0 && (
-                <>
-                  <SummaryPill icon={Landmark} label="Інкасація" value={money(data.collection.total)} color="violet" />
-                  <div className="h-5 w-px bg-slate-200" />
-                </>
-              )}
-              <SummaryPill icon={Wallet} label="Чистий дохід" value={money(summary.net_total)} color={summary.net_total >= 0 ? 'emerald' : 'red'} bold />
+              <SummaryPill icon={Banknote} label="Готівка" value={money(actualCash)} color="green" bold />
+              <SummaryPill icon={CreditCard} label="Безготівка" value={money(actualBank)} color="blue" bold />
               <div className="ml-auto flex items-center gap-2">
                 <button
                   onClick={() => setModal('closeMonth')}

@@ -3066,6 +3066,65 @@ async def get_kasa_data(
             else:
                 collection_bank += float(r[1] or 0)
         
+        # === CLOSED MONTHS: collapse items into summaries ===
+        _ensure_monthly_reports_table(db)
+        closed_months_data = []
+        
+        closed_reports = db.execute(text("""
+            SELECT year, month, report_data FROM monthly_reports ORDER BY year, month
+        """)).fetchall()
+        
+        closed_periods = set()
+        month_names_ua = ['','Січень','Лютий','Березень','Квітень','Травень','Червень',
+                          'Липень','Серпень','Вересень','Жовтень','Листопад','Грудень']
+        for cr in closed_reports:
+            cy, cm = cr[0], cr[1]
+            closed_periods.add((cy, cm))
+            try:
+                import json as json_mod
+                rd = json_mod.loads(cr[2]) if cr[2] else {}
+            except:
+                rd = {}
+            cash_reg = rd.get("cash_register", {})
+            closed_months_data.append({
+                "year": cy, "month": cm,
+                "label": f"{month_names_ua[cm]} {cy}",
+                "income_total": rd.get("income", {}).get("total", 0),
+                "income_cash": rd.get("income", {}).get("cash", 0),
+                "income_bank": rd.get("income", {}).get("bank", 0),
+                "income_count": rd.get("income", {}).get("count", 0),
+                "expenses_total": rd.get("expenses", {}).get("total", 0),
+                "expenses_cash": rd.get("expenses", {}).get("cash", 0),
+                "deposits_held": rd.get("deposits", {}).get("total_held", 0),
+                "deposits_refunded": rd.get("deposits", {}).get("total_refunded", 0),
+                "deposits_count": rd.get("deposits", {}).get("opened_count", 0),
+                "closing_cash": cash_reg.get("closing_balance", 0),
+                "opening_cash": cash_reg.get("opening_balance", 0),
+                "net_total": rd.get("summary", {}).get("net_total", 0),
+            })
+        
+        # Filter out items from closed months
+        if closed_periods:
+            def is_in_closed(date_str):
+                if not date_str: return False
+                try:
+                    from datetime import datetime as dt
+                    d = dt.fromisoformat(date_str) if isinstance(date_str, str) else date_str
+                    return (d.year, d.month) in closed_periods
+                except: return False
+            
+            income = [i for i in income if not is_in_closed(i.get("date"))]
+            expenses = [e for e in expenses if not is_in_closed(e.get("date"))]
+            refunds = [r for r in refunds if not is_in_closed(r.get("date"))]
+            # Deposits: keep held ones, hide closed ones
+            deposits = [d for d in deposits if not (d.get("status") in ("refunded","closed") and is_in_closed(d.get("opened_at")))]
+            
+            # Recalculate totals for open items only
+            income_cash_total = sum(i["amount"] for i in income if i.get("method") == "cash")
+            income_bank_total = sum(i["amount"] for i in income if i.get("method") != "cash")
+            expenses_cash_total = sum(e["amount"] for e in expenses if e.get("method") == "cash")
+            expenses_bank_total = sum(e["amount"] for e in expenses if e.get("method") != "cash")
+        
         return {
             "period": period,
             "income": {
@@ -3098,6 +3157,7 @@ async def get_kasa_data(
                 "bank_total": collection_bank,
                 "total": collection_cash + collection_bank,
             },
+            "closed_months": closed_months_data,
             "summary": {
                 "net_cash": income_cash_total - expenses_cash_total,
                 "net_bank": income_bank_total - expenses_bank_total,

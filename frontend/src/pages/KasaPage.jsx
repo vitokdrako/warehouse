@@ -65,6 +65,7 @@ export default function KasaPage({ embedded = false }) {
   const deposits = data?.deposits || { items: [], held_total: 0, available_total: 0 };
   const expenses = data?.expenses || { items: [], refunds: [], cash_total: 0, bank_total: 0, total: 0 };
   const summary = data?.summary || { net_cash: 0, net_bank: 0, net_total: 0 };
+  const closedMonths = data?.closed_months || [];
 
   const filteredIncome = filterBySearch(income.items);
   const filteredDeposits = filterBySearch(deposits.items);
@@ -185,9 +186,9 @@ export default function KasaPage({ embedded = false }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <IncomeColumn items={filteredIncome} totals={income} navigate={navigate} onAdd={() => setModal('income')} />
-            <DepositsColumn items={filteredDeposits} totals={deposits} navigate={navigate} onAdd={() => setModal('deposit')} />
-            <ExpensesColumn items={filteredExpenses} totals={expenses} onAdd={() => setModal('expense')} />
+            <IncomeColumn items={filteredIncome} totals={income} navigate={navigate} onAdd={() => setModal('income')} closedMonths={closedMonths} />
+            <DepositsColumn items={filteredDeposits} totals={deposits} navigate={navigate} onAdd={() => setModal('deposit')} closedMonths={closedMonths} />
+            <ExpensesColumn items={filteredExpenses} totals={expenses} onAdd={() => setModal('expense')} closedMonths={closedMonths} />
           </div>
         )}
       </main>
@@ -813,8 +814,84 @@ function NoteDisplay({ note, description }) {
   );
 }
 
+/* ========== CLOSED MONTH COLLAPSIBLE BAR ========== */
+function ClosedMonthBar({ month, type }) {
+  const [open, setOpen] = useState(false);
+  
+  const configs = {
+    income: {
+      label: 'Дохід',
+      total: month.income_total || 0,
+      color: 'emerald',
+      details: [
+        { label: 'Готівка', value: month.income_cash || 0 },
+        { label: 'Безготівка', value: month.income_bank || 0 },
+        { label: 'Записів', value: month.income_count || 0, raw: true },
+      ]
+    },
+    deposits: {
+      label: 'Застави',
+      total: month.deposits_held || 0,
+      color: 'amber',
+      details: [
+        { label: 'Прийнято', value: month.deposits_held || 0 },
+        { label: 'Повернено', value: month.deposits_refunded || 0 },
+        { label: 'Записів', value: month.deposits_count || 0, raw: true },
+      ]
+    },
+    expenses: {
+      label: 'Витрати',
+      total: month.expenses_total || 0,
+      color: 'rose',
+      details: [
+        { label: 'Готівка', value: month.expenses_cash || 0 },
+        { label: 'Чистий дохід', value: month.net_total || 0 },
+      ]
+    },
+  };
+  
+  const cfg = configs[type] || configs.income;
+  const borderColor = `border-${cfg.color}-200`;
+  const bgColor = `bg-${cfg.color}-50`;
+  const textColor = `text-${cfg.color}-800`;
+  
+  return (
+    <div className={`rounded-xl border ${borderColor} overflow-hidden`} data-testid={`closed-month-${month.month}-${type}`}>
+      <button onClick={() => setOpen(!open)}
+        className={`w-full flex items-center justify-between px-3 py-2 ${bgColor} hover:brightness-95 transition-all`}>
+        <div className="flex items-center gap-2">
+          <Check className={`w-3.5 h-3.5 ${textColor}`} />
+          <span className={`text-xs font-bold ${textColor}`}>{month.label}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-bold ${textColor}`}>{money(cfg.total)}</span>
+          <ChevronDown className={`w-3.5 h-3.5 ${textColor} transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      {open && (
+        <div className={`px-3 py-2 ${bgColor} bg-opacity-50 border-t ${borderColor}`}>
+          <div className="grid grid-cols-2 gap-1">
+            {cfg.details.map((d, i) => (
+              <div key={i} className="text-[11px] text-slate-600">
+                <span className="text-slate-400">{d.label}: </span>
+                <span className="font-semibold">{d.raw ? d.value : money(d.value)}</span>
+              </div>
+            ))}
+          </div>
+          {type === 'income' && (
+            <div className="mt-1.5 pt-1.5 border-t border-slate-200 text-[11px]">
+              <span className="text-slate-400">Каса: </span>
+              <span className="font-semibold text-slate-700">{money(month.opening_cash || 0)} → {money(month.closing_cash || 0)}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ========== COLUMN 1: INCOME ========== */
-function IncomeColumn({ items, totals, navigate, onAdd }) {
+function IncomeColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
   return (
     <section className="rounded-2xl border border-emerald-200 ring-2 ring-emerald-100 bg-white shadow-sm" data-testid="income-column">
       <ColumnHeader icon={TrendingUp} title="Дохід" count={items.length} total={totals.total} color="emerald" onAdd={onAdd}>
@@ -824,7 +901,8 @@ function IncomeColumn({ items, totals, navigate, onAdd }) {
         </div>
       </ColumnHeader>
       <div className="p-3 space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto">
-        {items.length === 0 ? <EmptyState text="Немає оплат за цей період" /> : items.map(item => (
+        {closedMonths.map(cm => <ClosedMonthBar key={`cm-${cm.year}-${cm.month}`} month={cm} type="income" />)}
+        {items.length === 0 && closedMonths.length === 0 ? <EmptyState text="Немає оплат за цей період" /> : items.map(item => (
           <div key={item.id}
             className="px-3 py-2.5 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 transition-all cursor-pointer group"
             onClick={() => item.order_id && navigate(`/order/${item.order_id}/view`)}
@@ -854,7 +932,7 @@ function IncomeColumn({ items, totals, navigate, onAdd }) {
 }
 
 /* ========== COLUMN 2: DEPOSITS ========== */
-function DepositsColumn({ items, totals, navigate, onAdd }) {
+function DepositsColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
   return (
     <section className="rounded-2xl border border-amber-200 ring-2 ring-amber-100 bg-white shadow-sm" data-testid="deposits-column">
       <ColumnHeader icon={Shield} title="Застави" count={items.length} total={totals.held_total} color="amber" onAdd={onAdd}>
@@ -866,7 +944,8 @@ function DepositsColumn({ items, totals, navigate, onAdd }) {
         </div>
       </ColumnHeader>
       <div className="p-3 space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto">
-        {items.length === 0 ? <EmptyState text="Немає застав за цей період" /> : items.map(item => {
+        {closedMonths.map(cm => <ClosedMonthBar key={`cm-${cm.year}-${cm.month}`} month={cm} type="deposits" />)}
+        {items.length === 0 && closedMonths.length === 0 ? <EmptyState text="Немає застав за цей період" /> : items.map(item => {
           const statusCfg = {
             holding: { label: 'Активна', cls: 'bg-amber-100 text-amber-700' },
             partially_used: { label: 'Частк.', cls: 'bg-orange-100 text-orange-700' },
@@ -908,7 +987,7 @@ function DepositsColumn({ items, totals, navigate, onAdd }) {
 }
 
 /* ========== COLUMN 3: EXPENSES ========== */
-function ExpensesColumn({ items, totals, onAdd }) {
+function ExpensesColumn({ items, totals, onAdd, closedMonths = [] }) {
   return (
     <section className="rounded-2xl border border-rose-200 ring-2 ring-rose-100 bg-white shadow-sm" data-testid="expenses-column">
       <ColumnHeader icon={TrendingDown} title="Витрати" count={items.length} total={totals.total} color="rose" onAdd={onAdd}>
@@ -918,7 +997,8 @@ function ExpensesColumn({ items, totals, onAdd }) {
         </div>
       </ColumnHeader>
       <div className="p-3 space-y-1.5 max-h-[calc(100vh-340px)] overflow-y-auto">
-        {items.length === 0 ? <EmptyState text="Немає витрат за цей період" /> : items.map((item, idx) => {
+        {closedMonths.map(cm => <ClosedMonthBar key={`cm-${cm.year}-${cm.month}`} month={cm} type="expenses" />)}
+        {items.length === 0 && closedMonths.length === 0 ? <EmptyState text="Немає витрат за цей період" /> : items.map((item, idx) => {
           const isRefund = item.expense_type === 'refund';
           const isCollection = item.expense_type === 'collection' || item.category_code === 'COLLECTION';
           return (

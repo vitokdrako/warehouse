@@ -5,7 +5,8 @@ import CorporateHeader from '../components/CorporateHeader';
 import {
   ArrowLeft, Banknote, CreditCard, Wallet, TrendingUp, TrendingDown,
   Search, RefreshCw, Shield, RotateCcw, Plus, X, MessageSquare,
-  ChevronDown, Landmark, CalendarCheck, Check
+  ChevronDown, Landmark, CalendarCheck, Check, Users, BarChart3,
+  ClipboardCheck, ChevronRight, AlertCircle
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
@@ -27,7 +28,8 @@ export default function KasaPage({ embedded = false }) {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(searchParams.get('period') || 'month');
   const [searchQuery, setSearchQuery] = useState('');
-  const [modal, setModal] = useState(null); // 'income' | 'deposit' | 'expense' | 'collection' | 'closeMonth' | null
+  const [modal, setModal] = useState(null);
+  const [activeView, setActiveView] = useState('kasa'); // kasa | plan | debts | report | summary
 
   const fetchData = async () => {
     setLoading(true);
@@ -152,7 +154,30 @@ export default function KasaPage({ embedded = false }) {
         </div>
       </div>
 
-      {/* 3-Column Layout */}
+      {/* Navigation Tabs */}
+      <div className="max-w-[1800px] mx-auto px-4 pt-4">
+        <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 w-fit">
+          {[
+            { key: 'kasa', label: 'Каса', icon: Wallet },
+            { key: 'plan', label: 'План надходжень', icon: TrendingUp },
+            { key: 'debts', label: 'Борги менеджерів', icon: Users },
+            { key: 'report', label: 'Звіт витрат', icon: BarChart3 },
+            { key: 'summary', label: 'Зведення каси', icon: ClipboardCheck },
+          ].map(tab => (
+            <button key={tab.key} onClick={() => setActiveView(tab.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeView === tab.key ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+              data-testid={`tab-${tab.key}`}>
+              <tab.icon className="w-3.5 h-3.5" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Kasa Main View */}
+      {activeView === 'kasa' && (
       <main className="max-w-[1800px] mx-auto px-4 py-6" data-testid="kasa-columns">
         {loading ? (
           <div className="grid grid-cols-3 gap-6">
@@ -166,6 +191,19 @@ export default function KasaPage({ embedded = false }) {
           </div>
         )}
       </main>
+      )}
+
+      {/* Plan View */}
+      {activeView === 'plan' && <ExpectedIncomeView />}
+
+      {/* Manager Debts */}
+      {activeView === 'debts' && <ManagerDebtsView />}
+
+      {/* Expense Report */}
+      {activeView === 'report' && <ExpenseReportView />}
+
+      {/* Evening Cash Summary */}
+      {activeView === 'summary' && <CashSummaryView />}
 
       {/* Modals */}
       {modal === 'income' && <AddIncomeModal onClose={() => setModal(null)} onCreated={onCreated} />}
@@ -176,6 +214,376 @@ export default function KasaPage({ embedded = false }) {
     </div>
   );
 }
+
+/* ========== Expected Income View (План надходжень) ========== */
+function ExpectedIncomeView() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+
+  const load = () => {
+    setLoading(true);
+    authFetch(`${BACKEND_URL}/api/finance/expected-income?month=${month}&year=${year}`)
+      .then(r => r.json()).then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(load, [month, year]);
+
+  const money = (v) => Number(v || 0).toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const statusBadge = (s) => {
+    if (s === 'paid') return <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">Оплачено</span>;
+    if (s === 'partial') return <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">Частково</span>;
+    return <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">Не оплачено</span>;
+  };
+
+  const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
+
+  return (
+    <div className="max-w-[1800px] mx-auto px-4 py-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800">План надходжень</h2>
+          <div className="flex items-center gap-2">
+            <select value={month} onChange={e => setMonth(+e.target.value)}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5" data-testid="plan-month">
+              {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+            </select>
+            <select value={year} onChange={e => setYear(+e.target.value)}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5" data-testid="plan-year">
+              {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+        </div>
+        {data?.summary && (
+          <div className="grid grid-cols-4 gap-4 p-4 bg-slate-50 border-b border-slate-100">
+            <div><div className="text-xs text-slate-500">Очікується</div><div className="text-lg font-bold text-slate-800">{money(data.summary.total_expected)} ₴</div></div>
+            <div><div className="text-xs text-slate-500">Оплачено</div><div className="text-lg font-bold text-emerald-600">{money(data.summary.total_paid)} ₴</div></div>
+            <div><div className="text-xs text-slate-500">Борг</div><div className="text-lg font-bold text-red-600">{money(data.summary.total_debt)} ₴</div></div>
+            <div><div className="text-xs text-slate-500">Замовлень</div><div className="text-lg font-bold text-slate-800">{data.summary.orders_count}</div>
+              <div className="text-[10px] text-slate-400">{data.summary.paid_count} опл. / {data.summary.partial_count} частк. / {data.summary.unpaid_count} неопл.</div>
+            </div>
+          </div>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 text-slate-500 border-b">
+              <tr>
+                <th className="text-left px-4 py-2 font-medium">Замовлення</th>
+                <th className="text-left px-4 py-2 font-medium">Клієнт</th>
+                <th className="text-left px-4 py-2 font-medium">Менеджер</th>
+                <th className="text-left px-4 py-2 font-medium">Дата події</th>
+                <th className="text-right px-4 py-2 font-medium">Сума</th>
+                <th className="text-right px-4 py-2 font-medium">Оплачено</th>
+                <th className="text-right px-4 py-2 font-medium">Борг</th>
+                <th className="text-center px-4 py-2 font-medium">Статус</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr><td colSpan="8" className="text-center py-8 text-slate-400">Завантаження...</td></tr>
+              ) : data?.items?.length === 0 ? (
+                <tr><td colSpan="8" className="text-center py-8 text-slate-400">Немає замовлень за цей місяць</td></tr>
+              ) : data?.items?.map(item => (
+                <tr key={item.order_id} className={`hover:bg-slate-50 ${item.payment_status === 'paid' ? 'opacity-50' : ''}`}>
+                  <td className="px-4 py-2.5 font-semibold text-blue-600">{item.order_number}</td>
+                  <td className="px-4 py-2.5 text-slate-700">{item.customer_name}</td>
+                  <td className="px-4 py-2.5 text-slate-500">{item.manager || '—'}</td>
+                  <td className="px-4 py-2.5 text-slate-500">{item.rental_start ? new Date(item.rental_start).toLocaleDateString('uk-UA') : '—'}</td>
+                  <td className="px-4 py-2.5 text-right font-medium text-slate-700">{money(item.order_total)}</td>
+                  <td className="px-4 py-2.5 text-right font-medium text-emerald-600">{money(item.paid)}</td>
+                  <td className="px-4 py-2.5 text-right font-bold text-red-600">{item.debt > 0 ? money(item.debt) : '—'}</td>
+                  <td className="px-4 py-2.5 text-center">{statusBadge(item.payment_status)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ========== Manager Debts View ========== */
+function ManagerDebtsView() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState({});
+
+  useEffect(() => {
+    authFetch(`${BACKEND_URL}/api/finance/manager-debts`)
+      .then(r => r.json()).then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const money = (v) => Number(v || 0).toLocaleString('uk-UA', { minimumFractionDigits: 0 });
+  const toggle = (m) => setExpanded(p => ({ ...p, [m]: !p[m] }));
+
+  return (
+    <div className="max-w-[1800px] mx-auto px-4 py-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800">Борги івент-менеджерів</h2>
+          {data && <div className="text-sm font-bold text-red-600">Загальний борг: {money(data.total_debt)} ₴</div>}
+        </div>
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-sm">Завантаження...</div>
+        ) : data?.managers?.length === 0 ? (
+          <div className="p-8 text-center text-emerald-600 text-sm font-semibold">Боргів немає!</div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {data?.managers?.map(mgr => (
+              <div key={mgr.manager}>
+                <button onClick={() => toggle(mgr.manager)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+                  data-testid={`debt-manager-${mgr.manager}`}>
+                  <div className="flex items-center gap-3">
+                    <Users className="w-4 h-4 text-slate-400" />
+                    <span className="text-sm font-semibold text-slate-700">{mgr.manager}</span>
+                    <span className="text-xs text-slate-400">{mgr.orders.length} замовл.</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-red-600">{money(mgr.total_debt)} ₴</span>
+                    <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expanded[mgr.manager] ? 'rotate-90' : ''}`} />
+                  </div>
+                </button>
+                {expanded[mgr.manager] && (
+                  <div className="bg-slate-50 px-4 pb-3">
+                    <table className="w-full text-xs">
+                      <thead><tr className="text-slate-400">
+                        <th className="text-left py-1.5 font-medium">Замовлення</th>
+                        <th className="text-left py-1.5 font-medium">Клієнт</th>
+                        <th className="text-left py-1.5 font-medium">Дата</th>
+                        <th className="text-right py-1.5 font-medium">Сума</th>
+                        <th className="text-right py-1.5 font-medium">Оплачено</th>
+                        <th className="text-right py-1.5 font-medium">Борг</th>
+                      </tr></thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {mgr.orders.map(o => (
+                          <tr key={o.order_id} className="hover:bg-white">
+                            <td className="py-1.5 font-semibold text-blue-600">{o.order_number}</td>
+                            <td className="py-1.5 text-slate-600">{o.customer_name}</td>
+                            <td className="py-1.5 text-slate-500">{o.rental_start ? new Date(o.rental_start).toLocaleDateString('uk-UA') : '—'}</td>
+                            <td className="py-1.5 text-right text-slate-600">{money(o.order_total)}</td>
+                            <td className="py-1.5 text-right text-emerald-600">{money(o.paid)}</td>
+                            <td className="py-1.5 text-right font-bold text-red-600">{money(o.debt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ========== Expense Report View (Звіт витрат) ========== */
+function ExpenseReportView() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('month');
+  const [parentFilter, setParentFilter] = useState('');
+  const [expanded, setExpanded] = useState({});
+
+  const load = () => {
+    setLoading(true);
+    let url = `${BACKEND_URL}/api/finance/expense-report?period=${period}`;
+    if (parentFilter) url += `&parent_code=${parentFilter}`;
+    authFetch(url).then(r => r.json()).then(d => { setData(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(load, [period, parentFilter]);
+
+  const money = (v) => Number(v || 0).toLocaleString('uk-UA', { minimumFractionDigits: 0 });
+  const toggle = (c) => setExpanded(p => ({ ...p, [c]: !p[c] }));
+  const periods = [
+    { value: 'day', label: 'Сьогодні' }, { value: 'week', label: 'Тиждень' },
+    { value: 'month', label: 'Місяць' }, { value: 'quarter', label: 'Квартал' },
+    { value: 'year', label: 'Рік' }, { value: 'all', label: 'Весь час' },
+  ];
+
+  // Group details by parent
+  const grouped = {};
+  (data?.by_detail || []).forEach(d => {
+    const key = d.parent_code || d.code;
+    if (!grouped[key]) grouped[key] = { name: d.parent_name, items: [], total: 0 };
+    grouped[key].items.push(d);
+    grouped[key].total += d.total;
+  });
+
+  return (
+    <div className="max-w-[1800px] mx-auto px-4 py-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+          <h2 className="text-sm font-bold text-slate-800">Звіт по статтях витрат</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            {periods.map(p => (
+              <button key={p.value} onClick={() => setPeriod(p.value)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  period === p.value ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`} data-testid={`report-period-${p.value}`}>{p.label}</button>
+            ))}
+          </div>
+        </div>
+        {data && (
+          <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <div className="text-xs text-slate-500">Загальні витрати за період</div>
+            <div className="text-2xl font-bold text-rose-600">{money(data.grand_total)} ₴</div>
+          </div>
+        )}
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-sm">Завантаження...</div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {Object.entries(grouped).sort(([,a],[,b]) => b.total - a.total).map(([code, group]) => (
+              <div key={code}>
+                <button onClick={() => toggle(code)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${expanded[code] ? 'rotate-90' : ''}`} />
+                    <span className="text-sm font-semibold text-slate-700">{group.name}</span>
+                    <span className="text-xs text-slate-400">{group.items.length} записів</span>
+                  </div>
+                  <span className="text-sm font-bold text-rose-600">{money(group.total)} ₴</span>
+                </button>
+                {expanded[code] && (
+                  <div className="bg-slate-50 px-6 pb-3 space-y-1">
+                    {group.items.sort((a,b) => b.total - a.total).map(item => (
+                      <div key={item.code} className="flex items-center justify-between py-1.5 text-xs">
+                        <span className="text-slate-600">{item.name}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-slate-400">{item.count}x</span>
+                          <span className="font-semibold text-slate-700">{money(item.total)} ₴</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            {Object.keys(grouped).length === 0 && (
+              <div className="p-8 text-center text-slate-400 text-sm">Немає витрат за обраний період</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ========== Cash Summary View (Щовечірнє зведення) ========== */
+function CashSummaryView() {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [actualCash, setActualCash] = useState('');
+  const [note, setNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const load = () => {
+    setLoading(true);
+    authFetch(`${BACKEND_URL}/api/finance/cash-summaries`)
+      .then(r => r.json()).then(d => { setHistory(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+  useEffect(load, []);
+
+  const money = (v) => Number(v || 0).toLocaleString('uk-UA', { minimumFractionDigits: 2 });
+
+  const submit = async () => {
+    if (!actualCash) return;
+    setSaving(true);
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/finance/cash-summary`, {
+        method: 'POST', body: JSON.stringify({ actual_cash: Number(actualCash), note })
+      });
+      const d = await res.json();
+      if (d.success) { setResult(d); setShowForm(false); setActualCash(''); setNote(''); load(); }
+    } catch (e) {}
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="max-w-[1800px] mx-auto px-4 py-6">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800">Щовечірнє зведення каси</h2>
+          <button onClick={() => { setShowForm(!showForm); setResult(null); }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold"
+            data-testid="new-summary-btn">
+            <Plus className="w-3.5 h-3.5" />
+            Нове зведення
+          </button>
+        </div>
+        {showForm && (
+          <div className="p-4 bg-amber-50 border-b border-amber-100 space-y-3">
+            <div className="text-xs font-semibold text-amber-800">Введіть фактичну суму готівки в сейфі:</div>
+            <div className="flex items-center gap-3">
+              <input type="number" value={actualCash} onChange={e => setActualCash(e.target.value)}
+                className="w-48 px-3 py-2 text-sm border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-300 outline-none"
+                placeholder="Сума в сейфі" data-testid="actual-cash-input" />
+              <input type="text" value={note} onChange={e => setNote(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm border border-amber-200 rounded-lg outline-none"
+                placeholder="Коментар (опціонально)" data-testid="summary-note-input" />
+              <button onClick={submit} disabled={saving || !actualCash}
+                className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold disabled:opacity-50"
+                data-testid="submit-summary-btn">
+                {saving ? '...' : 'Зберегти'}
+              </button>
+            </div>
+          </div>
+        )}
+        {result && (
+          <div className={`p-4 border-b ${result.difference >= 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+            <div className="flex items-center gap-4 text-sm">
+              <div><span className="text-slate-500">Система (РХ):</span> <span className="font-bold">{money(result.system_cash)} ₴</span></div>
+              <div><span className="text-slate-500">Факт:</span> <span className="font-bold">{money(result.actual_cash)} ₴</span></div>
+              <div><span className="text-slate-500">Різниця:</span> <span className={`font-bold ${result.difference >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{result.difference >= 0 ? '+' : ''}{money(result.difference)} ₴</span></div>
+            </div>
+          </div>
+        )}
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 text-slate-500 border-b">
+              <tr>
+                <th className="text-left px-4 py-2 font-medium">Дата</th>
+                <th className="text-right px-4 py-2 font-medium">Система (РХ)</th>
+                <th className="text-right px-4 py-2 font-medium">Факт в сейфі</th>
+                <th className="text-right px-4 py-2 font-medium">Різниця</th>
+                <th className="text-left px-4 py-2 font-medium">Коментар</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {loading ? (
+                <tr><td colSpan="5" className="text-center py-8 text-slate-400">Завантаження...</td></tr>
+              ) : history.length === 0 ? (
+                <tr><td colSpan="5" className="text-center py-8 text-slate-400">Ще немає зведень</td></tr>
+              ) : history.map(s => (
+                <tr key={s.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-2.5 font-medium text-slate-700">{s.date ? new Date(s.date).toLocaleDateString('uk-UA') : '—'}</td>
+                  <td className="px-4 py-2.5 text-right text-slate-600">{money(s.system_cash)}</td>
+                  <td className="px-4 py-2.5 text-right font-medium text-slate-800">{money(s.actual_cash)}</td>
+                  <td className={`px-4 py-2.5 text-right font-bold ${s.difference >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {s.difference >= 0 ? '+' : ''}{money(s.difference)}
+                  </td>
+                  <td className="px-4 py-2.5 text-slate-500 truncate max-w-xs">{s.note || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 /* ========== Summary Pill ========== */
 function SummaryPill({ icon: Icon, label, value, color, sub, bold }) {
@@ -366,7 +774,7 @@ function ExpensesColumn({ items, totals, onAdd }) {
                     {isCollection ? 'Інкасація' : isRefund ? 'Повернення застави' : (item.category_name || 'Витрата')}
                   </div>
                   <div className="text-xs text-slate-500 truncate">
-                    {isCollection ? (item.method === 'cash' ? 'Готівка' : 'Безготівка') : isRefund ? `${item.order_number} · ${item.customer_name}` : ''}
+                    {isCollection ? (item.method === 'cash' ? 'Готівка' : 'Безготівка') : isRefund ? `${item.order_number} · ${item.customer_name}` : (item.parent_category || '')}
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0">
@@ -525,25 +933,29 @@ function AddDepositModal({ onClose, onCreated }) {
 /*  MODAL: ADD EXPENSE                                           */
 /* ============================================================ */
 function AddExpenseModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ category_code: 'OTHER', method: 'cash', amount: '', note: '' });
+  const [form, setForm] = useState({ category_code: '', method: 'cash', amount: '', note: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [categoryTree, setCategoryTree] = useState([]);
+  const [selectedParent, setSelectedParent] = useState(null);
+
+  useEffect(() => {
+    authFetch(`${BACKEND_URL}/api/finance/categories?type=expense`)
+      .then(r => r.json())
+      .then(d => {
+        const tree = (d.tree || []).filter(p => p.code !== 'COLLECTION');
+        setCategoryTree(tree);
+      })
+      .catch(() => {});
+  }, []);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const categoryOpts = [
-    { value: 'OTHER', label: 'Інші витрати' },
-    { value: 'RENT_EXPENSE', label: 'Витрати на оренду' },
-    { value: 'DAMAGE_EXPENSE', label: 'Реставрація' },
-    { value: 'SALARY', label: 'Зарплата' },
-    { value: 'MARKETING', label: 'Маркетинг' },
-    { value: 'OFFICE', label: 'Офісні витрати' },
-    { value: 'REPAIR', label: 'Ремонт' },
-    { value: 'TRANSPORT', label: 'Транспорт' },
-    { value: 'LAUNDRY', label: 'Хімчистка' },
-  ];
+  const parentCat = categoryTree.find(c => c.id === selectedParent);
+  const subcats = parentCat?.children || [];
 
   const submit = async () => {
+    if (!form.category_code) return setError('Оберіть підкатегорію');
     if (!form.amount || Number(form.amount) <= 0) return setError('Вкажіть суму');
     setSaving(true); setError('');
     try {
@@ -566,7 +978,53 @@ function AddExpenseModal({ onClose, onCreated }) {
   return (
     <ModalWrapper onClose={onClose} title="Записати витрату" color="rose">
       <div className="space-y-4">
-        <FieldSelect label="Категорія" value={form.category_code} onChange={v => set('category_code', v)} options={categoryOpts} testId="expense-category" />
+        {/* Step 1: Parent category */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">Категорія</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {categoryTree.map(cat => (
+              <button key={cat.id}
+                onClick={() => { setSelectedParent(cat.id); set('category_code', ''); }}
+                className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition-all border ${
+                  selectedParent === cat.id
+                    ? 'bg-rose-50 border-rose-300 text-rose-700 ring-1 ring-rose-200'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                }`}
+                data-testid={`expense-parent-${cat.code}`}>
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Step 2: Subcategory */}
+        {selectedParent && subcats.length > 0 && (
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">Підкатегорія</label>
+            <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+              {subcats.map(sub => (
+                <button key={sub.id}
+                  onClick={() => set('category_code', sub.code)}
+                  className={`w-full px-3 py-2 text-xs text-left transition-colors ${
+                    form.category_code === sub.code
+                      ? 'bg-rose-50 text-rose-700 font-semibold'
+                      : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                  data-testid={`expense-sub-${sub.code}`}>
+                  {sub.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* No children — use parent directly */}
+        {selectedParent && subcats.length === 0 && (
+          <div className="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">
+            Підкатегорій немає — буде записано як "{parentCat?.name}"
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <FieldInput label="Сума (грн)" type="number" value={form.amount} onChange={v => set('amount', v)} testId="expense-amount" placeholder="0" />
           <FieldSelect label="Метод" value={form.method} onChange={v => set('method', v)}
@@ -574,7 +1032,7 @@ function AddExpenseModal({ onClose, onCreated }) {
         </div>
         <FieldTextarea label="Коментар" value={form.note} onChange={v => set('note', v)} testId="expense-note" placeholder="Опис витрати..." />
         {error && <div className="text-red-600 text-sm bg-red-50 rounded-lg p-2">{error}</div>}
-        <button onClick={submit} disabled={saving}
+        <button onClick={submit} disabled={saving || !form.category_code}
           className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm transition-colors disabled:opacity-50"
           data-testid="expense-submit-btn">
           {saving ? 'Зберігаю...' : 'Записати витрату'}

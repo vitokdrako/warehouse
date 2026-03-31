@@ -42,6 +42,21 @@ Comprehensive rental management platform (React + FastAPI + MySQL) syncing from 
   - Динамічний номер договору (через order→client_user→master_agreements)
   - Договір НЕ прив'язаний до платника — прив'язаний до замовлення
   - Buyer prefix logic without duplicate prefixes
+- **[2026-03-28] Payer type normalization:**
+  - tov/fop + tax_mode → normalized to llc_simple/llc_general/fop_simple/fop_general
+  - Fixes for invoice-payment and service-act item names
+  - Added `tov` and `go` (Громадська організація) to PAYER_TYPES
+- **[2026-03-28] Document template path fix:**
+  - Fixed _partials/base.css → documents/_partials/base.css in templates AND DB
+  - Fixed master_agreement and annex_to_contract templates
+- **[2026-03-28] PDF removed from email sending** (only HTML)
+- **[2026-03-31] Kasa Phase 1-5 (Full Feature Set):**
+  - Hierarchical expense categories (5 groups, 41 subcategories)
+  - Expense modal with 2-step category → subcategory selection
+  - Expected Income view (План надходжень) with month/year filter
+  - Manager Debts view (Борги менеджерів) with expandable sections
+  - Expense Report view (Звіт витрат) by period with expandable groups
+  - Evening Cash Summary (Зведення каси) — system vs actual balance
 
 ### Known Issues
 - P1: Multiple photos per product (not started)

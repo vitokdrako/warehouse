@@ -1267,6 +1267,7 @@ function CloseMonthModal({ onClose, onCreated }) {
   
   const [year, setYear] = useState(prevYear);
   const [month, setMonth] = useState(prevMonth);
+  const [closingCash, setClosingCash] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -1275,11 +1276,16 @@ function CloseMonthModal({ onClose, onCreated }) {
   const monthNames = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
 
   const submit = async () => {
+    if (!closingCash || isNaN(Number(closingCash))) {
+      setError('Вкажіть залишок каси');
+      return;
+    }
     setSaving(true); setError('');
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const body = {
         year, month, note,
+        closing_cash_balance: Number(closingCash),
         closed_by: user.firstname ? `${user.firstname} ${user.lastname || ''}`.trim() : (user.email || ''),
         closed_by_id: user.user_id,
       };
@@ -1296,37 +1302,90 @@ function CloseMonthModal({ onClose, onCreated }) {
 
   if (result) {
     const r = result;
+    const cr = r.cash_register || {};
     return (
-      <ModalWrapper onClose={() => { onCreated(); }} title={`Місяць ${monthNames[month-1]} ${year} закрито`} color="emerald">
-        <div className="space-y-3" data-testid="close-month-result">
+      <ModalWrapper onClose={() => { onCreated(); }} title={`${monthNames[month-1]} ${year} — закрито`} color="emerald">
+        <div className="space-y-3 max-h-[70vh] overflow-y-auto" data-testid="close-month-result">
           <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
             <Check className="w-8 h-8 text-emerald-600 mx-auto mb-1" />
             <p className="text-sm font-semibold text-emerald-700">Звіт збережено</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="bg-slate-50 rounded-lg p-2.5">
-              <div className="text-xs text-slate-500">Дохід</div>
-              <div className="font-bold text-emerald-700">{money(r.income?.total || 0)}</div>
-              <div className="text-[10px] text-slate-400">готівка {money(r.income?.cash || 0)} · банк {money(r.income?.bank || 0)}</div>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-2.5">
-              <div className="text-xs text-slate-500">Витрати + Повернення</div>
-              <div className="font-bold text-rose-600">{money((r.expenses?.total || 0) + (r.refunds?.total || 0))}</div>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-2.5">
-              <div className="text-xs text-slate-500">Застави отримано</div>
-              <div className="font-bold text-amber-700">{money(r.deposits?.total_held || 0)}</div>
-            </div>
-            <div className="bg-slate-50 rounded-lg p-2.5">
-              <div className="text-xs text-slate-500">Застави повернено</div>
-              <div className="font-bold text-amber-600">{money(r.deposits?.total_refunded || 0)}</div>
-            </div>
-            <div className="col-span-2 bg-slate-800 rounded-lg p-3 text-center">
-              <div className="text-xs text-slate-300">Чистий дохід</div>
-              <div className="text-lg font-extrabold text-white">{money(r.summary?.net_total || 0)}</div>
+
+          {/* CASH REGISTER */}
+          <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+            <div className="text-xs font-semibold text-blue-800 mb-2">Каса</div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div><span className="text-slate-500">Початок:</span> <span className="font-bold">{money(cr.opening_balance || 0)}</span></div>
+              <div><span className="text-slate-500">Кінець:</span> <span className="font-bold text-blue-700">{money(cr.closing_balance || 0)}</span></div>
             </div>
           </div>
-          <p className="text-xs text-slate-500 text-center">Звіт доступний в Адмін-панелі → Звіти</p>
+
+          {/* INCOME */}
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+            <div className="text-xs font-semibold text-emerald-800 mb-2">Доходи: {money(r.income?.total || 0)}</div>
+            <div className="grid grid-cols-2 gap-1 text-xs text-slate-600">
+              <div>Готівка: {money(r.income?.cash || 0)}</div>
+              <div>Безготівка: {money(r.income?.bank || 0)}</div>
+              {r.income?.by_type?.rent?.total > 0 && <div>Оренда: {money(r.income.by_type.rent.total)} ({r.income.by_type.rent.count})</div>}
+              {r.income?.by_type?.damage?.total > 0 && <div>Збитки: {money(r.income.by_type.damage.total)} ({r.income.by_type.damage.count})</div>}
+              {r.income?.by_type?.additional?.total > 0 && <div>Інше: {money(r.income.by_type.additional.total)} ({r.income.by_type.additional.count})</div>}
+              {r.income?.by_type?.late?.total > 0 && <div>Прострочення: {money(r.income.by_type.late.total)} ({r.income.by_type.late.count})</div>}
+            </div>
+          </div>
+
+          {/* EXPENSES */}
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-100">
+            <div className="text-xs font-semibold text-rose-800 mb-2">Витрати: {money(r.expenses?.total || 0)}</div>
+            <div className="grid grid-cols-2 gap-1 text-xs text-slate-600">
+              <div>Готівка: {money(r.expenses?.cash || 0)}</div>
+              <div>Безготівка: {money(r.expenses?.bank || 0)}</div>
+            </div>
+            {r.expenses?.by_category && Object.keys(r.expenses.by_category).length > 0 && (
+              <div className="mt-2 space-y-0.5">
+                {Object.entries(r.expenses.by_category).sort((a,b) => b[1].total - a[1].total).map(([cat, d]) => (
+                  <div key={cat} className="flex justify-between text-[11px] text-slate-500">
+                    <span>{cat}</span>
+                    <span className="font-medium">{money(d.total)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* DEPOSITS */}
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-100">
+            <div className="text-xs font-semibold text-amber-800 mb-1">Застави</div>
+            <div className="grid grid-cols-2 gap-1 text-xs text-slate-600">
+              <div>Прийнято: {money(r.deposits?.total_held || 0)} ({r.deposits?.opened_count || 0})</div>
+              <div>Повернено: {money(r.deposits?.total_refunded || 0)} ({r.deposits?.closed_count || 0})</div>
+            </div>
+          </div>
+
+          {/* REFUNDS */}
+          {(r.refunds?.total || 0) > 0 && (
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="text-xs font-semibold text-slate-700">Повернення клієнтам: {money(r.refunds?.total || 0)}</div>
+            </div>
+          )}
+
+          {/* ENCASHMENTS */}
+          {(r.encashments?.count || 0) > 0 && (
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div className="text-xs font-semibold text-slate-700">Переміщення: {r.encashments.count} операцій</div>
+              <div className="text-xs text-slate-500">В касу: {money(r.encashments?.in || 0)} · З каси: {money(r.encashments?.out || 0)}</div>
+            </div>
+          )}
+
+          {/* SUMMARY */}
+          <div className="bg-slate-800 rounded-xl p-3 text-center">
+            <div className="text-xs text-slate-300 mb-1">Чистий дохід за місяць</div>
+            <div className="text-lg font-extrabold text-white">{money(r.summary?.net_total || 0)}</div>
+            <div className="text-[10px] text-slate-400 mt-1">
+              готівка {money(r.summary?.net_cash || 0)} · безготівка {money(r.summary?.net_bank || 0)}
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 text-center">Замовлень за місяць: {r.orders_count || 0}</p>
         </div>
       </ModalWrapper>
     );
@@ -1337,7 +1396,7 @@ function CloseMonthModal({ onClose, onCreated }) {
       <div className="space-y-4" data-testid="close-month-form">
         <div className="p-3 rounded-xl bg-amber-50 border border-amber-200">
           <p className="text-xs text-amber-800">
-            Система зафіксує всі фінансові операції за обраний місяць і створить підсумковий звіт.
+            Система зафіксує всі фінансові операції за обраний місяць і створить підсумковий звіт. Залишок каси перенесеться на наступний місяць.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -1359,6 +1418,13 @@ function CloseMonthModal({ onClose, onCreated }) {
               )}
             </select>
           </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Залишок каси (готівка в касі)</label>
+          <input type="number" value={closingCash} onChange={e => setClosingCash(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm"
+            placeholder="Наприклад: 27965"
+            data-testid="close-month-cash" />
         </div>
         <FieldTextarea label="Примітка (необов'язково)" value={note} onChange={setNote} testId="close-month-note" placeholder="Коментар до закриття..." />
         {error && <div className="text-red-600 text-sm bg-red-50 rounded-lg p-2">{error}</div>}

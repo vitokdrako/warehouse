@@ -3104,8 +3104,8 @@ async def close_month(
 ):
     """
     Закрити місяць: зібрати всі фінансові дані за вказаний місяць,
-    зберегти як звіт в БД. Після закриття дані фіксуються.
-    data: { year: int, month: int, note?: str, closed_by?: str, closed_by_id?: int }
+    зберегти як звіт в БД. Фіксує залишок каси.
+    data: { year, month, closing_cash_balance, note?, closed_by?, closed_by_id? }
     """
     _ensure_monthly_reports_table(db)
     
@@ -3114,6 +3114,7 @@ async def close_month(
     note = data.get("note", "")
     closed_by = data.get("closed_by", "")
     closed_by_id = data.get("closed_by_id")
+    closing_cash = data.get("closing_cash_balance")  # actual cash at end of month
     
     if not year or not month:
         raise HTTPException(status_code=400, detail="Вкажіть рік та місяць")
@@ -3193,6 +3194,18 @@ async def close_month(
     dep_by_method = {}
     for r in deposit_payments:
         dep_by_method[r[0] or 'cash'] = float(r[1] or 0)
+
+    deposit_refund_payments = db.execute(text("""
+        SELECT method, SUM(amount) as total
+        FROM fin_payments
+        WHERE payment_type = 'deposit_refund'
+        AND status IN ('completed', 'confirmed')
+        AND occurred_at >= :month_start AND occurred_at < :month_end
+        GROUP BY method
+    """), params).fetchall()
+    dep_refund_by_method = {}
+    for r in deposit_refund_payments:
+        dep_refund_by_method[r[0] or 'cash'] = float(r[1] or 0)
     
     # 3. EXPENSES
     expenses_rows = db.execute(text("""
@@ -3252,15 +3265,44 @@ async def close_month(
         refunds_total += amt
         refunds_count += cnt
     
-    # 5. ORDERS COUNT
+    # 5. ENCASHMENTS (transfers in/out of safe)
+    encashments_rows = db.execute(text("""
+        SELECT SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) as total_in,
+               SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) as total_out,
+               COUNT(*) as cnt
+        FROM fin_encashments
+        WHERE status = 'completed'
+        AND created_at >= :month_start AND created_at < :month_end
+    """), params).fetchone()
+    
+    # 6. ORDERS COUNT
     orders_count = db.execute(text("""
         SELECT COUNT(DISTINCT order_id) FROM fin_payments
         WHERE status IN ('completed', 'confirmed')
         AND occurred_at >= :month_start AND occurred_at < :month_end
     """), params).scalar() or 0
     
+    # 7. CASH REGISTER BALANCES
+    # Opening balance: last day of previous month from cash_summaries, or 0
+    prev_month_end = month_start  # first day of this month = last moment of prev month
+    opening_row = db.execute(text("""
+        SELECT actual_cash FROM cash_summaries 
+        WHERE date < :d ORDER BY date DESC LIMIT 1
+    """), {"d": prev_month_end}).fetchone()
+    opening_cash = float(opening_row[0]) if opening_row else 0
+    
+    # Closing: use provided value or last cash_summary for this month
+    if closing_cash is not None:
+        closing_cash = float(closing_cash)
+    else:
+        closing_row = db.execute(text("""
+            SELECT actual_cash FROM cash_summaries 
+            WHERE date >= :start AND date < :end ORDER BY date DESC LIMIT 1
+        """), {"start": month_start, "end": month_end}).fetchone()
+        closing_cash = float(closing_row[0]) if closing_row else 0
+    
     # === BUILD REPORT ===
-    import json
+    import json as json_mod
     report = {
         "period": {"year": year, "month": month, "label": f"{month:02d}/{year}"},
         "income": {
@@ -3284,6 +3326,8 @@ async def close_month(
             "closed_refunded": float(deposits_closed[1] or 0),
             "received_cash": dep_by_method.get("cash", 0),
             "received_bank": dep_by_method.get("bank", 0),
+            "refunded_cash": dep_refund_by_method.get("cash", 0),
+            "refunded_bank": dep_refund_by_method.get("bank", 0),
         },
         "expenses": {
             "total": expenses_total,
@@ -3298,8 +3342,17 @@ async def close_month(
             "bank": refunds_by_method["bank"],
             "count": refunds_count,
         },
+        "encashments": {
+            "in": float(encashments_rows[0] or 0) if encashments_rows else 0,
+            "out": float(encashments_rows[1] or 0) if encashments_rows else 0,
+            "count": int(encashments_rows[2] or 0) if encashments_rows else 0,
+        },
         "collection": {"total": collection_total},
         "orders_count": orders_count,
+        "cash_register": {
+            "opening_balance": opening_cash,
+            "closing_balance": closing_cash,
+        },
         "summary": {
             "net_cash": income_by_method["cash"] - expenses_by_method["cash"] - refunds_by_method["cash"],
             "net_bank": income_by_method["bank"] - expenses_by_method["bank"] - refunds_by_method["bank"],
@@ -3313,11 +3366,20 @@ async def close_month(
         VALUES (:year, :month, :report_data, :closed_by, :closed_by_id, :note)
     """), {
         "year": year, "month": month,
-        "report_data": json.dumps(report, ensure_ascii=False),
+        "report_data": json_mod.dumps(report, ensure_ascii=False),
         "closed_by": closed_by,
         "closed_by_id": closed_by_id,
         "note": note,
     })
+    
+    # Save closing balance to cash_summaries for next month's opening
+    last_day = f"{year}-{month:02d}-" + ("31" if month in (1,3,5,7,8,10,12) else "30" if month in (4,6,9,11) else "28")
+    db.execute(text("""
+        INSERT INTO cash_summaries (date, system_cash, actual_cash, difference, note, created_by)
+        VALUES (:d, :bal, :bal, 0, :note, 'close-month')
+        ON DUPLICATE KEY UPDATE actual_cash = :bal2
+    """), {"d": last_day, "bal": closing_cash, "bal2": closing_cash, "note": f"Закриття {month:02d}/{year}"})
+    
     db.commit()
     
     return {"success": True, "report": report}

@@ -2837,7 +2837,8 @@ async def get_kasa_data(
         elif period == "all":
             pass  # no filter
         
-        # === 1. INCOME (rent/damage/late/additional payments) ===
+        # === 1. INCOME (rent/late/additional payments) ===
+        # NOTE: 'damage' excluded — damage deductions come from deposits, not new income
         income_rows = db.execute(text(f"""
             SELECT p.id, p.payment_type, p.method, p.amount, p.currency,
                    p.occurred_at, p.note, p.status,
@@ -2845,7 +2846,7 @@ async def get_kasa_data(
                    o.order_number, o.customer_name, p.order_id
             FROM fin_payments p
             LEFT JOIN orders o ON o.order_id = p.order_id
-            WHERE p.payment_type IN ('rent', 'additional', 'damage', 'late')
+            WHERE p.payment_type IN ('rent', 'additional', 'late')
             AND p.status IN ('completed', 'confirmed')
             {date_filter_payments}
             ORDER BY p.occurred_at DESC

@@ -1983,11 +1983,11 @@ async def get_hub_overview(db: Session = Depends(get_rh_db)):
         result = db.execute(text("""
             SELECT 
                 -- Готівка
-                (SELECT COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'late') THEN amount ELSE 0 END), 0) 
+                (SELECT COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type IN ('rent', 'additional', 'damage', 'late') THEN amount ELSE 0 END), 0) 
                  - COALESCE(SUM(CASE WHEN method = 'cash' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
                  FROM fin_payments WHERE status IN ('completed', 'confirmed')) as cash_balance,
                 -- Безготівка
-                (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'late') THEN amount ELSE 0 END), 0)
+                (SELECT COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type IN ('rent', 'additional', 'damage', 'late') THEN amount ELSE 0 END), 0)
                  - COALESCE(SUM(CASE WHEN method = 'bank' AND payment_type = 'refund' THEN amount ELSE 0 END), 0)
                  FROM fin_payments WHERE status IN ('completed', 'confirmed')) as bank_balance,
                 -- Виручка цей місяць
@@ -2837,8 +2837,7 @@ async def get_kasa_data(
         elif period == "all":
             pass  # no filter
         
-        # === 1. INCOME (rent/late/additional payments) ===
-        # NOTE: 'damage' excluded — damage deductions come from deposits, not new income
+        # === 1. INCOME (rent/damage/late/additional payments) ===
         income_rows = db.execute(text(f"""
             SELECT p.id, p.payment_type, p.method, p.amount, p.currency,
                    p.occurred_at, p.note, p.status,
@@ -2846,7 +2845,7 @@ async def get_kasa_data(
                    o.order_number, o.customer_name, p.order_id
             FROM fin_payments p
             LEFT JOIN orders o ON o.order_id = p.order_id
-            WHERE p.payment_type IN ('rent', 'additional', 'late')
+            WHERE p.payment_type IN ('rent', 'additional', 'damage', 'late')
             AND p.status IN ('completed', 'confirmed')
             {date_filter_payments}
             ORDER BY p.occurred_at DESC
@@ -3138,7 +3137,7 @@ async def close_month(
     income_rows = db.execute(text("""
         SELECT payment_type, method, SUM(amount) as total, COUNT(*) as cnt
         FROM fin_payments
-        WHERE payment_type IN ('rent', 'additional', 'late')
+        WHERE payment_type IN ('rent', 'additional', 'damage', 'late')
         AND status IN ('completed', 'confirmed')
         AND occurred_at >= :month_start AND occurred_at < :month_end
         GROUP BY payment_type, method

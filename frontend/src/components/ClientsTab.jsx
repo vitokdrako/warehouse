@@ -93,6 +93,7 @@ const PAYER_TYPES = [
   { value: "individual", label: "Фізична особа" },
   { value: "fop", label: "ФОП" },
   { value: "tov", label: "ТОВ" },
+  { value: "go", label: "Громадська організація" },
   { value: "pending", label: "Вкажу пізніше" }
 ];
 

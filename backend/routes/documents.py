@@ -2321,6 +2321,8 @@ async def preview_invoice_payment(
         is_general = True
     elif payer_type in ["fop", "tov", "company"] and tax_mode == "general":
         is_general = True
+    elif payer_type == "go":
+        is_general = True  # Громадська організація = завжди загальна
     
     item_name = "Квіткова композиція" if is_general else "Прокат декору"
     item_unit = "шт." if is_general else "послуга"
@@ -2439,7 +2441,7 @@ async def preview_service_act(
     # Determine item name based on payer type
     payer_type_sa = payer.get("type", "") or ""
     tax_mode_sa = payer.get("tax_mode", "") or ""
-    is_general_sa = payer_type_sa in ["fop_general", "llc_general"] or (payer_type_sa in ["fop", "tov", "company"] and tax_mode_sa == "general")
+    is_general_sa = payer_type_sa in ["fop_general", "llc_general"] or (payer_type_sa in ["fop", "tov", "company"] and tax_mode_sa == "general") or payer_type_sa == "go"
     sa_item_name = "Квіткова композиція" if is_general_sa else "Прокат декору"
     sa_item_unit = "шт" if is_general_sa else "шт"
     

@@ -350,7 +350,7 @@ export function DocumentPreviewModal({
     to: "",
     subject: "",
     message: "",
-    attachPdf: true
+    attachPdf: false
   });
   const [emailSending, setEmailSending] = useState(false);
   
@@ -522,7 +522,7 @@ export function DocumentPreviewModal({
       }
       
       setShowEmailModal(false);
-      setEmailForm({ to: "", subject: "", message: "", attachPdf: true });
+      setEmailForm({ to: "", subject: "", message: "", attachPdf: false });
       
       // Show success toast or notification
       alert(`Email успішно надіслано на ${emailForm.to}`);
@@ -736,7 +736,7 @@ export function DocumentPreviewModal({
                   />
                 </div>
                 
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer hidden">
                   <input
                     type="checkbox"
                     checked={emailForm.attachPdf}

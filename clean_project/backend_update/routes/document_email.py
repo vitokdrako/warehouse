@@ -30,7 +30,7 @@ class SendEmailRequest(BaseModel):
     cc: Optional[str] = None
     subject: Optional[str] = None
     message: Optional[str] = None
-    attach_pdf: bool = True
+    attach_pdf: bool = False
     sent_by_user_id: Optional[int] = None
     sent_by_user_name: Optional[str] = None
 

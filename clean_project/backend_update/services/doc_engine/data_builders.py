@@ -375,10 +375,12 @@ def build_order_data(db: Session, order_id: str, options: dict) -> dict:
                 raw_type = profile_row[0] or "individual"
                 tax_mode = profile_row[9] or "simplified"
                 
-                # Нормалізація: tov/fop/company + tax_mode → llc_simple/fop_general і т.д.
+                # Нормалізація: tov/fop/company/go + tax_mode → llc_simple/fop_general і т.д.
                 normalized_type = raw_type
-                if raw_type == "tov" or raw_type == "company":
+                if raw_type in ("tov", "company"):
                     normalized_type = "llc_general" if tax_mode == "general" else "llc_simple"
+                elif raw_type == "go":
+                    normalized_type = "llc_general"  # Громадська організація = завжди загальна
                 elif raw_type == "fop" and tax_mode:
                     normalized_type = "fop_general" if tax_mode == "general" else "fop_simple"
                 

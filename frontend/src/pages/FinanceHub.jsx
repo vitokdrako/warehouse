@@ -1523,13 +1523,14 @@ function OperationsTab({
                 
                 // Determine effective payer type (from selected payer or client default)
                 const effectivePayerType = selectedClientPayer?.type || selectedClientPayer?.payer_type || clientPayerType;
-                const isLegalEntity = ['fop', 'fop_simple', 'tov'].includes(effectivePayerType);
+                const isLegalEntity = ['fop', 'fop_simple', 'tov', 'go'].includes(effectivePayerType);
                 
                 const PAYER_TYPE_LABELS = {
                   'individual': '👤 Фіз. особа',
                   'fop': '🏪 ФОП',
                   'fop_simple': '🏪 ФОП (спрощена)',
-                  'tov': '🏢 ТОВ'
+                  'tov': '🏢 ТОВ',
+                  'go': '🏛 Громадська організація'
                 };
                 
                 return (
@@ -1854,7 +1855,8 @@ function DocumentsTab({ orders, selectedOrderId, setSelectedOrderId, selectedOrd
     fop_simple: "ФОП (спрощена)",
     fop_general: "ФОП (загальна)",
     llc_simple: "ТОВ (спрощена)",
-    llc_general: "ТОВ (загальна)"
+    llc_general: "ТОВ (загальна)",
+    go: "Громадська організація"
   };
   
   const STATUS_LABELS = {

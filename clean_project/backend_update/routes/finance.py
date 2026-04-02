@@ -3681,20 +3681,51 @@ async def create_cash_summary(data: dict, db: Session = Depends(get_rh_db)):
         """))
         db.commit()
         
-        # Calculate system cash balance for today
-        sys_cash_row = db.execute(text("""
-            SELECT 
-                COALESCE((SELECT SUM(amount) FROM fin_payments WHERE method='cash' AND status IN ('completed','confirmed')), 0)
-                - COALESCE((SELECT SUM(amount) FROM fin_expenses WHERE method='cash' AND status='posted'), 0)
-                - COALESCE((SELECT SUM(amount) FROM fin_payments WHERE payment_type='refund' AND method='cash' AND status IN ('completed','confirmed')), 0)
+        # Calculate system cash balance for today:
+        # carry_over from last closed month + current month income - current month expenses
+        from datetime import date, datetime
+        today = date.today()
+        cur_month_start = today.replace(day=1)
+        
+        # Get carry_over from last closed monthly report
+        carry_row = db.execute(text("""
+            SELECT report_data FROM monthly_reports
+            ORDER BY year DESC, month DESC LIMIT 1
         """)).fetchone()
-        system_cash = float(sys_cash_row[0]) if sys_cash_row else 0
+        carry_over = 0
+        if carry_row and carry_row[0]:
+            import json
+            rd = json.loads(carry_row[0]) if isinstance(carry_row[0], str) else carry_row[0]
+            cr = rd.get("cash_register", {})
+            carry_over = float(cr.get("closing_balance", 0))
+        
+        # Current month cash income (rent, additional, late, damage)
+        month_cash_in = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments
+            WHERE method='cash' AND status IN ('completed','confirmed')
+            AND payment_type IN ('rent','additional','late','damage')
+            AND occurred_at >= :month_start
+        """), {"month_start": cur_month_start}).scalar() or 0
+        
+        # Current month cash expenses
+        month_cash_out = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_expenses
+            WHERE method='cash' AND status='posted'
+            AND occurred_at >= :month_start
+        """), {"month_start": cur_month_start}).scalar() or 0
+        
+        # Current month cash refunds
+        month_cash_refunds = db.execute(text("""
+            SELECT COALESCE(SUM(amount), 0) FROM fin_payments
+            WHERE payment_type IN ('deposit_refund','refund') AND method='cash'
+            AND status IN ('completed','confirmed')
+            AND occurred_at >= :month_start
+        """), {"month_start": cur_month_start}).scalar() or 0
+        
+        system_cash = carry_over + float(month_cash_in) - float(month_cash_out) - float(month_cash_refunds)
         
         actual_cash = float(data.get("actual_cash", 0))
         difference = actual_cash - system_cash
-        
-        from datetime import date
-        today = date.today()
         
         db.execute(text("""
             INSERT INTO cash_summaries (date, system_cash, actual_cash, difference, note, created_by)

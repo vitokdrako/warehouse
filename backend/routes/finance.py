@@ -51,12 +51,13 @@ class ExpenseCreate(BaseModel):
     receipt_file_key: Optional[str] = None
 
 class DepositCreate(BaseModel):
-    order_id: int
+    order_id: Optional[int] = None
+    client_user_id: Optional[int] = None
     expected_amount: float
     actual_amount: float
-    currency: str = "UAH"  # UAH | USD | EUR
+    currency: str = "UAH"
     exchange_rate: Optional[float] = None
-    method: str = "cash"  # cash | card | bank
+    method: str = "cash"
     note: Optional[str] = None
     accepted_by_id: Optional[int] = None
     accepted_by_name: Optional[str] = None
@@ -1354,6 +1355,33 @@ async def pay_payroll(payroll_id: int, db: Session = Depends(get_rh_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+@router.get("/search/orders")
+async def search_orders_for_deposit(q: str = "", db: Session = Depends(get_rh_db)):
+    """Search orders for deposit modal"""
+    rows = db.execute(text("""
+        SELECT order_id, order_number, customer_name, customer_phone, total_price, deposit_amount, status
+        FROM orders
+        WHERE (order_number LIKE :q OR customer_name LIKE :q OR customer_phone LIKE :q)
+        AND status NOT IN ('cancelled')
+        ORDER BY order_id DESC LIMIT 20
+    """), {"q": f"%{q}%"}).fetchall()
+    return [{"order_id": r[0], "order_number": r[1], "customer_name": r[2], "phone": r[3],
+             "total_price": float(r[4] or 0), "deposit_amount": float(r[5] or 0), "status": r[6]} for r in rows]
+
+
+@router.get("/search/clients")
+async def search_clients_for_deposit(q: str = "", db: Session = Depends(get_rh_db)):
+    """Search clients for deposit modal"""
+    rows = db.execute(text("""
+        SELECT id, full_name, phone, payer_type, company
+        FROM client_users
+        WHERE (full_name LIKE :q OR phone LIKE :q OR company LIKE :q)
+        ORDER BY id DESC LIMIT 20
+    """), {"q": f"%{q}%"}).fetchall()
+    return [{"id": r[0], "full_name": r[1], "phone": r[2], "payer_type": r[3], "company": r[4]} for r in rows]
+
+
 # ============================================================
 # DEPOSIT WITH CURRENCY
 # ============================================================
@@ -1380,6 +1408,9 @@ async def create_deposit_with_currency(data: DepositCreate):
         cursor = conn.cursor()
         occurred_at = datetime.now()
         
+        if not data.order_id and not data.client_user_id:
+            raise HTTPException(400, "Вкажіть ордер або клієнта")
+        
         # Convert foreign currency to UAH equivalent
         uah_amount = data.actual_amount
         if data.currency != "UAH" and data.exchange_rate:
@@ -1394,11 +1425,14 @@ async def create_deposit_with_currency(data: DepositCreate):
         cursor.execute("SELECT id FROM fin_accounts WHERE code = %s", ("DEP_LIAB",))
         credit_acc_id = cursor.fetchone()['id']
         
-        # Create transaction with user info
+        entity_type = "order" if data.order_id else "client"
+        entity_id = data.order_id or data.client_user_id
+        
+        # Create transaction
         cursor.execute("""
             INSERT INTO fin_transactions (tx_type, amount, occurred_at, entity_type, entity_id, note, accepted_by_id, accepted_by_name)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, ("deposit_payment", uah_amount, occurred_at, "order", data.order_id, data.note or f"Застава {data.currency}",
+        """, ("deposit_payment", uah_amount, occurred_at, entity_type, entity_id, data.note or f"Застава {data.currency}",
               data.accepted_by_id, data.accepted_by_name))
         tx_id = cursor.lastrowid
         
@@ -1408,22 +1442,27 @@ async def create_deposit_with_currency(data: DepositCreate):
         cursor.execute("INSERT INTO fin_ledger_entries (tx_id, account_id, direction, amount, order_id) VALUES (%s, %s, 'C', %s, %s)",
                       (tx_id, credit_acc_id, uah_amount, data.order_id))
         
-        # Check existing deposit
-        cursor.execute("SELECT id FROM fin_deposit_holds WHERE order_id = %s", (data.order_id,))
-        existing = cursor.fetchone()
+        # Check existing deposit by order_id or client_user_id
+        if data.order_id:
+            cursor.execute("SELECT id FROM fin_deposit_holds WHERE order_id = %s", (data.order_id,))
+        elif data.client_user_id:
+            cursor.execute("SELECT id FROM fin_deposit_holds WHERE client_user_id = %s AND order_id IS NULL AND status = 'held'", (data.client_user_id,))
+        else:
+            existing = None
+        existing = cursor.fetchone() if data.order_id or data.client_user_id else None
         
         if existing:
             cursor.execute("""
                 UPDATE fin_deposit_holds SET held_amount = held_amount + %s, 
                     actual_amount = %s, currency = %s, exchange_rate = %s, expected_amount = %s
-                WHERE order_id = %s
-            """, (uah_amount, data.actual_amount, data.currency, data.exchange_rate, data.expected_amount, data.order_id))
+                WHERE id = %s
+            """, (uah_amount, data.actual_amount, data.currency, data.exchange_rate, data.expected_amount, existing['id']))
             deposit_id = existing['id']
         else:
             cursor.execute("""
-                INSERT INTO fin_deposit_holds (order_id, held_amount, actual_amount, currency, exchange_rate, expected_amount, opened_at, note)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (data.order_id, uah_amount, data.actual_amount, data.currency, data.exchange_rate, data.expected_amount, occurred_at, data.note))
+                INSERT INTO fin_deposit_holds (order_id, client_user_id, held_amount, actual_amount, currency, exchange_rate, expected_amount, opened_at, note)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (data.order_id, data.client_user_id, uah_amount, data.actual_amount, data.currency, data.exchange_rate, data.expected_amount, occurred_at, data.note))
             deposit_id = cursor.lastrowid
         
         # Record deposit event
@@ -2932,9 +2971,11 @@ async def get_kasa_data(
                    d.exchange_rate, d.used_amount, d.refunded_amount, d.status,
                    d.opened_at, d.closed_at, d.note,
                    o.order_number, o.customer_name,
-                   d.expected_amount
+                   d.expected_amount, d.client_user_id,
+                   cu.full_name as client_name
             FROM fin_deposit_holds d
             LEFT JOIN orders o ON o.order_id = d.order_id
+            LEFT JOIN client_users cu ON cu.id = d.client_user_id
             WHERE 1=1 {deposit_date_condition}
             ORDER BY d.opened_at DESC
         """))
@@ -2970,8 +3011,10 @@ async def get_kasa_data(
                 "closed_at": r[10].isoformat() if r[10] else None,
                 "note": r[11],
                 "order_number": r[12],
-                "customer_name": r[13],
+                "customer_name": r[13] or (r[16] if r[16] else None),
                 "expected_amount": float(r[14] or 0),
+                "client_user_id": r[15],
+                "client_name": r[16],
             })
         
         # Deposit payments (to know cash/bank)

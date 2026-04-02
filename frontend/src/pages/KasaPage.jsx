@@ -1151,20 +1151,52 @@ function AddIncomeModal({ onClose, onCreated }) {
 /*  MODAL: ADD DEPOSIT                                           */
 /* ============================================================ */
 function AddDepositModal({ onClose, onCreated }) {
-  const [form, setForm] = useState({ order_id: '', amount: '', currency: 'UAH', exchange_rate: '', method: 'cash', note: '' });
+  const [form, setForm] = useState({ order_id: '', client_user_id: '', amount: '', currency: 'UAH', exchange_rate: '', method: 'cash', note: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [bindType, setBindType] = useState('order'); // 'order' | 'client'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState(null);
   const userEmail = localStorage.getItem('user_email') || '';
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
+  const doSearch = async (q) => {
+    setSearchQuery(q);
+    if (q.length < 2) { setSearchResults([]); return }
+    setSearching(true);
+    try {
+      const endpoint = bindType === 'order' ? 'search/orders' : 'search/clients';
+      const res = await authFetch(`${BACKEND_URL}/api/finance/${endpoint}?q=${encodeURIComponent(q)}`);
+      setSearchResults(await res.json());
+    } catch { setSearchResults([]) }
+    setSearching(false);
+  };
+
+  const selectEntity = (item) => {
+    setSelectedEntity(item);
+    setSearchResults([]);
+    setSearchQuery('');
+    if (bindType === 'order') {
+      set('order_id', item.order_id);
+      set('client_user_id', '');
+      if (item.deposit_amount > 0 && !form.amount) set('amount', String(item.deposit_amount));
+    } else {
+      set('client_user_id', item.id);
+      set('order_id', '');
+    }
+  };
+
   const submit = async () => {
-    if (!form.order_id) return setError('Вкажіть ID ордеру');
+    if (!form.order_id && !form.client_user_id) return setError('Оберіть ордер або клієнта');
     if (!form.amount || Number(form.amount) <= 0) return setError('Вкажіть суму');
     setSaving(true); setError('');
     try {
       const body = {
-        order_id: Number(form.order_id),
+        order_id: form.order_id ? Number(form.order_id) : null,
+        client_user_id: form.client_user_id ? Number(form.client_user_id) : null,
         actual_amount: Number(form.amount),
         expected_amount: Number(form.amount),
         currency: form.currency,
@@ -1185,7 +1217,68 @@ function AddDepositModal({ onClose, onCreated }) {
   return (
     <ModalWrapper onClose={onClose} title="Внести заставу" color="amber">
       <div className="space-y-4">
-        <FieldInput label="ID ордеру" type="number" value={form.order_id} onChange={v => set('order_id', v)} testId="deposit-order" placeholder="Номер ордеру" />
+        {/* Bind type toggle */}
+        <div>
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">Прив'язка</label>
+          <div className="flex gap-2">
+            <button onClick={() => { setBindType('order'); setSelectedEntity(null); set('order_id',''); set('client_user_id','') }}
+              className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${bindType === 'order' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+              data-testid="deposit-bind-order">Ордер</button>
+            <button onClick={() => { setBindType('client'); setSelectedEntity(null); set('order_id',''); set('client_user_id','') }}
+              className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${bindType === 'client' ? 'bg-violet-50 border-violet-300 text-violet-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+              data-testid="deposit-bind-client">Клієнт</button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            {bindType === 'order' ? 'Пошук ордеру' : 'Пошук клієнта'}
+          </label>
+          {selectedEntity ? (
+            <div className="flex items-center justify-between px-3 py-2 rounded-lg border border-emerald-300 bg-emerald-50">
+              <span className="text-sm font-medium text-emerald-800">
+                {bindType === 'order'
+                  ? `${selectedEntity.order_number} — ${selectedEntity.customer_name}`
+                  : `${selectedEntity.full_name}${selectedEntity.company ? ` (${selectedEntity.company})` : ''}`}
+              </span>
+              <button onClick={() => { setSelectedEntity(null); set('order_id',''); set('client_user_id','') }}
+                className="text-emerald-600 hover:text-emerald-800"><X className="w-4 h-4" /></button>
+            </div>
+          ) : (
+            <>
+              <input value={searchQuery} onChange={e => doSearch(e.target.value)}
+                placeholder={bindType === 'order' ? 'Номер, клієнт, телефон...' : "Ім'я, телефон, компанія..."}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-400"
+                data-testid="deposit-search" />
+              {searchResults.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {searchResults.map(item => (
+                    <button key={bindType === 'order' ? item.order_id : item.id}
+                      onClick={() => selectEntity(item)}
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-amber-50 border-b border-slate-100 last:border-0">
+                      {bindType === 'order' ? (
+                        <div>
+                          <span className="font-semibold text-blue-700">{item.order_number}</span>
+                          <span className="text-slate-600"> — {item.customer_name}</span>
+                          <span className="text-slate-400 ml-2">Застава: ₴{(item.deposit_amount||0).toLocaleString('uk-UA')}</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="font-semibold text-violet-700">{item.full_name}</span>
+                          {item.company && <span className="text-slate-500"> ({item.company})</span>}
+                          {item.phone && <span className="text-slate-400 ml-2">{item.phone}</span>}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searching && <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg p-3 text-xs text-slate-400">Пошук...</div>}
+            </>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <FieldInput label="Сума" type="number" value={form.amount} onChange={v => set('amount', v)} testId="deposit-amount" placeholder="0" />
           <FieldSelect label="Валюта" value={form.currency} onChange={v => set('currency', v)}

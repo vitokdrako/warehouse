@@ -3126,7 +3126,20 @@ async def get_kasa_data(
         
         for i in income: mark_closed_period(i, "date")
         for e in expenses: mark_closed_period(e, "date")
-        for d in deposits: mark_closed_period(d, "opened_at")
+        for d in deposits:
+            # Active deposits (held/holding) are NEVER closed - they persist across months
+            if d.get("status") in ("held", "holding"):
+                d["_closed"] = False
+                d_date = d.get("opened_at")
+                if d_date:
+                    try:
+                        from datetime import datetime as dt
+                        parsed = dt.fromisoformat(d_date) if isinstance(d_date, str) else d_date
+                        d["_period"] = f"{parsed.year}-{parsed.month:02d}"
+                    except:
+                        pass
+            else:
+                mark_closed_period(d, "opened_at")
         
         # Carry-over balance from last closed month
         carry_over_balance = 0

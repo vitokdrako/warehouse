@@ -3146,21 +3146,39 @@ async def get_kasa_data(
         if closed_months_data:
             carry_over_balance = closed_months_data[-1].get("closing_cash", 0)
         
+        # Recalculate totals from OPEN items only (excluding closed months)
+        open_income = [i for i in income if not i.get("_closed")]
+        open_expenses = [e for e in expenses if not e.get("_closed")]
+        open_refunds = [r for r in refunds if not r.get("_closed")]
+        
+        open_income_cash = sum(i["amount"] for i in open_income if i["method"] == "cash")
+        open_income_bank = sum(i["amount"] for i in open_income if i["method"] != "cash")
+        open_expenses_cash = sum(e["amount"] for e in open_expenses if e.get("method") == "cash")
+        open_expenses_bank = sum(e["amount"] for e in open_expenses if e.get("method") != "cash")
+        open_refunds_cash = sum(r["amount"] for r in open_refunds if r.get("method") == "cash")
+        open_refunds_bank = sum(r["amount"] for r in open_refunds if r.get("method") != "cash")
+        
+        # Active deposits (held/holding) always count
+        active_deposits = [d for d in deposits if d.get("status") in ("held", "holding")]
+        active_held = sum(float(d.get("held_amount", 0)) for d in active_deposits)
+        active_refunded = sum(float(d.get("refunded_amount", 0)) for d in active_deposits)
+        active_used = sum(float(d.get("used_amount", 0)) for d in active_deposits)
+        
         return {
             "period": period,
             "income": {
                 "items": income,
-                "cash_total": income_cash_total,
-                "bank_total": income_bank_total,
-                "total": income_cash_total + income_bank_total,
-                "count": len(income),
+                "cash_total": open_income_cash,
+                "bank_total": open_income_bank,
+                "total": open_income_cash + open_income_bank,
+                "count": len(open_income),
             },
             "deposits": {
                 "items": deposits,
-                "held_total": deposits_held_total,
-                "refunded_total": deposits_refunded_total,
-                "used_total": deposits_used_total,
-                "available_total": deposits_held_total - deposits_refunded_total - deposits_used_total,
+                "held_total": active_held,
+                "refunded_total": active_refunded,
+                "used_total": active_used,
+                "available_total": active_held - active_refunded - active_used,
                 "cash_received": dep_by_method.get('cash', 0),
                 "bank_received": dep_by_method.get('bank', 0),
                 "count": len(deposits),
@@ -3168,10 +3186,10 @@ async def get_kasa_data(
             "expenses": {
                 "items": expenses,
                 "refunds": refunds,
-                "cash_total": expenses_cash_total,
-                "bank_total": expenses_bank_total,
-                "total": expenses_cash_total + expenses_bank_total,
-                "count": len(expenses) + len(refunds),
+                "cash_total": open_expenses_cash + open_refunds_cash,
+                "bank_total": open_expenses_bank + open_refunds_bank,
+                "total": open_expenses_cash + open_expenses_bank + open_refunds_cash + open_refunds_bank,
+                "count": len(open_expenses) + len(open_refunds),
             },
             "collection": {
                 "cash_total": collection_cash,
@@ -3181,9 +3199,9 @@ async def get_kasa_data(
             "closed_months": closed_months_data,
             "carry_over_balance": carry_over_balance,
             "summary": {
-                "net_cash": income_cash_total - expenses_cash_total,
-                "net_bank": income_bank_total - expenses_bank_total,
-                "net_total": (income_cash_total + income_bank_total) - (expenses_cash_total + expenses_bank_total),
+                "net_cash": open_income_cash - open_expenses_cash - open_refunds_cash,
+                "net_bank": open_income_bank - open_expenses_bank - open_refunds_bank,
+                "net_total": (open_income_cash + open_income_bank) - (open_expenses_cash + open_expenses_bank + open_refunds_cash + open_refunds_bank),
             }
         }
     except Exception as e:

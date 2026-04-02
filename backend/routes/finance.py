@@ -985,8 +985,8 @@ async def use_deposit(deposit_id: int, amount: float, damage_case_id: Optional[i
 @router.post("/deposits/{deposit_id}/refund")
 async def refund_deposit(deposit_id: int, amount: float, method: str = "cash",
                          note: Optional[str] = None, db: Session = Depends(get_rh_db)):
-    """Refund deposit to customer"""
-    dep = db.execute(text("SELECT order_id, held_amount, used_amount, refunded_amount FROM fin_deposit_holds WHERE id = :id"), {"id": deposit_id}).fetchone()
+    """Refund deposit to customer (works for both order-linked and client-only deposits)"""
+    dep = db.execute(text("SELECT order_id, held_amount, used_amount, refunded_amount, client_user_id FROM fin_deposit_holds WHERE id = :id"), {"id": deposit_id}).fetchone()
     if not dep: raise HTTPException(status_code=404, detail="Deposit not found")
     
     available = float(dep[1]) - float(dep[2]) - float(dep[3])
@@ -994,8 +994,12 @@ async def refund_deposit(deposit_id: int, amount: float, method: str = "cash",
     
     try:
         credit_acc = "CASH" if method == "cash" else "BANK"
-        tx_id = post_transaction(db, "deposit_refund", amount, "DEP_LIAB", credit_acc, "order", dep[0],
-                                 order_id=dep[0], note=note or "Повернення застави")
+        order_id = dep[0]
+        client_user_id = dep[4]
+        entity_type = "order" if order_id else ("client" if client_user_id else "deposit")
+        entity_id = order_id or client_user_id or deposit_id
+        tx_id = post_transaction(db, "deposit_refund", amount, "DEP_LIAB", credit_acc, entity_type, entity_id,
+                                 order_id=order_id, note=note or "Повернення застави")
         
         new_refunded = float(dep[3]) + amount
         remaining = float(dep[1]) - float(dep[2]) - new_refunded
@@ -2896,21 +2900,17 @@ async def get_kasa_data(
         # Date filter
         date_filter_payments = ""
         date_filter_expenses = ""
-        date_filter_deposits = ""
         params = {}
         
         if period == "day":
             date_filter_payments = "AND p.occurred_at >= CURDATE()"
             date_filter_expenses = "AND e.occurred_at >= CURDATE()"
-            date_filter_deposits = "AND d.opened_at >= CURDATE()"
         elif period == "week":
             date_filter_payments = "AND p.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
             date_filter_expenses = "AND e.occurred_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
-            date_filter_deposits = "AND d.opened_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)"
         elif period == "month":
             date_filter_payments = "AND MONTH(p.occurred_at) = MONTH(CURDATE()) AND YEAR(p.occurred_at) = YEAR(CURDATE())"
             date_filter_expenses = "AND MONTH(e.occurred_at) = MONTH(CURDATE()) AND YEAR(e.occurred_at) = YEAR(CURDATE())"
-            date_filter_deposits = "AND MONTH(d.opened_at) = MONTH(CURDATE()) AND YEAR(d.opened_at) = YEAR(CURDATE())"
         elif period == "all":
             pass  # no filter
         
@@ -2957,16 +2957,8 @@ async def get_kasa_data(
                 "order_id": r[12],
             })
         
-        # === 2. DEPOSITS ===
-        # For active deposits (held/holding) - ALWAYS show regardless of period
-        # For closed deposits - apply date filter
-        deposit_date_condition = ""
-        if date_filter_deposits:
-            # Strip 'AND' prefix and replace 'd.' with alias
-            df = date_filter_deposits.strip()
-            deposit_date_condition = f"AND (d.status IN ('held', 'holding') OR ({df.replace('AND ', '', 1)}))"
-        
-        deposit_rows = db.execute(text(f"""
+        # === 2. DEPOSITS (always ALL — no date/month filtering) ===
+        deposit_rows = db.execute(text("""
             SELECT d.id, d.order_id, d.held_amount, d.actual_amount, d.currency,
                    d.exchange_rate, d.used_amount, d.refunded_amount, d.status,
                    d.opened_at, d.closed_at, d.note,
@@ -2976,8 +2968,7 @@ async def get_kasa_data(
             FROM fin_deposit_holds d
             LEFT JOIN orders o ON o.order_id = d.order_id
             LEFT JOIN client_users cu ON cu.id = d.client_user_id
-            WHERE 1=1 {deposit_date_condition}
-            ORDER BY d.opened_at DESC
+            ORDER BY FIELD(d.status, 'holding', 'held', 'partially_used', 'fully_used', 'refunded'), d.opened_at DESC
         """))
         
         deposits = []
@@ -3169,20 +3160,7 @@ async def get_kasa_data(
         
         for i in income: mark_closed_period(i, "date")
         for e in expenses: mark_closed_period(e, "date")
-        for d in deposits:
-            # Active deposits (held/holding) are NEVER closed - they persist across months
-            if d.get("status") in ("held", "holding"):
-                d["_closed"] = False
-                d_date = d.get("opened_at")
-                if d_date:
-                    try:
-                        from datetime import datetime as dt
-                        parsed = dt.fromisoformat(d_date) if isinstance(d_date, str) else d_date
-                        d["_period"] = f"{parsed.year}-{parsed.month:02d}"
-                    except:
-                        pass
-            else:
-                mark_closed_period(d, "opened_at")
+        # Deposits are completely decoupled from monthly closing — no _closed/_period marking
         
         # Carry-over balance from last closed month
         carry_over_balance = 0

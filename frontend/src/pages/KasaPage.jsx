@@ -185,7 +185,7 @@ export default function KasaPage({ embedded = false }) {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <IncomeColumn items={filteredIncome} totals={income} navigate={navigate} onAdd={() => setModal('income')} closedMonths={closedMonths} carryOver={data?.carry_over_balance || 0} />
-            <DepositsColumn items={filteredDeposits} totals={deposits} navigate={navigate} onAdd={() => setModal('deposit')} closedMonths={closedMonths} />
+            <DepositsColumn items={filteredDeposits} totals={deposits} navigate={navigate} onAdd={() => setModal('deposit')} onRefresh={fetchData} />
             <ExpensesColumn items={filteredExpenses} totals={expenses} onAdd={() => setModal('expense')} closedMonths={closedMonths} />
           </div>
         )}
@@ -935,18 +935,85 @@ function IncomeColumn({ items, totals, navigate, onAdd, closedMonths = [], carry
 }
 
 /* ========== COLUMN 2: DEPOSITS ========== */
-function DepositsColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
-  const openItems = items.filter(i => !i._closed);
-  const closedPeriods = {};
-  items.filter(i => i._closed).forEach(i => {
-    const p = i._period || 'unknown';
-    if (!closedPeriods[p]) closedPeriods[p] = [];
-    closedPeriods[p].push(i);
-  });
+function DepositsColumn({ items, totals, navigate, onAdd, onRefresh }) {
+  const activeStatuses = ['holding', 'held', 'partially_used'];
+  const activeItems = items.filter(i => activeStatuses.includes(i.status));
+  const closedItems = items.filter(i => !activeStatuses.includes(i.status));
+  const [refundTarget, setRefundTarget] = useState(null);
+  const [refundForm, setRefundForm] = useState({ amount: '', method: 'cash', note: '' });
+  const [refundSaving, setRefundSaving] = useState(false);
+
+  const handleRefund = async () => {
+    if (!refundTarget || !refundForm.amount) return;
+    setRefundSaving(true);
+    try {
+      const res = await authFetch(
+        `${BACKEND_URL}/api/finance/deposits/${refundTarget.id}/refund?amount=${refundForm.amount}&method=${refundForm.method}&note=${encodeURIComponent(refundForm.note || '')}`,
+        { method: 'POST' }
+      );
+      if (res.ok) {
+        setRefundTarget(null);
+        setRefundForm({ amount: '', method: 'cash', note: '' });
+        if (onRefresh) onRefresh();
+      }
+    } catch (e) { console.error(e); }
+    finally { setRefundSaving(false); }
+  };
+
+  const statusCfg = {
+    holding: { label: 'Активна', cls: 'bg-amber-100 text-amber-700' },
+    held: { label: 'Активна', cls: 'bg-amber-100 text-amber-700' },
+    partially_used: { label: 'Частк.', cls: 'bg-orange-100 text-orange-700' },
+    fully_used: { label: 'Використано', cls: 'bg-rose-100 text-rose-700' },
+    refunded: { label: 'Повернуто', cls: 'bg-blue-100 text-blue-700' },
+  };
+
+  const renderItem = (item) => {
+    const st = statusCfg[item.status] || { label: item.status, cls: 'bg-slate-100 text-slate-600' };
+    const curr = item.currency === 'USD' ? '$' : item.currency === 'EUR' ? '€' : '₴';
+    const isActive = activeStatuses.includes(item.status);
+    const canRefund = isActive && item.available > 0;
+    return (
+      <div key={item.id}
+        className="px-3 py-2.5 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 transition-all"
+        data-testid={`deposit-item-${item.id}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-semibold text-slate-700 cursor-pointer"
+              onClick={() => item.order_id && navigate(`/order/${item.order_id}/return-settlement`)}>
+              {item.order_number || (item.client_name ? `Клієнт` : '—')}
+            </span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
+          </div>
+          <div className="font-bold text-amber-700 text-sm">{curr}{fmtUA(item.actual_amount)}</div>
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-xs text-slate-500 truncate">{item.customer_name || item.client_name || '—'}</span>
+          <span className="text-[10px] text-slate-400">{fmtDate(item.opened_at)}</span>
+        </div>
+        {(item.used_amount > 0 || item.refunded_amount > 0) && (
+          <div className="flex gap-3 mt-1.5 text-[10px]">
+            {item.used_amount > 0 && <span className="text-rose-600">Утримано: {money(item.used_amount)}</span>}
+            {item.refunded_amount > 0 && <span className="text-blue-600">Повернуто: {money(item.refunded_amount)}</span>}
+            <span className="text-emerald-600 ml-auto">Доступно: {money(item.available)}</span>
+          </div>
+        )}
+        <NoteDisplay note={item.note} />
+        {canRefund && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setRefundTarget(item); setRefundForm({ amount: String(item.available), method: 'cash', note: '' }); }}
+            className="mt-2 w-full text-[11px] font-medium py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-1"
+            data-testid={`deposit-refund-btn-${item.id}`}>
+            <RotateCcw className="w-3 h-3" /> Повернути заставу
+          </button>
+        )}
+      </div>
+    );
+  };
 
   return (
     <section className="rounded-2xl border border-amber-200 ring-2 ring-amber-100 bg-white shadow-sm flex flex-col" data-testid="deposits-column">
-      <ColumnHeader icon={Shield} title="Застави" count={openItems.length} total={totals.held_total} color="amber" onAdd={onAdd}>
+      <ColumnHeader icon={Shield} title="Застави" count={activeItems.length} total={totals.held_total} color="amber" onAdd={onAdd}>
         <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-amber-100 text-[11px]">
           <span className="text-slate-500"><Banknote className="w-3 h-3 inline mr-0.5" />Гот: {money(totals.cash_received || 0)}</span>
           <span className="text-slate-500"><CreditCard className="w-3 h-3 inline mr-0.5" />Безгот: {money(totals.bank_received || 0)}</span>
@@ -955,50 +1022,58 @@ function DepositsColumn({ items, totals, navigate, onAdd, closedMonths = [] }) {
         </div>
       </ColumnHeader>
       <div className="p-3 space-y-1.5 max-h-[calc(100vh-380px)] overflow-y-auto flex-1">
-        {openItems.length === 0 ? <EmptyState text="Немає нових застав" /> : openItems.map(item => {
-          const statusCfg = {
-            holding: { label: 'Активна', cls: 'bg-amber-100 text-amber-700' },
-            held: { label: 'Активна', cls: 'bg-amber-100 text-amber-700' },
-            partially_used: { label: 'Частк.', cls: 'bg-orange-100 text-orange-700' },
-            fully_used: { label: 'Використано', cls: 'bg-rose-100 text-rose-700' },
-            refunded: { label: 'Повернуто', cls: 'bg-blue-100 text-blue-700' },
-          };
-          const st = statusCfg[item.status] || { label: item.status, cls: 'bg-slate-100 text-slate-600' };
-          const curr = item.currency === 'USD' ? '$' : item.currency === 'EUR' ? '€' : '₴';
-          return (
-            <div key={item.id}
-              className="px-3 py-2.5 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 transition-all cursor-pointer"
-              onClick={() => item.order_id && navigate(`/order/${item.order_id}/return-settlement`)}
-              data-testid={`deposit-item-${item.id}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-semibold text-slate-700">{item.order_number || '—'}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
-                </div>
-                <div className="font-bold text-amber-700 text-sm">{curr}{fmtUA(item.actual_amount)}</div>
-              </div>
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-xs text-slate-500 truncate">{item.customer_name}</span>
-                <span className="text-[10px] text-slate-400">{fmtDate(item.opened_at)}</span>
-              </div>
-              {(item.used_amount > 0 || item.refunded_amount > 0) && (
-                <div className="flex gap-3 mt-1.5 text-[10px]">
-                  {item.used_amount > 0 && <span className="text-rose-600">Утримано: {money(item.used_amount)}</span>}
-                  {item.refunded_amount > 0 && <span className="text-blue-600">Повернуто: {money(item.refunded_amount)}</span>}
-                  <span className="text-emerald-600 ml-auto">Доступно: {money(item.available)}</span>
-                </div>
-              )}
-              <NoteDisplay note={item.note} />
-            </div>
-          );
-        })}
+        {activeItems.length === 0 && closedItems.length === 0 && <EmptyState text="Немає застав" />}
+        {activeItems.map(renderItem)}
+        {closedItems.length > 0 && activeItems.length > 0 && (
+          <div className="flex items-center gap-2 pt-2 pb-1">
+            <div className="flex-1 h-px bg-slate-200" />
+            <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Закриті</span>
+            <div className="flex-1 h-px bg-slate-200" />
+          </div>
+        )}
+        {closedItems.map(renderItem)}
       </div>
-      {closedMonths.length > 0 && (
-        <div className="p-3 pt-0 space-y-1.5 border-t border-slate-100">
-          {closedMonths.map(cm => {
-            const key = `${cm.year}-${String(cm.month).padStart(2,'0')}`;
-            return <ClosedMonthBar key={key} month={cm} type="deposits" items={closedPeriods[key] || []} />;
-          })}
+
+      {/* Refund Modal */}
+      {refundTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setRefundTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-5" onClick={e => e.stopPropagation()} data-testid="deposit-refund-modal">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-slate-800">Повернення застави</h3>
+              <button onClick={() => setRefundTarget(null)} className="p-1 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="text-sm text-slate-600 mb-3">
+              <span className="font-semibold">{refundTarget.order_number || refundTarget.customer_name || refundTarget.client_name || '—'}</span>
+              <span className="ml-2 text-slate-400">Доступно: <span className="text-emerald-600 font-bold">{money(refundTarget.available)}</span></span>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">Сума повернення</label>
+                <input type="number" value={refundForm.amount} onChange={e => setRefundForm(f => ({ ...f, amount: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="0" data-testid="refund-amount-input" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">Метод</label>
+                <div className="flex gap-2">
+                  {[{ v: 'cash', l: 'Готівка' }, { v: 'bank', l: 'Безготівка' }].map(m => (
+                    <button key={m.v} onClick={() => setRefundForm(f => ({ ...f, method: m.v }))}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors ${refundForm.method === m.v ? 'border-blue-400 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                      data-testid={`refund-method-${m.v}`}>{m.l}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 block mb-1">Коментар</label>
+                <input type="text" value={refundForm.note} onChange={e => setRefundForm(f => ({ ...f, note: e.target.value }))}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm" placeholder="Примітка..." data-testid="refund-note-input" />
+              </div>
+              <button onClick={handleRefund} disabled={refundSaving || !refundForm.amount || Number(refundForm.amount) <= 0}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl text-sm font-bold transition-colors"
+                data-testid="refund-confirm-btn">
+                {refundSaving ? 'Обробка...' : `Повернути ${refundForm.amount ? money(Number(refundForm.amount)) : ''}`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </section>

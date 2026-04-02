@@ -2919,6 +2919,14 @@ async def get_kasa_data(
             })
         
         # === 2. DEPOSITS ===
+        # For active deposits (held/holding) - ALWAYS show regardless of period
+        # For closed deposits - apply date filter
+        deposit_date_condition = ""
+        if date_filter_deposits:
+            # Strip 'AND' prefix and replace 'd.' with alias
+            df = date_filter_deposits.strip()
+            deposit_date_condition = f"AND (d.status IN ('held', 'holding') OR ({df.replace('AND ', '', 1)}))"
+        
         deposit_rows = db.execute(text(f"""
             SELECT d.id, d.order_id, d.held_amount, d.actual_amount, d.currency,
                    d.exchange_rate, d.used_amount, d.refunded_amount, d.status,
@@ -2927,7 +2935,7 @@ async def get_kasa_data(
                    d.expected_amount
             FROM fin_deposit_holds d
             LEFT JOIN orders o ON o.order_id = d.order_id
-            WHERE 1=1 {date_filter_deposits}
+            WHERE 1=1 {deposit_date_condition}
             ORDER BY d.opened_at DESC
         """))
         

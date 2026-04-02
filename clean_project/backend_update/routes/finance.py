@@ -2919,6 +2919,14 @@ async def get_kasa_data(
             })
         
         # === 2. DEPOSITS ===
+        # For active deposits (held/holding) - ALWAYS show regardless of period
+        # For closed deposits - apply date filter
+        deposit_date_condition = ""
+        if date_filter_deposits:
+            # Strip 'AND' prefix and replace 'd.' with alias
+            df = date_filter_deposits.strip()
+            deposit_date_condition = f"AND (d.status IN ('held', 'holding') OR ({df.replace('AND ', '', 1)}))"
+        
         deposit_rows = db.execute(text(f"""
             SELECT d.id, d.order_id, d.held_amount, d.actual_amount, d.currency,
                    d.exchange_rate, d.used_amount, d.refunded_amount, d.status,
@@ -2927,7 +2935,7 @@ async def get_kasa_data(
                    d.expected_amount
             FROM fin_deposit_holds d
             LEFT JOIN orders o ON o.order_id = d.order_id
-            WHERE 1=1 {date_filter_deposits}
+            WHERE 1=1 {deposit_date_condition}
             ORDER BY d.opened_at DESC
         """))
         
@@ -3066,7 +3074,7 @@ async def get_kasa_data(
             else:
                 collection_bank += float(r[1] or 0)
         
-        # === CLOSED MONTHS: collapse items into summaries ===
+        # === CLOSED MONTHS: summaries only (items stay in their arrays) ===
         _ensure_monthly_reports_table(db)
         closed_months_data = []
         
@@ -3103,27 +3111,27 @@ async def get_kasa_data(
                 "net_total": rd.get("summary", {}).get("net_total", 0),
             })
         
-        # Filter out items from closed months
-        if closed_periods:
-            def is_in_closed(date_str):
-                if not date_str: return False
-                try:
-                    from datetime import datetime as dt
-                    d = dt.fromisoformat(date_str) if isinstance(date_str, str) else date_str
-                    return (d.year, d.month) in closed_periods
-                except: return False
-            
-            income = [i for i in income if not is_in_closed(i.get("date"))]
-            expenses = [e for e in expenses if not is_in_closed(e.get("date"))]
-            refunds = [r for r in refunds if not is_in_closed(r.get("date"))]
-            # Deposits: keep held ones, hide closed ones
-            deposits = [d for d in deposits if not (d.get("status") in ("refunded","closed") and is_in_closed(d.get("opened_at")))]
-            
-            # Recalculate totals for open items only
-            income_cash_total = sum(i["amount"] for i in income if i.get("method") == "cash")
-            income_bank_total = sum(i["amount"] for i in income if i.get("method") != "cash")
-            expenses_cash_total = sum(e["amount"] for e in expenses if e.get("method") == "cash")
-            expenses_bank_total = sum(e["amount"] for e in expenses if e.get("method") != "cash")
+        # Mark each item with its closed status (frontend will group them)
+        def mark_closed_period(item, date_key="date"):
+            d = item.get(date_key)
+            if not d: return item
+            try:
+                from datetime import datetime as dt
+                parsed = dt.fromisoformat(d) if isinstance(d, str) else d
+                item["_closed"] = (parsed.year, parsed.month) in closed_periods
+                item["_period"] = f"{parsed.year}-{parsed.month:02d}"
+            except:
+                item["_closed"] = False
+            return item
+        
+        for i in income: mark_closed_period(i, "date")
+        for e in expenses: mark_closed_period(e, "date")
+        for d in deposits: mark_closed_period(d, "opened_at")
+        
+        # Carry-over balance from last closed month
+        carry_over_balance = 0
+        if closed_months_data:
+            carry_over_balance = closed_months_data[-1].get("closing_cash", 0)
         
         return {
             "period": period,
@@ -3158,6 +3166,7 @@ async def get_kasa_data(
                 "total": collection_cash + collection_bank,
             },
             "closed_months": closed_months_data,
+            "carry_over_balance": carry_over_balance,
             "summary": {
                 "net_cash": income_cash_total - expenses_cash_total,
                 "net_bank": income_bank_total - expenses_bank_total,

@@ -30,6 +30,7 @@ export default function KasaPage({ embedded = false }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [modal, setModal] = useState(null);
   const [activeView, setActiveView] = useState('kasa'); // kasa | plan | debts | report | summary
+  const [mobileSearch, setMobileSearch] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -90,21 +91,23 @@ export default function KasaPage({ embedded = false }) {
 
       {/* Top Bar */}
       <div className={embedded ? "bg-white border-b border-slate-200 rounded-t-xl" : "sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm"}>
-        <div className="max-w-[1800px] mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+        <div className="max-w-[1800px] mx-auto px-3 sm:px-4 py-2 sm:py-3">
+          {/* Row 1: Back + Title + Refresh */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               {!embedded && (
-                <button onClick={() => navigate('/manager-cabinet')} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500" data-testid="back-btn">
-                  <ArrowLeft className="w-5 h-5" />
+                <button onClick={() => navigate('/manager-cabinet')} className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 text-slate-500 flex-shrink-0" data-testid="back-btn">
+                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               )}
-              <div>
-                <h1 className="text-lg font-bold text-slate-800">Каса</h1>
-                <p className="text-xs text-slate-500">{periodLabels[period]}</p>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-lg font-bold text-slate-800">Каса</h1>
+                <p className="text-[11px] sm:text-xs text-slate-500">{periodLabels[period]}</p>
               </div>
             </div>
 
-            <div className="flex bg-slate-100 p-1 rounded-xl" data-testid="period-tabs">
+            {/* Period tabs - hidden on mobile, shown on sm+ */}
+            <div className="hidden sm:flex bg-slate-100 p-1 rounded-xl" data-testid="period-tabs">
               {Object.entries(periodLabels).map(([key, label]) => (
                 <button key={key} onClick={() => changePeriod(key)}
                   className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
@@ -112,39 +115,63 @@ export default function KasaPage({ embedded = false }) {
               ))}
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="relative">
+            <div className="flex items-center gap-2">
+              {/* Search - icon only on mobile */}
+              <div className="relative hidden sm:block">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input type="text" placeholder="Пошук по ордеру, клієнту..." value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm w-48 lg:w-64 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   data-testid="search-input" />
               </div>
-              <button onClick={fetchData} disabled={loading} className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50" data-testid="refresh-btn">
+              <button onClick={() => setMobileSearch(!mobileSearch)} className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50 sm:hidden" data-testid="search-toggle-btn">
+                <Search className="w-4 h-4 text-slate-500" />
+              </button>
+              <button onClick={fetchData} disabled={loading} className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50 flex-shrink-0" data-testid="refresh-btn">
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
 
+          {/* Mobile search bar */}
+          {mobileSearch && (
+            <div className="relative mt-2 sm:hidden">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input type="text" placeholder="Пошук..." value={searchQuery} autoFocus
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-2 rounded-lg border border-slate-300 text-sm w-full focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                data-testid="search-input-mobile" />
+            </div>
+          )}
+
+          {/* Mobile period tabs */}
+          <div className="flex sm:hidden bg-slate-100 p-0.5 rounded-lg mt-2 overflow-x-auto" data-testid="period-tabs-mobile">
+            {Object.entries(periodLabels).map(([key, label]) => (
+              <button key={key} onClick={() => changePeriod(key)}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors whitespace-nowrap flex-1 ${period === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'}`}
+                data-testid={`period-m-${key}`}>{label}</button>
+            ))}
+          </div>
+
           {data && (
-            <div className="flex items-center gap-6 mt-3 pt-3 border-t border-slate-100 text-sm" data-testid="summary-bar">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-slate-100 text-sm" data-testid="summary-bar">
               <SummaryPill icon={Banknote} label="Готівка" value={money(actualCash)} color="green" bold />
               <SummaryPill icon={CreditCard} label="Безготівка" value={money(actualBank)} color="blue" bold />
-              <div className="ml-auto flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto">
                 <button
                   onClick={() => setModal('closeMonth')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold transition-colors shadow-sm"
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-[11px] sm:text-xs font-semibold transition-colors shadow-sm"
                   data-testid="close-month-btn"
                 >
-                  <CalendarCheck className="w-3.5 h-3.5" />
-                  Закрити місяць
+                  <CalendarCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden sm:inline">Закрити місяць</span>
                 </button>
                 <button
                   onClick={() => setModal('collection')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors shadow-sm"
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-semibold transition-colors shadow-sm"
                   data-testid="collection-btn"
                 >
-                  <Landmark className="w-3.5 h-3.5" />
+                  <Landmark className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                   Інкасація
                 </button>
               </div>
@@ -154,22 +181,23 @@ export default function KasaPage({ embedded = false }) {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="max-w-[1800px] mx-auto px-4 pt-4">
-        <div className="flex items-center gap-1 bg-white rounded-xl border border-slate-200 p-1 w-fit">
+      <div className="max-w-[1800px] mx-auto px-3 sm:px-4 pt-3 sm:pt-4">
+        <div className="flex items-center gap-0.5 sm:gap-1 bg-white rounded-xl border border-slate-200 p-0.5 sm:p-1 overflow-x-auto no-scrollbar">
           {[
-            { key: 'kasa', label: 'Каса', icon: Wallet },
-            { key: 'plan', label: 'План надходжень', icon: TrendingUp },
-            { key: 'debts', label: 'Борги менеджерів', icon: Users },
-            { key: 'report', label: 'Звіт витрат', icon: BarChart3 },
-            { key: 'summary', label: 'Зведення каси', icon: ClipboardCheck },
+            { key: 'kasa', label: 'Каса', mobileLabel: 'Каса', icon: Wallet },
+            { key: 'plan', label: 'План надходжень', mobileLabel: 'План', icon: TrendingUp },
+            { key: 'debts', label: 'Борги менеджерів', mobileLabel: 'Борги', icon: Users },
+            { key: 'report', label: 'Звіт витрат', mobileLabel: 'Витрати', icon: BarChart3 },
+            { key: 'summary', label: 'Зведення каси', mobileLabel: 'Зведення', icon: ClipboardCheck },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveView(tab.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0 ${
                 activeView === tab.key ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`}
               data-testid={`tab-${tab.key}`}>
-              <tab.icon className="w-3.5 h-3.5" />
-              {tab.label}
+              <tab.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+              <span className="sm:hidden">{tab.mobileLabel}</span>
+              <span className="hidden sm:inline">{tab.label}</span>
             </button>
           ))}
         </div>
@@ -177,13 +205,13 @@ export default function KasaPage({ embedded = false }) {
 
       {/* Kasa Main View */}
       {activeView === 'kasa' && (
-      <main className="max-w-[1800px] mx-auto px-4 py-6" data-testid="kasa-columns">
+      <main className="max-w-[1800px] mx-auto px-3 sm:px-4 py-4 sm:py-6" data-testid="kasa-columns">
         {loading ? (
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {[1,2,3].map(i => <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 h-96 animate-pulse" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <IncomeColumn items={filteredIncome} totals={income} navigate={navigate} onAdd={() => setModal('income')} closedMonths={closedMonths} carryOver={data?.carry_over_balance || 0} />
             <DepositsColumn items={filteredDeposits} totals={deposits} navigate={navigate} onAdd={() => setModal('deposit')} onRefresh={fetchData} />
             <ExpensesColumn items={filteredExpenses} totals={expenses} onAdd={() => setModal('expense')} closedMonths={closedMonths} />
@@ -771,27 +799,27 @@ function ColumnHeader({ icon: Icon, title, count, total, totalLabel, color, onAd
   const btnColor = { emerald: 'bg-emerald-600 hover:bg-emerald-700', amber: 'bg-amber-600 hover:bg-amber-700', rose: 'bg-rose-600 hover:bg-rose-700' };
 
   return (
-    <div className={`px-5 py-4 border-b ${border[color]} ${bg[color]}`}>
+    <div className={`px-3 sm:px-5 py-3 sm:py-4 border-b ${border[color]} ${bg[color]}`}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${iconBg[color]}`}>
-            <Icon className="w-4 h-4" />
+        <div className="flex items-center gap-2 min-w-0">
+          <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg[color]}`}>
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </div>
-          <div>
-            <h3 className="font-semibold text-slate-800">{title}</h3>
-            <p className="text-xs text-slate-500">{count} операцій</p>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-slate-800 text-sm sm:text-base">{title}</h3>
+            <p className="text-[11px] sm:text-xs text-slate-500">{count} операцій</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className="text-right">
-            <div className={`font-bold text-lg ${totalColor[color]}`}>{totalLabel || money(total)}</div>
+            <div className={`font-bold text-base sm:text-lg ${totalColor[color]}`}>{totalLabel || money(total)}</div>
           </div>
           <button
             onClick={onAdd}
-            className={`w-8 h-8 rounded-lg text-white flex items-center justify-center transition-colors shadow-sm ${btnColor[color]}`}
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-white flex items-center justify-center transition-colors shadow-sm ${btnColor[color]}`}
             data-testid={`add-${color}-btn`}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>

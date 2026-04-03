@@ -30,9 +30,10 @@ A comprehensive rental management platform (RentalHub) for FarforRent — a deco
 - Evening cash summary reconciliation
 - Admin Panel "Orders Management" tab with full financial CRUD
 - Deposit linking to both Orders and Clients
-- **Deposits column fully decoupled from monthly closing (Inkasatsiia)**
-- **Flat deposit list: Active (held/holding/partially_used) at top, Closed (refunded/fully_used) at bottom**
-- **Deposit refund directly from Kasa for client-only deposits (not tied to orders)**
+- Deposits column fully decoupled from monthly closing (Inkasatsiia)
+- Flat deposit list: Active at top, Closed at bottom
+- Deposit refund directly from Kasa for client-only deposits
+- **Kasa page fully responsive for mobile devices**
 
 ## Production Build Process
 1. Update `/app/frontend/.env`: `REACT_APP_BACKEND_URL=https://backrentalhub.farforrent.com.ua`

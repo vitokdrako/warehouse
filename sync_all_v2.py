@@ -452,14 +452,14 @@ def push_quantities_to_opencart():
             return 0
 
         count = 0
+        skipped = 0
         for p in rh_products:
             product_id = p['product_id']
             qty = p['quantity'] or 0
             oc_cur.execute("""
                 UPDATE oc_product SET quantity = %s WHERE product_id = %s
             """, (qty, product_id))
-            if oc_cur.rowcount > 0:
-                count += 1
+            count += 1
 
         oc.commit()
         log(f"    Pushed {count} quantities to OpenCart")
@@ -564,7 +564,7 @@ def sync_orders_from_opencart():
                         status, total_price, deposit_amount, total_loss_value,
                         notes, created_at, synced_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
                     )
                 """, (
                     order_id, f"OC-{order_id}", order['customer_id'], customer_name,

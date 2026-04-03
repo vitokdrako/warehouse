@@ -3630,7 +3630,7 @@ async def get_expected_income(
     target_year = year or now.year
     
     try:
-        # All orders with events in the target month
+        # All orders with event START in the target month (each order belongs to ONE month only)
         rows = db.execute(text("""
             SELECT o.order_id, o.order_number, o.customer_name, o.status,
                    o.total_price, o.discount_amount, o.service_fee,
@@ -3643,10 +3643,7 @@ async def get_expected_income(
             FROM orders o
             LEFT JOIN users u ON u.user_id = o.manager_id
             WHERE o.status NOT IN ('cancelled', 'deleted')
-            AND (
-                (MONTH(o.rental_start_date) = :month AND YEAR(o.rental_start_date) = :year)
-                OR (MONTH(o.rental_end_date) = :month AND YEAR(o.rental_end_date) = :year)
-            )
+            AND MONTH(o.rental_start_date) = :month AND YEAR(o.rental_start_date) = :year
             ORDER BY o.rental_start_date ASC
         """), {"month": target_month, "year": target_year})
         

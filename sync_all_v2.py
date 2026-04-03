@@ -605,6 +605,18 @@ def sync_orders_from_opencart():
                 synced_count += 1
                 log(f"    Imported order #{order_id} ({customer_name})")
 
+                # Mark as sent to RH in OpenCart
+                try:
+                    oc_cur.execute("""
+                        UPDATE oc_order 
+                        SET order_status_id = 29 
+                        WHERE order_id = %s
+                    """, (order_id,))
+                    oc_conn.commit()
+                    log(f"    OC #{order_id} -> status 29")
+                except Exception as oc_err:
+                    log(f"    Failed to update OC status for #{order_id}: {oc_err}")
+
             except mysql.connector.IntegrityError:
                 log(f"    Order {order_id} already exists, skipping")
                 rh_conn.rollback()

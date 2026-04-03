@@ -1001,19 +1001,24 @@ function DepositsColumn({ items, totals, navigate, onAdd, onRefresh }) {
     const curr = item.currency === 'USD' ? '$' : item.currency === 'EUR' ? '€' : '₴';
     const isActive = activeStatuses.includes(item.status);
     const canRefund = isActive && item.available > 0;
+    const isCash = (item.method || 'cash') === 'cash';
     return (
       <div key={item.id}
         className="px-3 py-2.5 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50/30 transition-all"
         data-testid={`deposit-item-${item.id}`}>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
             <span className="text-xs font-semibold text-slate-700 cursor-pointer"
               onClick={() => item.order_id && navigate(`/order/${item.order_id}/return-settlement`)}>
               {item.order_number || (item.client_name ? `Клієнт` : '—')}
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${st.cls}`}>{st.label}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${isCash ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}
+              data-testid={`deposit-method-${item.id}`}>
+              {isCash ? 'Гот' : 'Безгот'}
+            </span>
           </div>
-          <div className="font-bold text-amber-700 text-sm">{curr}{fmtUA(item.actual_amount)}</div>
+          <div className="font-bold text-amber-700 text-sm flex-shrink-0 ml-2">{curr}{fmtUA(item.actual_amount)}</div>
         </div>
         <div className="flex items-center justify-between mt-1">
           <span className="text-xs text-slate-500 truncate">{item.customer_name || item.client_name || '—'}</span>

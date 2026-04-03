@@ -2964,7 +2964,13 @@ async def get_kasa_data(
                    d.opened_at, d.closed_at, d.note,
                    o.order_number, o.customer_name,
                    d.expected_amount, d.client_user_id,
-                   cu.full_name as client_name
+                   cu.full_name as client_name,
+                   (SELECT p.method FROM fin_payments p 
+                    WHERE p.payment_type = 'deposit' AND p.status IN ('completed','confirmed')
+                    AND (p.order_id = d.order_id OR (d.order_id IS NULL AND p.amount = d.held_amount 
+                         AND p.occurred_at >= d.opened_at - INTERVAL 1 MINUTE 
+                         AND p.occurred_at <= d.opened_at + INTERVAL 1 MINUTE))
+                    ORDER BY p.occurred_at DESC LIMIT 1) as payment_method
             FROM fin_deposit_holds d
             LEFT JOIN orders o ON o.order_id = d.order_id
             LEFT JOIN client_users cu ON cu.id = d.client_user_id
@@ -3006,6 +3012,7 @@ async def get_kasa_data(
                 "expected_amount": float(r[14] or 0),
                 "client_user_id": r[15],
                 "client_name": r[16],
+                "method": r[17] or "cash",
             })
         
         # Deposit payments (to know cash/bank)

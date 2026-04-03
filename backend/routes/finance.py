@@ -3639,7 +3639,26 @@ async def get_expected_income(
                    COALESCE((SELECT SUM(p.amount) FROM fin_payments p 
                              WHERE p.order_id = o.order_id 
                              AND p.payment_type IN ('rent','additional')
-                             AND p.status IN ('completed','confirmed')), 0) as paid_amount
+                             AND p.status IN ('completed','confirmed')), 0) as paid_amount,
+                   (SELECT p.method FROM fin_payments p 
+                    WHERE p.order_id = o.order_id 
+                    AND p.payment_type IN ('rent','additional')
+                    AND p.status IN ('completed','confirmed')
+                    ORDER BY p.occurred_at DESC LIMIT 1) as last_method,
+                   (SELECT MAX(p.occurred_at) FROM fin_payments p 
+                    WHERE p.order_id = o.order_id 
+                    AND p.payment_type IN ('rent','additional')
+                    AND p.status IN ('completed','confirmed')) as last_paid_at,
+                   (SELECT SUM(p.amount) FROM fin_payments p 
+                    WHERE p.order_id = o.order_id 
+                    AND p.payment_type IN ('rent','additional')
+                    AND p.status IN ('completed','confirmed')
+                    AND p.method = 'cash') as paid_cash,
+                   (SELECT SUM(p.amount) FROM fin_payments p 
+                    WHERE p.order_id = o.order_id 
+                    AND p.payment_type IN ('rent','additional')
+                    AND p.status IN ('completed','confirmed')
+                    AND p.method != 'cash') as paid_bank
             FROM orders o
             LEFT JOIN users u ON u.user_id = o.manager_id
             WHERE o.status NOT IN ('cancelled', 'deleted')
@@ -3678,6 +3697,10 @@ async def get_expected_income(
                 "rental_end": r[8].isoformat() if r[8] else None,
                 "manager": r[9],
                 "payment_status": "paid" if debt == 0 else ("partial" if paid > 0 else "unpaid"),
+                "last_method": r[11],
+                "last_paid_at": r[12].isoformat() if r[12] else None,
+                "paid_cash": float(r[13] or 0),
+                "paid_bank": float(r[14] or 0),
             })
         
         return {

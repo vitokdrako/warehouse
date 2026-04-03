@@ -265,6 +265,24 @@ function ExpectedIncomeView() {
     return <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">Не оплачено</span>;
   };
 
+  const fmtDate = (d) => { if (!d) return '—'; const dt = new Date(d); return `${dt.getDate().toString().padStart(2,'0')}.${(dt.getMonth()+1).toString().padStart(2,'0')}.${dt.getFullYear()}`; };
+
+  const methodBadge = (item) => {
+    if (item.paid === 0) return <span className="text-slate-300">—</span>;
+    const hasCash = item.paid_cash > 0;
+    const hasBank = item.paid_bank > 0;
+    if (hasCash && hasBank) {
+      return (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium">Гот {money(item.paid_cash)}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium">Безгот {money(item.paid_bank)}</span>
+        </div>
+      );
+    }
+    if (hasCash) return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-medium">Готівка</span>;
+    return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium">Безготівка</span>;
+  };
+
   const MONTHS = ['Січень','Лютий','Березень','Квітень','Травень','Червень','Липень','Серпень','Вересень','Жовтень','Листопад','Грудень'];
 
   return (
@@ -303,23 +321,27 @@ function ExpectedIncomeView() {
                 <th className="text-left px-4 py-2 font-medium">Дата події</th>
                 <th className="text-right px-4 py-2 font-medium">Сума</th>
                 <th className="text-right px-4 py-2 font-medium">Оплачено</th>
+                <th className="text-center px-4 py-2 font-medium">Метод</th>
+                <th className="text-center px-4 py-2 font-medium">Дата оплати</th>
                 <th className="text-right px-4 py-2 font-medium">Борг</th>
                 <th className="text-center px-4 py-2 font-medium">Статус</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {loading ? (
-                <tr><td colSpan="8" className="text-center py-8 text-slate-400">Завантаження...</td></tr>
+                <tr><td colSpan="10" className="text-center py-8 text-slate-400">Завантаження...</td></tr>
               ) : data?.items?.length === 0 ? (
-                <tr><td colSpan="8" className="text-center py-8 text-slate-400">Немає замовлень за цей місяць</td></tr>
+                <tr><td colSpan="10" className="text-center py-8 text-slate-400">Немає замовлень за цей місяць</td></tr>
               ) : data?.items?.map(item => (
                 <tr key={item.order_id} className={`hover:bg-slate-50 ${item.payment_status === 'paid' ? 'opacity-50' : ''}`}>
                   <td className="px-4 py-2.5 font-semibold text-blue-600">{item.order_number}</td>
                   <td className="px-4 py-2.5 text-slate-700">{item.customer_name}</td>
                   <td className="px-4 py-2.5 text-slate-500">{item.manager || '—'}</td>
-                  <td className="px-4 py-2.5 text-slate-500">{item.rental_start ? new Date(item.rental_start).toLocaleDateString('uk-UA') : '—'}</td>
+                  <td className="px-4 py-2.5 text-slate-500">{fmtDate(item.rental_start)}</td>
                   <td className="px-4 py-2.5 text-right font-medium text-slate-700">{money(item.order_total)}</td>
                   <td className="px-4 py-2.5 text-right font-medium text-emerald-600">{money(item.paid)}</td>
+                  <td className="px-4 py-2.5 text-center">{methodBadge(item)}</td>
+                  <td className="px-4 py-2.5 text-center text-slate-500 text-[11px]">{item.last_paid_at ? fmtDate(item.last_paid_at) : '—'}</td>
                   <td className="px-4 py-2.5 text-right font-bold text-red-600">{item.debt > 0 ? money(item.debt) : '—'}</td>
                   <td className="px-4 py-2.5 text-center">{statusBadge(item.payment_status)}</td>
                 </tr>

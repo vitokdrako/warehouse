@@ -58,9 +58,6 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 IMAGE_TIMEOUT = 30
 MAX_RETRIES = 2
 
-# Статус в OC після імпорту в RH
-OC_STATUS_SENT_TO_RH = 29
-
 
 def log(msg):
     """Log with timestamp"""
@@ -474,8 +471,9 @@ def push_quantities_to_opencart():
 
 def sync_orders_from_opencart():
     """
-    Sync NEW orders from OpenCart (order_status_id = 2 "В обробці").
-    After successful import, update OC status to 29 (Відправлено в РХ).
+    Sync NEW orders from OpenCart (order_status_id = 2).
+    Does NOT change status in OC.
+    Checks by order_id if already exists in RH to prevent duplicates.
     """
     log("  Syncing NEW orders from OpenCart...")
     try:
@@ -484,12 +482,12 @@ def sync_orders_from_opencart():
         oc_cur = oc_conn.cursor(dictionary=True)
         rh_cur = rh_conn.cursor()
 
-        # Знайти останнє синхронізоване замовлення
-        rh_cur.execute("SELECT MAX(order_id) FROM orders")
-        last_synced = rh_cur.fetchone()[0] or 0
-        log(f"    Last synced order_id: {last_synced}")
+        # Get ALL existing order IDs in RentalHub
+        rh_cur.execute("SELECT order_id FROM orders")
+        existing_ids = set(row[0] for row in rh_cur.fetchall())
+        log(f"    Orders in RH: {len(existing_ids)}")
 
-        # Витягнути НОВІ замовлення зі статусом 2 (В обробці)
+        # Get orders with status=2 from OC
         oc_cur.execute("""
             SELECT 
                 o.order_id, o.order_status_id, o.customer_id,
@@ -499,22 +497,20 @@ def sync_orders_from_opencart():
             FROM oc_order o
             LEFT JOIN oc_order_simple_fields osf ON o.order_id = osf.order_id
             WHERE o.order_status_id = 2
-              AND o.order_id > %s
             ORDER BY o.order_id ASC
-            LIMIT 50
-        """, (last_synced,))
+        """)
 
-        new_orders = oc_cur.fetchall()
-        log(f"    Found {len(new_orders)} new orders with status=2")
+        oc_orders = oc_cur.fetchall()
+        # Filter out already imported
+        new_orders = [o for o in oc_orders if o['order_id'] not in existing_ids]
+        log(f"    OC orders with status=2: {len(oc_orders)}, new: {len(new_orders)}")
 
         synced_count = 0
-        marked_count = 0
 
         for order in new_orders:
             order_id = order['order_id']
             customer_name = f"{order['firstname']} {order['lastname']}".strip()
 
-            # Отримати товари замовлення
             oc_cur.execute("""
                 SELECT 
                     op.order_product_id, op.product_id, op.name as product_name,
@@ -530,7 +526,6 @@ def sync_orders_from_opencart():
                 log(f"    Order {order_id} has no items, skipping")
                 continue
 
-            # Розрахунки
             total_rental = sum(float(item['total'] or 0) for item in order_items)
             total_deposit = 0
             total_loss_value = 0
@@ -540,7 +535,6 @@ def sync_orders_from_opencart():
                 total_deposit += (ean_value / 2) * quantity
                 total_loss_value += ean_value * quantity
 
-            # Dates
             rental_start = order['rent_issue_date'] or order['date_added'].date()
             rental_end = order['rent_return_date'] or order['date_added'].date()
             rental_days = None
@@ -555,7 +549,6 @@ def sync_orders_from_opencart():
                     rental_days = 1
 
             try:
-                # Insert order into RentalHub
                 rh_cur.execute("""
                     INSERT INTO orders (
                         order_id, order_number, customer_id, customer_name, 
@@ -574,7 +567,6 @@ def sync_orders_from_opencart():
                     order['comment'], order['date_added']
                 ))
 
-                # Insert order items
                 for item in order_items:
                     image_url = None
                     if item['image']:
@@ -589,7 +581,6 @@ def sync_orders_from_opencart():
                         item['quantity'], item['price'], item['total'], image_url
                     ))
 
-                # Insert client comment if exists
                 client_comment = order.get('comment', '').strip() if order.get('comment') else ''
                 if client_comment:
                     rh_cur.execute("""
@@ -598,7 +589,6 @@ def sync_orders_from_opencart():
                         VALUES (%s, %s, %s, %s, NOW())
                     """, (order_id, None, 'Komentap klienta', client_comment))
 
-                # Auto-create/link client
                 try:
                     client_user_id = ensure_client_from_order(
                         rh_cur, customer_name, order['telephone'], order['email']
@@ -615,31 +605,16 @@ def sync_orders_from_opencart():
                 synced_count += 1
                 log(f"    Imported order #{order_id} ({customer_name})")
 
-                # ============================================
-                # MARK ORDER AS SENT TO RH IN OPENCART
-                # ============================================
-                try:
-                    oc_cur.execute("""
-                        UPDATE oc_order SET order_status_id = %s WHERE order_id = %s
-                    """, (OC_STATUS_SENT_TO_RH, order_id))
-
-                    oc_cur.execute("""
-                        INSERT INTO oc_order_history 
-                        (order_id, order_status_id, notify, comment, date_added)
-                        VALUES (%s, %s, 0, %s, NOW())
-                    """, (order_id, OC_STATUS_SENT_TO_RH, 'Auto: Vidpravleno v RentalHub'))
-
-                    oc_conn.commit()
-                    marked_count += 1
-                    log(f"    OC order #{order_id} -> status {OC_STATUS_SENT_TO_RH}")
-                except Exception as oc_err:
-                    log(f"    Failed to update OC status for #{order_id}: {oc_err}")
-
             except mysql.connector.IntegrityError:
-                log(f"    Order {order_id} already exists")
+                log(f"    Order {order_id} already exists, skipping")
+                rh_conn.rollback()
+                continue
+            except Exception as e:
+                log(f"    Error importing order {order_id}: {e}")
+                rh_conn.rollback()
                 continue
 
-        log(f"    Synced {synced_count} orders, marked {marked_count} in OpenCart")
+        log(f"    Synced {synced_count} new orders")
         oc_cur.close(); rh_cur.close(); oc_conn.close(); rh_conn.close()
         return synced_count
     except Exception as e:

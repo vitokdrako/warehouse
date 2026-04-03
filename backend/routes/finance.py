@@ -4037,12 +4037,37 @@ async def get_expense_report(
         
         by_detail = [{"code": r[0], "name": r[1] or "Без категорії", "parent_code": r[2], "parent_name": r[3], "total": float(r[4]), "count": r[5]} for r in detail_rows]
         
+        # Individual expense items
+        item_rows = db.execute(text(f"""
+            SELECT e.id, e.amount, e.method, e.occurred_at, e.note,
+                   c.code as cat_code, c.name as cat_name,
+                   COALESCE(pc.code, c.code) as parent_code,
+                   COALESCE(pc.name, c.name) as parent_name,
+                   e.funding_source
+            FROM fin_expenses e
+            LEFT JOIN fin_categories c ON c.id = e.category_id
+            LEFT JOIN fin_categories pc ON pc.id = c.parent_id
+            WHERE e.status = 'posted' AND e.expense_type != 'collection'
+            {date_filter} {cat_filter}
+            ORDER BY e.occurred_at DESC
+        """), params)
+        
+        items = [{
+            "id": r[0], "amount": float(r[1]), "method": r[2], 
+            "occurred_at": r[3].isoformat() if r[3] else None,
+            "note": r[4] or "",
+            "cat_code": r[5], "cat_name": r[6] or "Без категорії",
+            "parent_code": r[7], "parent_name": r[8] or "Без категорії",
+            "funding_source": r[9],
+        } for r in item_rows]
+        
         grand_total = sum(g["total"] for g in by_group)
         
         return {
             "period": period,
             "by_group": by_group,
             "by_detail": by_detail,
+            "items": items,
             "grand_total": grand_total,
         }
     except Exception as e:

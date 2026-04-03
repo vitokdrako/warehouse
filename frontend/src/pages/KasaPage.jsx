@@ -495,6 +495,8 @@ function ExpenseReportView() {
   const [selectedCodes, setSelectedCodes] = useState(new Set());
   const [expandedParents, setExpandedParents] = useState({});
   const [allExpenses, setAllExpenses] = useState([]);
+  const [allItems, setAllItems] = useState([]);
+  const [expandedGroups, setExpandedGroups] = useState({});
 
   // Load categories
   useEffect(() => {
@@ -503,11 +505,9 @@ function ExpenseReportView() {
       .then(d => {
         const tree = (d.tree || []).filter(p => p.code !== 'COLLECTION');
         setCategoryTree(tree);
-        // Select all by default
         const allCodes = new Set();
         tree.forEach(p => { allCodes.add(p.code); (p.children || []).forEach(c => allCodes.add(c.code)); });
         setSelectedCodes(allCodes);
-        // Expand all parents
         const exp = {};
         tree.forEach(p => { exp[p.code] = true; });
         setExpandedParents(exp);
@@ -519,11 +519,21 @@ function ExpenseReportView() {
     setLoading(true);
     authFetch(`${BACKEND_URL}/api/finance/expense-report?period=${period}`)
       .then(r => r.json())
-      .then(d => { setAllExpenses(d.by_detail || []); setLoading(false); })
+      .then(d => { 
+        setAllExpenses(d.by_detail || []); 
+        setAllItems(d.items || []);
+        // Expand all groups by default
+        const eg = {};
+        (d.by_detail || []).forEach(det => { eg[det.parent_code || det.code] = true; });
+        setExpandedGroups(eg);
+        setLoading(false); 
+      })
       .catch(() => setLoading(false));
   }, [period]);
 
   const money = (v) => Number(v || 0).toLocaleString('uk-UA', { minimumFractionDigits: 0 });
+  const fmtDate = (d) => { if (!d) return '—'; const dt = new Date(d); return `${dt.getDate().toString().padStart(2,'0')}.${(dt.getMonth()+1).toString().padStart(2,'0')}`; };
+  const fmtDateTime = (d) => { if (!d) return '—'; const dt = new Date(d); return `${dt.getDate().toString().padStart(2,'0')}.${(dt.getMonth()+1).toString().padStart(2,'0')} ${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`; };
 
   const toggleParent = (code) => {
     setExpandedParents(p => ({ ...p, [code]: !p[code] }));
@@ -550,17 +560,17 @@ function ExpenseReportView() {
     });
   };
 
-  // Filter expenses by selected codes
-  const filtered = allExpenses.filter(e => selectedCodes.has(e.code) || selectedCodes.has(e.parent_code));
-  const filteredTotal = filtered.reduce((s, e) => s + e.total, 0);
+  // Filter items by selected codes
+  const filteredItems = allItems.filter(e => selectedCodes.has(e.cat_code) || selectedCodes.has(e.parent_code));
+  const filteredTotal = filteredItems.reduce((s, e) => s + e.amount, 0);
 
-  // Group filtered by parent
+  // Group filtered items by parent category
   const grouped = {};
-  filtered.forEach(d => {
-    const key = d.parent_code || d.code;
-    if (!grouped[key]) grouped[key] = { name: d.parent_name, items: [], total: 0 };
-    grouped[key].items.push(d);
-    grouped[key].total += d.total;
+  filteredItems.forEach(item => {
+    const key = item.parent_code || item.cat_code;
+    if (!grouped[key]) grouped[key] = { name: item.parent_name, items: [], total: 0 };
+    grouped[key].items.push(item);
+    grouped[key].total += item.amount;
   });
 
   const periods = [
@@ -570,9 +580,9 @@ function ExpenseReportView() {
   ];
 
   return (
-    <div className="max-w-[1800px] mx-auto px-4 py-6">
+    <div className="max-w-[1800px] mx-auto px-3 sm:px-4 py-4 sm:py-6">
       {/* Period filter */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         {periods.map(p => (
           <button key={p.value} onClick={() => setPeriod(p.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -582,13 +592,13 @@ function ExpenseReportView() {
         <div className="ml-auto text-lg font-bold text-rose-600">{money(filteredTotal)} ₴</div>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col lg:flex-row gap-4">
         {/* Left: Category checkboxes */}
-        <div className="w-72 flex-shrink-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="w-full lg:w-72 flex-shrink-0 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-3 border-b border-slate-100">
             <div className="text-xs font-bold text-slate-700">Статті витрат</div>
           </div>
-          <div className="max-h-[600px] overflow-y-auto">
+          <div className="max-h-[400px] lg:max-h-[600px] overflow-y-auto">
             {categoryTree.map(parent => {
               const children = parent.children || [];
               const parentChecked = selectedCodes.has(parent.code);
@@ -628,36 +638,77 @@ function ExpenseReportView() {
           </div>
         </div>
 
-        {/* Right: Results */}
+        {/* Right: Detailed Results */}
         <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100">
-            <h2 className="text-sm font-bold text-slate-800">Результати</h2>
+          <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-800">Деталізація витрат</h2>
+            <span className="text-xs text-slate-400">{filteredItems.length} записів</span>
           </div>
           {loading ? (
             <div className="p-8 text-center text-slate-400 text-sm">Завантаження...</div>
           ) : Object.keys(grouped).length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-sm">Немає витрат за обраний період / оберіть категорії</div>
+            <div className="p-8 text-center text-slate-400 text-sm">Немає витрат за обраний період</div>
           ) : (
-            <div className="divide-y divide-slate-100">
-              {Object.entries(grouped).sort(([,a],[,b]) => b.total - a.total).map(([code, group]) => (
-                <div key={code} className="px-4 py-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-slate-700">{group.name}</span>
-                    <span className="text-sm font-bold text-rose-600">{money(group.total)} ₴</span>
-                  </div>
-                  <div className="space-y-1 pl-3">
-                    {group.items.sort((a,b) => b.total - a.total).map(item => (
-                      <div key={item.code} className="flex items-center justify-between py-1 text-xs">
-                        <span className="text-slate-500">{item.name}</span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-slate-400">{item.count}x</span>
-                          <span className="font-semibold text-slate-700 w-20 text-right">{money(item.total)} ₴</span>
-                        </div>
+            <div className="divide-y divide-slate-100 max-h-[calc(100vh-300px)] overflow-y-auto">
+              {Object.entries(grouped).sort(([,a],[,b]) => b.total - a.total).map(([code, group]) => {
+                const isOpen = expandedGroups[code] !== false;
+                return (
+                  <div key={code}>
+                    <button onClick={() => setExpandedGroups(g => ({ ...g, [code]: !isOpen }))}
+                      className="w-full px-3 sm:px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                      data-testid={`group-${code}`}>
+                      <div className="flex items-center gap-2">
+                        <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                        <span className="text-sm font-semibold text-slate-700">{group.name}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500">{group.items.length}</span>
                       </div>
-                    ))}
+                      <span className="text-sm font-bold text-rose-600">{money(group.total)} ₴</span>
+                    </button>
+                    {isOpen && (
+                      <div className="bg-slate-50/50">
+                        {/* Table header */}
+                        <div className="hidden sm:grid grid-cols-12 gap-2 px-4 py-1.5 text-[10px] uppercase tracking-wider font-semibold text-slate-400 border-b border-slate-100">
+                          <div className="col-span-1">Дата</div>
+                          <div className="col-span-2">Категорія</div>
+                          <div className="col-span-5">Опис</div>
+                          <div className="col-span-2">Метод</div>
+                          <div className="col-span-2 text-right">Сума</div>
+                        </div>
+                        {group.items.map(item => (
+                          <div key={item.id} className="px-3 sm:px-4 py-2 border-b border-slate-100/50 hover:bg-white/60 transition-colors">
+                            {/* Desktop */}
+                            <div className="hidden sm:grid grid-cols-12 gap-2 items-center text-xs">
+                              <div className="col-span-1 text-slate-500 font-mono">{fmtDate(item.occurred_at)}</div>
+                              <div className="col-span-2 text-slate-600">{item.cat_name}</div>
+                              <div className="col-span-5 text-slate-700 break-words whitespace-pre-line">{item.note || '—'}</div>
+                              <div className="col-span-2">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${item.method === 'cash' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}`}>
+                                  {item.method === 'cash' ? 'Готівка' : 'Безготівка'}
+                                </span>
+                              </div>
+                              <div className="col-span-2 text-right font-bold text-rose-600">{money(item.amount)} ₴</div>
+                            </div>
+                            {/* Mobile */}
+                            <div className="sm:hidden">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[11px] text-slate-400 font-mono">{fmtDateTime(item.occurred_at)}</span>
+                                  <span className={`text-[10px] px-1 py-0.5 rounded ${item.method === 'cash' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>
+                                    {item.method === 'cash' ? 'Гот' : 'Безгот'}
+                                  </span>
+                                </div>
+                                <span className="font-bold text-rose-600 text-xs">{money(item.amount)} ₴</span>
+                              </div>
+                              <div className="text-[11px] text-slate-600 mt-0.5">{item.cat_name}</div>
+                              {item.note && <div className="text-[11px] text-slate-500 mt-0.5 whitespace-pre-line">{item.note}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

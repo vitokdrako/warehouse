@@ -1044,12 +1044,29 @@ function DepositsColumn({ items, totals, navigate, onAdd, onRefresh }) {
     );
   };
 
+  // Cash totals by currency (from active deposits)
+  const cashByCurr = { UAH: 0, USD: 0, EUR: 0 };
+  const bankTotal = { UAH: 0 };
+  activeItems.forEach(i => {
+    const c = i.currency || 'UAH';
+    const amt = i.actual_amount || 0;
+    if ((i.method || 'cash') === 'cash') {
+      cashByCurr[c] = (cashByCurr[c] || 0) + amt;
+    } else {
+      bankTotal.UAH += (i.held_amount || amt);
+    }
+  });
+
   return (
     <section className="rounded-2xl border border-amber-200 ring-2 ring-amber-100 bg-white shadow-sm flex flex-col" data-testid="deposits-column">
       <ColumnHeader icon={Shield} title="Застави" count={activeItems.length} total={totals.held_total} color="amber" onAdd={onAdd}>
-        <div className="flex gap-3 mt-1.5 pt-1.5 border-t border-amber-100 text-[11px]">
-          <span className="text-slate-500"><Banknote className="w-3 h-3 inline mr-0.5" />Гот: {money(totals.cash_received || 0)}</span>
-          <span className="text-slate-500"><CreditCard className="w-3 h-3 inline mr-0.5" />Безгот: {money(totals.bank_received || 0)}</span>
+        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 pt-1.5 border-t border-amber-100 text-[11px]">
+          <span className="text-green-600 font-medium"><Banknote className="w-3 h-3 inline mr-0.5" />Гот:</span>
+          {cashByCurr.UAH > 0 && <span className="text-slate-600">₴{fmtUA(cashByCurr.UAH)}</span>}
+          {cashByCurr.USD > 0 && <span className="text-slate-600">${fmtUA(cashByCurr.USD)}</span>}
+          {cashByCurr.EUR > 0 && <span className="text-slate-600">€{fmtUA(cashByCurr.EUR)}</span>}
+          {cashByCurr.UAH === 0 && cashByCurr.USD === 0 && cashByCurr.EUR === 0 && <span className="text-slate-400">₴0</span>}
+          <span className="text-blue-600 font-medium"><CreditCard className="w-3 h-3 inline mr-0.5" />Безгот: ₴{fmtUA(bankTotal.UAH)}</span>
           <span className="text-rose-500 ml-auto">Утрим: {money(totals.used_total)}</span>
           <span className="text-blue-500">Поверн: {money(totals.refunded_total)}</span>
         </div>

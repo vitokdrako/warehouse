@@ -22,7 +22,7 @@ const STATUS_COLORS = {
   completed: 'bg-emerald-100 text-emerald-700', cancelled: 'bg-red-100 text-red-600',
 }
 const PAYMENT_TYPE_LABELS = { rent: 'Оренда', additional: 'Допослуга', deposit: 'Застава', damage: 'Збиток', late: 'Прострочення', deposit_refund: 'Повернення', loss: 'Втрата', discount: 'Знижка' }
-const DEPOSIT_STATUS_LABELS = { held: 'Утримано', refunded: 'Повернено', partial: 'Частково', closed: 'Закрито' }
+const DEPOSIT_STATUS_LABELS = { held: 'Утримано', holding: 'Утримано', refunded: 'Повернено', partial: 'Частково', partially_used: 'Частково', fully_used: 'Використано', closed: 'Закрито' }
 
 export default function OrdersManagementTab() {
   const [orders, setOrders] = useState([])
@@ -243,7 +243,7 @@ export default function OrdersManagementTab() {
                     <td className="px-2 py-2 text-emerald-600 font-medium">{o.paid_rent > 0 ? `₴${fmtUA(o.paid_rent)}` : '—'}</td>
                     <td className={`px-2 py-2 font-bold ${o.debt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{o.debt > 0 ? `₴${fmtUA(o.debt)}` : <Check className="w-3.5 h-3.5" />}</td>
                     <td className="px-2 py-2">
-                      <span className={`px-1 py-0.5 rounded text-[10px] ${o.deposit_status === 'refunded' ? 'bg-emerald-100 text-emerald-700' : o.deposit_status === 'held' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`px-1 py-0.5 rounded text-[10px] ${o.deposit_status === 'refunded' ? 'bg-emerald-100 text-emerald-700' : ['held','holding','partially_used'].includes(o.deposit_status) ? 'bg-amber-100 text-amber-700' : o.deposit_status === 'fully_used' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
                         {o.deposit_held > 0 ? `₴${fmtUA(o.deposit_held)}` : '—'} {DEPOSIT_STATUS_LABELS[o.deposit_status] || ''}
                       </span>
                     </td>
@@ -399,7 +399,7 @@ export default function OrdersManagementTab() {
                                 {o.deposit_used > 0 && <div className="flex justify-between"><span className="text-slate-500">Використано:</span><span className="text-rose-600">₴{fmtUA(o.deposit_used)}</span></div>}
                                 <div className="flex justify-between"><span className="text-slate-500">Повернено:</span><span className="text-emerald-600">₴{fmtUA(o.deposit_refunded)}</span></div>
                                 <div className="flex justify-between"><span className="text-slate-500">Статус:</span>
-                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.deposit_status === 'refunded' ? 'bg-emerald-100 text-emerald-700' : o.deposit_status === 'held' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${o.deposit_status === 'refunded' ? 'bg-emerald-100 text-emerald-700' : ['held','holding','partially_used'].includes(o.deposit_status) ? 'bg-amber-100 text-amber-700' : o.deposit_status === 'fully_used' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
                                     {DEPOSIT_STATUS_LABELS[o.deposit_status] || o.deposit_status || '—'}
                                   </span></div>
                               </div>

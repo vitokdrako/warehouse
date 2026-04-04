@@ -85,7 +85,8 @@ def parse_order_row(row, db: Session = None):
         items_result = db.execute(text("""
             SELECT oi.id, oi.order_id, oi.product_id, oi.product_name, 
                    oi.quantity, oi.price, oi.total_rental,
-                   p.image_url, p.price as loss_value, p.quantity as available_qty,
+                   COALESCE(p.image_url, oi.image_url) as image_url,
+                   p.price as loss_value, p.quantity as available_qty,
                    p.sku, p.zone, p.aisle, p.shelf, p.cleaning_status, p.product_state,
                    p.category_name
             FROM order_items oi
@@ -675,7 +676,8 @@ async def get_order_details(
     items_result = db.execute(text("""
         SELECT oi.id, oi.order_id, oi.product_id, oi.product_name, 
                oi.quantity, oi.price, oi.total_rental,
-               p.image_url, p.price as loss_value, p.quantity as available_qty,
+               COALESCE(p.image_url, oi.image_url) as image_url,
+               p.price as loss_value, p.quantity as available_qty,
                p.sku, p.zone, p.aisle, p.shelf, p.cleaning_status, p.product_state,
                p.category_name
         FROM order_items oi

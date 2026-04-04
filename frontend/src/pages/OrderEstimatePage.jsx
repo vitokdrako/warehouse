@@ -5,6 +5,7 @@
  */
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { getImageUrl, handleImageError } from "../utils/imageHelper";
 
 const API = process.env.REACT_APP_BACKEND_URL || "";
 const cn = (...xs) => xs.filter(Boolean).join(" ");
@@ -201,7 +202,7 @@ export default function OrderEstimatePage() {
                     <td className="px-4 py-3 text-slate-400">{i + 1}</td>
                     <td className="px-4 py-3">
                       {item.image || item.photo ? (
-                        <img src={item.image || item.photo} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200" />
+                        <img src={getImageUrl(item.image || item.photo)} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200" onError={handleImageError} />
                       ) : (
                         <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200" />
                       )}

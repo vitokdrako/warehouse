@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import axios from 'axios'
 import { Plus, Minus, X, RotateCcw, Search, Package, AlertTriangle, History, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '../ui/button'
+import { getImageUrl, handleImageError } from '../../utils/imageHelper'
 import { Input } from '../ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog'
 import { useToast } from '../../hooks/use-toast'
@@ -435,9 +436,10 @@ export default function OrderItemsModification({
                   >
                     {product.image_url ? (
                       <img 
-                        src={product.image_url} 
+                        src={getImageUrl(product.image_url)} 
                         alt={product.name}
                         className="w-14 h-14 object-cover rounded"
+                        onError={handleImageError}
                       />
                     ) : (
                       <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center">

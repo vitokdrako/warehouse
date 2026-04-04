@@ -391,7 +391,7 @@ function SetCard({ set, onEdit, onDelete }) {
         {/* Image */}
         <div className="w-24 h-24 rounded-lg bg-corp-bg-light flex-shrink-0 overflow-hidden">
           {set.image_url ? (
-            <img src={set.image_url} alt={set.name} className="w-full h-full object-cover" />
+            <img src={getImageUrl(set.image_url)} alt={set.name} className="w-full h-full object-cover" onError={handleImageError} />
           ) : set.items[0]?.image ? (
             <img src={getImageUrl(set.items[0].image)} alt={set.name} className="w-full h-full object-cover" onError={handleImageError} />
           ) : (

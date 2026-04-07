@@ -219,6 +219,7 @@ class BulkProductUpdate(BaseModel):
     diameter_cm: Optional[float] = None
     description: Optional[str] = None
     care_instructions: Optional[str] = None
+    hashtags: Optional[list] = None
 
 
 @router.patch("/{product_id}")
@@ -250,6 +251,11 @@ async def update_product_bulk(
         if field in update_data:
             update_fields.append(f"{field} = :{field}")
             params[field] = update_data[field]
+    
+    # Handle hashtags specially (JSON column)
+    if "hashtags" in update_data:
+        update_fields.append("hashtags = :hashtags")
+        params["hashtags"] = json.dumps(update_data["hashtags"], ensure_ascii=False) if update_data["hashtags"] else None
     
     if not update_fields:
         raise HTTPException(status_code=400, detail="Немає полів для оновлення")

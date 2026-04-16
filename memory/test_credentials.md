@@ -1,9 +1,13 @@
 # Test Credentials
 
-## Admin Account
+## Admin
 - Email: vitokdrako@gmail.com
 - Password: test123
 
-## Manager Account
+## Manager
 - Email: max@test.com
 - Password: test123
+
+## Requisitor
+- Email: anastasia@farforrent.com.ua
+- Password: hub2468

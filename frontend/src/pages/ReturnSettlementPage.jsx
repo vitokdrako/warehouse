@@ -361,6 +361,15 @@ export default function ReturnSettlementPage() {
     } catch { alert('Помилка мережі'); }
   };
 
+  const handleWriteOffDamages = async () => {
+    if (!window.confirm('Списати шкоду по цьому замовленню?\n\nНарахування по шкодах буде обнулено.')) return;
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/orders/${id}/write-off-damages`, { method: 'POST' });
+      if (res.ok) { loadData(); }
+      else { const err = await res.json(); alert(err.detail || 'Помилка'); }
+    } catch { alert('Помилка мережі'); }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50" data-testid="return-settlement-page">
       {/* Header */}
@@ -398,6 +407,14 @@ export default function ReturnSettlementPage() {
                   className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition"
                   data-testid="unmark-image-project-btn">
                   Скасувати іміджевий
+                </button>
+              )}
+              {/* Write-off Damages Button */}
+              {!isImageProject && snapshot?.damage?.total > 0 && (
+                <button onClick={handleWriteOffDamages}
+                  className="px-3 py-1.5 rounded-lg bg-amber-100 text-amber-700 text-xs font-semibold hover:bg-amber-200 transition"
+                  data-testid="write-off-damages-btn">
+                  Списати шкоду
                 </button>
               )}
             </div>

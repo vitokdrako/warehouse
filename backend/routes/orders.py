@@ -3429,6 +3429,40 @@ async def save_packaging_return(order_id: int, data: dict, db: Session = Depends
 # IMAGE PROJECT (Іміджевий проєкт)
 # ============================================================
 
+@router.post("/{order_id}/write-off-damages")
+async def write_off_damages(order_id: int, db: Session = Depends(get_rh_db)):
+    """Списати шкоду по замовленню: обнулити damage_fee, видалити pending damage записи."""
+    
+    order = db.execute(text(
+        "SELECT order_id, damage_fee FROM orders WHERE order_id = :oid"
+    ), {"oid": order_id}).fetchone()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    old_fee = float(order[1] or 0)
+    
+    # Zero out damage_fee
+    db.execute(text("UPDATE orders SET damage_fee = 0 WHERE order_id = :oid"), {"oid": order_id})
+    
+    # Mark damage history as written off
+    db.execute(text("""
+        UPDATE product_damage_history 
+        SET processing_status = 'written_off', fee = 0
+        WHERE order_id = :oid AND processing_status = 'pending'
+    """), {"oid": order_id})
+    
+    # Delete pending damage transactions
+    db.execute(text("""
+        DELETE FROM fin_transactions 
+        WHERE entity_id = :oid AND entity_type = 'order' AND status = 'pending' AND tx_type LIKE '%damage%'
+    """), {"oid": order_id})
+    
+    db.commit()
+    
+    return {"ok": True, "order_id": order_id, "written_off_amount": old_fee}
+
+
 @router.post("/{order_id}/mark-image-project")
 async def mark_image_project(order_id: int, db: Session = Depends(get_rh_db)):
     """Позначити замовлення як іміджевий проєкт: 100% знижка, скасування всіх pending транзакцій."""

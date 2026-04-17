@@ -2442,12 +2442,14 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
                    o.rental_start_date, o.rental_end_date,
                    COALESCE(o.discount_amount, 0) as discount_amount,
                    COALESCE(o.discount_percent, 0) as discount_percent,
-                   o.payer_profile_id, o.created_at
+                   o.payer_profile_id, o.created_at, o.deal_mode
             FROM orders o WHERE o.order_id = :order_id
         """), {"order_id": order_id}).fetchone()
         
         if not order_row:
             raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+        
+        is_image_project = order_row[13] == 'image_project'
         
         # === 2. PAYMENTS (all types) ===
         payments_rows = db.execute(text("""
@@ -2659,7 +2661,23 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             rental_before_discount = total_price_stored + discount
             total_after_discount = total_price_stored
         
+        # Іміджевий проєкт: обнулити всі борги
+        if is_image_project:
+            damage["total"] = 0
+            damage["due"] = 0
+            damage["items"] = []
+            damage["deposit_covered"] = 0
+            late["total"] = 0
+            late["due"] = 0
+            late["items"] = []
+            total_after_discount = 0
+            discount = rental_before_discount
+        
         rent_due = max(0, total_after_discount - rent_paid - advance_paid)
+        
+        # Іміджевий проєкт: примусово обнулити борг
+        if is_image_project:
+            rent_due = 0
         
         totals = {
             "rental_total": rental_before_discount,
@@ -2756,6 +2774,7 @@ async def get_order_finance_snapshot(order_id: int, db: Session = Depends(get_rh
             "documents": documents,
             "payer_profile": payer_profile,
             "timeline": timeline,
+            "deal_mode": order_row[13] or "rent",
             "_meta": {
                 "snapshot_at": snapshot_time,
                 "version": data_hash,

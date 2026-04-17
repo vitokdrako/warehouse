@@ -3448,7 +3448,8 @@ async def mark_image_project(order_id: int, db: Session = Depends(get_rh_db)):
         UPDATE orders 
         SET deal_mode = 'image_project', 
             discount_percent = 100, 
-            discount_amount = total_price
+            discount_amount = total_price,
+            damage_fee = 0
         WHERE order_id = :oid
     """), {"oid": order_id})
     
@@ -3456,6 +3457,17 @@ async def mark_image_project(order_id: int, db: Session = Depends(get_rh_db)):
     deleted = db.execute(text("""
         DELETE FROM fin_transactions 
         WHERE entity_id = :oid AND entity_type = 'order' AND status = 'pending'
+    """), {"oid": order_id})
+    
+    # Remove damage records for this order
+    deleted_damages = db.execute(text("""
+        DELETE FROM product_damage_history WHERE order_id = :oid
+    """), {"oid": order_id})
+    
+    # Cancel pending damage/late payments
+    db.execute(text("""
+        DELETE FROM fin_payments 
+        WHERE order_id = :oid AND status = 'pending'
     """), {"oid": order_id})
     
     db.commit()

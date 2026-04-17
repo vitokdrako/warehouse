@@ -341,6 +341,26 @@ export default function ReturnSettlementPage() {
   };
   const orderStatus = statusConfig[orderDetail.status] || { label: orderDetail.status, color: 'bg-slate-100 text-slate-700' };
 
+  const isImageProject = orderDetail.deal_mode === 'image_project';
+
+  const handleMarkImageProject = async () => {
+    if (!window.confirm('Позначити як іміджевий проєкт?\n\nЗнижка 100%, всі борги по оренді та заставі будуть скасовані.')) return;
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/orders/${id}/mark-image-project`, { method: 'POST' });
+      if (res.ok) { loadData(); }
+      else { const err = await res.json(); alert(err.detail || 'Помилка'); }
+    } catch { alert('Помилка мережі'); }
+  };
+
+  const handleUnmarkImageProject = async () => {
+    if (!window.confirm('Зняти позначку іміджевого проєкту? Знижку буде скинуто до 0%.')) return;
+    try {
+      const res = await authFetch(`${BACKEND_URL}/api/orders/${id}/unmark-image-project`, { method: 'POST' });
+      if (res.ok) { loadData(); }
+      else { const err = await res.json(); alert(err.detail || 'Помилка'); }
+    } catch { alert('Помилка мережі'); }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50" data-testid="return-settlement-page">
       {/* Header */}
@@ -365,12 +385,35 @@ export default function ReturnSettlementPage() {
               <div><span className="text-slate-500">Видача:</span> <span className="font-semibold">{fmtDate(orderDetail.rental_start_date)}</span></div>
               <div><span className="text-slate-500">Повернення:</span> <span className="font-semibold">{fmtDate(orderDetail.rental_end_date)}</span></div>
               <div><span className="text-slate-500">Днів:</span> <span className="font-semibold">{orderDetail.rental_days}</span></div>
+              {/* Image Project Button */}
+              {orderDetail.status === 'returned' && !isImageProject && (
+                <button onClick={handleMarkImageProject}
+                  className="px-3 py-1.5 rounded-lg bg-violet-100 text-violet-700 text-xs font-semibold hover:bg-violet-200 transition"
+                  data-testid="mark-image-project-btn">
+                  Іміджевий проєкт
+                </button>
+              )}
+              {isImageProject && (
+                <button onClick={handleUnmarkImageProject}
+                  className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition"
+                  data-testid="unmark-image-project-btn">
+                  Скасувати іміджевий
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-6">
+        {/* Image Project Badge */}
+        {isImageProject && (
+          <div className="flex items-center gap-2 px-4 py-2.5 mb-4 bg-violet-50 border border-violet-200 rounded-xl" data-testid="image-project-badge">
+            <span className="text-lg">🎬</span>
+            <span className="text-sm font-semibold text-violet-700">Іміджевий проєкт</span>
+            <span className="text-xs text-violet-500">— знижка 100%, без фінансових зобов'язань</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* LEFT: Parts / Versions (2/3) */}

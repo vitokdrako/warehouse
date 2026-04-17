@@ -803,6 +803,7 @@ export default function NewOrderViewWorkspace() {
       orderId={orderId}
       orderNumber={order?.order_number || orderId}
       status={workspaceStatus}
+      dealMode={order?.deal_mode}
       issueDate={issueDate}
       returnDate={returnDate}
       createdAt={order?.date_added}
@@ -880,15 +881,55 @@ export default function NewOrderViewWorkspace() {
       saving={saving}
       footerActions={[
         { 
-          label: sendingEmail ? '⏳...' : '✉️ Email клієнту', 
+          label: sendingEmail ? '...' : 'Email клієнту', 
           onClick: handleSendEmail,
           disabled: sendingEmail || !clientEmail
         },
         ...(isInProgress ? [] : [{ 
-          label: '🚫 Відхилити', 
+          label: 'Відхилити', 
           onClick: () => navigate('/'), 
           variant: 'danger' 
-        }])
+        }]),
+        ...(decorOrderStatus === 'returned' && order?.deal_mode !== 'image_project' ? [{
+          label: '🎬 Іміджевий проєкт',
+          onClick: async () => {
+            if (!window.confirm('Позначити як іміджевий проєкт?\n\nЗнижка 100%, всі борги по оренді та заставі будуть скасовані.')) return
+            try {
+              const token = localStorage.getItem('token')
+              const res = await fetch(`${BACKEND_URL}/api/orders/${orderId}/mark-image-project`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+              })
+              if (res.ok) {
+                toast({ title: 'Позначено як іміджевий проєкт', description: 'Знижка 100%, борги скасовано' })
+                loadOrder()
+              } else {
+                const err = await res.json()
+                toast({ title: 'Помилка', description: err.detail, variant: 'destructive' })
+              }
+            } catch { toast({ title: 'Помилка мережі', variant: 'destructive' }) }
+          },
+          variant: 'secondary'
+        }] : []),
+        ...(order?.deal_mode === 'image_project' ? [{
+          label: 'Скасувати іміджевий',
+          onClick: async () => {
+            if (!window.confirm('Зняти позначку іміджевого проєкту? Знижку буде скинуто до 0%.')) return
+            try {
+              const token = localStorage.getItem('token')
+              const res = await fetch(`${BACKEND_URL}/api/orders/${orderId}/unmark-image-project`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+              })
+              if (res.ok) {
+                toast({ title: 'Позначку іміджевого проєкту знято' })
+                loadOrder()
+              } else {
+                const err = await res.json()
+                toast({ title: 'Помилка', description: err.detail, variant: 'destructive' })
+              }
+            } catch { toast({ title: 'Помилка мережі', variant: 'destructive' }) }
+          },
+          variant: 'danger'
+        }] : []),
       ]}
     >
       {/* === WORKSPACE ZONES === */}

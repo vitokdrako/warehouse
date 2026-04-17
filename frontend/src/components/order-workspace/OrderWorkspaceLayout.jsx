@@ -19,6 +19,7 @@ export default function OrderWorkspaceLayout({
   createdAt,
   headerTitle,
   backUrl,
+  dealMode,
   
   // Left Rail content
   leftRail,
@@ -78,6 +79,17 @@ export default function OrderWorkspaceLayout({
         hasUpdates={hasUpdates}
         onRefresh={onRefresh}
       />
+      
+      {/* Image Project Badge */}
+      {dealMode === 'image_project' && (
+        <div className="mx-auto max-w-7xl w-full px-2 sm:px-6 pt-2">
+          <div className="flex items-center gap-2 px-4 py-2 bg-violet-50 border border-violet-200 rounded-xl" data-testid="image-project-badge">
+            <span className="text-lg">🎬</span>
+            <span className="text-sm font-semibold text-violet-700">Іміджевий проєкт</span>
+            <span className="text-xs text-violet-500">— знижка 100%, без фінансових зобов'язань</span>
+          </div>
+        </div>
+      )}
       
       {/* Main content area */}
       <div className="flex-1 mx-auto max-w-7xl w-full px-2 sm:px-6 py-2 sm:py-6">

@@ -1,33 +1,33 @@
 # RentalHub PRD
 
-## Original Problem Statement
-Comprehensive rental management platform (RentalHub) with React frontend, FastAPI backend, and MySQL database.
-
 ## Architecture
-- **Frontend**: React (CRA) -> compiled to `/app/clean_project/frontend_build/`
+- **Frontend**: React (CRA) -> `/app/clean_project/frontend_build/`
 - **Backend**: FastAPI on port 8001
 - **Database**: MySQL (OpenCart DB + RentalHub DB)
-- **Production**: Frontend at `rentalhub.farforrent.com.ua`, Backend at `backrentalhub.farforrent.com.ua`
+- **Production**: Frontend `rentalhub.farforrent.com.ua`, Backend `backrentalhub.farforrent.com.ua`
 
-## Key Technical Concepts
-- **Production Build**: Swap `.env` REACT_APP_BACKEND_URL to `https://backrentalhub.farforrent.com.ua`, run `yarn build`, copy to `/app/clean_project/frontend_build/`, revert `.env`
-- **Image Helper**: All product images must use `getImageUrl()` from `utils/imageHelper.js`
+## Completed Features (2026-04-17)
+- **Image Project (Іміджевий проєкт)** feature:
+  - `POST /api/orders/{id}/mark-image-project` — marks order, sets 100% discount, cancels all pending transactions
+  - `POST /api/orders/{id}/unmark-image-project` — reverts to normal
+  - Uses existing `deal_mode` DB field (`rent` → `image_project`)
+  - Badge "Іміджевий проєкт" on order workspace header (violet)
+  - Button in footer actions when order status = `returned`
+  - "Скасувати іміджевий" button when already marked
+  - Order 7464 fixed: deal_mode=image_project, discount=100%, transactions cleared
+- **Bulk Product Editor** (22 columns, drag&drop, inline editing, filters)
+- **Product image URL fix** (getImageUrl wrapper + COALESCE SQL)
+- **Incassation 55000 UAH deleted** from both fin_transactions and fin_expenses
 
-## Completed Features (Latest Session 2026-04-07)
-- **Bulk Product Editor** in Admin Panel:
-  - 22 columns: ID, Photo, SKU, Name, Category, Color, Material, Shape, Rental, Loss, Qty, Zone, Aisle, Shelf, H, W, D, Diameter, State, **Hashtags, Description, Care Instructions**
-  - **Drag & drop column reordering** with localStorage persistence + reset button
-  - Inline editing, photo zoom modal, filters (category/color/shape/state/missing), search, pagination (50/page)
-  - Hashtags: displayed as comma-separated, saved as JSON array
-  - Backend: `routes/bulk_products.py` - GET list, GET filters, PATCH update (including JSON hashtags)
-- Product image URL fix across order views (getImageUrl + COALESCE SQL fallback)
+## Key Files Modified
+- `/app/backend/routes/orders.py` — image project endpoints + deal_mode in response
+- `/app/frontend/src/pages/NewOrderViewWorkspace.jsx` — button + dealMode prop
+- `/app/frontend/src/components/order-workspace/OrderWorkspaceLayout.jsx` — badge
+- `/app/backend/routes/bulk_products.py` — bulk editor API
+- `/app/frontend/src/components/admin/BulkProductEditor.jsx` — bulk editor UI
 
-## Pending Issues
-- P0: Verify `sync_all_v2.py` on production
+## Pending
 - P1: `invoice_legal` template fix
-- P2: `convert-to-order` instability, Moodboard export, Calendar timezone
-
-## Backlog
-- P1: Post-deployment health check, Simplify laundry_items
+- P2: `convert-to-order` instability, Moodboard, Calendar timezone
 - P2: Finmap API (postponed)
-- P3: WebSockets, Unify order workspaces, RBAC, HR/Ops, Telegram bot
+- P3: WebSockets, RBAC, HR/Ops, Telegram bot

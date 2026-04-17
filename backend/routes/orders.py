@@ -594,7 +594,7 @@ async def get_order_details(
     # [12]rental_days, [13]notes, [14]created_at,
     # [15]discount_amount, [16]manager_id, [17]issue_time, [18]return_time,
     # [19]manager_name, [20]discount_percent, [21]service_fee, [22]service_fee_name
-    # [23]client_notes
+    # [23]client_notes, [24]deal_mode
     result = db.execute(text("""
         SELECT 
             o.order_id, o.order_number, o.customer_id, o.customer_name, 
@@ -605,7 +605,8 @@ async def get_order_details(
             CONCAT(COALESCE(u.firstname, ''), ' ', COALESCE(u.lastname, '')) as manager_name,
             o.discount_percent, COALESCE(o.service_fee, 0) as service_fee,
             o.service_fee_name,
-            c.notes as client_notes
+            c.notes as client_notes,
+            o.deal_mode
         FROM orders o
         LEFT JOIN users u ON o.manager_id = u.user_id
         LEFT JOIN client_users c ON o.customer_id = c.id
@@ -666,6 +667,7 @@ async def get_order_details(
     order["service_fee"] = service_fee
     order["service_fee_name"] = row[22] or ""
     order["client_notes"] = row[23] if len(row) > 23 else None  # Нотатки про клієнта
+    order["deal_mode"] = row[24] if len(row) > 24 else "rent"
     # Після знижки — динамічний розрахунок
     total_after_discount = round(max(0, total_price - discount_amount), 2)
     order["total_after_discount"] = total_after_discount
@@ -3421,3 +3423,73 @@ async def save_packaging_return(order_id: int, data: dict, db: Session = Depends
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+# ============================================================
+# IMAGE PROJECT (Іміджевий проєкт)
+# ============================================================
+
+@router.post("/{order_id}/mark-image-project")
+async def mark_image_project(order_id: int, db: Session = Depends(get_rh_db)):
+    """Позначити замовлення як іміджевий проєкт: 100% знижка, скасування всіх pending транзакцій."""
+    
+    order = db.execute(text(
+        "SELECT order_id, status, total_price, deal_mode FROM orders WHERE order_id = :oid"
+    ), {"oid": order_id}).fetchone()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    if order[3] == 'image_project':
+        raise HTTPException(status_code=400, detail="Замовлення вже позначено як іміджевий проєкт")
+    
+    # Set deal_mode, 100% discount
+    db.execute(text("""
+        UPDATE orders 
+        SET deal_mode = 'image_project', 
+            discount_percent = 100, 
+            discount_amount = total_price
+        WHERE order_id = :oid
+    """), {"oid": order_id})
+    
+    # Cancel all pending transactions (rent accruals, expected deposits)
+    deleted = db.execute(text("""
+        DELETE FROM fin_transactions 
+        WHERE entity_id = :oid AND entity_type = 'order' AND status = 'pending'
+    """), {"oid": order_id})
+    
+    db.commit()
+    
+    return {
+        "ok": True, 
+        "order_id": order_id, 
+        "deal_mode": "image_project",
+        "cancelled_transactions": deleted.rowcount
+    }
+
+
+@router.post("/{order_id}/unmark-image-project")
+async def unmark_image_project(order_id: int, db: Session = Depends(get_rh_db)):
+    """Зняти позначку іміджевого проєкту."""
+    
+    order = db.execute(text(
+        "SELECT order_id, deal_mode FROM orders WHERE order_id = :oid"
+    ), {"oid": order_id}).fetchone()
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Замовлення не знайдено")
+    
+    if order[1] != 'image_project':
+        raise HTTPException(status_code=400, detail="Замовлення не є іміджевим проєктом")
+    
+    db.execute(text("""
+        UPDATE orders 
+        SET deal_mode = 'rent', 
+            discount_percent = 0, 
+            discount_amount = 0
+        WHERE order_id = :oid
+    """), {"oid": order_id})
+    
+    db.commit()
+    
+    return {"ok": True, "order_id": order_id, "deal_mode": "rent"}

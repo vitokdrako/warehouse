@@ -576,8 +576,8 @@ async def send_agreement(
     data: SendAgreementRequest,
     db: Session = Depends(get_rh_db)
 ):
-    """Send agreement PDF to email"""
-    from services.pdf_generator import generate_master_agreement_pdf
+    """Send agreement HTML to email"""
+    from services.pdf_generator import generate_master_agreement_html
     from services.email_service import send_email
     
     # Get agreement with client data
@@ -596,13 +596,13 @@ async def send_agreement(
     
     # Parse snapshot
     snapshot = None
-    if agreement[7]:  # snapshot_json field
+    if agreement[7]:
         try:
             snapshot = json.loads(agreement[7]) if isinstance(agreement[7], str) else agreement[7]
         except:
             pass
     
-    # Prepare data for PDF
+    # Prepare data
     agreement_data = {
         "id": agreement[0],
         "contract_number": agreement[1],
@@ -622,40 +622,30 @@ async def send_agreement(
         "bank_details": agreement[13]
     }
     
-    # Generate PDF
-    pdf_result = generate_master_agreement_pdf(agreement_data, client_data)
+    # Generate HTML content of the agreement
+    agreement_html = generate_master_agreement_html(agreement_data, client_data)
     
-    if not pdf_result.get("success"):
-        raise HTTPException(status_code=500, detail=f"Помилка генерації PDF: {pdf_result.get('error')}")
-    
-    # Prepare email
+    # Wrap in email template
     subject = f"Договір оренди № {agreement[1]} | FarforRent"
     html_body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; color: #333;">
-        <h2>Договір оренди № {agreement[1]}</h2>
         <p>Шановний(а) {client_data.get('full_name', 'клієнте')},</p>
-        <p>Надсилаємо вам Договір оренди обладнання.</p>
-        <p><strong>Номер договору:</strong> {agreement[1]}</p>
-        <p><strong>Дійсний до:</strong> {agreement_data.get('valid_until', '—')}</p>
-        <p>Будь ласка, ознайомтесь з умовами договору у вкладеному PDF файлі.</p>
+        <p>Надсилаємо вам Договір оренди обладнання № <strong>{agreement[1]}</strong>.</p>
+        <hr style="border: 1px solid #ddd; margin: 20px 0;">
+        {agreement_html}
+        <hr style="border: 1px solid #ddd; margin: 20px 0;">
         <p>Якщо у вас виникли питання, будь ласка, зв'яжіться з нами.</p>
-        <br>
         <p>З повагою,<br>Команда FarforRent<br>info@farforrent.com.ua</p>
     </body>
     </html>
     """
     
-    # Send email with PDF attachment
+    # Send email with HTML body (no PDF attachment)
     email_result = send_email(
         to_email=data.email,
         subject=subject,
-        html_content=html_body,
-        attachments=[{
-            "filename": pdf_result["pdf_filename"],
-            "content": pdf_result["pdf_bytes"],
-            "content_type": "application/pdf"
-        }]
+        html_content=html_body
     )
     
     if not email_result.get("success"):
@@ -670,7 +660,7 @@ async def send_agreement(
         """), {"id": agreement_id})
         db.commit()
     except:
-        pass  # Ignore if already sent
+        pass
     
     return {
         "success": True,
